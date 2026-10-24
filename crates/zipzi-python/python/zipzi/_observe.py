@@ -14,7 +14,7 @@ import struct
 from typing import Literal, Mapping, Sequence, cast
 from uuid import uuid4
 import zlib
-from . import _native as _native_module
+from ._backend import native as _native_module
 from ._animation import MotionPreview
 from ._session import Session
 from ._inspection import (

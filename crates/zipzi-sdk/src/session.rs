@@ -2,8 +2,8 @@
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use crate::edit::EditSession;
 use crate::types::*;
@@ -15,14 +15,14 @@ use zipzi_core::document::{
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::preview::PreviewState;
 use zipzi_core::{
-    BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas, ChangeKind, Document,
-    DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter, Part, PreviewValues,
-    SceneBinding, Transform, evaluate_frame,
+    evaluate_frame, BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas,
+    ChangeKind, Document, DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter,
+    Part, PreviewValues, SceneBinding, Transform,
 };
 use zipzi_project::{
+    export_cdi3, export_expression3, export_motion3, export_physics3, export_pose3,
     CdiProjectError, ExpressionProjectError, MotionProjectError, PhysicsProjectError,
-    PoseProjectError, export_cdi3, export_expression3, export_motion3, export_physics3,
-    export_pose3,
+    PoseProjectError,
 };
 use zipzi_project::{DocumentSession, FileSystem, NativeFileSystem};
 
@@ -644,6 +644,22 @@ impl AuthoringSession {
         Ok(edit)
     }
 
+    /// Validate a version before a host admits an exclusive operation.
+    pub fn check_version(
+        &self,
+        expected: Option<Version>,
+        operation: &'static str,
+    ) -> Result<(), SdkError> {
+        let version = self.version();
+        if let Some(value) = expected.filter(|value| *value != version) {
+            let mut error = SdkError::new("STALE_VERSION", "Document version changed", operation);
+            error.expected_version = Some(Box::new(value));
+            error.actual_version = Some(Box::new(version));
+            return Err(error);
+        }
+        Ok(())
+    }
+
     /// Create a persistent candidate workspace. `commit_to` checks the source
     /// version again before publishing, so callers can hold it across API calls.
     pub fn begin_owned_edit(
@@ -653,14 +669,8 @@ impl AuthoringSession {
     ) -> Result<EditSession<'static>, SdkError> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("sdk.begin_owned_edit");
+        self.check_version(expected, "begin_edit")?;
         let version = self.version();
-        if let Some(value) = expected.filter(|value| *value != version) {
-            let mut error =
-                SdkError::new("STALE_VERSION", "Document version changed", "begin_edit");
-            error.expected_version = Some(Box::new(value));
-            error.actual_version = Some(Box::new(version));
-            return Err(error);
-        }
         let candidate = self.project.document().fork_tracked_candidate();
         let candidate_bytes = candidate.estimated_content_bytes();
         if candidate_bytes > self.history_limits.max_bytes {

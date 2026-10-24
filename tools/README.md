@@ -78,14 +78,15 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | Entry | Coverage |
 | --- | --- |
 | SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
-| SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic and event contracts; optional filter |
+| SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic, events, protocol/framing and retention contracts; optional filter |
+| `python tools/python/test_connected.py` | Build a CPU socket host fixture and pure wheel; isolated installed Python subprocess/cold-start/fault/recovery acceptance; optional unittest names |
 | SDK `mesh` / `regression` | Daily alpha mesh / all 16 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
 | SDK `python` / `wheel` | Rebuilt Debug extension / isolated Release wheel gates |
 | SDK `full` or no argument | SDK formatting, complete 16-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
 | Editor `fast` | zipzi-editor-core library and synthetic integration |
 | Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
-| Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance |
+| Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance、runtime_ipc_acceptance（自动安装隔离 Python 客户端） |
 | Editor `tools` | All repository tooling tests (automatic discovery) |
 | Editor `full` or no argument | Editor formatting, tooling and complete three-package Cargo test invocation with test-support (examples/doctests included) |
 

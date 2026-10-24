@@ -1,0 +1,326 @@
+use serde_json::{Value, json};
+use std::time::{Duration, Instant};
+use zipzi_core::ModelSetup;
+use zipzi_runtime::{protocol::*, *};
+fn setup(limits: ProtocolLimits) -> (Runtime, Protocol, ClientId, u64, Instant) {
+    let mut rt = Runtime::default();
+    let mut p = Protocol::new(limits);
+    let now = Instant::now();
+    let hello = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
+    let client = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
+    let connection = hello["ok"]["connection"].as_u64().unwrap();
+    (rt, p, client, connection, now)
+}
+fn request(
+    rt: &mut Runtime,
+    p: &mut Protocol,
+    client: ClientId,
+    connection: u64,
+    id: u64,
+    op: Value,
+    now: Instant,
+) -> Value {
+    p.handle(
+        rt,
+        client,
+        connection,
+        Request {
+            protocol: CONTRACT.into(),
+            runtime: client.runtime_instance(),
+            client,
+            request_id: id,
+            operation: op,
+        },
+        now,
+    )
+}
+#[test]
+fn a06_strict_handshake_and_old_instance_never_register_or_mutate() {
+    let (mut rt, mut p, client, connection, now) = setup(Default::default());
+    let response = p.hello(&mut rt, json!({"protocol": "zipzi-runtime-r3-1"}), now);
+    assert_eq!(response["error"]["code"], "PROTOCOL_MISMATCH");
+    let mut fresh = Runtime::default();
+    assert_eq!(
+        p.hello(
+            &mut fresh,
+            json!({"protocol": CONTRACT, "runtime": rt.instance_id()}),
+            now
+        )["error"]["code"],
+        "HOST_RESTARTED"
+    );
+    assert_eq!(
+        request(
+            &mut fresh,
+            &mut p,
+            client,
+            connection,
+            1,
+            json!({"op":"list_sessions"}),
+            now
+        )["error"]["code"],
+        "HOST_RESTARTED"
+    );
+    assert!(fresh.list_sessions().is_empty());
+}
+#[test]
+fn a07_all_requests_deduplicate_digest_and_expired_watermark() {
+    let (mut rt, mut p, client, connection, now) = setup(ProtocolLimits {
+        results_per_client: 2,
+        result_ttl: Duration::from_secs(1),
+        ..Default::default()
+    });
+    let op = json!({"op":"create_session", "document_id": uuid::Uuid::new_v4().to_string(), "setup": ModelSetup::default()});
+    let result = request(&mut rt, &mut p, client, connection, 1, op.clone(), now);
+    assert!(result.get("ok").is_some(), "{result}");
+    assert_eq!(
+        request(&mut rt, &mut p, client, connection, 1, op.clone(), now),
+        result
+    );
+    assert_eq!(rt.list_sessions().len(), 1);
+    assert_eq!(
+        request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            1,
+            json!({"op":"list_sessions"}),
+            now
+        )["error"]["code"],
+        "REQUEST_ID_REUSED"
+    );
+    for id in 2..=4 {
+        request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            id,
+            json!({"op":"list_sessions"}),
+            now,
+        );
+    }
+    assert_eq!(
+        request(&mut rt, &mut p, client, connection, 1, op, now)["error"]["code"],
+        "REQUEST_EXPIRED"
+    );
+    assert!(p.retained_results().0 <= 2);
+    p.expire(&mut rt, now + Duration::from_secs(2));
+    assert_eq!(p.retained_results(), (0, 0));
+    assert_eq!(
+        request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            4,
+            json!({"op":"list_sessions"}),
+            now + Duration::from_secs(2)
+        )["error"]["code"],
+        "REQUEST_EXPIRED"
+    );
+}
+#[test]
+fn a17_result_byte_budget_and_hundred_edits_remain_bounded() {
+    let (mut rt, mut p, client, connection, now) = setup(ProtocolLimits {
+        result_bytes_per_client: 2048,
+        result_bytes_total: 2048,
+        ..Default::default()
+    });
+    let session = rt
+        .create_session(
+            client,
+            &uuid::Uuid::new_v4().to_string(),
+            ModelSetup::default(),
+        )
+        .unwrap();
+    let baseline = rt.accounted_bytes();
+    let mut id = 0;
+    for _ in 0..100 {
+        id += 1;
+        let response = request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            id,
+            json!({"op":"begin_edit", "session":session,"label":"cancel","expected":null}),
+            now,
+        );
+        let edit = response["ok"].clone();
+        assert!(!edit.is_null(), "{response}");
+        id += 1;
+        assert_eq!(
+            request(
+                &mut rt,
+                &mut p,
+                client,
+                connection,
+                id,
+                json!({"op":"release_edit", "edit":edit}),
+                now
+            ),
+            json!({"ok":null})
+        );
+        assert!(p.retained_results().1 <= 2048);
+    }
+    assert_eq!(rt.accounted_bytes(), baseline);
+    assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
+}
+#[test]
+fn a18_disconnect_resume_generation_and_expiry_reclaim_candidate_not_session() {
+    let mut rt = Runtime::default();
+    let mut p = Protocol::default();
+    let now = Instant::now();
+    let hello = p.hello(&mut rt, json!({"protocol":CONTRACT}), now)["ok"].clone();
+    let client: ClientId = serde_json::from_value(hello["client"].clone()).unwrap();
+    let generation = hello["connection"].as_u64().unwrap();
+    let session = rt
+        .create_session(
+            client,
+            &uuid::Uuid::new_v4().to_string(),
+            ModelSetup::default(),
+        )
+        .unwrap();
+    let edit = rt.begin_edit(client, session, "pending", None).unwrap();
+    p.disconnect(client, generation, now);
+    let instance = rt.instance_id();
+    let resumed = p.hello(
+        &mut rt,
+        json!({"protocol":CONTRACT,"runtime":instance,"client":client,"secret":hello["secret"]}),
+        now,
+    )["ok"]
+        .clone();
+    assert!(resumed["connection"].as_u64().unwrap() > generation);
+    p.disconnect(client, generation, now); // An old socket cannot expire a new one.
+    p.expire(&mut rt, now + Duration::from_secs(31));
+    assert!(rt.edit_state(client, edit).is_ok());
+    p.disconnect(client, resumed["connection"].as_u64().unwrap(), now);
+    p.expire(&mut rt, now + Duration::from_secs(31));
+    assert!(rt.edit_state(client, edit).is_err());
+    assert!(rt.session_info(session).is_ok());
+}
+#[cfg(unix)]
+#[test]
+fn a06_framing_limits_utf8_nonfinite_empty_arrays_roundtrip_and_private_endpoint() {
+    use zipzi_runtime::local::*;
+    let original = json!({"array":[], "float":1.2345678901234567, "text":"你好"});
+    let mut bytes = Vec::new();
+    write_frame(&mut bytes, &original).unwrap();
+    assert_eq!(read_frame(&mut bytes.as_slice()).unwrap(), original);
+    for length in [0, (MAX_FRAME + 1) as u32, u32::MAX] {
+        assert!(read_frame(&mut length.to_be_bytes().as_slice()).is_err());
+    }
+    for body in [b"[NaN]".as_slice(), b"[1e999]", b"\xff"] {
+        let mut bytes = (body.len() as u32).to_be_bytes().to_vec();
+        bytes.extend(body);
+        assert!(read_frame(&mut bytes.as_slice()).is_err());
+    }
+    let temp = tempfile::tempdir().unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    assert!(Endpoint::new(temp.path(), "BAD").is_err());
+    let endpoint = Endpoint::new(temp.path(), "a").unwrap();
+    let owner = endpoint.claim().unwrap().unwrap();
+    assert!(endpoint.claim().unwrap().is_none());
+    drop(owner);
+    assert!(endpoint.claim().unwrap().is_some());
+    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+    assert!(Endpoint::new(temp.path(), "a").is_err());
+}
+
+#[test]
+fn a07_status_of_unexecuted_id_does_not_expire_its_retry() {
+    let (mut rt, mut p, client, connection, now) = setup(Default::default());
+    let status = request(
+        &mut rt,
+        &mut p,
+        client,
+        connection,
+        0,
+        json!({"op":"request_status", "request_id":1}),
+        now,
+    );
+    assert_eq!(status["ok"]["state"], "not_executed");
+    assert_eq!(
+        request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            1,
+            json!({"op":"list_sessions"}),
+            now
+        ),
+        json!({"ok":[]})
+    );
+}
+
+#[test]
+fn a04_parameter_replacement_preserves_candidate_fields_in_one_request() {
+    let (mut rt, mut p, client, connection, now) = setup(Default::default());
+    let session = rt
+        .create_session(
+            client,
+            &uuid::Uuid::new_v4().to_string(),
+            ModelSetup::default(),
+        )
+        .unwrap();
+    let edit = rt
+        .begin_edit(client, session, "replace in candidate", None)
+        .unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    rt.apply_edit(client, edit, |candidate| {
+        candidate.create_parameter(zipzi_core::Parameter {
+            id: id.clone(),
+            runtime_id: "ParamOriginal".into(),
+            name: "original".into(),
+            decimal_places: 3,
+            kind: zipzi_core::ParameterKind::BlendShape,
+            minimum: 0.0,
+            maximum: 1.0,
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    let op = json!({"op":"apply", "edit":edit, "commands":[{
+        "op":"replace_parameter", "parameter":{
+            "id":id, "runtime_id":"placeholder", "name":"replacement",
+            "minimum":0.0, "maximum":1.0, "default_value":0.5,
+            "kind":"normal", "decimal_places":6, "repeat":false
+        }, "preserve_runtime_id":true, "preserve_kind":true, "preserve_decimal_places":true
+    }]});
+    let result = request(&mut rt, &mut p, client, connection, 1, op.clone(), now);
+    assert!(result.get("ok").is_some(), "{result}");
+    let sequence = rt.edit_sequence(client, edit).unwrap();
+    assert_eq!(
+        request(&mut rt, &mut p, client, connection, 1, op.clone(), now),
+        result
+    );
+    assert_eq!(rt.edit_sequence(client, edit).unwrap(), sequence);
+    let parameter = rt
+        .edit_document(client, edit)
+        .unwrap()
+        .get_parameter(&id)
+        .unwrap();
+    assert_eq!(parameter.name, "replacement");
+    assert_eq!(parameter.runtime_id, "ParamOriginal");
+    assert_eq!(parameter.decimal_places, 3);
+    assert_eq!(parameter.kind, zipzi_core::ParameterKind::BlendShape);
+    let mut explicit = op;
+    explicit["commands"][0]["preserve_runtime_id"] = json!(false);
+    explicit["commands"][0]["preserve_kind"] = json!(false);
+    explicit["commands"][0]["preserve_decimal_places"] = json!(false);
+    let result = request(&mut rt, &mut p, client, connection, 2, explicit, now);
+    assert!(result.get("ok").is_some(), "{result}");
+    let parameter = rt
+        .edit_document(client, edit)
+        .unwrap()
+        .get_parameter(&id)
+        .unwrap();
+    assert_eq!(parameter.runtime_id, "placeholder");
+    assert_eq!(parameter.decimal_places, 6);
+    assert_eq!(parameter.kind, zipzi_core::ParameterKind::Normal);
+    rt.commit_edit(client, edit).unwrap();
+    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
+}

@@ -28,3 +28,8 @@ mod runtime_interaction;
 pub fn runtime_interaction() -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| runtime_interaction::run())
 }
+
+mod runtime_ipc;
+pub fn runtime_ipc() -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| runtime_ipc::run())
+}

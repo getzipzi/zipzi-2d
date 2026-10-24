@@ -7,7 +7,7 @@ Implementation modules are private; import public names from ``zipzi``.
 from pathlib import Path
 from typing import Literal, Sequence
 
-from ._native import NativeSpatialSnapshot, ObjectHandle, SdkFailure, capabilities
+from ._backend import NativeSpatialSnapshot, ObjectHandle, SdkFailure, capabilities
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._session import Session, open_project
@@ -20,6 +20,7 @@ from ._inspection import (
 from .geometry import rectangle_grid_geometry
 from ._types import (
     Version,
+    ObjectBatch,
     Point,
     Appearance,
     MeshSnapshot,
@@ -196,6 +197,7 @@ if ObservationFailure.__module__ == "zipzi._observe":
 del _public_type
 
 __all__ = [
+    "Connection", "ConnectedBackend", "ConnectionFailure", "Busy", "OutcomeUnknown", "connect", "ObjectBatch",
     "Axis",
     "BlendConstraintSnapshot",
     "BlendConstraintSpec",
@@ -293,3 +295,8 @@ __all__ = [
     "open_project",
     "open_inspection_packet",
 ]
+
+from ._connection import Connection, ConnectedBackend, ConnectionFailure, Busy, OutcomeUnknown
+from ._endpoint import connect
+
+ObjectBatch.__module__ = __name__

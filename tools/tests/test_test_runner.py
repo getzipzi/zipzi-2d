@@ -30,12 +30,14 @@ class TestRunnerTests(unittest.TestCase):
 if pathlib.Path(sys.argv[0]).name == 'python3' and pathlib.Path(sys.argv[1]).name == 'cargo_domain.py':
     os.execv(sys.executable, [sys.executable, *sys.argv[1:]])
 with open('calls.jsonl','a') as out:
-    out.write(json.dumps({'tool':pathlib.Path(sys.argv[0]).name,'args':sys.argv[1:],'session':os.environ.get('ZIPZI_DEV_SESSION_DIR')})+'\\n')
+    out.write(json.dumps({'tool':pathlib.Path(sys.argv[0]).name,'args':sys.argv[1:],'session':os.environ.get('ZIPZI_DEV_SESSION_DIR'),'client':os.environ.get('ZIPZI_CLIENT_PYTHON')})+'\\n')
+if len(sys.argv)>1 and pathlib.Path(sys.argv[1]).name=='build_zipzi_client.py':
+    print('/fixture/connected/bin/python');sys.exit(0)
 if sys.argv[1:2]==['fmt']:sys.exit(int(os.environ.get('FORMAT_EXIT','0')))
 sys.exit(int(os.environ.get('TEST_EXIT','0')))
 ''')
             tool.chmod(0o755)
-        self.env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}", "ZIPZI_DEV_SESSION_DIR": "live-development-session"}
+        self.env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}", "ZIPZI_DEV_SESSION_DIR": "live-development-session", "ZIPZI_CLIENT_PYTHON": "/fixture/connected/bin/python"}
 
     def assert_editor_packages(self, args):
         expected = json.loads((self.root / 'tools/workspace/package-domains.json').read_text())['editor']
@@ -83,8 +85,15 @@ sys.exit(int(os.environ.get('TEST_EXIT','0')))
         result, calls = self.run_entrypoint("acceptance", TEST_EXIT="9")
         self.assertEqual(result.returncode, 9)
         self.assertEqual(len(calls), 1)
-        for target in ["acceptance", "native_render", "headless_screenshot", "animation_acceptance", "timeline_acceptance"]:
+        for target in ["acceptance", "native_render", "headless_screenshot", "animation_acceptance", "timeline_acceptance", "runtime_ipc_acceptance"]:
             self.assertIn(target, calls[0]["args"])
+
+    def test_acceptance_prepares_client_when_no_interpreter_was_supplied(self):
+        result, calls = self.run_entrypoint("acceptance", ZIPZI_CLIENT_PYTHON="")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(Path(calls[0]["args"][0]).name, "build_zipzi_client.py")
+        self.assertIn("--install", calls[0]["args"])
+        self.assertEqual(calls[-1]["client"], "/fixture/connected/bin/python")
 
     def test_ui_uses_the_full_editor_feature_graph_and_keeps_the_filter(self):
         result, calls = self.run_entrypoint("ui", "headless_tests::ui_performance")

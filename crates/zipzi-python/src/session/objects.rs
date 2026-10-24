@@ -2,6 +2,45 @@ use super::*;
 
 #[pymethods]
 impl NativeSession {
+    #[allow(clippy::type_complexity)]
+    fn query_objects(
+        &self,
+        meshes: Vec<String>,
+        parameters: Vec<String>,
+    ) -> PyResult<(
+        (u64, u64, u64),
+        Vec<Option<MeshTuple>>,
+        Vec<Option<ParameterTuple>>,
+    )> {
+        let session = self.inner.lock().map_err(|_| poisoned())?;
+        let version = session.version();
+        Ok((
+            version_tuple(version),
+            meshes
+                .iter()
+                .map(|id| session.mesh(id).map(|mesh| mesh_tuple(mesh, version)))
+                .collect(),
+            parameters
+                .iter()
+                .map(|id| {
+                    session.parameter(id).map(|p| {
+                        (
+                            p.id,
+                            p.runtime_id,
+                            p.name,
+                            p.minimum,
+                            p.maximum,
+                            p.default_value,
+                            p.repeat,
+                            parameter_kind_name(p.kind).to_owned(),
+                            version_tuple(version),
+                        )
+                    })
+                })
+                .collect(),
+        ))
+    }
+
     fn asset(&self, id: &str) -> PyResult<Option<AssetTuple>> {
         let session = self.inner.lock().map_err(|_| poisoned())?;
         Ok(session.asset(id).map(|asset| {

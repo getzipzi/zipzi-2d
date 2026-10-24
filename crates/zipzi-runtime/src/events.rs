@@ -3,7 +3,8 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use zipzi_sdk::{EditReceipt, SaveReceipt};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct EventCursor {
     pub runtime: RuntimeInstanceId,
     /// None is the registry stream; it has no cross-session ordering guarantee.

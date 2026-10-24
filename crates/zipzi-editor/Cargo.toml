@@ -20,6 +20,7 @@ gpui-kit.workspace = true
 gpui-fps = { workspace = true, optional = true }
 zipzi-editor-core.workspace = true
 zipzi-sdk.workspace = true
+zipzi-runtime.workspace = true
 zipzi-core.workspace = true
 zipzi-editor-render.workspace = true
 rust-i18n.workspace = true
@@ -75,5 +76,11 @@ required-features = ["test-support"]
 [[test]]
 name = "runtime_interaction_acceptance"
 path = "tests/runtime_interaction_acceptance.rs"
+harness = false
+required-features = ["test-support"]
+
+[[test]]
+name = "runtime_ipc_acceptance"
+path = "tests/runtime_ipc_acceptance.rs"
 harness = false
 required-features = ["test-support"]

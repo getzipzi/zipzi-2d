@@ -7,8 +7,8 @@ use crate::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 use zipzi_core::{Canvas, Document, ModelSetup, Vec2};
 use zipzi_sdk::{AuthoringSession, AuthoringSnapshot, EditReceipt, EditSession, Version};
@@ -103,6 +103,15 @@ impl Runtime {
             self.sessions.values().fold(0u64, |total, entry| {
                 total.wrapping_add(entry.events.cursor().sequence)
             }),
+        )
+    }
+    /// Live table counts for host diagnostics; byte values are CPU estimates.
+    pub fn live_counts(&self) -> (usize, usize, usize, usize) {
+        (
+            self.clients.len(),
+            self.sessions.len(),
+            self.edits.len(),
+            self.jobs.len(),
         )
     }
     pub fn instance_id(&self) -> RuntimeInstanceId {
@@ -379,6 +388,9 @@ impl Runtime {
     }
     pub fn edit_state(&self, client: ClientId, edit: EditId) -> Result<EditState> {
         Ok(self.edit(client, edit)?.state)
+    }
+    pub fn edit_sequence(&self, client: ClientId, edit: EditId) -> Result<u64> {
+        Ok(self.edit(client, edit)?.sequence)
     }
     pub fn edit_document(&self, client: ClientId, edit: EditId) -> Result<&Document> {
         self.edit(client, edit)?

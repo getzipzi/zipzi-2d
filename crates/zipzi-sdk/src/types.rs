@@ -9,7 +9,8 @@ use zipzi_core::{
 };
 use zipzi_project::{ImportReport, ProjectResult, PsdImportReport};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Version {
     pub session_id: u64,
     pub generation: u64,

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "contract": "zipzi-runtime-r3-2",
+  "scope": "R3 minimum connection slice; no modeling/animation/preview completeness claim",
+  "evidence": "docs/plans/sdk-runtime/r3-ipc.md",
+  "implemented": [
+    {"public": "zipzi.connect / Connection", "wire": "hello", "source": "runtime", "effects": "register/resume bounded client; no model copy", "acceptance": ["A06", "A12", "A18"]},
+    {"public": "Connection.list_sessions/create_session/attach_session; Session.session_id", "wire": "list_sessions/create_session/attach_session/session_info", "source": "formal session", "effects": "resident registration; no duplicate SDK/history", "acceptance": ["A02", "A06", "A18"]},
+    {"public": "Session.mesh/parameter/mesh_ids/parameter_ids/query_objects", "wire": "query", "source": "formal version; frozen source while Busy/Faulted", "effects": "read only; ordered arrays and missing entries", "acceptance": ["A12", "A17"]},
+    {"public": "Session.edit; Edit.mesh/parameter", "wire": "begin_edit/query(edit)", "source": "owned candidate + base version + sequence", "effects": "bounded token; owner and session validated", "acceptance": ["A04", "A07", "A12"]},
+    {"public": "Edit.create_mesh/rename_mesh/update_positions/erase_object/create_parameter/replace_parameter", "wire": "apply(commands)", "source": "candidate", "effects": "SDK-only validation; ordinary failure poisons entire edit; apply deduplicated", "acceptance": ["A04", "A07", "A12"]},
+    {"public": "Edit.commit/cancel/recover/pending_request/state and context manager", "wire": "commit/release_edit/job/request_status", "source": "owned candidate and retained request result", "effects": "one SDK publication; Busy preserves candidate; unknown outcome blocks writes/automatic cleanup", "acceptance": ["A03", "A07", "A12"]},
+    {"public": "Session.undo/redo/history_lengths/version/modified/project_path", "wire": "undo/redo/job/session_info", "source": "same formal history as Editor", "effects": "background job for history publication", "acceptance": ["A03", "A10", "A12"]},
+    {"public": "Session.save; Connection.open_project", "wire": "save/open/job", "source": "formal session and Runtime path reservation", "effects": "ownership-carrying IO job; cross-session target protection", "acceptance": ["A02", "A12"]},
+    {"public": "Connection.request(subscribe/events), request_status/recover/statistics", "wire": "subscribe/events/request_status/statistics", "source": "atomic cursor + bounded log/result window", "effects": "resync/expired IDs explicit; status query does not advance watermark", "acceptance": ["A07", "A10", "A17"]},
+    {"public": "Connection.show_window and desktop reopen", "wire": "show_window", "source": "explicit resident SessionId; optional current host window", "effects": "app-thread attach/activate; only advertised by desktop host", "acceptance": ["A06", "A18"]}
+  ],
+  "unsupported_until_later": ["full scene/modeling", "resources and attachments", "plans and addresses", "binary blobs", "CPU evaluation", "animation", "independent previews", "GPU observation", "proposals"],
+  "installation": {"client": "zipzi-0.1.0-py3-none-any.whl", "native": "optional alternative Maturin wheel", "python": ">=3.14,<3.15"}
+}

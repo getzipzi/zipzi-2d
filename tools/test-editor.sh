@@ -24,6 +24,13 @@ Editor UI/native gates require macOS and Metal.
 EOF
 }
 
+prepare_runtime_client() {
+    if [ -z "${ZIPZI_CLIENT_PYTHON:-}" ]; then
+        ZIPZI_CLIENT_PYTHON=$(python3 "$repo_root/tools/python/build_zipzi_client.py" --install)
+        export ZIPZI_CLIENT_PYTHON
+    fi
+}
+
 mode=${1:-full}
 if [ "$#" -gt 0 ]; then shift; fi
 case "$mode" in
@@ -37,9 +44,10 @@ case "$mode" in
         exec env -u ZIPZI_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features zipzi-editor/test-support --lib --test integration "$@"
         ;;
     acceptance)
+        prepare_runtime_client
         exec env -u ZIPZI_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features zipzi-editor/test-support \
             --test acceptance --test native_render --test headless_screenshot \
-            --test animation_acceptance --test timeline_acceptance --test runtime_interaction_acceptance "$@"
+            --test animation_acceptance --test timeline_acceptance --test runtime_interaction_acceptance --test runtime_ipc_acceptance "$@"
         ;;
     tools)
         exec python3 "$repo_root/tools/test_tools.py" "$@"
@@ -47,6 +55,7 @@ case "$mode" in
     full)
         python3 "$repo_root/tools/workspace/cargo_domain.py" editor fmt -- --check
         python3 "$repo_root/tools/test_tools.py"
+        prepare_runtime_client
         exec env -u ZIPZI_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features zipzi-editor/test-support "$@"
         ;;
     -h|--help|help)

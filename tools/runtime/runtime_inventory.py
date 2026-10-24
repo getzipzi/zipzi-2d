@@ -202,6 +202,9 @@ def rust_contract(row: dict, path: Path) -> dict:
         lifecycle = "Plan owned by client/session/source; base Version checked at execute; explicit release"
     expensive = (name.startswith(("import_", "export_", "plan_", "execute_", "prepare_"))
                  or name in {"save_project", "open_project", "commit", "commit_to", "read_snapshot", "candidate_snapshot", "remesh_rectangle_grid"})
+    if owner == "AuthoringSession" and name == "check_version":
+        classification = "host-only"
+        effect = "version admission check; no mutation"
     return dict(domain=domain, classification=classification, stage=stage,
                 source_ref=source, effect=effect, lifecycle=lifecycle,
                 bulk="preserve SDK collection/array arguments; add explicit batch queries in R4",

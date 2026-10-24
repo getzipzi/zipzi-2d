@@ -6,12 +6,13 @@ import json
 from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
-from ._native import NativePreparedImageContent, NativeResourcePlan, NativeDocumentPlan, NativeAttachmentPlan, NativeResourceNameAddress, NativeDocumentFieldAddress, NativeImageLoadToken, NativeAttachmentLoadToken, NativeAttachmentPathAddress, NativeSession, NativeReferencePlan, NativeReferenceFieldAddress, NativeReferenceSelectionAddress, NativeSceneContentPlan, NativeSceneContentAddress, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
+from ._backend import NativePreparedImageContent, NativeResourcePlan, NativeDocumentPlan, NativeAttachmentPlan, NativeResourceNameAddress, NativeDocumentFieldAddress, NativeImageLoadToken, NativeAttachmentLoadToken, NativeAttachmentPathAddress, NativeSession, NativeReferencePlan, NativeReferenceFieldAddress, NativeReferenceSelectionAddress, NativeSceneContentPlan, NativeSceneContentAddress, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
 from ._types import (
     ExportSettings,
+    ObjectBatch,
     Appearance,
     AssetSnapshot,
     Axis,
@@ -120,6 +121,19 @@ class Session:
             max_bytes,
         )
         return cls._from_native(native)
+
+    def query_objects(self, *, meshes: Sequence[str] = (), parameters: Sequence[str] = ()) -> ObjectBatch:
+        """Read ordered mesh/parameter batches atomically from one source version."""
+        version, mesh_values, parameter_values = self._native.query_objects(list(meshes), list(parameters))
+        return ObjectBatch(version,
+            [None if m is None else MeshSnapshot(*m) for m in mesh_values],
+            [None if p is None else ParameterSnapshot(*p) for p in parameter_values])
+
+    @property
+    def session_id(self):
+        """Hosted SessionId for attaching another connection; None for native sessions."""
+        value = getattr(self._native, "session_id", None)
+        return None if value is None else dict(value)
 
     def edit(self, label: str, expected_version: Version | None = None) -> Edit:
         """Start an atomic edit, optionally requiring the current version to match."""

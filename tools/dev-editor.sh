@@ -210,6 +210,7 @@ case "${2:-watch}" in
       fi
     done
     if [ -n "$recovered_pid_file" ]; then
+      rm -f "$recovered_pid_file.ready"
       mv "$recovered_pid_file" "$pid_file"
       printf 'Recovered %s instance %s from an unfinished launch.\n' "$package" "$old_pid"
     fi
@@ -260,6 +261,8 @@ PLIST
       --env MTL_HUD_ALIGNMENT=bottomleft \
       --env MTL_HUD_SCALE=0.16 \
       --env "ZIPZI_DEV_PID_FILE=$launch_pid_file" \
+      --env "ZIPZI_DEV_READY_FILE=$launch_pid_file.ready" \
+      --env "ZIPZI_EDITOR_HOST=$executable" \
       --stdout "$run_log" --stderr "$run_log" "$app" >>"$log" 2>&1; then
       printf 'Build succeeded, but the background launch failed; details: %s\n' "$log" >&2
       exit 1
@@ -270,23 +273,32 @@ PLIST
     while [ "$attempts" -lt "$dev_attempts" ]; do
       if [ -s "$launch_pid_file" ]; then
         new_pid=$(cat "$launch_pid_file")
-        if is_dev_process "$new_pid"; then
+        case "$new_pid" in
+          reused:*)
+            printf 'Resident Runtime host %s reused; this dev launch did not restart it.\n' "${new_pid#reused:}"
+            rm -f "$launch_pid_file" "$launch_pid_file.ready"
+            launch_pid_file=
+            exit 0
+            ;;
+        esac
+        if is_dev_process "$new_pid" && [ -s "$launch_pid_file.ready" ]; then
           break
         fi
       fi
       sleep "$dev_interval"
       attempts=$((attempts + 1))
     done
-    if ! is_dev_process "$new_pid"; then
+    if ! is_dev_process "$new_pid" || [ ! -s "$launch_pid_file.ready" ]; then
       printf 'Build succeeded, but the new app did not start; details: %s\n' "$run_log" >&2
       exit 1
     fi
+    rm -f "$launch_pid_file.ready"
     mv "$launch_pid_file" "$pid_file"
     launch_pid_file=
     printf 'Updated %s in the background.\n' "$package"
     ;;
   run)
-    exec env MTL_HUD_ENABLED=1 MTL_HUD_ALIGNMENT=bottomleft MTL_HUD_SCALE=0.16 \
+    exec env "ZIPZI_EDITOR_HOST=$dev_target_dir/debug/$package" MTL_HUD_ENABLED=1 MTL_HUD_ALIGNMENT=bottomleft MTL_HUD_SCALE=0.16 \
       cargo run --locked --target-dir "$dev_target_dir" -p "$package"
     ;;
   *)

@@ -18,7 +18,7 @@ from uuid import uuid4
 from ._spatial import (
     ObjectRef, ObjectBounds, HitTestResult, SpatialSource, object_bounds, hit_test,
 )
-from ._native import NativeSpatialSnapshot
+from ._backend import NativeSpatialSnapshot
 
 if TYPE_CHECKING:
     from ._observe import CapturedScene, RenderedSceneView

@@ -2,12 +2,15 @@ use std::path::PathBuf;
 use uuid::Uuid;
 use zipzi_sdk::{AuthoringSnapshot, EditReceipt, SaveReceipt, SdkError, Version};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub struct RuntimeInstanceId(pub(crate) Uuid);
 
 macro_rules! ids {
     ($($name:ident),*) => {$(
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+        #[serde(deny_unknown_fields)]
         pub struct $name {
             pub(crate) runtime: RuntimeInstanceId,
             pub(crate) serial: u64,

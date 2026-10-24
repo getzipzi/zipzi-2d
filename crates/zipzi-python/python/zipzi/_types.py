@@ -808,3 +808,11 @@ class SeekCacheStats(NamedTuple):
     checkpoints: int
     last_restored_time: float
     last_replayed_steps: int
+
+
+class ObjectBatch(NamedTuple):
+    """Ordered mesh/parameter reads from one version; missing IDs return None."""
+
+    version: Version
+    meshes: list[MeshSnapshot | None]
+    parameters: list[ParameterSnapshot | None]

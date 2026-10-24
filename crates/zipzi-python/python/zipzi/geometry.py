@@ -1,7 +1,7 @@
 """Python adapters for the Rust SDK geometry builders."""
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from . import _native
+from ._backend import native as _native
 if TYPE_CHECKING:
     from ._types import MeshGeometryData
 

@@ -55,6 +55,7 @@ commands from the repository root; inspect available modes with
 | --- | --- |
 | One Rust crate/module | `cargo test --locked -p <crate> --lib <filter>`; add its integration target when relevant |
 | Runtime ownership/jobs/events | `./tools/test-sdk.sh runtime` |
+| Local protocol / installed Python client | `python3 tools/python/test_connected.py` |
 | SDK authoring behavior | `./tools/test-sdk.sh fast <filter>` |
 | Alpha mesh generation | `./tools/test-sdk.sh mesh` |
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |

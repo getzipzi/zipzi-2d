@@ -18,6 +18,7 @@ mod headless_tests;
 mod host;
 mod i18n;
 mod input_routing;
+mod ipc;
 mod keybindings;
 mod menus;
 mod mesh_edges;
@@ -384,6 +385,17 @@ impl EditorView {
 }
 
 pub fn run() {
+    let endpoint = zipzi_runtime::local::Endpoint::from_env().expect("private Runtime endpoint");
+    let owner = match endpoint.inherit_or_claim().expect("Runtime owner lock") {
+        Some(owner) => owner,
+        None => {
+            let host_pid = ipc::reopen(&endpoint).expect("reopen resident Editor host");
+            if let Some(pid_file) = std::env::var_os("ZIPZI_DEV_PID_FILE") {
+                let _ = std::fs::write(pid_file, format!("reused:{host_pid}"));
+            }
+            return;
+        }
+    };
     // Record ownership before window creation and session restoration, which
     // can take longer than the dev launcher's startup timeout.
     if let Some(pid_file) = std::env::var_os("ZIPZI_DEV_PID_FILE") {
@@ -409,6 +421,7 @@ pub fn run() {
         actions::init(cx);
         theme::init(cx);
         cx.set_global(host::DesktopHost::new());
+        ipc::start(owner, cx).expect("start local Runtime listener");
         if !no_window {
             host::open_window(cx, !background_launch);
         }

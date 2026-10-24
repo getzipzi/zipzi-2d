@@ -125,3 +125,24 @@ The Release dual-viewport/background-client probe uses
 `ZIPZI_RUNTIME_INTERACTION_OUTPUT` and `ZIPZI_RUNTIME_INTERACTION_SAMPLES` (at
 least 30). It checks input reaches both current Metal surfaces while another
 session publishes Runtime jobs, and verifies visible history isolation.
+
+### Local Python connection (R3)
+
+The production Editor owns a private Unix socket and its endpoint lock for the
+whole resident lifetime, including `--no-window`. Python cold startup transfers
+an already locked owner descriptor; another desktop invocation forwards a window
+reopen to the existing process after a strict handshake. Protocol work enters
+Runtime on the application thread, and worker completion remains independent of
+windows. Development launches set `ZIPZI_EDITOR_HOST` to their paired executable;
+a reused resident host is reported without claiming ownership of its process.
+See [Python connection usage](../zipzi-python/README.md#connect-to-the-resident-editor-r3).
+
+```sh
+python3 tools/python/test_connected.py
+ZIPZI_CLIENT_PYTHON="$PWD/target/python-tests/connected/bin/python" \
+  env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
+  --features test-support --test runtime_ipc_acceptance
+```
+
+The native acceptance requires the isolated client installed by the first
+command and a working Metal device; it fails when prerequisites are absent.

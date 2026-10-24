@@ -2,14 +2,14 @@
 
 CPU-only, single-owner host for `zipzi-sdk` authoring sessions. It owns the sole
 formal session and history, client/edit/job tables, project path reservations,
-bounded event streams and executor handoffs. There is no GPUI, PyO3, GPU or
-transport dependency. SDK does not depend on Runtime.
+bounded event streams and executor handoffs. There is no GPUI, PyO3 or GPU dependency. SDK does not depend on Runtime.
 
 The desktop Editor uses the same application-owned Runtime. Windows and tabs
 attach views; closing them retains resident sessions and history. Typed UI writes
 and external clients share publication, event and project-path boundaries.
-Python transport, remote request deduplication,
-reconnect grace periods and standalone host startup belong to R3 and later.
+The `protocol` and Unix `local` modules provide the R3 control-message slice,
+remote request deduplication, reconnect grace periods and endpoint ownership.
+The production listener is assembled by the desktop Editor on its app thread.
 
 ## Typed access
 
@@ -140,3 +140,37 @@ a decoder stack via `Work::run_on_thread`; spawn failure returns untouched state
 `Completion::returned_session` permits read-only background view preparation.
 Apply the completion before any weak-window notification, and keep presentation
 failures separate from the formal Job result.
+
+## Local protocol (R3)
+
+`protocol::Protocol` owns authenticated/resumable clients and a bounded request
+result window. The host supplies `&mut Runtime` on the app thread; network threads
+only frame/decode and exchange messages through a bounded channel. Formal jobs
+continue via `Executor` and completion delivery. Terminal Job queries atomically
+transfer their results into the deduplicated request window and release Job slots.
+Request status queries do not advance the monotonic admission watermark.
+
+The contract is `zipzi-runtime-r3-2`: big-endian u32 length + UTF-8 JSON, at most
+16 MiB per control frame, strict handshake and runtime-scoped IDs. Binary blobs
+are unsupported until R4. The serial transport admits one outstanding request per
+connection (stricter than the R0 queue maxima), at most eight socket workers and
+16 queued transport notifications. Results retain at most 1024 entries/8 MiB per
+client, 64 MiB overall and 300 seconds; evicted IDs never execute as new requests.
+Disconnected clients get 30 seconds to resume with their secret; expiry releases
+ordinary edits while preserving formal sessions and entered jobs.
+
+`local::Endpoint` validates a private user-owned 0700 directory and 0600 lock,
+rejects symlinks and overlong profiles/paths, and uses `flock` for owner lifetime.
+Python passes the already locked descriptor to cold-started Editor processes;
+only an exclusive owner can remove a stale socket. Accepted sockets explicitly
+clear inherited nonblocking mode on macOS, and control frames are streamed in
+bounded chunks. The CPU example `local_host_fixture` is a subprocess fault-injection
+fixture, without Editor window support.
+
+```sh
+cargo test --locked -p zipzi-runtime --test protocol
+python3 tools/python/test_connected.py
+```
+
+See [R3 acceptance evidence](../../docs/plans/sdk-runtime/r3-ipc.md) and the
+[implemented connection slice](../../docs/runtime/r3-coverage.json).

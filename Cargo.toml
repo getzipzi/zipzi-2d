@@ -58,7 +58,7 @@ zipzi-editor-render = { path = "crates/zipzi-editor-render" }
 rust-i18n = "4.2"
 sys-locale = "0.3"
 tempfile = "3"
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 
 # Some macOS 27 toolchains produce an unloadable cdylib when release stripping
 # uses an external llvm-objcopy without the Mach-O LINKEDIT alignment fix.

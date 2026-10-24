@@ -4,6 +4,9 @@
 mod config;
 mod events;
 mod jobs;
+#[cfg(unix)]
+pub mod local;
+pub mod protocol;
 mod runtime;
 mod types;
 

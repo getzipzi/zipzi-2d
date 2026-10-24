@@ -63,6 +63,8 @@ class Edit:
     def __init__(self, native) -> None:
         self._native = native
         self._closed = False
+        self._state = "editing"
+        self._pending_action = None
 
     def __enter__(self) -> Edit:
         """Return this edit for use in a context manager."""
@@ -109,8 +111,8 @@ class Edit:
         """Import CDI into this edit; unresolved model IDs return diagnostics."""
         try:
             return [CdiDiagnostic(*item) for item in self._native.import_cdi3(text)]
-        except BaseException:
-            self._native.abort()
+        except BaseException as error:
+            self._failed(error)
             raise
 
     def create_expression(
@@ -173,8 +175,8 @@ class Edit:
         try:
             return [ExpressionDiagnostic(*item) for item in
                     self._native.import_expression3(expression_id, name, text)]
-        except BaseException:
-            self._native.abort()
+        except BaseException as error:
+            self._failed(error)
             raise
 
     def replace_expression(
@@ -202,8 +204,8 @@ class Edit:
         """Import motion3; missing parameter or Part targets return diagnostics."""
         try:
             return [MotionDiagnostic(*item) for item in self._native.import_motion3(motion_id, name, text)]
-        except BaseException:
-            self._native.abort()
+        except BaseException as error:
+            self._failed(error)
             raise
 
     def replace_motion(self, clip: Mapping[str, object]) -> None:
@@ -315,10 +317,10 @@ class Edit:
         self._call(lambda: self._native.document_authoring_json(json.dumps(intent)))
 
     def reference_authoring(self, intent: Mapping[str, object]) -> None:
-        self._native.reference_authoring_json(json.dumps(intent))
+        self._call(lambda: self._native.reference_authoring_json(json.dumps(intent)))
 
     def scene_content(self, intent: Mapping[str, object]) -> None:
-        self._native.scene_content_json(json.dumps(intent))
+        self._call(lambda: self._native.scene_content_json(json.dumps(intent)))
 
     def scene_authoring(self, intent: Mapping[str, object]) -> None:
         """Apply a typed scene lifecycle, relation or drawing-collection command."""
@@ -354,8 +356,8 @@ class Edit:
         """Import pose3; missing Part runtime IDs return diagnostics."""
         try:
             return [PoseDiagnostic(*item) for item in self._native.import_pose3(pose_id, text)]
-        except BaseException:
-            self._native.abort()
+        except BaseException as error:
+            self._failed(error)
             raise
 
     def create_physics(self, physics_id: str, name: str = "Physics") -> str:
@@ -373,8 +375,8 @@ class Edit:
         """Import physics3; missing parameter runtime IDs return diagnostics."""
         try:
             return [PhysicsDiagnostic(*item) for item in self._native.import_physics3(physics_id, text)]
-        except BaseException:
-            self._native.abort()
+        except BaseException as error:
+            self._failed(error)
             raise
 
     def discard_missing_attachment(self, path: str) -> None:
@@ -405,21 +407,74 @@ class Edit:
         raw = self._native.mesh(mesh_id)
         return MeshSnapshot(*raw) if raw is not None else None
 
+    @property
+    def state(self) -> str:
+        """editing, aborted, outcome_unknown, committed or cancelled."""
+        return self._state
+
+    @property
+    def pending_request(self):
+        if getattr(self._native, "connected", False):
+            return self._native.pending_request
+        return None
+
     def __exit__(self, exception_type, exception, traceback) -> bool:
-        """Commit on success, cancel on exception, and never suppress the exception."""
         if self._closed:
             return False
         if exception_type is not None:
-            self.cancel()
+            if self._retryable(exception):
+                return False
+            if self._state != "outcome_unknown":
+                try:
+                    self.cancel()
+                except BaseException:
+                    pass  # Preserve the original exception and unresolved cleanup.
             return False
+        if self._state == "outcome_unknown":
+            from ._connection import OutcomeUnknown
+            raise OutcomeUnknown("OUTCOME_UNKNOWN", "Recover the pending edit operation")
         self.commit()
         return False
 
-    def _call(self, operation) -> None:
+    def _ensure_editing(self):
+        if self._state == "outcome_unknown":
+            from ._connection import OutcomeUnknown
+            raise OutcomeUnknown("OUTCOME_UNKNOWN", "Recover the pending edit operation")
+        if self._state != "editing":
+            from ._backend import SdkFailure
+            error = SdkFailure("Edit is no longer writable")
+            error.code = "EDIT_ABORTED" if self._state == "aborted" else "EDIT_CLOSED"
+            error.operation = "edit"
+            error.object_ids, error.referrers = [], []
+            error.field_path = error.expected_version = error.actual_version = None
+            raise error
+
+    @staticmethod
+    def _retryable(error):
+        from ._connection import Busy, ConnectionFailure
+        return isinstance(error, Busy) or (isinstance(error, ConnectionFailure)
+            and error.code == "BUDGET_EXCEEDED" and getattr(error, "edit_state", None) == "editing")
+
+    def _failed(self, error):
+        from ._connection import OutcomeUnknown
+        if self._retryable(error):
+            return
+        if isinstance(error, OutcomeUnknown):
+            self._state = "outcome_unknown"
+            return
+        self._state = "aborted"  # Local conversion failures also poison the edit.
         try:
-            operation()
-        except BaseException:
             self._native.abort()
+        except BaseException:
+            pass
+
+    def _call(self, operation):
+        self._ensure_editing()
+        try:
+            return operation()
+        except BaseException as error:
+            self._pending_action = "apply"
+            self._failed(error)
             raise
 
     def add_png_asset(self, asset_id: str, name: str, absolute_path: Path) -> None:
@@ -790,13 +845,53 @@ class Edit:
         ))
 
     def commit(self) -> Version:
-        """Publish this edit atomically and return the new session version."""
+        """Publish once. Busy preserves the edit; lost results require recovery."""
+        self._ensure_editing()
         try:
-            return self._native.commit()
-        finally:
-            self._closed = True
+            result = self._native.commit()
+        except BaseException as error:
+            self._pending_action = "commit"
+            self._failed(error)
+            raise
+        self._state, self._closed = "committed", True
+        return result
 
     def cancel(self) -> None:
-        """Discard this edit without publishing its candidate changes."""
-        self._native.cancel()
-        self._closed = True
+        """Release a known edit. Unknown requests must be recovered first."""
+        if self._closed:
+            return
+        if self._state == "outcome_unknown":
+            self._ensure_editing()
+        try:
+            self._native.cancel()
+        except BaseException as error:
+            from ._connection import OutcomeUnknown
+            if isinstance(error, OutcomeUnknown):
+                self._state, self._pending_action = "outcome_unknown", "cancel"
+            raise
+        self._state, self._closed = "cancelled", True
+
+    def recover(self):
+        """Resolve the exact pending apply/commit/cancel without publishing twice."""
+        if self._state != "outcome_unknown":
+            raise RuntimeError("Edit has no pending outcome")
+        try:
+            result = self._native.recover()
+        except BaseException as error:
+            from ._connection import Busy, ConnectionFailure, OutcomeUnknown
+            if self._retryable(error):
+                self._state, self._pending_action = "editing", None
+            elif isinstance(error, ConnectionFailure) and error.code in {"REQUEST_EXPIRED", "CLIENT_EXPIRED", "HOST_RESTARTED"}:
+                # An expired result or restarted host cannot confirm a commit.
+                self._state = "outcome_unknown"
+            else:
+                self._failed(error)
+            raise
+        if self._pending_action == "commit":
+            self._state, self._closed = "committed", True
+        elif self._pending_action == "cancel":
+            self._state, self._closed = "cancelled", True
+        else:
+            self._state = "editing"
+        self._pending_action = None
+        return result

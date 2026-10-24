@@ -312,3 +312,74 @@ For method groups, data records, and behavior details, see the
 [Python API reference](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python/API.md).
 For repository validation, see the
 [validation guide](https://github.com/getzipzi/zipzi-2d/blob/main/docs/VALIDATION.md).
+
+## Connect to the resident Editor (R3)
+
+The pure Python client wheel shares this public facade and does not contain or
+require `_native`. Build and install it from the repository root:
+
+```sh
+python3 tools/python/build_zipzi_client.py
+uv pip install --python /absolute/venv target/python-client-wheels/zipzi-0.1.0-py3-none-any.whl
+```
+
+Install either this variant or the Maturin native wheel in an environment. Both
+use the distribution name `zipzi`; the native wheel also includes the connection
+client. Supported Python remains `>=3.14,<3.15`.
+
+```python
+from pathlib import Path
+from uuid import uuid4
+import zipzi
+
+with zipzi.connect(host="/absolute/path/to/zipzi-editor") as connection:
+    session = connection.create_session(str(uuid4()))
+    # Or: connection.attach_session(connection.list_sessions()[0]["id"])
+    parameter_id = str(uuid4())
+    with session.edit("Python parameter") as edit:
+        edit.create_parameter(parameter_id, "Angle", -30, 30, 0)
+        assert edit.parameter(parameter_id).name == "Angle"
+    print(session.query_objects(parameters=[parameter_id]))
+    connection.show_window(session)
+    session.save(Path("/absolute/output/project"))
+```
+
+`host` (or `ZIPZI_EDITOR_HOST`) is an absolute executable or `.app` path. With no
+explicit path, discovery checks installed Zipzi bundles, including bundle ID
+`dev.zipzi.editor`. It never chooses a Debug binary from the current directory.
+`start=False` attaches only. The default endpoint is
+`/tmp/zipzi-runtime-<uid>/default.sock`; `ZIPZI_RUNTIME_DIR` and
+`ZIPZI_RUNTIME_PROFILE` select a shared private absolute directory/profile.
+The Editor, desktop reopen, development launcher and Python use the same
+ownership lock. The 15-second startup timeout retains the original owner's
+attempt; it does not start another host. Closing the connection or exiting Python
+keeps formal sessions and history resident. Disconnected candidate edits expire
+after a 30-second reconnect grace period.
+
+R3 supports session registration/binding, Mesh/Parameter reads and ordered
+batches, candidate reads, mesh creation/rename/positions/deletion, parameter
+creation/replacement, commit/cancel, shared Undo/Redo and save/open. Query batches
+return detached records from one version. Handshake capabilities report the
+available slice; other operations raise `UNSUPPORTED_OPERATION`. Full modeling,
+resources, plans, evaluation, animation, independent previews and review follow
+in R4–R6; use the native backend for their current APIs.
+
+`zipzi.Busy` confirms that the operation did not run and leaves the Edit writable.
+This also applies when another Edit on the same connection has a pending request:
+recover that owning Edit first. Each Edit exposes only its own `pending_request`;
+it cannot recover another Edit's apply, commit, or Job response.
+A retry uses a new request ID automatically. Admission budget failures also retain
+the Edit when the server confirms its candidate is still writable. `zipzi.OutcomeUnknown` preserves the
+original request and blocks later operations. Keep the Edit and call
+`edit.recover()` to reconnect and confirm/replay that same ID; for a non-Edit
+operation use `connection.recover()`. `connection.request_status(id)` can inspect
+a retained request without consuming its ID or overwriting pending state.
+A `with` block propagates unknown outcomes without cancelling or committing again.
+Ordinary SDK/conversion errors poison the Edit even when caught. Expired results,
+expired clients and restarted hosts return explicit errors; obtain a fresh
+connection and inspect formal state before deciding on another write.
+
+Run installed-client subprocess acceptance with
+`python3 tools/python/test_connected.py`; optional unittest names select cases.
+See the [R3 evidence](../../docs/plans/sdk-runtime/r3-ipc.md) for production desktop
+and native Metal acceptance commands.

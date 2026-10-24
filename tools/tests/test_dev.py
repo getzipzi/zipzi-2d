@@ -32,7 +32,18 @@ int main(void) {
     const char *path = getenv("ZIPZI_DEV_PID_FILE");
     if (path && !getenv("NO_READY")) {
         FILE *file = fopen(path, "w");
-        if (file) { fprintf(file, "%d", getpid()); fclose(file); }
+        const char *reused = getenv("REUSE_HOST_PID");
+        if (file) {
+            if (reused) fprintf(file, "reused:%s", reused);
+            else fprintf(file, "%d", getpid());
+            fclose(file);
+        }
+        if (reused) return 0;
+        const char *ready = getenv("ZIPZI_DEV_READY_FILE");
+        if (ready && !getenv("NO_HANDSHAKE")) {
+            FILE *marker = fopen(ready, "w");
+            if (marker) { fputs("handshake complete", marker); fclose(marker); }
+        }
     }
     for (;;) pause();
 }''',
@@ -289,6 +300,21 @@ while True:
         self.assertIn('did not exit',output)
         self.assertTrue(self.alive(pid))
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
+
+    def test_pid_alone_is_not_readiness_and_later_reload_recovers_owner(self):
+        self.run_reload(expected=1, NO_HANDSHAKE='1')
+        self.assertFalse(self.pid_file.exists())
+        launches = (self.root/'launches').read_text().splitlines()
+        self.assertTrue(Path(launches[0]).read_text().isdigit())
+        self.run_reload()
+        self.assertTrue(self.pid_file.read_text().isdigit())
+
+    def test_reused_resident_is_reported_without_claiming_its_pid(self):
+        _, output = self.run_reload(REUSE_HOST_PID='1234')
+        self.assertIn('host 1234 reused', output)
+        self.assertFalse(self.pid_file.exists())
+        launch = Path((self.root/'launches').read_text().strip())
+        self.assertFalse(launch.exists())
 
     def test_readiness_timeout_does_not_accumulate_instances(self):
         self.run_reload(expected=1, NO_READY='1')

@@ -8,8 +8,12 @@ R0 records the baseline. R1 now provides the CPU-only
 [R1 implementation and checks](../plans/sdk-runtime/r1-core.md).
 R2 migrates Editor ownership and window lifetime; see
 [R2 implementation and checks](../plans/sdk-runtime/r2-editor.md). Its interaction
-performance gates passed ten alternating process pairs across 145 measurements. Transport and ConnectedBackend remain later stages.
-The current public Python package still imports `_native` and targets CPython 3.14.
+performance gates passed ten alternating process pairs across 145 measurements. R3 adds the local protocol and an independently installable pure Python client;
+see [R3 evidence](../plans/sdk-runtime/r3-ipc.md) and the explicit
+[implemented connection slice](r3-coverage.json). The source inventory below
+remains a classification catalog; `not-connected` there is not a claim that all
+entries are unimplemented. R3's coverage manifest records the verified routes.
+Python targets CPython 3.14; connection imports work without `_native`.
 
 ## Source inventory
 
