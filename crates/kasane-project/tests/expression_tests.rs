@@ -90,7 +90,7 @@ fn model3_expression_package_import_is_atomic() {
         .unwrap()
         .parent()
         .unwrap();
-    let source = root.join("tests/fixtures/external_v50/model.model3.json");
+    let source = root.join("fixtures/external_v50/model.model3.json");
     let mut session = DocumentSession::new();
     let (result, _) = session.import_model3(&source);
     assert!(result.status.is_ok(), "{result:?}");

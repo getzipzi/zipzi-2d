@@ -339,7 +339,7 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
     let physics = id();
     let pose = id();
     let fixture =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/animation_cpu");
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/animation_cpu");
     let motion_text = std::fs::read_to_string(fixture.join("minimal.motion3.json"))?;
     let physics_text = std::fs::read_to_string(fixture.join("thirty.physics3.json"))?;
     sdk.edit("special content",None,|edit|{

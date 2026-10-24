@@ -7,17 +7,16 @@ pub const PARAM: &str = "00000000-0000-4000-8000-000000000d02";
 pub const MOTION: &str = "00000000-0000-4000-8000-000000000d03";
 
 pub const THIRTY_PHYSICS3: &str =
-    include_str!("../../../../tests/fixtures/animation_cpu/thirty.physics3.json");
+    include_str!("../../../../fixtures/animation_cpu/thirty.physics3.json");
 pub const MISSING_PHYSICS3: &str =
-    include_str!("../../../../tests/fixtures/animation_cpu/missing.physics3.json");
-pub const LOOP_MOTION3: &str =
-    include_str!("../../../../tests/fixtures/animation_cpu/loop.motion3.json");
+    include_str!("../../../../fixtures/animation_cpu/missing.physics3.json");
+pub const LOOP_MOTION3: &str = include_str!("../../../../fixtures/animation_cpu/loop.motion3.json");
 pub const TYPED_MOTION3: &str =
-    include_str!("../../../../tests/fixtures/animation_cpu/typed.motion3.json");
+    include_str!("../../../../fixtures/animation_cpu/typed.motion3.json");
 pub const MINIMAL_MOTION3: &str =
-    include_str!("../../../../tests/fixtures/animation_cpu/minimal.motion3.json");
+    include_str!("../../../../fixtures/animation_cpu/minimal.motion3.json");
 pub const MINIMAL_POSE3: &str =
-    include_str!("../../../../tests/fixtures/animation_cpu/minimal.pose3.json");
+    include_str!("../../../../fixtures/animation_cpu/minimal.pose3.json");
 
 pub fn document() -> Document {
     let mut document = Document::new();

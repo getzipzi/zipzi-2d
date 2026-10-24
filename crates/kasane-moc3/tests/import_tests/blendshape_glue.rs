@@ -330,7 +330,7 @@ fn test_cyclic_parameter_moc3_roundtrip_and_evaluation() {
 #[test]
 fn test_blendshape_glue_moc3_roundtrip_and_evaluation() {
     let root = workspace_root();
-    let moc3_path = root.join("tests/fixtures/external_v50_bs_glue/model.moc3");
+    let moc3_path = root.join("fixtures/external_v50_bs_glue/model.moc3");
     let bytes = fs::read(&moc3_path).expect("Read v50 bs glue moc3");
 
     let inspection = inspect_moc3(&bytes).expect("Inspect v50 bs glue");

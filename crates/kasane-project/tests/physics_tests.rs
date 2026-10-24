@@ -32,7 +32,7 @@ fn document() -> Document {
 
 #[test]
 fn physics3_roundtrip_project_and_reference_protection() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/thirty.physics3.json");
     let imported = import_physics3(&document(), PHYSICS, source).unwrap();
     assert!(imported.diagnostics.is_empty());
     let mut reopened = decode_project(&encode_project(&imported.candidate).unwrap()).unwrap();
@@ -55,7 +55,7 @@ fn physics3_roundtrip_project_and_reference_protection() {
 
 #[test]
 fn physics3_unresolved_and_opaque_edits_block_strict_export() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/thirty.physics3.json");
     let mut missing = document();
     assert!(missing.erase_object(Y).status.is_ok());
     let imported = import_physics3(&missing, PHYSICS, source).unwrap();
@@ -87,10 +87,9 @@ fn model3_physics_package_roundtrip_and_bad_attachment_rollback() {
         .parent()
         .unwrap();
     let mut session = DocumentSession::new();
-    let (result, _) =
-        session.import_model3(&root.join("tests/fixtures/external_v50/model.model3.json"));
+    let (result, _) = session.import_model3(&root.join("fixtures/external_v50/model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
-    let source = include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/thirty.physics3.json");
     let mut imported = import_physics3(session.document(), PHYSICS, source).unwrap();
     assert!(imported.diagnostics.is_empty());
     assert!(imported

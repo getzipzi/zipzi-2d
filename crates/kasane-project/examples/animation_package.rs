@@ -25,8 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .ok_or("repo root")?
         .to_path_buf();
     let mut session = DocumentSession::new();
-    let (result, _) =
-        session.import_model3(&root.join("tests/fixtures/external_v50/model.model3.json"));
+    let (result, _) = session.import_model3(&root.join("fixtures/external_v50/model.model3.json"));
     if !result.status.is_ok() {
         return Err(result.status.message.into());
     }
@@ -38,20 +37,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &candidate,
         EXPRESSION,
         "Smile",
-        &std::fs::read_to_string(root.join("tests/fixtures/animation_cpu/minimal.exp3.json"))?,
+        &std::fs::read_to_string(root.join("fixtures/animation_cpu/minimal.exp3.json"))?,
     )?
     .candidate;
     candidate = import_motion3(
         &candidate,
         MOTION,
         "Idle",
-        &std::fs::read_to_string(root.join("tests/fixtures/animation_cpu/loop.motion3.json"))?,
+        &std::fs::read_to_string(root.join("fixtures/animation_cpu/loop.motion3.json"))?,
     )?
     .candidate;
     candidate = import_physics3(
         &candidate,
         PHYSICS,
-        &std::fs::read_to_string(root.join("tests/fixtures/animation_cpu/thirty.physics3.json"))?,
+        &std::fs::read_to_string(root.join("fixtures/animation_cpu/thirty.physics3.json"))?,
     )?
     .candidate;
     candidate = import_pose3(

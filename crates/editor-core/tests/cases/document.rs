@@ -166,7 +166,7 @@ fn blank_document_starts_clean_and_can_be_saved() -> anyhow::Result<()> {
 #[test]
 fn sdk_imports_create_editable_documents_with_textures() -> anyhow::Result<()> {
     let sdk_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let model3 = sdk_root.join("tests/fixtures/external_v50/model.model3.json");
+    let model3 = sdk_root.join("fixtures/external_v50/model.model3.json");
     let (mut model, notices) = Document::import_model3(&model3)?;
     assert!(!model.layers().is_empty());
     assert!(model.path().is_none());

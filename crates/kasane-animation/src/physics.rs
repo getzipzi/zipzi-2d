@@ -671,7 +671,7 @@ mod tests {
     fn observations_keep_the_normalized_angle_of_the_solved_particles() {
         for (reflect, weight, expected) in [(true, 100., 90.), (false, 50., -45.)] {
             let mut source: serde_json::Value = serde_json::from_str(include_str!(
-                "../../../tests/fixtures/animation_cpu/thirty.physics3.json"
+                "../../../fixtures/animation_cpu/thirty.physics3.json"
             ))
             .unwrap();
             let setting = &mut source["PhysicsSettings"][0];
@@ -707,7 +707,7 @@ mod tests {
     #[test]
     fn observations_reuse_storage_and_remain_independent() {
         let doc = document(include_str!(
-            "../../../tests/fixtures/animation_cpu/thirty.physics3.json"
+            "../../../fixtures/animation_cpu/thirty.physics3.json"
         ));
         let mut preview = PhysicsPreview::new(&doc);
         preview.set_parameter(X, 1.).unwrap();
@@ -730,7 +730,7 @@ mod tests {
     #[test]
     fn preview_bypass_and_stabilized_baseline_survive_cold_seek() {
         let doc = document(include_str!(
-            "../../../tests/fixtures/animation_cpu/thirty.physics3.json"
+            "../../../fixtures/animation_cpu/thirty.physics3.json"
         ));
         let mut preview = crate::MotionPreview::new(&doc);
         preview.set_base_parameter(X, 1.).unwrap();
@@ -756,7 +756,7 @@ mod tests {
     fn official_physics_fps_traces() {
         let cases: [(&str, [f32; 6]); 4] = [
             (
-                include_str!("../../../tests/fixtures/animation_cpu/missing.physics3.json"),
+                include_str!("../../../fixtures/animation_cpu/missing.physics3.json"),
                 [
                     0.0,
                     0.0,
@@ -767,7 +767,7 @@ mod tests {
                 ],
             ),
             (
-                include_str!("../../../tests/fixtures/animation_cpu/zero.physics3.json"),
+                include_str!("../../../fixtures/animation_cpu/zero.physics3.json"),
                 [
                     0.0,
                     0.0,
@@ -778,7 +778,7 @@ mod tests {
                 ],
             ),
             (
-                include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json"),
+                include_str!("../../../fixtures/animation_cpu/thirty.physics3.json"),
                 [
                     0.0,
                     0.0,
@@ -789,7 +789,7 @@ mod tests {
                 ],
             ),
             (
-                include_str!("../../../tests/fixtures/animation_cpu/multi.physics3.json"),
+                include_str!("../../../fixtures/animation_cpu/multi.physics3.json"),
                 [
                     0.0,
                     0.0,

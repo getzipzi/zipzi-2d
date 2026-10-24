@@ -11,9 +11,9 @@ public Python package still imports `_native` and targets CPython 3.14.
 Regenerate and validate from the repository root:
 
 ```sh
-uv run --locked python tools/runtime_inventory.py
-uv run --locked python tools/runtime_inventory.py --check
-uv run --locked python -m unittest discover -s tools -p test_runtime_inventory.py
+uv run --locked python tools/runtime/runtime_inventory.py
+uv run --locked python tools/runtime/runtime_inventory.py --check
+uv run --locked python tools/test_tools.py -p test_runtime_inventory.py
 ```
 
 [`api-inventory.json`](api-inventory.json) indexes all split SDK implementation
@@ -136,9 +136,9 @@ Required SDK/project primitives before R4 memory acceptance:
 ## Reproducible CPU fixture and measurements
 
 ```sh
-uv run --locked python tools/runtime_baseline.py target/runtime-r0-BASELINE
+uv run --locked python tools/runtime/runtime_baseline.py target/runtime-r0-BASELINE
 # Optional local licensed asset: source files are hashed and never modified.
-uv run --locked python tools/runtime_baseline.py target/runtime-r0-MAO \
+uv run --locked python tools/runtime/runtime_baseline.py target/runtime-r0-MAO \
   --model /absolute/path/to/mao_pro.model3.json
 ```
 

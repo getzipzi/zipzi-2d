@@ -21,7 +21,7 @@ fn main() {
         &document,
         id,
         "Benchmark",
-        include_str!("../../../tests/fixtures/animation_cpu/loop.motion3.json"),
+        include_str!("../../../fixtures/animation_cpu/loop.motion3.json"),
     )
     .unwrap();
     document = imported.candidate;

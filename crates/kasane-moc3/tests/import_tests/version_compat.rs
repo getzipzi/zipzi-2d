@@ -27,10 +27,7 @@ fn test_import_external_v33_3d8e869a() {
 
     // 2. Import
     let mut tex_map = HashMap::new();
-    tex_map.insert(
-        0,
-        root.join("tests/fixtures/gpu/gpu-package/textures/0.png"),
-    );
+    tex_map.insert(0, root.join("fixtures/gpu/gpu-package/textures/0.png"));
     let res = import_from_bare_moc3(&bytes, &tex_map).expect("Import failed");
     let doc = &res.document;
 
@@ -89,7 +86,7 @@ fn test_import_external_v33_3d8e869a() {
 #[test]
 fn test_import_external_v50() {
     let root = workspace_root();
-    let model3_path = root.join("tests/fixtures/external_v50/model.model3.json");
+    let model3_path = root.join("fixtures/external_v50/model.model3.json");
 
     let res = import_from_model3_file(&model3_path).expect("Import external v50 failed");
     let doc = &res.document;
@@ -146,8 +143,8 @@ fn test_import_external_v50() {
 #[test]
 fn test_import_external_v42() {
     let root = workspace_root();
-    let model3_path = root.join("tests/fixtures/external_v42/model.model3.json");
-    let moc3_path = root.join("tests/fixtures/external_v42/model.moc3");
+    let model3_path = root.join("fixtures/external_v42/model.model3.json");
+    let moc3_path = root.join("fixtures/external_v42/model.moc3");
     let bytes = fs::read(&moc3_path).expect("Failed to read external v42 moc3");
 
     // 1. Inspect
@@ -225,7 +222,7 @@ fn test_import_external_v42() {
 #[test]
 fn test_v42_without_blendshapes() {
     let root = workspace_root();
-    let moc3_path = root.join("tests/fixtures/external_v42/model.moc3");
+    let moc3_path = root.join("fixtures/external_v42/model.moc3");
     let mut bytes = fs::read(&moc3_path).expect("Read v42 moc3");
 
     // Zero out blendshape counts in count_info:
@@ -250,7 +247,7 @@ fn test_v42_without_blendshapes() {
 
     let res = import_from_bare_moc3(
         &bytes,
-        &HashMap::from([(0, root.join("tests/fixtures/external_v42/texture_00.png"))]),
+        &HashMap::from([(0, root.join("fixtures/external_v42/texture_00.png"))]),
     )
     .expect("Import without BS should succeed");
     assert_eq!(res.document.blend_binding_order().len(), 0);
@@ -263,7 +260,7 @@ fn test_v42_without_blendshapes() {
 #[test]
 fn test_v42_corrupt_color_index_rejected() {
     let root = workspace_root();
-    let moc3_path = root.join("tests/fixtures/external_v42/model.moc3");
+    let moc3_path = root.join("fixtures/external_v42/model.moc3");
     let mut bytes = fs::read(&moc3_path).expect("Read v42 moc3");
 
     // Section 107 is art_mesh_src.key_color_off
@@ -286,7 +283,7 @@ fn test_v42_corrupt_color_index_rejected() {
 #[test]
 fn test_v42_does_not_access_v50_fields() {
     let root = workspace_root();
-    let moc3_path = root.join("tests/fixtures/external_v42/model.moc3");
+    let moc3_path = root.join("fixtures/external_v42/model.moc3");
     let bytes = fs::read(&moc3_path).expect("Read v42 moc3");
 
     let inspection = inspect_moc3(&bytes).expect("Inspect v42");
@@ -361,10 +358,10 @@ fn test_v6_export_and_preflight() {
     assert_runtime_matches(doc, &exported.bytes, &[defaults]);
 
     // 5. Test auto on a document without 5.3 features exports v5
-    let v5_source = fs::read(root.join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let v5_source = fs::read(root.join("fixtures/external_v50/model.moc3")).unwrap();
     let v5_doc = import_from_bare_moc3(
         &v5_source,
-        &HashMap::from([(0, root.join("tests/fixtures/external_v50/texture_00.png"))]),
+        &HashMap::from([(0, root.join("fixtures/external_v50/texture_00.png"))]),
     )
     .unwrap()
     .document;

@@ -48,7 +48,7 @@ def run(output: Path) -> Path:
         raise ValueError("Output path must be absolute")
     output.mkdir(parents=True, exist_ok=True)
     source_a = Path(__file__).with_name("asymmetric-2x2.png").resolve()
-    source_b = Path(__file__).resolve().parents[2] / "tests/fixtures/external_v50/texture_00.png"
+    source_b = Path(__file__).resolve().parents[2] / "fixtures/external_v50/texture_00.png"
     session = kasane.Session(DOCUMENT, 120, 100, (60, 50))
     with session.edit("two materials and hierarchy") as edit:
         edit.add_png_asset(ASSET_A, "asymmetric 2x2", source_a)

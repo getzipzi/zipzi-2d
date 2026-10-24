@@ -24,30 +24,30 @@ jobs:
       - name: Sync Python environment
         run: uv sync --locked
       - name: Package domain coverage
-        run: uv run --locked python tools/cargo_domain.py --check
+        run: uv run --locked python tools/workspace/cargo_domain.py --check
       - name: Package gate controls
-        run: uv run --locked python -m unittest discover -s tools -p test_cargo_domain.py -v
+        run: uv run --locked python -m unittest discover -s tools/tests -p test_cargo_domain.py -v
       - name: Format
-        run: uv run --locked python tools/cargo_domain.py sdk fmt -- --check
+        run: uv run --locked python tools/workspace/cargo_domain.py sdk fmt -- --check
       - name: Static analysis
-        run: uv run --locked python tools/cargo_domain.py sdk clippy --all-targets --locked -- -D warnings
+        run: uv run --locked python tools/workspace/cargo_domain.py sdk clippy --all-targets --locked -- -D warnings
       - name: SDK entrypoint controls
         if: runner.os != 'Windows'
-        run: uv run --locked python -m unittest discover -s tests -p test_test_entrypoint.py -v
+        run: uv run --locked python -m unittest discover -s tools/tests -p test_test_entrypoint.py -v
       - name: Acceptance validator negative controls
-        run: uv run --locked python -m unittest discover -s tests -p test_acceptance_validators.py -v
+        run: uv run --locked python -m unittest discover -s tools/tests -p test_acceptance_validators.py -v
       - name: Decoder safety without native Core
         env:
           KASANE_MOC3_DISABLE_CORE_VALIDATION: "1"
         run: cargo test -p kasane-moc3 --no-default-features --test safety_tests --locked
       - name: Regression tests
-        run: uv run --locked python tools/cargo_domain.py sdk test --locked
+        run: uv run --locked python tools/workspace/cargo_domain.py sdk test --locked
       - name: Distribution notice consistency
-        run: uv run --locked python tools/verify_artifacts.py
+        run: uv run --locked python tools/packaging/verify_artifacts.py
       - name: Build Python wheel
         run: uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
       - name: Verify wheel contents
-        run: uv run --locked python -c "from pathlib import Path; import subprocess, sys; wheels = list(Path('target/python-wheels').glob('kasane-*.whl')); assert len(wheels) == 1, wheels; subprocess.check_call([sys.executable, 'tools/verify_artifacts.py', '--wheel', str(wheels[0])])"
+        run: uv run --locked python -c "from pathlib import Path; import subprocess, sys; wheels = list(Path('target/python-wheels').glob('kasane-*.whl')); assert len(wheels) == 1, wheels; subprocess.check_call([sys.executable, 'tools/packaging/verify_artifacts.py', '--wheel', str(wheels[0])])"
       - name: SDK experiment harness controls
         if: runner.os != 'Windows'
         run: |
@@ -58,13 +58,13 @@ jobs:
           assert len(wheels) == 1, wheels
           env = dict(os.environ, SDK_EXPERIMENT_WHEEL=str(wheels[0].resolve()),
                      SDK_EXPERIMENT_PYTHON=sys.executable)
-          subprocess.check_call([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests',
+          subprocess.check_call([sys.executable, '-m', 'unittest', 'discover', '-s', 'tools/tests',
                                  '-p', 'test_sdk_experiments.py', '-v'], env=env)
           PY
       - name: SDK wheel integration
-        run: uv run --locked python -c "from pathlib import Path; import subprocess, sys; wheels = list(Path('target/python-wheels').glob('kasane-*.whl')); assert len(wheels) == 1, wheels; sys.exit(subprocess.call([sys.executable, 'tools/validate_sdk.py', '--wheel', str(wheels[0])]))"
+        run: uv run --locked python -c "from pathlib import Path; import subprocess, sys; wheels = list(Path('target/python-wheels').glob('kasane-*.whl')); assert len(wheels) == 1, wheels; sys.exit(subprocess.call([sys.executable, 'tools/validation/validate_sdk.py', '--wheel', str(wheels[0])]))"
       - name: SDK Python typing
         run: uv run --locked python -c "from pathlib import Path; import subprocess, sys; wheels = list(Path('target/python-wheels').glob('kasane-*.whl')); assert len(wheels) == 1, wheels; subprocess.check_call(['uv', 'pip', 'install', '--python', sys.executable, str(wheels[0])]); subprocess.check_call([sys.executable, '-m', 'pyright', '--pythonpath', sys.executable, 'examples/sdk/python_cpu_recipe.py'])"
       - name: WGPU blend reference
         if: runner.os == 'macOS'
-        run: uv run --locked python tools/compare_wgpu_blends.py
+        run: uv run --locked python tools/validation/compare_wgpu_blends.py

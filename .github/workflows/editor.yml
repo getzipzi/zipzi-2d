@@ -22,20 +22,20 @@ jobs:
       - name: Sync Python environment
         run: uv sync --locked
       - name: Package domain coverage
-        run: uv run --locked python tools/cargo_domain.py --check
+        run: uv run --locked python tools/workspace/cargo_domain.py --check
       - name: Editor format
-        run: uv run --locked python tools/cargo_domain.py editor fmt -- --check
+        run: uv run --locked python tools/workspace/cargo_domain.py editor fmt -- --check
       - name: Editor tooling controls
         run: uv run --locked sh tools/test-editor.sh tools
       - name: Compile every Editor target
-        run: uv run --locked python tools/cargo_domain.py editor check --locked --all-targets --features kasane-editor/test-support
+        run: uv run --locked python tools/workspace/cargo_domain.py editor check --locked --all-targets --features kasane-editor/test-support
       - name: Core synthetic tests
         run: uv run --locked sh tools/test-editor.sh fast
       - name: Probe Metal device
         id: metal
         shell: bash
         run: |
-          swift tools/metal-capability.swift >> "$GITHUB_OUTPUT"
+          swift tools/validation/metal-capability.swift >> "$GITHUB_OUTPUT"
       - name: Editor libraries and headless synthetic integration
         if: steps.metal.outputs.available == 'true'
         run: uv run --locked sh tools/test-editor.sh regression -- --nocapture
@@ -52,4 +52,4 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo 'Licensed models are not distributed to CI. Optional model tests report missing assets; full licensed-model acceptance remains a local P5/P6 gate.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Licensed models are not distributed to CI. Optional model tests report missing assets; full licensed-model acceptance remains a local acceptance gate.' >> "$GITHUB_STEP_SUMMARY"

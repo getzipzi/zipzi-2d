@@ -1,31 +1,256 @@
-# 验证工具
+# Development tools
 
-## 当前入口
-
-| 入口 | 用途 |
-| --- | --- |
-| `validate_sdk.py` | 在仓库外临时环境安装 wheel，运行 CPU/GPU、创作、导入编辑、导出、双 Core 与图像参考门禁，并保存报告与哈希。 |
-| `sdk_experiments.py` | 冻结 SDK 实验条件，生成三个渐进受试任务，记录外部 agent 进程，独立判分和重放，保存审阅与汇总。见 [实验协议](../docs/archive/SDK-EXPERIMENTS.md)。 |
-| `compare_sdk_image.py` | 读取 RGBA8 PNG，比较整图和 focus crop，保存差分图。 |
-| `compare_wgpu_blends.py` | 将 720 个 WGPU 混合样本与固定的官方 Framework GPU 参考图比较。 |
-| `validate_official_core.py`、`probes/` | 对 Rust MOC3 导出运行官方与 Purism Core 数值对照。 |
-| `create_*_fixture.py` | 生成被 Rust/Python 测试复用的 MOC3 fixture。 |
-| `run_purism_fuzz.sh`、`check_purism_bundle.sh` | Purism Core 模糊测试与单头文件 smoke test。 |
+Run commands from the repository root, using `uv run --locked python` for Python
+tools. Implementations live here; their regression tests live in
+[`tools/tests/`](tests/README.md). Tooling tests use automatic discovery:
 
 ```sh
-uv run --locked python -m unittest discover -s tests -p test_acceptance_validators.py -v
-uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
-uv run --locked python tools/validate_sdk.py --wheel /absolute/path/to/kasane.whl
-uv run --locked python tools/compare_wgpu_blends.py
+uv run --locked python tools/test_tools.py
+uv run --locked python tools/test_tools.py -p test_cargo_domain.py -v
 ```
 
-带 `observe` feature 的 wheel 可使用 `--require-gpu --require-image-reference`。完整本机门禁再加 `--full --official-probe /absolute/path/to/kasane_document_official_probe --purism-probe /absolute/path/to/kasane_document_purism_probe`。`--full` 要求 GPU、双 Core 和固定参考图实际通过。CPU wheel 的 GPU 项会报告 `not_run`，总状态为 `partial`。
+## Directory ownership
 
-参考图是历史外部运行时捕获，不在每次运行时重新生成。其模型、纹理、PNG 哈希和视图参数在 `tests/fixtures/render_reference/`；任何参考图更新都应留下新的来源与对照证据。
+The top level keeps five daily entrypoints: `test-sdk.sh`, `test-editor.sh`,
+`test_tools.py`, `dev-editor.sh` and `build-editor-app.sh`. Their implementation
+helpers and specialized commands live under the directories below. Paths in
+this guide are relative to `tools/` unless a command starts with `tools/`.
 
-## Test domains
+| Directory | Responsibility |
+| --- | --- |
+| `workspace/` | Cargo package domains, shared shell paths, artifact discovery and provenance |
+| `python/` | Python extension and installed-wheel test runner, called by `test-sdk.sh` |
+| `packaging/` | Workspace source archives and source/wheel/app verification |
+| `benchmarks/` | Native Editor benchmarks, offscreen measurement and trace reports |
+| `validation/` | SDK acceptance, image comparisons, model/runtime probes and Purism checks |
+| `validation/probes/`, `validation/cmo3/` | C++ probe builds and Cubism Java inspection helper |
+| `fixtures/` | Shared model/animation fixture generators; generated inputs live in root `fixtures/` |
+| `runtime/` | Runtime API inventories and CPU baselines |
+| `experiments/` | Agent experiment CLI and packet/worker support in `sdk_experiment/` |
+| `tests/` | Regression tests for all tooling groups |
 
-See [test and CI gates](../docs/development/testing.md). `test-sdk.sh` and
-`test-editor.sh` preserve separate complete gates; shared package selection is
-defined in `package-domains.json` and validated with `python3 cargo_domain.py --check`
-from this directory, or `python3 tools/cargo_domain.py --check` from the root.
+Add specialized scripts to their owning directory and update this guide and
+callers. Python scripts may import sibling modules; cross-group dependencies
+should stay explicit. Shell callers set `tools_dir` before sourcing
+`workspace/workspace.sh`, so nested benchmark scripts preserve caller-relative
+arguments and output paths.
+
+## Build and test entrypoints
+
+| Entry | Purpose |
+| --- | --- |
+| `test_tools.py` | Repository tooling tests; accepts unittest discovery flags (`-p`, `-k`, `-v`) |
+| `test-sdk.sh` | SDK fast, mesh, regression, stress, Python, wheel and full gates |
+| `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
+| `python/test_python.py` | Refresh Debug Python extension or build/validate an isolated Release wheel |
+| `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
+| `dev-editor.sh` | Editor development watcher and process lifecycle |
+| `build-editor-app.sh` | macOS app bundle construction |
+| `workspace/workspace.sh`, `workspace/workspace_tools.py` | Shared path and Cargo artifact handling |
+
+See [test coverage](#test-coverage), [CI coverage](#ci-coverage) and
+[Editor setup](../crates/kasane-editor/README.md#develop-and-test). No mode on either domain test shell
+script means the expensive full gate. Prefer focused tests during development.
+Editor entrypoints resolve checkout paths themselves, including absolute calls
+from another directory. The Python tooling runner also resolves its own checkout.
+
+## Test coverage
+
+Run commands from the repository root. `tools/workspace/package-domains.json` assigns every
+owned workspace package to exactly one domain: 15 SDK packages (including Python
+and the Rust comparison runner) and 3 Editor packages. New workspace members must
+be explicitly assigned; missing, stale, duplicate or overlapping names fail the
+metadata coverage gate. Vendor packages are not workspace members.
+
+```sh
+python3 tools/workspace/cargo_domain.py --check
+python3 tools/workspace/cargo_domain.py sdk check --locked --all-targets
+python3 tools/workspace/cargo_domain.py editor check --locked --all-targets --features kasane-editor/test-support
+./tools/test-sdk.sh fast physics_editing::
+./tools/test-editor.sh ui i18n::
+```
+
+`workspace/cargo_domain.py` runs from the repository root, preserves Cargo status and
+arguments, and prevents package selectors from overriding its domain. It is a
+Python standard-library tool; `uv run --locked python ...` uses the project's
+Python environment. `fmt` selects only the domain's own packages, excluding vendor.
+
+| Entry | Coverage |
+| --- | --- |
+| SDK `fast` | kasane-sdk library and ordinary integration; optional filter |
+| SDK `mesh` / `regression` | Daily alpha mesh / all 15 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
+| SDK `stress` | Entire fixed-seed alpha mesh matrix |
+| SDK `python` / `wheel` | Rebuilt Debug extension / isolated Release wheel gates |
+| SDK `full` or no argument | SDK formatting, complete 15-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
+| Editor `fast` | editor-core library and synthetic integration |
+| Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
+| Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance |
+| Editor `tools` | All repository tooling tests (automatic discovery) |
+| Editor `full` or no argument | Editor formatting, tooling and complete three-package Cargo test invocation with test-support (examples/doctests included) |
+
+The SDK full gate's extra arguments retain their original wheel-gate meaning;
+Editor full extra arguments go to Cargo tests. Editor `fast` and `regression` omit
+example compilation and doctests; `full` includes both. Focused Cargo arguments and arguments
+after `--` retain their normal meaning. Editor Rust gates unset
+`KASANE_DEV_SESSION_DIR` to isolate tests from live development sessions.
+Formatting, Rust, tooling and wheel failures stop the relevant full gate and
+propagate their exit status. Complete suites remain expensive: use focused modes
+during iteration and reserve full runs for broad regression acceptance.
+
+### CI coverage
+
+Both workflows run on every push and pull request. There are no path filters:
+SDK changes trigger Editor consumer validation; root manifests, shared tools,
+assets and vendor changes cannot be missed by path heuristics.
+
+SDK CI retains Linux/macOS/Windows, all-target clippy, decoder safety without
+native Core, complete SDK tests, wheel building, isolated integration, Python
+typing, validator negative controls, non-Windows experiment controls and the
+macOS WGPU blend reference. Cargo commands select only SDK packages.
+
+Editor CI runs on macOS: package coverage, formatting, tooling, every-target
+compilation with test-support, and core synthetic tests. A Swift Metal-device
+probe controls UI/integration and native acceptance execution. A failed probe
+is a job failure. An absent device produces an explicit warning and job summary;
+it is not evidence that UI/native tests passed. On a Metal-capable runner,
+regression and all five acceptance targets must pass normally.
+
+Licensed model data is not uploaded to CI. Optional missing-model cases retain
+their existing skip behavior; `--nocapture` exposes their messages. Full model
+acceptance stays in the local Editor acceptance/full gates after authorized data
+is available. A passing hosted run does not establish local licensed-model or
+unavailable GPU coverage.
+
+### Repository tooling and Python SDK tests
+
+Tooling implementations live in `tools/`; their regression tests live in
+`tools/tests/test_*.py`. Both Editor `tools` and Editor `full` call the shared discovery
+runner, including SDK validator and Python-runner controls. New test modules do
+not require editing a shell-script module list.
+
+```sh
+uv run --locked python tools/test_tools.py
+uv run --locked python tools/test_tools.py -p test_python_runner.py -v
+uv run --locked python tools/test_tools.py -k failure
+```
+
+SDK `fast`/`mesh` gates run CPU behavior, while observe/render tests need a GPU.
+Editor UI and native gates require macOS and Metal. Full local licensed-model
+requirements are documented in the [Editor README](../crates/kasane-editor/README.md#local-model-acceptance).
+
+See [test layout and prerequisites](tests/README.md). These tests exercise
+tooling, not the built SDK extension. For the latter use `test-sdk.sh python`:
+each invocation rebuilds the current Debug extension, checks GPU capabilities and
+starts fresh test processes. CPU and observe runs share one locked editable
+environment in `target/python-tests/`; wheel runs use separate environments and
+isolated installed packages. `python -- -k history` filters development tests;
+choose filters matching both CPU and inspection modules (repeat `-k` to match
+alternatives). Python 3.14 returns a failure when a selected module has no matching tests;
+wheel acceptance deliberately rejects filters.
+
+Daily SDK `mesh` and `regression` skip only `alpha_mesh_stress::`; the 65536-vertex
+boundary remains in daily checks. `stress`, plain `cargo test -p kasane-sdk` and
+SDK `full` retain the complete fixed-seed matrix. Tests are not globally ignored.
+
+## Validation and fixtures
+
+| Tools | Purpose |
+| --- | --- |
+| `validation/validate_sdk.py` | Isolated installed-wheel CPU/GPU, authoring, import/edit/export and image-reference acceptance |
+| `validation/validate_official_core.py`, `validation/probes/` | Official/Purism Core numerical comparison for MOC3 exports |
+| `validation/compare_sdk_image.py`, `validation/compare_wgpu_blends.py` | Image differences and pinned WGPU blend-reference checks |
+| `fixtures/create_*`, `fixtures/make_project_stress_fixture.py` | Reproducible shared fixture generation |
+| `validation/check_cmo3.py`, `validation/cmo3/` | Cubism document inspection |
+| `validation/run_*_probe.py`, `validation/run_*_integration.py`, `validation/run_observe_visual_baseline.py` | Explicit format/runtime/visual acceptance experiments |
+| `validation/run_purism_fuzz.sh`, `validation/check_purism_bundle.sh` | Purism fuzzing and single-header smoke checks |
+| `packaging/package_source.py`, `packaging/verify_artifacts.py` | Source packaging, notice and built-artifact checks |
+
+```sh
+uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
+uv run --locked python tools/validation/validate_sdk.py --wheel /absolute/path/to/kasane.whl
+```
+
+An observe-enabled wheel can use `--require-gpu --require-image-reference`.
+`--full` additionally requires `--official-probe` and `--purism-probe` paths and
+successful GPU, dual-Core and reference checks. CPU wheel validation reports GPU
+items as `not_run` and overall status as `partial`. Reference captures in
+`fixtures/render_reference/` preserve model/texture hashes and view settings;
+updates need new provenance and comparison evidence. See
+[distribution](#local-distribution-artifacts) for packaging commands.
+
+## Benchmarks and research tools
+
+`benchmarks/timeline-benchmark.sh`, `benchmarks/timeline-number-benchmark.sh`, `benchmarks/properties-benchmark.sh`
+and `benchmarks/window-benchmark.sh` run native Editor benchmarks. `benchmarks/property-chain-benchmark.py`
+and `benchmarks/*-trace-report.py` measure and analyze editing/frame work. Native runs require
+macOS and Metal; model-dependent runs need separately obtained local assets.
+
+```sh
+# Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:
+./tools/benchmarks/timeline-benchmark.sh target/timeline-benchmark-run 600
+# Timeline channel-number scrubbing, CPU/GPU stages and authoring comparison:
+./tools/benchmarks/timeline-number-benchmark.sh target/timeline-number-benchmark-run 96
+# Mesh properties and complete RGB/HSV color picker in a native window:
+./tools/benchmarks/properties-benchmark.sh target/properties-benchmark-run 300 120
+# Paired Release editing-chain totals, nested stage attribution and work counts:
+uv run --locked python tools/benchmarks/property-chain-benchmark.py models/local/mao/runtime/mao_pro.model3.json target/property-chain-run --reader-policy unique
+# Continuous Animation workspace drags in a native window (no per-input frame wait):
+KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=canvas ./tools/benchmarks/window-benchmark.sh MODEL target/animation-canvas-drag 2400 240
+KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./tools/benchmarks/window-benchmark.sh MODEL target/animation-number-drag 2400 240
+```
+
+`runtime/runtime_inventory.py`, `runtime/runtime_baseline.py` and `runtime/runtime-migration-inventory.py`
+support [Runtime preparation](../docs/runtime/README.md).
+`experiments/sdk_experiments.py` and `experiments/sdk_experiment/` implement the
+[SDK experiment protocol](../docs/archive/SDK-EXPERIMENTS.md).
+These research tools are separate from routine package tests; model-dependent
+runs require the documented local inputs. Generated output belongs in `target/`.
+
+## Local distribution artifacts
+
+The Editor source distribution is a **workspace archive**. Its Rust macros embed
+icons and locales from `crates/kasane-editor/assets/`; GPUI patches live outside
+the Editor crate. The three Editor crates declare `publish = false`; use the
+complete source layout below so the workspace patches and licenses are present.
+This does not change Cargo package identities, APIs or licenses.
+
+```sh
+uv run --locked python tools/packaging/package_source.py target/releases/zipzi-2d-source.tar.gz
+uv run --locked python tools/packaging/verify_artifacts.py --source target/releases/zipzi-2d-source.tar.gz
+uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
+uv run --locked python tools/packaging/verify_artifacts.py --wheel /absolute/path/to/kasane.whl
+./tools/build-editor-app.sh editor debug
+./tools/build-editor-app.sh editor release
+uv run --locked python tools/packaging/verify_artifacts.py --app 'target/Kasane Editor.app'
+```
+
+The source tool includes tracked and non-ignored new source files plus initialized
+Purism sources, records hashes and checkout status, and refuses missing gitlinks,
+escaping symlinks and tracked private/generated content. Initialize Purism before
+packaging. Local models, the proprietary Cubism SDK under `third_party/`,
+target, Python caches and machine Cargo config are excluded.
+It retains all 18 crate paths, Editor crate assets, patches, docs and both license texts.
+Extract the `zipzi-2d/` directory and build from that workspace root.
+
+The wheel carries MIT and third-party notices under `.dist-info/licenses`, the
+native extension, `py.typed` and `_native.pyi`. Distribution copies of the two
+notice files live in `crates/kasane-python/`; `packaging/verify_artifacts.py` compares them
+byte-for-byte to the canonical root files before CI builds a wheel. Update both
+copies when the canonical text changes. An isolated installed-wheel gate is:
+
+```sh
+uv run --locked python tools/validation/validate_sdk.py --wheel /absolute/path/to/kasane.whl
+```
+
+The CPU wheel report is `partial` when CPU checks pass but GPU/dual-Core checks
+were not requested. Read the individual checks; do not relabel it a full pass.
+
+Both app profiles place the binary reported by Cargo in `Contents/MacOS`, the
+application icon and MIT/GPL/licensing/notices in `Contents/Resources`, and retain
+vendored license files under `vendor-notices/`. SVG icons and locales are embedded
+in the binary rather than copied to a second runtime asset tree. The verifier
+checks the actual embedded bytes and language text. The output path is reused
+between profiles; retain a separate copy under `target/` when comparing both.
+
+These commands create local unsigned artifacts. They do not upload releases,
+notarize apps, change remote repositories or verify GitHub license presentation.

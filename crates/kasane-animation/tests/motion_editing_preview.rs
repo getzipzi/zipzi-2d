@@ -37,14 +37,14 @@ fn document() -> Document {
         &document,
         &id(6),
         "Motion",
-        include_str!("../../../tests/fixtures/animation_cpu/minimal.motion3.json"),
+        include_str!("../../../fixtures/animation_cpu/minimal.motion3.json"),
     )
     .unwrap()
     .candidate;
     let document = import_pose3(
         &document,
         &id(7),
-        include_str!("../../../tests/fixtures/animation_cpu/minimal.pose3.json"),
+        include_str!("../../../fixtures/animation_cpu/minimal.pose3.json"),
     )
     .unwrap()
     .candidate;
@@ -52,7 +52,7 @@ fn document() -> Document {
         &document,
         &id(8),
         "Expression",
-        include_str!("../../../tests/fixtures/animation_cpu/minimal.exp3.json"),
+        include_str!("../../../fixtures/animation_cpu/minimal.exp3.json"),
     )
     .unwrap()
     .candidate

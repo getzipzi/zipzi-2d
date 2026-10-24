@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 #[test]
 fn imported_models_and_saved_projects_share_the_codec() {
-    let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures");
+    let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures");
     for model in ["external_v42", "external_cyclic", "external_v50_bs_glue"] {
         let mut session = DocumentSession::new();
         let (result, _) =
@@ -115,7 +115,7 @@ fn editable_physics_uses_bound_parameter_guids() {
             .status
             .is_ok());
     }
-    let source = include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/thirty.physics3.json");
     let imported =
         kasane_project::import_physics3(&doc, "00000000-0000-4000-8000-000000002004", source)
             .unwrap();

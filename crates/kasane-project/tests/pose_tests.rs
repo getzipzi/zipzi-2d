@@ -28,7 +28,7 @@ fn document() -> Document {
 
 #[test]
 fn pose3_import_roundtrips_uuid_refs_and_project_v5() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/minimal.pose3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/minimal.pose3.json");
     let imported = import_pose3(&document(), POSE, source).unwrap();
     assert!(imported.diagnostics.is_empty());
     let mut reopened = decode_project(&encode_project(&imported.candidate).unwrap()).unwrap();
@@ -74,8 +74,7 @@ fn model3_pose_package_roundtrip_and_corrupt_import_rollback() {
         .parent()
         .unwrap();
     let mut session = DocumentSession::new();
-    let (result, _) =
-        session.import_model3(&root.join("tests/fixtures/external_v50/model.model3.json"));
+    let (result, _) = session.import_model3(&root.join("fixtures/external_v50/model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
     let part_id = session.document().part_order()[0].clone();
     let runtime_id = session

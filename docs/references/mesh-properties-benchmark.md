@@ -5,7 +5,7 @@ inputs and 300 measured inputs at a target 120 Hz as the existing window UI
 benchmark:
 
 ```sh
-./tools/properties-benchmark.sh target/properties-run 300 120
+./tools/benchmarks/properties-benchmark.sh target/properties-run 300 120
 ```
 
 `KASANE_BENCH_MODEL` overrides the model. `KASANE_BENCH_PROPERTY_CASE` selects one
@@ -83,6 +83,6 @@ when integrity checks pass; the script's zero exit status establishes valid
 measurement, not universal performance health.
 
 ```sh
-python3 tools/properties-trace-report.py target/properties-run/trace.jsonl --output target/properties-run
+python3 tools/benchmarks/properties-trace-report.py target/properties-run/trace.jsonl --output target/properties-run
 python3 -m unittest discover -s scripts -p 'test*trace_report.py'
 ```

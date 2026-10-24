@@ -22,6 +22,8 @@ Examples:
   ./tools/test-sdk.sh python --observe
   ./tools/test-sdk.sh python -- -k history
   ./tools/test-sdk.sh wheel --observe
+
+Details: tools/README.md#test-coverage
 EOF
 }
 
@@ -43,7 +45,7 @@ case "$mode" in
         exec cargo test --locked -p kasane-sdk --lib --test integration "$@"
         ;;
     regression)
-        daily_rust_tests python3 tools/cargo_domain.py sdk test --locked --lib --tests "$@"
+        daily_rust_tests python3 tools/workspace/cargo_domain.py sdk test --locked --lib --tests "$@"
         ;;
     mesh)
         daily_rust_tests cargo test --locked -p kasane-sdk --test alpha_mesh "$@"
@@ -52,15 +54,15 @@ case "$mode" in
         exec cargo test --locked -p kasane-sdk --test alpha_mesh "$@"
         ;;
     python)
-        exec uv run --locked python tools/test_python.py "$@"
+        exec uv run --locked python tools/python/test_python.py "$@"
         ;;
     wheel)
-        exec uv run --locked python tools/test_python.py --wheel "$@"
+        exec uv run --locked python tools/python/test_python.py --wheel "$@"
         ;;
     full)
-        python3 tools/cargo_domain.py sdk fmt -- --check
-        python3 tools/cargo_domain.py sdk test --locked
-        exec uv run --locked python tools/test_python.py --wheel "$@"
+        python3 tools/workspace/cargo_domain.py sdk fmt -- --check
+        python3 tools/workspace/cargo_domain.py sdk test --locked
+        exec uv run --locked python tools/python/test_python.py --wheel "$@"
         ;;
     -h|--help|help)
         usage

@@ -17,7 +17,7 @@ fn test_import_m1_roundtrip() {
     // Use an existing test texture
     tex_map.insert(
         0,
-        workspace_root().join("tests/fixtures/gpu/gpu-package/textures/0.png"),
+        workspace_root().join("fixtures/gpu/gpu-package/textures/0.png"),
     );
     let import_res = import_from_bare_moc3(&encoded.bytes, &tex_map).expect("Import failed");
     let doc_imported = &import_res.document;
@@ -93,7 +93,7 @@ fn test_import_m1_roundtrip() {
 
 #[test]
 fn test_post_import_editing() {
-    let source = fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let source = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     let mut doc = import_from_bare_moc3(&source, &fixture_textures())
         .unwrap()
         .document;
@@ -155,7 +155,7 @@ fn test_structural_editing() {
     let mut tex_map = HashMap::new();
     tex_map.insert(
         0,
-        workspace_root().join("tests/fixtures/gpu/gpu-package/textures/0.png"),
+        workspace_root().join("fixtures/gpu/gpu-package/textures/0.png"),
     );
     let mut res = import_from_bare_moc3(&encoded.bytes, &tex_map).expect("Import failed");
     let doc = &mut res.document;
@@ -206,7 +206,7 @@ fn test_structural_editing() {
 
 #[test]
 fn import_regressions_match_document_and_runtime() {
-    let source = fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let source = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     let samples: Vec<Vec<f32>> = [-1.0, -0.5, 0.0, 0.5, 1.0]
         .into_iter()
         .flat_map(|x| [-1.0, 0.0, 1.0].into_iter().map(move |y| vec![x, y]))
@@ -230,7 +230,7 @@ fn import_regressions_match_document_and_runtime() {
 
 #[test]
 fn rotation_edit_rebinding_and_deletion_change_export() {
-    let bytes = fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let bytes = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     let mut doc = import_from_bare_moc3(&bytes, &fixture_textures())
         .unwrap()
         .document;

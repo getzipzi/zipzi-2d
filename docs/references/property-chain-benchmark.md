@@ -9,10 +9,10 @@ latency. Native Properties probes below check the ownership behavior separately.
 ## Run
 
 ```sh
-python3 tools/property-chain-benchmark.py \
+python3 tools/benchmarks/property-chain-benchmark.py \
   models/local/mao/runtime/mao_pro.model3.json target/property-chain-unique \
   --reader-policy unique
-python3 tools/property-chain-benchmark.py \
+python3 tools/benchmarks/property-chain-benchmark.py \
   models/local/mao/runtime/mao_pro.model3.json target/property-chain-retained \
   --reader-policy retained
 ```
@@ -122,7 +122,7 @@ Check actual native ownership with the existing window harness:
 ```sh
 KASANE_BENCH_CHAIN_STAGES=1 KASANE_BENCH_PROPERTY_CASE=opacity_drag \
   KASANE_BENCH_WARMUP=10 \
-  ./tools/properties-benchmark.sh target/property-chain-native-opacity 60 120
+  ./tools/benchmarks/properties-benchmark.sh target/property-chain-native-opacity 60 120
 ```
 
 The feature-enabled native harness records stage counts/times on the UI thread

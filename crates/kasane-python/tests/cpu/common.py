@@ -48,7 +48,7 @@ BLEND_OFFSCREEN = "00000000-0000-4000-8000-000000000024"
 TESTS_DIR = Path(__file__).resolve().parent.parent
 TEXTURE = TESTS_DIR / "fixtures/asymmetric-2x2.png"
 LAYERED_PSD = TESTS_DIR.parents[1] / "kasane-psd/tests/fixtures/layered.psd"
-EXTERNAL = TESTS_DIR.parents[2] / "tests/fixtures/external_v50"
+EXTERNAL = TESTS_DIR.parents[2] / "fixtures/external_v50"
 
 
 def session():

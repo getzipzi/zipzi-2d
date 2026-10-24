@@ -96,7 +96,7 @@ cargo test -p kasane-sdk-observe --locked
 For the group-crop A/B benchmark and pixel comparison, run:
 
 ```sh
-uv run --locked python tools/benchmark_offscreens.py --rounds 3
+uv run --locked python tools/benchmarks/benchmark_offscreens.py --rounds 3
 ```
 
 This alternates the default crop policy with the `benchmark-global-surfaces`
@@ -104,5 +104,6 @@ feature, which forces the previous common-surface strategy while retaining the
 same traversal and preflight. Keep that feature disabled in application builds.
 Each run warms 20 frames and measures 90 frames at 2048×2048. Reports include
 completed-command GPU timestamps, CPU encoding time, attachment bytes, and raw
-RGBA captures; comparisons fail above a one-byte channel difference. See
-[the measured results](../../docs/OFFSCREEN-PERFORMANCE.md).
+RGBA captures; comparisons fail above a one-byte channel difference. Related
+[benchmark entrypoints](../../tools/README.md#benchmarks-and-research-tools) are
+listed in the tool guide.

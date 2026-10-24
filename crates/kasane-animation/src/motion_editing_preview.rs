@@ -285,7 +285,7 @@ mod tests {
             &document,
             &id(6),
             "Motion",
-            include_str!("../../../tests/fixtures/animation_cpu/minimal.motion3.json"),
+            include_str!("../../../fixtures/animation_cpu/minimal.motion3.json"),
         )
         .unwrap()
         .candidate;

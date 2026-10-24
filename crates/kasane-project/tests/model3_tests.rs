@@ -8,7 +8,7 @@ fn null_optional_file_references_import_as_absent() {
         .unwrap()
         .parent()
         .unwrap();
-    let source = root.join("tests/fixtures/external_v50");
+    let source = root.join("fixtures/external_v50");
     let temporary = std::env::temp_dir().join(format!(
         "kasane-model3-null-references-{}",
         std::process::id()
@@ -52,7 +52,7 @@ fn identical_expression_registrations_import_once() {
         .unwrap()
         .parent()
         .unwrap();
-    let source = root.join("tests/fixtures/external_v50");
+    let source = root.join("fixtures/external_v50");
     let temporary = std::env::temp_dir().join(format!(
         "kasane-model3-duplicate-expressions-{}",
         std::process::id()
@@ -100,7 +100,7 @@ fn model3_groups_layout_and_hit_areas_survive_project_and_package() {
         .unwrap()
         .parent()
         .unwrap();
-    let source = root.join("tests/fixtures/external_v50");
+    let source = root.join("fixtures/external_v50");
     let temporary =
         std::env::temp_dir().join(format!("kasane-model3-settings-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&temporary);
@@ -193,7 +193,7 @@ fn sound_and_userdata_are_managed_after_source_is_removed() {
         .unwrap()
         .parent()
         .unwrap();
-    let source = root.join("tests/fixtures/external_v50");
+    let source = root.join("fixtures/external_v50");
     let temporary =
         std::env::temp_dir().join(format!("kasane-managed-files-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&temporary);
@@ -205,7 +205,7 @@ fn sound_and_userdata_are_managed_after_source_is_removed() {
     )
     .unwrap();
     std::fs::copy(
-        root.join("tests/fixtures/animation_cpu/loop.motion3.json"),
+        root.join("fixtures/animation_cpu/loop.motion3.json"),
         temporary.join("idle.motion3.json"),
     )
     .unwrap();

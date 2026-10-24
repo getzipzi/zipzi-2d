@@ -4,9 +4,9 @@ use serde_json::Value;
 #[test]
 fn physics3_roundtrip_recounts_and_preserves_fps_presence() {
     for source in [
-        include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json"),
-        include_str!("../../../tests/fixtures/animation_cpu/missing.physics3.json"),
-        include_str!("../../../tests/fixtures/animation_cpu/zero.physics3.json"),
+        include_str!("../../../fixtures/animation_cpu/thirty.physics3.json"),
+        include_str!("../../../fixtures/animation_cpu/missing.physics3.json"),
+        include_str!("../../../fixtures/animation_cpu/zero.physics3.json"),
     ] {
         let physics = decode_physics3(source).unwrap();
         assert!(physics.counts_match());
@@ -23,7 +23,7 @@ fn physics3_roundtrip_recounts_and_preserves_fps_presence() {
 
 #[test]
 fn physics3_invalid_targets_and_unknown_numeric_extension_are_explicit() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/thirty.physics3.json");
     let mut physics = decode_physics3(source).unwrap();
     std::sync::Arc::make_mut(&mut physics.settings[0]).outputs[0].vertex_index = 2;
     assert_eq!(

@@ -62,7 +62,7 @@ pub(crate) fn model_textures(moc: &std::path::Path) -> HashMap<usize, PathBuf> {
 }
 
 pub(crate) fn fixture_textures() -> HashMap<usize, PathBuf> {
-    model_textures(&workspace_root().join("tests/fixtures/external_v50/model.moc3"))
+    model_textures(&workspace_root().join("fixtures/external_v50/model.moc3"))
 }
 
 pub(crate) struct PurismModelInstance {

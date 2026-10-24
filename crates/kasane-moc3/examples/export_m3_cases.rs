@@ -325,10 +325,7 @@ fn main() {
         .unwrap()
         .parent()
         .unwrap();
-    let tex_map = HashMap::from([(
-        0,
-        root.join("tests/fixtures/gpu/gpu-package/textures/0.png"),
-    )]);
+    let tex_map = HashMap::from([(0, root.join("fixtures/gpu/gpu-package/textures/0.png"))]);
     let original = encode_moc3(&create_m1_fixture_doc()).unwrap();
     let decoded = import_from_bare_moc3(&original.bytes, &tex_map).unwrap();
     write_case(
@@ -343,11 +340,10 @@ fn main() {
         .expect("Required external v33 fixture missing");
     let decoded = import_from_bare_moc3(&v33, &tex_map).unwrap();
     write_case(&out_dir, "case_external_v33", &v33, &decoded.document);
-    let v50 = fs::read(root.join("tests/fixtures/external_v50/model.moc3"))
+    let v50 = fs::read(root.join("fixtures/external_v50/model.moc3"))
         .expect("Required external v50 fixture missing");
     let decoded =
-        import_from_model3_file(&root.join("tests/fixtures/external_v50/model.model3.json"))
-            .unwrap();
+        import_from_model3_file(&root.join("fixtures/external_v50/model.model3.json")).unwrap();
     write_case(&out_dir, "case_external_v50", &v50, &decoded.document);
     for name in ["binding_zero", "color_window", "canvas_y"] {
         let bytes = import_cases::variant(&v50, name);

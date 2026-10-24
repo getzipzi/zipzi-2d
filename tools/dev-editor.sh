@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-. "$(dirname "$0")/workspace.sh"
+tools_dir=$(CDPATH= cd -- "$(dirname -- "$0")/." && pwd)
+. "$tools_dir/workspace/workspace.sh"
 
 case "${1:-editor}" in
   editor)
@@ -175,7 +176,7 @@ case "${2:-watch}" in
       exit 1
     fi
 
-    binary=$(python3 "$repo_root/tools/workspace_tools.py" executable "$log.json")
+    binary=$(python3 "$repo_root/tools/workspace/workspace_tools.py" executable "$log.json")
 
     old_pid=
     if [ -s "$pid_file" ]; then

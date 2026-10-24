@@ -1,37 +1,73 @@
-# Runtime monorepo
+# Repository structure
 
-## Active authoring and rendering
+The root Cargo workspace owns 18 crates: 15 SDK packages and 3 Editor packages.
+`Cargo.toml` defines membership; [`tools/workspace/package-domains.json`](tools/workspace/package-domains.json)
+assigns test domains. Validate both with `python3 tools/workspace/cargo_domain.py --check`
+after adding or removing a member. All owned crates live directly under `crates/`.
 
-- `crates/kasane-core/` — editable document, deformation and evaluation.
-- `crates/kasane-project/` — project persistence, resource validation and package publication.
-- `crates/kasane-moc3/` — MOC3 import, export and safety checks.
-- `crates/kasane-render/` — renderer-independent scene plan.
-- `crates/kasane-render-wgpu/` — WGPU renderer.
-- `crates/kasane-render-metal/` — native Metal renderer sharing CPU planning with WGPU.
-- `crates/kasane-sdk/` — transactional Rust authoring API.
-- `crates/kasane-sdk-observe/` — immutable observation and GPU capture.
-- `crates/kasane-python/` — Python wheel and agent scripting interface.
-- `tests/` — acceptance-gate tests and shared model, texture and image-reference fixtures.
-- `models/` — local Live2D model sources and their usage inventory; small generated test fixtures stay in `tests/fixtures/`.
-- `tools/` — SDK, Core and WGPU acceptance commands.
+## Crate responsibilities
 
-## Separate comparison projects
+| Crate | Responsibility |
+| --- | --- |
+| `kasane-core` | Editable documents, deformation and evaluation |
+| `kasane-live2d` | Live2D motion, expression, pose and physics formats |
+| `kasane-animation` | Animation evaluation |
+| `kasane-project` | Project persistence, resources and package publication |
+| `kasane-moc3` | MOC3 import/export and safety validation |
+| `kasane-cmo3` | Cubism editor document import/export |
+| `kasane-psd` | PSD import |
+| `kasane-moc3-psd` | MOC3-to-PSD export |
+| `kasane-render` | Backend-independent render planning |
+| `kasane-render-wgpu` | WGPU rendering |
+| `kasane-render-metal` | Native Metal rendering |
+| `kasane-sdk` | Transactional Rust authoring API |
+| `kasane-sdk-observe` | Immutable inspection and GPU capture |
+| `kasane-python` | Python bindings and independently built wheel |
+| `cubism-matrix-kasane` | SDK comparison benchmark runner |
+| [`editor-core`](crates/editor-core/README.md) | UI-independent Editor state and SDK coordination |
+| [`editor-render`](crates/editor-render/README.md) | Editor scene/overlay adapter to Metal |
+| [`kasane-editor`](crates/kasane-editor/README.md) | GPUI application, panels and native integration |
 
-- `third_party/purism-core/` — Cubism Core-compatible implementation.
-- `benchmarks/cubism-matrix/` — independent official Cubism/Purism comparison benchmark.
-- `third_party/` — local, untracked SDKs and assets.
+The Editor consumes the SDK through workspace dependencies. `editor-core` has no
+GPUI dependency; `editor-render` consumes its scene snapshots and the SDK's Metal
+renderer; `kasane-editor` connects both to the UI. SDK crates must not depend on
+Editor crates. The three Editor crates and their assets are GPL-3.0-only; SDK
+crates are MIT. Shared directories do not imply a shared license:
+[component licensing](LICENSING.md) remains authoritative.
 
-## Editor and shared infrastructure
+## Supporting directories
 
-- `crates/kasane-editor/`, `crates/editor-core/`, `crates/editor-render/` — GPL Editor UI, authoring and rendering.
-- `crates/cubism-matrix-kasane/` — SDK Rust comparison runner.
-- `crates/kasane-editor/assets/{app-icons,icons,locales}/` — application and packaging assets owned by the Editor crate.
-- `vendor/` — third-party GPUI patches; inner workspaces remain independent.
-- `tools/dev-editor.sh`, `tools/build-editor-app.sh`, `tools/test-editor.sh` — Editor entrypoints.
-- `tools/test-sdk.sh` — SDK entrypoint. Both test entrypoints and CI use `tools/package-domains.json`; new members must be assigned to one domain.
-- `docs/` — combined plans, references, development guides and historical records.
-- `tools/package_source.py`, `tools/verify_artifacts.py` — workspace source and built-artifact validation; see [distribution](docs/development/distribution.md).
+| Directory | Contents and ownership |
+| --- | --- |
+| `tools/` | Five daily entrypoints plus [functional tool groups](tools/README.md#directory-ownership) |
+| `tools/tests/` | Tooling regression tests; see [test layout](tools/tests/README.md) |
+| `fixtures/` | Shared test inputs and render references; see [fixture guide](fixtures/README.md) |
+| `crates/<crate>/tests/` | Crate-owned integration/acceptance tests; Python extension tests stay with its crate |
+| `crates/kasane-editor/assets/` | App icons, UI icons and locale resources |
+| `docs/references/` | Topic references |
+| `docs/plans/`, `docs/archive/` | Plans and historical design/measurement records; not current setup instructions |
+| `examples/sdk/` | Public SDK usage examples |
+| `models/` | Model inventory; private model files belong in ignored `local/` |
+| `benchmarks/cubism-matrix/` | Independent official Cubism/Purism comparison project |
+| `vendor/` | Pinned GPUI patches with their own licenses and excluded workspaces |
+| `third_party/` | Local SDKs/assets plus the tracked `purism-core` submodule |
+| `target/` | Disposable build artifacts, test environments, reports and app bundles |
 
-All 18 owned Cargo members live directly in `crates/<package.name>`. See
-[licensing](LICENSING.md) before reusing shared tools or docs. `third_party/purism-core`
-is the tracked submodule exception within otherwise ignored local third-party material.
+## Shared infrastructure
+
+The root `Cargo.lock` pins owned workspace builds. The default Cargo members are
+`kasane-core`, `kasane-project` and `kasane-sdk`; plain `cargo test` is not a whole
+repository gate. Use the SDK and Editor [test entrypoints](tools/README.md#test-coverage)
+to keep platform requirements and package selection explicit. Vendor workspaces
+and the Purism submodule have their own build/test lifecycles.
+
+Root `pyproject.toml` and `uv.lock` pin development Python dependencies. Use
+`uv add --group dev <package>` and commit both files when adding one. The Python
+SDK retains its own build configuration under `crates/kasane-python`.
+
+CI runs SDK and Editor consumer validation on every push and pull request.
+Tooling tests are automatically discovered from `tools/tests/test_*.py`; native tests,
+licensed fixtures and GPU checks retain explicit gates. See the
+[tool guide](tools/README.md), [CI coverage](tools/README.md#test-coverage),
+[dependency record](vendor/README.md#dependencies) and
+[distribution guide](tools/README.md#local-distribution-artifacts).

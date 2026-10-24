@@ -9,8 +9,7 @@ use kasane_moc3::{
 
 #[test]
 fn import_preserves_keys_outside_declared_parameter_range() {
-    let mut bytes =
-        fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let mut bytes = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     let inspection = inspect_moc3(&bytes).unwrap();
     let maximum_offset = inspection.section_offsets[51] as usize;
     bytes[maximum_offset..maximum_offset + 4].copy_from_slice(&0.5f32.to_le_bytes());
@@ -32,7 +31,7 @@ fn import_preserves_keys_outside_declared_parameter_range() {
 
 #[test]
 fn import_document_accepts_self_mask_from_source() {
-    let bytes = fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let bytes = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     let mut document = import_from_bare_moc3(&bytes, &HashMap::new())
         .unwrap()
         .document;
@@ -45,7 +44,7 @@ fn import_document_accepts_self_mask_from_source() {
 
 #[test]
 fn import_document_accepts_mutual_masks_from_source() {
-    let bytes = fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let bytes = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     let mut document = import_from_bare_moc3(&bytes, &HashMap::new())
         .unwrap()
         .document;
@@ -67,8 +66,7 @@ fn import_document_accepts_mutual_masks_from_source() {
 
 #[test]
 fn import_normalizes_empty_drawing_group_sentinel() {
-    let mut bytes =
-        fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let mut bytes = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     import_cases::set_i32(&mut bytes, 82, 0, 2);
     import_cases::set_i32(&mut bytes, 82, 1, 0);
     import_cases::set_i32(&mut bytes, 85, 1, i32::MAX);
@@ -196,7 +194,7 @@ fn test_resource_mapping() {
 
 #[test]
 fn cyclic_parent_references_are_errors() {
-    let source = fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let source = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     for (section, parent, kind) in [(9, 0, "Part"), (16, 0, "Deformer"), (16, 1, "Deformer")] {
         let mut bytes = source.clone();
         import_cases::set_i32(&mut bytes, section, 0, parent);
@@ -208,8 +206,7 @@ fn cyclic_parent_references_are_errors() {
 
 #[test]
 fn invalid_color_windows_are_rejected() {
-    let mut bytes =
-        fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let mut bytes = fs::read(workspace_root().join("fixtures/external_v50/model.moc3")).unwrap();
     import_cases::set_i32(&mut bytes, 107, 0, 1); // six keyforms no longer fit
     let error = import_from_bare_moc3(&bytes, &HashMap::new()).unwrap_err();
     assert!(matches!(
@@ -404,7 +401,7 @@ fn decoder_rejects_blendshape_references_without_core_guard() {
     // Calling the decoder directly exercises its own checks, independently of
     // the optional native consistency checker used by inspect_moc3.
     let original =
-        fs::read(workspace_root().join("tests/fixtures/external_v50_bs_glue/model.moc3")).unwrap();
+        fs::read(workspace_root().join("fixtures/external_v50_bs_glue/model.moc3")).unwrap();
     let inspection = inspect_moc3(&original).unwrap();
     for section in [149, 150, 151, 120, 121, 122, 123, 124] {
         let mut bytes = original.clone();

@@ -251,7 +251,7 @@ and explicit boundary repair/fallback baking for animation transfers.
 cargo test --locked -p kasane-cmo3 -p kasane-project
 cargo run --locked -p kasane-cmo3 --example fixture -- /tmp/model.cmo3
 # Optional: local Cubism Editor archive/XML reader and model setup.
-uv run --locked python tools/check_cmo3.py \
+uv run --locked python tools/validation/check_cmo3.py \
   --editor '/Applications/Live2D Cubism 5.4 alpha' /tmp/model.cmo3
 ```
 
@@ -278,12 +278,12 @@ With the local Nijiiro Mao package installed as described in
 
 ```sh
 cargo test --locked -p kasane-project --test mao_cubism -- --nocapture
-uv run --locked python tools/check_cmo3.py \
+uv run --locked python tools/validation/check_cmo3.py \
   --editor '/Applications/Live2D Cubism 5.4 alpha' \
   target/mao-cubism-integration/editable/mao.cmo3 \
   target/mao-cubism-integration/editable/mao.can3
 # Compare Cubism's evaluated geometry and draw order against Kasane's poses:
-uv run --locked python tools/check_cmo3.py \
+uv run --locked python tools/validation/check_cmo3.py \
   --editor '/Applications/Live2D Cubism 5.4 alpha' \
   --expected-geometry target/mao-cubism-integration/expected-geometry.json \
   target/mao-cubism-integration/editable/mao.cmo3

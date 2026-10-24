@@ -210,7 +210,7 @@ fn import_reports_truncated_pngs_for_both_entry_points() {
         .unwrap()
         .parent()
         .unwrap();
-    let fixture = root.join("tests/fixtures/external_v50");
+    let fixture = root.join("fixtures/external_v50");
     let tmp = TestDirectory::new();
     let png = fs::read(fixture.join("texture_00.png")).unwrap();
     fs::copy(fixture.join("model.moc3"), tmp.0.join("model.moc3")).unwrap();

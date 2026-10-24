@@ -3,7 +3,7 @@ use serde_json::Value;
 
 #[test]
 fn pose3_roundtrip_preserves_groups_links_and_missing_fade() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/minimal.pose3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/minimal.pose3.json");
     let mut pose = decode_pose3(source).unwrap();
     assert_eq!(pose.groups[0].len(), 2);
     pose.groups[0][0].links = Some(vec!["PartLinked".into()]);

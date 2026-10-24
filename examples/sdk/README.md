@@ -1,6 +1,6 @@
 # SDK acceptance recipes
 
-These scripts are invoked by `tools/validate_sdk.py` and Python typing CI.
+These scripts are invoked by `tools/validation/validate_sdk.py` and Python typing CI.
 They were restored from the parent of `9970d891` after P5 detected that the
 validator still referenced scripts deleted by that commit. The source PNG is
 synthetic. Current API adaptations remove the old pixels-per-unit constructor

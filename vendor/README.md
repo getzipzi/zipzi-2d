@@ -1,5 +1,31 @@
 # GPUI 本地补丁清单
 
+## Dependencies
+
+| Dependency | Source |
+| --- | --- |
+| GPUI Kit 0.7.3 | [longbridge/gpui-kit](https://github.com/longbridge/gpui-kit), pinned to `507e82b8115ac73af92b7d3856501f9d7b73b2c9`; `gpui-component` has local compact-menu and tooltip patches under `vendor/gpui-kit`. See [patch details](#kit-compact-菜单与-tooltip). |
+| GPUI Fast 0.1.7 | Local patches for `gpui-fast`, `gpui-fast-macos`, and `gpui-fast-apple` under `vendor/`. See [native Metal patches](#原生-metal-逐文件修改). |
+| Kasane | Workspace SDK sources at [`../crates`](../crates), built from the same repository commit and root `Cargo.lock`. |
+| Metal 0.33 | crates.io |
+
+Sources and overrides are defined in [Cargo.toml](../Cargo.toml). All workspace crates
+share [Cargo.lock](../Cargo.lock); build and test with `--locked`.
+
+Kasane is a local path dependency, so its revision is not pinned by Cargo.lock.
+Use the same checkout for all Kasane crates, including `kasane-sdk-observe` for
+tests. No sibling GPUI checkout is needed.
+
+The workspace enables `gpui-fast` on both GPUI Kit and the optional FPS monitor.
+The three local Fast patches preserve native Metal surfaces, shared queues,
+headless rendering, and frame tracing. Kit also retains upstream `gpui-pre`
+0.3.9 dependencies in its graph; its Fast feature selects the Fast re-exports
+used by the editor. Test renderers use `gpui-fast-apple` too.
+
+The Fast backend and local cache-boundary fix are the accepted default.
+See the [old Kit comparison and adoption decision](../docs/archive/gpui-kit-old-vs-fast.md)
+for measured CPU improvements and retained presentation-latency tradeoffs.
+
 ## 对比基线
 
 保留 crates.io 发布的 `gpui-fast`、`gpui-fast-macos`、`gpui-fast-apple` **0.1.7**，作为 GPUI Kit 0.7.3 的 `gpui-fast` 后端。根目录 `Cargo.toml` 的 `[patch.crates-io]` 选择这些本地包。Kit 固定在官方 commit，另通过 Git source 的 `[patch]` 覆盖下述 `gpui-component` 包。

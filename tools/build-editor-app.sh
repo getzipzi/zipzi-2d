@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. "$(dirname "$0")/workspace.sh"
+tools_dir=$(CDPATH= cd -- "$(dirname -- "$0")/." && pwd)
+. "$tools_dir/workspace/workspace.sh"
 case "${1:-editor}" in
   editor)
     package="kasane-editor"
@@ -25,7 +26,7 @@ esac
 artifact_log=$(mktemp)
 trap 'rm -f "$artifact_log"' 0
 cargo build --locked --message-format=json-render-diagnostics --profile "$cargo_profile" -p "$package" > "$artifact_log"
-binary=$(python3 "$repo_root/tools/workspace_tools.py" executable "$artifact_log")
+binary=$(python3 "$repo_root/tools/workspace/workspace_tools.py" executable "$artifact_log")
 app="$PWD/target/$name.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$binary" "$app/Contents/MacOS/$package"

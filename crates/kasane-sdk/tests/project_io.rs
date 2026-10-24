@@ -731,7 +731,7 @@ fn failed_save_and_open_preserve_state_successful_open_resets_generation() {
 }
 
 fn external_model() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/external_v50")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/external_v50")
 }
 
 #[test]

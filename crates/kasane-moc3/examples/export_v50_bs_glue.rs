@@ -20,7 +20,7 @@ fn main() {
         .parent()
         .unwrap()
         .to_path_buf();
-    let out_dir = root.join("tests/fixtures/external_v50_bs_glue");
+    let out_dir = root.join("fixtures/external_v50_bs_glue");
     fs::create_dir_all(&out_dir).unwrap();
 
     let mut doc = Document::new();

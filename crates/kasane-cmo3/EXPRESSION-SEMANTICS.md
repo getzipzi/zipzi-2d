@@ -50,7 +50,7 @@ With a local licensed Cubism installation, the native probe can save and reload
 an exported CAN3 and compare its embedded operation records:
 
 ```sh
-uv run --locked python tools/check_cmo3.py --editor /path/to/Cubism \
+uv run --locked python tools/validation/check_cmo3.py --editor /path/to/Cubism \
   --resave-animation /path/to/new-saved.can3 /path/to/exported.can3
 ```
 

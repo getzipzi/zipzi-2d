@@ -1,89 +1,83 @@
 # Zipzi 2D
 
-This checkout is integrating the Kasane SDK and Editor. SDK code is
-MIT licensed; Editor code and assets retain GPL-3.0-only. See [licensing](LICENSING.md).
-The workspace, tools and CI share explicit SDK (15 packages) and Editor
-(3 packages) test domains; see [test gates](docs/development/testing.md).
-See the [migration status](docs/repository-merge/README.md) and the
-[revised flattening plan](docs/plans/repository-merge-plan.md). All 18 owned crates are flat under `crates/`; Editor assets live in `crates/kasane-editor/assets/`, while tools, docs and
-third-party patches use root directories.
-See the [Editor guide](docs/development/editor.md) and [documentation index](docs/README.md).
+Zipzi 2D brings the Kasane Rust authoring SDK, Python bindings and native macOS
+Editor into one workspace. It supports editable 2D model documents, animation,
+Live2D/Cubism format interoperability, and WGPU/Metal rendering. The project is
+under development and has not been officially released; APIs and file formats
+may change.
 
-Kasane 2D provides a Rust authoring SDK, Python bindings, and a WGPU renderer
+## Start here
 
-Start with the [Python SDK README](crates/kasane-python/README.md) and
-[Python API reference](crates/kasane-python/API.md). See
-[architecture](docs/ARCHITECTURE.md). The [model inventory](models/README.md) records
-local models used by tests and benchmarks.
+- **Desktop Editor:** [setup, development and native tests](crates/kasane-editor/README.md).
+- **Rust SDK:** [authoring API](crates/kasane-sdk/README.md) and
+  [architecture](docs/ARCHITECTURE.md).
+- **Python SDK:** [installation and examples](crates/kasane-python/README.md),
+  [API reference](crates/kasane-python/API.md), [recipes](examples/sdk/README.md).
+- **Contributing:** [repository structure](MONOREPO.md),
+  [test gates](tools/README.md#test-coverage), [tools](tools/README.md) and
+  [documentation index](docs/README.md).
 
-The [Runtime preparation record](docs/runtime/README.md) contains the R0 API
-inventory, ownership audit and reproducible CPU fixture/baseline tools for the
-paired Editor integration. Runtime and ConnectedBackend are not implemented yet.
+## Development
 
-## Build and test
-
-The unified workspace requires Rust 1.95 or newer (Editor GPUI uses
-`std::hint::cold_path`, stabilized in 1.95).
-
-Python tools use uv (0.10.7 or newer) and CPython 3.14. The root
-`pyproject.toml` and `uv.lock` manage development tools; the SDK wheel remains
-an independently built package under `crates/kasane-python`.
+Use Rust 1.95 or newer, uv 0.10.7 or newer, and CPython 3.14.
+The Editor additionally requires macOS, Xcode Command Line Tools and a
+Metal-capable GPU. Run these commands from the repository root:
 
 ```sh
 uv sync --locked
-cargo test --locked -p kasane-sdk
-uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
-uv run --locked python tools/validate_sdk.py --wheel /absolute/path/to/kasane.whl
+python3 tools/workspace/cargo_domain.py --check
+
+# Focused SDK development
+cargo test --locked -p kasane-sdk --test integration physics_editing::
+
+# Native Editor (macOS)
+cargo run --locked -p kasane-editor
+./tools/test-editor.sh fast timeline::
+
+# Repository tooling tests; no native application build
+uv run --locked python tools/test_tools.py
 ```
 
-For repeated local edits, use the focused entrypoint:
+For Python development, `./tools/test-sdk.sh python` refreshes the Debug extension
+before running CPU and inspection tests; add `--observe` for GPU coverage.
+`./tools/test-sdk.sh wheel` builds a Release wheel and validates its isolated
+installation. The wheel is an independent package under `crates/kasane-python`;
+root `pyproject.toml` and `uv.lock` manage development tools.
 
-```sh
-./tools/test-sdk.sh fast                         # SDK unit + ordinary CPU integration
-./tools/test-sdk.sh fast physics_editing::       # Filter one SDK domain
-./tools/test-sdk.sh mesh                         # Daily alpha mesh regressions + boundary limits
-./tools/test-sdk.sh regression                   # Rust libraries/integration, excluding stress remainder
-./tools/test-sdk.sh stress                       # Complete alpha mesh suite + fixed-seed stress matrix
-./tools/test-sdk.sh python                       # Current Debug extension + CPU/inspection tests
-./tools/test-sdk.sh python --observe             # Current Debug extension + CPU/inspection/GPU
-./tools/test-sdk.sh python -- -k history          # Filter Python tests
-./tools/test-sdk.sh wheel                        # Real Release wheel + isolated acceptance
-./tools/test-sdk.sh full                         # Format + complete Rust suite + CPU wheel gate
-```
+## Tests
 
-SDK ordinary integration cases share `--test integration`. Alpha mesh daily
-regression keeps four representative cases from each original random matrix;
-`stress` adds the remaining cases, preserving all 24 fragmented and 64 small
-masks with the same seeds and assertions. `mesh` and `regression` skip only the
-`alpha_mesh_stress::` tests. The 65536-vertex boundary case stays in daily checks.
-Plain `cargo test --locked -p kasane-sdk` and `full` include the complete matrix;
-stress tests are not ignored or feature-gated.
-For a narrow Rust invocation use, for example,
-`cargo test --locked -p kasane-sdk --test integration physics_editing::`.
+Choose the smallest gate covering the change, then broaden when needed. Run
+commands from the repository root; inspect available modes with
+`./tools/test-sdk.sh --help`, `./tools/test-editor.sh --help` or
+`uv run --locked python tools/test_tools.py --help`.
 
-The Python development gate keeps its environment in `target/python-tests/`
-and reuses the workspace `target/` Cargo artifacts. Each invocation refreshes
-the extension, checks its GPU capability, and starts fresh test processes.
-This covers the current Rust and Python sources without rebuilding a Release
-wheel on each edit. CPU/observe development runs share one editable environment
-because Maturin installs their
-native extension at the same source location. Packaged-wheel tests use separate
-environments and import only the installed wheel. Complete wheel acceptance
-remains a separate gate; its failures are propagated.
+| Changed area | Starting command |
+| --- | --- |
+| One Rust crate/module | `cargo test --locked -p <crate> --lib <filter>`; add its integration target when relevant |
+| SDK authoring behavior | `./tools/test-sdk.sh fast <filter>` |
+| Alpha mesh generation | `./tools/test-sdk.sh mesh` |
+| Editor coordination | `./tools/test-editor.sh fast <filter>` |
+| Editor UI (macOS/Metal) | `./tools/test-editor.sh ui <filter>` |
+| Python SDK | `./tools/test-sdk.sh python` (add `--observe` for GPU coverage) |
+| Repository tools | `uv run --locked python tools/test_tools.py -p test_<tool>.py` |
 
-Run Python tools with `uv run --locked ...`. Add development dependencies with
-`uv add --group dev <package>` and commit both `pyproject.toml` and `uv.lock`.
-Agent experiments share one uv-managed environment per experiment and allow
-participants to install dependencies; see the [experiment guide](docs/archive/SDK-EXPERIMENTS.md).
+Filters and filenames are placeholders; omit them to run the selected gate.
+For a crate's integration targets, inspect its README and `tests/`, or list cases
+with `cargo test --locked -p <crate> --test <target> -- --list`.
+Editor shell gates clear `KASANE_DEV_SESSION_DIR`; clear it explicitly when
+running Editor Cargo tests directly.
 
-The wheel validator installs the wheel into a temporary environment outside
-the source tree and tests project creation, import, editing, save, and export.
-An observe-enabled wheel can also run GPU and pinned image-reference checks;
-`--full` additionally requires official and Purism Core probes. See the
-[tool guide](tools/README.md) for the complete commands.
+[Full coverage, prerequisites and CI](tools/README.md#test-coverage) define
+regression, stress, native acceptance and packaged-wheel gates. Both domain
+scripts default to expensive **full** runs when no mode is supplied.
+Plain `cargo test` selects only `kasane-core`, `kasane-project` and `kasane-sdk`.
+Tooling tests belong in `tools/tests/`, crate tests stay with their crate, and
+shared data belongs in [`fixtures/`](fixtures/README.md).
 
-See [local distribution artifacts](docs/development/distribution.md) for source
-archives, wheel notices and debug/release app bundle validation.
+All owned crates share the root Cargo workspace and lockfile. Local models belong
+in `models/local/`; see the [model inventory](models/README.md). Source archives,
+Python wheels and macOS app bundles have separate
+[distribution checks](tools/README.md#local-distribution-artifacts).
 
 ## License and third-party rights
 

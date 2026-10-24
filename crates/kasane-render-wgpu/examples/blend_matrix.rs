@@ -1,5 +1,5 @@
 //! Standalone GPU matrix for the 18 color × 5 alpha extended blend modes.
-//! The companion script `tools/compare_wgpu_blends.py` compares its PNG with
+//! The companion script `tools/validation/compare_wgpu_blends.py` compares its PNG with
 //! a pinned official Framework capture using identical sample colors.
 use std::collections::HashMap;
 use std::fs::File;

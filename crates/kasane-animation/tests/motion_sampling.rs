@@ -16,10 +16,10 @@ fn decode_motion3(
 }
 
 const RESTRICTED: &str =
-    include_str!("../../../tests/fixtures/animation_cpu/bezier_restricted.motion3.json");
+    include_str!("../../../fixtures/animation_cpu/bezier_restricted.motion3.json");
 const UNRESTRICTED: &str =
-    include_str!("../../../tests/fixtures/animation_cpu/bezier_unrestricted.motion3.json");
-const TYPED: &str = include_str!("../../../tests/fixtures/animation_cpu/typed.motion3.json");
+    include_str!("../../../fixtures/animation_cpu/bezier_unrestricted.motion3.json");
+const TYPED: &str = include_str!("../../../fixtures/animation_cpu/typed.motion3.json");
 
 #[test]
 fn beziers_match_official_framework_cpu_samples() {

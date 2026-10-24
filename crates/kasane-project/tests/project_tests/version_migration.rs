@@ -18,7 +18,7 @@ fn test_v42_project_lifecycle_detachment_and_export() {
         .unwrap()
         .parent()
         .unwrap();
-    let src_fixture = root.join("tests/fixtures/external_v42");
+    let src_fixture = root.join("fixtures/external_v42");
 
     let tmp = TestDirectory::new();
     let source_dir = tmp.0.join("v42_external_source");

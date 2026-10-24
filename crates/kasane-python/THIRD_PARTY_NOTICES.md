@@ -18,5 +18,5 @@ PurismCore is distributed under the MIT License included in that submodule.
 
 Editor-owned source and assets retain GPL-3.0-only; see [LICENSING](LICENSING.md)
 and the full [GPL text](LICENSE-GPL-3.0). Patched GPUI sources now live in `vendor/`;
-their original notices and [dependency/patch record](docs/development/dependencies.md)
+their original notices and [dependency/patch record](vendor/README.md#dependencies)
 remain authoritative. Directory flattening does not relicense third-party code.

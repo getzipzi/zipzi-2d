@@ -7,7 +7,7 @@ use std::{collections::HashMap, path::PathBuf};
 fn fixture(name: &str) -> Vec<u8> {
     std::fs::read(
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures")
+            .join("../../fixtures")
             .join(name)
             .join("model.moc3"),
     )
@@ -112,7 +112,7 @@ fn v6_references_and_stale_reports_are_checked_without_native_code() {
     let textures = HashMap::from([(
         0,
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/external_v50_bs_glue/texture_00.png"),
+            .join("../../fixtures/external_v50_bs_glue/texture_00.png"),
     )]);
     let mut doc = import_from_bare_moc3(&original, &textures)
         .unwrap()

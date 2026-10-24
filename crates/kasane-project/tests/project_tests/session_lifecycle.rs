@@ -436,7 +436,7 @@ fn test_project_detachment_lifecycle() {
         .unwrap()
         .parent()
         .unwrap();
-    let src_fixture = root.join("tests/fixtures/external_v50");
+    let src_fixture = root.join("fixtures/external_v50");
 
     let tmp = TestDirectory::new();
     let source_dir = tmp.0.join("external_source");
@@ -525,13 +525,12 @@ fn import_rejects_cycles_without_replacing_session() {
         .unwrap()
         .parent()
         .unwrap();
-    let source = fs::read(root.join("tests/fixtures/external_v50/model.moc3")).unwrap();
+    let source = fs::read(root.join("fixtures/external_v50/model.moc3")).unwrap();
     let offsets = kasane_moc3::inspect_moc3(&source).unwrap().section_offsets;
     let tmp = TestDirectory::new();
     let path = tmp.0.join("bad.moc3");
     let mut session = DocumentSession::new();
-    let (result, _) =
-        session.import_model3(&root.join("tests/fixtures/external_v50/model.model3.json"));
+    let (result, _) = session.import_model3(&root.join("fixtures/external_v50/model.model3.json"));
     assert!(result.status.is_ok());
     let baseline = encode_project(session.document()).unwrap();
     let revision = session.document().revision();

@@ -41,7 +41,7 @@ def run(output: Path) -> Path:
     if not output.is_absolute():
         raise ValueError("Output path must be absolute")
     output.mkdir(parents=True, exist_ok=True)
-    fixture = Path(__file__).resolve().parents[2] / "tests/fixtures/external_v50"
+    fixture = Path(__file__).resolve().parents[2] / "fixtures/external_v50"
     model3 = fixture / "model.model3.json"
     moc3 = fixture / "model.moc3"
     texture = fixture / "texture_00.png"

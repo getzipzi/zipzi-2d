@@ -28,7 +28,7 @@ fn document() -> Document {
 
 #[test]
 fn motion_import_roundtrips_segments_events_and_project() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/typed.motion3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/typed.motion3.json");
     let imported = import_motion3(&document(), MOTION, "Idle", source).unwrap();
     assert!(imported.diagnostics.is_empty());
     let mut reopened = decode_project(&encode_project(&imported.candidate).unwrap()).unwrap();
@@ -60,7 +60,7 @@ fn motion_import_roundtrips_segments_events_and_project() {
 
 #[test]
 fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/typed.motion3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/typed.motion3.json");
     let imported = import_motion3(&document(), MOTION, "Idle", source).unwrap();
     let clip = imported.candidate.get_motion(MOTION).unwrap();
     let ids: Vec<_> = clip.tracks[0].keys().map(|key| key.id.clone()).collect();
@@ -101,7 +101,7 @@ fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
 #[test]
 fn key_identity_is_excluded_from_opaque_content_fingerprint() {
     let mut source: Value = serde_json::from_str(include_str!(
-        "../../../tests/fixtures/animation_cpu/typed.motion3.json"
+        "../../../fixtures/animation_cpu/typed.motion3.json"
     ))
     .unwrap();
     source["Future"] = serde_json::json!({"label": "preserve"});
@@ -126,7 +126,7 @@ fn key_identity_is_excluded_from_opaque_content_fingerprint() {
 
 #[test]
 fn virtual_motion_targets_roundtrip_and_opaque_namespace_changes_block_export() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/minimal.motion3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/minimal.motion3.json");
     let imported = import_motion3(&document(), MOTION, "Mixed", source).unwrap();
     assert_eq!(imported.diagnostics.len(), 2);
     let exported: Value =
@@ -149,7 +149,7 @@ fn virtual_motion_targets_roundtrip_and_opaque_namespace_changes_block_export() 
 
 #[test]
 fn motion_group_registration_is_separate_and_roundtrips() {
-    let source = include_str!("../../../tests/fixtures/animation_cpu/typed.motion3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/typed.motion3.json");
     let mut candidate = import_motion3(&document(), MOTION, "Idle", source)
         .unwrap()
         .candidate;
@@ -195,8 +195,7 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
         .parent()
         .unwrap();
     let mut session = DocumentSession::new();
-    let (result, _) =
-        session.import_model3(&root.join("tests/fixtures/external_v50/model.model3.json"));
+    let (result, _) = session.import_model3(&root.join("fixtures/external_v50/model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
     assert!(result
         .diagnostics

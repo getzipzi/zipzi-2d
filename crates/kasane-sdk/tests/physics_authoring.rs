@@ -514,7 +514,7 @@ fn changesets_label_order_and_history_direction_are_precise() {
 #[test]
 fn unresolved_import_keeps_usable_channels_and_external_group_ids() {
     let (mut s, a, _, x, y) = setup();
-    let source = include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json");
+    let source = include_str!("../../../fixtures/animation_cpu/thirty.physics3.json");
     let mut value: serde_json::Value = serde_json::from_str(source).unwrap();
     value["PhysicsSettings"][0]["Input"][0]["Source"]["Id"] = "Missing".into();
     value["PhysicsSettings"][0]["Output"][0]["Destination"]["Id"] = "Y".into();

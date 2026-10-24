@@ -39,7 +39,7 @@ SDK 正式发布仍执行完整结构校验。共享存储保持原有 JSON 数�
 
 新增能力先确定规则所有权，再选择语言。决定模型变化、求值或形变保持的正式算法由 Rust 体系实现，即使当前只有 Python 调用者；文档不变量归 core，事务与建模操作归 SDK，持久化归 project。Python 可组合已有操作完成批处理、报告与脚本便利语法，但组合中若产生新的建模规则，也应交由 Rust 维护。尚未稳定的模型专属算法保留在实验中。
 
-正式验收使用仓库外安装的 Python wheel、Rust 契约与 GPU 测试、官方/Purism Core 数值探针，以及仓库内固定的外部 GPU 参考图。参考图的输入哈希和来源记录在 `tests/fixtures/render_reference/`；[验证命令](VALIDATION.md)会检查输入与参考图身份。
+正式验收使用仓库外安装的 Python wheel、Rust 契约与 GPU 测试、官方/Purism Core 数值探针，以及仓库内固定的外部 GPU 参考图。参考图的输入哈希和来源记录在 `fixtures/render_reference/`；[验证命令](VALIDATION.md)会检查输入与参考图身份。
 
 Godot 编辑器、Viewer、demo 与 GDExtension 已从代码库移除。旧实现方案和里程碑记录见 [archive](archive/)。
 

@@ -319,7 +319,7 @@ fn truncated_psd_does_not_panic() {
 #[test]
 fn imports_psd_created_by_the_existing_moc3_exporter() {
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures/gpu/gpu-package/model.model3.json");
+        .join("../../fixtures/gpu/gpu-package/model.model3.json");
     let (bytes, exported) = kasane_moc3_psd::from_model3_file(&fixture).unwrap();
     let bundle = import_psd(&bytes).unwrap();
     assert_eq!(bundle.report.raster_layers, exported.layers);
