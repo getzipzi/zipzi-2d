@@ -35,6 +35,22 @@ Editor crates. The three Editor crates and their assets are GPL-3.0-only; SDK
 crates are MIT. Shared directories do not imply a shared license:
 [component licensing](LICENSING.md) remains authoritative.
 
+## SDK and language boundaries
+
+The Python wheel contains both PyO3 bindings and Python workflow code. Model
+invariants and evaluation rules belong in the Rust core/format crates;
+transactions, history and authoring rules belong in `kasane-sdk`; resource I/O
+and publication belong in `kasane-project`. PyO3 converts values, errors and
+results. Python provides user-facing types, context managers, batch workflows
+and reports. New modeling rules belong in Rust even when Python is their only
+current caller; model-specific experiments remain in experiment tooling.
+
+`kasane-sdk-observe` captures immutable session snapshots and validates image
+resources through `kasane-project`. Render backends share scene planning and CPU
+geometry through `kasane-render`: native Metal on macOS and WGPU on other
+platforms. See [format conversion boundaries](crates/kasane-cmo3/README.md) and
+[coordinate contracts](docs/archive/coordinates.md) for format-specific details.
+
 ## Supporting directories
 
 | Directory | Contents and ownership |

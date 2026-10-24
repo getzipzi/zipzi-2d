@@ -2,7 +2,7 @@
 
 状态：历史实施记录。调研日期：2026-09-23。代码基线：`8b283f8eeca785b506e6dbae0552cc2358f49053`。
 
-本文记录 SDK 从 Godot Document Bridge 迁移时的设计与阶段验收，涉及的旧目录和脚本可能已移除。当前架构、可运行命令和 API 分别见 [ARCHITECTURE.md](../ARCHITECTURE.md)、[VALIDATION.md](../VALIDATION.md) 和 [SDK-API.md](../SDK-API.md)。
+本文记录 SDK 从 Godot Document Bridge 迁移时的设计与阶段验收，涉及的旧目录和脚本可能已移除。当前架构、可运行命令和 API 分别见 [MONOREPO.md](../../MONOREPO.md#sdk-and-language-boundaries)、[工具指南](../../tools/README.md#test-coverage) 和 [Python API](../../crates/kasane-python/API.md)。
 
 本文把当时已验证的仓库事实、建议设计和未来验收分开记录。其余新 crate、目录和命令描述是实施时的记录，不代表当前状态。
 

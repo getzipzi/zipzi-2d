@@ -32,6 +32,15 @@ inputs; Editor visibility also refreshes the host preview. The old
 `ObjectLocks` and `DeformerDisplay` APIs and wire fields are removed, with no
 migration adapters.
 
+## Session and history ownership
+
+`AuthoringSession` owns document undo/redo through checkpoint history.
+`kasane-core` supplies persistent-content checkpoints, candidate publication and
+restoration; `kasane-project::DocumentSession` owns project/resource I/O and keeps
+no history stack. Interactive edits preview an isolated candidate and commit one
+history step. Cancellation, unchanged edits and failures preserve the redo branch.
+The SDK coordinates history resource paths and the saved baseline when saving.
+
 ## Tests
 
 From the workspace root, `./tools/test-sdk.sh fast` runs SDK unit and ordinary CPU

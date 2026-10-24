@@ -23,6 +23,9 @@ Keep native widgets, GPU resources and window lifecycle in the consuming crates.
 Reusable model semantics belong in the SDK; this crate supplies Editor policy
 and coordination around them.
 
+See the [viewport interaction contract](../../docs/references/viewport-interactions.md)
+for gesture ownership, capture lifecycle and cancellation rules.
+
 ## Test
 
 Run from the repository root:

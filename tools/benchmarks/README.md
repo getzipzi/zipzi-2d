@@ -1,4 +1,110 @@
-# Property editing chain benchmark
+# Benchmark guides
+
+Run commands from the repository root. These guides document existing harnesses
+and how to interpret their output; measured results belong in
+[`docs/archive/benchmarks/`](../../docs/archive/benchmarks/).
+
+| Guide | Use it for |
+| --- | --- |
+| [Native Mesh Properties](#mesh-properties-native-window-benchmark) | Real-window input, UI/Metal work and presentation correlation |
+| [Property editing chain](#property-editing-chain-benchmark) | Synchronous CPU editing cost, stage attribution and ownership controls |
+
+Choose checks using the [UI performance reference](../../docs/references/ui-performance.md).
+See the [tool index](../README.md#benchmarks-and-research-tools) for Timeline,
+window and offscreen benchmark commands. Native window harnesses require macOS,
+Metal and the documented local model; CPU chain measurements do not measure
+window or GPU latency.
+
+## Mesh properties native-window benchmark
+
+Run the same Mao source model, Release build, isolated configuration, 30 warmup
+inputs and 300 measured inputs at a target 120 Hz as the existing window UI
+benchmark:
+
+```sh
+./tools/benchmarks/properties-benchmark.sh target/properties-run 300 120
+```
+
+`KASANE_BENCH_MODEL` overrides the model. `KASANE_BENCH_PROPERTY_CASE` selects one
+case from the checklist below. The runner requires an unlocked Mac, a visible,
+active native window, and real Metal. Avoid input and concurrent builds while it
+runs. It chooses the visible mesh with the most vertices, restores committed
+edits outside each measured phase, never saves the source, and quits at the end.
+
+### Checklist
+
+| Cases | Input path |
+| --- | --- |
+| `name`, `runtime_id` | GPUI text entry, replacement and Enter commit |
+| `part` | Open searchable select, enter query, debounce, select; verify requested ID |
+| `masks` | Search and add a different mesh, remove the first reference; verify added ID |
+| `opacity_text`, `opacity_drag` | Text commit and uninterrupted Slide Number Input gesture |
+| `multiply_hex`, `multiply_reset` | Inline HEX commit and restore-default suffix |
+| `color_blend` | Cycle all 18 supported modes; verify each requested mode |
+| `enabled` | Repeated checkbox changes |
+| `picker_open_close` | Open the production popover and dismiss with Escape |
+| `picker_tabs` | Switch RGB/HSV tabs |
+| `picker_hex`, `picker_invalid_hex` | Live valid HEX preview and alternating invalid/valid drafts |
+| `picker_hue`, `picker_sv` | Continuous color-wheel hue and SV-triangle drags |
+| `picker_rgb_{0,1,2}_text`, `picker_hsv_{0,1,2}_text` | Edit every RGB and HSV numeric field |
+| `picker_rgb_{0,1,2}_drag`, `picker_hsv_{0,1,2}_drag` | Scrub every RGB and HSV numeric field |
+| `picker_done`, `picker_cancel` | Change color, confirm/cancel, reopen |
+| `picker_swatches` | Hover original/current swatches, including tooltip dwell |
+| `idle`, `picker_idle` | Blurred, static panel and open picker baselines |
+
+Multiply Color is RGB; its picker has no Alpha control. Color-channel gestures
+start from a non-grey color. Number scrubs use the existing Timeline number
+probe's repeated 7-pixel movement pattern so quantized controls receive meaningful
+changes. Continuous inputs never wait for a preview frame. Searchable selects
+wait for their actual debounce; popup lifecycle cases wait for their new UI.
+
+Only observation and pointer-isolation hooks require `test-support`. The native
+runner reads observed bounds, dispatches actual pointer/key/IME text events, and
+does not call headless helpers that force frames after each input. Pointer
+isolation follows the existing animation-number benchmark: native AppKit hover
+cannot interrupt scripted drags. Normal application builds do not include these
+observation hooks.
+
+### Measurements and interpretation
+
+The output contains `environment.txt`, build/application logs, `trace.jsonl`,
+`requests.json`, and `summary.json`. Each case reports measured input count,
+observed value changes, timer lateness, actual input intervals, UI draw counts,
+window presentations, request outcomes, and p50/p95/p99/max durations.
+
+The reporter reuses `frame-trace-report.py` for request, texture lifetime and
+presentation correlation. Metrics include scene evaluation, resource preparation,
+encoding, model-preview GPU, UI CPU draw, and window-composition GPU. It sums
+nested native event-handler scopes per input separately from interaction wall
+time, which includes intentional debounce and popup waits. GPU durations are
+Metal timestamps, not CPU submission duration.
+
+Tabs, invalid drafts, tooltips and idle can legitimately reuse a model texture.
+Their UI and composition work is reported by phase; the reporter does not invent
+input-to-presentation latency for those changes. Missing latency counts stay
+visible. The phase includes 250 ms of trailing settle time; idle rates should
+use the reported phase duration.
+
+As in the existing UI benchmark, missing samples/end records, dropped trace
+events, failed native presentations, GPU errors, edit errors and incomplete runs
+are failures. Debug measurements cannot pass Release validation. Cases that edit
+values must demonstrate a changed property or live color/number value. Expected
+no-change operations retain their zero change count.
+
+Compare CPU and GPU stages with the existing 8.33 ms reference budget and retain
+over-budget counts. End-to-end latency can span multiple refresh intervals;
+exceeding 8.33 ms does not itself establish a dropped frame. Input cadence is
+measured rather than inferred from the requested 120 Hz. Review request outcomes
+alongside successful samples. Report recurring spikes or missing coverage even
+when integrity checks pass; the script's zero exit status establishes valid
+measurement, not universal performance health.
+
+```sh
+uv run --locked python tools/benchmarks/properties-trace-report.py target/properties-run/trace.jsonl --output target/properties-run
+uv run --locked python tools/test_tools.py -p 'test*trace_report.py'
+```
+
+## Property editing chain benchmark
 
 This benchmark locates synchronous editing costs before changing SDK or editor
 behavior. It uses the production `Editor` entry points, actual imported model
@@ -6,18 +112,19 @@ data, isolated edit candidates, and the CPU scene/evaluation path. It does not
 measure GPUI layout, GPU work, native event delivery, FPS or input-to-photon
 latency. Native Properties probes below check the ownership behavior separately.
 
-## Run
+### Run
 
 ```sh
-python3 tools/benchmarks/property-chain-benchmark.py \
+uv run --locked python tools/benchmarks/property-chain-benchmark.py \
   models/local/mao/runtime/mao_pro.model3.json target/property-chain-unique \
   --reader-policy unique
-python3 tools/benchmarks/property-chain-benchmark.py \
+uv run --locked python tools/benchmarks/property-chain-benchmark.py \
   models/local/mao/runtime/mao_pro.model3.json target/property-chain-retained \
   --reader-policy retained
 ```
 
-Requires the local model and sibling SDK checkout. A saved
+Requires the local model and the SDK sources in this workspace; no sibling
+checkout is needed. A saved
 `project.kasane.json` can also be supplied. Missing resources are explicitly
 reported as skips; a missing model, failed edit or incomplete run is an error.
 Output directories must be new. Source model files are never saved or modified.
@@ -47,7 +154,7 @@ Thermal state, hardware, compiler version, relevant build environment, repositor
 revisions/diffs, source hashes, full source archive, model-subtree hashes and
 binary hashes are retained. No model assets are copied into the report.
 
-## Workload and timing boundaries
+### Workload and timing boundaries
 
 Mesh selection prefers editable ArtMesh215 when present; otherwise it chooses
 the median-size mesh editable at the default parameter pose. Its vertex count
@@ -86,7 +193,7 @@ one history step; undo and cancellation must restore the original values.
 CPU Modeling/Animation results must pass production acceptance checks. A frame
 accepted here has not been GPU rendered or displayed by an OS window.
 
-## Ownership controls
+### Ownership controls
 
 `unique` does not retain an extra `ObjectIndex` reader across the edit. The
 document cache can still use `Arc::make_mut`, but usually owns its only strong
@@ -134,7 +241,7 @@ ownership regime applies; native CPU and GPU latency continue to come from the
 existing Properties report. Do not use instrumented native timings as an
 uninstrumented before/after comparison.
 
-## Read the report
+### Read the report
 
 `summary.md` lists the median of the three per-process medians, their range,
 the median of per-process empirical P95s, and the paired probe/plain median
@@ -177,6 +284,6 @@ sleep 1
 wait "$chain_profile_pid"
 ```
 
-## Refactor comparison
+### Refactor comparison
 
-The runner preserves plain binaries and fingerprints. See the [refactor comparison](../archive/benchmarks/2026-10-21-property-chain-refactor.md) for historical before/after measurements across property policies and index snapshot changes.
+The runner preserves plain binaries and fingerprints. See the [refactor comparison](../../docs/archive/benchmarks/2026-10-21-property-chain-refactor.md) for historical before/after measurements across property policies and index snapshot changes.

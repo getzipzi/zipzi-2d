@@ -22,3 +22,13 @@ Pose resolution and no Motion fades, Expression, Physics or fired events. It is
 independent of the queued `MotionPreview` result pipeline. `motion_positions` in
 result snapshots exposes SDK loop coordinates, including its duration + 1 / FPS
 tail; `canonical_motion_seek_time` maps local Timeline seeks within that cycle.
+
+## Motion storage and validation
+
+`MotionClip` tracks and events use `SharedVec`: metadata edits retain shared curve
+payloads, while curve edits separate them through copy-on-write. Typed scalar
+patches validate the changed field and its dependencies. Fade edits avoid walking
+curves; duration/FPS changes check existing track/event endpoints, half-frame
+tolerance and source time ranges. SDK publication still performs full structural
+validation. Shared storage keeps the JSON array representation, and history
+budgets charge each checkpoint in full to avoid undercounting shared allocations.

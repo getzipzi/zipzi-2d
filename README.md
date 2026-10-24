@@ -10,7 +10,7 @@ may change.
 
 - **Desktop Editor:** [setup, development and native tests](crates/kasane-editor/README.md).
 - **Rust SDK:** [authoring API](crates/kasane-sdk/README.md) and
-  [architecture](docs/ARCHITECTURE.md).
+  [crate responsibilities](MONOREPO.md#crate-responsibilities).
 - **Python SDK:** [installation and examples](crates/kasane-python/README.md),
   [API reference](crates/kasane-python/API.md), [recipes](examples/sdk/README.md).
 - **Contributing:** [repository structure](MONOREPO.md),

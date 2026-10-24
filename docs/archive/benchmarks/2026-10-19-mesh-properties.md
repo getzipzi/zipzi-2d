@@ -145,6 +145,6 @@ tooltip 使用 1,200 次复测替代主测的小样本。修复后的五项均�
 KASANE_BENCH_PROPERTY_CASE=picker_swatches ./scripts/properties-benchmark.sh target/new-tooltip-run 1200 120
 ```
 
-[完整负载和计时说明](../references/mesh-properties-benchmark.md)。
+[完整负载和计时说明](../../../tools/benchmarks/README.md#mesh-properties-native-window-benchmark)。
 本报告记录修复前结果。后续改动和剩余预算问题见
 [CPU 修复与小样本验证](2026-10-19-mesh-properties-cpu-fix.md)。

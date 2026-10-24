@@ -6,7 +6,8 @@ component selection but keep navigation and presentation independent.
 
 ## Where behavior lives
 
-`crates/editor-core/src/tools/` groups interaction behavior by operation:
+[`editor-core/src/tools/`](../../crates/editor-core/src/tools/) groups interaction
+behavior by operation:
 
 - `select.rs`: shared hit/selection preparation, deferred object clicks,
   rectangle completion and its overlay and capture hints.
@@ -30,7 +31,8 @@ never own model transactions.
 
 ## Lifecycle
 
-`crates/editor-core/src/viewport/interaction.rs` owns interaction acquisition and
+[`viewport/interaction.rs`](../../crates/editor-core/src/viewport/interaction.rs)
+owns interaction acquisition and
 release for both UI and synchronous core clients:
 
 1. `begin_canvas_gesture(binding, point, shift, alt)` checks the displayed frame before taking
@@ -105,6 +107,20 @@ returns core cleanup for the window to apply. Delayed cleanup cannot release a
 replacement capture.
 
 ## Verification
+
+Run focused checks from the repository root:
+
+```sh
+./tools/test-editor.sh fast viewport_targets::
+./tools/test-editor.sh fast viewport_isolation::
+# Native/headless UI libraries require macOS and Metal:
+./tools/test-editor.sh ui headless_tests::input_routing
+./tools/test-editor.sh ui input_routing::policy::
+```
+
+The shell entrypoint clears `KASANE_DEV_SESSION_DIR`. See
+[test coverage](../../tools/README.md#test-coverage) for broader gates.
+
 
 Core integration cases cover current-frame rejection, delayed frames, original
 write targets, one-step history, cancel/rollback and independent viewport owners.

@@ -180,6 +180,9 @@ updates need new provenance and comparison evidence. See
 
 ## Benchmarks and research tools
 
+See [benchmark workloads and report interpretation](benchmarks/README.md) for
+the native Mesh Properties and CPU property-editing-chain harnesses.
+
 `benchmarks/timeline-benchmark.sh`, `benchmarks/timeline-number-benchmark.sh`, `benchmarks/properties-benchmark.sh`
 and `benchmarks/window-benchmark.sh` run native Editor benchmarks. `benchmarks/property-chain-benchmark.py`
 and `benchmarks/*-trace-report.py` measure and analyze editing/frame work. Native runs require

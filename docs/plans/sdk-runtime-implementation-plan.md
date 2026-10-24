@@ -278,7 +278,7 @@ CPU fixture 必须可在无授权素材环境运行。GPU 与真实模型测试�
 
 ### 6.1 测量方法
 
-复用[属性链基准](../references/property-chain-benchmark.md)、[UI 性能参考](../references/ui-performance.md)和 README 中的 Timeline/窗口基准。采用相同机器、Release 配置、模型、窗口尺寸和交互脚本；预热后至少 5 对交替的 baseline/candidate 进程测量。记录每进程 P50/P95、各进程统计的中位数和范围，不将不同操作或不同模型混为一个平均值。
+复用[属性链基准](../../tools/benchmarks/README.md#property-editing-chain-benchmark)、[UI 性能参考](../references/ui-performance.md)和 README 中的 Timeline/窗口基准。采用相同机器、Release 配置、模型、窗口尺寸和交互脚本；预热后至少 5 对交替的 baseline/candidate 进程测量。记录每进程 P50/P95、各进程统计的中位数和范围，不将不同操作或不同模型混为一个平均值。
 
 最低场景：属性数值/颜色拖动、顶点或变形器拖动、Timeline 键拖动/seek、持续动画播放、双视口切换，以及另一文档存在后台 agent 批次时的人工操作。
 

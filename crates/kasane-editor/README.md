@@ -30,7 +30,9 @@ unification. `test-support` enables production-library native acceptance targets
 animation/transfer cases additionally need separately obtained local model assets.
 See [test coverage and CI](../../tools/README.md#test-coverage) for the full mode
 matrix and [benchmarks](../../tools/README.md#benchmarks-and-research-tools) for
-native measurement commands.
+native measurement commands. Consult the
+[UI performance reference](../../docs/references/ui-performance.md) when changing
+redraws, caching, large lists or frame scheduling.
 
 ## Development process
 

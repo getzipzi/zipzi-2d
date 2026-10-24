@@ -4,7 +4,7 @@
 投影失效、Parameter 重复验证，以及通用候选／求值器重建。
 尚不支持直接决定把 SDK 全部持久数据改成共享容器，也不支持预测界面加速倍率。
 
-[测量方法与复现](../references/property-chain-benchmark.md)；
+[测量方法与复现](../../../tools/benchmarks/README.md#property-editing-chain-benchmark)；
 [机器可读结果](2026-10-21-property-chain.json)。
 
 ## 方法与覆盖

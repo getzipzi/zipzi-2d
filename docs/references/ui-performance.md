@@ -45,8 +45,12 @@ The small structural regression group is available when relevant and is also par
 of the normal editor test suite:
 
 ```sh
-cargo test --locked -p kasane-editor --lib headless_tests::ui_performance
+./tools/test-editor.sh ui headless_tests::ui_performance
 ```
+
+The UI gate uses the full Editor feature graph and clears development-session
+state. It requires macOS and Metal. See [benchmark methods](../../tools/benchmarks/README.md)
+and [test coverage](../../tools/README.md#test-coverage) for commands and prerequisites.
 
 For benchmarks, keep model, viewport, UI scale, and input workload comparable.
 Verify that inputs actually change the model and present new frames; exclude and

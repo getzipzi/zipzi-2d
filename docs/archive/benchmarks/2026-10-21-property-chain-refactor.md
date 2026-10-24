@@ -25,7 +25,7 @@ COW 仍然存在。本轮没有把所有 SDK 数据容器改成共享存储。
 
 ## 测量方法
 
-沿用[同一套基准](../references/property-chain-benchmark.md)。Mao 模型、ArtMesh215
+沿用[同一套基准](../../../tools/benchmarks/README.md#property-editing-chain-benchmark)。Mao 模型、ArtMesh215
 的 MeshKeyform、Motion 目标、17 个负载、每进程 10 次预热／60 次交互／每拖拽 12 次
 更新、三轮新进程均与基线相同。负载 Rust 源码哈希一致，模型文件哈希一致。
 
