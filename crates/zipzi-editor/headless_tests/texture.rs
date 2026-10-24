@@ -85,6 +85,15 @@ fn new_texture_inspects_immediately_and_cancelled_chooser_keeps_empty_resource(
     cx: &mut TestAppContext,
 ) {
     let h = setup(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        let body = window.find("Resources-body").bounds();
+        for id in ["texture-new", "texture-import"] {
+            let button = window.within("resources-panel-toolbar").find(id).bounds();
+            assert!(button.bottom() <= body.top());
+            assert!((button.size.height - crate::ui::compact::scaled(20., cx)).abs() <= px(0.5));
+        }
+    })
+    .unwrap();
     click(&h, "texture-new", cx);
     let asset = selected(&h, cx);
     assert_eq!(asset.kind, K::Texture);
@@ -195,7 +204,7 @@ fn direct_import_cancel_invalid_png_and_success_have_atomic_history(cx: &mut Tes
     });
 }
 #[gpui_kit::test]
-fn mesh_selects_existing_empty_texture_and_replacement_refreshes_the_same_resource(
+fn mesh_properties_omit_texture_and_replacement_refreshes_existing_resource_users(
     cx: &mut TestAppContext,
 ) {
     let h = setup(cx);
@@ -208,9 +217,32 @@ fn mesh_selects_existing_empty_texture_and_replacement_refreshes_the_same_resour
     cx.update_window(h.window, |_, window, cx| window.press("enter", cx))
         .unwrap();
     cx.run_until_parked();
+    h.view.update(cx, |v, cx| {
+        let d = v.editor.document().unwrap();
+        let patch = zipzi_editor_core::PropertyPatch {
+            scope: d.property_scope(&mesh),
+            expected: d.property_values(&mesh).unwrap(),
+            changes: [(
+                zipzi_editor_core::property::mesh::TEXTURE.key,
+                zipzi_editor_core::PropertyValue::Text(asset.id.clone()),
+            )]
+            .into(),
+        };
+        v.editor
+            .execute(EditorCommand::SetObjectProperties {
+                object: mesh.clone(),
+                patch,
+            })
+            .unwrap();
+        v.redraw(cx);
+    });
     inspect(&h, mesh.clone(), cx);
-    show(&h, "property-select-texture", cx);
-    choose(&h, "property-select-texture", "TextureSearchTarget", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("property-input-name").visible());
+        assert!(window.try_find("property-select-texture").is_none());
+    })
+    .unwrap();
     h.view.read_with(cx, |v, _| {
         assert_eq!(
             v.editor

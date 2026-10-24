@@ -21,7 +21,7 @@ struct FrozenDocument {
     summary: DocumentSummary,
     layers: Vec<Layer>,
     selected: Option<Layer>,
-    mesh_tree: Vec<TreeNode>,
+    part_tree: Vec<TreeNode>,
     deformer_tree: Vec<TreeNode>,
     views: HashMap<crate::ViewportId, crate::ViewportState>,
 }
@@ -90,7 +90,7 @@ impl Entry {
             summary: DocumentSummary::read(self.id, session),
             layers: session.document().layers(),
             selected: session.document().selected_layer(),
-            mesh_tree: session.document().mesh_tree(),
+            part_tree: session.document().part_tree(),
             deformer_tree: session.document().deformer_tree(),
             views: session.views.clone(),
         };
@@ -120,10 +120,10 @@ impl Entry {
             EntryState::Saving(saving) => saving.frozen.layers.clone(),
         }
     }
-    pub(super) fn mesh_tree(&self) -> Vec<TreeNode> {
+    pub(super) fn part_tree(&self) -> Vec<TreeNode> {
         match &self.state {
-            EntryState::Ready(session) => session.document().mesh_tree(),
-            EntryState::Saving(saving) => saving.frozen.mesh_tree.clone(),
+            EntryState::Ready(session) => session.document().part_tree(),
+            EntryState::Saving(saving) => saving.frozen.part_tree.clone(),
         }
     }
     pub(super) fn deformer_tree(&self) -> Vec<TreeNode> {

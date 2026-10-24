@@ -89,8 +89,8 @@ impl ViewportSurface {
         let measure = view.clone();
         let mouse = view.clone();
         let overlay_renderer = self.overlay_renderer.clone();
-        let primary = palette.selected;
-        let selection_fill = primary.opacity(0.12);
+        let selection_outline = palette.selection_region;
+        let selection_fill = selection_outline.opacity(0.12);
         canvas(
             move |bounds, window, cx| {
                 measure.update(cx, |this, cx| {
@@ -178,7 +178,7 @@ impl ViewportSurface {
                             (p(a.x, b.y), a),
                         ],
                         bounds.origin,
-                        |path| window.paint_path(path, primary),
+                        |path| window.paint_path(path, selection_outline),
                     );
                 }
                 if overlay.lasso.len() >= 2 {
@@ -192,7 +192,7 @@ impl ViewportSurface {
                     }
                     let edges: Vec<_> = overlay.lasso.windows(2).map(|p| (p[0], p[1])).collect();
                     mesh_edges::paint_edges(&edges, bounds.origin, |path| {
-                        window.paint_path(path, primary);
+                        window.paint_path(path, selection_outline);
                     });
                     let first = overlay.lasso[0];
                     let last = *overlay.lasso.last().unwrap();
@@ -212,7 +212,7 @@ impl ViewportSurface {
                         })
                         .collect();
                     mesh_edges::paint_edges(&closure, bounds.origin, |path| {
-                        window.paint_path(path, primary.opacity(0.7));
+                        window.paint_path(path, selection_outline.opacity(0.7));
                     });
                 }
                 if capture {

@@ -133,6 +133,8 @@ pub enum CommandId {
     ResetView,
     #[serde(rename = "view.fit")]
     FitView,
+    #[serde(rename = "view.isolate-selection")]
+    ToggleViewportIsolation,
     #[serde(rename = "tool.select")]
     SelectTool,
     #[serde(rename = "tool.lasso")]
@@ -149,8 +151,8 @@ pub enum CommandId {
     ToggleAncestorDeformers,
     #[serde(rename = "tool.cancel")]
     CancelGesture,
-    #[serde(rename = "panel.mesh-tree", alias = "panel.layers")]
-    MeshTree,
+    #[serde(rename = "panel.parts-tree", alias = "panel.layers")]
+    PartsTree,
     #[serde(rename = "panel.deformers")]
     Deformers,
     #[serde(rename = "panel.parameters")]
@@ -480,6 +482,13 @@ specs![
         ["secondary-0"]
     ),
     (FitView, "menu.fit_view", Viewport, false, []),
+    (
+        ToggleViewportIsolation,
+        "dock.isolate_selection",
+        Viewport,
+        false,
+        ["/"]
+    ),
     (SelectTool, "editor.tool_select", Viewport, false, ["v"]),
     (LassoTool, "editor.tool_lasso", Viewport, false, ["l"]),
     (
@@ -512,7 +521,7 @@ specs![
         false,
         ["escape"]
     ),
-    (MeshTree, "editor.mesh_tree", Window, false, []),
+    (PartsTree, "editor.part_tree", Window, false, []),
     (Deformers, "editor.deformer_tree", Window, false, []),
     (Parameters, "editor.parameters", Window, false, []),
     (Properties, "editor.properties", Window, false, []),
@@ -781,6 +790,8 @@ impl Editor {
             LassoTool => !animation_navigation && self.active_tool() == crate::ToolId::Lasso,
             GlueTool => !animation_navigation && self.active_tool() == crate::ToolId::Glue,
             HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,
+            ToggleViewportIsolation => matches!(command.target,
+                CommandTarget::Viewport(binding) if self.viewport_isolated(binding)),
             ToggleDeformers => self.deformer_visibility().all,
             ToggleAncestorDeformers => self.deformer_visibility().ancestors,
             _ => false,
@@ -944,6 +955,12 @@ impl Editor {
             ZoomOut => target && !self.is_busy() && !self.gesture_active() && view.zoom > MIN_ZOOM,
             ResetView => target && !self.is_busy() && !self.gesture_active(),
             FitView => target && !self.is_busy() && !self.gesture_active() && metrics.visible(),
+            ToggleViewportIsolation => {
+                modeling
+                    && !self.is_busy()
+                    && matches!(command.target,
+                CommandTarget::Viewport(binding) if self.can_toggle_viewport_isolation(binding))
+            }
             CancelGesture => target && !self.is_busy(),
             HandTool => target && !self.is_busy() && (modeling || animation_navigation),
             _ => modeling && target && !self.is_busy(),
@@ -992,6 +1009,7 @@ impl Editor {
             ZoomOut => self.zoom_viewport(viewport.unwrap(), -0.25, None)?,
             ResetView => self.reset_viewport(viewport.unwrap())?,
             FitView => self.fit_viewport(viewport.unwrap())?,
+            ToggleViewportIsolation => self.toggle_viewport_isolation(viewport.unwrap())?,
             HandTool
                 if viewport
                     .is_some_and(|binding| binding.kind == crate::ViewportKind::Animation) =>

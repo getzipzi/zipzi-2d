@@ -138,6 +138,10 @@ pub struct EvaluatedDeformer {
     /// Drawable::positions. Warp points are row-major; rotation points are the
     /// transformed origin and unit X/Y axes.
     pub points: Vec<Vec2>,
+    /// Unit direction of the rotation's local X axis in model space, evaluated
+    /// without translation or scale so tiny imported scales retain their angle.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rotation_axis: Option<Vec2>,
 }
 
 pub fn parent_positions<'a>(

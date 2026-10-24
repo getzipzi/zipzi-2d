@@ -39,27 +39,27 @@ fn focused_tree_move_uses_full_order_under_filter_and_preserves_inspection(
             )
             .unwrap();
         crate::keybindings::reload(cx);
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("Second", cx);
     })
     .unwrap();
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
-        window.click(format!("mesh-item-Mesh:{second}"), cx);
+        window.click(format!("parts-item-Mesh:{second}"), cx);
         window.hover("canvas-body", cx); // hover must not change keyboard ownership
         window.press("alt-up", cx);
     })
     .unwrap();
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert_eq!(doc.mesh_tree()[0].children[0].id, second);
-        assert_eq!(doc.mesh_tree()[0].children[1].id, first);
+        assert_eq!(doc.part_tree()[0].children[0].id, second);
+        assert_eq!(doc.part_tree()[0].children[1].id, first);
         assert_eq!(doc.context().inspected.as_ref().unwrap().id, second);
         assert_eq!(doc.history_lengths(), (1, 0));
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
     });
     cx.update_window(h.window, |_, window, cx| {
-        assert_eq!(window.find("mesh-tree-search").value(), Some("Second"));
+        assert_eq!(window.find("parts-tree-search").value(), Some("Second"));
         window.press("alt-up", cx); // boundary no-op
     })
     .unwrap();
@@ -110,7 +110,7 @@ fn palette_move_remapping_replaces_default_and_never_reorders_from_text_focus(
         window.click("property-input-name", cx);
         window.press("alt-down", cx);
         window.press("alt-k", cx);
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.press("alt-down", cx);
     })
     .unwrap();
@@ -129,9 +129,9 @@ fn all_selected_shortcut_is_noop_and_locked_members_cannot_move(cx: &mut TestApp
         .collect();
     let h = setup_with_document(cx, document, assets);
     cx.update_window(h.window, |_, window, cx| {
-        window.click(format!("mesh-item-Mesh:{}", meshes[0].id), cx);
+        window.click(format!("parts-item-Mesh:{}", meshes[0].id), cx);
         window.click_with_modifiers(
-            format!("mesh-item-Mesh:{}", meshes[1].id),
+            format!("parts-item-Mesh:{}", meshes[1].id),
             Modifiers {
                 platform: true,
                 ..Default::default()
@@ -148,7 +148,7 @@ fn all_selected_shortcut_is_noop_and_locked_members_cannot_move(cx: &mut TestApp
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
     });
     cx.update_window(h.window, |_, window, cx| {
-        window.click(format!("mesh-item-Mesh:{}", meshes[1].id), cx);
+        window.click(format!("parts-item-Mesh:{}", meshes[1].id), cx);
         h.view.update(cx, |view, cx| {
             let result = view.editor.execute(EditorCommand::SetObjectsLocked {
                 objects: vec![meshes[1].clone()],
@@ -162,7 +162,7 @@ fn all_selected_shortcut_is_noop_and_locked_members_cannot_move(cx: &mut TestApp
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         assert_eq!(doc.history_lengths(), (1, 0));
-        assert_eq!(doc.mesh_tree()[0].children[1].id, meshes[1].id);
+        assert_eq!(doc.part_tree()[0].children[1].id, meshes[1].id);
         assert!(
             view.edit_error
                 .as_ref()

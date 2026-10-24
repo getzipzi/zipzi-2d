@@ -23,6 +23,30 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir, ViewportBinding, Vec<Ob
 }
 
 #[test]
+fn isolation_command_uses_selection_and_allows_exiting_after_deselection() -> anyhow::Result<()> {
+    let (mut editor, _assets, binding, objects) = setup()?;
+    editor.execute(EditorCommand::SelectCanvasObjects(Vec::new()))?;
+    let command = editor.command_for_viewport(
+        CommandId::ToggleViewportIsolation,
+        binding,
+        CommandSource::Shortcut,
+    );
+    assert!(!editor.command_available(command));
+    editor.execute(EditorCommand::SelectCanvasObjects(vec![objects[0].clone()]))?;
+    let history = editor.document().unwrap().history_lengths();
+    assert!(editor.command_available(command));
+    editor.dispatch(command)?;
+    assert!(editor.command_state(command).checked);
+    editor.execute(EditorCommand::SelectCanvasObjects(Vec::new()))?;
+    assert!(editor.command_available(command));
+    editor.dispatch(command)?;
+    assert!(!editor.command_state(command).checked);
+    assert!(!editor.viewport_isolated(binding));
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+    Ok(())
+}
+
+#[test]
 fn isolation_freezes_scope_and_filters_picking_overlays_and_marquee() -> anyhow::Result<()> {
     let (mut editor, _assets, binding, objects) = setup()?;
     editor.execute(EditorCommand::SelectCanvasObjects(vec![objects[0].clone()]))?;

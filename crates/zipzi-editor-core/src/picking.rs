@@ -40,6 +40,8 @@ pub struct ControlGeometry {
     pub object: ObjectRef,
     pub kind: ControlKind,
     pub points: Vec<ModelPoint>,
+    /// Scale-independent rotation direction, separate from translated control points.
+    pub rotation_axis: Option<crate::ModelVector>,
     pub edges: Arc<[(usize, usize)]>,
     pub enabled: bool,
     /// Editor display only. Hidden controls still supply their children's coordinate space.

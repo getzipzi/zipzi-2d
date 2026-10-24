@@ -53,6 +53,10 @@ pub struct OverlaySnapshot {
     pub unavailable: Option<String>,
     pub target_label: Option<String>,
     pub gizmo_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    /// Outer Warp transform frame, distinct from its lattice and Bezier tangents.
+    pub warp_frame_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    /// Rotation rings and their scale-handle spokes use a stronger stroke.
+    pub rotation_lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub guide_lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub handles: Vec<OverlayHandle>,
     pub interaction_label: Option<String>,
@@ -332,7 +336,11 @@ impl ToolController {
                     }
                 }
                 if let Some(gizmo) = scene.deformer_gizmo(control, t) {
-                    out.gizmo_lines.extend(gizmo.outline);
+                    if control.kind == ControlKind::Rotation {
+                        out.rotation_lines.extend(gizmo.outline);
+                    } else {
+                        out.warp_frame_lines.extend(gizmo.outline);
+                    }
                     out.handles
                         .extend(
                             gizmo

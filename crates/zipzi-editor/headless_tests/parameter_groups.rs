@@ -7,6 +7,84 @@ fn id(index: u128) -> String {
 }
 
 #[gpui_kit::test]
+fn titlebar_toggle_folds_all_groups_and_keeps_root_parameters_visible(cx: &mut TestAppContext) {
+    let (mut document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
+    document.set_preview_parameter(&id(3), 0.7).unwrap();
+    let before = document.parameters();
+    let history = document.history_lengths();
+    let selection = document.context().selections.clone();
+    let harness = setup_with_document(cx, document, assets);
+    cx.simulate_window_resize(harness.window, size(px(1100.), px(1400.)));
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(
+            (window
+                .find("parameters-toggle-expansion")
+                .bounds()
+                .size
+                .height
+                - px(20.))
+            .abs()
+                <= px(0.5)
+        );
+        // A partly collapsed hierarchy expands fully on the next click.
+        window.click(format!("parameter-group-toggle-{}", id(102)), cx);
+        window.click("parameters-toggle-expansion", cx);
+        for parameter in 1..=5 {
+            assert!(
+                window
+                    .find(format!("parameter-name-{}", id(parameter)))
+                    .visible()
+            );
+        }
+        window.click("parameters-toggle-expansion", cx);
+        for parameter in 1..=4 {
+            assert!(
+                window
+                    .try_find(format!("parameter-name-{}", id(parameter)))
+                    .is_none()
+            );
+        }
+        assert!(window.find(format!("parameter-name-{}", id(5))).visible());
+        assert_eq!(
+            window
+                .find(format!("parameter-group-{}", id(101)))
+                .expanded(),
+            Some(false)
+        );
+        window.click("parameters-toggle-expansion", cx);
+        for parameter in 1..=5 {
+            assert!(
+                window
+                    .find(format!("parameter-name-{}", id(parameter)))
+                    .visible()
+            );
+        }
+        assert_eq!(
+            window
+                .find(format!("parameter-group-{}", id(102)))
+                .expanded(),
+            Some(true)
+        );
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert_eq!(document.parameters(), before);
+        assert_eq!(document.history_lengths(), history);
+        assert_eq!(document.context().selections, selection);
+    });
+    let (document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
+    let flat = setup_with_document(cx, document, assets);
+    cx.update_window(flat.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click("parameters-toggle-expansion", cx);
+        assert!(window.find(format!("parameter-name-{}", id(1))).visible());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn grouped_parameters_preserve_hierarchy_values_and_independent_collapse(cx: &mut TestAppContext) {
     let (mut document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
     document.set_preview_parameter(&id(3), 0.7).unwrap();
@@ -35,10 +113,7 @@ fn grouped_parameters_preserve_hierarchy_values_and_independent_collapse(cx: &mu
                 .value(),
             Some("0")
         );
-        assert_eq!(
-            window.find("parameter-group-count-ungrouped").value(),
-            Some("1")
-        );
+        assert!(window.try_find("parameter-group-ungrouped").is_none());
         let row_y = |window: &mut gpui_kit::Window, index| {
             window
                 .find(format!("parameter-name-{}", id(index)))
@@ -88,13 +163,11 @@ fn grouped_parameters_preserve_hierarchy_values_and_independent_collapse(cx: &mu
         );
 
         window.click(format!("parameter-group-toggle-{}", id(102)), cx);
-        window.click("parameter-group-toggle-ungrouped", cx);
         assert!(
             window
-                .try_find(format!("parameter-name-{}", id(5)))
+                .try_find("parameter-group-toggle-ungrouped")
                 .is_none()
         );
-        window.click("parameter-group-toggle-ungrouped", cx);
         assert!(
             window
                 .try_find(format!("parameter-name-{}", id(5)))

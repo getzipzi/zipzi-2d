@@ -32,7 +32,7 @@ fn fixture(cx: &mut TestAppContext) -> (Harness, ObjectRef, Vec<ObjectRef>) {
     )
 }
 fn row(object: &ObjectRef) -> String {
-    format!("mesh-item-{:?}:{}", object.kind, object.id)
+    format!("parts-item-{:?}:{}", object.kind, object.id)
 }
 fn selected(h: &Harness, cx: &TestAppContext) -> Vec<ObjectRef> {
     h.view.read_with(cx, |view, _| {
@@ -100,7 +100,7 @@ fn filtered_range_uses_visible_rows_and_collapsing_keeps_hidden_selection(cx: &m
     let (h, part, m) = fixture(cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click(row(&m[0]), cx);
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("Match", cx);
     })
     .unwrap();
@@ -160,7 +160,7 @@ fn navigation_does_not_intercept_search_input_or_apply_an_old_document_anchor(
     let (h, _, m) = fixture(cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click(row(&m[0]), cx);
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.press("down", cx);
         window.press("enter", cx);
     })
@@ -190,7 +190,7 @@ fn keyboard_move_uses_cursor_without_activating_it_and_fold_preserves_selection(
     .unwrap();
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert_eq!(doc.mesh_tree()[0].children[0].id, m[1].id);
+        assert_eq!(doc.part_tree()[0].children[0].id, m[1].id);
         assert_eq!(doc.context().selection.as_ref(), Some(&m[0]));
         assert_eq!(doc.history_lengths(), (6, 0));
     });

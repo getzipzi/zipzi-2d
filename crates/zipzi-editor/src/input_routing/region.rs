@@ -120,7 +120,7 @@ mod tests {
     fn snapshot_skips_stale_captures_and_keeps_only_the_first_valid_owner() {
         let resolved = Cell::new(0);
         let captures = [
-            (PanelKind::MeshTree, false, CaptureCancelKey::Escape),
+            (PanelKind::PartsTree, false, CaptureCancelKey::Escape),
             (
                 PanelKind::AnimationTimeline,
                 true,

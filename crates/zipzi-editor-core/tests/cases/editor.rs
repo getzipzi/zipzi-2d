@@ -172,7 +172,7 @@ fn save_moves_the_same_session_to_a_thread_and_freezes_only_its_document() -> an
     let first = editor.active_id().unwrap();
     editor.execute(EditorCommand::PreviewName("Saved".into()))?;
     editor.zoom_by(0.5);
-    let mesh_tree = editor.mesh_tree();
+    let part_tree = editor.part_tree();
     let deformer_tree = editor.deformer_tree();
     let layer_names: Vec<_> = editor
         .layers()
@@ -184,7 +184,7 @@ fn save_moves_the_same_session_to_a_thread_and_freezes_only_its_document() -> an
     let task = editor.prepare_save(first, &output.path().join("saved"), false)?;
     assert!(editor.is_busy());
     assert!(editor.document().is_none());
-    assert_eq!(editor.mesh_tree(), mesh_tree);
+    assert_eq!(editor.part_tree(), part_tree);
     assert_eq!(editor.deformer_tree(), deformer_tree);
     assert_eq!(
         editor

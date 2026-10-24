@@ -152,7 +152,7 @@ fn every_scene_command_source_uses_the_same_owner_defaults_and_single_history(
             );
             h.view.read_with(cx, |view, _| {
                 let doc = view.editor.document().unwrap();
-                let tree = doc.mesh_tree();
+                let tree = doc.part_tree();
                 assert!(
                     tree.iter()
                         .find(|n| n.id == part.id)
@@ -214,7 +214,7 @@ fn configured_creation_shortcut_ignores_text_and_repeat_but_creates_from_editor_
             )
             .unwrap();
         crate::keybindings::reload(cx);
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.press("ctrl-alt-m", cx);
     })
     .unwrap();
@@ -263,7 +263,7 @@ fn creation_settles_text_and_filtered_command_result_is_revealed_and_name_focuse
         assert_eq!(doc.history_lengths(), (3, 0));
     });
     cx.update_window(h.window, |_, window, cx| {
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("nothing matches", cx);
     })
     .unwrap();
@@ -271,12 +271,12 @@ fn creation_settles_text_and_filtered_command_result_is_revealed_and_name_focuse
     let warp = inspected(&h, cx);
     cx.update_window(h.window, |_, window, cx| {
         assert_eq!(
-            window.find("mesh-tree-search").value(),
+            window.find("parts-tree-search").value(),
             Some("nothing matches")
         );
         assert!(
             window
-                .find(format!("mesh-item-WarpDeformer:{}", warp.id))
+                .find(format!("parts-item-WarpDeformer:{}", warp.id))
                 .visible()
         );
         assert!(window.find("tree-created-item").visible());
@@ -391,9 +391,9 @@ fn creating_from_native_menu_reopens_hidden_tree_and_properties_and_focuses_the_
     cx.update_window(h.window, |_, window, cx| {
         h.view.update(cx, |view, cx| {
             let dock = view.dock.as_ref().unwrap();
-            dock.toggle(zipzi_editor_core::PanelKind::MeshTree, window, cx);
+            dock.toggle(zipzi_editor_core::PanelKind::PartsTree, window, cx);
             dock.toggle(zipzi_editor_core::PanelKind::Properties, window, cx);
-            assert!(!dock.displayed(zipzi_editor_core::PanelKind::MeshTree, cx));
+            assert!(!dock.displayed(zipzi_editor_core::PanelKind::PartsTree, cx));
             assert!(!dock.displayed(zipzi_editor_core::PanelKind::Properties, cx));
         });
     })
@@ -401,7 +401,11 @@ fn creating_from_native_menu_reopens_hidden_tree_and_properties_and_focuses_the_
     invoke(&h, C::CreatePart, CommandSource::NativeMenu, cx);
     let part = inspected(&h, cx);
     cx.update_window(h.window, |_, window, cx| {
-        assert!(window.find(format!("mesh-item-Part:{}", part.id)).visible());
+        assert!(
+            window
+                .find(format!("parts-item-Part:{}", part.id))
+                .visible()
+        );
         assert!(window.find("property-input-name").visible());
         window.input("Named after reopening", cx);
         window.press("enter", cx);
@@ -423,7 +427,7 @@ fn creation_name_focus_wins_when_tree_and_properties_share_a_tab_group(cx: &mut 
         let layout = DockLayout::h_split()
             .child(
                 DockLayout::tabs()
-                    .panel_view(panel_handle(dock.mesh_tree.clone()), cx)
+                    .panel_view(panel_handle(dock.part_tree.clone()), cx)
                     .panel_view(panel_handle(dock.properties.clone()), cx),
                 Some(gpui_kit::px(300.)),
             )
@@ -431,7 +435,7 @@ fn creation_name_focus_wins_when_tree_and_properties_share_a_tab_group(cx: &mut 
                 DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
                 None,
             );
-        let tree = PanelId::from(dock.mesh_tree.entity_id());
+        let tree = PanelId::from(dock.part_tree.entity_id());
         let area = dock.area.clone();
         area.update(cx, |area, cx| {
             area.set_center(layout, window, cx);
@@ -464,14 +468,14 @@ fn creation_resets_tree_range_anchor_to_the_new_selection(cx: &mut TestAppContex
     invoke(&h, C::CreateMesh, CommandSource::Direct, cx);
     let b = inspected(&h, cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.click(format!("mesh-item-Mesh:{}", a.id), cx)
+        window.click(format!("parts-item-Mesh:{}", a.id), cx)
     })
     .unwrap();
     invoke(&h, C::CreatePart, CommandSource::NativeMenu, cx);
     let part = inspected(&h, cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click_with_modifiers(
-            format!("mesh-item-Mesh:{}", b.id),
+            format!("parts-item-Mesh:{}", b.id),
             gpui_kit::Modifiers {
                 shift: true,
                 ..Default::default()

@@ -71,6 +71,10 @@ impl CanvasScene {
                 object: ObjectRef::new(K::Deformer, &evaluated.id),
                 kind: t.kind,
                 points: evaluated.points.iter().copied().map(to_model).collect(),
+                rotation_axis: evaluated.rotation_axis.map(|axis| crate::ModelVector {
+                    x: axis.x,
+                    y: axis.y,
+                }),
                 edges: t.edges.clone(),
                 enabled: evaluated.enabled,
                 visible: document.deformer_controls_visible(&evaluated.id),
@@ -115,6 +119,7 @@ impl CanvasScene {
             controls.push(ControlGeometry {
                 object: g.object.clone(),
                 kind: ControlKind::Glue,
+                rotation_axis: None,
                 points,
                 edges: edges.into(),
                 enabled: visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b),

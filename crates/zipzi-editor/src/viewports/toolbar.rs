@@ -1,13 +1,41 @@
 use crate::{EditorView, t, ui::compact};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable,
+    ActiveTheme, Disableable, Selectable, Sizable,
     button::{Button, ButtonCustomVariant, ButtonVariants},
 };
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::CommandId;
 
-const TOOL_BUTTON_SIZE: f32 = 28.;
+mod notch;
+pub(super) use notch::{Notch, PRIMARY, SECONDARY};
+
+/// Shared viewport appearance; callers retain their existing button dimensions.
+pub(super) fn button_style(button: Button, cx: &App) -> Button {
+    let selected = button.is_selected();
+    let crate::theme::ToolbarPalette {
+        surface,
+        hovered,
+        pressed,
+    } = crate::theme::toolbar_colors(cx);
+    button
+        .when(!selected, |button| {
+            button
+                .custom(
+                    ButtonCustomVariant::new(cx)
+                        .color(cx.theme().border)
+                        .hover(hovered.opacity(0.95))
+                        .active(pressed.opacity(0.95))
+                        .foreground(cx.theme().foreground),
+                )
+                .border_color(cx.theme().border)
+                .bg(surface.opacity(0.85))
+        })
+        .when(selected, |button| {
+            button.bg(cx.theme().button_primary.opacity(0.85))
+        })
+        .border_1()
+}
 
 /// One button's appearance and behavior. Items render in registration order.
 #[derive(Clone, Copy)]
@@ -81,6 +109,14 @@ pub(super) struct CanvasToolbar {
     pub items: Vec<ToolbarItemConfig>,
 }
 
+pub(super) fn attached_button(button: Button, shape: Notch, cx: &App) -> Button {
+    let selected = button.is_selected();
+    button_style(button, cx)
+        .when(!selected, |button| button.bg(transparent_black()))
+        .border_0()
+        .rounded(compact::scaled(shape.button_radius, cx))
+}
+
 impl RenderOnce for CanvasToolbar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let Self {
@@ -90,18 +126,57 @@ impl RenderOnce for CanvasToolbar {
             items,
         } = self;
         let view = owner.read(cx);
-        // Opaque tool surfaces stay distinct from both the canvas and model pixels.
-        let crate::theme::ToolbarPalette {
-            surface,
-            hovered,
-            pressed,
-        } = crate::theme::toolbar_colors(cx);
+        let mut tools = gpui_kit::component::toolbar::ToolbarGroup::new("canvas-tools")
+            .label(t!("editor.panel_toolbar_actions"))
+            .flex_col()
+            .gap(compact::rem(1.));
+        for item in items {
+            let command = item.command;
+            let invocation = canvas.read(cx).command(
+                &view.editor,
+                command,
+                zipzi_editor_core::CommandSource::Toolbar,
+            );
+            let state = view.editor.command_state(invocation);
+            let selected = state.checked;
+            let enabled = !modal && state.enabled;
+            let owner = owner.clone();
+            let canvas = canvas.clone();
+            tools = tools.content(
+                compact::button(Button::new(item.id))
+                    .when(command != CommandId::GenerateMesh, |button| {
+                        compact::toggle(button, selected)
+                    })
+                    .xsmall()
+                    .w(compact::rem(PRIMARY.button_size))
+                    .h(compact::rem(PRIMARY.button_size))
+                    .min_w(compact::rem(PRIMARY.button_size))
+                    .map(|button| attached_button(button, PRIMARY, cx))
+                    .icon(item.icon)
+                    .accessibility_label(t!(command.spec().label).into_owned())
+                    .tooltip(t!(command.spec().label))
+                    .disabled(!enabled)
+                    .on_click(move |_, window, cx| {
+                        let id = canvas.entity_id();
+                        let focus = canvas.read(cx).focus.clone();
+                        window.focus(&focus, cx);
+                        owner.update(cx, |view, _| {
+                            if let Some(dock) = &mut view.dock {
+                                dock.activate_viewport(id);
+                            }
+                        });
+                        owner.update(cx, |view, cx| view.run_invocation(invocation, window, cx));
+                    }),
+            );
+        }
         div()
             .id("canvas-toolbar")
             .test_support()
             .absolute()
-            .top_2()
-            .left_2()
+            .top(compact::rem(8.))
+            .left_0()
+            .px(compact::rem(PRIMARY.inset))
+            .py(compact::rem(PRIMARY.end_padding()))
             .occlude()
             .flex()
             .flex_col()
@@ -109,66 +184,7 @@ impl RenderOnce for CanvasToolbar {
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
             .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
-            .child(compact::group(
-                "canvas-tools",
-                t!("editor.panel_toolbar_actions"),
-                Axis::Vertical,
-                items
-                    .iter()
-                    .map(|item| {
-                        let command = item.command;
-                        let invocation = canvas.read(cx).command(
-                            &view.editor,
-                            command,
-                            zipzi_editor_core::CommandSource::Toolbar,
-                        );
-                        let state = view.editor.command_state(invocation);
-                        let selected = state.checked;
-                        let enabled = !modal && state.enabled;
-                        let owner = owner.clone();
-                        let canvas = canvas.clone();
-                        compact::button(Button::new(item.id))
-                            .when(item.command != CommandId::GenerateMesh, |button| {
-                                compact::toggle(button, selected)
-                            })
-                            .small()
-                            .w(compact::rem(TOOL_BUTTON_SIZE))
-                            .h(compact::rem(TOOL_BUTTON_SIZE))
-                            .min_w(compact::rem(TOOL_BUTTON_SIZE))
-                            .when(!selected, |button| {
-                                button
-                                    .custom(
-                                        ButtonCustomVariant::new(cx)
-                                            // Kit derives hover/pressed borders from this color.
-                                            // The opaque idle fill is supplied below separately.
-                                            .color(cx.theme().border)
-                                            .hover(hovered)
-                                            .active(pressed)
-                                            .foreground(cx.theme().foreground),
-                                    )
-                                    .border_color(cx.theme().border)
-                                    .bg(surface)
-                            })
-                            .border_1()
-                            .icon(item.icon)
-                            .accessibility_label(t!(item.command.spec().label).into_owned())
-                            .tooltip(t!(item.command.spec().label))
-                            .disabled(!enabled)
-                            .on_click(move |_, window, cx| {
-                                let id = canvas.entity_id();
-                                let focus = canvas.read(cx).focus.clone();
-                                window.focus(&focus, cx);
-                                owner.update(cx, |view, _| {
-                                    if let Some(dock) = &mut view.dock {
-                                        dock.activate_viewport(id);
-                                    }
-                                });
-                                owner.update(cx, |view, cx| {
-                                    view.run_invocation(invocation, window, cx)
-                                });
-                            })
-                    })
-                    .collect::<Vec<_>>(),
-            ))
+            .child(PRIMARY.background(cx))
+            .child(tools)
     }
 }

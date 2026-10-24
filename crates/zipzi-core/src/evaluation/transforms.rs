@@ -371,6 +371,7 @@ pub(super) fn evaluate(
         deformer.id.clone_from(id);
         deformer.enabled = transform_state.enabled;
         deformer.points.clear();
+        deformer.rotation_axis = None;
         if t.kind() == TransformKind::Warp {
             deformer.points.extend(
                 transform_state
@@ -387,6 +388,19 @@ pub(super) fn evaluate(
                 Vec2::new(0., 1.),
             ]);
             transform_state.apply(&mut deformer.points);
+            let mut axis = [0.; 2];
+            rotation_points(
+                transform_state.source.base_angle,
+                transform_state.pose.angle,
+                1.,
+                PsmVec2::default(),
+                transform_state.pose.reflect_x,
+                transform_state.pose.reflect_y,
+                &[1., 0.],
+                &mut axis,
+                1,
+            );
+            deformer.rotation_axis = Some(Vec2::new(axis[0], axis[1]));
         }
         state.transforms[transform_slot] = transform_state;
     }

@@ -78,6 +78,12 @@ pub(super) fn visible_rows(
         collapsed: &HashSet<String>,
         rows: &mut Vec<VisibleRow>,
     ) {
+        if node.kind == TreeNodeKind::Group && node.id == "unowned" {
+            for child in &node.children {
+                unfiltered(child, depth, collapsed, rows);
+            }
+            return;
+        }
         rows.push(row(node, depth, false));
         if !collapsed.contains(&node_key(node)) {
             for child in &node.children {
@@ -95,6 +101,13 @@ pub(super) fn visible_rows(
         collapsed: &HashSet<String>,
         rows: &mut Vec<VisibleRow>,
     ) -> bool {
+        if node.kind == TreeNodeKind::Group && node.id == "unowned" {
+            let mut matched = false;
+            for child in &node.children {
+                matched |= filtered(child, depth, ancestor_match, query, filter, collapsed, rows);
+            }
+            return matched;
+        }
         // Search scope and object type are independent: a Part's name can
         // include its Mesh descendants even when only Mesh is checked.
         let in_scope = ancestor_match
@@ -299,6 +312,41 @@ mod tests {
         assert_eq!(
             ids(&visible_rows(&fixture(), &HashSet::new(), &filter)),
             ["root", "head"]
+        );
+    }
+
+    #[test]
+    fn unowned_members_are_root_rows_even_with_stale_collapse_state() {
+        let mut unowned = TreeNode::new("unowned".into(), "Unassigned to Part".into(), Group);
+        unowned.children = fixture();
+        let collapsed = HashSet::from([node_key(&unowned)]);
+        let nodes = vec![unowned];
+        for query in ["", "eye"] {
+            let rows = visible_rows(
+                &nodes,
+                &collapsed,
+                &TreeFilter {
+                    query: query.into(),
+                    ..Default::default()
+                },
+            );
+            assert_eq!(rows[0].node.id, "root");
+            assert_eq!(rows[0].depth, 0);
+            assert_eq!(rows[1].depth, 1);
+            assert!(rows.iter().all(|row| row.node.id != "unowned"));
+            assert!(rows.iter().any(|row| row.node.id == "eye-left"));
+        }
+        let rows = visible_rows(
+            &nodes,
+            &collapsed,
+            &TreeFilter {
+                query: "Unassigned".into(),
+                ..Default::default()
+            },
+        );
+        assert!(
+            rows.is_empty(),
+            "hidden synthetic titles must not match searches"
         );
     }
 

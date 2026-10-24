@@ -19,7 +19,7 @@ fn node<'a>(nodes: &'a [TreeNode], id: &str) -> Option<&'a TreeNode> {
     })
 }
 fn children(d: &Document, id: &str) -> Vec<String> {
-    node(&d.mesh_tree(), id)
+    node(&d.part_tree(), id)
         .unwrap()
         .children
         .iter()
@@ -58,13 +58,13 @@ fn all_scene_defaults_roundtrip_with_one_creation_history_entry_each() -> anyhow
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("creation.zipzi"))?;
     let reopened = Document::open(&saved.manifest)?;
-    assert_eq!(reopened.mesh_tree(), d.mesh_tree());
+    assert_eq!(reopened.part_tree(), d.part_tree());
     assert_eq!(reopened.deformer_tree(), d.deformer_tree());
-    let before = d.mesh_tree();
+    let before = d.part_tree();
     d.undo()?;
-    assert!(node(&d.mesh_tree(), &created[4].id).is_none());
+    assert!(node(&d.part_tree(), &created[4].id).is_none());
     d.redo()?;
-    assert_eq!(d.mesh_tree(), before);
+    assert_eq!(d.part_tree(), before);
     Ok(())
 }
 

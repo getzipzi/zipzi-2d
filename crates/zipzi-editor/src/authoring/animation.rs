@@ -8,7 +8,6 @@ use zipzi_editor_core::{CommandId, PalettePosition};
 #[derive(Clone)]
 pub(crate) enum AnimationAction {
     Create(ObjectKind, Option<ObjectRef>),
-    Inspect(ObjectRef),
     Step(ObjectRef, bool),
     Move(ObjectRef, Option<ObjectRef>, PalettePosition),
     RemoveEntry(ObjectRef),
@@ -53,11 +52,6 @@ impl AnimationAction {
                     }),
                 }
             }
-            Self::Inspect(object) => ActionAvailability::for_object(
-                doc,
-                object,
-                zipzi_editor_core::AuthoringAction::Inspect,
-            ),
             Self::Step(object, _) => ActionAvailability::for_object(
                 doc,
                 object,
@@ -162,15 +156,6 @@ impl EditorView {
                 return;
             }
             _ => {}
-        }
-        if let AnimationAction::Inspect(object) = action {
-            if AuthoringContext::capture(&self.editor) == Some(context)
-                && self.prepare_property_inputs(document, window, cx)
-            {
-                let result = self.inspect_authoring_object(document, object, false, window, cx);
-                self.complete_edit(result, cx);
-            }
-            return;
         }
         if let AnimationAction::MoveTo(source) = action {
             if !self.prepare_property_inputs(document, window, cx) {
@@ -311,10 +296,7 @@ pub(crate) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
             object.kind,
             ObjectKind::MotionGroup | ObjectKind::MotionRegistration
         );
-        let mut actions = vec![(
-            t!("editor.properties").into_owned(),
-            AnimationAction::Inspect(object.clone()),
-        )];
+        let mut actions = vec![];
         for kind in if motion {
             vec![ObjectKind::Motion, ObjectKind::MotionGroup]
         } else {
@@ -325,16 +307,6 @@ pub(crate) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
                 AnimationAction::Create(kind, Some(object.clone())),
             ));
         }
-        actions.extend([
-            (
-                t!("authoring.move_up").into_owned(),
-                AnimationAction::Step(object.clone(), false),
-            ),
-            (
-                t!("authoring.move_down").into_owned(),
-                AnimationAction::Step(object.clone(), true),
-            ),
-        ]);
         if object.kind == ObjectKind::ExpressionEntry {
             actions.push((
                 t!("authoring.remove_expression_entry").into_owned(),
@@ -398,15 +370,32 @@ pub(crate) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
                 AnimationAction::DeleteAnimation(object.clone(), AnimationRemoval::Expression),
             ));
         }
+        if matches!(
+            object.kind,
+            ObjectKind::MotionRegistration | ObjectKind::ExpressionEntry
+        ) {
+            actions.push((
+                t!("authoring.move_to").into_owned(),
+                AnimationAction::MoveTo(object.clone()),
+            ));
+        }
+        let mut items = Vec::new();
         for (label, action) in actions {
             let Some(availability) = action.availability(&entity.read(cx).editor) else {
                 continue;
+            };
+            let section = match &action {
+                AnimationAction::Create(..) | AnimationAction::AddMotionReference(_) => 1,
+                AnimationAction::CopyMotion(..) | AnimationAction::MoveTo(_) => 2,
+                AnimationAction::RemoveEntry(_) | AnimationAction::DeleteAnimation(..) => 3,
+                _ => unreachable!("not a context menu action"),
             };
             let label = availability
                 .reason
                 .map_or(label.clone(), |reason| format!("{label} · {reason}"));
             let owner = owner.clone();
-            menu = menu.item(
+            items.push((
+                section,
                 PopupMenuItem::new(label)
                     .disabled(!availability.enabled)
                     .on_click(move |_, window, cx| {
@@ -414,25 +403,16 @@ pub(crate) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
                             state.run_animation_action(context, action.clone(), window, cx)
                         });
                     }),
-            );
+            ));
         }
-        if matches!(
-            object.kind,
-            ObjectKind::MotionRegistration | ObjectKind::ExpressionEntry
-        ) {
-            let action = AnimationAction::MoveTo(object.clone());
-            if let Some(availability) = action.availability(&entity.read(cx).editor) {
-                let owner = owner.clone();
-                menu = menu.item(
-                    PopupMenuItem::new(t!("authoring.move_to"))
-                        .disabled(!availability.enabled)
-                        .on_click(move |_, window, cx| {
-                            let _ = owner.update(cx, |state, cx| {
-                                state.run_animation_action(context, action.clone(), window, cx)
-                            });
-                        }),
-                );
+        items.sort_by_key(|(section, _)| *section);
+        let mut previous = None;
+        for (section, item) in items {
+            if previous.is_some_and(|previous| previous != section) {
+                menu = menu.separator();
             }
+            menu = menu.item(item);
+            previous = Some(section);
         }
         menu
     })

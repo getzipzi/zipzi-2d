@@ -4,6 +4,7 @@ use gpui_kit::component::{
     button::{Button, ButtonVariant, ButtonVariants},
     input::Input,
     menu::PopupMenu,
+    scroll::{ScrollableElement, ScrollbarHandle},
     select::{Select, SelectDelegate},
 };
 use gpui_kit::{prelude::*, *};
@@ -89,6 +90,46 @@ pub fn header_button(button: Button) -> Button {
     self::button(button)
         .h(rem(HEADER_CONTROL))
         .min_w(rem(HEADER_CONTROL))
+}
+
+/// Group/Part creation uses the same compact folder-plus affordance in headers.
+pub fn new_group_button(button: Button) -> Button {
+    header_button(button).icon(gpui_kit::assets::IconName::FolderPlus)
+}
+
+/// Overlay a scrollbar on the viewport, keeping the caller's scroll handle
+/// and virtualized or ordinary content as the actual scroll area.
+#[track_caller]
+pub fn scroll_frame(
+    content: impl IntoElement,
+    scroll: &(impl ScrollbarHandle + Clone + 'static),
+) -> Div {
+    let overflowing = scroll.content_size().height > scroll.viewport_bounds().size.height;
+    div()
+        .relative()
+        .size_full()
+        .flex_1()
+        .min_h_0()
+        .min_w_0()
+        .overflow_hidden()
+        .flex()
+        .flex_col()
+        .child(content)
+        // Keep the scrollbar's hit region above cached row controls, without
+        // occluding the rest of the list viewport.
+        .child(
+            deferred(
+                div()
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .right_0()
+                    .w(px(16.))
+                    .when(overflowing, |track| track.occlude())
+                    .vertical_scrollbar(scroll),
+            )
+            .with_priority(1),
+        )
 }
 
 /// Keep menu interaction in Kit, including submenus and custom multiline rows.

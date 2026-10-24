@@ -537,6 +537,23 @@ fn right_click_move_picker_keeps_playing_and_moves_the_clicked_registration(
     .unwrap();
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
+        for i in 0..32usize {
+            if let Some(item) = window.within("popup-menu").try_find(i) {
+                if let Some(label) = item.label() {
+                    assert!(
+                        ![
+                            "Move up",
+                            "Move down",
+                            "Move Earlier in Execution",
+                            "Move Later in Execution"
+                        ]
+                        .iter()
+                        .any(|prefix| label.starts_with(prefix)),
+                        "Unexpected context action: {label}"
+                    );
+                }
+            }
+        }
         let index = (0..16usize)
             .find(|i| {
                 window
@@ -598,4 +615,92 @@ fn right_click_move_picker_keeps_playing_and_moves_the_clicked_registration(
         window.close_dialog(cx);
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn resource_context_menus_group_creation_and_organization_before_removal(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, px, size, test::ClickOptions};
+    use zipzi_editor_core::PanelKind;
+    let (document, assets) = document_fixture::combined_animation_document().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.resize(size(px(1200.), px(1500.)));
+        window.click("workspace-animation", cx);
+    })
+    .unwrap();
+    for (panel, row, expected) in [
+        (
+            PanelKind::AnimationMotions,
+            ("animation-motion", 0usize),
+            vec![
+                "New Motion",
+                "Copy Motion Content",
+                "Move to…",
+                "Remove Registration",
+                "Delete Motion Content Everywhere…",
+            ],
+        ),
+        (
+            PanelKind::AnimationExpressions,
+            ("animation-expression", 0usize),
+            vec![
+                "New Expression",
+                "Add Expression Member",
+                "Delete Expression…",
+            ],
+        ),
+        (
+            PanelKind::AnimationPhysics,
+            ("physics-group-row", 0usize),
+            vec!["Add group", "Duplicate", "Delete"],
+        ),
+    ] {
+        cx.update_window(h.window, |_, window, cx| {
+            h.view.update(cx, |v, cx| {
+                v.dock.as_ref().unwrap().show(panel, None, window, cx)
+            });
+            window.render_frame(cx);
+            window.click_with_options(row, ClickOptions::new().with_button(MouseButton::Right), cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, window, cx| {
+            let labels: Vec<_> = (0..32usize)
+                .filter_map(|i| {
+                    window
+                        .within("popup-menu")
+                        .try_find(i)
+                        .and_then(|item| item.label().map(str::to_owned))
+                })
+                .collect();
+            assert!(!labels.iter().any(|label| label == "Properties"));
+            assert_eq!(
+                labels.first().map(String::as_str),
+                expected.first().copied()
+            );
+            let mut previous = None;
+            for expected in expected {
+                let at = labels
+                    .iter()
+                    .position(|label| label.starts_with(expected))
+                    .unwrap_or_else(|| panic!("Missing {expected}: {labels:?}"));
+                assert!(
+                    previous.is_none_or(|previous| previous < at),
+                    "Wrong menu order: {labels:?}"
+                );
+                previous = Some(at);
+            }
+            assert!(!labels.iter().any(|label| {
+                ["Move up", "Move down", "Move Earlier", "Move Later"]
+                    .iter()
+                    .any(|prefix| label.starts_with(prefix))
+            }));
+            window.press("escape", cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+    }
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (0, 0))
+    });
 }

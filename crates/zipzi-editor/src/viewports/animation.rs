@@ -52,9 +52,6 @@ impl AnimationViewport {
             hand_tool: true,
             controls: None,
             cursor: None,
-            interaction_label: None,
-            target_label: None,
-            vertex_notice: None,
         }
     }
 }

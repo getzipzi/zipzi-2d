@@ -269,6 +269,9 @@ impl FormDialogView for MoveDestinationPicker {
                 t!("authoring.move_stale")
             );
             match plan {
+                SortPlan::Business(plan) => {
+                    state.editor.execute_business(self.document, &plan)?;
+                }
                 SortPlan::Palette(plan) => {
                     let result = state.editor.execute_palette_move(self.document, &plan)?;
                     if let Some(object) = self.sources.last().cloned() {

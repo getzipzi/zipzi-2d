@@ -1,6 +1,7 @@
 //! Physics groups are navigated independently of animation playback.
 use super::*;
 use crate::authoring::{AuthoringContext, business};
+use crate::panels::sorting::{self, SortItem};
 use crate::panels::{properties::physics::group_name, toolbar::PanelToolbar};
 use crate::ui::compact;
 use gpui_kit::assets::IconName;
@@ -70,62 +71,26 @@ impl AnimationPanel {
         let group = doc
             .physics_definition()
             .and_then(|a| selected(&state.editor, a).map(|i| reference(&a.data.settings[i].id)));
-        for (id, icon, label, action) in [
-            (
-                "physics-add-group",
-                IconName::Plus,
-                "physics.add_group",
-                Some(A::Create(ObjectKind::PhysicsGroup, group.clone())),
-            ),
-            (
-                "physics-copy-group",
-                IconName::Copy,
-                "physics.copy_group",
-                group.clone().map(A::Copy),
-            ),
-            (
-                "physics-delete-group",
-                IconName::Trash,
-                "physics.delete_group",
-                group.clone().map(A::Delete),
-            ),
-            (
-                "physics-up-group",
-                IconName::ArrowUp,
-                "authoring.execute_earlier",
-                group.clone().map(|o| A::Step(o, false)),
-            ),
-            (
-                "physics-down-group",
-                IconName::ArrowDown,
-                "authoring.execute_later",
-                group.clone().map(|o| A::Step(o, true)),
-            ),
-        ] {
-            let available = action
-                .as_ref()
-                .and_then(|a| business::availability(&state.editor, a));
-            let off = state.modal || dialog || available.as_ref().is_none_or(|a| !a.enabled);
-            let hint = available
-                .and_then(|a| a.reason)
-                .unwrap_or_else(|| t!(label).into());
-            let owner = self.owner.clone();
-            toolbar = toolbar.action(move |_| {
-                Button::new(id)
-                    .icon(icon)
-                    .ghost()
-                    .accessibility_label(t!(label))
-                    .tooltip(hint.clone())
-                    .disabled(off)
-                    .on_click(move |_, window, cx| {
-                        if let (Some(context), Some(action)) = (context, action.clone()) {
-                            let _ = owner.update(cx, |v, cx| {
-                                v.run_business_action(context, action, window, cx)
-                            });
-                        }
-                    })
-            });
-        }
+        let action = A::Create(ObjectKind::PhysicsGroup, group);
+        let available = business::availability(&state.editor, &action);
+        let off = state.modal || dialog || available.as_ref().is_none_or(|a| !a.enabled);
+        let hint = available
+            .and_then(|a| a.reason)
+            .unwrap_or_else(|| t!("physics.add_group").into());
+        let create_owner = self.owner.clone();
+        toolbar = toolbar.action(move |_| {
+            compact::new_group_button(Button::new("physics-add-group"))
+                .accessibility_label(t!("physics.add_group"))
+                .tooltip(hint)
+                .disabled(off)
+                .on_click(move |_, window, cx| {
+                    if let Some(context) = context {
+                        let _ = create_owner.update(cx, |v, cx| {
+                            v.run_business_action(context, action.clone(), window, cx)
+                        });
+                    }
+                })
+        });
         if let Some(asset) = doc.physics_definition() {
             let object = ObjectRef::new(ObjectKind::Physics, &asset.id);
             let owner = self.owner.clone();
@@ -179,7 +144,13 @@ impl AnimationPanel {
         };
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
-        let Some(document) = state.editor.active_id() else {
+        let disabled = state.modal || state.editor.is_busy() || dialog;
+        let document = state.editor.active_id();
+        self.sorting.update(cx, |sorting, cx| {
+            sorting.reconcile(document, !disabled, window, cx);
+        });
+        let state = owner.read(cx);
+        let Some(document) = document else {
             return root
                 .child(div().p_2().child(t!("editor.welcome")))
                 .into_any_element();
@@ -200,7 +171,7 @@ impl AnimationPanel {
                 .into_any_element();
         };
         let index = selected(&state.editor, asset);
-        let disabled = state.modal || state.editor.is_busy() || dialog;
+        root = sorting::scroll_div(root, &self.sorting, &self.resources.view.scroll);
         let choices: Vec<_> = asset
             .data
             .settings
@@ -222,8 +193,8 @@ impl AnimationPanel {
                 self.resources.view.scroll.scroll_to_top_of_item(i);
             }
             let object = reference(&rig.id);
-            root = root.child(
-                self.resource_row(
+            let row = self
+                .resource_row(
                     ("physics-group-row", i),
                     index == Some(i),
                     i,
@@ -234,12 +205,6 @@ impl AnimationPanel {
                 .test_support()
                 .aria_label(group_name(asset, &rig.id).to_owned())
                 .aria_selected(index == Some(i))
-                .child(
-                    div()
-                        .flex_shrink_0()
-                        .text_color(cx.theme().muted_foreground)
-                        .child(format!("{}", i + 1)),
-                )
                 .child(
                     div()
                         .flex_1()
@@ -261,23 +226,39 @@ impl AnimationPanel {
                             this.choose_physics(document, object.clone(), window, cx);
                         }
                     }),
+                );
+            let item = SortItem::PhysicsGroup(reference(&rig.id));
+            let row = sorting::drop_target(row, &self.sorting, item.clone(), None, cx);
+            root = root.child(
+                sorting::drag_source(
+                    row,
+                    &self.sorting,
+                    document,
+                    item,
+                    group_name(asset, &rig.id).to_owned(),
+                    !disabled,
                 )
                 .context_menu(business::menu(self.owner.clone(), reference(&rig.id))),
             );
         }
-        root.on_key_down(cx.listener(move |this, event: &KeyDownEvent, window, cx| {
-            if disabled || !this.focus.is_focused(window) || choices.is_empty() {
-                return;
-            }
-            let next = match event.keystroke.key.as_str() {
-                "down" => index.map_or(0, |i| (i + 1).min(choices.len() - 1)),
-                "up" => index.map_or(choices.len() - 1, |i| i.saturating_sub(1)),
-                "enter" => index.unwrap_or(0),
-                _ => return,
-            };
-            this.choose_physics(document, choices[next].clone(), window, cx);
-            cx.stop_propagation();
-        }))
+        crate::ui::compact::scroll_frame(
+            sorting::panel_actions(root, &self.sorting).on_key_down(cx.listener(
+                move |this, event: &KeyDownEvent, window, cx| {
+                    if disabled || !this.focus.is_focused(window) || choices.is_empty() {
+                        return;
+                    }
+                    let next = match event.keystroke.key.as_str() {
+                        "down" => index.map_or(0, |i| (i + 1).min(choices.len() - 1)),
+                        "up" => index.map_or(choices.len() - 1, |i| i.saturating_sub(1)),
+                        "enter" => index.unwrap_or(0),
+                        _ => return,
+                    };
+                    this.choose_physics(document, choices[next].clone(), window, cx);
+                    cx.stop_propagation();
+                },
+            )),
+            &self.resources.view.scroll,
+        )
         .into_any_element()
     }
 }

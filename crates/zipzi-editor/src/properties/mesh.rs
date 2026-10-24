@@ -10,7 +10,6 @@ pub(super) fn fields() -> FormDefinition {
             field(NAME, "properties.name", Text),
             field(RUNTIME_ID, "properties.runtime_id", Text),
             field(PART, "properties.part", Select).choices(true, parts),
-            field(TEXTURE, "texture.resource", Select).choices(true, textures),
             field(DEFORMER, "properties.deformer", Select).choices(true, deformers),
             field(MASKS, "properties.masks", References).choices(true, meshes),
             field(INVERTED_MASK, "properties.inverted_mask", Toggle),
@@ -85,7 +84,7 @@ fn tree_choices(
         &if deformer {
             document.deformer_tree()
         } else {
-            document.mesh_tree()
+            document.part_tree()
         },
         "",
         kind,
@@ -101,24 +100,6 @@ fn parts(document: &Document) -> Vec<Choice> {
         ObjectKind::Part,
         Some("properties.no_part"),
     )
-}
-pub(crate) fn textures(document: &Document) -> Vec<Choice> {
-    let mut choices = vec![Choice {
-        label: t!("texture.unassigned").into(),
-        value: String::new(),
-    }];
-    let index = document.object_index();
-    choices.extend(
-        document
-            .resource_collection()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|r| Choice {
-                label: index.name(&r).to_owned().into(),
-                value: r.id,
-            }),
-    );
-    choices
 }
 fn deformers(document: &Document) -> Vec<Choice> {
     tree_choices(

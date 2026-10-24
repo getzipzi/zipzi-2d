@@ -46,7 +46,7 @@ fn all_scene_objects_support_visibility_under_locks_with_history_and_persistence
                 .enabled,
             Some(true)
         );
-        assert_eq!(visible(&editor.mesh_tree(), &target.id), Some(false));
+        assert_eq!(visible(&editor.part_tree(), &target.id), Some(false));
         if matches!(target.kind, ObjectKind::Mesh | ObjectKind::Deformer) {
             assert_eq!(visible(&editor.deformer_tree(), &target.id), Some(false));
         }
@@ -64,9 +64,9 @@ fn all_scene_objects_support_visibility_under_locks_with_history_and_persistence
             (history + 1, 0)
         );
         editor.execute(EditorCommand::Undo)?;
-        assert_eq!(visible(&editor.mesh_tree(), &target.id), Some(true));
+        assert_eq!(visible(&editor.part_tree(), &target.id), Some(true));
         editor.execute(EditorCommand::Redo)?;
-        assert_eq!(visible(&editor.mesh_tree(), &target.id), Some(false));
+        assert_eq!(visible(&editor.part_tree(), &target.id), Some(false));
 
         let mut task = editor
             .prepare_save(
@@ -77,7 +77,7 @@ fn all_scene_objects_support_visibility_under_locks_with_history_and_persistence
             .run();
         editor.finish_save(&mut task)?;
         let reopened = Document::open(&dir.path().join("hidden.zipzi"))?;
-        assert_eq!(visible(&reopened.mesh_tree(), &target.id), Some(false));
+        assert_eq!(visible(&reopened.part_tree(), &target.id), Some(false));
         editor.execute(EditorCommand::SetObjectVisible {
             object: target,
             visible: true,
@@ -182,10 +182,10 @@ fn parent_visibility_preserves_child_flags_and_updates_canvas() -> anyhow::Resul
         let child = ObjectRef::new(ObjectKind::Mesh, &meshes[1].id);
         doc.set_object_visible(&child, false)?;
         doc.set_object_visible(&parent, false)?;
-        assert_eq!(visible(&doc.mesh_tree(), &meshes[0].id), Some(true));
-        assert_eq!(visible(&doc.mesh_tree(), &child.id), Some(false));
+        assert_eq!(visible(&doc.part_tree(), &meshes[0].id), Some(true));
+        assert_eq!(visible(&doc.part_tree(), &child.id), Some(false));
         assert_eq!(
-            visible(&doc.mesh_tree(), &object(ObjectKind::Part, 103).id),
+            visible(&doc.part_tree(), &object(ObjectKind::Part, 103).id),
             Some(true)
         );
         let snapshot = doc.snapshot()?;

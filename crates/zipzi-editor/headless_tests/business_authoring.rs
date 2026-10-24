@@ -431,6 +431,23 @@ fn pose_group_right_click_copy_captures_source_and_shortcut_reorders(cx: &mut Te
     .unwrap();
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
+        for i in 0..32usize {
+            if let Some(item) = window.within("popup-menu").try_find(i) {
+                if let Some(label) = item.label() {
+                    assert!(
+                        ![
+                            "Move up",
+                            "Move down",
+                            "Move Earlier in Execution",
+                            "Move Later in Execution"
+                        ]
+                        .iter()
+                        .any(|prefix| label.starts_with(prefix)),
+                        "Unexpected context action: {label}"
+                    );
+                }
+            }
+        }
         let copy = (0..16usize)
             .find(|i| {
                 window

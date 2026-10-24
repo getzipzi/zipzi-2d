@@ -26,10 +26,12 @@ impl Painter for Window {
 pub(crate) struct Palette {
     pub mesh: Hsla,
     pub deformer: Hsla,
+    pub deformer_frame: Hsla,
     pub glue: Hsla,
     pub mesh_selected: Hsla,
     pub hollow: Hsla,
     pub selected: Hsla,
+    pub selection_region: Hsla,
     pub surface: Hsla,
 }
 impl Palette {
@@ -37,9 +39,11 @@ impl Palette {
         Self {
             mesh: rgb(0x909090).into(),
             deformer: rgb(0x62c878).into(),
+            deformer_frame: rgb(if dark { 0x669eff } else { 0x2864dc }).into(),
             glue: rgb(0x00c8ff).into(),
             mesh_selected: rgb(0xff0000).into(),
             selected: rgb(0xff5000).into(),
+            selection_region: rgb(if dark { 0xb0b0b0 } else { 0x606060 }).into(),
             hollow: rgb(0xffffff).into(),
             surface: rgb(if dark { 0x25272b } else { 0xe9ebef }).into(),
         }
@@ -109,6 +113,12 @@ pub(crate) fn paint_lines(
         lines(&deformer.lines, width, p.deformer.opacity(alpha));
     }
     lines(&overlay.gizmo_lines, 0.75, p.deformer.opacity(0.45));
+    lines(
+        &overlay.warp_frame_lines,
+        1.,
+        p.deformer_frame.opacity(0.95),
+    );
+    lines(&overlay.rotation_lines, 1., p.deformer.opacity(0.85));
     for glue in &overlay.glues {
         let color = if glue.selected { p.selected } else { p.glue };
         let dashed: Vec<_> = glue

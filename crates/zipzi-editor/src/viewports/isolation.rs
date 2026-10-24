@@ -28,7 +28,15 @@ pub(super) fn state(
             binding,
             active: binding.is_some_and(|b| owner.editor.viewport_isolated(b)),
             enabled: !modal
-                && binding.is_some_and(|b| owner.editor.can_toggle_viewport_isolation(b)),
+                && binding.is_some_and(|b| {
+                    owner
+                        .editor
+                        .command_available(owner.editor.command_for_viewport(
+                            zipzi_editor_core::CommandId::ToggleViewportIsolation,
+                            b,
+                            zipzi_editor_core::CommandSource::Direct,
+                        ))
+                }),
             display: binding.map_or(IsolationDisplay::Dim, |b| {
                 owner.editor.viewport_isolation_display(b)
             }),
@@ -49,13 +57,19 @@ fn apply(
     }
     window.focus(&canvas.read(cx).focus.clone(), cx);
     owner.update(cx, |owner, cx| {
-        let result = match display {
-            None => owner.editor.toggle_viewport_isolation(binding),
-            Some(display) => owner
+        if let Some(display) = display {
+            let result = owner
                 .editor
-                .set_viewport_isolation_display(binding, display),
-        };
-        owner.complete_edit(result, cx);
+                .set_viewport_isolation_display(binding, display);
+            owner.complete_edit(result, cx);
+        } else {
+            let command = owner.editor.command_for_viewport(
+                zipzi_editor_core::CommandId::ToggleViewportIsolation,
+                binding,
+                zipzi_editor_core::CommandSource::Direct,
+            );
+            owner.run_invocation(command, window, cx);
+        }
     });
 }
 
@@ -84,9 +98,15 @@ pub(super) fn controls(
                 .border_1()
                 .rounded_tr(px(0.))
                 .rounded_br(px(0.))
-                .icon(IconName::Frame)
+                .icon(IconName::Focus)
                 .accessibility_label(label.clone().into_owned())
-                .tooltip(label)
+                .tooltip_with_action(
+                    label,
+                    &crate::actions::RunCommand::new(
+                        zipzi_editor_core::CommandId::ToggleViewportIsolation,
+                    ),
+                    Some("ZipziShortcutDisplay"),
+                )
                 .disabled(!header.enabled)
                 .on_click(move |_, window, cx| {
                     if let Some(binding) = binding {

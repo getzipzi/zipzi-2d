@@ -44,7 +44,7 @@ fn panel_selector_switches_and_context_menu_closes_only_the_active_panel(cx: &mu
         let dock = view.dock.as_ref().unwrap();
         (
             dock.area.clone(),
-            PanelId::from(dock.mesh_tree.entity_id()),
+            PanelId::from(dock.part_tree.entity_id()),
             PanelId::from(dock.document_panels[&PanelKind::DrawOrder].entity_id()),
         )
     });
@@ -63,7 +63,7 @@ fn panel_selector_switches_and_context_menu_closes_only_the_active_panel(cx: &mu
         window.render_frame(cx);
         assert!(window.find(format!("dock-tab-{draw_order:?}")).visible());
         assert!(window.try_find(format!("dock-tab-{mesh:?}")).is_none());
-        assert!(window.try_find("mesh-panel-toolbar").is_none());
+        assert!(window.try_find("parts-panel-toolbar").is_none());
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
@@ -79,7 +79,7 @@ fn panel_selector_switches_and_context_menu_closes_only_the_active_panel(cx: &mu
         window.render_frame(cx);
         assert!(area.read(cx).panel(draw_order).is_none());
         assert!(area.read(cx).panel(mesh).is_some());
-        assert!(window.find("mesh-panel-toolbar").visible());
+        assert!(window.find("parts-panel-toolbar").visible());
     })
     .unwrap();
 }
@@ -188,7 +188,7 @@ fn active_panel_drags_from_tab_and_full_header_between_groups(cx: &mut TestAppCo
             dock.area.clone(),
             PanelId::from(dock.document_panels[&PanelKind::DrawOrder].entity_id()),
             PanelId::from(dock.properties.entity_id()),
-            PanelId::from(dock.mesh_tree.entity_id()),
+            PanelId::from(dock.part_tree.entity_id()),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -224,9 +224,9 @@ fn active_panel_drags_from_tab_and_full_header_between_groups(cx: &mut TestAppCo
 fn selecting_header_search_text_does_not_drag_the_panel(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("select this text", cx);
-        let search = window.find("mesh-tree-search").bounds();
+        let search = window.find("parts-tree-search").bounds();
         let from = gpui_kit::point(search.left() + px(45.), search.center().y);
         let to = from + gpui_kit::point(px(35.), px(0.));
         super::slide_number_input::press(window, from, cx);
@@ -234,8 +234,8 @@ fn selecting_header_search_text_does_not_drag_the_panel(cx: &mut TestAppContext)
         window.render_frame(cx);
         assert!(!cx.has_active_drag(), "text selection started a dock drag");
         super::slide_number_input::release(window, to, cx);
-        assert_eq!(window.find("mesh-tree-search").focused(), Some(true));
-        for id in ["mesh-tree-filter", "btn_zoom_out"] {
+        assert_eq!(window.find("parts-tree-search").focused(), Some(true));
+        for id in ["parts-tree-filter", "btn_zoom_out"] {
             let from = window.find(id).bounds().center();
             let to = from + gpui_kit::point(px(35.), px(0.));
             super::slide_number_input::press(window, from, cx);
@@ -256,7 +256,7 @@ fn canvas_drags_from_header_background_and_keeps_zoom_controls(cx: &mut TestAppC
         (
             dock.area.clone(),
             dock.viewport_panel_id(),
-            PanelId::from(dock.mesh_tree.entity_id()),
+            PanelId::from(dock.part_tree.entity_id()),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -298,13 +298,13 @@ fn canvas_drags_from_header_background_and_keeps_zoom_controls(cx: &mut TestAppC
 fn collapsed_bottom_selector_reopens_the_selected_panel(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        let (area, resources, physics) = harness.view.update(cx, |view, cx| {
+        let (area, resources, pose) = harness.view.update(cx, |view, cx| {
             let dock = view.dock.as_ref().unwrap();
             let resources = dock.document_panels[&PanelKind::Resources].clone();
-            let physics = dock.document_panels[&PanelKind::Physics].clone();
+            let pose = dock.document_panels[&PanelKind::Pose].clone();
             let layout = DockLayout::tabs()
                 .panel_view(panel_handle(resources.clone()), cx)
-                .panel_view(panel_handle(physics.clone()), cx);
+                .panel_view(panel_handle(pose.clone()), cx);
             dock.area.update(cx, |area, cx| {
                 area.set_dock(DockPlacement::Bottom, layout, window, cx);
                 area.toggle_dock(DockPlacement::Bottom, window, cx);
@@ -312,17 +312,17 @@ fn collapsed_bottom_selector_reopens_the_selected_panel(cx: &mut TestAppContext)
             (
                 dock.area.clone(),
                 PanelId::from(resources.entity_id()),
-                PanelId::from(physics.entity_id()),
+                PanelId::from(pose.entity_id()),
             )
         });
         window.render_frame(cx);
         assert!(!area.read(cx).is_dock_open(DockPlacement::Bottom));
         window.click(selector(&area, resources, cx), cx);
         window.render_frame(cx);
-        window.click(format!("dock-select-{physics:?}"), cx);
+        window.click(format!("dock-select-{pose:?}"), cx);
         window.render_frame(cx);
         assert!(area.read(cx).is_dock_open(DockPlacement::Bottom));
-        assert!(window.find(format!("dock-tab-{physics:?}")).visible());
+        assert!(window.find(format!("dock-tab-{pose:?}")).visible());
     })
     .unwrap();
 }
@@ -432,7 +432,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                 };
                 dock.show(PanelKind::AnimationPose, Some(target), window, cx);
                 dock.show(PanelKind::AnimationPose, Some(target), window, cx);
-                dock.show(PanelKind::MeshTree, Some(target), window, cx);
+                dock.show(PanelKind::PartsTree, Some(target), window, cx);
             });
             window.render_frame(cx);
             let tree = area.read(cx).layout(DockPlacement::Center).unwrap();
@@ -568,8 +568,8 @@ fn workspace_restoration_keeps_each_windows_own_panel_instances(cx: &mut TestApp
         for (own, foreign) in [
             (dock.viewport_panel_id(), foreign.viewport_panel_id()),
             (
-                PanelId::from(dock.mesh_tree.entity_id()),
-                PanelId::from(foreign.mesh_tree.entity_id()),
+                PanelId::from(dock.part_tree.entity_id()),
+                PanelId::from(foreign.part_tree.entity_id()),
             ),
         ] {
             assert!(dock.area.read(cx).panel(own).is_some());
@@ -696,7 +696,7 @@ fn first_row_owns_tree_controls_and_preserves_search_when_switching(cx: &mut Tes
         let dock = view.dock.as_ref().unwrap();
         (
             dock.area.clone(),
-            PanelId::from(dock.mesh_tree.entity_id()),
+            PanelId::from(dock.part_tree.entity_id()),
             PanelId::from(dock.document_panels[&PanelKind::DrawOrder].entity_id()),
         )
     });
@@ -704,29 +704,29 @@ fn first_row_owns_tree_controls_and_preserves_search_when_switching(cx: &mut Tes
         let header = window
             .find(selector(&area, mesh, cx).replace("dock-selector-", "dock-header-"))
             .bounds();
-        for id in ["mesh-tree-search", "mesh-tree-filter"] {
+        for id in ["parts-tree-search", "parts-tree-filter"] {
             let control = window.find(id).bounds();
             assert!(header.contains(&control.origin));
             assert!(control.bottom() <= header.bottom());
         }
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("kept", cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         area.update(cx, |area, cx| area.select_panel(order, window, cx));
         window.render_frame(cx);
-        assert!(window.try_find("mesh-tree-search").is_none());
+        assert!(window.try_find("parts-tree-search").is_none());
         area.update(cx, |area, cx| area.select_panel(mesh, window, cx));
         window.render_frame(cx);
-        assert_eq!(window.find("mesh-tree-search").value(), Some("kept"));
-        window.click("mesh-tree-clear", cx);
+        assert_eq!(window.find("parts-tree-search").value(), Some("kept"));
+        window.click("parts-tree-clear", cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert_eq!(window.find("mesh-tree-search").value(), Some(""));
-        assert!(window.try_find("mesh-tree-clear").is_none());
+        assert_eq!(window.find("parts-tree-search").value(), Some(""));
+        assert!(window.try_find("parts-tree-clear").is_none());
     })
     .unwrap();
 }
@@ -736,14 +736,14 @@ fn narrow_panel_keeps_selector_and_tools_accessible(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let (area, mesh) = harness.view.read_with(cx, |view, _| {
         let dock = view.dock.as_ref().unwrap();
-        (dock.area.clone(), PanelId::from(dock.mesh_tree.entity_id()))
+        (dock.area.clone(), PanelId::from(dock.part_tree.entity_id()))
     });
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             let dock = view.dock.as_ref().unwrap();
             let layout = DockLayout::h_split()
                 .child(
-                    DockLayout::tabs().panel_view(panel_handle(dock.mesh_tree.clone()), cx),
+                    DockLayout::tabs().panel_view(panel_handle(dock.part_tree.clone()), cx),
                     Some(px(100.)),
                 )
                 .child(
@@ -766,14 +766,14 @@ fn narrow_panel_keeps_selector_and_tools_accessible(cx: &mut TestAppContext) {
         assert!(tools.bottom() <= header.bottom());
         window.click("panel-header-tools", cx);
         window.render_frame(cx);
-        assert!(window.find("mesh-tree-search").visible());
-        window.click("mesh-tree-search", cx);
+        assert!(window.find("parts-tree-search").visible());
+        window.click("parts-tree-search", cx);
         window.input("popup", cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert_eq!(window.find("mesh-tree-search").value(), Some("popup"));
+        assert_eq!(window.find("parts-tree-search").value(), Some("popup"));
         window.press("escape", cx);
     })
     .unwrap();
@@ -788,7 +788,7 @@ fn canvas_uses_the_same_selector_and_can_share_and_restore_a_panel_group(cx: &mu
         (
             dock.area.clone(),
             dock.viewport_panel_id(),
-            PanelId::from(dock.mesh_tree.entity_id()),
+            PanelId::from(dock.part_tree.entity_id()),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -812,7 +812,7 @@ fn canvas_uses_the_same_selector_and_can_share_and_restore_a_panel_group(cx: &mu
         window.render_frame(cx);
         assert!(window.find(selector(&area, canvas, cx)).visible());
         assert!(window.find("canvas-toolbar").visible());
-        assert!(window.try_find("mesh-tree-search").is_none());
+        assert!(window.try_find("parts-tree-search").is_none());
         crate::docking::validate_layout(
             &area.read(cx).dump(cx),
             zipzi_editor_core::WorkspaceKind::Modeling,
@@ -826,7 +826,7 @@ fn canvas_uses_the_same_selector_and_can_share_and_restore_a_panel_group(cx: &mu
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(window.try_find("canvas-toolbar").is_none());
-        assert!(window.find("mesh-tree-search").visible());
+        assert!(window.find("parts-tree-search").visible());
         window.click(selector(&area, mesh, cx), cx);
         window.render_frame(cx);
         window.click(format!("dock-select-{canvas:?}"), cx);
@@ -859,7 +859,7 @@ fn canvas_in_a_side_dock_remains_a_valid_target_for_new_panels(cx: &mut TestAppC
             let dock = view.dock.as_ref().unwrap();
             dock.area.update(cx, |area, cx| {
                 area.set_center(
-                    DockLayout::tabs().panel_view(panel_handle(dock.mesh_tree.clone()), cx),
+                    DockLayout::tabs().panel_view(panel_handle(dock.part_tree.clone()), cx),
                     window,
                     cx,
                 );

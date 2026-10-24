@@ -77,7 +77,7 @@ fn tree_move_to_submits_captured_multiselection_atomically_and_reveals_destinati
         }
     }
     let mut expected_order = Vec::new();
-    order(&document.mesh_tree(), &mut expected_order);
+    order(&document.part_tree(), &mut expected_order);
     let meshes: Vec<_> = document
         .layers()
         .iter()
@@ -85,9 +85,9 @@ fn tree_move_to_submits_captured_multiselection_atomically_and_reveals_destinati
         .collect();
     let h = setup_with_document(cx, document, assets);
     cx.update_window(h.window, |_, window, cx| {
-        window.click(format!("mesh-item-Mesh:{}", meshes[0].id), cx);
+        window.click(format!("parts-item-Mesh:{}", meshes[0].id), cx);
         window.click_with_modifiers(
-            format!("mesh-item-Mesh:{}", meshes[1].id),
+            format!("parts-item-Mesh:{}", meshes[1].id),
             Modifiers {
                 platform: true,
                 ..Default::default()
@@ -99,7 +99,7 @@ fn tree_move_to_submits_captured_multiselection_atomically_and_reveals_destinati
     let inspected = h.view.read_with(cx, |view, _| {
         view.editor.document().unwrap().context().inspected.clone()
     });
-    open(&h, format!("mesh-item-Mesh:{}", meshes[0].id), cx);
+    open(&h, format!("parts-item-Mesh:{}", meshes[0].id), cx);
     choose(&h, "Body", cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click("move-destination-submit", cx);
@@ -108,7 +108,7 @@ fn tree_move_to_submits_captured_multiselection_atomically_and_reveals_destinati
     settle(cx);
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        let tree = doc.mesh_tree();
+        let tree = doc.part_tree();
         let body = tree.iter().find(|node| node.id == id(102)).unwrap();
         assert_eq!(
             body.children
@@ -125,7 +125,7 @@ fn tree_move_to_submits_captured_multiselection_atomically_and_reveals_destinati
         assert!(!window.has_active_dialog(cx));
         assert!(
             window
-                .find(format!("mesh-item-Mesh:{}", meshes[1].id))
+                .find(format!("parts-item-Mesh:{}", meshes[1].id))
                 .visible()
         );
         h.view.update(cx, |view, cx| {
@@ -175,7 +175,7 @@ fn cycle_and_locked_destination_remain_disabled_and_cancel_keeps_history(cx: &mu
         .set_objects_locked(&[ObjectRef::new(ObjectKind::Part, id(102))], true)
         .unwrap();
     let h = setup_with_document(cx, document, assets);
-    open(&h, format!("mesh-item-Part:{}", id(101)), cx);
+    open(&h, format!("parts-item-Part:{}", id(101)), cx);
     choose(&h, "Face / Eyes", cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click("move-destination-submit", cx);
@@ -213,7 +213,7 @@ fn cycle_and_locked_destination_remain_disabled_and_cancel_keeps_history(cx: &mu
 fn picker_rejects_changed_document_even_after_a_target_was_validated(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_parts().unwrap();
     let h = setup_with_document(cx, document, assets);
-    open(&h, format!("mesh-item-Part:{}", id(103)), cx);
+    open(&h, format!("parts-item-Part:{}", id(103)), cx);
     choose(&h, "Body", cx);
     cx.update_window(h.window, |_, _, cx| {
         h.view.update(cx, |view, cx| {
@@ -242,7 +242,7 @@ fn picker_rejects_changed_document_even_after_a_target_was_validated(cx: &mut Te
     settle(cx);
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert_eq!(doc.mesh_tree()[0].children[0].id, id(103));
+        assert_eq!(doc.part_tree()[0].children[0].id, id(103));
         assert_eq!(doc.history_lengths(), (1, 0));
     });
 }
@@ -294,12 +294,12 @@ fn filtered_move_reveals_new_ancestor_path_and_keeps_query_and_inspection(cx: &m
         .unwrap();
     let h = setup_with_document(cx, document, assets);
     cx.update_window(h.window, |_, window, cx| {
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("Face", cx);
     })
     .unwrap();
     settle(cx);
-    open(&h, format!("mesh-item-Mesh:{object}"), cx);
+    open(&h, format!("parts-item-Mesh:{object}"), cx);
     choose(&h, "Body", cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click("move-destination-submit", cx)
@@ -307,9 +307,13 @@ fn filtered_move_reveals_new_ancestor_path_and_keeps_query_and_inspection(cx: &m
     .unwrap();
     settle(cx);
     cx.update_window(h.window, |_, window, _| {
-        assert_eq!(window.find("mesh-tree-search").value(), Some("Face"));
-        assert!(window.find(format!("mesh-item-Part:{}", id(102))).visible());
-        assert!(window.find(format!("mesh-item-Mesh:{object}")).visible());
+        assert_eq!(window.find("parts-tree-search").value(), Some("Face"));
+        assert!(
+            window
+                .find(format!("parts-item-Part:{}", id(102)))
+                .visible()
+        );
+        assert!(window.find(format!("parts-item-Mesh:{object}")).visible());
         assert!(window.find("tree-moved-item").visible());
         assert!(window.try_find("tree-created-item").is_none());
     })
@@ -340,12 +344,12 @@ fn locked_member_rejects_the_entire_captured_selection(cx: &mut TestAppContext) 
     document
         .set_objects_locked(&[meshes[1].clone()], true)
         .unwrap();
-    let before = document.mesh_tree();
+    let before = document.part_tree();
     let h = setup_with_document(cx, document, assets);
     cx.update_window(h.window, |_, window, cx| {
-        window.click(format!("mesh-item-Mesh:{}", meshes[0].id), cx);
+        window.click(format!("parts-item-Mesh:{}", meshes[0].id), cx);
         window.click_with_modifiers(
-            format!("mesh-item-Mesh:{}", meshes[1].id),
+            format!("parts-item-Mesh:{}", meshes[1].id),
             Modifiers {
                 platform: true,
                 ..Default::default()
@@ -354,7 +358,7 @@ fn locked_member_rejects_the_entire_captured_selection(cx: &mut TestAppContext) 
         );
     })
     .unwrap();
-    open(&h, format!("mesh-item-Mesh:{}", meshes[0].id), cx);
+    open(&h, format!("parts-item-Mesh:{}", meshes[0].id), cx);
     choose(&h, "Body", cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click("move-destination-submit", cx);
@@ -372,7 +376,7 @@ fn locked_member_rejects_the_entire_captured_selection(cx: &mut TestAppContext) 
     settle(cx);
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert_eq!(doc.mesh_tree(), before);
+        assert_eq!(doc.part_tree(), before);
         assert_eq!(doc.history_lengths(), (1, 0));
         assert_eq!(doc.context().selections, meshes);
     });
@@ -428,7 +432,7 @@ fn configurable_move_to_command_uses_the_focused_tree_row(cx: &mut TestAppContex
             )
             .unwrap();
         crate::keybindings::reload(cx);
-        window.click(format!("mesh-item-Part:{}", id(103)), cx);
+        window.click(format!("parts-item-Part:{}", id(103)), cx);
         window.press("alt-m", cx);
     })
     .unwrap();
@@ -441,7 +445,7 @@ fn configurable_move_to_command_uses_the_focused_tree_row(cx: &mut TestAppContex
     settle(cx);
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        let tree = doc.mesh_tree();
+        let tree = doc.part_tree();
         assert_eq!(
             tree.iter()
                 .find(|node| node.id == id(102))
@@ -475,9 +479,9 @@ fn offscreen_targets_explain_owner_requirements_and_keep_the_document_unchanged(
     let b = create(T::Part, "B", &[]);
     let offscreen = create(T::Offscreen, "Offscreen A", &[a]);
     create(T::Offscreen, "Offscreen B", &[b]);
-    let before = document.mesh_tree();
+    let before = document.part_tree();
     let h = setup_with_document(cx, document, tempfile::tempdir().unwrap());
-    open(&h, format!("mesh-item-Offscreen:{}", offscreen.id), cx);
+    open(&h, format!("parts-item-Offscreen:{}", offscreen.id), cx);
     for (path, reason) in [
         ("Root collection", "Choose a Part"),
         ("B", "already has an Offscreen"),
@@ -502,7 +506,7 @@ fn offscreen_targets_explain_owner_requirements_and_keep_the_document_unchanged(
     settle(cx);
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert_eq!(doc.mesh_tree(), before);
+        assert_eq!(doc.part_tree(), before);
         assert_eq!(doc.history_lengths(), (4, 0));
     });
 }

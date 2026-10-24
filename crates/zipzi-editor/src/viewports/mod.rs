@@ -304,9 +304,6 @@ impl Render for ViewportSurface {
             hand_tool,
             controls,
             cursor,
-            interaction_label,
-            target_label,
-            vertex_notice,
         } = (self.content)(state, self.viewport);
         if !self.show_origin_crosshair {
             overlay.origin_crosshair = None;
@@ -322,8 +319,6 @@ impl Render for ViewportSurface {
         let capture = self.navigation.pan.is_some() || self.interaction.is_some();
         let palette = crate::canvas_overlay::Palette::new(cx.theme().is_dark());
         let muted = cx.theme().muted_foreground;
-        let foreground = cx.theme().foreground;
-        let background = cx.theme().background;
         let menu_owner = owner.downgrade();
         let menu_canvas = cx.weak_entity();
         let body = div()
@@ -383,47 +378,6 @@ impl Render for ViewportSurface {
                 })
             })
             .children(controls.map(|render| render(self, modal, cx)))
-            .children(interaction_label.map(|label| {
-                div()
-                    .absolute()
-                    .left(px(48.))
-                    .top(px(48.))
-                    .px_2()
-                    .py_1()
-                    .rounded_md()
-                    .bg(background)
-                    .text_color(foreground)
-                    .text_xs()
-                    .child(label)
-            }))
-            .children(vertex_notice.map(|reason| {
-                div()
-                    .id("canvas-vertex-notice")
-                    .test_support()
-                    .absolute()
-                    .right_3()
-                    .bottom_3()
-                    .max_w(px(360.))
-                    .px_2p5()
-                    .py_1()
-                    .rounded_md()
-                    .bg(cx.theme().warning.opacity(0.15))
-                    .border_1()
-                    .border_color(cx.theme().warning.opacity(0.4))
-                    .text_xs()
-                    .text_color(cx.theme().warning)
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .child(reason)
-            }))
-            .children(target_label.map(|label| {
-                div()
-                    .absolute()
-                    .left_2()
-                    .bottom_2()
-                    .text_xs()
-                    .text_color(muted)
-                    .child(label)
-            }))
             // Include our own occluding toolbar/controls in the viewport region.
             // Later popup layers can still occlude the entire region.
             .child(self.input_region.marker())
@@ -473,7 +427,4 @@ pub(super) struct SurfaceContent {
     hand_tool: bool,
     controls: Option<fn(&ViewportSurface, bool, &mut Context<ViewportSurface>) -> AnyElement>,
     cursor: Option<CursorStyle>,
-    interaction_label: Option<String>,
-    target_label: Option<String>,
-    vertex_notice: Option<String>,
 }

@@ -107,7 +107,7 @@ fn arrows_browse_enter_inspects_and_left_right_follow_visible_hierarchy(cx: &mut
 }
 
 #[gpui_kit::test]
-fn movement_uses_browsed_folder_instead_of_inspected_parameter_and_pseudo_group_is_noop(
+fn movement_uses_browsed_folder_and_ungrouped_parameters_have_no_parent_row(
     cx: &mut TestAppContext,
 ) {
     let h = fixture(cx);
@@ -128,20 +128,22 @@ fn movement_uses_browsed_folder_instead_of_inspected_parameter_and_pseudo_group_
         assert_eq!(doc.context().parameter_focus, Some(object(K::Parameter, 1)));
     });
     cx.update_window(h.window, |_, window, cx| {
-        window.press("end", cx); // Breath
-        window.press("left", cx); // Ungrouped pseudo header
-        window.press("alt-up", cx);
-        window.press("enter", cx);
-        window.press("left", cx); // collapse pseudo header
-        assert!(
-            window
-                .try_find(format!("parameter-name-{}", id(5)))
-                .is_none()
-        );
+        window.press("end", cx); // Breath at root
+        window.press("left", cx); // No synthetic parent to browse or collapse
+        assert!(window.find(format!("parameter-name-{}", id(5))).visible());
+        assert!(window.try_find("parameter-group-ungrouped").is_none());
     })
     .unwrap();
-    assert_eq!(cursor(&h, cx), None);
+    assert_eq!(cursor(&h, cx), Some(object(K::Parameter, 5)));
     assert_eq!(inspected(&h, cx), Some(object(K::Parameter, 1)));
+    cx.update_window(h.window, |_, window, cx| {
+        window.press("enter", cx);
+        window.press("left", cx);
+        assert!(window.find(format!("parameter-name-{}", id(5))).visible());
+    })
+    .unwrap();
+    assert_eq!(cursor(&h, cx), Some(object(K::Parameter, 5)));
+    assert_eq!(inspected(&h, cx), Some(object(K::Parameter, 5)));
     h.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0))
     });
@@ -260,7 +262,6 @@ fn deleting_a_browsed_folder_reconciles_cursor_and_undo_does_not_revive_the_old_
     click_group(&h, 101, cx);
     cx.update_window(h.window, |_, window, cx| {
         window.press("end", cx);
-        window.press("up", cx); // Ungrouped
         window.press("up", cx); // Expressions
     })
     .unwrap();

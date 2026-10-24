@@ -356,12 +356,12 @@ fn layouts_are_independent_and_pending_reset_captures_its_workspace(cx: &mut Tes
         cx.global::<crate::settings::Settings>().store.clone()
     });
     let mesh = harness.view.read_with(cx, |view, _| {
-        PanelId::from(view.dock.as_ref().unwrap().mesh_tree.entity_id())
+        PanelId::from(view.dock.as_ref().unwrap().part_tree.entity_id())
     });
     cx.update_window(harness.window, |_, window, cx| {
         window.simulate_next_frame(cx);
         harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::MeshTree, window, cx)
+            view.run_command(CommandId::PartsTree, window, cx)
         });
         window.render_frame(cx);
         assert!(
@@ -438,7 +438,7 @@ fn invalid_animation_layout_falls_back_without_resetting_modeling(cx: &mut TestA
     cx.update_window(harness.window, |_, window, cx| {
         window.simulate_next_frame(cx);
         harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::MeshTree, window, cx)
+            view.run_command(CommandId::PartsTree, window, cx)
         });
         window.render_frame(cx);
         window.click("workspace-animation", cx);
@@ -453,7 +453,7 @@ fn invalid_animation_layout_falls_back_without_resetting_modeling(cx: &mut TestA
             assert!(
                 dock.area
                     .read(cx)
-                    .panel(PanelId::from(dock.mesh_tree.entity_id()))
+                    .panel(PanelId::from(dock.part_tree.entity_id()))
                     .is_none()
             );
         });
@@ -470,7 +470,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
     cx.update_window(harness.window, |_, window, cx| {
         window.simulate_next_frame(cx);
         harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::MeshTree, window, cx)
+            view.run_command(CommandId::PartsTree, window, cx)
         });
         window.render_frame(cx);
         window.click("workspace-animation", cx);
@@ -541,7 +541,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
             assert!(
                 dock.area
                     .read(cx)
-                    .panel(PanelId::from(dock.mesh_tree.entity_id()))
+                    .panel(PanelId::from(dock.part_tree.entity_id()))
                     .is_none()
             );
             assert!(

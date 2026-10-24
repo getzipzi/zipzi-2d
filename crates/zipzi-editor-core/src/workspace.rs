@@ -227,10 +227,10 @@ impl Editor {
             .map(|session| session.document().parameter_model_revision())
     }
 
-    pub fn mesh_tree(&self) -> Vec<TreeNode> {
+    pub fn part_tree(&self) -> Vec<TreeNode> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .map_or_else(Vec::new, Entry::mesh_tree)
+            .map_or_else(Vec::new, Entry::part_tree)
     }
     pub fn deformer_tree(&self) -> Vec<TreeNode> {
         self.active

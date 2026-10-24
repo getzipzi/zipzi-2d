@@ -153,6 +153,7 @@ pub(crate) fn menu(
     &mut Context<gpui_kit::component::menu::PopupMenu>,
 ) -> gpui_kit::component::menu::PopupMenu {
     move |mut menu, window, cx| {
+        menu = compact::menu(menu);
         let Some(entity) = owner.upgrade() else {
             return menu;
         };
@@ -183,45 +184,8 @@ pub(crate) fn menu(
                 t!("authoring.delete_business").into(),
                 A::Delete(source.clone()),
             ),
-            (
-                t!(if source.kind == K::PhysicsGroup {
-                    "authoring.execute_earlier"
-                } else {
-                    "authoring.move_up"
-                })
-                .into(),
-                A::Step(source.clone(), false),
-            ),
-            (
-                t!(if source.kind == K::PhysicsGroup {
-                    "authoring.execute_later"
-                } else {
-                    "authoring.move_down"
-                })
-                .into(),
-                A::Step(source.clone(), true),
-            ),
         ]);
-        let inspect = owner.clone();
-        let object = source.clone();
-        menu = menu.item(
-            PopupMenuItem::new(t!("authoring.inspect_business").into_owned()).on_click(
-                move |_, window, cx| {
-                    let _ = inspect.update(cx, |v, cx| {
-                        if AuthoringContext::capture(&v.editor) == Some(context) {
-                            let result = v.inspect_authoring_object(
-                                context.editing.document,
-                                object.clone(),
-                                false,
-                                window,
-                                cx,
-                            );
-                            v.complete_edit(result, cx);
-                        }
-                    });
-                },
-            ),
-        );
+        let mut items = Vec::new();
         for (label, action) in actions {
             let Some(availability) = availability(&entity.read(cx).editor, &action) else {
                 continue;
@@ -229,8 +193,15 @@ pub(crate) fn menu(
             let label = availability
                 .reason
                 .map_or(label.to_string(), |r| format!("{label} · {r}"));
+            let section = match &action {
+                A::Create(..) => 1,
+                A::Copy(_) => 2,
+                A::Delete(_) => 3,
+                _ => unreachable!("only create, copy and delete are direct menu actions"),
+            };
             let owner = owner.clone();
-            menu = menu.item(
+            items.push((
+                section,
                 PopupMenuItem::new(label)
                     .disabled(!availability.enabled)
                     .on_click(move |_, window, cx| {
@@ -238,7 +209,7 @@ pub(crate) fn menu(
                             v.run_business_action(context, action.clone(), window, cx)
                         });
                     }),
-            );
+            ));
         }
         if matches!(
             source.kind,
@@ -257,7 +228,8 @@ pub(crate) fn menu(
             ) {
                 let owner = owner.clone();
                 let source = source.clone();
-                menu = menu.item(
+                items.push((
+                    2,
                     PopupMenuItem::new(
                         t!(if migrate {
                             "authoring.migrate_pose_group"
@@ -278,8 +250,17 @@ pub(crate) fn menu(
                             )
                         });
                     }),
-                );
+                ));
             }
+        }
+        items.sort_by_key(|(section, _)| *section);
+        let mut previous = None;
+        for (section, item) in items {
+            if previous.is_some_and(|previous| previous != section) {
+                menu = menu.separator();
+            }
+            menu = menu.item(item);
+            previous = Some(section);
         }
         menu
     }

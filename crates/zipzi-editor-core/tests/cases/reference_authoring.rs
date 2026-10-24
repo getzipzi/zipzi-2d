@@ -144,8 +144,8 @@ fn label_publication_reuses_relations_and_refreshes_document_metadata() -> anyho
 #[test]
 fn reference_copy_delete_and_selection_patch_refresh_the_shared_projection() -> anyhow::Result<()> {
     let (mut d, _assets) = super::support::sample_document_with_two_layers()?;
-    let mesh = d.mesh_tree()[0].children[0].id.clone();
-    let other = d.mesh_tree()[0].children[1].id.clone();
+    let mesh = d.part_tree()[0].children[0].id.clone();
+    let other = d.part_tree()[0].children[1].id.clone();
     let address = d.reference_selection_address(&mesh, S::MeshMasks)?;
     let p = d.plan_reference_selection_patch(&address, vec![other])?;
     d.execute_reference_authoring(&p)?;

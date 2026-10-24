@@ -80,7 +80,7 @@ fn detached_runtime_uses_defaults_restores_hidden_objects_and_preserves_authorin
     let (mut editor, _assets) = setup()?;
     editor.set_workspace(WorkspaceKind::Modeling)?;
     let parameter = editor.document().unwrap().parameters()[0].id.clone();
-    let mesh = editor.document().unwrap().mesh_tree()[0].children[0]
+    let mesh = editor.document().unwrap().part_tree()[0].children[0]
         .id
         .clone();
     editor.execute(EditorCommand::SetPreviewParameter {
@@ -279,7 +279,7 @@ fn document_workspace_save_and_history_changes_pause_and_invalidate() -> anyhow:
     assert!(!editor.animation().unwrap().playing);
     assert!(!editor.accepts_animation(pending.identity));
     editor.set_workspace(WorkspaceKind::Modeling)?;
-    let mesh = editor.document().unwrap().mesh_tree()[0].children[0]
+    let mesh = editor.document().unwrap().part_tree()[0].children[0]
         .id
         .clone();
     editor.execute(EditorCommand::SetObjectVisible {

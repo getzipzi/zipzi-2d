@@ -193,3 +193,55 @@ fn hierarchical_transforms_and_warp(flag: u8) {
     assert!(!frame.drawables[0].visible);
     assert_eq!(frame.drawables[0].positions, visible_positions);
 }
+
+#[test]
+fn rotation_display_axes_preserve_direction_for_tiny_nested_scales_and_large_origins() {
+    for reflect_x in [false, true] {
+        let mut doc = Document::new();
+        assert!(doc
+            .initialize(id(80), Canvas::new(256., 256., Vec2::default(), 1.))
+            .is_ok());
+        for (number, parent, base_angle, angle, origin) in [
+            (81, None, 11., 13., Vec2::new(100_000., 100_000.)),
+            (82, Some(81), 7., -3.5, Vec2::new(0.25, 0.25)),
+        ] {
+            assert!(doc
+                .create_transform(Transform {
+                    id: id(number),
+                    parent_id: parent.map(|number| id(number).into()),
+                    data: TransformData::Rotation(RotationTransform {
+                        base_angle,
+                        pose: RotationPose {
+                            origin: origin.into(),
+                            angle,
+                            scale: 0.0001,
+                            reflect_x: number == 81 && reflect_x,
+                            ..Default::default()
+                        },
+                    }),
+                    ..Default::default()
+                })
+                .status
+                .is_ok());
+        }
+        let mut frame = DrawableFrame::default();
+        assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
+        for (number, angle, sign) in [
+            (81, 24_f32, if reflect_x { -1. } else { 1. }),
+            (82, 27.5, 1.),
+        ] {
+            let deformer = frame
+                .deformers
+                .iter()
+                .find(|deformer| deformer.id == id(number))
+                .unwrap();
+            let axis = deformer.rotation_axis.unwrap();
+            assert!((axis.x - sign * angle.to_radians().cos()).abs() < 1e-6);
+            assert!((axis.y - sign * angle.to_radians().sin()).abs() < 1e-6);
+            // The old world-space endpoints coincide at this precision.
+            assert_eq!(deformer.points[0], deformer.points[1]);
+        }
+        let json = serde_json::to_string(&frame).unwrap();
+        assert_eq!(serde_json::from_str::<DrawableFrame>(&json).unwrap(), frame);
+    }
+}

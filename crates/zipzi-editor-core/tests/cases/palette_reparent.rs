@@ -31,7 +31,7 @@ fn preservation_review_applies_exact_order_atomically_and_keeps_organization_and
     let (mut d, _assets) = support::sample_document_for_reparent(false)?;
     let source = d.layers()[0].id.clone();
     let target = ObjectRef::new(K::Mesh, &d.layers()[1].id);
-    let organization = d.mesh_tree();
+    let organization = d.part_tree();
     let selected = d.context().selections.clone();
     let inspected = d.context().inspected.clone();
     let history = d.history_lengths();
@@ -68,7 +68,7 @@ fn preservation_review_applies_exact_order_atomically_and_keeps_organization_and
             .collect::<Vec<_>>(),
         [source.clone(), target.id.clone()]
     );
-    assert_eq!(d.mesh_tree(), organization);
+    assert_eq!(d.part_tree(), organization);
     assert_eq!(d.context().inspected, inspected);
     assert_eq!(d.context().selections, selected);
     assert_eq!(d.history_lengths(), (history.0 + 1, 0));

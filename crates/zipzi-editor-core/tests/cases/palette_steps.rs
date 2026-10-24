@@ -86,12 +86,12 @@ fn boundary_blocks_stay_in_place_and_all_selected_noop_preserves_redo() -> anyho
 #[test]
 fn native_closure_absorbs_selected_descendants_before_stepping_a_part() -> anyhow::Result<()> {
     let (mut d, _assets) = support::sample_document_with_parts()?;
-    let before_children = d.mesh_tree()[0].children.clone();
+    let before_children = d.part_tree()[0].children.clone();
     let nested_mesh = before_children[0].children[0].reference().unwrap();
     let sources = [nested_mesh, object(K::Part, 103), object(K::Part, 101)];
     d.select_objects(sources.to_vec())?;
     step(&mut d, V::Organization, &sources, true)?;
-    let tree = d.mesh_tree();
+    let tree = d.part_tree();
     assert_eq!(tree[0].id, object(K::Part, 102).id);
     assert_eq!(tree[1].children, before_children);
     assert_eq!(d.context().selections, sources);
@@ -106,12 +106,12 @@ fn collection_steps_are_independent_and_locked_boundary_member_rejects_the_whole
     let body = object(K::Part, 102);
     let a = create(&mut d, T::Mesh, std::slice::from_ref(&body))?;
     let b = create(&mut d, T::Mesh, std::slice::from_ref(&body))?;
-    let face_mesh = d.mesh_tree()[0].children[1].reference().unwrap();
+    let face_mesh = d.part_tree()[0].children[1].reference().unwrap();
     let sources = [face_mesh.clone(), b.clone()];
     step(&mut d, V::Organization, &sources, false)?;
-    assert_eq!(d.mesh_tree()[0].children[0].id, face_mesh.id);
+    assert_eq!(d.part_tree()[0].children[0].id, face_mesh.id);
     assert_eq!(
-        d.mesh_tree()[1]
+        d.part_tree()[1]
             .children
             .iter()
             .map(|n| &n.id)
@@ -122,7 +122,7 @@ fn collection_steps_are_independent_and_locked_boundary_member_rejects_the_whole
     d.undo()?;
     let face = object(K::Part, 101);
     d.set_objects_locked(std::slice::from_ref(&face), true)?;
-    let before = d.mesh_tree();
+    let before = d.part_tree();
     let history = d.history_lengths();
     let error = d
         .plan_palette_steps(V::Organization, &[face, b], false)
@@ -134,7 +134,7 @@ fn collection_steps_are_independent_and_locked_boundary_member_rejects_the_whole
             .code(),
         "OBJECT_LOCKED"
     );
-    assert_eq!(d.mesh_tree(), before);
+    assert_eq!(d.part_tree(), before);
     assert_eq!(d.history_lengths(), history);
     Ok(())
 }
@@ -147,7 +147,7 @@ fn root_parts_and_unowned_objects_keep_their_distinct_display_buckets() -> anyho
     let m = create(&mut d, T::Mesh, &[])?;
     let n = create(&mut d, T::Mesh, &[])?;
     step(&mut d, V::Organization, &[b.clone(), n.clone()], false)?;
-    let tree = d.mesh_tree();
+    let tree = d.part_tree();
     assert_eq!([&tree[0].id, &tree[1].id], [&b.id, &a.id]);
     let unowned = tree.iter().find(|n| n.id == "unowned").unwrap();
     assert_eq!(

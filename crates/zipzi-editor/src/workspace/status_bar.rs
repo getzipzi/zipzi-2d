@@ -125,7 +125,22 @@ impl Render for StatusBar {
 
 fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
     let error = view.edit_error.clone().or_else(|| view.render_error());
-    let message = error.clone().unwrap_or_else(|| view.message.clone());
+    let interaction_message = view
+        .editor
+        .current_viewport_interaction()
+        .and_then(|token| {
+            (!view.modal && token.kind == zipzi_editor_core::ViewportInteractionKind::Modeling)
+                .then(|| {
+                    view.editor
+                        .overlay_for_viewport(token.binding)
+                        .interaction_label
+                })
+                .flatten()
+        });
+    let message = error
+        .clone()
+        .or(interaction_message)
+        .unwrap_or_else(|| view.message.clone());
     let hint_context = resolve_hint_context(view, cx);
     let bindings_digest = cx
         .global::<Settings>()

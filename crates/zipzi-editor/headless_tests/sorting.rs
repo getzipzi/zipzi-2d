@@ -48,7 +48,54 @@ fn begin_drag(
 }
 
 #[gpui_kit::test]
-fn empty_ungrouped_bucket_receives_parameters(cx: &mut TestAppContext) {
+fn motions_can_be_dragged_to_root_without_a_virtual_group(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let moved = document.motion_resources()[0].selection.clone();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        let from = window.find(("animation-motion", 0usize)).bounds().center();
+        let to = window.find("animation-motion-root-drop").bounds().center();
+        window.drag(from, to, cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let resources = harness
+            .view
+            .read(cx)
+            .editor
+            .document()
+            .unwrap()
+            .motion_resources();
+        let index = resources
+            .iter()
+            .position(|resource| resource.selection == moved)
+            .unwrap();
+        assert!(resources[index].group_id.is_none());
+        assert!(window.find(("animation-motion", index)).visible());
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (1, 0)
+        );
+        assert!(
+            window
+                .try_find(("animation-motion-group-header", 1usize))
+                .is_none()
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn root_receives_parameters_without_an_ungrouped_header(cx: &mut TestAppContext) {
     let (mut document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
     document
         .move_parameter(
@@ -60,24 +107,19 @@ fn empty_ungrouped_bucket_receives_parameters(cx: &mut TestAppContext) {
     cx.simulate_window_resize(harness.window, size(px(1100.), px(1400.)));
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert_eq!(
-            window.find("parameter-group-count-ungrouped").value(),
-            Some("0")
-        );
+        assert!(window.try_find("parameter-group-ungrouped").is_none());
         let from = window
             .find(format!("parameter-name-{}", id(3)))
             .bounds()
             .center();
-        let to = window.find("parameter-group-ungrouped").bounds().center();
+        let to = window.find("parameters-root-drop").bounds().center();
         window.drag(from, to, cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert_eq!(
-            window.find("parameter-group-count-ungrouped").value(),
-            Some("1")
-        );
+        assert!(window.try_find("parameter-group-ungrouped").is_none());
+        assert!(window.find(format!("parameter-name-{}", id(3))).visible());
         assert!(
             harness
                 .view
@@ -143,7 +185,7 @@ fn sorting_a_long_parameter_list_keeps_scroll_position(cx: &mut TestAppContext) 
 fn filtered_tree_uses_stable_targets_and_document_switch_cancels_a_drag(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let (first, second, original, active) = harness.view.read_with(cx, |view, _| {
-        let tree = view.editor.mesh_tree();
+        let tree = view.editor.part_tree();
         (
             tree[0].children[0].id.clone(),
             tree[0].children[1].id.clone(),
@@ -152,18 +194,18 @@ fn filtered_tree_uses_stable_targets_and_document_switch_cancels_a_drag(cx: &mut
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
         window.click("tree-kind-Part", cx);
-        window.click("mesh-tree-filter", cx);
-        let from = window.find(format!("mesh-item-Mesh:{second}")).bounds();
-        let to = window.find(format!("mesh-item-Mesh:{first}")).bounds();
+        window.click("parts-tree-filter", cx);
+        let from = window.find(format!("parts-item-Mesh:{second}")).bounds();
+        let to = window.find(format!("parts-item-Mesh:{first}")).bounds();
         window.drag(
             point(from.left() + px(80.), from.center().y),
             point(to.left() + px(80.), to.top() + px(2.)),
             cx,
         );
         assert_eq!(
-            harness.view.read(cx).editor.mesh_tree()[0].children[0].id,
+            harness.view.read(cx).editor.part_tree()[0].children[0].id,
             second
         );
         harness.view.update(cx, |view, cx| {
@@ -172,7 +214,7 @@ fn filtered_tree_uses_stable_targets_and_document_switch_cancels_a_drag(cx: &mut
                 .unwrap();
             view.redraw(cx);
         });
-        window.click("mesh-tree-clear", cx);
+        window.click("parts-tree-clear", cx);
         window.render_frame(cx);
         begin_drag(
             window,
@@ -194,7 +236,7 @@ fn filtered_tree_uses_stable_targets_and_document_switch_cancels_a_drag(cx: &mut
         cx.notify();
     });
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.mesh_tree(), original);
+        assert_eq!(view.editor.part_tree(), original);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 1));
     });
 }
@@ -269,7 +311,7 @@ fn dragging_at_the_list_edge_scrolls_and_escape_stops_the_timer(cx: &mut TestApp
             .find(format!("parameter-name-{}", id(1)))
             .bounds()
             .center();
-        let bounds = window.find("parameters-panel").bounds();
+        let bounds = window.find("parameters-scroll-frame").bounds();
         begin_drag(window, cx, from, point(from.x, bounds.bottom() - px(8.)));
     })
     .unwrap();
@@ -309,12 +351,12 @@ fn tree_drag_reorders_siblings_once_and_undo_restores_both_rows(cx: &mut TestApp
     let harness = setup(cx);
     let original = harness
         .view
-        .read_with(cx, |view, _| view.editor.mesh_tree());
+        .read_with(cx, |view, _| view.editor.part_tree());
     let first = original[0].children[0].id.clone();
     let second = original[0].children[1].id.clone();
     cx.update_window(harness.window, |_, window, cx| {
-        let from = window.find(format!("mesh-item-Mesh:{second}")).bounds();
-        let to = window.find(format!("mesh-item-Mesh:{first}")).bounds();
+        let from = window.find(format!("parts-item-Mesh:{second}")).bounds();
+        let to = window.find(format!("parts-item-Mesh:{first}")).bounds();
         window.drag(
             point(from.left() + px(80.), from.center().y),
             point(to.left() + px(80.), to.top() + px(3.)),
@@ -323,7 +365,7 @@ fn tree_drag_reorders_siblings_once_and_undo_restores_both_rows(cx: &mut TestApp
         window.render_frame(cx);
         harness.view.read_with(cx, |view, _| {
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
-            assert_eq!(view.editor.mesh_tree()[0].children[0].id, second);
+            assert_eq!(view.editor.part_tree()[0].children[0].id, second);
             assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
             assert_eq!(view.editor.deformer_tree()[0].children[0].id, first);
         });
@@ -334,11 +376,11 @@ fn tree_drag_reorders_siblings_once_and_undo_restores_both_rows(cx: &mut TestApp
         window.render_frame(cx);
         assert!(
             window
-                .find(format!("mesh-item-Mesh:{first}"))
+                .find(format!("parts-item-Mesh:{first}"))
                 .bounds()
                 .top()
                 < window
-                    .find(format!("mesh-item-Mesh:{second}"))
+                    .find(format!("parts-item-Mesh:{second}"))
                     .bounds()
                     .top()
         );
@@ -354,7 +396,7 @@ fn deformer_tree_drag_keeps_part_tree_order(cx: &mut TestAppContext) {
         (
             tree[0].children[0].id.clone(),
             tree[0].children[1].id.clone(),
-            view.editor.mesh_tree(),
+            view.editor.part_tree(),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -376,7 +418,7 @@ fn deformer_tree_drag_keeps_part_tree_order(cx: &mut TestAppContext) {
             harness.view.read(cx).editor.deformer_tree()[0].children[0].id,
             second
         );
-        assert_eq!(harness.view.read(cx).editor.mesh_tree(), parts);
+        assert_eq!(harness.view.read(cx).editor.part_tree(), parts);
         assert_eq!(
             harness
                 .view
@@ -557,25 +599,25 @@ fn tree_drag_moves_parts_with_contents_and_can_unassign_meshes(cx: &mut TestAppC
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         let from = window
-            .find(format!("mesh-drag-{}", id(103)))
+            .find(format!("parts-drag-{}", id(103)))
             .bounds()
             .center();
         let to = window
-            .find(format!("mesh-item-Part:{}", id(102)))
+            .find(format!("parts-item-Part:{}", id(102)))
             .bounds()
             .center();
         window.drag(from, to, cx);
         window.render_frame(cx);
         let mesh = harness.view.read_with(cx, |view, _| {
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
-            let tree = view.editor.mesh_tree();
+            let tree = view.editor.part_tree();
             assert!(tree[0].children.iter().all(|node| node.id != id(103)));
             assert_eq!(tree[1].children[0].id, id(103));
             assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
             tree[1].children[0].children[0].id.clone()
         });
-        let from = window.find(format!("mesh-drag-{mesh}")).bounds().center();
-        let to = window.find("mesh-tree-root-drop").bounds().center();
+        let from = window.find(format!("parts-drag-{mesh}")).bounds().center();
+        let to = window.find("parts-tree-root-drop").bounds().center();
         window.drag(from, to, cx);
         window.render_frame(cx);
         assert_eq!(
@@ -583,7 +625,7 @@ fn tree_drag_moves_parts_with_contents_and_can_unassign_meshes(cx: &mut TestAppC
                 .view
                 .read(cx)
                 .editor
-                .mesh_tree()
+                .part_tree()
                 .last()
                 .unwrap()
                 .children[0]
@@ -611,14 +653,14 @@ fn tree_hover_expands_parts_and_cycle_drop_is_rejected(cx: &mut TestAppContext) 
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         window
-            .within("mesh-tree-panel")
+            .within("parts-tree-panel")
             .click(format!("tree-expand-Part:{}", id(101)), cx);
         let from = window
-            .find(format!("mesh-drag-{}", id(102)))
+            .find(format!("parts-drag-{}", id(102)))
             .bounds()
             .center();
         let to = window
-            .find(format!("mesh-item-Part:{}", id(101)))
+            .find(format!("parts-item-Part:{}", id(101)))
             .bounds()
             .center();
         begin_drag(window, cx, from, to);
@@ -632,16 +674,16 @@ fn tree_hover_expands_parts_and_cycle_drop_is_rejected(cx: &mut TestAppContext) 
         window.render_frame(cx);
         assert!(
             window
-                .try_find(format!("mesh-item-Part:{}", id(103)))
+                .try_find(format!("parts-item-Part:{}", id(103)))
                 .is_some()
         );
         window.press("escape", cx);
         let from = window
-            .find(format!("mesh-drag-{}", id(101)))
+            .find(format!("parts-drag-{}", id(101)))
             .bounds()
             .center();
         let to = window
-            .find(format!("mesh-item-Part:{}", id(103)))
+            .find(format!("parts-item-Part:{}", id(103)))
             .bounds()
             .center();
         window.drag(from, to, cx);
@@ -665,10 +707,10 @@ fn tree_visibility_controls_do_not_start_sorting(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        let tree = harness.view.read(cx).editor.mesh_tree();
+        let tree = harness.view.read(cx).editor.part_tree();
         let mesh = &tree[0].children[0].id;
-        let from = window.find(format!("mesh-vis-{mesh}")).bounds().center();
-        let to = window.find("mesh-tree-root-drop").bounds().center();
+        let from = window.find(format!("parts-vis-{mesh}")).bounds().center();
+        let to = window.find("parts-tree-root-drop").bounds().center();
         begin_drag(window, cx, from, to);
         assert!(!cx.has_active_drag());
         assert_eq!(
@@ -718,7 +760,7 @@ fn groups_can_cross_containers_and_return_to_root_with_undo(cx: &mut TestAppCont
     .unwrap();
     for target in [
         format!("parameter-group-{}", id(101)),
-        "parameter-group-ungrouped".into(),
+        "parameters-root-drop".into(),
     ] {
         cx.update_window(harness.window, |_, window, cx| {
             window.render_frame(cx);
@@ -761,7 +803,7 @@ fn groups_can_cross_containers_and_return_to_root_with_undo(cx: &mut TestAppCont
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         let from = window.find(format!("parameter-group-{}", id(101))).bounds();
-        let to = window.find("parameter-group-ungrouped").bounds();
+        let to = window.find("parameters-root-drop").bounds();
         window.drag(
             point(from.left() + px(90.), from.center().y),
             point(to.left() + px(90.), to.top() + px(2.)),
@@ -865,7 +907,7 @@ fn tree_multiselection_moves_as_one_transaction_without_changing_selection(
     let (document, assets) = document_fixture::sample_document_with_parts().unwrap();
     let h = setup_with_document(cx, document, assets);
     let meshes = h.view.read_with(cx, |view, _| {
-        let tree = view.editor.mesh_tree();
+        let tree = view.editor.part_tree();
         fn collect(nodes: &[zipzi_editor_core::TreeNode], out: &mut Vec<ObjectRef>) {
             for node in nodes {
                 if node.kind == zipzi_editor_core::TreeNodeKind::Mesh {
@@ -887,11 +929,11 @@ fn tree_multiselection_moves_as_one_transaction_without_changing_selection(
         });
         window.render_frame(cx);
         let from = window
-            .find(format!("mesh-drag-{}", meshes[0].id))
+            .find(format!("parts-drag-{}", meshes[0].id))
             .bounds()
             .center();
         let to = window
-            .find(format!("mesh-item-Part:{}", id(102)))
+            .find(format!("parts-item-Part:{}", id(102)))
             .bounds()
             .center();
         window.drag(from, to, cx);
@@ -899,7 +941,7 @@ fn tree_multiselection_moves_as_one_transaction_without_changing_selection(
         let view = h.view.read(cx);
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
         assert_eq!(view.editor.document().unwrap().context().selections, meshes);
-        let tree = view.editor.mesh_tree();
+        let tree = view.editor.part_tree();
         assert_eq!(
             tree[1]
                 .children
@@ -936,17 +978,17 @@ fn a_locked_member_rejects_the_whole_tree_drag(cx: &mut TestAppContext) {
             view.redraw(cx);
         });
         window.render_frame(cx);
-        let tree = h.view.read(cx).editor.mesh_tree();
+        let tree = h.view.read(cx).editor.part_tree();
         let from = window
-            .find(format!("mesh-drag-{}", meshes[0].id))
+            .find(format!("parts-drag-{}", meshes[0].id))
             .bounds()
             .center();
         let to = window
-            .find(format!("mesh-item-Part:{}", id(102)))
+            .find(format!("parts-item-Part:{}", id(102)))
             .bounds()
             .center();
         window.drag(from, to, cx);
-        assert_eq!(h.view.read(cx).editor.mesh_tree(), tree);
+        assert_eq!(h.view.read(cx).editor.part_tree(), tree);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
             (1, 0)
@@ -989,7 +1031,7 @@ fn a_parameter_drag_settles_the_old_name_before_the_move(cx: &mut TestAppContext
 }
 
 #[gpui_kit::test]
-fn row_menu_step_uses_the_clicked_row_and_matches_drag_order(cx: &mut TestAppContext) {
+fn parameter_row_menu_omits_steps_and_preserves_move_to(cx: &mut TestAppContext) {
     let (mut document, assets) = document_fixture::sample_document_with_parameters(3).unwrap();
     let inspected = document.parameters()[0].id.clone();
     document.focus_parameter(&inspected).unwrap();
@@ -1005,25 +1047,29 @@ fn row_menu_step_uses_the_clicked_row_and_matches_drag_order(cx: &mut TestAppCon
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        let up = (0..16usize)
-            .find(|index| {
+        let labels: Vec<_> = (0..24usize)
+            .filter_map(|i| {
                 window
                     .within("popup-menu")
-                    .try_find(*index)
-                    .is_some_and(|item| item.label() == Some("Move up"))
+                    .try_find(i)
+                    .and_then(|item| item.label().map(str::to_owned))
             })
-            .expect("Move up entry");
-        assert_ne!(window.within("popup-menu").find(up).disabled(), Some(true));
-        window.within("popup-menu").click(up, cx);
+            .collect();
+        assert!(labels.iter().any(|label| label == "Move to…"));
+        assert!(
+            !labels
+                .iter()
+                .any(|label| label.starts_with("Move up") || label.starts_with("Move down"))
+        );
     })
     .unwrap();
     cx.run_until_parked();
     h.view.read_with(cx, |view, _| {
         let document = view.editor.document().unwrap();
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
-        assert_eq!(document.parameters()[1].id, id(3));
+        assert_eq!(document.parameters()[2].id, id(3));
         assert_eq!(document.context().inspected.as_ref().unwrap().id, inspected);
-        assert_eq!(document.history_lengths(), (1, 0));
+        assert_eq!(document.history_lengths(), (0, 0));
     });
 }
 

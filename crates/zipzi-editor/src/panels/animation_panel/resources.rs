@@ -159,12 +159,11 @@ impl AnimationPanel {
                     ObjectKind::MotionGroup => "animation-new-motion-group",
                     _ => "animation-new-expression",
                 })
-                .icon(if kind == ObjectKind::MotionGroup {
-                    IconName::FolderPlus
-                } else {
-                    IconName::Plus
-                })
-                .ghost()
+                .icon(IconName::Plus)
+                .when(
+                    kind == ObjectKind::MotionGroup,
+                    crate::ui::compact::new_group_button,
+                )
                 .accessibility_label(authoring::create_label(kind))
                 .tooltip(hint.clone())
                 .disabled(unavailable)
@@ -363,12 +362,21 @@ impl AnimationPanel {
                 self.resources
                     .view
                     .collapsed
-                    .remove(&catalog.motions[index].group);
+                    .remove(&catalog.motions[index].group_id);
             }
             let groups: Vec<_> = document
                 .motion_groups()
                 .iter()
-                .map(|g| (Some(g.id.clone()), g.name.clone()))
+                .map(|g| {
+                    (
+                        Some(g.id.clone()),
+                        if g.name.trim().is_empty() {
+                            t!("workspace.unnamed_group").into_owned()
+                        } else {
+                            g.name.clone()
+                        },
+                    )
+                })
                 .chain(std::iter::once((
                     None,
                     t!("workspace.ungrouped").into_owned(),
@@ -398,124 +406,146 @@ impl AnimationPanel {
                 if located {
                     self.resources.view.collapsed.remove(&group);
                 }
-                let expanded = !self.resources.view.collapsed.contains(&group);
-                let key = group.clone();
-                let object = group
-                    .as_ref()
-                    .map(|id| ObjectRef::new(ObjectKind::MotionGroup, id));
-                let cursor = choices.len();
-                if let Some(object) = &object {
-                    if state
-                        .editor
-                        .active_inspection()
-                        .and_then(|i| i.object())
+                let expanded = group.is_none() || !self.resources.view.collapsed.contains(&group);
+                if group.is_some() {
+                    let key = group.clone();
+                    let object = group
                         .as_ref()
-                        == Some(object)
-                    {
-                        selected_cursor = Some(cursor);
-                    }
-                    if location.as_ref() == Some(object) {
-                        self.resources.view.focused = Some(object.clone());
-                        self.resources.view.scroll.scroll_to_top_of_item(row_index);
-                    }
-                    choices.push((row_index, Choice::Inspect(object.clone())));
-                }
-                let item = object
-                    .clone()
-                    .map(SortItem::Resource)
-                    .unwrap_or(SortItem::ResourceRoot { motion: true });
-                let panel = cx.weak_entity();
-                let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
-                    if let SortItem::Resource(object) = item {
-                        let _ = panel.update(cx, |p, cx| {
-                            if p.resources.view.collapsed.remove(&Some(object.id.clone())) {
-                                cx.notify();
-                            }
-                        });
-                    }
-                });
-                let mut header = div()
-                    .id(("animation-motion-group-header", group_index))
-                    .test_support()
-                    .role(gpui::Role::Group)
-                    .aria_label(group_name.clone())
-                    .aria_expanded(expanded)
-                    .aria_selected(object.as_ref().is_some_and(|object| {
-                        state
+                        .map(|id| ObjectRef::new(ObjectKind::MotionGroup, id));
+                    let cursor = choices.len();
+                    if let Some(object) = &object {
+                        if state
                             .editor
                             .active_inspection()
                             .and_then(|i| i.object())
                             .as_ref()
                             == Some(object)
-                    }))
-                    .map(|e| group_header::row_style(e, 0, cx))
-                    .map(|e| sorting::drop_target(e, &self.sorting, item.clone(), Some(expand), cx))
-                    .map(|e| {
-                        sorting::drag_source(
-                            e,
-                            &self.sorting,
-                            id,
-                            item,
-                            group_name.clone(),
-                            !disabled && object.is_some(),
+                        {
+                            selected_cursor = Some(cursor);
+                        }
+                        if location.as_ref() == Some(object) {
+                            self.resources.view.focused = Some(object.clone());
+                            self.resources.view.scroll.scroll_to_top_of_item(row_index);
+                        }
+                        choices.push((row_index, Choice::Inspect(object.clone())));
+                    }
+                    let item = object
+                        .clone()
+                        .map(SortItem::Resource)
+                        .unwrap_or(SortItem::ResourceRoot { motion: true });
+                    let panel = cx.weak_entity();
+                    let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
+                        if let SortItem::Resource(object) = item {
+                            let _ = panel.update(cx, |p, cx| {
+                                if p.resources.view.collapsed.remove(&Some(object.id.clone())) {
+                                    cx.notify();
+                                }
+                            });
+                        }
+                    });
+                    let mut header = div()
+                        .id(("animation-motion-group-header", group_index))
+                        .test_support()
+                        .role(gpui::Role::Group)
+                        .aria_label(group_name.clone())
+                        .aria_expanded(expanded)
+                        .aria_selected(object.as_ref().is_some_and(|object| {
+                            state
+                                .editor
+                                .active_inspection()
+                                .and_then(|i| i.object())
+                                .as_ref()
+                                == Some(object)
+                        }))
+                        .map(|e| group_header::row_style(e, 0, cx))
+                        .map(|e| {
+                            sorting::drop_target(e, &self.sorting, item.clone(), Some(expand), cx)
+                        })
+                        .map(|e| {
+                            sorting::drag_source(
+                                e,
+                                &self.sorting,
+                                id,
+                                item,
+                                group_name.clone(),
+                                !disabled && object.is_some(),
+                            )
+                        })
+                        .child(
+                            Button::new(("animation-motion-group", group_index))
+                                .icon(if expanded {
+                                    IconName::ChevronDown
+                                } else {
+                                    IconName::ChevronRight
+                                })
+                                .ghost()
+                                .xsmall()
+                                .h_full()
+                                .disabled(disabled)
+                                .accessibility_label(group_name.clone())
+                                .on_click(cx.listener(move |panel, _, _, cx| {
+                                    if !panel.resources.view.collapsed.remove(&key) {
+                                        panel.resources.view.collapsed.insert(key.clone());
+                                    }
+                                    cx.notify();
+                                })),
+                        );
+                    let label = group_name.clone();
+                    let object_for_click = object.clone();
+                    header = header
+                        .child(
+                            Button::new(("animation-motion-group-name", group_index))
+                                .icon(IconName::Folder)
+                                .ghost()
+                                .xsmall()
+                                .h_full()
+                                .flex_1()
+                                .min_w_0()
+                                .justify_start()
+                                .disabled(disabled || object.is_none())
+                                .accessibility_label(label.clone())
+                                .child(
+                                    div()
+                                        .id(("animation-motion-group-label", group_index))
+                                        .test_support()
+                                        .flex_1()
+                                        .min_w_0()
+                                        .text_ellipsis()
+                                        .text_xs()
+                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .child(label),
+                                )
+                                .on_click(cx.listener(move |panel, _, window, cx| {
+                                    if let Some(object) = &object_for_click {
+                                        panel.resources.view.cursor = Some(cursor);
+                                        panel.choose(
+                                            id,
+                                            Choice::Inspect(object.clone()),
+                                            false,
+                                            window,
+                                            cx,
+                                        );
+                                    }
+                                })),
                         )
-                    })
-                    .child(
-                        Button::new(("animation-motion-group", group_index))
-                            .icon(if expanded {
-                                IconName::ChevronDown
-                            } else {
-                                IconName::ChevronRight
-                            })
-                            .ghost()
-                            .xsmall()
-                            .disabled(disabled)
-                            .accessibility_label(group_name.clone())
-                            .on_click(cx.listener(move |panel, _, _, cx| {
-                                if !panel.resources.view.collapsed.remove(&key) {
-                                    panel.resources.view.collapsed.insert(key.clone());
-                                }
-                                cx.notify();
-                            })),
-                    );
-                let label = group_name.clone();
-                let object_for_click = object.clone();
-                header = header
-                    .child(
-                        Button::new(("animation-motion-group-name", group_index))
-                            .ghost()
-                            .xsmall()
-                            .flex_1()
-                            .min_w_0()
-                            .justify_start()
-                            .disabled(disabled || object.is_none())
-                            .label(label)
-                            .on_click(cx.listener(move |panel, _, window, cx| {
-                                if let Some(object) = &object_for_click {
-                                    panel.resources.view.cursor = Some(cursor);
-                                    panel.choose(
-                                        id,
-                                        Choice::Inspect(object.clone()),
-                                        false,
-                                        window,
-                                        cx,
-                                    );
-                                }
-                            })),
-                    )
-                    .child(
-                        div()
-                            .id(("animation-motion-group-count", group_index))
-                            .test_support()
-                            .aria_value(members.len().to_string())
-                            .child(members.len().to_string()),
-                    );
-                if let Some(object) = object {
-                    list = list.child(authoring::row_menu(header, self.owner.clone(), id, object));
-                } else {
-                    list = list.child(header);
+                        .child(
+                            div()
+                                .id(("animation-motion-group-count", group_index))
+                                .test_support()
+                                .aria_value(members.len().to_string())
+                                .flex_shrink_0()
+                                .text_size(crate::ui::compact::rem(crate::ui::compact::CAPTION))
+                                .text_color(theme.muted_foreground)
+                                .child(members.len().to_string()),
+                        );
+                    if let Some(object) = object {
+                        list =
+                            list.child(authoring::row_menu(header, self.owner.clone(), id, object));
+                    } else {
+                        list = list.child(header);
+                    }
+                    row_index += 1;
                 }
-                row_index += 1;
                 if !expanded {
                     continue;
                 }
@@ -555,14 +585,6 @@ impl AnimationPanel {
                         )
                         .test_support()
                         .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
-                        .when_some(resource.selection.entry.as_ref(), |row, _| {
-                            let entry = resource.entry_index;
-                            row.child(
-                                div()
-                                    .text_color(theme.muted_foreground)
-                                    .child(format!("{}", entry + 1)),
-                            )
-                        })
                         .child(
                             div()
                                 .flex_1()
@@ -642,6 +664,12 @@ impl AnimationPanel {
                     ));
                 }
             }
+            list = list.child(sorting::root_drop_target(
+                "animation-motion-root-drop",
+                &self.sorting,
+                SortItem::ResourceRoot { motion: true },
+                cx,
+            ));
         } else {
             for (index, resource) in catalog.expressions.iter().enumerate() {
                 let selected = animation.expression.as_ref() == Some(&resource.id);
@@ -793,7 +821,10 @@ impl AnimationPanel {
                     )
                 },
             )
-            .child(list)
+            .child(crate::ui::compact::scroll_frame(
+                list,
+                &self.resources.view.scroll,
+            ))
             .on_key_down(cx.listener(move |panel, event: &KeyDownEvent, window, cx| {
                 if disabled || !panel.focus.is_focused(window) || choices.is_empty() {
                     return;

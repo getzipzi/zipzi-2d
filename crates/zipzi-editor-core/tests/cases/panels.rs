@@ -229,7 +229,7 @@ fn inherited_influences_are_paths_not_direct_mesh_bindings() -> anyhow::Result<(
             .any(|e| e.kind == R::DeformParent && e.target.id == child)
     );
     assert!(
-        doc.mesh_tree()
+        doc.part_tree()
             .iter()
             .any(|n| n.kind == zipzi_editor_core::TreeNodeKind::Group)
     );
@@ -447,7 +447,7 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
         .clone();
     assert!(index.get(&attachment).is_some());
     assert_eq!(index.incoming(&attachment).count(), 0);
-    assert!(doc.mesh_tree().iter().any(|p| {
+    assert!(doc.part_tree().iter().any(|p| {
         p.children
             .iter()
             .any(|n| n.reference() == Some(ObjectRef::new(K::Offscreen, &offscreen)))

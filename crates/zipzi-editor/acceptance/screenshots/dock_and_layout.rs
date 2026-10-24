@@ -259,7 +259,7 @@ pub(crate) fn compact_screenshots(directory: &std::path::Path) -> anyhow::Result
                     let pixel = screenshot.get_pixel(x, (canvas.bottom().as_f32() * display_scale).floor() as u32 - 1);
                     anyhow::ensure!(pixel.0[..3].iter().all(|channel| channel.abs_diff(expected) <= 3), "Metal corner leaked at {}: {:?}, canvas={:?}, x={:?}", scale.label(), pixel.0, canvas, x);
                 }
-                let tree_height = (window.find("mesh-tree-panel").bounds().size.height.as_f32() - crate::ui::compact::ROW * scale.factor()).max(0.);
+                let tree_height = (window.find("parts-tree-panel").bounds().size.height.as_f32() - crate::ui::compact::ROW * scale.factor()).max(0.);
                 Ok::<_, anyhow::Error>(serde_json::json!({"scene": name, "logical_window": [viewport.width.as_f32(), viewport.height.as_f32()], "display_scale": display_scale, "ui_scale": scale.factor(), "canvas": {"width": canvas.size.width.as_f32(), "height": canvas.size.height.as_f32(), "area": canvas.size.width.as_f32() * canvas.size.height.as_f32()}, "tree_row_capacity": (tree_height / (crate::ui::compact::ROW * scale.factor())).floor(), "header_overflow_count": overflow, "headers": headers}))
             })??;
             metrics.push(data);
@@ -361,7 +361,7 @@ pub(crate) fn dock_screenshots(directory: &std::path::Path) -> anyhow::Result<()
             .read(cx)
             .layout(DockPlacement::Center)
             .unwrap()
-            .find_panel_node(PanelId::from(dock.mesh_tree.entity_id()))
+            .find_panel_node(PanelId::from(dock.part_tree.entity_id()))
             .unwrap();
         window.click(format!("dock-selector-{}", node.as_u64()), cx);
     })?;
@@ -374,7 +374,7 @@ pub(crate) fn dock_screenshots(directory: &std::path::Path) -> anyhow::Result<()
         let area = dock.area.clone();
         let layout = DockLayout::h_split()
             .child(
-                DockLayout::tabs().panel_view(panel_handle(dock.mesh_tree.clone()), cx),
+                DockLayout::tabs().panel_view(panel_handle(dock.part_tree.clone()), cx),
                 Some(px(100.)),
             )
             .child(
@@ -396,7 +396,7 @@ pub(crate) fn dock_screenshots(directory: &std::path::Path) -> anyhow::Result<()
         let area = dock.area.clone();
         let layout = DockLayout::tabs()
             .panel_view(dock.viewport_panel(), cx)
-            .panel_view(panel_handle(dock.mesh_tree.clone()), cx);
+            .panel_view(panel_handle(dock.part_tree.clone()), cx);
         area.update(cx, |area, cx| area.set_center(layout, window, cx));
     })?;
     save(&harness.capture()?, directory, "dock-canvas-group.png")?;

@@ -39,7 +39,7 @@ pub struct DockWorkspace {
     pub animation_inspectors:
         HashMap<PanelKind, Entity<crate::panels::animation_panel::AnimationPanel>>,
     pub properties: Entity<crate::panels::PropertiesPanel>,
-    pub mesh_tree: Entity<crate::panels::MeshTreePanel>,
+    pub part_tree: Entity<crate::panels::PartsTreePanel>,
     pub deformer_tree: Entity<crate::panels::DeformerTreePanel>,
     pub parameters: Entity<crate::panels::ParametersPanel>,
     pub document_panels: std::collections::HashMap<
@@ -136,8 +136,8 @@ impl DockWorkspace {
                     area.select_panel(id, window, cx);
                 } else {
                     match kind {
-                        PanelKind::MeshTree => {
-                            area.remove_panel(self.mesh_tree.clone(), window, cx)
+                        PanelKind::PartsTree => {
+                            area.remove_panel(self.part_tree.clone(), window, cx)
                         }
                         PanelKind::Deformers => {
                             area.remove_panel(self.deformer_tree.clone(), window, cx)
@@ -340,7 +340,7 @@ mod tests {
             center: PanelState {
                 panel_name: "StackPanel".into(),
                 children: vec![
-                    PanelState::new("MeshTree"),
+                    PanelState::new("PartsTree"),
                     PanelState::new("ModelingViewport"),
                     PanelState::new("Properties"),
                 ],
@@ -424,7 +424,7 @@ mod tests {
         invalid = layout();
         invalid.center.children[0] = PanelState {
             panel_name: "TabPanel".into(),
-            children: vec![PanelState::new("MeshTree")],
+            children: vec![PanelState::new("PartsTree")],
             info: PanelInfo::tabs(1),
         };
         assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());

@@ -24,7 +24,6 @@ fn includes(panel: PanelKind, kind: ObjectKind) -> bool {
             K::BlendBinding | K::BlendKeyTable | K::BlendConstraint
         ),
         PanelKind::Glue => kind == K::Glue,
-        PanelKind::Physics => matches!(kind, K::Physics | K::PhysicsGroup),
         PanelKind::Pose => matches!(kind, K::Pose | K::PoseGroup | K::PoseEntry | K::PoseLink),
         PanelKind::Resources => matches!(kind, K::Texture | K::Attachment),
         _ => false,
@@ -543,6 +542,11 @@ impl Panel for DocumentPanel {
         SharedString::from(t!(self.kind.label()).into_owned())
     }
 }
+impl crate::docking::header::PanelHeader for DocumentPanel {
+    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        self.texture_toolbar(window, cx)
+    }
+}
 impl Render for DocumentPanel {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.row_sequence = 0;
@@ -655,7 +659,7 @@ impl Render for DocumentPanel {
             }
         } else {
             if self.kind == PanelKind::Resources {
-                body = body.child(self.texture_toolbar(cx));
+                body = body.child(self.texture_imports(cx));
             }
             let references: Vec<_> = index
                 .objects
@@ -749,7 +753,7 @@ impl Render for DocumentPanel {
             .id(SharedString::from(format!("{}-panel", self.kind.name())))
             .size_full()
             .min_h_0()
-            .overflow_y_scroll()
+            .overflow_hidden()
             .bg(cx.theme().background)
             .text_color(cx.theme().foreground)
             .text_xs()
@@ -781,7 +785,7 @@ impl Render for DocumentPanel {
                 .absolute()
                 .size_full(),
             )
-            .child(body)
+            .child(compact::scroll_frame(body, &self.scroll))
             .into_any_element()
     }
 }

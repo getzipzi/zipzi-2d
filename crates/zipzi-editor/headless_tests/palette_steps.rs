@@ -34,11 +34,11 @@ fn fixture(cx: &mut TestAppContext) -> (Harness, ObjectRef, Vec<ObjectRef>) {
     )
 }
 fn row(object: &ObjectRef) -> String {
-    format!("mesh-item-{:?}:{}", object.kind, object.id)
+    format!("parts-item-{:?}:{}", object.kind, object.id)
 }
 fn order(h: &Harness, cx: &TestAppContext) -> Vec<String> {
     h.view.read_with(cx, |view, _| {
-        view.editor.document().unwrap().mesh_tree()[0]
+        view.editor.document().unwrap().part_tree()[0]
             .children
             .iter()
             .map(|n| n.id.clone())
@@ -51,22 +51,6 @@ fn cmd() -> Modifiers {
         ..Default::default()
     }
 }
-fn choose(h: &Harness, label: &str, cx: &mut TestAppContext) {
-    cx.run_until_parked();
-    cx.update_window(h.window, |_, window, cx| {
-        let index = (0..24usize)
-            .find(|index| {
-                window
-                    .within("popup-menu")
-                    .try_find(*index)
-                    .is_some_and(|item| item.label() == Some(label))
-            })
-            .expect(label);
-        window.within("popup-menu").click(index, cx);
-    })
-    .unwrap();
-    cx.run_until_parked();
-}
 
 #[gpui_kit::test]
 fn disjoint_selected_rows_move_through_hidden_neighbors_with_one_history_entry(
@@ -74,7 +58,7 @@ fn disjoint_selected_rows_move_through_hidden_neighbors_with_one_history_entry(
 ) {
     let (h, _, m) = fixture(cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("Keep", cx);
     })
     .unwrap();
@@ -95,7 +79,7 @@ fn disjoint_selected_rows_move_through_hidden_neighbors_with_one_history_entry(
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
     });
     cx.update_window(h.window, |_, window, cx| {
-        assert_eq!(window.find("mesh-tree-search").value(), Some("Keep"));
+        assert_eq!(window.find("parts-tree-search").value(), Some("Keep"));
         h.view.update(cx, |view, cx| {
             let result = view.editor.execute(EditorCommand::Undo);
             view.complete_edit(result, cx);
@@ -109,21 +93,17 @@ fn disjoint_selected_rows_move_through_hidden_neighbors_with_one_history_entry(
 }
 
 #[gpui_kit::test]
-fn menu_and_keyboard_share_disjoint_step_semantics_and_repeated_boundary_steps_are_noops(
+fn keyboard_steps_preserve_disjoint_selection_and_repeated_boundary_steps_are_noops(
     cx: &mut TestAppContext,
 ) {
     let (h, _, m) = fixture(cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click(row(&m[1]), cx);
         window.click_with_modifiers(row(&m[3]), cmd(), cx);
-        window.click_with_options(
-            row(&m[1]),
-            ClickOptions::new().with_button(MouseButton::Right),
-            cx,
-        );
+        window.press("alt-down", cx);
     })
     .unwrap();
-    choose(&h, "Move down", cx);
+    cx.run_until_parked();
     assert_eq!(order(&h, cx), [0, 2, 1, 4, 3].map(|i| m[i].id.clone()));
     cx.update_window(h.window, |_, window, cx| {
         window.press("alt-down", cx);
@@ -142,13 +122,9 @@ fn menu_and_keyboard_share_disjoint_step_semantics_and_repeated_boundary_steps_a
 }
 
 #[gpui_kit::test]
-fn menu_freezes_the_clicked_selection_without_retargeting_later_inspection(
-    cx: &mut TestAppContext,
-) {
+fn tree_menu_keeps_move_to_and_omits_step_items(cx: &mut TestAppContext) {
     let (h, _, m) = fixture(cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.click(row(&m[1]), cx);
-        window.click_with_modifiers(row(&m[3]), cmd(), cx);
         window.click_with_options(
             row(&m[1]),
             ClickOptions::new().with_button(MouseButton::Right),
@@ -157,23 +133,23 @@ fn menu_freezes_the_clicked_selection_without_retargeting_later_inspection(
     })
     .unwrap();
     cx.run_until_parked();
-    cx.update_window(h.window, |_, _, cx| {
-        h.view.update(cx, |view, cx| {
-            let result = view
-                .editor
-                .execute(EditorCommand::SelectObject(m[4].clone()));
-            view.complete_edit(result, cx);
-        })
+    cx.update_window(h.window, |_, window, _| {
+        let labels: Vec<_> = (0..32usize)
+            .filter_map(|i| {
+                window
+                    .within("popup-menu")
+                    .try_find(i)
+                    .and_then(|item| item.label().map(str::to_owned))
+            })
+            .collect();
+        assert!(labels.iter().any(|label| label == "Move to…"));
+        assert!(
+            !labels
+                .iter()
+                .any(|label| label.starts_with("Move up") || label.starts_with("Move down"))
+        );
     })
     .unwrap();
-    choose(&h, "Move up", cx);
-    assert_eq!(order(&h, cx), [1, 0, 3, 2, 4].map(|i| m[i].id.clone()));
-    h.view.read_with(cx, |view, _| {
-        let d = view.editor.document().unwrap();
-        assert_eq!(d.context().inspected.as_ref(), Some(&m[4]));
-        assert_eq!(d.context().selections, [m[4].clone()]);
-        assert_eq!(d.history_lengths(), (7, 0));
-    });
 }
 
 #[gpui_kit::test]

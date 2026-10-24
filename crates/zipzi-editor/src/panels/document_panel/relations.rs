@@ -136,7 +136,7 @@ impl DocumentPanel {
             inspected,
             cx,
         ))
-        .child(rows)
+        .child(compact::scroll_frame(rows, &self.scroll))
         .into_any_element()
     }
 

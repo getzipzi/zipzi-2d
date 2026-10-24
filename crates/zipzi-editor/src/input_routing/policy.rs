@@ -95,7 +95,7 @@ pub(super) fn decide(
         && matches!(
             facts.focused.map(|target| target.local),
             Some(LocalTarget::Panel(
-                zipzi_editor_core::PanelKind::MeshTree
+                zipzi_editor_core::PanelKind::PartsTree
                     | zipzi_editor_core::PanelKind::Deformers
                     | zipzi_editor_core::PanelKind::Parameters
                     | zipzi_editor_core::PanelKind::AnimationMotions

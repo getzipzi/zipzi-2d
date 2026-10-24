@@ -14,6 +14,7 @@ mod physics_scene;
 mod properties_scene;
 mod themes_scene;
 mod timeline_scene;
+mod toolbar_scene;
 mod transfer_scene;
 mod viewports_scene;
 
@@ -28,6 +29,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("toolbar") {
+        toolbar_scene::run(&directory)?;
+        println!("Viewport toolbar Metal screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("physics") {
         physics_scene::run(&directory)?;
         println!("Physics panel screenshots passed.");

@@ -131,7 +131,7 @@ fn mesh_properties_part_assignment_uses_tree_order_locks_and_preserves_draw_grou
     assert_eq!(doc.history_lengths(), (history.0 + 1, 0));
     assert_eq!(doc.object_index().draw_groups, before.draw_groups);
     let body_node = doc
-        .mesh_tree()
+        .part_tree()
         .into_iter()
         .find(|node| node.id == body.id)
         .unwrap();

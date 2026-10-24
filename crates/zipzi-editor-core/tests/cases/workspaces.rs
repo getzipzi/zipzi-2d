@@ -237,7 +237,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     );
     assert_eq!(
         PanelKind::for_command(CommandId::Physics, editor.workspace()),
-        Some(PanelKind::Physics)
+        None
     );
     assert_eq!(
         PanelKind::for_command(CommandId::Pose, editor.workspace()),

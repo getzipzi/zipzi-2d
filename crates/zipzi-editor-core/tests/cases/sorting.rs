@@ -36,14 +36,14 @@ fn deformation_self_reorder_is_a_noop_and_preserves_redo() -> anyhow::Result<()>
 fn hierarchy_order_is_independent_of_other_tree_and_rendering_and_survives_history_and_save()
 -> anyhow::Result<()> {
     let (mut document, _assets) = support::sample_document_with_two_layers()?;
-    let original = document.mesh_tree();
+    let original = document.part_tree();
     let deformation = document.deformer_tree();
     let children = &original[0].children;
     let first = children[0].reference().unwrap();
     let second = children[1].reference().unwrap();
     let before = document.snapshot()?.viewport_frame;
     document.reorder_tree(false, &second, &first, ReorderPosition::Before)?;
-    assert_eq!(document.mesh_tree()[0].children[0].id, second.id);
+    assert_eq!(document.part_tree()[0].children[0].id, second.id);
     assert_eq!(document.deformer_tree(), deformation);
     let after = document.snapshot()?.viewport_frame;
     assert_eq!(before.drawables.len(), after.drawables.len());
@@ -55,16 +55,16 @@ fn hierarchy_order_is_independent_of_other_tree_and_rendering_and_survives_histo
     assert_eq!(document.history_lengths(), (1, 0));
     document.reorder_tree(true, &second, &first, ReorderPosition::Before)?;
     assert_eq!(document.deformer_tree()[0].children[0].id, second.id);
-    assert_eq!(document.mesh_tree()[0].children[0].id, second.id);
+    assert_eq!(document.part_tree()[0].children[0].id, second.id);
     document.undo()?;
     assert_eq!(document.deformer_tree(), deformation);
     document.undo()?;
-    assert_eq!(document.mesh_tree(), original);
+    assert_eq!(document.part_tree(), original);
     document.redo()?;
     let output = tempfile::tempdir()?;
     let saved = document.save(&output.path().join("sorted.zipzi"))?;
     let reopened = Document::open(&saved.manifest)?;
-    assert_eq!(reopened.mesh_tree(), document.mesh_tree());
+    assert_eq!(reopened.part_tree(), document.part_tree());
     assert_eq!(reopened.deformer_tree(), deformation);
     Ok(())
 }
@@ -176,7 +176,7 @@ fn invalid_moves_and_noops_preserve_redo_and_document_identity() -> anyhow::Resu
     assert!(editor.execute_palette_move(first, &plan).is_err());
     // Missing or differently typed tree targets cannot become a write destination.
     let (mut document, _assets) = support::sample_document_with_two_layers()?;
-    let source = document.mesh_tree()[0].children[0].reference().unwrap();
+    let source = document.part_tree()[0].children[0].reference().unwrap();
     assert!(
         document
             .reorder_tree(
@@ -262,7 +262,7 @@ fn sorting_imported_cdi_keeps_unresolved_entries_extensions_and_omitted_paramete
 fn part_moves_keep_subtrees_deformation_and_history_atomic() -> anyhow::Result<()> {
     use zipzi_editor_core::OrganizationDestination as Destination;
     let (mut document, assets) = support::sample_document_with_parts()?;
-    let original = document.mesh_tree();
+    let original = document.part_tree();
     let deformer = document.deformer_tree();
     let part = |value| ObjectRef::new(ObjectKind::Part, id(value));
     let face = &original[0];
@@ -287,9 +287,9 @@ fn part_moves_keep_subtrees_deformation_and_history_atomic() -> anyhow::Result<(
             position: ReorderPosition::Before,
         },
     )?;
-    assert_eq!(document.mesh_tree()[0].children[0].id, mesh.id);
+    assert_eq!(document.part_tree()[0].children[0].id, mesh.id);
     document.move_organization(&part(103), Destination::Part(Some(id(102))))?;
-    assert_eq!(document.mesh_tree()[1].children, vec![eyes]);
+    assert_eq!(document.part_tree()[1].children, vec![eyes]);
     assert_eq!(document.deformer_tree(), deformer);
     assert_eq!(document.history_lengths(), (2, 0));
     // Across-parent placement updates both ownership and position in one step.
@@ -300,24 +300,24 @@ fn part_moves_keep_subtrees_deformation_and_history_atomic() -> anyhow::Result<(
             position: ReorderPosition::After,
         },
     )?;
-    assert_eq!(document.mesh_tree()[1].children[1].id, mesh.id);
-    assert!(document.mesh_tree()[0].children.is_empty());
+    assert_eq!(document.part_tree()[1].children[1].id, mesh.id);
+    assert!(document.part_tree()[0].children.is_empty());
     assert_eq!(document.history_lengths(), (3, 0));
     let saved = document.save(&assets.path().join("moved.zipzi"))?;
     assert_eq!(
-        Document::open(&saved.manifest)?.mesh_tree(),
-        document.mesh_tree()
+        Document::open(&saved.manifest)?.part_tree(),
+        document.part_tree()
     );
     document.undo()?;
-    assert_eq!(document.mesh_tree()[0].children[0].id, mesh.id);
+    assert_eq!(document.part_tree()[0].children[0].id, mesh.id);
     document.undo()?;
     document.undo()?;
-    assert_eq!(document.mesh_tree(), original);
+    assert_eq!(document.part_tree(), original);
     document.redo()?;
     document.move_organization(&mesh, Destination::Part(None))?;
-    assert_eq!(document.mesh_tree().last().unwrap().children[0].id, mesh.id);
+    assert_eq!(document.part_tree().last().unwrap().children[0].id, mesh.id);
     document.move_organization(&part(103), Destination::Part(None))?;
-    assert!(document.mesh_tree().iter().any(|node| node.id == id(103)));
+    assert!(document.part_tree().iter().any(|node| node.id == id(103)));
     assert_eq!(document.deformer_tree(), deformer);
     Ok(())
 }
@@ -329,7 +329,7 @@ fn invalid_part_destinations_and_noops_do_not_discard_redo() -> anyhow::Result<(
     let part = |value| ObjectRef::new(ObjectKind::Part, id(value));
     document.move_organization(&part(103), Destination::Part(Some(id(102))))?;
     document.undo()?;
-    let original = document.mesh_tree();
+    let original = document.part_tree();
     let history = document.history_lengths();
     for (source, destination) in [
         (part(101), Destination::Part(Some(id(103)))),
@@ -345,7 +345,7 @@ fn invalid_part_destinations_and_noops_do_not_discard_redo() -> anyhow::Result<(
         ),
     ] {
         assert!(document.move_organization(&source, destination).is_err());
-        assert_eq!(document.mesh_tree(), original);
+        assert_eq!(document.part_tree(), original);
         assert_eq!(document.history_lengths(), history);
     }
     document.move_organization(&part(102), Destination::Part(None))?;
@@ -357,7 +357,7 @@ fn invalid_part_destinations_and_noops_do_not_discard_redo() -> anyhow::Result<(
         },
     )?;
     assert_eq!(document.history_lengths(), history);
-    assert_eq!(document.mesh_tree(), original);
+    assert_eq!(document.part_tree(), original);
     Ok(())
 }
 
@@ -468,7 +468,7 @@ fn organization_moves_preserve_drawing_across_parameters_history_and_save() -> a
     for explicit in [false, true] {
         for mode in 0..4 {
             let (mut document, assets, ids) = drawing_fixture(explicit)?;
-            let original_tree = document.mesh_tree();
+            let original_tree = document.part_tree();
             let original_groups = stored_drawing_groups(&document);
             assert_eq!(original_groups.is_null(), !explicit);
             let groups = document.object_index().draw_groups.clone();
@@ -490,7 +490,7 @@ fn organization_moves_preserve_drawing_across_parameters_history_and_save() -> a
                 ),
             };
             document.move_organization(&source, destination)?;
-            assert_ne!(document.mesh_tree(), original_tree);
+            assert_ne!(document.part_tree(), original_tree);
             assert_eq!(
                 parameterized_render_orders(&mut document)?,
                 baseline,
@@ -504,14 +504,14 @@ fn organization_moves_preserve_drawing_across_parameters_history_and_save() -> a
                 assert_eq!(persisted_groups, original_groups);
             }
             document.undo()?;
-            assert_eq!(document.mesh_tree(), original_tree);
+            assert_eq!(document.part_tree(), original_tree);
             assert_eq!(stored_drawing_groups(&document), original_groups);
             assert_eq!(parameterized_render_orders(&mut document)?, baseline);
             document.redo()?;
             assert_eq!(stored_drawing_groups(&document), persisted_groups);
             let saved = document.save(&assets.path().join("moved.zipzi"))?;
             let mut reopened = Document::open(&saved.manifest)?;
-            assert_eq!(reopened.mesh_tree(), document.mesh_tree());
+            assert_eq!(reopened.part_tree(), document.part_tree());
             assert_eq!(stored_drawing_groups(&reopened), persisted_groups);
             assert_eq!(parameterized_render_orders(&mut reopened)?, baseline);
         }

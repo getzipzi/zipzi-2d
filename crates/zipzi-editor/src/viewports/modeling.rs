@@ -43,44 +43,23 @@ impl ModelingViewport {
         let overlay = owner
             .editor
             .overlay_for_frame(frame.map(|f| f.canvas.version));
-        let vertex_notice = overlay.unavailable.clone();
         let active_handle = overlay.active_handle;
-        let interaction_label = overlay.interaction_label.clone().or_else(|| {
-            active_handle.map(|handle| {
-                use zipzi_editor_core::DeformerHandle as H;
-                t!(match handle {
-                    H::Move => "editor.deformer_move_hint",
-                    H::Rotate => "editor.deformer_rotate_hint",
-                    H::Scale(_) | H::RotationScale => "editor.deformer_scale_hint",
-                })
-                .into_owned()
-            })
-        });
-        let target_label = overlay.target_label.as_ref().map(|label| {
-            if label == "Base shape" {
-                t!("editor.edit_base").into_owned()
-            } else if let Some(keys) = label.strip_prefix("Keyform · ") {
-                format!("{} · {}", t!("editor.edit_keyform"), keys)
-            } else {
-                label.clone()
-            }
-        });
         let cursor = active_handle
             .map(|handle| {
                 use zipzi_editor_core::DeformerHandle as H;
                 match handle {
                     H::Move => CursorStyle::OpenHand,
-                    H::Rotate => CursorStyle::Crosshair,
+                    H::Rotate => CursorStyle::Arrow,
+                    H::RotationScale => CursorStyle::Crosshair,
                     H::Scale(1 | 5) => CursorStyle::ResizeUpDown,
                     H::Scale(3 | 7) => CursorStyle::ResizeLeftRight,
                     H::Scale(0 | 4) => CursorStyle::ResizeUpLeftDownRight,
                     H::Scale(_) => CursorStyle::ResizeUpRightDownLeft,
-                    H::RotationScale => CursorStyle::Crosshair,
                 }
             })
             .or_else(|| {
                 if overlay.active_component.is_some() {
-                    Some(CursorStyle::OpenHand)
+                    Some(CursorStyle::Arrow)
                 } else if owner.editor.active_tool() == ToolId::Lasso {
                     Some(CursorStyle::Crosshair)
                 } else {
@@ -94,9 +73,6 @@ impl ModelingViewport {
             hand_tool: owner.editor.active_tool() == ToolId::Hand,
             controls: Some(deformer_bar::render_deformer_bar),
             cursor,
-            interaction_label,
-            target_label,
-            vertex_notice,
         }
     }
 }

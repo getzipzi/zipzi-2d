@@ -795,7 +795,7 @@ pub(super) fn panel_icon(name: &str) -> IconName {
     use PanelKind::*;
     match PanelKind::from_name(name) {
         Some(ModelingViewport | AnimationViewport) => IconName::Image,
-        Some(MeshTree) => IconName::Layers,
+        Some(PartsTree) => IconName::Layers,
         Some(Deformers) => IconName::Network,
         Some(DrawOrder) => IconName::ListOrdered,
         Some(Properties) => IconName::Settings,
@@ -806,7 +806,7 @@ pub(super) fn panel_icon(name: &str) -> IconName {
         Some(Glue) => IconName::Link,
         Some(AnimationMotions) => IconName::Film,
         Some(AnimationExpressions) => IconName::Shapes,
-        Some(Physics | AnimationPhysics) => IconName::Activity,
+        Some(AnimationPhysics) => IconName::Activity,
         Some(Pose | AnimationPose) => IconName::Bone,
         Some(Resources) => IconName::Folder,
         Some(AnimationTimeline) => IconName::ChartLine,

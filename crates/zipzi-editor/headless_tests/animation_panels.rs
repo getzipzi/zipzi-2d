@@ -166,6 +166,20 @@ fn motion_groups_collapse_without_changing_selection(cx: &mut TestAppContext) {
         assert!(window.try_find(("animation-motion", 0usize)).is_none());
         assert!(window.try_find(("animation-motion", 1usize)).is_none());
         assert!(window.find(("animation-motion", 2usize)).visible());
+        let group_count = harness
+            .view
+            .read(cx)
+            .editor
+            .document()
+            .unwrap()
+            .motion_groups()
+            .len();
+        assert!(
+            window
+                .try_find(("animation-motion-group-header", group_count))
+                .is_none()
+        );
+        assert!(window.find("animation-motion-root-drop").visible());
         let animation = harness.view.read(cx).editor.animation().unwrap();
         assert_eq!(
             animation.motion.as_ref().unwrap().entry.clone(),
@@ -544,7 +558,7 @@ fn inspector_commands_restore_separate_workspace_layouts(cx: &mut TestAppContext
             ] {
                 assert!(dock.contains(kind, cx));
             }
-            for kind in [PanelKind::Physics, PanelKind::Pose] {
+            for kind in [PanelKind::Pose] {
                 assert!(!dock.contains(kind, cx));
             }
             view.run_command(CommandId::Properties, window, cx);
@@ -562,7 +576,6 @@ fn inspector_commands_restore_separate_workspace_layouts(cx: &mut TestAppContext
         let view = harness.view.read(cx);
         let dock = view.dock.as_ref().unwrap();
         assert!(dock.contains(PanelKind::Properties, cx));
-        assert!(!dock.contains(PanelKind::Physics, cx));
         assert!(!dock.contains(PanelKind::AnimationPhysics, cx));
         window.click("workspace-animation", cx);
         window.render_frame(cx);
@@ -712,4 +725,78 @@ fn inspection_lock_keeps_motion_registration_and_sound(cx: &mut TestAppContext) 
         );
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn motion_group_titles_show_unnamed_and_empty_groups_and_align_left_at_all_scales(
+    cx: &mut TestAppContext,
+) {
+    use crate::settings::{Settings, UiScale};
+    use gpui_kit::{ScrollDelta, point, px};
+    use zipzi_core::document::MotionEdit;
+    let (mut document, assets) = document_fixture::animation_document().unwrap();
+    let plan = document
+        .plan_motion_authoring(MotionEdit::RenameGroup {
+            id: document.motion_groups()[0].id.clone(),
+            name: "  ".into(),
+        })
+        .unwrap();
+    document.execute_motion_authoring(&plan).unwrap();
+    for i in 0..24 {
+        let plan = document
+            .plan_motion_authoring(MotionEdit::CreateGroup {
+                id: uuid::Uuid::new_v4().to_string(),
+                name: if i == 0 {
+                    "Empty group with a very long name that must remain left aligned".into()
+                } else {
+                    format!("Empty {i}")
+                },
+            })
+            .unwrap();
+        document.execute_motion_authoring(&plan).unwrap();
+    }
+    let group_count = document.motion_groups().len();
+    let h = setup_with_document(cx, document, assets);
+    for scale in UiScale::ALL {
+        cx.update_window(h.window, |_, window, cx| {
+            cx.update_global::<Settings, _>(|s, _| s.set_ui_scale(scale).unwrap());
+            crate::theme::change(gpui_kit::component::ThemeMode::Dark, cx);
+            window.click("workspace-animation", cx);
+            window.render_frame(cx);
+            window.scroll(
+                "animation-motion-list",
+                ScrollDelta::Pixels(point(px(0.), px(10000.))),
+                cx,
+            );
+            assert_eq!(
+                window.find(("animation-motion-group-name", 0usize)).label(),
+                Some("Unnamed group")
+            );
+            assert_eq!(
+                window
+                    .find(("animation-motion-group-count", 1usize))
+                    .value(),
+                Some("0")
+            );
+            for i in [0usize, 1] {
+                let header = window.find(("animation-motion-group-header", i)).bounds();
+                let button = window.find(("animation-motion-group-name", i)).bounds();
+                let label = window.find(("animation-motion-group-label", i)).bounds();
+                assert!((header.size.height.as_f32() - 22. * scale.factor()).abs() <= 0.5);
+                assert!(label.left() - button.left() <= px(32. * scale.factor()));
+                assert!(label.right() <= button.right());
+                assert!(button.top() >= header.top() && button.bottom() <= header.bottom());
+            }
+            window.scroll(
+                "animation-motion-list",
+                ScrollDelta::Pixels(point(px(0.), px(-10000.))),
+                cx,
+            );
+            let last = window.find(("animation-motion-group-header", group_count - 1));
+            assert!(last.visible());
+            assert!((last.bounds().size.height.as_f32() - 22. * scale.factor()).abs() <= 0.5);
+        })
+        .unwrap();
+        cx.run_until_parked();
+    }
 }

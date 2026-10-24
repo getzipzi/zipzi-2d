@@ -29,9 +29,7 @@ pub(super) fn rows(doc: &zipzi_editor_core::Document, target: &PropertyTarget) -
     };
     let binding = doc.ordinary_binding(source);
     if matches!(source.kind, K::Mesh | K::Deformer | K::Part) {
-        if binding.is_some() {
-            add(source.clone(), Control::Open, Control::Open.label());
-        } else {
+        if binding.is_none() {
             add(source.clone(), Control::Create, Control::Create.label());
         }
         return rows;
@@ -82,7 +80,6 @@ pub(super) fn rows(doc: &zipzi_editor_core::Document, target: &PropertyTarget) -
             });
         }
     } else if source.kind == K::BindingAxis {
-        add(b.reference.clone(), Control::Open, Control::Open.label());
         add(
             source.clone(),
             Control::Parameter,

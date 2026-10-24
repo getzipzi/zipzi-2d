@@ -2,6 +2,57 @@
 use super::*;
 
 impl ParametersPanel {
+    fn has_collapsed_groups(&self) -> bool {
+        self.visible_rows.iter().any(|row| matches!(row,
+            ListRow::Group { id: Some(id), .. } if self.collapsed_groups.contains(&Some(id.clone()))
+        ))
+    }
+
+    pub(super) fn expansion_button(&self, window: &mut Window, cx: &mut Context<Self>) -> Button {
+        let expanded = self.has_collapsed_groups();
+        let document = self.document_id;
+        let disabled = document.is_none()
+            || !self.slider_interaction_allowed(window, cx)
+            || !self
+                .layout
+                .rows()
+                .iter()
+                .any(|row| matches!(row, ListRow::Group { id: Some(_), .. }));
+        let label = if expanded {
+            t!("editor.tree_unfold_all")
+        } else {
+            t!("editor.tree_fold_all")
+        };
+        crate::ui::compact::header_button(Button::new("parameters-toggle-expansion"))
+            .icon(if expanded {
+                IconName::ChevronRight
+            } else {
+                IconName::ChevronDown
+            })
+            .accessibility_label(label.clone())
+            .tooltip(label)
+            .disabled(disabled)
+            .on_click(cx.listener(move |this, _, window, cx| {
+                if this.document_id != document || !this.slider_interaction_allowed(window, cx) {
+                    return;
+                }
+                this.finish_slider_drag(cx);
+                let expand = this.has_collapsed_groups();
+                this.collapsed_groups.clear();
+                if !expand {
+                    this.collapsed_groups
+                        .extend(this.layout.rows().iter().filter_map(|row| match row {
+                            ListRow::Group { id: Some(id), .. } => Some(Some(id.clone())),
+                            _ => None,
+                        }));
+                }
+                window.focus(&this.focus, cx);
+                this.navigation_focused = true;
+                this.refresh_visible_rows(cx);
+                cx.notify();
+            }))
+    }
+
     pub(super) fn group_header(
         &self,
         id: Option<String>,
@@ -86,7 +137,6 @@ impl ParametersPanel {
             .aria_selected(selected)
             .map(|element| group_header::row_style(element, depth, cx))
             .when(selected, |row| row.bg(cx.theme().primary.opacity(0.15)))
-            .border_1()
             .border_color(if focused {
                 cx.theme().primary
             } else {
@@ -100,7 +150,8 @@ impl ParametersPanel {
                         IconName::ChevronRight
                     })
                     .ghost()
-                    .small()
+                    .xsmall()
+                    .h_full()
                     .ml(crate::ui::compact::rem(depth.min(6) as f32 * 12.))
                     .disabled(disabled)
                     .accessibility_label(t!(
@@ -119,7 +170,7 @@ impl ParametersPanel {
                 Button::new(SharedString::from(format!("parameter-group-name-{key}")))
                     .icon(IconName::Folder)
                     .ghost()
-                    .small()
+                    .xsmall()
                     .flex_1()
                     .min_w_0()
                     .h_full()
@@ -154,7 +205,8 @@ impl ParametersPanel {
                     Button::new(SharedString::from(format!("parameter-group-inspect-{id}")))
                         .icon(IconName::Info)
                         .ghost()
-                        .small()
+                        .xsmall()
+                        .h_full()
                         .disabled(disabled)
                         .accessibility_label(t!("editor.parameter_group_inspect"))
                         .tooltip(t!("editor.parameter_group_inspect"))

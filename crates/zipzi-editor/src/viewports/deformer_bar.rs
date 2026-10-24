@@ -1,6 +1,7 @@
+use super::toolbar::SECONDARY;
 use crate::{t, ui::compact, viewports::ViewportSurface};
 use gpui_kit::assets::IconName;
-use gpui_kit::component::{Disableable, WindowExt, button::Button};
+use gpui_kit::component::{Disableable, Sizable, WindowExt, button::Button};
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::{CommandId, CommandSource, EditorCommand, ObjectKind};
 
@@ -106,19 +107,38 @@ pub fn render_deformer_bar(
             .accessibility_label(t!("editor.deformer_gesture_hint").into_owned())
             .tooltip(t!("editor.deformer_gesture_hint")),
     );
+    let mut tools = gpui_kit::component::toolbar::ToolbarGroup::new("deformer-tools")
+        .label(t!("editor.deformer_grid"))
+        .gap(compact::rem(1.));
+    for button in buttons {
+        tools = tools.content(
+            super::toolbar::attached_button(button, SECONDARY, cx)
+                .xsmall()
+                .h(compact::rem(SECONDARY.button_size))
+                .min_w(compact::rem(SECONDARY.button_size))
+                .px(compact::rem(3.)),
+        );
+    }
     div()
-        .id("deformer-actions")
         .absolute()
-        .top(compact::rem(8.))
-        .left(compact::rem(48.))
-        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-        .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
-        .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
-        .child(compact::group(
-            "deformer-tools",
-            t!("editor.deformer_grid"),
-            Axis::Horizontal,
-            buttons,
-        ))
+        .top_0()
+        .left_0()
+        .w_full()
+        .flex()
+        .justify_center()
+        .child(
+            div()
+                .id("deformer-actions")
+                .test_support()
+                .relative()
+                .px(compact::rem(SECONDARY.end_padding()))
+                .py(compact::rem(SECONDARY.inset))
+                .occlude()
+                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
+                .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
+                .child(SECONDARY.background(cx))
+                .child(tools),
+        )
         .into_any_element()
 }

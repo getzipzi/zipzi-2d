@@ -91,6 +91,7 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
     scene.controls.push(ControlGeometry {
         object: glue.clone(),
         kind: ControlKind::Glue,
+        rotation_axis: None,
         points: vec![ModelPoint { x: 10., y: 10. }, ModelPoint { x: 20., y: 10. }],
         edges: vec![(0, 1)].into(),
         enabled: true,

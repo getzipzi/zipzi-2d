@@ -73,6 +73,7 @@ struct EditorView {
     edit_error: Option<String>,
     message: String,
     status_message_task: Option<Task<()>>,
+    viewport_notice: Option<(zipzi_editor_core::DocumentId, String)>,
     requests: Option<preview::RequestSender>,
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
@@ -120,6 +121,7 @@ impl EditorView {
                 cx.global::<settings::Settings>().notices.join("; ")
             },
             status_message_task: None,
+            viewport_notice: None,
             requests: None,
             gpu_device: None,
             _frames: None,
@@ -178,6 +180,31 @@ impl EditorView {
         cx.notify();
     }
 
+    /// Show a changed editing restriction once, through the timed status channel.
+    /// Retaining its identity after timeout prevents pointer redraws from reviving it.
+    fn sync_viewport_notice(&mut self, cx: &mut Context<Self>) {
+        let notice = (self.editor.editing_context()
+            == Some(zipzi_editor_core::EditingContext::Modeling))
+        .then(|| self.editor.overlay().unavailable)
+        .flatten()
+        .zip(self.editor.active_id())
+        .map(|(reason, document)| (document, reason));
+        if notice == self.viewport_notice {
+            return;
+        }
+        let previous = std::mem::replace(&mut self.viewport_notice, notice.clone());
+        if let Some((_, reason)) = notice {
+            if self.edit_error.is_none() {
+                self.set_status_message(reason, cx);
+            }
+        } else if previous.is_some_and(|(_, reason)| self.message == reason) {
+            self.message.clear();
+            if self.edit_error.is_none() {
+                self.status_message_task = None;
+            }
+        }
+    }
+
     fn schedule_status_clear(&mut self, cx: &mut Context<Self>) {
         if self.edit_error.is_none() && self.message.is_empty() {
             self.status_message_task = None;
@@ -225,6 +252,7 @@ impl EditorView {
         self.sync_viewports();
         self.request_preview();
         self.sync_animation_clock(cx);
+        self.sync_viewport_notice(cx);
         workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
         cx.notify();
     }
@@ -287,6 +315,7 @@ impl EditorView {
 
     fn redraw_canvas_for_input(&mut self, cx: &mut Context<Self>, input: u64) {
         self.request_preview_for_input(input);
+        self.sync_viewport_notice(cx);
         self.notify_canvas(cx);
         workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
     }

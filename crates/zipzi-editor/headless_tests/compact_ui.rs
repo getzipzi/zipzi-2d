@@ -119,7 +119,7 @@ fn ui_scale_changes_controls_rows_and_chrome_together(cx: &mut TestAppContext) {
                 .unwrap();
             let node = tree
                 .find_panel_node(gpui_kit::component::dock::PanelId::from(
-                    dock.mesh_tree.entity_id(),
+                    dock.part_tree.entity_id(),
                 ))
                 .unwrap();
             let header = window
@@ -130,8 +130,10 @@ fn ui_scale_changes_controls_rows_and_chrome_together(cx: &mut TestAppContext) {
                 .bounds();
             for control in [
                 selector,
-                window.find("mesh-tree-search").bounds(),
-                window.find("mesh-tree-filter").bounds(),
+                window.find("parts-tree-search").bounds(),
+                window.find("parts-tree-filter").bounds(),
+                window.find("parts-tree-new-part").bounds(),
+                window.find("parts-tree-toggle-expansion").bounds(),
             ] {
                 assert!(
                     (control.size.height.as_f32() - 20. * factor).abs() <= 0.5,
@@ -142,7 +144,7 @@ fn ui_scale_changes_controls_rows_and_chrome_together(cx: &mut TestAppContext) {
                     "header control alignment: {control:?} in {header:?}"
                 );
             }
-            let search = window.find("mesh-tree-search").bounds();
+            let search = window.find("parts-tree-search").bounds();
             assert!(
                 (header.right() - search.right() - (search.top() - header.top())).abs()
                     <= gpui_kit::px(0.5),

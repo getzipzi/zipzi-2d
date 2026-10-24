@@ -25,7 +25,7 @@ fn panel(object: &ObjectRef, animation: bool, projection: Option<PaletteProjecti
             if projection == Some(PaletteProjection::Deformation) {
                 PanelKind::Deformers
             } else {
-                PanelKind::MeshTree
+                PanelKind::PartsTree
             }
         }
         K::MeshBinding | K::SceneBinding | K::GlueBinding | K::BindingAxis | K::BindingSample => {
@@ -58,7 +58,7 @@ fn panel(object: &ObjectRef, animation: bool, projection: Option<PaletteProjecti
             if animation {
                 PanelKind::AnimationPhysics
             } else {
-                PanelKind::Physics
+                PanelKind::Properties
             }
         }
         K::Pose | K::PoseGroup | K::PoseEntry | K::PoseLink => {
@@ -207,7 +207,7 @@ pub(crate) fn locate(
         state.editor.editing_context() == Some(zipzi_editor_core::EditingContext::Animation),
         projection,
     );
-    let mesh = dock.mesh_tree.clone();
+    let parts = dock.part_tree.clone();
     let deformer = dock.deformer_tree.clone();
     let parameters = dock.parameters.clone();
     let motions = dock.animation_motions.clone();
@@ -215,7 +215,7 @@ pub(crate) fn locate(
     let document_panel = dock.document_panels.get(&kind).cloned();
     let animation_panel = dock.animation_inspectors.get(&kind).cloned();
     match kind {
-        PanelKind::MeshTree => mesh.update(cx, |p, cx| {
+        PanelKind::PartsTree => parts.update(cx, |p, cx| {
             if created {
                 p.locate_created_object(document, object, window, cx)
             } else {

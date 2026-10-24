@@ -12,8 +12,8 @@ fn locking_a_tree_object_settles_its_text_before_making_it_readonly(cx: &mut Tes
     });
     fill(&h, "property-input-name", "Renamed before locking", cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.hover(format!("mesh-item-Mesh:{}", object.id), cx);
-        window.click(format!("mesh-lock-{}", object.id), cx);
+        window.hover(format!("parts-item-Mesh:{}", object.id), cx);
+        window.click(format!("parts-lock-{}", object.id), cx);
     })
     .unwrap();
     cx.run_until_parked();

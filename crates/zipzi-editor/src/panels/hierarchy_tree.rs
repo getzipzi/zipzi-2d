@@ -155,7 +155,12 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
     }
 
     fn prefix() -> &'static str {
-        if DEFORMER { "deformer" } else { "mesh" }
+        if DEFORMER { "deformer" } else { "parts" }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn sorting_scroll_handle(&self) -> UniformListScrollHandle {
+        self.scroll.clone()
     }
 
     fn object_types() -> &'static [TreeNodeKind] {
@@ -201,6 +206,81 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         }
         self.rows_dirty = true;
         cx.notify();
+    }
+
+    fn set_all_expanded(&mut self, expanded: bool, cx: &mut Context<Self>) {
+        fn collect(nodes: &[TreeNode], keys: &mut HashSet<String>) {
+            for node in nodes {
+                if !node.children.is_empty() {
+                    if node.kind != TreeNodeKind::Group || node.id != "unowned" {
+                        keys.insert(node_key(node));
+                    }
+                    collect(&node.children, keys);
+                }
+            }
+        }
+        let collapsed = if self.view.filter.is_active() {
+            &mut self.filtered_collapsed
+        } else {
+            &mut self.view.collapsed
+        };
+        collapsed.clear();
+        if !expanded {
+            collect(&self.nodes, collapsed);
+        }
+        self.rows_dirty = true;
+        cx.notify();
+    }
+
+    fn has_collapsed_rows(&self) -> bool {
+        self.rows
+            .iter()
+            .any(|row| row.has_children && self.collapsed().contains(&node_key(&row.node)))
+    }
+
+    fn expansion_button(&self, cx: &Context<Self>) -> Button {
+        let expanded = self.has_collapsed_rows();
+        let document = self.document_id;
+        let disabled = self.owner.upgrade().is_none_or(|owner| {
+            let state = owner.read(cx);
+            state.modal
+                || state.editor.is_busy()
+                || document.is_none()
+                || state.editor.active_id() != document
+        });
+        let label = if expanded {
+            t!("editor.tree_unfold_all")
+        } else {
+            t!("editor.tree_fold_all")
+        };
+        crate::ui::compact::header_button(Button::new(SharedString::from(format!(
+            "{}-tree-toggle-expansion",
+            Self::prefix()
+        ))))
+        .icon(if expanded {
+            IconName::ChevronRight
+        } else {
+            IconName::ChevronDown
+        })
+        .accessibility_label(label.clone())
+        .tooltip(label)
+        .disabled(disabled)
+        .on_click(cx.listener(move |this, _, window, cx| {
+            if window.has_active_dialog(cx) || this.document_id != document {
+                return;
+            }
+            let available = this.owner.upgrade().is_some_and(|owner| {
+                let state = owner.read(cx);
+                !state.modal
+                    && !state.editor.is_busy()
+                    && document.is_some()
+                    && state.editor.active_id() == document
+            });
+            if available {
+                let expanded = this.has_collapsed_rows();
+                this.set_all_expanded(expanded, cx);
+            }
+        }))
     }
 
     fn sync_header(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -262,6 +342,10 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         let panel = cx.weak_entity();
         PanelToolbar::new(SharedString::from(format!("{prefix}-panel-toolbar")))
             .control(management::button(self, cx))
+            .when(!DEFORMER, |toolbar| {
+                toolbar.control(management::new_part_button(self, cx))
+            })
+            .control(self.expansion_button(cx))
             .control(
                 PanelToolbarPopover::new(
                     SharedString::from(format!("{prefix}-tree-filter-popover")),
@@ -369,7 +453,7 @@ impl<const DEFORMER: bool> Focusable for HierarchyTreePanel<DEFORMER> {
 }
 impl<const DEFORMER: bool> BasePanel for HierarchyTreePanel<DEFORMER> {
     fn panel_name(&self) -> &'static str {
-        if DEFORMER { "Deformers" } else { "MeshTree" }
+        if DEFORMER { "Deformers" } else { "PartsTree" }
     }
     fn zoomable(&self, _: &App) -> bool {
         false
@@ -385,7 +469,7 @@ impl<const DEFORMER: bool> Panel for HierarchyTreePanel<DEFORMER> {
         if DEFORMER {
             t!("editor.deformer_tree")
         } else {
-            t!("editor.mesh_tree")
+            t!("editor.part_tree")
         }
     }
 }
@@ -431,7 +515,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             self.nodes = if DEFORMER {
                 owner.read(cx).editor.deformer_tree()
             } else {
-                owner.read(cx).editor.mesh_tree()
+                owner.read(cx).editor.part_tree()
             };
             if let Some(doc) = owner.read(cx).editor.document() {
                 self.selection.reconcile(&doc.object_index());
@@ -518,7 +602,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             div().id(if DEFORMER {
                 "deformer-tree-panel"
             } else {
-                "mesh-tree-panel"
+                "parts-tree-panel"
             }),
             &self.sorting,
         )
@@ -556,7 +640,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                     if DEFORMER {
                         "deformer-tree-scroll-area"
                     } else {
-                        "mesh-tree-scroll-area"
+                        "parts-tree-scroll-area"
                     },
                     rows.len(),
                     move |range, window, cx| {
@@ -653,7 +737,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     div()
                                         .id(SharedString::from(format!(
                                             "{}-item-{key}",
-                                            if DEFORMER { "deformer" } else { "mesh" }
+                                            if DEFORMER { "deformer" } else { "parts" }
                                         )))
                                         .group("layer-row")
                                         .flex()
@@ -886,6 +970,15 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             .flex_1()
             .min_h_0()
             .track_scroll(&self.scroll)
+            .map(|list| {
+                crate::ui::compact::scroll_frame(list, &self.scroll)
+                    .id(if DEFORMER {
+                        "deformer-tree-scroll-frame"
+                    } else {
+                        "parts-tree-scroll-frame"
+                    })
+                    .test_support()
+            })
             .into_any_element()
         })
         .when(target.is_some(), |element| {
@@ -895,7 +988,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                         .id(if DEFORMER {
                             "deformer-tree-root-drop"
                         } else {
-                            "mesh-tree-root-drop"
+                            "parts-tree-root-drop"
                         })
                         .test_support()
                         .h(crate::ui::compact::rem(crate::ui::compact::ROW))

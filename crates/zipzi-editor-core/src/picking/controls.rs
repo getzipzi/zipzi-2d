@@ -28,9 +28,15 @@ impl CanvasScene {
     pub fn control_points(&self, c: &ControlGeometry, t: ViewportTransform) -> Vec<ViewportPoint> {
         let mut points: Vec<_> = c.points.iter().map(|p| t.to_viewport(*p)).collect();
         if c.kind == ControlKind::Rotation && points.len() >= 2 {
+            // Do not subtract nearby viewport/world points to recover a tiny
+            // authored axis: translation and camera offsets erase its low bits.
+            let axis = c.rotation_axis.unwrap_or(crate::ModelVector {
+                x: c.points[1].x - c.points[0].x,
+                y: c.points[1].y - c.points[0].y,
+            });
             let d = ViewportPoint {
-                x: points[1].x - points[0].x,
-                y: points[1].y - points[0].y,
+                x: axis.x,
+                y: -axis.y,
             };
             let length = d.x.hypot(d.y);
             if length > 1e-6 {

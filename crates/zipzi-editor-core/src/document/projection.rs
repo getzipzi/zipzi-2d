@@ -177,7 +177,7 @@ impl Document {
         visuals
     }
 
-    pub fn mesh_tree(&self) -> Vec<TreeNode> {
+    pub fn part_tree(&self) -> Vec<TreeNode> {
         self.structure_tree(false)
     }
     pub fn deformer_tree(&self) -> Vec<TreeNode> {

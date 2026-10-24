@@ -98,10 +98,10 @@ pub(crate) fn modeling_and_parameters_screenshots(
     save(&selected, directory, "editor-selected.png")?;
 
     harness.cx.update_window(harness.window, |_, window, cx| {
-        window.hover(format!("mesh-item-Mesh:{mesh}"), cx);
+        window.hover(format!("parts-item-Mesh:{mesh}"), cx);
         window
-            .within("mesh-tree-panel")
-            .click(format!("mesh-lock-{mesh}"), cx);
+            .within("parts-tree-panel")
+            .click(format!("parts-lock-{mesh}"), cx);
         harness.view.read_with(cx, |view, _| {
             assert!(view.editor.overlay().vertices.is_empty());
             assert!(
@@ -135,8 +135,8 @@ pub(crate) fn modeling_and_parameters_screenshots(
 
     harness.cx.update_window(harness.window, |_, window, cx| {
         window
-            .within("mesh-tree-panel")
-            .click(format!("mesh-vis-{mesh}"), cx);
+            .within("parts-tree-panel")
+            .click(format!("parts-vis-{mesh}"), cx);
     })?;
     let hidden = harness.capture()?;
     let hidden_canvas = harness.canvas_image(&hidden)?;

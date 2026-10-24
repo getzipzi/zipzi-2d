@@ -200,7 +200,8 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
         let tools = window.find("canvas-toolbar").bounds();
         let canvas = window.find("canvas-body").bounds();
         assert!(top.bottom() <= canvas.top());
-        assert!(canvas.contains(&tools.origin));
+        assert!((tools.left() - canvas.left()).abs() <= px(0.5));
+        assert!(tools.top() > canvas.top());
         assert!(tools.right() <= canvas.right());
         assert!(tools.bottom() <= canvas.bottom());
         assert!(tools.size.height > tools.size.width);

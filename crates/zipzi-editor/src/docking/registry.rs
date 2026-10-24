@@ -23,8 +23,8 @@ impl DockWorkspace {
             crate::viewports::AnimationViewport::new(owner.clone(), viewport_slots[1], window, cx);
         let timeline = crate::panels::timeline::Timeline::new(owner.clone(), window, cx);
         let properties = crate::panels::PropertiesPanel::new(owner.clone(), window, cx);
-        let mesh_tree =
-            crate::panels::MeshTreePanel::new(owner.clone(), thumbnails.clone(), window, cx);
+        let part_tree =
+            crate::panels::PartsTreePanel::new(owner.clone(), thumbnails.clone(), window, cx);
         let deformer_tree =
             crate::panels::DeformerTreePanel::new(owner.clone(), thumbnails, window, cx);
         let parameters = crate::panels::ParametersPanel::new(owner.clone(), window, cx);
@@ -59,7 +59,7 @@ impl DockWorkspace {
                 panel_handle(animation_expressions.clone()),
             ),
             (PanelKind::Properties, panel_handle(properties.clone())),
-            (PanelKind::MeshTree, panel_handle(mesh_tree.clone())),
+            (PanelKind::PartsTree, panel_handle(part_tree.clone())),
             (PanelKind::Deformers, panel_handle(deformer_tree.clone())),
             (PanelKind::Parameters, panel_handle(parameters.clone())),
         ] {
@@ -88,7 +88,7 @@ impl DockWorkspace {
             cx,
             crate::viewports::AnimationViewport::header_state,
         );
-        header::register(&mut headers, &mesh_tree, cx);
+        header::register(&mut headers, &part_tree, cx);
         header::register(&mut headers, &deformer_tree, cx);
         header::register(&mut headers, &parameters, cx);
         header::register_with_state(
@@ -111,6 +111,7 @@ impl DockWorkspace {
             &animation_inspectors[&PanelKind::AnimationPose],
             cx,
         );
+        header::register(&mut headers, &document_panels[&PanelKind::Resources], cx);
         let headers = Rc::new(headers);
         let input_regions: HashMap<_, crate::input_routing::InputRegion> = panels
             .keys()
@@ -185,7 +186,7 @@ impl DockWorkspace {
             animation_expressions,
             animation_inspectors,
             properties,
-            mesh_tree,
+            part_tree,
             deformer_tree,
             parameters,
             document_panels,

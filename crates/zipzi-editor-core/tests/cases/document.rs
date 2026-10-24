@@ -467,7 +467,7 @@ fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Resu
     session.save_project(&receipt.manifest, None)?;
 
     let document = Document::open(&receipt.manifest)?;
-    let parts = document.mesh_tree();
+    let parts = document.part_tree();
     assert_eq!(parts.len(), 2);
     assert_eq!(parts[0].id, root_part);
     assert_eq!(parts[0].kind, TreeNodeKind::Part);

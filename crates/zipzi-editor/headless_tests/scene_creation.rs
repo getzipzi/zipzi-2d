@@ -63,7 +63,7 @@ fn row_creation_captures_the_existing_multi_selection(cx: &mut TestAppContext) {
     let h = setup_with_document(cx, document, tempfile::tempdir().unwrap());
     cx.update_window(h.window, |_, window, cx| {
         window.click_with_options(
-            format!("mesh-item-Mesh:{}", meshes[0].id),
+            format!("parts-item-Mesh:{}", meshes[0].id),
             ClickOptions::new().with_button(MouseButton::Right),
             cx,
         );
@@ -95,7 +95,7 @@ fn row_creation_captures_the_existing_multi_selection(cx: &mut TestAppContext) {
     let created = inspected(&h, cx);
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        let children = &doc.mesh_tree()[0].children;
+        let children = &doc.part_tree()[0].children;
         assert_eq!(
             children.iter().map(|n| n.id.as_str()).collect::<Vec<_>>(),
             [
@@ -118,7 +118,7 @@ fn toolbar_creation_focuses_name_and_rename_has_separate_history(cx: &mut TestAp
         tempfile::tempdir().unwrap(),
     );
     cx.update_window(h.window, |_, window, cx| {
-        window.click("mesh-tree-create", cx)
+        window.click("parts-tree-create", cx)
     })
     .unwrap();
     choose(&h, "New Part", cx);
@@ -126,7 +126,11 @@ fn toolbar_creation_focuses_name_and_rename_has_separate_history(cx: &mut TestAp
     assert_eq!(part.kind, ObjectKind::Part);
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(window.find(format!("mesh-item-Part:{}", part.id)).visible());
+        assert!(
+            window
+                .find(format!("parts-item-Part:{}", part.id))
+                .visible()
+        );
         assert!(window.find("property-input-name").visible());
         window.input("Character", cx);
         window.press("enter", cx);
@@ -178,7 +182,7 @@ fn row_creation_uses_clicked_container_instead_of_current_selection(cx: &mut Tes
     let h = setup_with_document(cx, document, assets);
     cx.update_window(h.window, |_, window, cx| {
         window.click_with_options(
-            format!("mesh-item-Part:{}", id(102)),
+            format!("parts-item-Part:{}", id(102)),
             ClickOptions::new().with_button(MouseButton::Right),
             cx,
         );
@@ -189,7 +193,7 @@ fn row_creation_uses_clicked_container_instead_of_current_selection(cx: &mut Tes
     assert_eq!(object.kind, ObjectKind::Mesh);
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        let tree = doc.mesh_tree();
+        let tree = doc.part_tree();
         let body = tree.iter().find(|node| node.id == id(102)).unwrap();
         assert_eq!(body.children[0].id, object.id);
         assert_eq!(doc.history_lengths(), (1, 0));
@@ -199,7 +203,7 @@ fn row_creation_uses_clicked_container_instead_of_current_selection(cx: &mut Tes
         window.render_frame(cx);
         assert!(
             window
-                .find(format!("mesh-item-Mesh:{}", object.id))
+                .find(format!("parts-item-Mesh:{}", object.id))
                 .visible()
         );
         assert!(window.find("property-input-name").visible());
@@ -217,21 +221,21 @@ fn filtered_creation_reveals_new_item_and_ancestors_without_clearing_conditions(
         .unwrap();
     let h = setup_with_document(cx, document, assets);
     cx.update_window(h.window, |_, window, cx| {
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("no existing match", cx);
     })
     .unwrap();
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
         window.click("tree-kind-Mesh", cx);
         window.press("escape", cx);
     })
     .unwrap();
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
-        assert!(window.find("mesh-tree-empty").visible());
-        window.click("mesh-tree-create", cx);
+        assert!(window.find("parts-tree-empty").visible());
+        window.click("parts-tree-create", cx);
     })
     .unwrap();
     choose(&h, "New Mesh", cx);
@@ -239,35 +243,43 @@ fn filtered_creation_reveals_new_item_and_ancestors_without_clearing_conditions(
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
         assert_eq!(
-            window.find("mesh-tree-search").value(),
+            window.find("parts-tree-search").value(),
             Some("no existing match")
         );
-        assert!(window.find(format!("mesh-item-Part:{}", id(101))).visible());
-        assert!(window.find(format!("mesh-item-Part:{}", id(103))).visible());
         assert!(
             window
-                .find(format!("mesh-item-Mesh:{}", object.id))
+                .find(format!("parts-item-Part:{}", id(101)))
+                .visible()
+        );
+        assert!(
+            window
+                .find(format!("parts-item-Part:{}", id(103)))
+                .visible()
+        );
+        assert!(
+            window
+                .find(format!("parts-item-Mesh:{}", object.id))
                 .visible()
         );
         assert!(window.find("tree-created-item").visible());
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
         assert_eq!(window.find("tree-kind-Mesh").checked(), Some(false));
         window.press("escape", cx);
-        window.click(format!("mesh-item-Part:{}", id(103)), cx);
+        window.click(format!("parts-item-Part:{}", id(103)), cx);
     })
     .unwrap();
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
         assert!(window.try_find("tree-created-item").is_none());
-        assert!(window.find("mesh-tree-empty").visible());
+        assert!(window.find("parts-tree-empty").visible());
         assert_eq!(
-            window.find("mesh-tree-search").value(),
+            window.find("parts-tree-search").value(),
             Some("no existing match")
         );
-        window.click("mesh-tree-clear", cx);
+        window.click("parts-tree-clear", cx);
         assert!(
             window
-                .find(format!("mesh-item-Mesh:{}", object.id))
+                .find(format!("parts-item-Mesh:{}", object.id))
                 .visible()
         );
     })
@@ -284,7 +296,7 @@ fn locked_container_creation_is_disabled_with_reason_and_no_publication(cx: &mut
     let h = setup_with_document(cx, document, assets);
     cx.update_window(h.window, |_, window, cx| {
         window.click_with_options(
-            format!("mesh-item-Part:{}", id(103)),
+            format!("parts-item-Part:{}", id(103)),
             ClickOptions::new().with_button(MouseButton::Right),
             cx,
         );
@@ -321,7 +333,7 @@ fn open_creation_menu_cannot_execute_after_document_version_changes(cx: &mut Tes
         tempfile::tempdir().unwrap(),
     );
     cx.update_window(h.window, |_, window, cx| {
-        window.click("mesh-tree-create", cx)
+        window.click("parts-tree-create", cx)
     })
     .unwrap();
     cx.run_until_parked();
@@ -338,7 +350,7 @@ fn open_creation_menu_cannot_execute_after_document_version_changes(cx: &mut Tes
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         assert!(
-            doc.mesh_tree()
+            doc.part_tree()
                 .iter()
                 .all(|node| node.kind != zipzi_editor_core::TreeNodeKind::Part)
         );
@@ -357,7 +369,7 @@ fn root_menu_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type(
     );
     cx.update_window(h.window, |_, window, cx| {
         window.click_with_options(
-            "mesh-tree-root-drop",
+            "parts-tree-root-drop",
             ClickOptions::new().with_button(MouseButton::Right),
             cx,
         );
@@ -400,14 +412,14 @@ fn root_menu_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type(
                 let result = view.editor.execute(EditorCommand::Navigate(part.clone()));
                 view.complete_edit(result, cx);
             });
-            window.click("mesh-tree-create", cx);
+            window.click("parts-tree-create", cx);
         })
         .unwrap();
         choose(&h, label, cx);
         let created = inspected(&h, cx);
         h.view.read_with(cx, |view, _| {
             let doc = view.editor.document().unwrap();
-            let tree = doc.mesh_tree();
+            let tree = doc.part_tree();
             let owner = tree.iter().find(|node| node.id == part.id).unwrap();
             assert!(
                 owner
@@ -419,4 +431,62 @@ fn root_menu_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type(
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
         });
     }
+}
+
+#[gpui_kit::test]
+fn parts_header_creates_a_part_directly_and_disables_it_for_a_locked_parent(
+    cx: &mut TestAppContext,
+) {
+    let (mut document, assets) = document_fixture::sample_document_with_parts().unwrap();
+    let parent = ObjectRef::new(ObjectKind::Part, id(101));
+    document.navigate(parent.clone()).unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        let toolbar = window.find("parts-panel-toolbar").bounds();
+        let button = window.find("parts-tree-new-part").bounds();
+        assert!(button.top() >= toolbar.top() && button.bottom() <= toolbar.bottom());
+        window.click("parts-tree-new-part", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    let created = inspected(&h, cx);
+    assert_eq!(created.kind, ObjectKind::Part);
+    h.view.read_with(cx, |v, _| {
+        let d = v.editor.document().unwrap();
+        let tree = d.part_tree();
+        let parent = tree.iter().find(|node| node.id == parent.id).unwrap();
+        assert!(parent.children.iter().any(|node| node.id == created.id));
+        assert_eq!(d.history_lengths(), (1, 0));
+        assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.input("Header part", cx);
+        window.press("enter", cx);
+        h.view.update(cx, |v, cx| {
+            assert_eq!(
+                v.editor.document().unwrap().object_index().name(&created),
+                "Header part"
+            );
+            v.editor
+                .execute(EditorCommand::SetObjectsLocked {
+                    objects: vec![created.clone()],
+                    locked: true,
+                })
+                .unwrap();
+            v.redraw(cx);
+        });
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click("parts-tree-new-part", cx);
+        h.view.read_with(cx, |v, _| {
+            assert_eq!(v.editor.document().unwrap().history_lengths(), (3, 0));
+            assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+        });
+    })
+    .unwrap();
 }

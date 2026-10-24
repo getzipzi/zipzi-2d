@@ -185,7 +185,10 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
         window.render_frame(cx);
         window.click(("physics-group-row", 0usize), cx);
         window.render_frame(cx);
-        window.click("physics-copy-group", cx);
+    })
+    .unwrap();
+    physics_context_action(&harness, cx, 0, "Duplicate");
+    cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         harness.view.read_with(cx, |view, _| {
             assert_eq!(
@@ -200,9 +203,9 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
                 2
             )
         });
-        window.click("physics-delete-group", cx);
     })
     .unwrap();
+    physics_context_action(&harness, cx, 1, "Delete");
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         assert!(window.try_find("business-dialog").is_some());
@@ -531,4 +534,134 @@ fn rejected_physics_node_deletion_keeps_the_selected_node(cx: &mut TestAppContex
         });
     })
     .unwrap();
+}
+
+fn physics_context_action(h: &super::Harness, cx: &mut TestAppContext, row: usize, label: &str) {
+    use gpui_kit::{MouseButton, test::ClickOptions};
+    cx.update_window(h.window, |_, window, cx| {
+        window.click_with_options(
+            ("physics-group-row", row),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        for i in 0..32usize {
+            if let Some(item) = window.within("popup-menu").try_find(i) {
+                if let Some(label) = item.label() {
+                    assert!(
+                        ![
+                            "Move up",
+                            "Move down",
+                            "Move Earlier in Execution",
+                            "Move Later in Execution"
+                        ]
+                        .iter()
+                        .any(|prefix| label.starts_with(prefix)),
+                        "Unexpected context action: {label}"
+                    );
+                }
+            }
+        }
+        let item = (0..16usize)
+            .find(|i| {
+                window
+                    .within("popup-menu")
+                    .try_find(*i)
+                    .is_some_and(|e| e.label() == Some(label))
+            })
+            .unwrap_or_else(|| panic!("Missing Physics action: {label}"));
+        window.within("popup-menu").click(item, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+
+#[gpui_kit::test]
+fn physics_list_drag_reorders_execution_once_and_undo_restores_groups(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{BusinessAction as A, ObjectKind as K};
+    let (mut document, assets) = document_fixture::combined_animation_document().unwrap();
+    for _ in 0..2 {
+        let plan = document
+            .plan_business(&A::Create(K::PhysicsGroup, None), "Group".into())
+            .unwrap();
+        document.execute_business(&plan).unwrap();
+    }
+    let original: Vec<_> = document
+        .physics_definition()
+        .unwrap()
+        .data
+        .settings
+        .iter()
+        .map(|g| g.id.clone())
+        .collect();
+    let history = document.history_lengths();
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.resize(size(px(1200.), px(1200.)));
+        window.click("workspace-animation", cx);
+        h.view.update(cx, |v, cx| {
+            v.dock
+                .as_ref()
+                .unwrap()
+                .show(PanelKind::AnimationPhysics, None, window, cx)
+        });
+        window.render_frame(cx);
+        for id in [
+            "physics-copy-group",
+            "physics-delete-group",
+            "physics-up-group",
+            "physics-down-group",
+        ] {
+            assert!(window.try_find(id).is_none());
+        }
+        let from = window.find(("physics-group-row", 2usize)).bounds();
+        let to = window.find(("physics-group-row", 0usize)).bounds();
+        window.drag(from.center(), point(to.center().x, to.top() + px(2.)), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |v, _| {
+        assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+        let d = v.editor.document().unwrap();
+        let order: Vec<_> = d
+            .physics_definition()
+            .unwrap()
+            .data
+            .settings
+            .iter()
+            .map(|g| g.id.clone())
+            .collect();
+        assert_eq!(
+            order,
+            vec![
+                original[2].clone(),
+                original[0].clone(),
+                original[1].clone()
+            ]
+        );
+        assert_eq!(d.history_lengths().0, history.0 + 1);
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        h.view
+            .update(cx, |v, cx| v.run_command(CommandId::Undo, window, cx));
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |v, _| {
+        let order: Vec<_> = v
+            .editor
+            .document()
+            .unwrap()
+            .physics_definition()
+            .unwrap()
+            .data
+            .settings
+            .iter()
+            .map(|g| g.id.clone())
+            .collect();
+        assert_eq!(order, original);
+    });
 }

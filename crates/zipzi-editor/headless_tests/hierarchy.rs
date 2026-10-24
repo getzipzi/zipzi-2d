@@ -3,7 +3,109 @@ use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 
 #[gpui_kit::test]
-fn tree_search_reveals_collapsed_matches_and_clear_restores_expansion(cx: &mut TestAppContext) {
+fn titlebar_fold_and_unfold_all_preserve_document_and_independent_tree_states(
+    cx: &mut TestAppContext,
+) {
+    let (document, assets) = super::document_fixture::sample_document_with_scene_objects().unwrap();
+    let meshes: Vec<_> = document
+        .layers()
+        .iter()
+        .map(|layer| layer.id.clone())
+        .collect();
+    let selection = document.context().selections.clone();
+    let history = document.history_lengths();
+    let harness = super::setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        for prefix in ["parts", "deformer"] {
+            let other = if prefix == "parts" {
+                "deformer"
+            } else {
+                "parts"
+            };
+            let toggle = format!("{prefix}-tree-toggle-expansion");
+            assert!(window.try_find(format!("{prefix}-tree-fold-all")).is_none());
+            assert!(
+                window
+                    .try_find(format!("{prefix}-tree-unfold-all"))
+                    .is_none()
+            );
+            let (kind, id) = if prefix == "parts" {
+                ("Part", 101)
+            } else {
+                ("RotationDeformer", 501)
+            };
+            window.within(format!("{prefix}-tree-panel")).click(
+                format!("tree-expand-{kind}:{}", uuid::Uuid::from_u128(id)),
+                cx,
+            );
+            assert!(
+                window
+                    .try_find(format!("{prefix}-item-Mesh:{}", meshes[0]))
+                    .is_none()
+            );
+            window.click(toggle.clone(), cx);
+            assert!(
+                window
+                    .find(format!("{prefix}-item-Mesh:{}", meshes[0]))
+                    .visible()
+            );
+            window.click(toggle.clone(), cx);
+            for mesh in &meshes {
+                assert!(
+                    window
+                        .try_find(format!("{prefix}-item-Mesh:{mesh}"))
+                        .is_none()
+                );
+                assert!(window.find(format!("{other}-item-Mesh:{mesh}")).visible());
+            }
+            window.click(toggle, cx);
+            for mesh in &meshes {
+                assert!(window.find(format!("{prefix}-item-Mesh:{mesh}")).visible());
+            }
+        }
+        window.click("parts-tree-toggle-expansion", cx);
+        window.click("parts-tree-search", cx);
+        window.input("Face", cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(
+            window
+                .find(format!("parts-item-Mesh:{}", meshes[0]))
+                .visible()
+        );
+        window.click("parts-tree-toggle-expansion", cx);
+        assert!(
+            window
+                .try_find(format!("parts-item-Mesh:{}", meshes[0]))
+                .is_none()
+        );
+        window.click("parts-tree-toggle-expansion", cx);
+        assert!(
+            window
+                .find(format!("parts-item-Mesh:{}", meshes[0]))
+                .visible()
+        );
+        window.click("parts-tree-clear", cx);
+        assert!(
+            window
+                .try_find(format!("parts-item-Mesh:{}", meshes[0]))
+                .is_none()
+        );
+        window.click("parts-tree-toggle-expansion", cx);
+        harness.view.read_with(cx, |view, _| {
+            let document = view.editor.document().unwrap();
+            assert_eq!(document.context().selections, selection);
+            assert_eq!(document.history_lengths(), history);
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn tree_search_keeps_ungrouped_objects_at_root_and_clear_restores_rows(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let (diamond, second, selection, revision) = harness.view.read_with(cx, |view, _| {
         let layers = view.editor.layers();
@@ -25,26 +127,20 @@ fn tree_search_reveals_collapsed_matches_and_clear_restores_expansion(cx: &mut T
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window
-            .within("mesh-tree-panel")
-            .click("tree-expand-Group:unowned", cx);
-        assert!(
-            window
-                .try_find(format!("mesh-item-Mesh:{second}"))
-                .is_none()
-        );
-        window.click("mesh-tree-search", cx);
+        assert!(window.try_find("tree-expand-Group:unowned").is_none());
+        assert!(window.find(format!("parts-item-Mesh:{second}")).visible());
+        window.click("parts-tree-search", cx);
         window.input("sEcOnD", cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        assert!(window.find(format!("mesh-item-Mesh:{second}")).visible());
+        assert!(window.find(format!("parts-item-Mesh:{second}")).visible());
         assert!(
             window
-                .try_find(format!("mesh-item-Mesh:{diamond}"))
+                .try_find(format!("parts-item-Mesh:{diamond}"))
                 .is_none()
         );
-        assert!(window.find("mesh-tree-search").focused().unwrap());
+        assert!(window.find("parts-tree-search").focused().unwrap());
         harness.view.read_with(cx, |view, _| {
             assert_eq!(
                 view.editor.document().unwrap().context().selections,
@@ -52,18 +148,11 @@ fn tree_search_reveals_collapsed_matches_and_clear_restores_expansion(cx: &mut T
             );
             assert_eq!(view.editor.tree_revision(), revision);
         });
-        window.click("mesh-tree-clear", cx);
-        assert_eq!(window.find("mesh-tree-search").value(), Some(""));
-        assert!(
-            window
-                .try_find(format!("mesh-item-Mesh:{second}"))
-                .is_none()
-        );
-        window
-            .within("mesh-tree-panel")
-            .click("tree-expand-Group:unowned", cx);
-        assert!(window.find(format!("mesh-item-Mesh:{diamond}")).visible());
-        assert!(window.find(format!("mesh-item-Mesh:{second}")).visible());
+        window.click("parts-tree-clear", cx);
+        assert_eq!(window.find("parts-tree-search").value(), Some(""));
+        assert!(window.try_find("tree-expand-Group:unowned").is_none());
+        assert!(window.find(format!("parts-item-Mesh:{diamond}")).visible());
+        assert!(window.find(format!("parts-item-Mesh:{second}")).visible());
     })
     .unwrap();
 }
@@ -75,21 +164,21 @@ fn tree_type_filter_keeps_popover_open_and_empty_results_keep_selection(cx: &mut
         view.editor.document().unwrap().context().selections.clone()
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("second", cx);
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
         assert_eq!(window.find("tree-kind-Mesh").checked(), Some(true));
         window.click("tree-kind-Mesh", cx);
         assert_eq!(window.find("tree-kind-Mesh").checked(), Some(false));
-        assert!(window.find("mesh-tree-empty").visible());
+        assert!(window.find("parts-tree-empty").visible());
         // Continuous multi-select updates in place instead of closing the popup.
         window.click("tree-kind-Part", cx);
         assert_eq!(window.find("tree-kind-Part").checked(), Some(false));
         window.click("tree-all-types", cx);
         assert_eq!(window.find("tree-kind-Mesh").checked(), Some(true));
         assert_eq!(window.find("tree-kind-Part").checked(), Some(true));
-        assert!(window.try_find("mesh-tree-empty").is_none());
-        assert_eq!(window.find("mesh-tree-search").value(), Some("second"));
+        assert!(window.try_find("parts-tree-empty").is_none());
+        assert_eq!(window.find("parts-tree-search").value(), Some("second"));
         window.press("escape", cx);
         assert!(window.try_find("tree-kind-Mesh").is_none());
         harness.view.read_with(cx, |view, _| {
@@ -111,9 +200,9 @@ fn tree_conditions_are_independent_between_panels_and_restored_per_document(
         .view
         .read_with(cx, |view, _| view.editor.active_id().unwrap());
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("mesh-tree-search", cx);
+        window.click("parts-tree-search", cx);
         window.input("second", cx);
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
         window.click("tree-kind-Part", cx);
         window.press("escape", cx);
         harness.view.update(cx, |view, cx| {
@@ -126,8 +215,8 @@ fn tree_conditions_are_independent_between_panels_and_restored_per_document(
         assert_eq!(window.find("deformer-tree-search").value(), Some(""));
         window.click("deformer-tree-search", cx);
         window.input("diamond", cx);
-        assert_eq!(window.find("mesh-tree-search").value(), Some("second"));
-        window.click("mesh-tree-filter", cx);
+        assert_eq!(window.find("parts-tree-search").value(), Some("second"));
+        window.click("parts-tree-filter", cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
@@ -136,7 +225,7 @@ fn tree_conditions_are_independent_between_panels_and_restored_per_document(
             cx.notify();
         });
         window.render_frame(cx);
-        assert_eq!(window.find("mesh-tree-search").value(), Some(""));
+        assert_eq!(window.find("parts-tree-search").value(), Some(""));
         assert_eq!(window.find("deformer-tree-search").value(), Some(""));
         assert!(window.try_find("tree-kind-Mesh").is_none());
     })
@@ -147,15 +236,15 @@ fn tree_conditions_are_independent_between_panels_and_restored_per_document(
             cx.notify();
         });
         window.render_frame(cx);
-        assert_eq!(window.find("mesh-tree-search").value(), Some("second"));
+        assert_eq!(window.find("parts-tree-search").value(), Some("second"));
         assert_eq!(window.find("deformer-tree-search").value(), Some("diamond"));
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
         assert_eq!(window.find("tree-kind-Part").checked(), Some(false));
         assert_eq!(window.find("tree-kind-Mesh").checked(), Some(true));
         window.press("escape", cx);
-        window.click("mesh-tree-clear", cx);
+        window.click("parts-tree-clear", cx);
         assert_eq!(window.find("deformer-tree-search").value(), Some("diamond"));
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
         assert_eq!(window.find("tree-kind-Part").checked(), Some(true));
     })
     .unwrap();
@@ -176,7 +265,7 @@ fn visibility_eye_updates_its_row_without_changing_selection(cx: &mut TestAppCon
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("mesh-vis-{second_id}"), cx);
+        window.click(format!("parts-vis-{second_id}"), cx);
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.selected_layer().unwrap().id, selected_id);
             assert!(view.editor.selected_layer().unwrap().visible);
@@ -234,7 +323,7 @@ fn visibility_eyes_toggle_all_scene_object_kinds_without_changing_selection(
     ] {
         cx.update_window(harness.window, |_, window, cx| {
             for expected in [false, true] {
-                window.click(format!("mesh-vis-{}", target.id), cx);
+                window.click(format!("parts-vis-{}", target.id), cx);
                 harness.view.read_with(cx, |view, _| {
                     assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
                     let doc = view.editor.document().unwrap();
@@ -294,14 +383,14 @@ fn deformer_tree_controls_do_not_hide_or_lock_children_and_sync_with_part_tree(
         harness.view.update(cx, |view, cx| {
             view.editor.execute(EditorCommand::Undo).unwrap();
             let dock = view.dock.as_ref().unwrap();
-            let panel = gpui_kit::component::dock::PanelId::from(dock.mesh_tree.entity_id());
+            let panel = gpui_kit::component::dock::PanelId::from(dock.part_tree.entity_id());
             dock.area
                 .update(cx, |area, cx| area.select_panel(panel, window, cx));
             cx.notify();
         });
         window.render_frame(cx);
-        window.click(format!("mesh-vis-{}", parent.id), cx);
-        window.click(format!("mesh-lock-{}", parent.id), cx);
+        window.click(format!("parts-vis-{}", parent.id), cx);
+        window.click(format!("parts-lock-{}", parent.id), cx);
         harness.view.read_with(cx, |view, _| {
             let doc = view.editor.document().unwrap();
             assert!(view.edit_error.is_none());
@@ -328,7 +417,7 @@ fn default_layout_has_independent_document_panels(cx: &mut TestAppContext) {
                 .iter()
                 .map(|p| p.panel_name.as_str())
                 .collect::<Vec<_>>(),
-            ["MeshTree", "DrawOrder"]
+            ["PartsTree", "DrawOrder"]
         );
         assert_eq!(columns[0].children[1].children[0].panel_name, "Deformers");
         assert_eq!(columns[1].children[0].panel_name, "ModelingViewport");
@@ -345,7 +434,7 @@ fn default_layout_has_independent_document_panels(cx: &mut TestAppContext) {
             dock.document_panels[&zipzi_editor_core::PanelKind::Keyforms].entity_id(),
         );
         assert!(dock.area.read(cx).panel(keyforms).is_none());
-        assert_eq!(dock.document_panels.len(), 8);
+        assert_eq!(dock.document_panels.len(), 7);
     });
 }
 
@@ -545,8 +634,8 @@ fn tree_lock_button_preserves_selection_and_other_tree_can_unlock(cx: &mut TestA
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.hover(format!("mesh-item-Mesh:{}", target.id), cx);
-        window.click(format!("mesh-lock-{}", target.id), cx);
+        window.hover(format!("parts-item-Mesh:{}", target.id), cx);
+        window.click(format!("parts-lock-{}", target.id), cx);
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
@@ -601,7 +690,7 @@ fn inherited_lock_button_opens_options_without_selecting_or_unlocking_parent(
         view.editor.document().unwrap().context().selections.clone()
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("mesh-lock-{mesh}"), cx);
+        window.click(format!("parts-lock-{mesh}"), cx);
         assert!(
             window
                 .find(format!("locate-state-source-{}", parent.id))
@@ -634,7 +723,7 @@ fn inherited_eye_explains_source_and_only_changes_it_on_explicit_choice(cx: &mut
     let selection = doc.context().selections.clone();
     let harness = super::setup_with_document(cx, doc, assets);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("mesh-vis-{}", mesh.id), cx);
+        window.click(format!("parts-vis-{}", mesh.id), cx);
         assert!(
             window
                 .find(format!("locate-state-source-{}", part.id))
@@ -685,7 +774,7 @@ fn model_enabled_property_is_read_only_and_independent_of_the_editor_eye(cx: &mu
             });
 
             for (edit, visible) in [(1, false), (2, true)] {
-                window.click(format!("mesh-vis-{}", mesh.id), cx);
+                window.click(format!("parts-vis-{}", mesh.id), cx);
                 assert!(window.try_find("object-model-enabled").is_none());
                 assert_eq!(window.find("object-property-enabled").checked(), None);
                 harness.view.read_with(cx, |view, _| {

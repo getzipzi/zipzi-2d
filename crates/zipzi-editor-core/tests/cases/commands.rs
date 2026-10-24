@@ -318,17 +318,17 @@ fn tree_cache_revision_and_visibility_follow_edits_not_navigation() -> anyhow::R
         visible: false,
     })?;
     assert_ne!(editor.tree_revision(), revision);
-    for tree in [editor.mesh_tree(), editor.deformer_tree()] {
+    for tree in [editor.part_tree(), editor.deformer_tree()] {
         assert_eq!(visibility(&tree, &id), Some(false));
     }
     let hidden_revision = editor.tree_revision();
     editor.execute(EditorCommand::Undo)?;
     assert_ne!(editor.tree_revision(), hidden_revision);
-    for tree in [editor.mesh_tree(), editor.deformer_tree()] {
+    for tree in [editor.part_tree(), editor.deformer_tree()] {
         assert_eq!(visibility(&tree, &id), Some(true));
     }
     editor.execute(EditorCommand::Redo)?;
-    for tree in [editor.mesh_tree(), editor.deformer_tree()] {
+    for tree in [editor.part_tree(), editor.deformer_tree()] {
         assert_eq!(visibility(&tree, &id), Some(false));
     }
     Ok(())

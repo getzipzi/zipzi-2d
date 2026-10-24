@@ -8,7 +8,7 @@ fn id() -> String {
 #[test]
 fn mesh_content_receipt_refreshes_canvas_and_keeps_retained_snapshot() -> anyhow::Result<()> {
     let (mut d, _assets) = super::support::sample_document_with_two_layers()?;
-    let mesh = d.mesh_tree()[0].children[0].id.clone();
+    let mesh = d.part_tree()[0].children[0].id.clone();
     let vertex = 0;
     let before = d.snapshot()?;
     let selections = d.context().selections.clone();

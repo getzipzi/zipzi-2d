@@ -7,6 +7,185 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+fn viewport_transform_delta_updates_status_bar_and_clears_on_finish_or_cancel(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{
+        CanvasInput, DeformerHandle, EditorCommand, ObjectKind, ObjectRef, ViewportPoint,
+    };
+    let (document, assets) =
+        super::super::document_fixture::sample_document_with_scene_objects().unwrap();
+    let harness = super::super::setup_with_document(cx, document, assets);
+    let object = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(502).to_string());
+    for cancel in [false, true] {
+        harness.view.update(cx, |view, _| {
+            view.editor
+                .execute(EditorCommand::SelectObject(object.clone()))
+                .unwrap();
+        });
+        present_canvas(&harness, cx);
+        harness.view.update(cx, |view, cx| {
+            // Synthetic frames have no running preview worker.
+            for frame in view.viewport_frames.values_mut() {
+                frame.error = None;
+            }
+            view.set_status_message("Ready", cx);
+            let frame = view.modeling_frame().unwrap().canvas.clone();
+            let control = frame
+                .geometry
+                .controls
+                .iter()
+                .find(|control| control.object == object)
+                .unwrap();
+            let gizmo = frame
+                .geometry
+                .deformer_gizmo(control, frame.transform)
+                .unwrap();
+            let start = gizmo
+                .handles
+                .iter()
+                .find(|(handle, _)| *handle == DeformerHandle::Scale(4))
+                .unwrap()
+                .1;
+            let token = view
+                .editor
+                .begin_canvas_gesture(frame.version.binding, start, false, false)
+                .unwrap()
+                .capture
+                .unwrap();
+            let mut previous = None;
+            let mut end = start;
+            for distance in [20., 40.] {
+                end = ViewportPoint {
+                    x: start.x + distance,
+                    y: start.y + distance,
+                };
+                view.editor
+                    .update_canvas_gesture(
+                        token,
+                        CanvasInput::Move {
+                            point: end,
+                            left_down: true,
+                        },
+                    )
+                    .unwrap();
+                let delta = view
+                    .editor
+                    .overlay_for_viewport(token.binding)
+                    .interaction_label
+                    .unwrap();
+                assert!(delta.contains('%'));
+                assert_ne!(previous.as_ref(), Some(&delta));
+                crate::workspace::status_bar::StatusBar::sync(&view.status_bar, view, cx);
+                assert_eq!(
+                    view.status_bar.read(cx).displayed_message(),
+                    Some((delta.as_str(), false))
+                );
+                previous = Some(delta);
+            }
+            view.set_edit_error("Operation failed", cx);
+            assert_eq!(
+                view.status_bar.read(cx).displayed_message(),
+                Some(("Operation failed", true))
+            );
+            view.clear_edit_error(cx);
+            assert_eq!(
+                view.status_bar.read(cx).displayed_message(),
+                Some((previous.as_deref().unwrap(), false))
+            );
+            view.editor
+                .update_canvas_gesture(
+                    token,
+                    if cancel {
+                        CanvasInput::Cancel
+                    } else {
+                        CanvasInput::Up { point: end }
+                    },
+                )
+                .unwrap();
+            crate::workspace::status_bar::StatusBar::sync(&view.status_bar, view, cx);
+            assert_eq!(
+                view.status_bar.read(cx).displayed_message(),
+                Some(("Ready", false))
+            );
+        });
+    }
+}
+
+#[gpui_kit::test]
+fn viewport_editing_notice_uses_timed_status_message_without_a_canvas_banner(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{EditorCommand, ObjectKind, ObjectRef};
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    let object = harness.view.read_with(cx, |view, _| {
+        ObjectRef::new(ObjectKind::Mesh, view.editor.layers()[0].id.clone())
+    });
+    harness.view.update(cx, |view, cx| {
+        // This test presents a synthetic frame without starting the preview worker.
+        for frame in view.viewport_frames.values_mut() {
+            frame.error = None;
+        }
+        view.editor
+            .execute(EditorCommand::SelectCanvasObjects(vec![object.clone()]))
+            .unwrap();
+        view.editor
+            .execute(EditorCommand::SetObjectsLocked {
+                objects: vec![object.clone()],
+                locked: true,
+            })
+            .unwrap();
+        view.sync_viewport_notice(cx);
+    });
+    let reason = harness.view.read_with(cx, |view, cx| {
+        let reason = view.editor.overlay().unavailable.unwrap();
+        assert_eq!(
+            view.status_bar.read(cx).displayed_message(),
+            Some((reason.as_str(), false))
+        );
+        reason
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("canvas-vertex-notice").is_none());
+        assert!(window.find("app-status-message").visible());
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.background_executor
+        .advance_clock(crate::EditorView::STATUS_MESSAGE_TIMEOUT);
+    cx.run_until_parked();
+    harness.view.update(cx, |view, cx| {
+        view.sync_viewport_notice(cx);
+        assert_eq!(
+            view.editor.overlay().unavailable.as_deref(),
+            Some(reason.as_str())
+        );
+        assert!(view.status_bar.read(cx).displayed_message().is_none());
+        view.editor
+            .execute(EditorCommand::SetObjectsLocked {
+                objects: vec![object.clone()],
+                locked: false,
+            })
+            .unwrap();
+        view.sync_viewport_notice(cx);
+        view.set_edit_error("Operation failed", cx);
+        view.editor
+            .execute(EditorCommand::SetObjectsLocked {
+                objects: vec![object],
+                locked: true,
+            })
+            .unwrap();
+        view.sync_viewport_notice(cx);
+        assert_eq!(
+            view.status_bar.read(cx).displayed_message(),
+            Some(("Operation failed", true))
+        );
+    });
+}
+
+#[gpui_kit::test]
 fn hover_without_a_presented_frame_keeps_document_observers_idle(cx: &mut TestAppContext) {
     use std::{cell::Cell, rc::Rc};
 
@@ -595,6 +774,20 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
                 8
             );
         });
+        let bar = window.find("deformer-actions").bounds();
+        let viewport = window.find("canvas-body").bounds();
+        assert!((bar.center().x - viewport.center().x).abs() <= px(0.5));
+        let scale = crate::ui::compact::scale(cx);
+        assert!((bar.top() - viewport.top()).abs() <= px(0.5));
+        for id in [
+            "deformer-ancestors",
+            "deformer-warp-mode",
+            "deformer-grid",
+            "deformer-help",
+        ] {
+            let button = window.find(id).bounds();
+            assert!((button.size.height.as_f32() - 20. * scale).abs() <= 0.5);
+        }
         window.click("deformer-warp-mode", cx);
         harness.view.read_with(cx, |view, _| {
             assert!(view.editor.warp_fine());

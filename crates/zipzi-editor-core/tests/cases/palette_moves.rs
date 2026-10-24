@@ -105,9 +105,9 @@ fn selected_ancestor_absorbs_descendants_and_locked_batch_is_rejected() -> anyho
         Some(target.clone()),
         P::Inside,
     )?;
-    assert_eq!(d.mesh_tree()[0].children[0].id, parent.id);
+    assert_eq!(d.part_tree()[0].children[0].id, parent.id);
     assert_eq!(
-        d.mesh_tree()[0].children[0]
+        d.part_tree()[0].children[0]
             .children
             .iter()
             .filter(|node| node.id == child.id)
@@ -116,7 +116,7 @@ fn selected_ancestor_absorbs_descendants_and_locked_batch_is_rejected() -> anyho
     );
     d.undo()?;
     d.set_objects_locked(std::slice::from_ref(&child), true)?;
-    let tree = d.mesh_tree();
+    let tree = d.part_tree();
     let history = d.history_lengths();
     assert!(
         d.plan_palette_move(PaletteMove {
@@ -127,7 +127,7 @@ fn selected_ancestor_absorbs_descendants_and_locked_batch_is_rejected() -> anyho
         })
         .is_err()
     );
-    assert_eq!(d.mesh_tree(), tree);
+    assert_eq!(d.part_tree(), tree);
     assert_eq!(d.history_lengths(), history);
     Ok(())
 }

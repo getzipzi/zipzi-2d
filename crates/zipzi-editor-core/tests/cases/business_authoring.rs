@@ -349,3 +349,57 @@ fn removing_physics_singleton_retires_manual_trial_and_undo_does_not_restart_it(
     assert!(!editor.animation().unwrap().playing);
     Ok(())
 }
+
+#[test]
+fn physics_group_reorder_uses_stable_anchors_and_preserves_noop_history() -> anyhow::Result<()> {
+    use zipzi_editor_core::PalettePosition as P;
+    let mut d = Document::new_blank()?;
+    let a = create(&mut d, K::PhysicsGroup, None)?;
+    let b = create(&mut d, K::PhysicsGroup, None)?;
+    let c = create(&mut d, K::PhysicsGroup, None)?;
+    let order = |d: &Document| {
+        d.physics_definition()
+            .unwrap()
+            .data
+            .settings
+            .iter()
+            .map(|g| g.id.clone())
+            .collect::<Vec<_>>()
+    };
+    let history = d.history_lengths();
+    execute(
+        &mut d,
+        A::ReorderPhysicsGroup(c.clone(), a.clone(), P::Before),
+    )?;
+    assert_eq!(order(&d), vec![c.id.clone(), a.id.clone(), b.id.clone()]);
+    assert_eq!(d.history_lengths().0, history.0 + 1);
+    d.undo()?;
+    assert_eq!(order(&d), vec![a.id.clone(), b.id.clone(), c.id.clone()]);
+    let history = d.history_lengths();
+    let noop = d.plan_business(
+        &A::ReorderPhysicsGroup(a.clone(), b.clone(), P::Before),
+        String::new(),
+    )?;
+    assert!(noop.noop);
+    d.execute_business(&noop)?;
+    assert_eq!(d.history_lengths(), history);
+    let stale = d.plan_business(
+        &A::ReorderPhysicsGroup(a.clone(), c.clone(), P::After),
+        String::new(),
+    )?;
+    d.redo()?;
+    assert!(d.execute_business(&stale).is_err());
+    execute(
+        &mut d,
+        A::ReorderPhysicsGroup(c.clone(), b.clone(), P::After),
+    )?;
+    assert_eq!(order(&d), vec![a.id.clone(), b.id.clone(), c.id.clone()]);
+    assert!(
+        d.plan_business(
+            &A::ReorderPhysicsGroup(a.clone(), b.clone(), P::Inside),
+            String::new()
+        )
+        .is_err()
+    );
+    Ok(())
+}

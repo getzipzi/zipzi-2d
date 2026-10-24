@@ -17,13 +17,16 @@ pub(super) enum SortItem {
     TreeRoot { deformer: bool },
     Parameter(String),
     Resource(ObjectRef),
+    PhysicsGroup(ObjectRef),
     ResourceRoot { motion: bool },
     Group(Option<String>),
 }
 impl SortItem {
     fn reference(&self) -> Option<ObjectRef> {
         match self {
-            Self::Tree { object, .. } | Self::Resource(object) => Some(object.clone()),
+            Self::Tree { object, .. } | Self::Resource(object) | Self::PhysicsGroup(object) => {
+                Some(object.clone())
+            }
             Self::Parameter(id) => Some(ObjectRef::new(ObjectKind::Parameter, id)),
             Self::Group(Some(id)) => Some(ObjectRef::new(ObjectKind::ParameterGroup, id)),
             _ => None,
@@ -51,6 +54,32 @@ impl SortItem {
             _ => PaletteProjection::Parameters,
         }
     }
+}
+
+/// A root destination remains available even when no ungrouped objects exist.
+pub(super) fn root_drop_target(
+    id: &'static str,
+    state: &Entity<SortState>,
+    item: SortItem,
+    cx: &App,
+) -> impl IntoElement {
+    drop_target(
+        div()
+            .id(id)
+            .test_support()
+            .h(crate::ui::compact::rem(crate::ui::compact::ROW))
+            .flex_shrink_0()
+            .px_3()
+            .flex()
+            .items_center()
+            .text_xs()
+            .text_color(cx.theme().muted_foreground)
+            .child(crate::t!("editor.tree_drop_root")),
+        state,
+        item,
+        None,
+        cx,
+    )
 }
 
 fn drop_position(
@@ -90,12 +119,14 @@ struct PaletteDrag {
 enum SortPlan {
     Palette(PaletteMovePlan),
     Resource(zipzi_editor_core::AnimationLibraryPlan),
+    Business(zipzi_editor_core::BusinessPlan),
 }
 impl SortPlan {
     fn is_noop(&self) -> bool {
         match self {
             Self::Palette(p) => p.is_noop(),
             Self::Resource(p) => p.is_noop(),
+            Self::Business(p) => p.noop,
         }
     }
     fn requires_preservation(&self) -> bool {
@@ -244,6 +275,8 @@ impl SortState {
         }
         if drag.source.projection() != target.projection()
             || drag.source.resource_family() != target.resource_family()
+            || matches!(drag.source, SortItem::PhysicsGroup(_))
+                != matches!(target, SortItem::PhysicsGroup(_))
         {
             self.cached = Some((
                 target.clone(),
@@ -263,7 +296,17 @@ impl SortState {
             }
             let owner = self.owner.upgrade().unwrap();
             let doc = owner.read(cx).editor.document().unwrap();
-            let result = if drag.source.resource() {
+            let result = if matches!(drag.source, SortItem::PhysicsGroup(_)) {
+                doc.plan_business(
+                    &zipzi_editor_core::BusinessAction::ReorderPhysicsGroup(
+                        self.sources[0].clone(),
+                        target.reference().unwrap(),
+                        position,
+                    ),
+                    String::new(),
+                )
+                .map(SortPlan::Business)
+            } else if drag.source.resource() {
                 doc.plan_animation_resource_move(
                     &self.sources[0],
                     target.reference().as_ref(),
@@ -348,6 +391,20 @@ impl SortState {
         let Some(context) = self.context else {
             return;
         };
+        if matches!(drag.source, SortItem::PhysicsGroup(_)) {
+            let action = zipzi_editor_core::BusinessAction::ReorderPhysicsGroup(
+                self.sources[0].clone(),
+                target.reference().unwrap(),
+                position,
+            );
+            self.clear(cx);
+            if let Some(owner) = self.owner.upgrade() {
+                owner.update(cx, |state, cx| {
+                    state.run_business_action(context, action, window, cx)
+                });
+            }
+            return;
+        }
         if drag.source.resource() {
             let source = self.sources[0].clone();
             self.clear(cx);
@@ -731,7 +788,10 @@ pub(super) fn scroll_div<E: StatefulInteractiveElement>(
     })
 }
 
-pub(super) fn panel_actions(element: Stateful<Div>, state: &Entity<SortState>) -> Stateful<Div> {
+pub(super) fn panel_actions<E: StatefulInteractiveElement>(
+    element: E,
+    state: &Entity<SortState>,
+) -> E {
     let keyboard = state.clone();
     let state = state.clone();
     element
@@ -879,12 +939,12 @@ impl EditorView {
             return;
         }
         let doc = self.editor.document().unwrap();
-        let (projection, object) = if dock.displayed(zipzi_editor_core::PanelKind::MeshTree, cx)
-            && dock.mesh_tree.read(cx).focus_handle(cx).is_focused(window)
+        let (projection, object) = if dock.displayed(zipzi_editor_core::PanelKind::PartsTree, cx)
+            && dock.part_tree.read(cx).focus_handle(cx).is_focused(window)
         {
             (
                 PaletteProjection::Organization,
-                dock.mesh_tree.read(cx).movement_object(),
+                dock.part_tree.read(cx).movement_object(),
             )
         } else if dock.displayed(zipzi_editor_core::PanelKind::Deformers, cx)
             && dock
@@ -967,9 +1027,9 @@ impl EditorView {
     }
 }
 
-/// The same core placement adapter serves explicit menu steps and pointer moves.
+/// Capture the clicked selection for the destination picker.
 pub(super) fn move_menu(
-    mut menu: gpui_kit::component::menu::PopupMenu,
+    menu: gpui_kit::component::menu::PopupMenu,
     owner: WeakEntity<EditorView>,
     document: DocumentId,
     projection: PaletteProjection,
@@ -985,7 +1045,6 @@ pub(super) fn move_menu(
         return menu;
     }
     let context = AuthoringContext::capture(&state.editor);
-    let locate = object.clone();
     let sources = state
         .editor
         .document()
@@ -997,85 +1056,22 @@ pub(super) fn move_menu(
             }
         })
         .unwrap_or_default();
-    for (down, label) in [
-        (false, crate::t!("authoring.move_up")),
-        (true, crate::t!("authoring.move_down")),
-    ] {
-        let plan = state
-            .editor
-            .document()
-            .ok_or_else(|| anyhow::anyhow!("Document closed"))
-            .and_then(|document| document.plan_palette_steps(projection, &sources, down));
-        let enabled = plan.as_ref().is_ok_and(|plan| !plan.is_noop());
-        let reason = plan.as_ref().err().map(|error| move_error(error));
-        let label: SharedString = reason
-            .map_or_else(|| label.to_string(), |reason| format!("{label} · {reason}"))
-            .into();
-        let sources = sources.clone();
-        let locate = locate.clone();
-        let owner = owner.clone();
-        menu = menu.item(
-            PopupMenuItem::new(label)
-                .action(Box::new(crate::actions::RunCommand::new(if down {
-                    zipzi_editor_core::CommandId::PaletteMoveDown
-                } else {
-                    zipzi_editor_core::CommandId::PaletteMoveUp
-                })))
-                .disabled(!enabled)
-                .on_click(move |_, window, cx| {
-                    let (Some(context), Some(owner)) = (context, owner.upgrade()) else {
-                        return;
-                    };
-                    owner.update(cx, |owner, cx| {
-                        let result =
-                            owner.execute_authoring(context, window, cx, |editor, document| {
-                                let plan = editor
-                                    .document()
-                                    .unwrap()
-                                    .plan_palette_steps(projection, &sources, down)?;
-                                editor.execute_palette_move(document, &plan)
-                            });
-                        match result {
-                            Ok(result) => {
-                                owner.clear_edit_error(cx);
-                                owner.redraw(cx);
-                                if result.receipt.changed {
-                                    owner.locate_palette_step(
-                                        document,
-                                        projection,
-                                        locate.clone(),
-                                        window,
-                                        cx,
-                                    );
-                                }
-                            }
-                            Err(error) => owner.set_edit_error(move_error(&error), cx),
-                        }
+    menu.item(
+        PopupMenuItem::new(crate::t!("authoring.move_to"))
+            .action(Box::new(crate::actions::RunCommand::new(
+                zipzi_editor_core::CommandId::PaletteMoveTo,
+            )))
+            .disabled(context.is_none())
+            .on_click(move |_, window, cx| {
+                if let Some(context) = context {
+                    let owner = owner.clone();
+                    let sources = sources.clone();
+                    window.defer(cx, move |window, cx| {
+                        destination::open(owner, document, context, projection, sources, window, cx)
                     });
-                }),
-        );
-    }
-    {
-        menu = menu.item(
-            PopupMenuItem::new(crate::t!("authoring.move_to"))
-                .action(Box::new(crate::actions::RunCommand::new(
-                    zipzi_editor_core::CommandId::PaletteMoveTo,
-                )))
-                .disabled(context.is_none())
-                .on_click(move |_, window, cx| {
-                    if let Some(context) = context {
-                        let owner = owner.clone();
-                        let sources = sources.clone();
-                        window.defer(cx, move |window, cx| {
-                            destination::open(
-                                owner, document, context, projection, sources, window, cx,
-                            )
-                        });
-                    }
-                }),
-        );
-    }
-    menu
+                }
+            }),
+    )
 }
 
 fn move_error(error: &anyhow::Error) -> String {

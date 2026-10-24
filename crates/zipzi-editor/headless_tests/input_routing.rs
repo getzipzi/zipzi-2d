@@ -8,6 +8,43 @@ use gpui_kit::{
 use zipzi_editor_core::{CommandId, CommandSource, ViewportKind};
 
 #[gpui_kit::test]
+fn isolate_shortcut_toggles_hovered_viewport_and_protects_text_and_repeat(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        let binding = h.view.read(cx).editor.primary_viewport_binding().unwrap();
+        let history = h.view.read(cx).editor.document().unwrap().history_lengths();
+        window.hover("canvas-body", cx);
+        window.press("/", cx);
+        assert!(h.view.read(cx).editor.viewport_isolated(binding));
+        assert_eq!(window.find("btn_isolate_selection").checked(), Some(true));
+        window.dispatch_event(
+            KeyDownEvent {
+                keystroke: Keystroke::parse("/").unwrap(),
+                is_held: true,
+                prefer_character_input: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(h.view.read(cx).editor.viewport_isolated(binding));
+        window.press("/", cx);
+        assert!(!h.view.read(cx).editor.viewport_isolated(binding));
+        window.hover("workspace-animation", cx);
+        window.press("/", cx);
+        assert!(!h.view.read(cx).editor.viewport_isolated(binding));
+        window.click("parts-tree-search", cx);
+        window.hover("canvas-body", cx);
+        window.press("/", cx);
+        assert!(!h.view.read(cx).editor.viewport_isolated(binding));
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            history
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn captured_viewport_respects_the_configured_cancel_binding(cx: &mut TestAppContext) {
     use gpui_kit::{MouseButton, MouseDownEvent};
     let h = setup(cx);
@@ -167,7 +204,7 @@ fn timeline_hint_publication_rejects_stale_captures_and_stays_local_to_its_windo
 fn popover_keeps_keyboard_priority_when_pointer_returns_to_viewport(cx: &mut TestAppContext) {
     let h = setup(cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
     })
     .unwrap();
     cx.run_until_parked();
@@ -521,7 +558,7 @@ fn popover_in_another_window_does_not_capture_this_windows_keyboard(cx: &mut Tes
     let first = setup(cx);
     let second = setup(cx);
     cx.update_window(first.window, |_, window, cx| {
-        window.click("mesh-tree-filter", cx);
+        window.click("parts-tree-filter", cx);
     })
     .unwrap();
     cx.run_until_parked();

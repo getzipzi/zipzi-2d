@@ -3,6 +3,68 @@ use super::common::*;
 use zipzi_editor_core::*;
 
 #[test]
+fn rotation_gizmo_retains_arbitrary_angles_at_small_authored_scales_and_large_origins()
+-> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(true)?;
+    let mut angle = 0.;
+    for (step, delta) in [13., 7., -3.5, 20.].into_iter().enumerate() {
+        editor.execute(EditorCommand::AdjustDeformer {
+            object: object.clone(),
+            adjustment: DeformerAdjustment {
+                translation: if step == 0 {
+                    ModelVector {
+                        x: 100_000.,
+                        y: 100_000.,
+                    }
+                } else {
+                    ModelVector::default()
+                },
+                angle: delta,
+                scale: if step == 0 { 0.0001 } else { 1. },
+            },
+        })?;
+        angle += delta;
+        let frame = shown(&mut editor)?;
+        let control = frame
+            .geometry
+            .controls
+            .iter()
+            .find(|control| control.object == object)
+            .unwrap();
+        for zoom in [0.1, 1., 4.] {
+            let transform = ViewportTransform {
+                scale: zoom,
+                offset: ViewportPoint {
+                    x: 256. - control.points[0].x * zoom,
+                    y: 256. + control.points[0].y * zoom,
+                },
+                metrics: frame.transform.metrics,
+            };
+            let points = frame.geometry.control_points(control, transform);
+            let dx = points[1].x - points[0].x;
+            let dy = points[0].y - points[1].y;
+            let shown_angle = dy.atan2(dx).to_degrees();
+            assert!(
+                (shown_angle - angle).abs() < 0.001,
+                "angle {angle}, shown {shown_angle}, zoom {zoom}"
+            );
+            assert!((dx.hypot(dy) - 540. * zoom).abs() < 0.001);
+            assert_eq!(
+                frame.geometry.hit(
+                    points[1],
+                    transform,
+                    std::slice::from_ref(&object),
+                    ToolId::Select,
+                    DeformerVisibility::default()
+                ),
+                Some(HitTarget::RotationHandle(object.clone()))
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn warp_and_rotation_drags_present_intermediate_geometry_before_the_latest_pose()
 -> anyhow::Result<()> {
     for rotation in [false, true] {

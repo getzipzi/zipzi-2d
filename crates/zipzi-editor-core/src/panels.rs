@@ -35,7 +35,7 @@ use WorkspaceKind::{Animation, Modeling};
 panels! {
     (ModelingViewport, None, Some(Modeling), Center, 0, true),
     (AnimationViewport, None, Some(Animation), Center, 0, true),
-    (MeshTree, Some(C::MeshTree), Some(Modeling), Left, 0, true),
+    (PartsTree, Some(C::PartsTree), Some(Modeling), Left, 0, true),
     (DrawOrder, Some(C::DrawOrder), Some(Modeling), Left, 0, true),
     (Deformers, Some(C::Deformers), Some(Modeling), Left, 1, true),
     (Properties, Some(C::Properties), None, Right, 0, true),
@@ -44,7 +44,6 @@ panels! {
     (Keyforms, Some(C::Keyforms), Some(Modeling), Bottom, 0, false),
     (BlendShapes, Some(C::BlendShapes), Some(Modeling), Right, 0, false),
     (Glue, Some(C::Glue), Some(Modeling), Right, 0, false),
-    (Physics, Some(C::Physics), Some(Modeling), Right, 0, false),
     (Pose, Some(C::Pose), Some(Modeling), Right, 0, false),
     (Resources, Some(C::Resources), Some(Modeling), Right, 0, false),
     (AnimationMotions, Some(C::Motions), Some(Animation), Left, 0, true),
@@ -69,13 +68,12 @@ impl PanelKind {
         matches!(self, Self::ModelingViewport | Self::AnimationViewport)
     }
 
-    pub const DOCUMENT_PANELS: [Self; 8] = [
+    pub const DOCUMENT_PANELS: [Self; 7] = [
         Self::DrawOrder,
         Self::Relations,
         Self::Keyforms,
         Self::BlendShapes,
         Self::Glue,
-        Self::Physics,
         Self::Pose,
         Self::Resources,
     ];

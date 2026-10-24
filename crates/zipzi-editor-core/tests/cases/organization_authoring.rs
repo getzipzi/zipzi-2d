@@ -255,7 +255,7 @@ fn root_part_sort_anchors_stay_in_the_part_palette_with_unassigned_scene_objects
         },
     )?;
     d.reorder_tree(false, &a, &b, zipzi_editor_core::ReorderPosition::After)?;
-    let tree = d.mesh_tree();
+    let tree = d.part_tree();
     let parts: Vec<_> = tree
         .iter()
         .filter(|node| node.kind == zipzi_editor_core::TreeNodeKind::Part)

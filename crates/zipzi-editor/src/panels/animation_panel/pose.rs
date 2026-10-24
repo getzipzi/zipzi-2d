@@ -47,12 +47,8 @@ impl AnimationPanel {
                     K::PoseEntry => "pose-new-entry",
                     _ => "pose-new-link",
                 })
-                .icon(if kind == K::PoseGroup {
-                    IconName::FolderPlus
-                } else {
-                    IconName::Plus
-                })
-                .ghost()
+                .icon(IconName::Plus)
+                .when(kind == K::PoseGroup, compact::new_group_button)
                 .accessibility_label(business::create_label(kind))
                 .tooltip(hint.clone())
                 .disabled(disabled)
@@ -334,7 +330,8 @@ impl AnimationPanel {
                 )
                 .track_scroll(&self.business_scroll)
                 .flex_1()
-                .min_h_0(),
+                .min_h_0()
+                .map(|list| compact::scroll_frame(list, &self.business_scroll)),
             )
             .on_key_down(cx.listener(move |panel, event: &KeyDownEvent, window, cx| {
                 if disabled || !panel.focus.is_focused(window) || choices.is_empty() {

@@ -44,7 +44,7 @@ fn children(d: &Document, deform: bool, id: &str) -> Vec<String> {
     let tree = if deform {
         d.deformer_tree()
     } else {
-        d.mesh_tree()
+        d.part_tree()
     };
     node(&tree, id)
         .unwrap()
@@ -151,7 +151,7 @@ fn mixed_organization_owners_do_not_change_the_shared_deformation_parent() {
     let saved = d.save(&dir.path().join("deformation.zipzi")).unwrap();
     let reopened = Document::open(&saved.manifest).unwrap();
     assert_eq!(reopened.deformer_tree(), d.deformer_tree());
-    assert_eq!(reopened.mesh_tree(), d.mesh_tree());
+    assert_eq!(reopened.part_tree(), d.part_tree());
 }
 
 #[test]

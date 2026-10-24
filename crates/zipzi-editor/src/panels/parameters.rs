@@ -188,7 +188,12 @@ impl ParametersPanel {
         self.sorting.read(cx).plans_built
     }
 
-    fn toolbar(&self, create_disabled: bool, cx: &mut Context<Self>) -> PanelToolbar {
+    fn toolbar(
+        &self,
+        create_disabled: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> PanelToolbar {
         let new_label = t!("parameter.new").into_owned();
         let available = |action: ParameterAction| {
             self.owner
@@ -222,17 +227,17 @@ impl ParametersPanel {
                     .on_click(on_create)
             })
             .action(move |_| {
-                Button::new("new-parameter-group-action")
-                    .icon(IconName::Folder)
+                crate::ui::compact::new_group_button(Button::new("new-parameter-group-action"))
                     .accessibility_label(t!("parameter.new_group"))
                     .tooltip(group_tip)
                     .disabled(group_disabled)
                     .on_click(on_group)
             })
+            .control(self.expansion_button(window, cx))
     }
 
     fn refresh_visible_rows(&mut self, cx: &mut Context<Self>) {
-        self.visible_rows = self.layout.visible(&self.collapsed_groups);
+        self.visible_rows = grouping::visible_rows(&self.layout, &self.collapsed_groups);
         self.reconcile_navigation(cx);
         for row in &self.visible_rows {
             if let ListRow::Parameter { index, depth } = row {
@@ -286,7 +291,7 @@ impl crate::docking::header::PanelHeader for ParametersPanel {
                         .command(zipzi_editor_core::CommandId::CreateParameter),
                 )
         });
-        self.toolbar(disabled, cx).into_any_element()
+        self.toolbar(disabled, window, cx).into_any_element()
     }
 }
 
@@ -417,7 +422,20 @@ impl Render for ParametersPanel {
                 .flex_1()
                 .min_h_0()
                 .track_scroll(&self.scroll)
+                .map(|list| {
+                    crate::ui::compact::scroll_frame(list, &self.scroll)
+                        .id("parameters-scroll-frame")
+                        .test_support()
+                })
                 .into_any_element()
+            })
+            .when(self.document_id.is_some(), |panel| {
+                panel.child(sorting::root_drop_target(
+                    "parameters-root-drop",
+                    &self.sorting,
+                    SortItem::Group(None),
+                    cx,
+                ))
             })
             .into_any_element()
     }

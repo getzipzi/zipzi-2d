@@ -48,7 +48,7 @@ fn pending_scene_objects_remain_visible_inspectable_and_persistent() -> anyhow::
         let object = index.get(&ObjectRef::new(kind, id)).unwrap();
         assert!(object.diagnostic.is_some());
     }
-    let tree = d.mesh_tree();
+    let tree = d.part_tree();
     assert!(
         tree.iter()
             .flat_map(|n| n.children.iter())
@@ -80,7 +80,7 @@ fn pending_scene_objects_remain_visible_inspectable_and_persistent() -> anyhow::
 #[test]
 fn scene_copy_and_delete_refresh_canvas_topology_and_keep_context() -> anyhow::Result<()> {
     let (mut d, _assets) = super::support::sample_document_with_two_layers()?;
-    let source = d.mesh_tree()[0].children[0].id.clone();
+    let source = d.part_tree()[0].children[0].id.clone();
     let selected = d.context().selections.clone();
     let before = d.snapshot()?;
     let retained = d.geometry(&before);
@@ -125,7 +125,7 @@ fn scene_copy_and_delete_refresh_canvas_topology_and_keep_context() -> anyhow::R
 #[test]
 fn scene_label_patch_reuses_relations_and_keeps_retained_canvas_labels() -> anyhow::Result<()> {
     let (mut d, _assets) = super::support::sample_document_with_two_layers()?;
-    let mesh = d.mesh_tree()[0].children[0].reference().unwrap();
+    let mesh = d.part_tree()[0].children[0].reference().unwrap();
     let index = d.object_index();
     let old_name = index.name(&mesh).to_owned();
     let snapshot = d.snapshot()?;

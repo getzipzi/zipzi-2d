@@ -10,6 +10,7 @@ pub enum BusinessAction {
     Copy(ObjectRef),
     Delete(ObjectRef),
     Step(ObjectRef, bool),
+    ReorderPhysicsGroup(ObjectRef, ObjectRef, crate::PalettePosition),
     Move(ObjectRef, String, Option<String>),
     MigratePoseGroup(ObjectRef, String),
 }
@@ -20,6 +21,7 @@ impl BusinessAction {
             Self::Copy(o)
             | Self::Delete(o)
             | Self::Step(o, _)
+            | Self::ReorderPhysicsGroup(o, ..)
             | Self::Move(o, ..)
             | Self::MigratePoseGroup(o, _) => Some(o),
         }
@@ -195,7 +197,7 @@ impl Document {
                     A::Copy(_) => AuthoringAction::Duplicate,
                     A::Delete(_) => AuthoringAction::Delete,
                     A::MigratePoseGroup(..) => AuthoringAction::Dissolve,
-                    A::Step(..) => AuthoringAction::Reorder,
+                    A::Step(..) | A::ReorderPhysicsGroup(..) => AuthoringAction::Reorder,
                     _ => AuthoringAction::Move,
                 };
                 let state = self.authoring_capabilities(source)?.state(kind);
@@ -481,6 +483,36 @@ impl Document {
                 ids: vec![o.id.clone()],
                 node_replacements: Default::default(),
             })?),
+            A::ReorderPhysicsGroup(source, target, position) => {
+                ensure!(
+                    source.kind == K::PhysicsGroup && target.kind == K::PhysicsGroup,
+                    "Expected Physics groups"
+                );
+                let order = self.business_order(source)?;
+                ensure!(
+                    order.contains(&source.id) && order.contains(&target.id),
+                    "Missing Physics group"
+                );
+                ensure!(
+                    *position != crate::PalettePosition::Inside,
+                    "Physics groups cannot be nested"
+                );
+                if source == target {
+                    Native::Noop
+                } else {
+                    let remaining: Vec<_> =
+                        order.into_iter().filter(|id| id != &source.id).collect();
+                    let before = if *position == crate::PalettePosition::Before {
+                        Some(target.id.clone())
+                    } else {
+                        next(remaining, &target.id)
+                    };
+                    Native::Physics(self.plan_physics_authoring(PhysicsEdit::ReorderGroups {
+                        ids: vec![source.id.clone()],
+                        before,
+                    })?)
+                }
+            }
             A::Step(o, down) => {
                 let intent = if o.kind == K::PhysicsGroup {
                     self.physics_group_step(&o.id, *down)?

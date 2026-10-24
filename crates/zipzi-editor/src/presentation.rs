@@ -244,6 +244,7 @@ impl EditorView {
                     .error = Some(error);
             }
         }
+        self.sync_viewport_notice(cx);
         workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
         self.notify_viewport(binding.viewport, cx);
     }

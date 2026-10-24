@@ -92,7 +92,7 @@ fn fixed_review_reports_native_proof_and_commits_once_with_selection_and_undo(
             d.history_lengths(),
             d.context().selections.clone(),
             d.context().inspected.clone(),
-            d.mesh_tree(),
+            d.part_tree(),
         )
     });
     cx.update_window(h.window, |_, window, cx| {
@@ -151,7 +151,7 @@ fn fixed_review_reports_native_proof_and_commits_once_with_selection_and_undo(
         assert_eq!(d.history_lengths(), (history.0 + 1, 0));
         assert_eq!(d.context().selections, selection);
         assert_eq!(d.context().inspected, inspected);
-        assert_eq!(d.mesh_tree(), organization);
+        assert_eq!(d.part_tree(), organization);
         assert_eq!(
             d.deformer_tree()
                 .iter()

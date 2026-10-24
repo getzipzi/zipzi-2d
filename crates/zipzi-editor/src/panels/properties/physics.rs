@@ -260,7 +260,7 @@ impl PropertiesPanel {
         };
         let parameters = document.parameters();
         let Some(asset) = document.physics_definition().cloned() else {
-            return body.into_any_element();
+            return compact::scroll_frame(body, &self.physics.scroll).into_any_element();
         };
         let selected = self.target.as_ref().map(|target| target.object.clone());
         let group = selected.and_then(|object| {
@@ -278,7 +278,7 @@ impl PropertiesPanel {
                 .map(|rig| rig.id.clone())
         });
         let Some(group) = group else {
-            return body.into_any_element();
+            return compact::scroll_frame(body, &self.physics.scroll).into_any_element();
         };
         if self.physics.group != group {
             self.physics_group(group, cx);
@@ -378,7 +378,7 @@ impl PropertiesPanel {
             .enumerate()
             .find(|(_, r)| r.id == self.physics.group)
         else {
-            return body.into_any_element();
+            return compact::scroll_frame(body, &self.physics.scroll).into_any_element();
         };
         if let Some(object) = owner
             .read(cx)
@@ -698,7 +698,7 @@ impl PropertiesPanel {
                     .child(error.clone()),
             );
         }
-        body.into_any_element()
+        compact::scroll_frame(body, &self.physics.scroll).into_any_element()
     }
 }
 

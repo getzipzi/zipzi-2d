@@ -90,7 +90,7 @@ fn capture_precedes_hover_then_focus_and_never_reuses_an_absent_target() {
 fn focused_palette_binding_precedes_disjoint_hovered_viewport_binding() {
     let mut facts = facts();
     facts.hovered = Some(targets()[0]);
-    facts.focused = Some(InputTarget::new(LocalTarget::Panel(PanelKind::MeshTree)));
+    facts.focused = Some(InputTarget::new(LocalTarget::Panel(PanelKind::PartsTree)));
     let bindings = bindings(&[CommandId::ZoomIn, CommandId::PaletteMoveUp]);
     assert_eq!(decide(&facts, &bindings, |_| true), KeyDecision::Ignore);
     facts.focused = None;

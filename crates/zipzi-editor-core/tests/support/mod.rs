@@ -95,7 +95,7 @@ pub fn sample_document_with_two_layers() -> anyhow::Result<(Document, TempDir)> 
 
 pub fn sample_document_with_parts() -> anyhow::Result<(Document, TempDir)> {
     let (mut document, assets) = sample_document_with_two_layers()?;
-    let meshes: Vec<_> = document.mesh_tree()[0]
+    let meshes: Vec<_> = document.part_tree()[0]
         .children
         .iter()
         .map(|node| node.id.clone())
