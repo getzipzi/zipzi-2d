@@ -20,9 +20,8 @@ SDK 包还含有 Haru、Mao、Natori、Wanko 样本；仓库当前代码没有�
 
 # 编辑器性能基准模型
 
-当前统一位置是仓库根 `models/local/`（从本目录为 `../../../models/local/`），
-见[公共模型说明](../../../models/README.md)。脚本和测试不再查找相邻仓库或应用目录下的副本。
-本地资源仍忽略，不随代码提交；P5 将核对并汇集原 checkout 的素材。
+当前统一位置是仓库根 `models/local/`。脚本和测试不再查找相邻仓库或应用目录下的副本。
+本地资源仍忽略，不随代码提交；P5 已核对并汇集原 checkout 的素材。
 以下清单和复制日期保留为原 Editor 素材记录，其中 `local/` 现在对应根模型目录。
 
 | 模型 | 导入入口 | 文件数 | 总大小（字节） | 纹理 |
@@ -58,3 +57,15 @@ SHA-256 校验。该素材统一使用 `local/mao/`，不保留单独的 `local/
 已采集 [CPU 与原生 Metal 基线](../docs/editor-foundation-baseline.md)，包含导入、场景求值、
 单/双模型原生渲染与切换的分位数、RSS 和 GPU 分配；据此设置 128 MiB 近期纹理缓存预算。
 无窗口测量不包含 AppKit/GPUI 输入到屏幕显示的端到端延迟，该项仍未验证。
+
+## Zipzi consolidation — 2026-10-24 (P5)
+
+The SDK's 27 source files and Editor's 51 source files were hashed before copying.
+Their overlap had no content conflicts. The merged root `models/local/` retains
+48 asset files after excluding `.DS_Store`, `.kasane.lock` and `cat_import.af~lock~`;
+original model assets remain untouched. A source application lock changed externally
+during verification; it is excluded from the asset comparison. All 26 model3 file references resolve.
+Private per-file hashes and source provenance are retained in
+`.git/merge-baseline/p5-models.json`, not committed or included in source releases.
+CMO3/CAN3 source bytes are preserved; portable import tests normalize authored
+model references only in temporary copies, as the existing acceptance tests require.

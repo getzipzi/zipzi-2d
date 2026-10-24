@@ -12,11 +12,13 @@ P0 baseline capture, P1 history import, P2 workspace integration and P3 path/too
 adaptation are complete.
 **Revised scope:** the user now requests a fully flattened repository. P3F
 (flatten all owned crates, consolidate assets/tools/docs/vendor, then adapt paths)
-is complete; P4 test/CI routing is also implemented and locally verified. P5–P6 remain. P0–P3 results describe the intermediate layout, not
+is complete; P4 test/CI routing and P5 artifact/model checks are also implemented
+and locally verified. P6 remains. P0–P3 results describe the intermediate layout, not
 acceptance of the flattened layout; see the new P3F evidence. Cargo resolves one
 workspace and lockfile; Editor entrypoints and fixtures use this checkout. SDK CI and broad test entrypoints now select their explicit package domains;
-hosted workflow execution is still unverified. Native runtime, full app packaging and licensed-model acceptance remain
-part of the later end-to-end gates.
+hosted workflow execution is still unverified. P5 built and inspected real
+wheel and app bundles and ran focused licensed-model acceptance; broader
+runtime and regression gates remain for P6.
 
 The governing [implementation plan](../plans/repository-merge-plan.md)
 retains the design and acceptance matrix. Its original snapshot is historical;
@@ -40,9 +42,8 @@ new-checkout request replaces the plan’s suggestion to work inside kasane-2d.
   Cargo metadata, worktree/status inventories and per-file model SHA-256 lists.
   These local evidence files are intentionally not committed or copied into
   source archives. Preserve this directory when moving this checkout.
-- SDK has 27 local model files; Editor has 51. Shared relative paths have no
-  content conflicts. Assets remain in the original repositories; none were
-  copied, overwritten or deleted. Consolidation is deferred to P5.
+- At P0, SDK had 27 local model files and Editor had 51, with no shared-path
+  content conflicts. P5 later consolidated their assets; see the P5 record.
 - Both original `cargo metadata --locked --no-deps --format-version 1` commands
   passed. This verifies manifest/package metadata, not compilation or full
   dependency resolution. No expensive baseline suite was repeated, and no
@@ -109,11 +110,16 @@ Editor assets, tools, documentation and vendor patches use root directories.
 See [P4 implementation and local validation](p4-test-domains.md). SDK and Editor
 have separate complete gates with exhaustive package coverage checks.
 
-## Next: P5 and repository acceptance
+## P5: models and distribution artifacts
 
-1. Validate packaged licenses/assets, consolidate authorized local models (P5).
-2. Complete regression, hosted CI, fresh-clone/worktree isolation and final cutover (P6).
+See [P5 implementation and local validation](p5-artifacts.md). The local model
+assets are consolidated under the ignored root tree. A workspace source archive,
+real Release wheel and debug/release macOS app bundles were built and checked.
 
-Complete app packaging, licensed-model acceptance, Python wheel, GitHub license
-recognition and cross-platform CI remain unverified. Recheck original HEADs
-before the next stage and reconcile any new commits.
+## Next: P6 repository acceptance
+
+Complete broad regression, optional GPU/dual-Core gates, hosted and
+cross-platform CI, fresh-clone/worktree isolation, tail-commit reconciliation
+and final cutover. GitHub license recognition remains unverified because this
+branch has not been pushed. Recheck original HEADs before the next stage and
+reconcile any new commits.

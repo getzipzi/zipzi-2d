@@ -38,11 +38,11 @@ case "$mode" in
             --test animation_acceptance --test timeline_acceptance "$@"
         ;;
     tools)
-        exec env PYTHONPATH="$repo_root/tools${PYTHONPATH:+:$PYTHONPATH}" python3 -m unittest test_cargo_domain test_dev test_workspace_entrypoints test_property_chain_benchmark test_test_runner test_animation_trace_report test_frame_trace_report test_properties_trace_report "$@"
+        exec env PYTHONPATH="$repo_root/tools${PYTHONPATH:+:$PYTHONPATH}" python3 -m unittest test_package_source test_cargo_domain test_dev test_workspace_entrypoints test_property_chain_benchmark test_test_runner test_animation_trace_report test_frame_trace_report test_properties_trace_report "$@"
         ;;
     full)
         python3 "$repo_root/tools/cargo_domain.py" editor fmt -- --check
-        env PYTHONPATH="$repo_root/tools${PYTHONPATH:+:$PYTHONPATH}" python3 -m unittest test_cargo_domain test_dev test_workspace_entrypoints test_property_chain_benchmark test_test_runner test_animation_trace_report test_frame_trace_report test_properties_trace_report
+        env PYTHONPATH="$repo_root/tools${PYTHONPATH:+:$PYTHONPATH}" python3 -m unittest test_package_source test_cargo_domain test_dev test_workspace_entrypoints test_property_chain_benchmark test_test_runner test_animation_trace_report test_frame_trace_report test_properties_trace_report
         exec env -u KASANE_DEV_SESSION_DIR python3 "$repo_root/tools/cargo_domain.py" editor test --locked --features kasane-editor/test-support "$@"
         ;;
     -h|--help|help)

@@ -42,8 +42,12 @@ jobs:
         run: cargo test -p kasane-moc3 --no-default-features --test safety_tests --locked
       - name: Regression tests
         run: uv run --locked python tools/cargo_domain.py sdk test --locked
+      - name: Distribution notice consistency
+        run: uv run --locked python tools/verify_artifacts.py
       - name: Build Python wheel
         run: uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
+      - name: Verify wheel contents
+        run: uv run --locked python -c "from pathlib import Path; import subprocess, sys; wheels = list(Path('target/python-wheels').glob('kasane-*.whl')); assert len(wheels) == 1, wheels; subprocess.check_call([sys.executable, 'tools/verify_artifacts.py', '--wheel', str(wheels[0])])"
       - name: SDK experiment harness controls
         if: runner.os != 'Windows'
         run: |

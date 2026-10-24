@@ -20,3 +20,6 @@ benchmarks/cubism-matrix/runners/native/build*/
 output
 
 # Editor output is covered by root target, output, model and Python cache rules.
+
+# Machine-specific Cargo configuration is not part of releases.
+/.cargo/config.toml

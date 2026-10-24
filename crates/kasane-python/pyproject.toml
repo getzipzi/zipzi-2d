@@ -7,6 +7,8 @@ name = "kasane"
 dynamic = ["version"]
 requires-python = ">=3.14,<3.15"
 description = "Scriptable 2D model authoring SDK"
+license = "MIT"
+license-files = ["LICENSE-MIT", "THIRD_PARTY_NOTICES.md"]
 readme = "README.md"
 
 [project.urls]

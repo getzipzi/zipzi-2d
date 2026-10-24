@@ -4,6 +4,7 @@
 - [SDK architecture](ARCHITECTURE.md), [Python SDK](../crates/kasane-python/README.md) and [API](../crates/kasane-python/API.md)
 - [Editor development](development/editor.md) and [dependencies](development/dependencies.md)
 - [Test domains and CI](development/testing.md)
+- [Source, wheel and app artifacts](development/distribution.md)
 - [Tool guide](../tools/README.md) and [model inventory](../models/README.md)
 - [Runtime preparation](runtime/README.md) and [Runtime plan](plans/sdk-runtime-implementation-plan.md)
 - [Repository merge plan](plans/repository-merge-plan.md) and [execution evidence](repository-merge/README.md)

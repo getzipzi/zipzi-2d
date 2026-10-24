@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2024"
 rust-version.workspace = true
 license = "GPL-3.0-only"
+# Distributed with root assets, patches and licenses in the workspace source archive.
+publish = false
 
 [dependencies]
 anyhow.workspace = true

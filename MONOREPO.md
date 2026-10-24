@@ -30,6 +30,7 @@
 - `tools/dev-editor.sh`, `tools/build-editor-app.sh`, `tools/test-editor.sh` — Editor entrypoints.
 - `tools/test-sdk.sh` — SDK entrypoint. Both test entrypoints and CI use `tools/package-domains.json`; new members must be assigned to one domain.
 - `docs/` — combined plans, references, development guides and historical records.
+- `tools/package_source.py`, `tools/verify_artifacts.py` — workspace source and built-artifact validation; see [distribution](docs/development/distribution.md).
 
 All 18 owned Cargo members live directly in `crates/<package.name>`. See
 [licensing](LICENSING.md) before reusing shared tools or docs. `third_party/purism-core`

@@ -30,9 +30,17 @@ app="$PWD/target/$name.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$binary" "$app/Contents/MacOS/$package"
 cp "$repo_root/LICENSE-GPL-3.0" "$app/Contents/Resources/LICENSE"
-if [ -f "$icon_asset" ]; then
-  cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
-fi
+for notice in LICENSE-MIT LICENSE-GPL-3.0 LICENSING.md THIRD_PARTY_NOTICES.md; do
+  cp "$repo_root/$notice" "$app/Contents/Resources/$notice"
+done
+mkdir -p "$app/Contents/Resources/vendor-notices"
+find "$repo_root/vendor" -type f \( -iname 'license*' -o -iname 'notice*' -o -iname 'copying*' \) | while IFS= read -r notice; do
+  relative=${notice#"$repo_root/vendor/"}
+  mkdir -p "$app/Contents/Resources/vendor-notices/$(dirname "$relative")"
+  cp "$notice" "$app/Contents/Resources/vendor-notices/$relative"
+done
+cp "$repo_root/vendor/README.md" "$app/Contents/Resources/vendor-notices/README.md"
+cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

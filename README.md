@@ -82,6 +82,9 @@ An observe-enabled wheel can also run GPU and pinned image-reference checks;
 `--full` additionally requires official and Purism Core probes. See the
 [tool guide](tools/README.md) for the complete commands.
 
+See [local distribution artifacts](docs/development/distribution.md) for source
+archives, wheel notices and debug/release app bundle validation.
+
 ## License and third-party rights
 
 SDK components use [MIT](LICENSE-MIT); Editor components use
