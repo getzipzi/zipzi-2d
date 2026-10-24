@@ -1,0 +1,24 @@
+[package]
+name = "zipzi-editor-core"
+version.workspace = true
+edition = "2024"
+rust-version.workspace = true
+license = "GPL-3.0-only"
+# Distributed with Editor assets, workspace patches and licenses in the workspace source archive.
+publish = false
+
+[features]
+bench-instrumentation = ["zipzi-core/bench-instrumentation", "zipzi-sdk/bench-instrumentation"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+zipzi-core.workspace = true
+zipzi-sdk.workspace = true
+zipzi-project.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+zipzi-cmo3 = { path = "../zipzi-cmo3", features = ["test-support"] }

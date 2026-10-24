@@ -39,12 +39,12 @@ def load_configuration() -> tuple[dict, dict]:
     providers = {"cubism", "purism"}
     hosts = {"cubism-framework-native", "core-only"}
     expected = {(provider, host) for provider in providers for host in hosts}
-    expected.add(("kasane", "kasane-render-metal"))
+    expected.add(("zipzi", "zipzi-render-metal"))
     cases = matrix.get("cases", [])
     actual = {(case.get("core"), case.get("host")) for case in cases}
     ids = [case.get("id") for case in cases]
     if actual != expected or len(ids) != len(expected) or len(set(ids)) != len(expected):
-        raise ValueError("matrix.json must contain four Core/host combinations and kasane-metal exactly once")
+        raise ValueError("matrix.json must contain four Core/host combinations and zipzi-metal exactly once")
     if workload.get("instances") != workload["layout"]["columns"] * workload["layout"]["rows"]:
         raise ValueError("workload layout must have exactly one grid cell per instance")
     if len(workload.get("viewport", [])) != 2:
@@ -201,14 +201,14 @@ def build_core(case_id: str, jobs: int) -> Path:
     return executable
 
 
-def build_kasane(case_id: str) -> Path:
+def build_zipzi(case_id: str) -> Path:
     case, _ = find_case(case_id)
-    if case["host"] != "kasane-render-metal":
-        raise ValueError(f"{case_id} is not a Kasane Metal case")
+    if case["host"] != "zipzi-render-metal":
+        raise ValueError(f"{case_id} is not a Zipzi Metal case")
     if sys.platform != "darwin":
-        raise ValueError("kasane-render-metal requires macOS")
-    run(["cargo", "build", "--release", "--locked", "-p", "cubism-matrix-kasane"])
-    executable = REPO_ROOT / "target/release/cubism-matrix-kasane"
+        raise ValueError("zipzi-render-metal requires macOS")
+    run(["cargo", "build", "--release", "--locked", "-p", "cubism-matrix-zipzi"])
+    executable = REPO_ROOT / "target/release/cubism-matrix-zipzi"
     if not executable.is_file():
         raise FileNotFoundError(f"Cargo did not produce {executable}")
     return executable
@@ -216,8 +216,8 @@ def build_kasane(case_id: str) -> Path:
 
 def run_case(case_id: str) -> None:
     case, _ = find_case(case_id)
-    if case["host"] == "kasane-render-metal":
-        executable = REPO_ROOT / "target/release/cubism-matrix-kasane"
+    if case["host"] == "zipzi-render-metal":
+        executable = REPO_ROOT / "target/release/cubism-matrix-zipzi"
         if not executable.is_file():
             raise FileNotFoundError(f"build {case_id} before running it")
         run([str(executable), str(WORKLOAD_PATH), str(MAO_SOURCE / "runtime/mao_pro.model3.json")])
@@ -306,15 +306,15 @@ def benchmark_core(repeats: int, jobs: int) -> Path:
 
 
 def benchmark_render(repeats: int, jobs: int) -> Path:
-    """Compare Kasane/Metal with the official Core/Framework Native runner."""
+    """Compare Zipzi/Metal with the official Core/Framework Native runner."""
     if repeats < 1:
         raise ValueError("repeats must be at least 1")
     native = build_native("cubism-native", jobs)
-    kasane = build_kasane("kasane-metal")
+    zipzi = build_zipzi("zipzi-metal")
     commands = {
         "cubism-native": ([str(native)], native.parent),
-        "kasane-metal": (
-            [str(kasane), str(WORKLOAD_PATH), str(MAO_SOURCE / "runtime/mao_pro.model3.json")],
+        "zipzi-metal": (
+            [str(zipzi), str(WORKLOAD_PATH), str(MAO_SOURCE / "runtime/mao_pro.model3.json")],
             REPO_ROOT,
         ),
     }
@@ -343,19 +343,19 @@ def benchmark_render(repeats: int, jobs: int) -> Path:
         }
         for case_id, case_trials in trials.items()
     }
-    fps_ratio = medians["kasane-metal"]["average_fps"] / medians["cubism-native"]["average_fps"]
+    fps_ratio = medians["zipzi-metal"]["average_fps"] / medians["cubism-native"]["average_fps"]
     report = {
         "schema_version": 1,
         "benchmark": "cubism-render-comparison",
         "repeats": repeats,
         "trials": trials,
         "medians": medians,
-        "kasane_to_cubism_fps_ratio": fps_ratio,
+        "zipzi_to_cubism_fps_ratio": fps_ratio,
         "comparison_note": (
-            "Kasane evaluates an imported editable model and waits for offscreen Metal GPU completion; "
+            "Zipzi evaluates an imported editable model and waits for offscreen Metal GPU completion; "
             "Cubism Native updates the official runtime and presents through an OpenGL window. "
             "Native hardcodes model placement and uses default Framework mask resolution; "
-            "Kasane uses cell_fill and canvas-pixel mask density. Only model3.json is hashed. "
+            "Zipzi uses cell_fill and canvas-pixel mask density. Only model3.json is hashed. "
             "The ratio is an end-to-end stack reference, not a matched-workload or isolated renderer ratio."
         ),
     }
@@ -366,7 +366,7 @@ def benchmark_render(repeats: int, jobs: int) -> Path:
     for case_id in case_ids:
         median = medians[case_id]
         print(f"  {case_id:13} {median['average_fps']:8.2f} FPS  p50={median['p50_frame_ms']:.2f} ms")
-    print(f"  Kasane/Cubism FPS: {fps_ratio:.2f}x")
+    print(f"  Zipzi/Cubism FPS: {fps_ratio:.2f}x")
     print(f"saved {output_path}")
     return output_path
 
@@ -393,7 +393,7 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     validate_parser = subparsers.add_parser("validate")
     validate_parser.add_argument("--local", action="store_true")
-    for name in ("build-native", "build-core", "build-kasane"):
+    for name in ("build-native", "build-core", "build-zipzi"):
         build_parser = subparsers.add_parser(name)
         build_parser.add_argument("case")
         build_parser.add_argument("--jobs", type=int, default=os.cpu_count() or 4)
@@ -413,8 +413,8 @@ def main() -> int:
             build_native(args.case, args.jobs)
         elif args.command == "build-core":
             build_core(args.case, args.jobs)
-        elif args.command == "build-kasane":
-            build_kasane(args.case)
+        elif args.command == "build-zipzi":
+            build_zipzi(args.case)
         elif args.command == "run":
             run_case(args.case)
         elif args.command == "benchmark-core":

@@ -7,7 +7,7 @@
 
 - Apple M4，arm64，16 GiB；macOS 27.0 / 26A428。
 - rustc 1.98.1（Homebrew）；工作区 dev profile，debug=0，未启用 release 优化。
-- 无窗口的 `editor-core` example；HUD 关闭，显示倍率/画布尺寸/GPU 均不适用。
+- 无窗口的 `zipzi-editor-core` example；HUD 关闭，显示倍率/画布尺寸/GPU 均不适用。
 - 模型：`models/local/mao/runtime/mao_pro.model3.json` 与
   `models/local/Shirousagi/Shirousagi.model3.json`，相对仓库根目录；运行时 canonicalize 为绝对路径。
 - 每轮创建空工作区，依次导入 Mao、求首场景、导入 Shirousagi、求首场景，随后交替切换 10 次。
@@ -40,7 +40,7 @@ peak memory footprint **197,607,952 字节**，总墙钟 **8.87 秒**。
 从仓库根目录执行：
 
 ```sh
-cargo build --locked -p editor-core --example workspace_baseline
+cargo build --locked -p zipzi-editor-core --example workspace_baseline
 /usr/bin/time -l target/debug/examples/workspace_baseline \
   models/local/mao/runtime/mao_pro.model3.json \
   models/local/Shirousagi/Shirousagi.model3.json 5
@@ -49,7 +49,7 @@ cargo build --locked -p editor-core --example workspace_baseline
 ## 原生 Metal 工作负载
 
 同一 Apple M4 / 16 GiB / macOS 27.0 / Rust 1.98.1，dev profile 未优化、HUD 关闭。
-`editor-render/examples/workspace_gpu_baseline.rs` 使用一个 Metal device/queue，
+`zipzi-editor-render/examples/workspace_gpu_baseline.rs` 使用一个 Metal device/queue，
 逻辑画布 640 × 400、倍率 2、物理输出 1280 × 800、RGBA8Unorm，无窗口、无像素回读。
 该尺寸为基准显式参数；真实 UI 使用 CanvasView 实测 bounds。
 
@@ -98,7 +98,7 @@ RSS 在释放后仍高，反映进程分配器/运行库保留，不能据此断
 复现：
 
 ```sh
-cargo run --locked -p editor-render --example workspace_gpu_baseline -- \
+cargo run --locked -p zipzi-editor-render --example workspace_gpu_baseline -- \
   models/local/mao/runtime/mao_pro.model3.json \
   models/local/Shirousagi/Shirousagi.model3.json 100
 ```

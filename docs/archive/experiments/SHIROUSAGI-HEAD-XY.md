@@ -55,7 +55,7 @@ Part 的 `draw_order` 显式沿用 PSD 原有层序。初次分组时，脸轮�
 
 工程含 24 mesh、23 个既有 X mesh binding、16 Part、3 warp、3 个 Y scene binding 和 `ParamAngleX/ParamAngleY` 两参数。结构、资源、几何诊断均为空。14 个 X/Y 姿态在可编辑工程重开、异目录搬迁、package 重导入和 package 搬迁后与新工程逐像素相同；导出保留两个参数的 runtime ID。
 
-先按 [`modules/kasane-python/README.md`](../../modules/kasane-python/README.md) 安装带 `observe` feature 的 wheel，并完成上轮 X 工程，然后在仓库根目录运行：
+先按 [`modules/zipzi-python/README.md`](../../modules/zipzi-python/README.md) 安装带 `observe` feature 的 wheel，并完成上轮 X 工程，然后在仓库根目录运行：
 
 ```sh
 .venv/bin/python docs/experiments/shirousagi_head_xy.py \

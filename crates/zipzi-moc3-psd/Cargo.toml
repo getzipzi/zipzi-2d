@@ -1,0 +1,13 @@
+[package]
+name = "zipzi-moc3-psd"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Export MOC3 ArtMeshes and textures as a layered PSD"
+
+[dependencies]
+ag-psd = "=0.3.0"
+zipzi-core = { path = "../zipzi-core" }
+zipzi-moc3 = { path = "../zipzi-moc3" }

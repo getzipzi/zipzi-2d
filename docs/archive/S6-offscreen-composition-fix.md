@@ -1,6 +1,6 @@
 # S6 Offscreen 与扩展混合验收（2026-09-21）
 
-**S6 已通过：统一入口的 9 项必需门禁全部 passed，源码和原生库哈希一致。** 最终报告为 `target/kasane/m3c/s6_report.json`；专项通过不能替代完整门禁。此记录覆盖图像正确性、正式 Editor 工作流、混合模式及资源预算，独立应用打包仍属于 S7。
+**S6 已通过：统一入口的 9 项必需门禁全部 passed，源码和原生库哈希一致。** 最终报告为 `target/zipzi/m3c/s6_report.json`；专项通过不能替代完整门禁。此记录覆盖图像正确性、正式 Editor 工作流、混合模式及资源预算，独立应用打包仍属于 S7。
 
 ## 根因与修复
 
@@ -31,7 +31,7 @@ Godot 4.7.2 / Compatibility / Apple M4，2048×2048 Ren 预览，24 个持久 Of
 | RenderingServer 逐帧渲染资源峰值 | 578,684,137 bytes，551.9 MiB |
 | 测试进程 RSS 采样峰值 | 416,792,576 bytes，397.5 MiB |
 
-稳定刷新 30 帧的纹理内存、创建及 resize 计数不增长；缩放 A→B→A 图像一致，参数 ready 图像与继续等待后的结果一致。4096×4096 超预算请求在分配前被拒绝，随后恢复提交成功。具体样本、adapter 和门限见 [资源报告](../target/kasane/m3c/s6/ren-resources/godot-report.json)。
+稳定刷新 30 帧的纹理内存、创建及 resize 计数不增长；缩放 A→B→A 图像一致，参数 ready 图像与继续等待后的结果一致。4096×4096 超预算请求在分配前被拒绝，随后恢复提交成功。具体样本、adapter 和门限见 [资源报告](../target/zipzi/m3c/s6/ren-resources/godot-report.json)。
 
 ## 固定 SDK 的模式矩阵
 
@@ -84,7 +84,7 @@ python3 -m unittest discover -s tools -p test_validate_s6.py
 
 统一入口真实执行构建、混合矩阵、目标复制负向对照、生命周期、Ren 资源、M4 数据/GPU、M3B 双 Core 数值和正式 Editor 官方图像门禁。任一缺失、失败或未运行均返回非零；运行前先清除旧成功状态，报告保存源码/SDK/库 SHA-256，运行中源码或库发生变化也不能通过。`--matrix-only` 只输出 `S6-matrix` 专项，不能宣称 S6 完成。
 
-主报告：[s6_report.json](../target/kasane/m3c/s6_report.json)。各子报告、PNG、差分、Editor 请求结果及逐帧内存位于 `target/kasane/m3c/s6/`。M3B 子项仅引用 `numerical_status`；该子报告的里程碑总状态仍为 `incomplete`，不会将数值通过冒充旧打包应用验收。当前源码应用流程由本阶段的 `editor_official` 单独验证。
+主报告：[s6_report.json](../target/zipzi/m3c/s6_report.json)。各子报告、PNG、差分、Editor 请求结果及逐帧内存位于 `target/zipzi/m3c/s6/`。M3B 子项仅引用 `numerical_status`；该子报告的里程碑总状态仍为 `incomplete`，不会将数值通过冒充旧打包应用验收。当前源码应用流程由本阶段的 `editor_official` 单独验证。
 
 ## 最终验收结果
 
@@ -100,4 +100,4 @@ python3 -m unittest discover -s tools -p test_validate_s6.py
 | M3B 双 Core 数值 | 147 批、3,505 组参数样本，两个 Core 均 passed |
 | 正式源码 Editor / 官方 Framework | 7 组图像、103 项全图及局部检查 passed |
 
-本次还通过 111 项 Rust 测试、workspace check 和 5 项验收脚本单元测试。当前 `apps/editor/native/libkasane_godot.dylib` 已同步到报告中的 debug 库，源码应用启动检查无错误；此前已打开的 Godot 进程需重启加载。S7 独立应用打包和全版本发布闭环未在本阶段宣称完成。
+本次还通过 111 项 Rust 测试、workspace check 和 5 项验收脚本单元测试。当前 `apps/editor/native/libzipzi_godot.dylib` 已同步到报告中的 debug 库，源码应用启动检查无错误；此前已打开的 Godot 进程需重启加载。S7 独立应用打包和全版本发布闭环未在本阶段宣称完成。

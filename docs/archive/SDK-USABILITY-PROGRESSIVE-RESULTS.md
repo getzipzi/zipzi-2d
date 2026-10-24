@@ -2,7 +2,7 @@
 
 协议、评分与梯度见 [渐进实验](SDK-USABILITY-PROGRESSIVE.md)。以下为探索性工程证据；只有两位 Luna 受试者，且 S1 延续 S0 的使用经验，不能把成绩解释为陌生人群的成功率。
 
-环境：Git 基线 `1a9d4d095a7ee9502a40c53c197d5f348901e2f6`，CPython 3.14.3，`uv` 0.10.7，macOS arm64；`kasane` 0.1.0 CPU wheel SHA-256 `294a7b8cc6e07ff3a0f5259d5b7c4be045d481bed042705fe5c4d1078fe81283`。wheel 由 `RUSTFLAGS='-C strip=none' uv build --wheel` 构建，使用 `uv venv` 与 `uv pip install` 安装至隔离环境。原始任务包、受试脚本、笔记和逐项判分 JSON 均在本机 `target/sdk-usability/progressive/`，不纳入 Git。
+环境：Git 基线 `1a9d4d095a7ee9502a40c53c197d5f348901e2f6`，CPython 3.14.3，`uv` 0.10.7，macOS arm64；`zipzi` 0.1.0 CPU wheel SHA-256 `294a7b8cc6e07ff3a0f5259d5b7c4be045d481bed042705fe5c4d1078fe81283`。wheel 由 `RUSTFLAGS='-C strip=none' uv build --wheel` 构建，使用 `uv venv` 与 `uv pip install` 安装至隔离环境。原始任务包、受试脚本、笔记和逐项判分 JSON 均在本机 `target/sdk-usability/progressive/`，不纳入 Git。
 
 ## S0：PNG 新建工程
 
@@ -32,7 +32,7 @@
 
 ## Python SDK 改版复测
 
-根据 S0、S1 与历史局部编辑实验的障碍，直接修改 `kasane` Python SDK：
+根据 S0、S1 与历史局部编辑实验的障碍，直接修改 `zipzi` Python SDK：
 
 - `CanvasSnapshot.origin` 返回 `(x, y)`，与 `Session(..., origin=...)` 的输入形状一致。
 - `Session.parameter_id(name_or_id)`、求值、完整求值、预览和 Observer 允许唯一参数显示名；重名明确拒绝并要求 ID，原有 ID 仍可用。
@@ -54,15 +54,15 @@
 
 ## S4 SDK 图像诊断改版
 
-SDK 新增无外部图像依赖的 `kasane.compare_png`、`ObservedFrame.compare_png` 和 `ImageComparison`，可读 RGB8/RGBA8 PNG，报告像素差、变化范围并保存差异图。observe wheel v3 SHA-256 为 `2e82a647b53f696fe9f337dea7a979ca371c88b1a2c37cc662efc80bd0cd2860`。已安装 wheel 在仓库外运行 CPU **37/37**、GPU **3/3** 通过；正控制 **18/18**，负控制在目标形态及图像项失败。
+SDK 新增无外部图像依赖的 `zipzi.compare_png`、`ObservedFrame.compare_png` 和 `ImageComparison`，可读 RGB8/RGBA8 PNG，报告像素差、变化范围并保存差异图。observe wheel v3 SHA-256 为 `2e82a647b53f696fe9f337dea7a979ca371c88b1a2c37cc662efc80bd0cd2860`。已安装 wheel 在仓库外运行 CPU **37/37**、GPU **3/3** 通过；正控制 **18/18**，负控制在目标形态及图像项失败。
 
-两位新 Luna 均实际使用 SDK 图像比较求得最终 `changed_pixels=0`；原始作品及全新目录重跑均各 **18/18**，最终 Pyright 各 0 错误，按口径各 **100/100**。两人独立发现：包级 `kasane.compare_png` 运行时可用，但 Pyright 认为它没有公开导出；一人改用 `ObservedFrame.compare_png`，另一人通过动态 `getattr` 绕过类型检查。后一做法是 SDK 类型表面缺陷的证据，不应作为建议用法。另有人误猜 `ObservationRun.output`，实际只有 `directory`。
+两位新 Luna 均实际使用 SDK 图像比较求得最终 `changed_pixels=0`；原始作品及全新目录重跑均各 **18/18**，最终 Pyright 各 0 错误，按口径各 **100/100**。两人独立发现：包级 `zipzi.compare_png` 运行时可用，但 Pyright 认为它没有公开导出；一人改用 `ObservedFrame.compare_png`，另一人通过动态 `getattr` 绕过类型检查。后一做法是 SDK 类型表面缺陷的证据，不应作为建议用法。另有人误猜 `ObservationRun.output`，实际只有 `directory`。
 
 一位受试者按任务要求把结果写在 `/tmp`，首版 S4 判分器却暗含任务包 `output/` 路径要求。修复为检查任意绝对输出根、并要求 manifest 和报告位于同一根下后，保留原始作品重判；正负控制仍符合预期。该问题计入 harness，不计入 SDK 或受试者成绩。v3 由此仍发现 SDK 缺陷，不作为最终稳定版本。
 
 SDK 随后把 `compare_png` 和 `ImageComparison` 明确加入公开导出，新增 `ObservationRun.output` 别名，并使差异 PNG 的变化像素可见。observe wheel v4 SHA-256 为 `e202cf55fac2ee1222e878e1bc6d4cdff42f14268f96afb7c9b211a351f1b6d0`。隔离安装后 CPU **37/37**、GPU **3/3**、直接引用包级 API 的 Pyright **0 错误**；新正控制通过、负控制失败。v4 的两位新受试者复测另行评分，不和 v3 成绩合并。
 
-v4 两位新 Luna 的原始作品与全新目录复跑均各 **18/18**，Pyright 均 0 错误，按口径各 **100/100**。两人均用公开 `kasane.compare_png` 核实终点渲染 `changed_pixels=0`。一人把 SDK 的观察报告复制到输出根并添加比较指标，原始判分器只在报告同目录寻找帧和 contact sheet，故初判 16/18。任务未规定报告布局；判分器改为以 summary 的绝对路径和报告中的帧 SHA-256 核验实际文件，原始作品重判为 18/18，正负控制保持区分。两人还分别把 `frame.png` 字节及字符串路径传入只接受 `Path` 的比较入口，收到运行时错误后自行修正；这是同一类型的易用性摩擦。
+v4 两位新 Luna 的原始作品与全新目录复跑均各 **18/18**，Pyright 均 0 错误，按口径各 **100/100**。两人均用公开 `zipzi.compare_png` 核实终点渲染 `changed_pixels=0`。一人把 SDK 的观察报告复制到输出根并添加比较指标，原始判分器只在报告同目录寻找帧和 contact sheet，故初判 16/18。任务未规定报告布局；判分器改为以 summary 的绝对路径和报告中的帧 SHA-256 核验实际文件，原始作品重判为 18/18，正负控制保持区分。两人还分别把 `frame.png` 字节及字符串路径传入只接受 `Path` 的比较入口，收到运行时错误后自行修正；这是同一类型的易用性摩擦。
 
 因此 SDK v5 将 `compare_png` 的两个输入及 `ObservedFrame.compare_png` 的参考输入扩为 `Path | str | bytes`，其中 bytes 为 PNG 内容。observe wheel SHA-256 为 `21344f0789a39cbac54dd20798b29f7053f9b8337534bdae49d4a7d57ca973ac`；隔离安装后 CPU **37/37**、GPU **3/3**、Pyright **0 错误**，正控制通过、负控制失败。v5 另由两位新 Luna 复测，不与 v4 成绩合并。
 

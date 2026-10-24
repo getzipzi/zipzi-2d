@@ -2,7 +2,7 @@
 
 日期：2026-09-24。方案与任务见 [SDK-USABILITY-EXPERIMENT.md](SDK-USABILITY-EXPERIMENT.md)。本轮使用 5 个相互隔离、无先前对话的 subagent，会话使用同一默认模型和推理设置；未主动提示方法或修复方案。每个 agent 只收到自己的 `TASK.md`、公开 SDK 文档、输入工程和已安装 wheel。任务是在已有工程中仅将 `right` mesh 的 `expression=1` keyform 的父级局部 X 增加 0.1。
 
-环境：Git 基线 `01ec274`；`kasane` 0.1.0 CPU wheel SHA-256 `4d229792857f3461986ba8cbcd2269c736712f2ee47ff69c9efa9762dbb5677a`；CPython 3.14.3；macOS arm64。实验工具和文档在本轮开始前固定。五份输入工程内容 hash 相同，任务目录分开；参与者没有读取其他受试目录或判分器的授权。原始任务包、脚本、notes、结果工程、输入 hash 和判分 JSON 保存在本地 `target/sdk-usability/2026-09-24-first-round/`，该目录不纳入 Git。
+环境：Git 基线 `01ec274`；`zipzi` 0.1.0 CPU wheel SHA-256 `4d229792857f3461986ba8cbcd2269c736712f2ee47ff69c9efa9762dbb5677a`；CPython 3.14.3；macOS arm64。实验工具和文档在本轮开始前固定。五份输入工程内容 hash 相同，任务目录分开；参与者没有读取其他受试目录或判分器的授权。原始任务包、脚本、notes、结果工程、输入 hash 和判分 JSON 保存在本地 `target/sdk-usability/2026-09-24-first-round/`，该目录不纳入 Git。
 
 | 试验 | 自报用时 | 工程判分 | 无清理直接复跑 | 主要卡点 |
 | --- | ---: | --- | --- | --- |

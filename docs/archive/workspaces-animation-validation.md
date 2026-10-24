@@ -7,7 +7,7 @@
 - Apple M4，10 核 GPU，16 GiB 内存，Mac16,10；macOS 27.0.1（26A434）。
 - 主显示器 3840 × 2160，逻辑 1920 × 1080 / 120 Hz；镜像副显示器为 75 Hz。没有打开 Metal HUD。
 - release 原生窗口和 headless 性能测试，窗口逻辑尺寸 1100 × 740、scale factor 2；测试截图为 2200 × 1480。全量回归使用 debug。
-- 编辑器基线为第四阶段提交 `b1c546f9101d31b6455cad03965011cbd3873835`，加第五阶段工作区改动；相邻 kasane-2d 为 `c90bdc5f2f00b540c87635745d0f3a4f66dd97bb`，本阶段没有 SDK 改动。
+- 编辑器基线为第四阶段提交 `b1c546f9101d31b6455cad03965011cbd3873835`，加第五阶段工作区改动；相邻 zipzi-2d 为 `c90bdc5f2f00b540c87635745d0f3a4f66dd97bb`，本阶段没有 SDK 改动。
 
 ## 实际模型覆盖
 
@@ -21,9 +21,9 @@
 
 Mao 另外覆盖：循环超过动作时长仍保留绝对时钟；回到起点；非循环动作中依次切换两个表情；1.5 s → 0.25 s → 1.5 s 的完整 snapshot 和 Metal 画布像素相同；清除表情立即改变图像；动作到达结尾自动暂停并钳制到时长。Physics / Pose 全程使用 SDK 的固定步进与调度。两个无动画资源模型正确显示空状态并禁用播放。
 
-Mao 原始动作均循环，因此测试只在临时导入文档中把第二个动作设为非循环。本地模型都没有原生 Offscreen；Metal 测试在临时 Mao 文档的根 Part 上增加一个 Kasane Offscreen，并导入常量 ModelOpacity 动作。源 model3、motion、纹理没有修改。这覆盖实际纹理、遮罩及几何的合成路径，不代表已经验证所有原生 Cubism Offscreen 资源。
+Mao 原始动作均循环，因此测试只在临时导入文档中把第二个动作设为非循环。本地模型都没有原生 Offscreen；Metal 测试在临时 Mao 文档的根 Part 上增加一个 Zipzi Offscreen，并导入常量 ModelOpacity 动作。源 model3、motion、纹理没有修改。这覆盖实际纹理、遮罩及几何的合成路径，不代表已经验证所有原生 Cubism Offscreen 资源。
 
-真实 Mao 派生文档与小型重叠 fixture 都在 opacity 0 / 0.5 / 1 与 `kasane-sdk-observe` 实际 Metal 图像比较，最大通道差不超过 **1/255**；零透明度全部透明，0.5 与 1 图像不同，且 0.5 结果可区分于最终合成图像整体乘 0.5。整体透明度在逐 drawable、mask / Offscreen 合成前应用一次，保留 Part 和 Offscreen 各自透明度。
+真实 Mao 派生文档与小型重叠 fixture 都在 opacity 0 / 0.5 / 1 与 `zipzi-sdk-observe` 实际 Metal 图像比较，最大通道差不超过 **1/255**；零透明度全部透明，0.5 与 1 图像不同，且 0.5 结果可区分于最终合成图像整体乘 0.5。整体透明度在逐 drawable、mask / Offscreen 合成前应用一次，保留 Part 和 Offscreen 各自透明度。
 
 Mao 投影得到 15 条资源诊断，包含未解析目标等已知限制。验收要求它们在资源面板中可见，没有把“能播放”解释成全部通道兼容。Sound 仍只诊断、不播放音频。
 
@@ -98,7 +98,7 @@ python3 scripts/test_frame_trace_report.py
 ./scripts/animation-benchmark.sh target/animation-headless-run 600
 
 # 不采集性能，只运行真实模型完整场景。
-cargo test --locked -p kasane-editor --test animation_acceptance
+cargo test --locked -p zipzi-editor --test animation_acceptance
 ```
 
 原生结果包含 `environment.txt`、`application.log`、`trace.jsonl`、`summary.json`；headless 另外包含 `run.log`、`results.json` 和模型截图。JSONL writer 有固定容量并报告丢失事件；报告拒绝不完整 trace、丢失事件、失败 GPU command 和超预算 checkpoint。
@@ -122,7 +122,7 @@ cargo test --locked -p kasane-editor --test animation_acceptance
 两个专用预览线程现在使用 macOS `QOS_CLASS_USER_INTERACTIVE`，仅作用于
 动画求值与 Metal 提交；没有改变模拟步长、GPU 背压、显示同步或三缓冲配置。
 空闲时仍在有界 mailbox 上阻塞。线程 CPU 计时仅在 trace 开启时采集。
-`KASANE_TRACE_DEFAULT_WORKER_QOS=1` 可在 trace 模式下恢复默认调度作对照。
+`ZIPZI_TRACE_DEFAULT_WORKER_QOS=1` 可在 trace 模式下恢复默认调度作对照。
 
 同一 Release 二进制、Mao、120 Hz 显示环境，顺序对照如下。长间隔定义为超过
 该轮实际唯一呈现时间戳中位间隔的 1.5 倍；系统呈现时间不是硬件扫描测量。

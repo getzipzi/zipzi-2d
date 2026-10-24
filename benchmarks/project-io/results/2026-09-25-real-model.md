@@ -53,11 +53,11 @@ Apple M4、16 GB 内存、macOS 27.0.0、本机 APFS，Release 构建。热文�
 目前没有仅为打开/保存速度而立即迁移二进制工程格式的依据。紧凑 JSON 仍可压缩得更小，且 725 MB 进程峰值仍需在更大模型和低内存设备上观察；若要迁移格式，应再用同一语义内容测二进制原型的完整读写、兼容性和峰值内存。
 
 ```sh
-cargo build --release -p kasane-project --example import_model3_project --example project_io_stress
+cargo build --release -p zipzi-project --example import_model3_project --example project_io_stress
 target/release/examples/import_model3_project "$HOME/Downloads/live2d-models/Gothic-style Girl/Gothic-style Girl/Gothic-style Girl.model3.json" "$PWD/target/project-io-stress/repro-real"
 target/release/examples/project_io_stress "$PWD/target/project-io-stress/repro-real" "$PWD/target/project-io-stress/repro-real-save" 5
 ```
 
-原始逐次耗时在 `target/project-io-stress/real-gothic-fixed-bench.json`，一次转换的数据在 `target/project-io-stress/real-gothic-fixed-import.json`。`cargo test --release -p kasane-project` 共 40 项、`cargo test --release -p kasane-sdk` 共 42 项，均通过。
+原始逐次耗时在 `target/project-io-stress/real-gothic-fixed-bench.json`，一次转换的数据在 `target/project-io-stress/real-gothic-fixed-import.json`。`cargo test --release -p zipzi-project` 共 40 项、`cargo test --release -p zipzi-sdk` 共 42 项，均通过。
 
-修复后逐次耗时在 `target/project-io-stress/after-fix-real-bench.json` 和 `target/project-io-stress/after-fix-compact-bench.json`，重新导入数据在 `target/project-io-stress/after-fix-import.json`。修复后 `cargo test --release -p kasane-core -p kasane-project -p kasane-sdk` 全部通过。
+修复后逐次耗时在 `target/project-io-stress/after-fix-real-bench.json` 和 `target/project-io-stress/after-fix-compact-bench.json`，重新导入数据在 `target/project-io-stress/after-fix-import.json`。修复后 `cargo test --release -p zipzi-core -p zipzi-project -p zipzi-sdk` 全部通过。

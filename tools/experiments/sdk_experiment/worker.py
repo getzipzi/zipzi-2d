@@ -17,7 +17,7 @@ import tempfile
 from uuid import uuid4
 import zlib
 
-import kasane
+import zipzi
 
 
 GROUPS = {
@@ -82,7 +82,7 @@ def close(left, right):
 
 
 def make_project(texture, task):
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+    session = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
     asset, parameter = str(uuid4()), str(uuid4())
     with session.edit("fixture") as edit:
         edit.add_png_asset(asset, "texture", texture)
@@ -96,9 +96,9 @@ def make_project(texture, task):
         with session.edit("bindings") as edit:
             for mesh in session.mesh_ids():
                 base = session.mesh(mesh).positions
-                edit.create_mesh_binding(str(uuid4()), mesh, [kasane.Axis(parameter, [0, 1])], [
-                    kasane.MeshKeyform([0], base),
-                    kasane.MeshKeyform([1], [(x + 10, y) for x, y in base]),
+                edit.create_mesh_binding(str(uuid4()), mesh, [zipzi.Axis(parameter, [0, 1])], [
+                    zipzi.MeshKeyform([0], base),
+                    zipzi.MeshKeyform([1], [(x + 10, y) for x, y in base]),
                 ])
     return session
 
@@ -143,7 +143,7 @@ def creation_checks(session, task, texture_hash):
         shared = triangles[0] & triangles[1]
         a, b = [vertices[i] for i in shared]
         checks["triangles"] = abs(a[0] - b[0]) == 20 and abs(a[1] - b[1]) == 20
-    checks["drawing"] = close(plain(mesh.drawing), plain(kasane.MeshDrawingData(
+    checks["drawing"] = close(plain(mesh.drawing), plain(zipzi.MeshDrawingData(
         session.asset_ids()[0] if session.asset_ids() else "")))
     if task == "parameter":
         checks["parameter"] = False
@@ -160,7 +160,7 @@ def creation_checks(session, task, texture_hash):
                     forms = [f for f in binding.keyforms if f.keys == [value]]
                     checks[f"form_{value}"] = len(forms) == 1 and close(
                         sorted(plain(forms[0].positions)), sorted([[x + 10 * value, y] for x, y in corners])) and (
-                            forms[0].appearance == kasane.Appearance() and forms[0].draw_order is None)
+                            forms[0].appearance == zipzi.Appearance() and forms[0].draw_order is None)
             for value in (0, 0.5, 1):
                 drawables = session.evaluate({p.id: value}).drawables
                 checks[f"sample_{value}"] = len(drawables) == 1 and close(
@@ -170,7 +170,7 @@ def creation_checks(session, task, texture_hash):
 
 
 def grade(task, manifest, oracle):
-    session = kasane.open_project(manifest)
+    session = zipzi.open_project(manifest)
     checks = {"structure": not session.validate_structure(),
               "resources": not session.diagnose_resources()}
     if task == "edit":
@@ -194,7 +194,7 @@ def advanced_fixture(task, packet):
     source = packet / "input"
     texture = packet / "input/texture.png"
     shutil.copy2(Path(__file__).parent / "texture.png", texture)
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+    session = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
     a, p = str(uuid4()), str(uuid4())
     assets = [a]
     if task == "resource-recovery":
@@ -211,9 +211,9 @@ def advanced_fixture(task, packet):
     with session.edit("bindings") as edit:
         for mesh in session.mesh_ids():
             base = session.mesh(mesh).positions
-            edit.create_mesh_binding(str(uuid4()), mesh, [kasane.Axis(p, [0, 1])], [
-                kasane.MeshKeyform([0], base),
-                kasane.MeshKeyform([1], [(x + 10, y) for x, y in base]),
+            edit.create_mesh_binding(str(uuid4()), mesh, [zipzi.Axis(p, [0, 1])], [
+                zipzi.MeshKeyform([0], base),
+                zipzi.MeshKeyform([1], [(x + 10, y) for x, y in base]),
             ])
     if task == "delivery-transfer":
         exported = source / "exported"
@@ -224,7 +224,7 @@ def advanced_fixture(task, packet):
             shutil.move(str(child), source / child.name)
         exported.rmdir()
         texture.unlink()
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+        imported = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
         imported.import_model3(source / "model.model3.json")
         target = next(m for m in imported.mesh_ids() if imported.mesh(m).positions[0][0] > 35)
         parameter = imported.parameter_ids()[0]
@@ -240,8 +240,8 @@ def advanced_fixture(task, packet):
         return {"baseline": baseline, "expected": state(imported, parameter),
                 "parameter_name": request["parameter_runtime_name"], "request": request}
     project = session.save(source / "project")
-    expected = state(kasane.open_project(project.manifest), p)
-    original = kasane.open_project(project.manifest)
+    expected = state(zipzi.open_project(project.manifest), p)
+    original = zipzi.open_project(project.manifest)
     asset = original.asset(a)
     missing_path = source / "project" / asset.source
     candidates = source / "candidates"
@@ -252,7 +252,7 @@ def advanced_fixture(task, packet):
     missing_path.unlink()
     texture.unlink()
     (source / "second.png").unlink()
-    broken = kasane.open_project(project.manifest)
+    broken = zipzi.open_project(project.manifest)
     if len(broken.diagnose_resources()) != 1:
         raise RuntimeError("resource fixture does not have exactly one missing asset")
     return {"expected": expected, "parameter_name": "Open", "missing_asset": a,
@@ -261,7 +261,7 @@ def advanced_fixture(task, packet):
 
 def advanced_checks(task, manifest, package, oracle):
     checks = {}
-    session = kasane.open_project(manifest)
+    session = zipzi.open_project(manifest)
     parameter = oracle["parameter_name"]
     checks["structure"] = not session.validate_structure()
     checks["resources"] = not session.diagnose_resources()
@@ -282,13 +282,13 @@ def advanced_checks(task, manifest, package, oracle):
         receiver = Path(folder)
         shutil.copytree(manifest.parent, receiver / "project")
         shutil.copytree(package_dir, receiver / "package")
-        moved = kasane.open_project(receiver / "project" / manifest.name)
+        moved = zipzi.open_project(receiver / "project" / manifest.name)
         checks["moved_project"] = not moved.diagnose_resources() and close(state(moved, parameter), oracle["expected"])
         # An absolute asset reference to the original location is not a portable delivery.
         checks["internal_assets"] = all(not Path(moved.asset(a).source).is_absolute()
                                         and ".." not in Path(moved.asset(a).source).parts
                                         for a in moved.asset_ids())
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+        imported = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
         imported.import_model3(receiver / "package/model.model3.json")
         checks["moved_package"] = not imported.diagnose_resources() and not imported.validate_structure()
         checks["package_semantics"] = close(semantic(imported, parameter), oracle["semantic"])
@@ -317,7 +317,7 @@ def semantic(session, parameter):
 
 def advanced_solution(task, packet, oracle, variant="positive"):
     if task == "delivery-transfer":
-        session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+        session = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
         session.import_model3(packet / "input/model.model3.json")
         target = next(m for m in session.mesh_ids() if session.mesh_record(m).runtime_id == oracle["request"]["mesh_runtime_id"])
         if variant == "wrong_target":
@@ -329,7 +329,7 @@ def advanced_solution(task, packet, oracle, variant="positive"):
             with session.edit("control edit") as edit:
                 edit.set_mesh_keyform(binding.id, form._replace(positions=[(x + shift, y) for x, y in form.positions]))
     else:
-        session = kasane.open_project(packet / "input/project")
+        session = zipzi.open_project(packet / "input/project")
         candidate = "tile_42.png" if variant == "wrong_content" else "tile_17.png"
         if variant != "no_recovery":
             with session.edit("control recovery") as edit:
@@ -371,7 +371,7 @@ def prepare_advanced(task, packet, oracle_path):
         model = missing / "package/model.model3.json"
         ref = json.loads(model.read_text())["FileReferences"]["Textures"][0]
         (model.parent / ref).unlink()
-        controls["missing_texture"] = safe_advanced_grade(task, missing / "project" / (good / "project/project.kasane.json").name,
+        controls["missing_texture"] = safe_advanced_grade(task, missing / "project" / (good / "project/project.zipzi.json").name,
                                                            model, oracle)
         # The exported package must be self-contained; an absolute external reference fails.
         external = root / "external_reference"
@@ -380,7 +380,7 @@ def prepare_advanced(task, packet, oracle_path):
         raw = json.loads(model.read_text())
         raw["FileReferences"]["Textures"][0] = str(packet / "input/candidates/tile_17.png") if task == "resource-recovery" else str(packet / "input/textures/0.png")
         model.write_text(json.dumps(raw))
-        controls["external_reference"] = safe_advanced_grade(task, external / "project/project.kasane.json", model, oracle)
+        controls["external_reference"] = safe_advanced_grade(task, external / "project/project.zipzi.json", model, oracle)
     oracle["controls"] = controls
     oracle_path.write_text(json.dumps(oracle, indent=2, allow_nan=False) + "\n")
     if controls["positive"]["status"] != "passed" or any(v["status"] != "failed" for k, v in controls.items() if k != "positive"):
@@ -389,7 +389,7 @@ def prepare_advanced(task, packet, oracle_path):
 
 
 def visual_fixture(packet, parented=False):
-    if not kasane.capabilities()["gpu_observation"]:
+    if not zipzi.capabilities()["gpu_observation"]:
         raise RuntimeError("visual-locate requires the observe wheel")
     source = packet / "input"
     texture_dir = source / "fixture-textures"
@@ -397,7 +397,7 @@ def visual_fixture(packet, parented=False):
     colors = [(240, 70, 70, 255), (60, 200, 90, 255), (70, 100, 240, 255)]
     for index, color in enumerate(colors):
         png(texture_dir / f"{index}.png", 8, 8, color)
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+    session = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
     parameter = str(uuid4())
     positions = [((12, 20), (30, 38)), ((42, 20), (60, 38)), ((70, 55), (88, 73))]
     meshes = []
@@ -410,8 +410,8 @@ def visual_fixture(packet, parented=False):
         edit.create_parameter(parameter, "Pose", 0, 1, 0)
         if parented:
             transform = str(uuid4())
-            edit.create_rotation_transform(transform, "hinge", kasane.RotationData(
-                0, kasane.RotationPose((51, 29), angle=35)))
+            edit.create_rotation_transform(transform, "hinge", zipzi.RotationData(
+                0, zipzi.RotationPose((51, 29), angle=35)))
             edit.set_deform_parent(meshes[1], transform)
     if parented:
         local_square = [(-0.9, 0.9), (0.9, 0.9), (0.9, -0.9), (-0.9, -0.9)]
@@ -421,16 +421,16 @@ def visual_fixture(packet, parented=False):
     with session.edit("endpoint motion") as edit:
         for mesh, (dx, dy) in zip(meshes, offsets):
             base = session.mesh(mesh).positions
-            edit.create_mesh_binding(str(uuid4()), mesh, [kasane.Axis(parameter, [0, 1])], [
-                kasane.MeshKeyform([0], base),
-                kasane.MeshKeyform([1], [(x + dx, y + dy) for x, y in base]),
+            edit.create_mesh_binding(str(uuid4()), mesh, [zipzi.Axis(parameter, [0, 1])], [
+                zipzi.MeshKeyform([0], base),
+                zipzi.MeshKeyform([1], [(x + dx, y + dy) for x, y in base]),
             ])
     oracle = {"parameter_name": "Pose", "expected": state(session, parameter),
               "target_mesh_id": meshes[1], "offset": [1.2 if parented else 12, 0],
               "parented": parented,
               "sample_values": [0, 0.5, 1],
               "observer": {"width": 256, "height": 256, "fit_long_side": 256}}
-    with kasane.Observer(256, 256, 256) as observer:
+    with zipzi.Observer(256, 256, 256) as observer:
         rgba = {}
         for value in (0, 0.5, 1):
             first = observer.observe(session, {parameter: value})
@@ -448,7 +448,7 @@ def visual_fixture(packet, parented=False):
         offset = oracle["offset"][0]
         edit.set_mesh_keyform(binding.id, form._replace(positions=[(x + offset, y) for x, y in form.positions]))
     session.save(source / "project")
-    with kasane.Observer(256, 256, 256) as observer:
+    with zipzi.Observer(256, 256, 256) as observer:
         wrong = observer.observe(session, {parameter: 1})
         if hashlib.sha256(wrong.rgba).hexdigest() == oracle["rgba_sha256"]["1"]:
             raise RuntimeError("visual fixture perturbation is invisible")
@@ -459,7 +459,7 @@ def visual_fixture(packet, parented=False):
 
 
 def visual_checks(manifest, result, oracle):
-    session = kasane.open_project(manifest)
+    session = zipzi.open_project(manifest)
     samples = oracle["sample_values"]
     snapshot = compose_state if oracle.get("state_kind") == "compose" else state
     checks = {"structure": not session.validate_structure(),
@@ -467,7 +467,7 @@ def visual_checks(manifest, result, oracle):
               "saved_state": close(snapshot(session, samples) if snapshot is compose_state else
                                    snapshot(session, oracle["parameter_name"], samples), oracle["expected"])}
     expected_pngs = []
-    with kasane.Observer(**oracle["observer"]) as observer:
+    with zipzi.Observer(**oracle["observer"]) as observer:
         for value in samples:
             frame = observer.observe(session, {oracle["parameter_name"]: value})
             checks[f"rgba_{value}"] = hashlib.sha256(frame.rgba).hexdigest() == oracle["rgba_sha256"][str(value)]
@@ -484,7 +484,7 @@ def visual_checks(manifest, result, oracle):
     with tempfile.TemporaryDirectory() as folder:
         moved_path = Path(folder) / "project"
         shutil.copytree(manifest.parent, moved_path)
-        moved = kasane.open_project(moved_path / manifest.name)
+        moved = zipzi.open_project(moved_path / manifest.name)
         moved_state = snapshot(moved, samples) if snapshot is compose_state else snapshot(moved, oracle["parameter_name"], samples)
         checks["moved_project"] = not moved.diagnose_resources() and close(moved_state, oracle["expected"])
     return {"status": "passed" if all(checks.values()) else "failed", "checks": checks}
@@ -503,7 +503,7 @@ def prepare_visual(packet, oracle_path, parented=False):
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
         root = Path(folder)
         for variant in ("positive", "no_edit", "wrong_target", "wrong_amount"):
-            session = kasane.open_project(packet / "input/project")
+            session = zipzi.open_project(packet / "input/project")
             if variant != "no_edit":
                 target = oracle["target_mesh_id"]
                 if variant == "wrong_target":
@@ -516,7 +516,7 @@ def prepare_visual(packet, oracle_path, parented=False):
             manifest = session.save(root / variant / "project").manifest
             run = None
             if variant == "positive":
-                with kasane.Observer(256, 256, 256) as observer:
+                with zipzi.Observer(256, 256, 256) as observer:
                     observed = observer.observe_run(session, [{"Pose": v} for v in (0, 0.5, 1)], root / variant / "observations")
                 data = {"observation_report": str(observed.report), "contact_sheet": str(observed.contact_sheet),
                         "frames": [str(p) for p in observed.frames]}
@@ -541,12 +541,12 @@ def expression_bindings(session, included=("mouth", "left-mark", "right-mark"), 
                 endpoint = [(x, y - 5 if y < middle else y + 5) for x, y in base]
             else:
                 endpoint = [(x, y + mark_delta) for x, y in base]
-            edit.create_mesh_binding(str(uuid4()), mesh.id, [kasane.Axis(parameter, [0, 1])], [
-                kasane.MeshKeyform([0], base), kasane.MeshKeyform([1], endpoint)])
+            edit.create_mesh_binding(str(uuid4()), mesh.id, [zipzi.Axis(parameter, [0, 1])], [
+                zipzi.MeshKeyform([0], base), zipzi.MeshKeyform([1], endpoint)])
 
 
 def compose_fixture(packet):
-    if not kasane.capabilities()["gpu_observation"]:
+    if not zipzi.capabilities()["gpu_observation"]:
         raise RuntimeError("compose-expression requires the observe wheel")
     source = packet / "input"
     textures = source / "fixture-textures"
@@ -554,7 +554,7 @@ def compose_fixture(packet):
     colors = [(230, 80, 110, 255), (240, 200, 40, 255), (80, 190, 240, 255)]
     names = ["mouth", "left-mark", "right-mark"]
     boxes = [((40, 50), (60, 60)), ((20, 35), (28, 43)), ((72, 35), (80, 43))]
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+    session = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
     with session.edit("expression base") as edit:
         for index, (name, (minimum, maximum)) in enumerate(zip(names, boxes)):
             texture = textures / f"{index}.png"
@@ -565,13 +565,13 @@ def compose_fixture(packet):
         edit.create_parameter(str(uuid4()), "Expression", 0, 1, 0)
     session.save(source / "project")
     shutil.rmtree(textures)
-    truth = kasane.open_project(source / "project")
+    truth = zipzi.open_project(source / "project")
     expression_bindings(truth)
     samples = [0, 0.25, 0.5, 0.75, 1]
     oracle = {"parameter_name": "Expression", "sample_values": samples,
               "observer": {"width": 256, "height": 256, "fit_long_side": 256},
               "state_kind": "compose", "expected": compose_state(truth, samples)}
-    with kasane.Observer(256, 256, 256) as observer:
+    with zipzi.Observer(256, 256, 256) as observer:
         rgba = {}
         for value in samples:
             first = observer.observe(truth, {"Expression": value})
@@ -593,7 +593,7 @@ def prepare_compose(packet, oracle_path):
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
         root = Path(folder)
         for variant in ("positive", "no_bindings", "mouth_only", "one_mark", "wrong_mark"):
-            session = kasane.open_project(packet / "input/project")
+            session = zipzi.open_project(packet / "input/project")
             if variant == "positive":
                 expression_bindings(session)
             elif variant == "mouth_only":
@@ -605,7 +605,7 @@ def prepare_compose(packet, oracle_path):
             manifest = session.save(root / variant / "project").manifest
             result_path = None
             if variant == "positive":
-                with kasane.Observer(256, 256, 256) as observer:
+                with zipzi.Observer(256, 256, 256) as observer:
                     run = observer.observe_run(session, [{"Expression": value} for value in oracle["sample_values"]], root / variant / "observations")
                 result_path = root / variant / "result.json"
                 result_path.write_text(json.dumps({"observation_report": str(run.report),
@@ -630,10 +630,10 @@ def revise_handoff(session, included=("left-mark", "right-mark"), delta=-3):
 
 
 def handoff_fixture(packet):
-    if not kasane.capabilities()["gpu_observation"]:
+    if not zipzi.capabilities()["gpu_observation"]:
         raise RuntimeError("handoff-revision requires the observe wheel")
     source = packet / "input"
-    session = kasane.open_project(source / "project")
+    session = zipzi.open_project(source / "project")
     if session.validate_structure() or session.diagnose_resources():
         raise RuntimeError("handoff source is not a valid self-contained project")
     for name in ("mouth", "left-mark", "right-mark"):
@@ -652,7 +652,7 @@ def handoff_fixture(packet):
     oracle = {"parameter_name": "Expression", "sample_values": samples,
               "observer": {"width": 256, "height": 256, "fit_long_side": 256},
               "baseline": baseline, "expected": state(session, "Expression", samples)}
-    with kasane.Observer(256, 256, 256) as observer:
+    with zipzi.Observer(256, 256, 256) as observer:
         rgba = {}
         for value in samples:
             first = observer.observe(session, {"Expression": value})
@@ -675,7 +675,7 @@ def prepare_handoff(packet, oracle_path):
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
         root = Path(folder)
         for variant in ("positive", "no_edit", "one_mark", "wrong_amount", "changed_mouth"):
-            session = kasane.open_project(packet / "input/project")
+            session = zipzi.open_project(packet / "input/project")
             if variant == "positive":
                 revise_handoff(session)
             elif variant == "one_mark":
@@ -693,7 +693,7 @@ def prepare_handoff(packet, oracle_path):
             manifest = session.save(root / variant / "project").manifest
             result_path = None
             if variant == "positive":
-                with kasane.Observer(256, 256, 256) as observer:
+                with zipzi.Observer(256, 256, 256) as observer:
                     run = observer.observe_run(session, [{"Expression": value} for value in oracle["sample_values"]], root / variant / "observations")
                 result_path = root / variant / "result.json"
                 result_path.write_text(json.dumps({"observation_report": str(run.report),
@@ -715,7 +715,7 @@ SHIROUSAGI_VARIANTS = {
 
 def shirousagi_model():
     source = Path(__file__).parent / "shirousagi/Shirousagi.model3.json"
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+    session = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
     imported = session.import_model3(source)
     if imported.warnings or imported.diagnostics or session.validate_structure() or session.diagnose_resources():
         raise RuntimeError(f"Shirousagi source failed preflight: {imported}")
@@ -763,7 +763,7 @@ def shirousagi_change(session, variant, amount=-1):
 
 
 def shirousagi_fixture(packet, oracle_path, variant_name):
-    if not kasane.capabilities()["gpu_observation"]:
+    if not zipzi.capabilities()["gpu_observation"]:
         raise RuntimeError("shirousagi-repair requires the observe wheel")
     variant = SHIROUSAGI_VARIANTS[variant_name]
     source = Path(__file__).parent / "shirousagi"
@@ -771,7 +771,7 @@ def shirousagi_fixture(packet, oracle_path, variant_name):
     shutil.copy2(source / "Shirousagi.psd", input_dir / "Shirousagi.psd")
     original = shirousagi_model()
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
-        art = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+        art = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
         imported = art.import_psd(input_dir / "Shirousagi.psd", Path(folder) / "psd-project")
         model_names = {original.mesh(mid).name for mid in original.mesh_ids()}
         art_names = {art.mesh(mid).name for mid in art.mesh_ids()}
@@ -781,7 +781,7 @@ def shirousagi_fixture(packet, oracle_path, variant_name):
     observer = {"width": 512, "height": 512, "fit_long_side": 512}
     all_poses = public + hidden
     hashes = []
-    with kasane.Observer(**observer) as renderer:
+    with zipzi.Observer(**observer) as renderer:
         for index, pose in enumerate(all_poses):
             frame = renderer.observe(original, pose)
             if frame.rgba != renderer.observe(original, pose).rgba:
@@ -796,7 +796,7 @@ def shirousagi_fixture(packet, oracle_path, variant_name):
     binding, _ = shirousagi_binding(original, variant)
     shirousagi_change(original, variant, amount=1)
     original.save(input_dir / "project")
-    with kasane.Observer(**observer) as renderer:
+    with zipzi.Observer(**observer) as renderer:
         broken = renderer.observe(original, public[0])
         if hashlib.sha256(broken.rgba).hexdigest() == hashes[0]:
             raise RuntimeError("Shirousagi injected fault is not visible")
@@ -820,7 +820,7 @@ def shirousagi_state_without_target_positions(snapshot, oracle):
 
 def shirousagi_render_checks(session, oracle, prefix):
     checks = {}
-    with kasane.Observer(**oracle["observer"]) as renderer:
+    with zipzi.Observer(**oracle["observer"]) as renderer:
         for index, pose in enumerate(oracle["all_poses"]):
             frame = renderer.observe(session, pose)
             checks[f"{prefix}_pose_{index}"] = hashlib.sha256(frame.rgba).hexdigest() == oracle["rgba_sha256"][index]
@@ -828,7 +828,7 @@ def shirousagi_render_checks(session, oracle, prefix):
 
 
 def shirousagi_checks(manifest, package, oracle):
-    session = kasane.open_project(manifest)
+    session = zipzi.open_project(manifest)
     actual = state(session, "ParamAngleX", (-30, 0, 30))
     checks = {"structure": not session.validate_structure(),
               "resources": not session.diagnose_resources(),
@@ -848,10 +848,10 @@ def shirousagi_checks(manifest, package, oracle):
         receiver = Path(folder)
         shutil.copytree(manifest.parent, receiver / "project")
         shutil.copytree(package_dir, receiver / "package")
-        moved = kasane.open_project(receiver / "project" / manifest.name)
+        moved = zipzi.open_project(receiver / "project" / manifest.name)
         checks["moved_project_resources"] = not moved.diagnose_resources()
         checks.update(shirousagi_render_checks(moved, oracle, "moved_project"))
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+        imported = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
         result = imported.import_model3(receiver / "package/model.model3.json")
         checks["moved_package_resources"] = not result.diagnostics and not imported.diagnose_resources()
         checks["moved_package_structure"] = not imported.validate_structure()
@@ -884,7 +884,7 @@ def prepare_shirousagi(packet, oracle_path, variant_name):
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
         root = Path(folder)
         for name in ("positive", "no_edit", "wrong_amount", "wrong_keyform"):
-            session = kasane.open_project(packet / "input/project")
+            session = zipzi.open_project(packet / "input/project")
             variant = dict(oracle["variant"])
             if name == "wrong_keyform":
                 variant["keys"] = [-variant["keys"][0], variant["keys"][1], variant["keys"][2]]
@@ -965,22 +965,22 @@ def blink_author(session, mode="positive"):
             edit.create_parameter(pid, param, 0, 1, 1,
                                   runtime_id=None if mode == "wrong_runtime" else param)
             keys = [0, 0.5, 1] if mode == "extra_midpoint" else [0, 1]
-            forms = [kasane.MeshKeyform([0], closed)]
+            forms = [zipzi.MeshKeyform([0], closed)]
             if mode == "extra_midpoint":
                 midpoint = [((a + c) / 2, (b + d) / 2)
                             for (a, b), (c, d) in zip(closed, base)]
-                forms.append(kasane.MeshKeyform([0.5], midpoint))
-            forms.append(kasane.MeshKeyform([1], base))
-            edit.create_mesh_binding(str(uuid4()), mesh.id, [kasane.Axis(pid, keys)], forms)
+                forms.append(zipzi.MeshKeyform([0.5], midpoint))
+            forms.append(zipzi.MeshKeyform([1], base))
+            edit.create_mesh_binding(str(uuid4()), mesh.id, [zipzi.Axis(pid, keys)], forms)
 
 
 def blink_fixture(packet, oracle_path):
-    if not kasane.capabilities()["gpu_observation"]:
+    if not zipzi.capabilities()["gpu_observation"]:
         raise RuntimeError("shirousagi-blink requires the observe wheel")
     source = Path(__file__).parent / "shirousagi"
     input_dir = packet / "input"
     shutil.copy2(source / "Shirousagi.psd", input_dir / "Shirousagi.psd")
-    art = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+    art = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
     imported = art.import_psd(input_dir / "Shirousagi.psd", input_dir / "project")
     model = shirousagi_model()
     names = {art.mesh(mid).name for mid in art.mesh_ids()}
@@ -993,7 +993,7 @@ def blink_fixture(packet, oracle_path):
              for left, right in public + hidden]
     observer = {"width": 700, "height": 700, "fit_long_side": 700}
     frames = []
-    with kasane.Observer(**observer) as renderer:
+    with zipzi.Observer(**observer) as renderer:
         static_frame = renderer.observe(art, {})
         static_crops = {name: blink_crop(static_frame.rgba, 700, box)
                         for name, box in BLINK_BOXES.items()}
@@ -1058,7 +1058,7 @@ def blink_structure_checks(session, oracle):
 
 def blink_render_checks(session, oracle, prefix):
     checks = {}
-    with kasane.Observer(**oracle["observer"]) as renderer:
+    with zipzi.Observer(**oracle["observer"]) as renderer:
         for index, spec in enumerate(oracle["frames"]):
             pose = spec["pose"]
             frame = renderer.observe(session, pose)
@@ -1080,7 +1080,7 @@ def blink_render_checks(session, oracle, prefix):
 
 
 def blink_checks(manifest, package, oracle):
-    session = kasane.open_project(manifest)
+    session = zipzi.open_project(manifest)
     checks = blink_structure_checks(session, oracle)
     checks.update(blink_render_checks(session, oracle, "project"))
     package_dir = package.parent
@@ -1096,11 +1096,11 @@ def blink_checks(manifest, package, oracle):
         receiver = Path(folder)
         shutil.copytree(manifest.parent, receiver / "project")
         shutil.copytree(package_dir, receiver / "package")
-        moved = kasane.open_project(receiver / "project" / manifest.name)
+        moved = zipzi.open_project(receiver / "project" / manifest.name)
         checks.update({f"moved_{key}": value
                        for key, value in blink_structure_checks(moved, oracle).items()})
         checks.update(blink_render_checks(moved, oracle, "moved_project"))
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+        imported = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
         result = imported.import_model3(receiver / "package/model.model3.json")
         checks["package_import"] = not result.warnings and not result.diagnostics
         checks["package_structure"] = not imported.validate_structure()
@@ -1130,7 +1130,7 @@ def prepare_blink(packet, oracle_path):
         root = Path(folder)
         for mode in ("positive", "extra_midpoint", "no_edit", "one_eye",
                      "wrong_runtime", "wrong_shape"):
-            session = kasane.open_project(packet / "input/project")
+            session = zipzi.open_project(packet / "input/project")
             if mode != "no_edit":
                 blink_author(session, mode)
             manifest = session.save(root / mode / "project").manifest
@@ -1232,7 +1232,7 @@ def art_patch(session, source_png, output_png, spec, mode="positive"):
 
 
 def art_revision_fixture(packet, oracle_path, variant_name):
-    if not kasane.capabilities()["gpu_observation"]:
+    if not zipzi.capabilities()["gpu_observation"]:
         raise RuntimeError("shirousagi-art-revision requires the observe wheel")
     spec = ART_REVISION_VARIANTS[variant_name]
     input_dir = packet / "input"
@@ -1243,7 +1243,7 @@ def art_revision_fixture(packet, oracle_path, variant_name):
     if len(original.mesh_ids()) != 24 or len(original.parameter_ids()) != 34:
         raise RuntimeError("Shirousagi delivered model changed")
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
-        art = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+        art = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
         imported = art.import_psd(input_dir / "Shirousagi.psd", Path(folder) / "psd-project")
         if imported.warnings or imported.raster_layers != 24:
             raise RuntimeError("Shirousagi PSD no longer has 24 layers")
@@ -1257,12 +1257,12 @@ def art_revision_fixture(packet, oracle_path, variant_name):
     atlas_path = Path(atlas.source)
     box = art_uv_box(record, atlas.width, atlas.height)
     source_hashes = art_texture_hashes(atlas_path, box)
-    revised = kasane.open_project(input_dir / "project")
+    revised = zipzi.open_project(input_dir / "project")
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
         art_patch(revised, atlas_path, Path(folder) / "revised-atlas.png", spec)
         observer = {"width": 700, "height": 700, "fit_long_side": 700}
         frames = []
-        with kasane.Observer(**observer) as renderer:
+        with zipzi.Observer(**observer) as renderer:
             for index, pose in enumerate(ART_REVISION_POSES):
                 base = renderer.observe(original, pose)
                 reference = renderer.observe(revised, pose)
@@ -1310,7 +1310,7 @@ def art_texture_checks(session, base_dir, oracle, prefix):
 
 def art_render_checks(session, oracle, prefix):
     checks = {}
-    with kasane.Observer(**oracle["observer"]) as renderer:
+    with zipzi.Observer(**oracle["observer"]) as renderer:
         for index, spec in enumerate(oracle["frames"]):
             frame = renderer.observe(session, spec["pose"])
             checks[f"{prefix}_outside_{index}"] = (
@@ -1322,7 +1322,7 @@ def art_render_checks(session, oracle, prefix):
 
 
 def art_revision_checks(manifest, package, oracle):
-    session = kasane.open_project(manifest)
+    session = zipzi.open_project(manifest)
     actual = state(session, "ParamAngleX", (-30, 0, 30))
     checks = {"structure": not session.validate_structure(),
               "resources": not session.diagnose_resources(),
@@ -1343,7 +1343,7 @@ def art_revision_checks(manifest, package, oracle):
         receiver = Path(folder)
         shutil.copytree(manifest.parent, receiver / "project")
         shutil.copytree(package_dir, receiver / "package")
-        moved = kasane.open_project(receiver / "project" / manifest.name)
+        moved = zipzi.open_project(receiver / "project" / manifest.name)
         checks["moved_project_structure"] = not moved.validate_structure()
         checks["moved_project_resources"] = not moved.diagnose_resources()
         checks["moved_project_state"] = close(
@@ -1351,7 +1351,7 @@ def art_revision_checks(manifest, package, oracle):
             art_state_without_target_hash(oracle["expected"], oracle))
         checks.update(art_texture_checks(moved, receiver / "project", oracle, "moved_project"))
         checks.update(art_render_checks(moved, oracle, "moved_project"))
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
+        imported = zipzi.Session(str(uuid4()), 100, 100, (50, 50))
         result = imported.import_model3(receiver / "package/model.model3.json")
         checks["package_import"] = not result.warnings and not result.diagnostics
         checks["package_structure"] = not imported.validate_structure()
@@ -1381,13 +1381,13 @@ def prepare_art_revision(packet, oracle_path, variant_name):
     oracle = art_revision_fixture(packet, oracle_path, variant_name)
     controls = {}
     input_project = packet / "input/project"
-    asset = kasane.open_project(input_project).asset(oracle["target_asset_id"])
+    asset = zipzi.open_project(input_project).asset(oracle["target_asset_id"])
     source_png = input_project / asset.source
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
         root = Path(folder)
         for mode in ("positive", "edge_inclusive", "no_edit", "wrong_layer",
                      "wrong_tint", "whole_atlas", "rig_change"):
-            session = kasane.open_project(input_project)
+            session = zipzi.open_project(input_project)
             if mode != "no_edit":
                 art_patch(session, source_png, root / f"{mode}.png", oracle["spec"], mode)
             manifest = session.save(root / mode / "project").manifest
@@ -1461,26 +1461,26 @@ def main():
     session = make_project(texture, args.task)
     if args.task == "edit":
         source = session.save(args.packet / "input/project")
-        session = kasane.open_project(source.manifest)
+        session = zipzi.open_project(source.manifest)
         repair(session)
     oracle = {"texture_hash": hashlib.sha256(texture.read_bytes()).hexdigest()}
     with tempfile.TemporaryDirectory(dir=args.oracle.parent) as folder:
         destination = Path(folder)
         manifest = session.save(destination / "positive").manifest
-        oracle["expected"] = state(kasane.open_project(manifest))
+        oracle["expected"] = state(zipzi.open_project(manifest))
         positive = grade(args.task, manifest, oracle)
         with session.edit("negative: wrong name") as edit:
             edit.rename_mesh(session.mesh_ids()[0], "incorrect")
         negative = grade(args.task, session.save(destination / "negative").manifest, oracle)
         # A second negative tests geometry rather than just metadata.
-        session = kasane.open_project(manifest)
+        session = zipzi.open_project(manifest)
         mesh = session.mesh(session.mesh_ids()[0])
         with session.edit("negative: geometry") as edit:
             edit.update_positions(mesh.id, mesh.vertex_ids, [(x + 1, y) for x, y in mesh.positions])
         geometry = grade(args.task, session.save(destination / "geometry").manifest, oracle)
         extra = {}
         if args.task != "create":
-            session = kasane.open_project(manifest)
+            session = zipzi.open_project(manifest)
             mesh = session.mesh(session.mesh_ids()[0])
             binding = session.binding_for_mesh(mesh.id)
             form = next(f for f in binding.keyforms if f.keys == [1])

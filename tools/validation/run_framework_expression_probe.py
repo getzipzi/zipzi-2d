@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "fixtures/animation_cpu"
 OUTPUT = ROOT / "target/expression-cpu-probe"
-PROBE = ROOT / "target/animation-cpu-probe/kasane_framework_animation_cpu_probe"
+PROBE = ROOT / "target/animation-cpu-probe/zipzi_framework_animation_cpu_probe"
 
 
 def run(args: list[str], timeout: int = 300) -> subprocess.CompletedProcess[str]:
@@ -56,7 +56,7 @@ def main() -> int:
         for name, wanted in expected.items():
             source = FIXTURES / f"{name}.exp3.json"
             encoded = OUTPUT / f"{name}.exp3.json"
-            run(["cargo", "run", "-q", "-p", "kasane-live2d", "--example",
+            run(["cargo", "run", "-q", "-p", "zipzi-live2d", "--example",
                  "reencode_exp3", "--", str(source), str(encoded)])
             source_trace = trace(source)
             encoded_trace = trace(encoded)
@@ -87,7 +87,7 @@ def main() -> int:
                 "Type": "Live2D Expression", "FadeInTime": 0.25,
                 "Parameters": [{"Id": "ParamY", "Value": amount, "Blend": blend}],
             }, indent=2))
-            run(["cargo", "run", "-q", "-p", "kasane-live2d", "--example",
+            run(["cargo", "run", "-q", "-p", "zipzi-live2d", "--example",
                  "reencode_exp3", "--", str(source), str(encoded)])
             result = run([str(PROBE), "--expression-mix", str(FIXTURES / "model.moc3"),
                           str(encoded), str(OUTPUT / "default.exp3.json")])

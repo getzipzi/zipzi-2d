@@ -2,7 +2,7 @@
 
 物理字段编辑现在通过通用 `PropertyPatch → Gesture::Properties → EditSession::patch_physics`。
 名称、FPS、输入/输出映射、权重、缩放、标准化与摆段属性的写入规则集中在
-`editor-core/src/property/physics.rs`，UI 只定义字段布局与显示名称。
+`zipzi-editor-core/src/property/physics.rs`，UI 只定义字段布局与显示名称。
 摆段设置复用也是一次多字段 patch。
 
 SDK 的 `PhysicsPatch` 使用类型化字段，定位 asset、group 和数组元素。校验通过后
@@ -33,13 +33,13 @@ setter 路径也使用新的共享存储；patch 路径每次保留一个旧文�
 从编辑器目录复现一轮：
 
 ```sh
-cargo test --locked --release --manifest-path ../kasane-2d/Cargo.toml -p kasane-sdk --test physics_editing physics_field_patch_benchmark -- --ignored --nocapture
+cargo test --locked --release --manifest-path ../zipzi-2d/Cargo.toml -p zipzi-sdk --test physics_editing physics_field_patch_benchmark -- --ignored --nocapture
 ```
 
 ## 验证
 
 - SDK/core/project/animation：325 项通过，另有 1 项性能测量默认忽略。
-- editor-core：342 项通过，2 项默认忽略。
+- zipzi-editor-core：342 项通过，2 项默认忽略。
 - 编辑器：339 项通过，1 项默认忽略。全套运行排除了之前已知不稳定的画布缩放通知
   计数用例；该用例随后单独运行通过。物理相关 7 项测试均通过。
 - 覆盖字段校验、失败原子性、快照隔离、未修改组共享、撤销/重做、无变化保留 redo、

@@ -31,7 +31,7 @@ Mao 的静态 Glue、BlendShape 及 MOC3/工程往返已实现，但**尚未达�
 
 ### P1：Editor 新增语义不可通过正式脚本 API 编辑
 
-`modules/kasane-godot/src/document_bridge.rs` 没有 BlendShape table/constraint/binding、Glue 的 CRUD、读取快照或列表接口；`get_document_summary` 也未提供这些集合。六个 stage 没有修改 `apps/editor`、对应 dock 或 `API.md`。
+`modules/zipzi-godot/src/document_bridge.rs` 没有 BlendShape table/constraint/binding、Glue 的 CRUD、读取快照或列表接口；`get_document_summary` 也未提供这些集合。六个 stage 没有修改 `apps/editor`、对应 dock 或 `API.md`。
 
 因此 Rust Document 中新增的数据可以被保存和求值，但 Agent 在正式 Editor 中不能按 M3B 契约检查/修改它们。Stage E 的 commit 标题虽然包括导出和脱离往返，不能据此视为 F10 或完整阶段 E 已完成。
 
@@ -82,12 +82,12 @@ Document 只有固定 intensity，没有独立的 Glue Keyform/普通多轴强�
 
 | 检查 | 结果 |
 |---|---|
-| `cargo test -p kasane-core -p kasane-moc3 -p kasane-project --locked` | 63 项测试通过（另有 0 项的 lib/doc test target）；含新增修改校验、颜色/排序、动画 Glue 拒绝、ID 容量、安全检查及重复 group 回归 |
-| `cargo test -p kasane-godot --lib --locked` | 6 项通过 |
+| `cargo test -p zipzi-core -p zipzi-moc3 -p zipzi-project --locked` | 63 项测试通过（另有 0 项的 lib/doc test target）；含新增修改校验、颜色/排序、动画 Glue 拒绝、ID 容量、安全检查及重复 group 回归 |
+| `cargo test -p zipzi-godot --lib --locked` | 6 项通过 |
 | `cargo check --workspace --locked` | 通过 |
 | `python3 tests/test_m3b_validation.py` | 4 项通过：像素上限、逐值颜色容差、重复 ID、正常对照 |
-| `python3 tools/validate_m3b.py --numerical-only --output-dir target/kasane/m3b-review` | 550 组、23 批、2 个 Core，严格门禁失败；报告 `target/kasane/m3b-review/report.json` |
-| `python3 tools/m3b_baseline.py --output-dir target/kasane/m3b-review` | 严格门禁失败，`all_maximums` 超标；报告 `target/kasane/m3b-review/baseline.json` |
+| `python3 tools/validate_m3b.py --numerical-only --output-dir target/zipzi/m3b-review` | 550 组、23 批、2 个 Core，严格门禁失败；报告 `target/zipzi/m3b-review/report.json` |
+| `python3 tools/m3b_baseline.py --output-dir target/zipzi/m3b-review` | 严格门禁失败，`all_maximums` 超标；报告 `target/zipzi/m3b-review/baseline.json` |
 | GPU / 正式应用验收 | 本次未执行；实现范围仍缺上述入口和测试 |
 
 M3B 当前状态应为：**核心导入/往返已有实现，部分缺陷已修复；完整可编辑能力与严格验收未完成。**

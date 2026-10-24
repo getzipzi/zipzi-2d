@@ -17,7 +17,7 @@ import sdk_experiments as harness
 SOLUTION = '''from pathlib import Path
 from uuid import uuid4
 import argparse, json
-import kasane
+import zipzi
 p = argparse.ArgumentParser()
 p.add_argument('--output', type=Path, required=True)
 out = p.parse_args().output
@@ -25,14 +25,14 @@ out.mkdir(parents=True, exist_ok=True)
 packet = Path(__file__).resolve().parent
 task = TASK
 if task == 'edit':
-    model = kasane.open_project(packet / 'input/project')
+    model = zipzi.open_project(packet / 'input/project')
     mesh = model.require_unique_mesh('right')
     binding = model.binding_for_mesh(mesh.id)
     form = next(f for f in binding.keyforms if f.keys == [1])
     with model.edit('shift') as edit:
         edit.set_mesh_keyform(binding.id, form._replace(positions=[(x+10,y) for x,y in form.positions]))
 else:
-    model = kasane.Session(str(uuid4()), 100, 100, (50,50), 10)
+    model = zipzi.Session(str(uuid4()), 100, 100, (50,50), 10)
     asset, mesh, parameter = (str(uuid4()) for _ in range(3))
     with model.edit('create') as edit:
         edit.add_png_asset(asset, 'freely chosen asset name', packet / 'input/texture.png')
@@ -41,22 +41,22 @@ else:
         base = model.mesh(mesh).positions
         with model.edit('parameter') as edit:
             edit.create_parameter(parameter, 'Open', 0, 1, 0)
-            edit.create_mesh_binding(str(uuid4()), mesh, [kasane.Axis(parameter,[0,1])],
-                [kasane.MeshKeyform([0],base),kasane.MeshKeyform([1],[(x+10,y) for x,y in base])])
+            edit.create_mesh_binding(str(uuid4()), mesh, [zipzi.Axis(parameter,[0,1])],
+                [zipzi.MeshKeyform([0],base),zipzi.MeshKeyform([1],[(x+10,y) for x,y in base])])
 manifest = model.save(out / 'my-custom-layout' / 'project').manifest
 (out / 'result.json').write_text(json.dumps({'project_manifest':str(manifest)}))
 '''
 
 ADVANCED_SOLUTION = '''from pathlib import Path
 from uuid import uuid4
-import argparse, json, kasane
+import argparse, json, zipzi
 p = argparse.ArgumentParser(); p.add_argument('--output', type=Path, required=True)
 out = p.parse_args().output; out.mkdir(parents=True, exist_ok=True)
 packet = Path(__file__).resolve().parent
 task = TASK
 if task == 'delivery-transfer':
     request = json.loads((packet / 'input/request.json').read_text())
-    model = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+    model = zipzi.Session(str(uuid4()), 100, 100, (50, 50), 10)
     model.import_model3(packet / 'input/model.model3.json')
     mesh = next(mid for mid in model.mesh_ids() if model.mesh_record(mid).runtime_id == request['mesh_runtime_id'])
     binding = model.binding_for_mesh(mesh)
@@ -64,7 +64,7 @@ if task == 'delivery-transfer':
     with model.edit('target') as edit:
         edit.set_mesh_keyform(binding.id, form._replace(positions=[(x+7,y) for x,y in form.positions]))
 else:
-    model = kasane.open_project(packet / 'input/project')
+    model = zipzi.open_project(packet / 'input/project')
     bad = model.diagnose_resources()[0].asset_id
     with model.edit('recover') as edit:
         edit.relocate_png_asset(bad, packet / 'input/candidates/tile_17.png')
@@ -76,17 +76,17 @@ model.export_package(out / f'package-{index}')
 '''
 
 VISUAL_SOLUTION = '''from pathlib import Path
-import argparse, json, kasane
+import argparse, json, zipzi
 p=argparse.ArgumentParser(); p.add_argument('--output',type=Path,required=True)
 out=p.parse_args().output.resolve(); out.mkdir(parents=True,exist_ok=True)
-session=kasane.open_project(Path(__file__).resolve().parent/'input/project')
+session=zipzi.open_project(Path(__file__).resolve().parent/'input/project')
 mesh=session.require_unique_mesh('segment-1')
 binding=session.binding_for_mesh(mesh.id)
 form=next(f for f in binding.keyforms if f.keys==[1])
 with session.edit('visual control') as edit:
     edit.set_mesh_keyform(binding.id,form._replace(positions=[(x-12,y) for x,y in form.positions]))
 manifest=session.save(out/'project').manifest
-with kasane.Observer(256,256,256) as observer:
+with zipzi.Observer(256,256,256) as observer:
     run=observer.observe_run(session,[{'Pose':v} for v in (0,0.5,1)],out/'observations')
 (out/'result.json').write_text(json.dumps({'project_manifest':str(manifest),'observation_report':str(run.report),
     'contact_sheet':str(run.contact_sheet),'frames':[str(p) for p in run.frames]}))
@@ -94,10 +94,10 @@ with kasane.Observer(256,256,256) as observer:
 
 EXPRESSION_SOLUTION = '''from pathlib import Path
 from uuid import uuid4
-import argparse, json, kasane
+import argparse, json, zipzi
 p=argparse.ArgumentParser(); p.add_argument('--output',type=Path,required=True)
 out=p.parse_args().output.resolve(); out.mkdir(parents=True,exist_ok=True)
-session=kasane.open_project(Path(__file__).resolve().parent/'input/project')
+session=zipzi.open_project(Path(__file__).resolve().parent/'input/project')
 parameter=session.parameter_id('Expression')
 with session.edit('expression control') as edit:
     for name in ('mouth','left-mark','right-mark'):
@@ -108,20 +108,20 @@ with session.edit('expression control') as edit:
             end=[(x,y-5 if y<center else y+5) for x,y in base]
         else:
             end=[(x,y-6) for x,y in base]
-        edit.create_mesh_binding(str(uuid4()),mesh.id,[kasane.Axis(parameter,[0,1])],
-            [kasane.MeshKeyform([0],base),kasane.MeshKeyform([1],end)])
+        edit.create_mesh_binding(str(uuid4()),mesh.id,[zipzi.Axis(parameter,[0,1])],
+            [zipzi.MeshKeyform([0],base),zipzi.MeshKeyform([1],end)])
 manifest=session.save(out/'project').manifest
-with kasane.Observer(256,256,256) as observer:
+with zipzi.Observer(256,256,256) as observer:
     run=observer.observe_run(session,[{'Expression':v} for v in (0,0.25,0.5,0.75,1)],out/'observations')
 (out/'result.json').write_text(json.dumps({'project_manifest':str(manifest),'observation_report':str(run.report),
     'contact_sheet':str(run.contact_sheet),'frames':[str(p) for p in run.frames]}))
 '''
 
 HANDOFF_SOLUTION = '''from pathlib import Path
-import argparse, json, kasane
+import argparse, json, zipzi
 p=argparse.ArgumentParser(); p.add_argument('--output',type=Path,required=True)
 out=p.parse_args().output.resolve(); out.mkdir(parents=True,exist_ok=True)
-session=kasane.open_project(Path(__file__).resolve().parent/'input/project')
+session=zipzi.open_project(Path(__file__).resolve().parent/'input/project')
 with session.edit('handoff control') as edit:
     for name in ('left-mark','right-mark'):
         mesh=session.require_unique_mesh(name)
@@ -130,7 +130,7 @@ with session.edit('handoff control') as edit:
         end=next(f for f in binding.keyforms if f.keys==[1])
         edit.set_mesh_keyform(binding.id,end._replace(positions=[(x,y-3) for x,y in base.positions]))
 manifest=session.save(out/'project').manifest
-with kasane.Observer(256,256,256) as observer:
+with zipzi.Observer(256,256,256) as observer:
     run=observer.observe_run(session,[{'Expression':v} for v in (0,0.25,0.5,0.75,1)],out/'observations')
 (out/'result.json').write_text(json.dumps({'project_manifest':str(manifest),'observation_report':str(run.report),
     'contact_sheet':str(run.contact_sheet),'frames':[str(p) for p in run.frames]}))
@@ -187,7 +187,7 @@ class InfrastructureTests(unittest.TestCase):
 class WheelIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temp = tempfile.TemporaryDirectory(prefix='kasane-harness-tests-')
+        cls.temp = tempfile.TemporaryDirectory(prefix='zipzi-harness-tests-')
         cls.root = Path(cls.temp.name).resolve() / 'experiment'
         cls.cli('init', '--wheel', os.environ['SDK_EXPERIMENT_WHEEL'],
                 '--python', os.environ.get('SDK_EXPERIMENT_PYTHON', '3.14'))
@@ -396,10 +396,10 @@ class WheelIntegrationTests(unittest.TestCase):
     def test_edit_cannot_pass_by_saving_unchanged_input(self):
         packet = self.prepare('no-edit', 'edit')
         (packet / 'solution.py').write_text('''from pathlib import Path
-import argparse, json, kasane
+import argparse, json, zipzi
 p = argparse.ArgumentParser(); p.add_argument('--output', type=Path)
 out = p.parse_args().output; out.mkdir(parents=True)
-model = kasane.open_project(Path(__file__).resolve().parent / 'input/project')
+model = zipzi.open_project(Path(__file__).resolve().parent / 'input/project')
 saved = model.save(out / 'project')
 (out / 'result.json').write_text(json.dumps({'project_manifest':str(saved.manifest)}))
 ''')
@@ -410,7 +410,7 @@ saved = model.save(out / 'project')
         packet = self.prepare('alternate-geometry')
         script = (packet / 'solution.py').read_text()
         alternative = '''record = model.mesh_record(mesh)
-geometry = kasane.MeshGeometryData(
+geometry = zipzi.MeshGeometryData(
     [11,22,33,44], [(60,60),(40,60),(40,40),(60,40)],
     [(1,1),(0,1),(0,0),(1,0)], [(11,22,44),(22,33,44)])
 with model.edit('alternative triangulation') as edit:
@@ -423,11 +423,11 @@ with model.edit('alternative triangulation') as edit:
     def test_subjects_share_uv_environment_and_can_install_dependencies(self):
         first = self.prepare('deps-first')
         second = self.prepare('deps-second')
-        wheel = first / 'kasane_experiment_helper-1.0.0-py3-none-any.whl'
-        metadata = 'kasane_experiment_helper-1.0.0.dist-info'
+        wheel = first / 'zipzi_experiment_helper-1.0.0-py3-none-any.whl'
+        metadata = 'zipzi_experiment_helper-1.0.0.dist-info'
         files = {
-            'kasane_experiment_helper.py': 'VALUE = 7\n',
-            metadata + '/METADATA': 'Metadata-Version: 2.1\nName: kasane-experiment-helper\nVersion: 1.0.0\n',
+            'zipzi_experiment_helper.py': 'VALUE = 7\n',
+            metadata + '/METADATA': 'Metadata-Version: 2.1\nName: zipzi-experiment-helper\nVersion: 1.0.0\n',
             metadata + '/WHEEL': 'Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n',
         }
         files[metadata + '/RECORD'] = ''.join(name + ',,\n' for name in files) + metadata + '/RECORD,,\n'
@@ -436,14 +436,14 @@ with model.edit('alternative triangulation') as edit:
                 archive.writestr(name, content)
         for packet in (first, second):
             script = packet / 'solution.py'
-            script.write_text('from kasane_experiment_helper import VALUE\nassert VALUE == 7\n' + script.read_text())
+            script.write_text('from zipzi_experiment_helper import VALUE\nassert VALUE == 7\n' + script.read_text())
         runner = first / 'runner.py'
         runner.write_text('''import os, subprocess
 from pathlib import Path
-packet = Path(os.environ['KASANE_PACKET'])
-python = os.environ['KASANE_PYTHON']
-subprocess.check_call([os.environ['KASANE_UV'], 'pip', 'install', '--python', python,
-                      str(packet / 'kasane_experiment_helper-1.0.0-py3-none-any.whl')])
+packet = Path(os.environ['ZIPZI_PACKET'])
+python = os.environ['ZIPZI_PYTHON']
+subprocess.check_call([os.environ['ZIPZI_UV'], 'pip', 'install', '--python', python,
+                      str(packet / 'zipzi_experiment_helper-1.0.0-py3-none-any.whl')])
 subprocess.check_call([python, str(packet / 'solution.py'), '--output', str(packet / 'output')])
 ''')
         try:
@@ -455,14 +455,14 @@ subprocess.check_call([python, str(packet / 'solution.py'), '--output', str(pack
             self.assertFalse((second / '.venv').exists())
             before = harness.read(self.root / 'host/trials/deps-first/environment-before.json')
             after = harness.read(self.root / 'host/trials/deps-first/agent/environment.json')
-            self.assertFalse(any('kasane-experiment-helper' in p for p in before['requirements']))
-            self.assertTrue(any('kasane-experiment-helper' in p for p in after['requirements']))
+            self.assertFalse(any('zipzi-experiment-helper' in p for p in before['requirements']))
+            self.assertTrue(any('zipzi-experiment-helper' in p for p in after['requirements']))
             self.assertTrue(after['sdk_unchanged'])
             self.cli('review', '--trial', 'deps-first', '--reviewer', 'test', '--human-prompts', '0',
                      '--public-api', 'yes', '--trace', str(self.root / 'host/trials/deps-first/agent/stdout.log'),
                      '--notes', 'synthetic shared environment control')
         finally:
-            subprocess.check_call(['uv', 'pip', 'uninstall', '--python', self.python, 'kasane-experiment-helper'])
+            subprocess.check_call(['uv', 'pip', 'uninstall', '--python', self.python, 'zipzi-experiment-helper'])
         rows = json.loads(self.cli('summarize'))['trials']
         self.assertTrue(next(r for r in rows if r['trial'] == 'deps-first')['independent_success'])
 

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["maturin==1.15.0"]
+build-backend = "maturin"
+
+[project]
+name = "zipzi"
+dynamic = ["version"]
+requires-python = ">=3.14,<3.15"
+description = "Scriptable 2D model authoring SDK"
+license = "MIT"
+license-files = ["LICENSE-MIT", "THIRD_PARTY_NOTICES.md"]
+readme = "README.md"
+
+[project.urls]
+Repository = "https://github.com/pakholeung37/zipzi-2d"
+Documentation = "https://github.com/pakholeung37/zipzi-2d/blob/main/crates/zipzi-python/API.md"
+
+[tool.maturin]
+python-source = "python"
+module-name = "zipzi._native"
+bindings = "pyo3"

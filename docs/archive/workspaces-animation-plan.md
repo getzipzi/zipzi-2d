@@ -20,7 +20,7 @@
 
 以现有 `.model3.json` 导入流程为入口，加载其引用的 moc3、纹理、motion、expression，以及已有的 physics / pose。单独的 moc3 不包含动作和表情资源，首版不增加裸 moc3 的资源关联向导，也不扫描目录猜测未注册的资源。
 
-导入后保持用户当前 workspace，不自动开始播放。首次启动默认为 Modeling；窗口可以恢复上次使用的 workspace。保存、重新打开 Kasane 项目后，同样可以预览项目已有的动作和表情。
+导入后保持用户当前 workspace，不自动开始播放。首次启动默认为 Modeling；窗口可以恢复上次使用的 workspace。保存、重新打开 Zipzi 项目后，同样可以预览项目已有的动作和表情。
 
 Motions 按 model3 的 group / entry 展示。不能仅按 clip UUID 去重，因为同一个 clip 的不同注册项可能有不同的淡入淡出配置。项目中存在但未注册到 group 的 clip 放在“未分组”中，使用 clip 自身配置。Expressions 使用资源名称并保留稳定的内部标识。
 
@@ -65,7 +65,7 @@ Space 不抢占文本输入、模态对话框或已有控件的必要键盘行�
 | motion 选择、expression 选择、时刻、运行状态 | 每个 DocumentSession 的 Animation 状态 | 仅内存，不写入项目和 SDK 历史 |
 | SDK MotionPreview、seek 缓存、几何缓存 | 动画预览执行器 | 可丢弃；关闭文档时释放 |
 
-引入最小的 `WorkspaceKind::{Modeling, Animation}`。现有 `editor-core/src/workspace.rs` 管理窗口内的文档和任务，不等同于新的工作模式；保留职责或按需改名，避免让 workspace 同时指布局、文档容器和播放状态。现有 `CommandScope::Workspace` 表示窗口级命令范围，同样不能被误用成 Modeling / Animation 模式。
+引入最小的 `WorkspaceKind::{Modeling, Animation}`。现有 `zipzi-editor-core/src/workspace.rs` 管理窗口内的文档和任务，不等同于新的工作模式；保留职责或按需改名，避免让 workspace 同时指布局、文档容器和播放状态。现有 `CommandScope::Workspace` 表示窗口级命令范围，同样不能被误用成 Modeling / Animation 模式。
 
 布局配置建议使用带 workspace 键的新配置文件，写入任务必须捕获具体 workspace，避免延迟写入覆盖另一个布局。Reset Layout 只重置当前 workspace。缺失或无效配置只恢复对应默认值；旧 `layout.json` 不导入、不编写迁移器。
 
@@ -112,9 +112,9 @@ Expression 是持续生效的参数效果，不人为赋予一个 motion 式的�
 
 ### 核心播放控制
 
-新增 `editor-core/src/animation.rs`，承载资源投影、纯数据的预览描述、播放状态转换和 SDK 适配。将每个文档的控制状态挂在 `DocumentSession`，通过 Editor 暴露带 DocumentId 校验的命令。拟定命令包括选择 motion、选择／清除 expression、播放／暂停、归零、seek 和重置预览。
+新增 `zipzi-editor-core/src/animation.rs`，承载资源投影、纯数据的预览描述、播放状态转换和 SDK 适配。将每个文档的控制状态挂在 `DocumentSession`，通过 Editor 暴露带 DocumentId 校验的命令。拟定命令包括选择 motion、选择／清除 expression、播放／暂停、归零、seek 和重置预览。
 
-通过 [Document](../crates/editor-core/src/document.rs) 暴露创建 detached `MotionPreview` 所需的受控接口，不把可写 AuthoringSession 暴露给 UI。SDK 预览持有独立快照；播放求值不调用 `SetPreviewParameter(s)`，不提交 EditSession，不累积历史、不改变 modified。
+通过 [Document](../crates/zipzi-editor-core/src/document.rs) 暴露创建 detached `MotionPreview` 所需的受控接口，不把可写 AuthoringSession 暴露给 UI。SDK 预览持有独立快照；播放求值不调用 `SetPreviewParameter(s)`，不提交 EditSession，不累积历史、不改变 modified。
 
 model3 注册项使用 `schedule_motion_entry(group, index, time)`；未分组 clip 使用 `schedule_motion`。保存内部选择时，同时保留注册位置与 clip 标识用于校验，文档变化后不能仅凭旧 index 播放另一个条目。
 
@@ -130,13 +130,13 @@ model3 注册项使用 `schedule_motion_entry(group, index, time)`；未分组 c
 
 每个异步结果至少携带 DocumentId、workspace、模型 generation、预览 generation、请求序号和实际求值时间。渲染结果沿用同一身份；拒绝其他文档、旧 workspace、旧预览及请求序号倒退的帧。连续播放允许同一 generation 内晚到但比已显示帧更新的结果，不能要求每一帧都等于最新请求而造成持续拒帧。拖动期间允许时间向后，但显示的请求序号必须递增；循环 motion 只在本次拖动开始时重建第一圈。暂停、精确 seek、重置时提高接受下界，阻止之前的播放或拖动帧覆盖最终目标帧。
 
-当前 [DocumentSession::scene](../crates/editor-core/src/session.rs) 同时构造画面与建模 picking 几何。Animation 只需运行时画面，需拆出共享渲染描述和可选的建模交互数据，避免每帧重建对象树、缩略图、拾取几何和建模覆盖层。保留现有 Metal 渲染器及 [preview worker](../crates/editor/src/preview.rs) 的请求合并和 GPU 背压。
+当前 [DocumentSession::scene](../crates/zipzi-editor-core/src/session.rs) 同时构造画面与建模 picking 几何。Animation 只需运行时画面，需拆出共享渲染描述和可选的建模交互数据，避免每帧重建对象树、缩略图、拾取几何和建模覆盖层。保留现有 Metal 渲染器及 [preview worker](../crates/editor/src/preview.rs) 的请求合并和 GPU 背压。
 
 播放面板读取动画 snapshot；建模面板仍读取文档投影。画面及需要精确对应的参数读数使用实际求值／呈现时间，不能拿新的时钟值标记旧画面。错误和 coverage 诊断去重后展示，不逐帧追加通知。
 
 ### 运行时画面与透明度
 
-Animation 的 [SceneSnapshot](../crates/editor-core/src/scene.rs) 使用 SDK 运行时帧，不经过 Modeling 的 `viewport_frame` 隐藏过滤。不修改或清除文档中的 editor hidden / locked 元数据，切回 Modeling 后保持原来的编辑可见性。
+Animation 的 [SceneSnapshot](../crates/zipzi-editor-core/src/scene.rs) 使用 SDK 运行时帧，不经过 Modeling 的 `viewport_frame` 隐藏过滤。不修改或清除文档中的 editor hidden / locked 元数据，切回 Modeling 后保持原来的编辑可见性。
 
 将 `MotionSnapshot::model_opacity` 纳入共享渲染描述，Modeling 使用默认值 1。阶段二先固定其兼容语义：相邻 SDK observer 当前在 `apply_model_opacity` 开启时将该值乘入各 drawable 的 opacity；最终模型合成后再整体乘透明度是另一种效果，两者在重叠和混合时不能互换。使用有重叠、遮罩和 Offscreen 的 fixture 对照现有 observer 与项目采用的运行时参考，确定一致的应用位置后再接入，不能仅根据字段名称选择合成方案。
 
@@ -148,7 +148,7 @@ Animation 的 [SceneSnapshot](../crates/editor-core/src/scene.rs) 使用 SDK 运
 
 - [docking.rs](../crates/editor/src/docking.rs)：两种默认布局、workspace 对应的面板校验和独立布局读写；共享一个中央画布实体，避免重复注册 Panel identity。
 - [ui.rs](../crates/editor/src/ui.rs)、[canvas.rs](../crates/editor/src/canvas.rs)：移除 Space 临时抓手，保留现有中键平移；按 workspace 提供画布内容和工具入口。
-- [commands.rs](../crates/editor-core/src/commands.rs)、[keybindings.rs](../crates/editor/src/keybindings.rs)、[menus.rs](../crates/editor/src/menus.rs)：统一命令注册和可用性，提供播放入口与状态；不制作两套快捷键配置。
+- [commands.rs](../crates/zipzi-editor-core/src/commands.rs)、[keybindings.rs](../crates/editor/src/keybindings.rs)、[menus.rs](../crates/editor/src/menus.rs)：统一命令注册和可用性，提供播放入口与状态；不制作两套快捷键配置。
 - `crates/editor/src/workspace/`：切换控件和播放控制条；`panels/` 新增 motion、expression 和预览信息面板。
 - `crates/editor/locales/`：中英文名称、空态、禁用说明、资源及播放错误文案。
 
@@ -203,7 +203,7 @@ Animation 的 [SceneSnapshot](../crates/editor-core/src/scene.rs) 使用 SDK 运
 
 ## 验证计划
 
-### editor-core
+### zipzi-editor-core
 
 新增 `workspaces`、`animation` 测试模块，使用小型确定性 fixture 覆盖：
 
@@ -248,7 +248,7 @@ cargo fmt --all -- --check
 - 当前 canvas 已支持中键平移；此次输入改动重点是删除 Space 抓手分支并统一播放命令。
 - 当前 scene 缓存与建模 picking 几何耦合，且现有帧接受规则围绕建模交互；动画需要独立失效和呈现规则，不能仅靠每帧全窗口 redraw 接入。
 
-相邻实现依据：`../kasane-2d/modules/kasane-sdk/src/session.rs`、`modules/kasane-animation/src/motion_preview.rs`、`expression.rs` 及 `tests/motion_preview.rs`。阶段二接入后台播放与运行时帧，并补充共享 canonical 步进和透明度 API；阶段三复用其表情调度、组合求值和 seek 缓存完成控制与定位。
+相邻实现依据：`../zipzi-2d/modules/zipzi-sdk/src/session.rs`、`modules/zipzi-animation/src/motion_preview.rs`、`expression.rs` 及 `tests/motion_preview.rs`。阶段二接入后台播放与运行时帧，并补充共享 canonical 步进和透明度 API；阶段三复用其表情调度、组合求值和 seek 缓存完成控制与定位。
 
 ## 实施记录
 
@@ -277,13 +277,13 @@ cargo fmt --all -- --check
 - 首次按视口适配模型。切文档、workspace、保存、失焦、隐藏或模态暂停并清理时钟锚点；非活动文档只保留描述和时间。帧交付只通知 Canvas、PlaybackBar 与 Preview Info，避免逐帧刷新建模面板。
 - `SceneSnapshot::model_opacity` 在 Modeling 为 1，Animation 使用 SDK snapshot 值。共享 `apply_model_opacity` 与现有 observer host policy 一致：逐 drawable、遮罩和 Offscreen 合成前应用一次。复用已有 Framework renderer color alpha 参考，不对最终整图额外乘 alpha。重叠 + mask + Offscreen fixture 在 0 / 0.5 / 1 与 observer 实际 Metal 图像比较，最大通道差不超过 1/255，且验证与最终图像半透明的差别。
 - 验证：新增 6 个 core 测试（包含本地 Mao model3 的连续 / 冷回放一致性）、2 个 headless 播放测试、后台取消 / 挂起测试、Metal opacity 图像测试。真实截图新增 `animation-motion-zero.png` 与 `animation-motion-one-second.png`，检查动画像素改变、实际时间为 1s、历史和 modified 不变；切回 Modeling 的像素恢复仍通过。
-- 检查：编辑器 `cargo test --locked --workspace`、`cargo check --locked --workspace`、`cargo fmt --all -- --check`；相邻 SDK `cargo test --locked -p kasane-animation -p kasane-sdk-observe` 与 `cargo fmt --all -- --check`。SDK 改动及其新 API 要求见 DEPENDENCIES.md。
+- 检查：编辑器 `cargo test --locked --workspace`、`cargo check --locked --workspace`、`cargo fmt --all -- --check`；相邻 SDK `cargo test --locked -p zipzi-animation -p zipzi-sdk-observe` 与 `cargo fmt --all -- --check`。SDK 改动及其新 API 要求见 DEPENDENCIES.md。
 
 下一阶段实现 expression 单独 / 组合预览、触发记录与立即清除，以及进度尺和确定性 seek。本阶段尚未开放 expression 控制或时间拖动，也未完成阶段四、五的全部诊断和性能验收。
 
 ### 2026-10-12：阶段三
 
-- 阶段二已提交：编辑器 `e8b4cfe`（`Implement Motion playback in the Animation workspace`）；相邻 kasane-2d `c90bdc5`（`Support canonical animation playback and shared model opacity`）。DEPENDENCIES.md 已记录 SDK 提交。
+- 阶段二已提交：编辑器 `e8b4cfe`（`Implement Motion playback in the Animation workspace`）；相邻 zipzi-2d `c90bdc5`（`Support canonical animation playback and shared model opacity`）。DEPENDENCIES.md 已记录 SDK 提交。
 - AnimationSession 增加稳定 expression ID 选择与按时间、调用顺序保存的临时触发记录。后台请求包含完整 schedule，连续选择和清除可以安全合并；同一预览的 Motion / Expression / Physics / Pose 仍全部由 SDK 求值，不修改 authoring preview 或历史。
 - 首次选择和切换表情在当前时刻激活，并保留原播放／暂停状态；重复选择不追加记录。非循环定位和归零保留本轮记录；在旧时刻选择另一表情会丢弃之后的触发，保留同一时刻的调用顺序。
 - Clear Expression 清空整个表情 schedule，重建相同 motion 到当前时刻，恢复原播放状态；不使用保留 schedule 的 SDK reset。Reset Preview 清空选择和触发记录，暂停并返回零时刻；无 motion 的表情使用独立持续时钟。

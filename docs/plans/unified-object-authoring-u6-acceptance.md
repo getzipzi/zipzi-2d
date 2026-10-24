@@ -52,16 +52,16 @@
   headless_tests::properties::properties_ime
 
 # 实际模型、动画与原生 Metal。
-env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace \
-  --features kasane-editor/test-support --test acceptance \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked --workspace \
+  --features zipzi-editor/test-support --test acceptance \
   --test native_render --test animation_acceptance
 
 # 当时截图版本含 authoring；最终已移除该新增场景。另跑了既有 Properties、Physics 与 compact。
-env -u KASANE_DEV_SESSION_DIR \
-  KASANE_SCREENSHOT_DIR="$PWD/target/u6-screenshots" \
-  cargo test --locked --workspace --features kasane-editor/test-support \
+env -u ZIPZI_DEV_SESSION_DIR \
+  ZIPZI_SCREENSHOT_DIR="$PWD/target/u6-screenshots" \
+  cargo test --locked --workspace --features zipzi-editor/test-support \
   --test headless_screenshot
-# 分别设置 KASANE_SCREENSHOT_SCENE=properties / physics / compact 后重复上一命令。
+# 分别设置 ZIPZI_SCREENSHOT_SCENE=properties / physics / compact 后重复上一命令。
 
 cargo fmt --all -- --check
 git diff --check
@@ -102,7 +102,7 @@ Apple M4（Mac16,10）、16 GiB；Mao 实际模型，Editor `8b435dc` 对比当�
 
 ### Opacity 定向复核
 
-5 对交替进程，仅执行 `mesh_opacity_drag`；每进程 5 次预热、20 次手势、12 次更新。更新＋CPU 预览 p50 为基线 **0.328 ms**、当前 **0.318 ms**；各进程 p50 范围分别为 0.316–0.488、0.297–0.455 ms，P95 中位数为 1.290、1.188 ms。定向场景未复现全链采样的偏高，不能将一次较高汇总值直接归因为新增 UI 适配。此次仅核查 CPU 探针实际依赖的 editor-core、SDK 与工作区清单，确认它们和已保存二进制的来源一致；UI acceptance 文件不进入该依赖链。
+5 对交替进程，仅执行 `mesh_opacity_drag`；每进程 5 次预热、20 次手势、12 次更新。更新＋CPU 预览 p50 为基线 **0.328 ms**、当前 **0.318 ms**；各进程 p50 范围分别为 0.316–0.488、0.297–0.455 ms，P95 中位数为 1.290、1.188 ms。定向场景未复现全链采样的偏高，不能将一次较高汇总值直接归因为新增 UI 适配。此次仅核查 CPU 探针实际依赖的 zipzi-editor-core、SDK 与工作区清单，确认它们和已保存二进制的来源一致；UI acceptance 文件不进入该依赖链。
 
 原始数据与逐进程结果：`target/u6-opacity-performance/focused.json`、`focused-*.jsonl.gz`。此前一次短复测因 acceptance 源码变动被来源守卫拒绝，其部分样本已丢弃，不混入任何结果。CPU 复核与工作量回归未显示稳定新增负担；这些观测不提供统计等效性或 UI 延迟保证。
 

@@ -22,17 +22,17 @@
 - [窗口输入路由](../../crates/editor/src/input_routing.rs) 按当前渲染帧的区域 hitbox 解析悬停与捕获，涵盖 viewport、Timeline 与辅助面板，裁剪、遮挡、标签切换后重新命中；离窗清除普通目标。悬停不转移焦点，文本、数值、菜单及字符输入保持控件优先级。业务快捷键在窗口入口只解析一次，用同一 Command 检查重复和执行；GPUI keymap 保留菜单加速键显示以及控件 Enter／Escape，不再重复分发业务键。
 - Timeline 使用独立的 `TimelineId`／`TimelineBinding`，命令、候选与 scrub 记录实例身份。隐藏／重建使旧绑定失效，只取消该实例的候选或 scrub；数值拖动的全局 UI 捕获按窗口、binding 和候选 edit ID 登记、释放。延迟停用回调同时核对活动代数和领域 token。
 - [panel 生命周期](../../crates/editor/src/panel_lifecycle.rs) 统一窗口激活、可见性与实例注册协调；关闭、保存、上下文切换及阻塞 UI 仍调用 core 的 `EditingLifecycle`。参数和网格对话框保存 `EditingContextToken`，文档切走再返回不能复活旧提交，领域版本校验继续保留；窗口暂时失焦只释放交互捕获，不使同一上下文中的对话框草稿失效。
-- [Inspection](../../crates/editor-core/src/inspection.rs) 显式区分 Modeling 的对象／主对象和 Animation 的资源／channel／key 来源，携带 DocumentId 与上下文 token；属性面板读取活动编辑上下文，不用显示名称或列表位置引用对象。
+- [Inspection](../../crates/zipzi-editor-core/src/inspection.rs) 显式区分 Modeling 的对象／主对象和 Animation 的资源／channel／key 来源，携带 DocumentId 与上下文 token；属性面板读取活动编辑上下文，不用显示名称或列表位置引用对象。
 - 导航尺寸和逻辑像素点统一为 `ViewportMetrics`／`ViewportPoint`，`ModelPoint` 使用原点相对、X 右 Y 上的模型坐标，视口直接消费求值结果；局部空间在对象编辑边界转换，zoom 表示每模型单位的逻辑像素数。网格对话框图片组件归并为 `MeshGenerationPreview`，与编辑器视图共用 `ViewState::zoom_about` 的锚点缩放数学。
 
 
-第一批验证：`cargo test --locked -p editor-core`（255 passed，1 ignored）、`cargo test --locked -p kasane-editor --lib`（238 passed，1 ignored）和格式检查通过。`./scripts/test.sh` 的 Python、core、headless、截图与前置 Metal 检查通过，但本地 Mao 模型的 `timeline_acceptance` 在 Natural 手势阶段报告 `native dense drag did not change presented pixels`；修改前的 HEAD `0f56a72` 在相同依赖和模型上独立复现同一失败，完整测试尚未全绿。
+第一批验证：`cargo test --locked -p zipzi-editor-core`（255 passed，1 ignored）、`cargo test --locked -p zipzi-editor --lib`（238 passed，1 ignored）和格式检查通过。`./scripts/test.sh` 的 Python、core、headless、截图与前置 Metal 检查通过，但本地 Mao 模型的 `timeline_acceptance` 在 Natural 手势阶段报告 `native dense drag did not change presented pixels`；修改前的 HEAD `0f56a72` 在相同依赖和模型上独立复现同一失败，完整测试尚未全绿。
 
 第二批验证：core 264 passed（1 ignored），headless UI 与命令／菜单测试 242 passed（1 ignored）；Timeline overview、curves、候选与取消恢复的原生 Metal 截图通过。完整脚本再次通过 Python、core、headless、三份本地模型 Animation 验收、默认截图和前置 Metal 检查，最终仍停在上述已确认的 Timeline 像素断言失败。
 
 第三批验证：core 270 passed（1 ignored），headless UI 243 passed（1 ignored），格式与 diff 检查通过。新增测试覆盖同种实例的命令目标、缩放边界、尺寸与 revision 隔离、独立文档恢复、保存成功／失败与冻结期间新增实例、编辑上下文独立于布局、另一实例 resize 不取消建模候选，以及主实例替换后拒绝旧帧。Timeline 专项 Metal 截图通过；完整脚本通过 Python、core、headless、三份真实模型 Animation 验收、默认截图与前置 Metal 检查，仍停在已确认的 Mao Timeline 像素断言失败。
 
-第四批验证：core 275 passed（1 ignored），UI 247 passed（启用 test-support 后 249 passed，1 ignored），生产配置 `cargo check --locked -p kasane-editor`、格式与 diff 检查通过。新增 core 回归覆盖共享求值、实例请求与命中几何、慢实例接受中间候选帧、悬停／框选 overlay 的 binding 归属，以及无 UI token 的领域输入在隐藏／销毁时取消；headless 回归覆盖实际焦点目标和实例错误隔离。双 Modeling 与双 Animation 使用生产 worker 的原生 Metal 场景通过，移动左侧时右侧区域均为 0 像素变化，右侧 GPU 请求号不变；连续双实例导航最终均呈现最新投影。Timeline overview、curves、候选与取消恢复专项截图通过。最终完整脚本通过 Python、core、UI、三份真实模型 Animation 验收、默认及双视图截图、前置 Metal 与 overlay 检查，仍停在已独立确认的 Mao Timeline `native dense drag did not change presented pixels` 断言。产品布局未开放复制 viewport；悬停快捷键路由仍不属于本批已验证能力。
+第四批验证：core 275 passed（1 ignored），UI 247 passed（启用 test-support 后 249 passed，1 ignored），生产配置 `cargo check --locked -p zipzi-editor`、格式与 diff 检查通过。新增 core 回归覆盖共享求值、实例请求与命中几何、慢实例接受中间候选帧、悬停／框选 overlay 的 binding 归属，以及无 UI token 的领域输入在隐藏／销毁时取消；headless 回归覆盖实际焦点目标和实例错误隔离。双 Modeling 与双 Animation 使用生产 worker 的原生 Metal 场景通过，移动左侧时右侧区域均为 0 像素变化，右侧 GPU 请求号不变；连续双实例导航最终均呈现最新投影。Timeline overview、curves、候选与取消恢复专项截图通过。最终完整脚本通过 Python、core、UI、三份真实模型 Animation 验收、默认及双视图截图、前置 Metal 与 overlay 检查，仍停在已独立确认的 Mao Timeline `native dense drag did not change presented pixels` 断言。产品布局未开放复制 viewport；悬停快捷键路由仍不属于本批已验证能力。
 
 Mao Timeline 基线问题已定位为验收取样错误：Full Effect 模式在 `t=0` 的淡入权重为零，候选关键帧已从 0 变为 9.024，但最终参数与像素理应保持不变。原生拖动验收改为选择有效淡入结束后、淡出开始前且仍可向上修改的关键帧，保留重复轨道顺序及像素变化／取消精确恢复断言，并增加最终参数变化检查与报告中的取样时间、淡入／淡出信息。core 回归覆盖 Full Effect 零时刻屏蔽候选、Editing 直接采样候选，以及正权重时的候选变化和取消恢复。Mao Natural／Dense 专项原生验收与 42 项 Timeline core 测试通过。修复后 `./scripts/test.sh` 完整通过：Python 28 项、core 276 passed（1 ignored）、UI 249 passed（1 ignored）、三份真实模型 Animation 验收、默认及双视图截图、Metal／overlay 检查、Mao Timeline 全流程及 doc-tests；上述历史基线失败已解除。
 
@@ -64,12 +64,12 @@ Mao Timeline 基线问题已定位为验收取样错误：Full Effect 模式在 
 | --- | --- |
 | [具体 viewport](../../crates/editor/src/viewports/mod.rs) 与共享 surface / navigation 已分离 | 内容与业务输入由固定类型声明，布局只负责组合 |
 | [ToolbarRegistry](../../crates/editor/src/viewports/toolbar.rs) 为两种 viewport 分别提供完整工具列表 | 不再按 workspace 或工具字符串过滤 |
-| [DocumentSession](../../crates/editor-core/src/session.rs) 已拆分编辑上下文与按 ViewportId 保存的导航状态 | 保留共享 SDK 历史与领域选择 |
-| [呈现状态](../../crates/editor-core/src/viewport/presentation.rs) 按实例保存请求与命中帧 | 有序中间帧仍可接受；切换、隐藏与重建核验 binding |
+| [DocumentSession](../../crates/zipzi-editor-core/src/session.rs) 已拆分编辑上下文与按 ViewportId 保存的导航状态 | 保留共享 SDK 历史与领域选择 |
+| [呈现状态](../../crates/zipzi-editor-core/src/viewport/presentation.rs) 按实例保存请求与命中帧 | 有序中间帧仍可接受；切换、隐藏与重建核验 binding |
 | [ViewportPanels](../../crates/editor/src/docking/viewports.rs) 区分具体 panel 与内部 surface 的 entity 身份 | 注册工厂和标题使用具体 panel，测试可同时创建同种实例 |
 | [预览渲染队列](../../crates/editor/src/preview.rs) 按 viewport 合并请求与结果 | 共享 Metal 执行器，实例之间不覆盖排队结果 |
 | [快捷键安装](../../crates/editor/src/keybindings.rs) 与 [窗口路由](../../crates/editor/src/input_routing.rs) 分开 | 当前可见 hitbox 决定局部目标，真实控件焦点负责控件输入 |
-| [Panel catalog](../../crates/editor-core/src/panels.rs) 与 [布局校验](../../crates/editor/src/docking/layout.rs) 声明各 workspace 的必需具体 viewport | 产品布局保持唯一主视图，旧版本恢复默认 |
+| [Panel catalog](../../crates/zipzi-editor-core/src/panels.rs) 与 [布局校验](../../crates/editor/src/docking/layout.rs) 声明各 workspace 的必需具体 viewport | 产品布局保持唯一主视图，旧版本恢复默认 |
 
 
 [MeshGenerationPreview](../../crates/editor/src/ui/mesh_generation_preview.rs) 是网格生成对话框的图片与线段预览组件，内容使用归一化坐标，在绘制边界转换为 ViewportPoint；与 ViewportState 共用锚点缩放数学，保留对话框自己的图片、平移与 wireframe 状态。
@@ -182,7 +182,7 @@ Generate Mesh 是一次命令，不是持续活动工具。Hand 可以表现为�
 4. 普通 panel / viewport 命令路由到鼠标所在的可见区域，且只在该上下文允许时执行。
 5. 未被消费的窗口或文档命令进入相应全局入口；无人处理的事件保持未处理。
 
-悬停变更只更新路由状态，不调用 `window.focus()`。局部快捷键解析应在窗口入口显式结合悬停上下文与真实控件焦点，避免仅靠 `KasaneViewport` 焦点谓词实现悬停，也避免同一个按键被 GPUI action 与手动路由执行两次。保留 GPUI 的输入法、控件键盘行为和可访问性焦点机制。
+悬停变更只更新路由状态，不调用 `window.focus()`。局部快捷键解析应在窗口入口显式结合悬停上下文与真实控件焦点，避免仅靠 `ZipziViewport` 焦点谓词实现悬停，也避免同一个按键被 GPUI action 与手动路由执行两次。保留 GPUI 的输入法、控件键盘行为和可访问性焦点机制。
 
 | 情况 | 预期行为 |
 | --- | --- |
@@ -226,13 +226,13 @@ DocumentId + ViewportId + binding_generation
 
 | 优先级 | 重构项 | 当前依据与实施结果 |
 | --- | --- | --- |
-| 必须先做 | Command 与快捷键上下文 | [Command](../../crates/editor-core/src/commands.rs) 携带明确 viewport / Timeline panel 目标、统一状态查询及调用来源，窗口入口解析悬停与捕获 |
-| 必须先做 | 编辑会话与布局分离 | [DocumentSession](../../crates/editor-core/src/session.rs) 已移除 workspace；Modeling、Animation 编辑上下文与实例导航状态已分离 |
+| 必须先做 | Command 与快捷键上下文 | [Command](../../crates/zipzi-editor-core/src/commands.rs) 携带明确 viewport / Timeline panel 目标、统一状态查询及调用来源，窗口入口解析悬停与捕获 |
+| 必须先做 | 编辑会话与布局分离 | [DocumentSession](../../crates/zipzi-editor-core/src/session.rs) 已移除 workspace；Modeling、Animation 编辑上下文与实例导航状态已分离 |
 | 必须先做 | 交互归属与编辑生命周期 | [Modeling 输入](../../crates/editor/src/viewports/modeling.rs)、[Timeline](../../crates/editor/src/panels/timeline/lifecycle.rs) 和对话框分别维护取消规则；统一身份核验、捕获释放与提交取消边界 |
-| 与实例隔离一起做 | 内容求值与视图呈现分离 | [AnimationIdentity](../../crates/editor-core/src/animation/provenance.rs) 已去除导航信息；AnimationViewportIdentity 与 Modeling FrameVersion 明确包含实例呈现身份，共享可复用求值结果 |
-| 与实例隔离一起做 | 选择与检视来源 | [PanelContext](../../crates/editor-core/src/objects/context.rs) 保留对象选择与导航，Inspection 显式提供各编辑上下文的检视来源 |
+| 与实例隔离一起做 | 内容求值与视图呈现分离 | [AnimationIdentity](../../crates/zipzi-editor-core/src/animation/provenance.rs) 已去除导航信息；AnimationViewportIdentity 与 Modeling FrameVersion 明确包含实例呈现身份，共享可复用求值结果 |
+| 与实例隔离一起做 | 选择与检视来源 | [PanelContext](../../crates/zipzi-editor-core/src/objects/context.rs) 保留对象选择与导航，Inspection 显式提供各编辑上下文的检视来源 |
 | 与实例隔离一起做 | Panel 注册与生命周期 | [DockWorkspace](../../crates/editor/src/docking.rs) 包含大量具体 entity 和类型分支；统一注册元数据、实例查询和可见性回调 |
-| 与实例隔离一起做 | 保存期间的会话状态 | [FrozenDocument](../../crates/editor-core/src/workspace/entry.rs) 已冻结按 ViewportId 保存的状态映射；保存成功、失败与后台完成均覆盖恢复验证 |
+| 与实例隔离一起做 | 保存期间的会话状态 | [FrozenDocument](../../crates/zipzi-editor-core/src/workspace/entry.rs) 已冻结按 ViewportId 保存的状态映射；保存成功、失败与后台完成均覆盖恢复验证 |
 | 随功能逐步收敛 | 变更通知和根视图职责 | [EditorView](../../crates/editor/src/lib.rs) 手动分发刷新并管理全部帧；提取具体职责，按变更种类通知受影响的实例 |
 
 ### Command 与快捷键契约
@@ -249,7 +249,7 @@ DocumentId + ViewportId + binding_generation
 
 快捷键架构覆盖 macOS、Windows 和 Linux 的平台差异，当前应用运行与原生验收仍以 macOS 为基线。渲染后端和窗口宿主的其他平台移植属于独立工作，不能用键位映射通过测试代表整个应用已经跨平台可用。
 
-当前 [默认命令键位](../../crates/editor-core/src/commands.rs) 和 Timeline 多处直接使用 `cmd-*`；[配置校验](../../crates/editor-core/src/settings.rs) 的系统保留键与文本保护规则也主要面向 macOS。已有 `PlatformKeyboardMapper` 处理键盘映射，GPUI 的 [Keystroke](../../vendor/gpui-fast/src/platform/keystroke.rs) 支持 `secondary`：macOS 映射为 Command，其他平台映射为 Control。`cmd` 本身表示平台键，与 `super`、`win` 共享解析语义，不会自动变成 Control。
+当前 [默认命令键位](../../crates/zipzi-editor-core/src/commands.rs) 和 Timeline 多处直接使用 `cmd-*`；[配置校验](../../crates/zipzi-editor-core/src/settings.rs) 的系统保留键与文本保护规则也主要面向 macOS。已有 `PlatformKeyboardMapper` 处理键盘映射，GPUI 的 [Keystroke](../../vendor/gpui-fast/src/platform/keystroke.rs) 支持 `secondary`：macOS 映射为 Command，其他平台映射为 Control。`cmd` 本身表示平台键，与 `super`、`win` 共享解析语义，不会自动变成 Control。
 
 将命令语义、平台默认绑定和用户覆盖分开。通用应用快捷键使用 `secondary`，真实 Control、Alt、Shift 以及平台专用动作保留明确含义。
 

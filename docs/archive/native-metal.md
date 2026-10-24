@@ -1,11 +1,11 @@
 # Native Metal integration
 
 Native Metal is the sole editor rendering path. No backend flags are needed.
-`editor-render` owns this adapter; `editor-core` supplies SDK-evaluated frames
+`zipzi-editor-render` owns this adapter; `zipzi-editor-core` supplies SDK-evaluated frames
 and immutable decoded source textures without depending on Metal or GPUI.
 
 ```sh
-cargo run --locked --release -p kasane-editor
+cargo run --locked --release -p zipzi-editor
 cargo test --locked --workspace
 ./scripts/build-app.sh
 ```
@@ -14,7 +14,7 @@ cargo test --locked --workspace
 
 GPUI retains its original native Metal renderer and AppKit/IME implementation.
 Window/PlatformWindow exposes that renderer's MTLDevice and MTLCommandQueue.
-Kasane uses that device and calls `MetalRenderer::encode` on a command buffer from
+Zipzi uses that device and calls `MetalRenderer::encode` on a command buffer from
 **GPUI's queue**. `MetalContext::from_device` creates a convenience queue, but the
 editor deliberately does not submit to it.
 
@@ -49,7 +49,7 @@ in `../vendor/README.md`.
 ## Tests and limits
 
 `crates/editor/tests/native_metal.rs` uses the real native GPUI headless renderer
-and Kasane Metal renderer. It checks colors, combined document/element opacity,
+and Zipzi Metal renderer. It checks colors, combined document/element opacity,
 content masks, UI overlay order, hidden content, immutable previous frames, resizing,
 and transparent RGBA/BGRA targets. Only the final output is read back for assertions;
 there is no intermediate readback between renderers.
@@ -61,7 +61,7 @@ normal preview worker and overlay renderer. This target runs on the main thread
 for AppKit text shaping, waits for the accepted current preview and thumbnails,
 and exports PNGs for the fixture, canvas selection, and hidden model. Pixel
 checks cover repeatability, selection overlay changes, removal of model fill,
-and lossless PNG round trips. Run `cargo test --locked -p kasane-editor --test
+and lossless PNG round trips. Run `cargo test --locked -p zipzi-editor --test
 headless_screenshot`; see the README for output directory options.
 
 The user has confirmed that the native Metal editor works. Detailed UI/IME and
@@ -69,9 +69,9 @@ window lifecycle verification remain manual; no computer-use testing is performe
 
 The preview resolution follows the canvas area and display scale. The adapter
 retains immutable scene snapshots, skipping model sync on view-only changes.
-Kasane caches mesh buffers and versioned raw masks, batches draws within a pass,
+Zipzi caches mesh buffers and versioned raw masks, batches draws within a pass,
 and renders Replace directly into the output. Output/offscreen textures are not pooled.
 See [the 120 Hz interaction measurements](interaction-performance.md) for the
 measured budget, workloads, commands and remaining display validation. The
-local Kasane checkout must include the new native backend and accompanying changes;
+local Zipzi checkout must include the new native backend and accompanying changes;
 the earlier pinned revision alone is insufficient.

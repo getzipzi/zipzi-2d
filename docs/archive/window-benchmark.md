@@ -10,7 +10,7 @@
   target/window-benchmark-mao 300 120
 ```
 
-参数依次是模型、输出目录、每种负载的正式样本数、输入频率。支持 `model3.json` 和已保存的 Kasane 项目；后者可覆盖保存状态下的 dirty 查询。默认每种负载先预热 30 次，可用 `KASANE_BENCH_WARMUP` 覆盖。
+参数依次是模型、输出目录、每种负载的正式样本数、输入频率。支持 `model3.json` 和已保存的 Zipzi 项目；后者可覆盖保存状态下的 dirty 查询。默认每种负载先预热 30 次，可用 `ZIPZI_BENCH_WARMUP` 覆盖。
 
 脚本先检查 Mac 已解锁，再编译 Release，关闭 Metal HUD，使用输出目录内的独立配置，然后启动并激活测试窗口。运行期间保持窗口在待测显示器上、可见且有焦点，避免操作它或并行运行编译。失去焦点/隐藏会中止测试并在报告中标为失败。结束后测试进程自动退出，不保存模型更改，不影响另一个编辑器进程。
 
@@ -81,11 +81,11 @@ trace 缺少结束记录、写入丢失、负耗时、GPU 失败、自动负载�
 仅启用追踪，不启用自动负载，即可记录用户真实操作从 GPUI 事件入口开始的流程：
 
 ```sh
-KASANE_FRAME_TRACE="$PWD/target/manual-frame-trace.jsonl" \
-  ./target/release/kasane-editor
+ZIPZI_FRAME_TRACE="$PWD/target/manual-frame-trace.jsonl" \
+  ./target/release/zipzi-editor
 ```
 
-正常退出后运行相同报告脚本。输出文件必须不存在，避免覆盖旧数据。异步操作或延迟执行的命令可能没有同步输入 ID，这些请求仍记录内部阶段，但不伪造输入到显示延迟。没有设置 `KASANE_FRAME_TRACE` 时不安装计时 sink，不读计时钟、不创建日志线程或注册 GPU 显示回调。
+正常退出后运行相同报告脚本。输出文件必须不存在，避免覆盖旧数据。异步操作或延迟执行的命令可能没有同步输入 ID，这些请求仍记录内部阶段，但不伪造输入到显示延迟。没有设置 `ZIPZI_FRAME_TRACE` 时不安装计时 sink，不读计时钟、不创建日志线程或注册 GPU 显示回调。
 
 ## 初版验证与采样
 
@@ -100,4 +100,4 @@ KASANE_FRAME_TRACE="$PWD/target/manual-frame-trace.jsonl" \
 
 自动采样时，画布忽略非注入的鼠标移动，避免原生悬浮事件取消模拟中键拖动。手动追踪与普通编辑器不受影响；两次因此未产生平移请求的旧采样保留为不完整记录，未用于性能对比。
 
-当前 editor 默认使用完整 Metal 网格覆盖层。追踪时显式设置 `KASANE_TRACE_BATCH_MESH_EDGES=1` 使用 GPUI 合批基线，`=0` 使用 GPUI 逐边基线；不设置则使用 Metal，元数据记录 `metal_mesh_overlay`。以上历史结果保持原始含义，详见 [覆盖层重构](mesh-overlay-rendering.md)。
+当前 editor 默认使用完整 Metal 网格覆盖层。追踪时显式设置 `ZIPZI_TRACE_BATCH_MESH_EDGES=1` 使用 GPUI 合批基线，`=0` 使用 GPUI 逐边基线；不设置则使用 Metal，元数据记录 `metal_mesh_overlay`。以上历史结果保持原始含义，详见 [覆盖层重构](mesh-overlay-rendering.md)。

@@ -1,7 +1,7 @@
 # 渲染边界重构建议
 
 状态：2026-09-23，第一阶段已接入 Godot 并完成回归与 benchmark。下面保留设计评审依据；实际完成范围见文末。提取阶段的性能基线在 4471373 保存。
-范围：kasane-core 的帧输出、kasane-preview、kasane-render、kasane-render-godot 与 Godot 适配层。未审查 wgpu 实现。
+范围：zipzi-core 的帧输出、zipzi-preview、zipzi-render、zipzi-render-godot 与 Godot 适配层。未审查 wgpu 实现。
 
 ## 判断
 
@@ -12,7 +12,7 @@
 
 ## 当前代码中的依据
 
-1. `kasane-render/src/lib.rs` 的 RenderPass 明确规定 Composite 在子绘制之前发出；`plan.rs::prepare_passes` 实现了这一顺序。它适用于提前挂接 Godot Sprite，但不是生产者先完成、消费者再读取的执行顺序。新的执行式后端还得重新解释这套协议。
+1. `zipzi-render/src/lib.rs` 的 RenderPass 明确规定 Composite 在子绘制之前发出；`plan.rs::prepare_passes` 实现了这一顺序。它适用于提前挂接 Godot Sprite，但不是生产者先完成、消费者再读取的执行顺序。新的执行式后端还得重新解释这套协议。
 2. `MaskKey` 把 consumer 和 scale 放进共享资源身份；Godot masks.rs 的注释解释了 consumer 是为了视口依赖。逻辑 mask 的内容身份与后端需要的物理实例被混在一起。
 3. `plan.rs::mask_reserved_bytes` 遍历 mask 顶点估算 bounds，Godot `update_mask_texture` 又通过节点快照重新计算。前者用 f64 尺度和至少 2 像素，后者用 f32 和至少 1 像素；估算与分配不是同一份描述。
 4. 共享 planner 固定 4096 上限和每个 offscreen 8 字节/像素；这可以是当前 Godot 的保守策略，但不能作为所有后端的物理成本事实。
@@ -111,11 +111,11 @@ Godot 可在 lowering 中按 consumer 复制物理 mask；其它后端可以复�
 
 ## crate 与 API 的职责
 
-- kasane-core：求值和不可变发布，保留现有静态几何与帧缓存；不拥有 GPU 资源。
-- kasane-render：场景编译、句柄解析、逻辑依赖、共享几何 bounds/质量策略；不规定 Godot consumer 分配策略。
-- kasane-render-godot：Godot lowering、节点/材质/纹理/viewport 缓存和增量同步。
-- kasane-preview：项目资源校验与刷新编排；资源准备成功和画面完成是两个状态。其现有小型 AssetResolver 可保留，不扩张成所有 backend 的万能接口。
-- kasane-godot：GDExtension API、文档信号、资源入口和宿主展示。
+- zipzi-core：求值和不可变发布，保留现有静态几何与帧缓存；不拥有 GPU 资源。
+- zipzi-render：场景编译、句柄解析、逻辑依赖、共享几何 bounds/质量策略；不规定 Godot consumer 分配策略。
+- zipzi-render-godot：Godot lowering、节点/材质/纹理/viewport 缓存和增量同步。
+- zipzi-preview：项目资源校验与刷新编排；资源准备成功和画面完成是两个状态。其现有小型 AssetResolver 可保留，不扩张成所有 backend 的万能接口。
+- zipzi-godot：GDExtension API、文档信号、资源入口和宿主展示。
 
 内部用类型化 Result/Status/Stats；Dictionary 转换留在 GDExtension 方法。
 MeshView 的公开检查接口仍需校验，renderer 内部可走已验证输入路径，避免 Rust -> PackedArray -> Vec -> Dictionary 往返。
@@ -139,7 +139,7 @@ Godot 的 pre/post draw、viewport 可见性和 pending_draws 策略属于宿主
 无变化路径应无同步工作；纯相机应无顶点上传；静态拓扑不应逐帧重新扫描 indices/UV；稳定结构的规划 scratch 应复用容量。
 全动画场景仍允许 O(V) 的求值和动态检查，不承诺总帧处理恒定时间。
 
-第一轮执行 `cargo test -p kasane-render -p kasane-preview --locked`：15 个单元测试通过，doc tests 通过（无用例）。后续实际 benchmark 与第二轮验证见下文。未修改运行时代码，新架构的收益仍需在实现后实测。
+第一轮执行 `cargo test -p zipzi-render -p zipzi-preview --locked`：15 个单元测试通过，doc tests 通过（无用例）。后续实际 benchmark 与第二轮验证见下文。未修改运行时代码，新架构的收益仍需在实现后实测。
 
 ## 第二轮验证：必须进入方案的约束
 
@@ -210,7 +210,7 @@ Godot 的节点归属与 queue_free 不应进入共享层；删除父 surface �
 ### 测量范围与实施门槛
 
 重构前 c21c111 对比 de62a6b，两负载各重复 3 次：fixture CPU mean +3.33%，frame mean +0.27%；Ren CPU mean 约不变，frame mean -0.64%。两者通过现有 5% 门槛，不能据此证明下一方案会更快。
-原始记录见 [基线结果](../benchmarks/kasane-preview/results/20260923-backend-extraction/summary.md)。
+原始记录见 [基线结果](../benchmarks/zipzi-preview/results/20260923-backend-extraction/summary.md)。
 
 benchmark 调用 `set_preview_values`，其返回时执行 inspection::get_frame，把 positions/UV/indices 等转换为 Dictionary。因此 refresh_cpu_ms 包含求值、渲染同步和整帧 API 返回值构造；frame_ms 还包含宿主调度等待，不是纯 GPU 时间。
 后续保留这个端到端门槛，另外增加轻量 set_preview_parameter 路径或内部阶段计时；不能换掉旧测量入口后把差值全部归功于 renderer。
@@ -219,8 +219,8 @@ benchmark 调用 `set_preview_values`，其返回时执行 inspection::get_frame
 第二轮验证命令：
 
 ```sh
-cargo test -p kasane-core --test evaluation_workspace_tests --test preview_state_tests --locked -- --nocapture
-cargo test -p kasane-render -p kasane-preview --locked
+cargo test -p zipzi-core --test evaluation_workspace_tests --test preview_state_tests --locked -- --nocapture
+cargo test -p zipzi-render -p zipzi-preview --locked
 python3 tools/validate_render_boundary.py
 ```
 
@@ -244,7 +244,7 @@ GPU 脚本用当前 Release 库，在独立临时项目运行，不改用户正�
 
 验收：新增 5 个 ScenePlan 契约测试覆盖顺序、raw mask 依赖、跨 consumer 逻辑共享、重复源、结构替换、失败前置验证、静态容器复用及帧所有权。core/render/preview Rust 测试、renderer Clippy 通过；GPU 边界 163 项（23+106+34）及 destination-copy 正负对照、Godot 集成 188 项、官方 GPU 图像对照 84 项通过。
 
-[本轮 benchmark](../benchmarks/kasane-preview/results/20260923-scene-plan/summary.md)：相对同场重新运行的 de62a6b，fixture CPU mean -2.80%、frame mean +0.11%；Ren CPU mean -2.46%、CPU p95 -6.64%、frame mean -2.37%。两组均通过 5% 门槛，纹理显存和主要资源计数一致。相机的优化由零模型提交/零 CPU 几何同步计数验证；没有把参数 benchmark 的小幅变化冒充相机专用耗时测量。
+[本轮 benchmark](../benchmarks/zipzi-preview/results/20260923-scene-plan/summary.md)：相对同场重新运行的 de62a6b，fixture CPU mean -2.80%、frame mean +0.11%；Ren CPU mean -2.46%、CPU p95 -6.64%、frame mean -2.37%。两组均通过 5% 门槛，纹理显存和主要资源计数一致。相机的优化由零模型提交/零 CPU 几何同步计数验证；没有把参数 benchmark 的小幅变化冒充相机专用耗时测量。
 
 仍未实现的后续项：core 每网格 dirty/version 发布、模型帧提交中的拓扑验证缓存、材质/颜色节点的细粒度差分同步、内部 MeshView 类型化上传接口、物理池与延迟释放峰值的严格总预算、非 Godot backend 的迁移。`ScenePlan` 的 unversioned 输入仍全量验证，`ViewLayout` 仍有小容器分配；这轮不声称模型动画路径已做到零分配或全局最优。
 
@@ -259,6 +259,6 @@ GPU 脚本用当前 Release 库，在独立临时项目运行，不改用户正�
 后续仍包括 core 每网格 dirty/version 发布、内部 MeshView 类型化上传接口（现有热路径仍有 PackedArray 往返与重复检查）、offscreen 材质增量同步、小容器分配及延迟释放峰值预算。这轮没有将模型帧路径描述为零分配或全局最优。
 
 
-[第二阶段实测](../benchmarks/kasane-preview/results/20260923-incremental-sync/summary.md)：fixture CPU mean -0.83%、frame mean +1.50%；Ren CPU mean -9.70%、CPU p95 -7.18%、frame mean -4.03%。均通过既有 5% 门槛，资源数量和 GPU 上传次数一致。Ren 的 121 次提交仅同步节点顺序 1 次、drawable 材质 221 次。
+[第二阶段实测](../benchmarks/zipzi-preview/results/20260923-incremental-sync/summary.md)：fixture CPU mean -0.83%、frame mean +1.50%；Ren CPU mean -9.70%、CPU p95 -7.18%、frame mean -4.03%。均通过既有 5% 门槛，资源数量和 GPU 上传次数一致。Ren 的 121 次提交仅同步节点顺序 1 次、drawable 材质 221 次。
 
 第二阶段验收：77 个 Rust 测试、renderer Clippy、174 项渲染边界检查及目标颜色读取正负对照、188 项 Godot 集成检查、84 项 GPU 图像对照通过。新增契约覆盖未变模型、透明度变化和绘制顺序变化的差分同步。

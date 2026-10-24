@@ -49,7 +49,7 @@ arguments and output paths.
 | `workspace/workspace.sh`, `workspace/workspace_tools.py` | Shared path and Cargo artifact handling |
 
 See [test coverage](#test-coverage), [CI coverage](#ci-coverage) and
-[Editor setup](../crates/kasane-editor/README.md#develop-and-test). No mode on either domain test shell
+[Editor setup](../crates/zipzi-editor/README.md#develop-and-test). No mode on either domain test shell
 script means the expensive full gate. Prefer focused tests during development.
 Editor entrypoints resolve checkout paths themselves, including absolute calls
 from another directory. The Python tooling runner also resolves its own checkout.
@@ -65,7 +65,7 @@ metadata coverage gate. Vendor packages are not workspace members.
 ```sh
 python3 tools/workspace/cargo_domain.py --check
 python3 tools/workspace/cargo_domain.py sdk check --locked --all-targets
-python3 tools/workspace/cargo_domain.py editor check --locked --all-targets --features kasane-editor/test-support
+python3 tools/workspace/cargo_domain.py editor check --locked --all-targets --features zipzi-editor/test-support
 ./tools/test-sdk.sh fast physics_editing::
 ./tools/test-editor.sh ui i18n::
 ```
@@ -77,12 +77,12 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 
 | Entry | Coverage |
 | --- | --- |
-| SDK `fast` | kasane-sdk library and ordinary integration; optional filter |
+| SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
 | SDK `mesh` / `regression` | Daily alpha mesh / all 15 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
 | SDK `python` / `wheel` | Rebuilt Debug extension / isolated Release wheel gates |
 | SDK `full` or no argument | SDK formatting, complete 15-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
-| Editor `fast` | editor-core library and synthetic integration |
+| Editor `fast` | zipzi-editor-core library and synthetic integration |
 | Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
 | Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance |
 | Editor `tools` | All repository tooling tests (automatic discovery) |
@@ -92,7 +92,7 @@ The SDK full gate's extra arguments retain their original wheel-gate meaning;
 Editor full extra arguments go to Cargo tests. Editor `fast` and `regression` omit
 example compilation and doctests; `full` includes both. Focused Cargo arguments and arguments
 after `--` retain their normal meaning. Editor Rust gates unset
-`KASANE_DEV_SESSION_DIR` to isolate tests from live development sessions.
+`ZIPZI_DEV_SESSION_DIR` to isolate tests from live development sessions.
 Formatting, Rust, tooling and wheel failures stop the relevant full gate and
 propagate their exit status. Complete suites remain expensive: use focused modes
 during iteration and reserve full runs for broad regression acceptance.
@@ -136,7 +136,7 @@ uv run --locked python tools/test_tools.py -k failure
 
 SDK `fast`/`mesh` gates run CPU behavior, while observe/render tests need a GPU.
 Editor UI and native gates require macOS and Metal. Full local licensed-model
-requirements are documented in the [Editor README](../crates/kasane-editor/README.md#local-model-acceptance).
+requirements are documented in the [Editor README](../crates/zipzi-editor/README.md#local-model-acceptance).
 
 See [test layout and prerequisites](tests/README.md). These tests exercise
 tooling, not the built SDK extension. For the latter use `test-sdk.sh python`:
@@ -149,7 +149,7 @@ alternatives). Python 3.14 returns a failure when a selected module has no match
 wheel acceptance deliberately rejects filters.
 
 Daily SDK `mesh` and `regression` skip only `alpha_mesh_stress::`; the 65536-vertex
-boundary remains in daily checks. `stress`, plain `cargo test -p kasane-sdk` and
+boundary remains in daily checks. `stress`, plain `cargo test -p zipzi-sdk` and
 SDK `full` retain the complete fixed-seed matrix. Tests are not globally ignored.
 
 ## Validation and fixtures
@@ -166,8 +166,8 @@ SDK `full` retain the complete fixed-seed matrix. Tests are not globally ignored
 | `packaging/package_source.py`, `packaging/verify_artifacts.py` | Source packaging, notice and built-artifact checks |
 
 ```sh
-uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
-uv run --locked python tools/validation/validate_sdk.py --wheel /absolute/path/to/kasane.whl
+uv build --wheel --python 3.14 --out-dir target/python-wheels crates/zipzi-python
+uv run --locked python tools/validation/validate_sdk.py --wheel /absolute/path/to/zipzi.whl
 ```
 
 An observe-enabled wheel can use `--require-gpu --require-image-reference`.
@@ -198,8 +198,8 @@ macOS and Metal; model-dependent runs need separately obtained local assets.
 # Paired Release editing-chain totals, nested stage attribution and work counts:
 uv run --locked python tools/benchmarks/property-chain-benchmark.py models/local/mao/runtime/mao_pro.model3.json target/property-chain-run --reader-policy unique
 # Continuous Animation workspace drags in a native window (no per-input frame wait):
-KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=canvas ./tools/benchmarks/window-benchmark.sh MODEL target/animation-canvas-drag 2400 240
-KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./tools/benchmarks/window-benchmark.sh MODEL target/animation-number-drag 2400 240
+ZIPZI_BENCH_ANIMATION=1 ZIPZI_BENCH_ANIMATION_DRAG=canvas ./tools/benchmarks/window-benchmark.sh MODEL target/animation-canvas-drag 2400 240
+ZIPZI_BENCH_ANIMATION=1 ZIPZI_BENCH_ANIMATION_DRAG=number ./tools/benchmarks/window-benchmark.sh MODEL target/animation-number-drag 2400 240
 ```
 
 `runtime/runtime_inventory.py`, `runtime/runtime_baseline.py` and `runtime/runtime-migration-inventory.py`
@@ -212,7 +212,7 @@ runs require the documented local inputs. Generated output belongs in `target/`.
 ## Local distribution artifacts
 
 The Editor source distribution is a **workspace archive**. Its Rust macros embed
-icons and locales from `crates/kasane-editor/assets/`; GPUI patches live outside
+icons and locales from `crates/zipzi-editor/assets/`; GPUI patches live outside
 the Editor crate. The three Editor crates declare `publish = false`; use the
 complete source layout below so the workspace patches and licenses are present.
 This does not change Cargo package identities, APIs or licenses.
@@ -220,11 +220,11 @@ This does not change Cargo package identities, APIs or licenses.
 ```sh
 uv run --locked python tools/packaging/package_source.py target/releases/zipzi-2d-source.tar.gz
 uv run --locked python tools/packaging/verify_artifacts.py --source target/releases/zipzi-2d-source.tar.gz
-uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
-uv run --locked python tools/packaging/verify_artifacts.py --wheel /absolute/path/to/kasane.whl
+uv build --wheel --python 3.14 --out-dir target/python-wheels crates/zipzi-python
+uv run --locked python tools/packaging/verify_artifacts.py --wheel /absolute/path/to/zipzi.whl
 ./tools/build-editor-app.sh editor debug
 ./tools/build-editor-app.sh editor release
-uv run --locked python tools/packaging/verify_artifacts.py --app 'target/Kasane Editor.app'
+uv run --locked python tools/packaging/verify_artifacts.py --app 'target/Zipzi Editor.app'
 ```
 
 The source tool includes tracked and non-ignored new source files plus initialized
@@ -237,12 +237,12 @@ Extract the `zipzi-2d/` directory and build from that workspace root.
 
 The wheel carries MIT and third-party notices under `.dist-info/licenses`, the
 native extension, `py.typed` and `_native.pyi`. Distribution copies of the two
-notice files live in `crates/kasane-python/`; `packaging/verify_artifacts.py` compares them
+notice files live in `crates/zipzi-python/`; `packaging/verify_artifacts.py` compares them
 byte-for-byte to the canonical root files before CI builds a wheel. Update both
 copies when the canonical text changes. An isolated installed-wheel gate is:
 
 ```sh
-uv run --locked python tools/validation/validate_sdk.py --wheel /absolute/path/to/kasane.whl
+uv run --locked python tools/validation/validate_sdk.py --wheel /absolute/path/to/zipzi.whl
 ```
 
 The CPU wheel report is `partial` when CPU checks pass but GPU/dual-Core checks

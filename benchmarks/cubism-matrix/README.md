@@ -2,7 +2,7 @@
 
 This project uses 40 independent instances of Nijiiro Mao to compare two
 Cubism Core ABI providers across Cubism Framework Native and a Core-only runner,
-plus an imported Kasane model rendered through native Metal. Compatibility must
+plus an imported Zipzi model rendered through native Metal. Compatibility must
 be established before performance numbers are treated as valid.
 
 | Case | Core provider | Host/rendering stack | Purpose |
@@ -11,7 +11,7 @@ be established before performance numbers are treated as valid.
 | `purism-native` | Purism Core v6 ABI | Cubism Framework Native | Isolate Purism Core |
 | `cubism-core` | Official Cubism Core | Core-only | Pure computation baseline |
 | `purism-core` | Purism Core v6 ABI | Core-only | Pure computation comparison |
-| `kasane-metal` | Kasane authoring evaluation | kasane-render-metal | End-to-end Kasane native rendering load |
+| `zipzi-metal` | Zipzi authoring evaluation | zipzi-render-metal | End-to-end Zipzi native rendering load |
 
 The Core implementation is selected at link time. The matrix therefore creates
 separate artifacts; it never switches Core implementations inside a
@@ -19,14 +19,14 @@ running process. All Native cases share one C++ runner.
 
 ## Layout
 
-- `config/matrix.json` defines the four Core/host combinations and Kasane case.
+- `config/matrix.json` defines the four Core/host combinations and Zipzi case.
 - `config/mao-40.json` is the shared workload definition. Its 10x4 grid keeps
   each model near the previous on-screen size while doubling update/render load.
 - `runners/native/` is the Cubism Framework OpenGL runner.
 - `runners/core/` calls only the shared Cubism Core C ABI. It separately measures
   startup, parameter writes, idle/animated updates, drawable readback, and a
   40-model update-plus-readback working set.
-- `runners/kasane/` imports Mao once, advances 40 independent animation previews,
+- `runners/zipzi/` imports Mao once, advances 40 independent animation previews,
   evaluates their geometry, assembles one scene, and submits it with native Metal.
 - `tools/matrix.py` validates, prepares, builds, and runs individual cases.
 - `results/historical/` preserves measurements from before this restructure.
@@ -106,13 +106,13 @@ alternating order, and write median data to
 uv run --locked python benchmarks/cubism-matrix/tools/matrix.py benchmark-core --repeats 3
 ```
 
-## Kasane versus official Native rendering
+## Zipzi versus official Native rendering
 
-On macOS, build and run the Kasane case by itself:
+On macOS, build and run the Zipzi case by itself:
 
 ```sh
-uv run --locked python benchmarks/cubism-matrix/tools/matrix.py build-kasane kasane-metal
-uv run --locked python benchmarks/cubism-matrix/tools/matrix.py run kasane-metal
+uv run --locked python benchmarks/cubism-matrix/tools/matrix.py build-zipzi zipzi-metal
+uv run --locked python benchmarks/cubism-matrix/tools/matrix.py run zipzi-metal
 ```
 
 For a repeatable comparison with the official Cubism Core and Framework Native
@@ -122,27 +122,27 @@ runner, use interleaved trials:
 uv run --locked python benchmarks/cubism-matrix/tools/matrix.py benchmark-render --repeats 3
 ```
 
-The command saves all trials, medians, and the Kasane/Cubism FPS ratio in
-`artifacts/results/latest-render-comparison.json`. Kasane also saves its last
-frame as `artifacts/results/latest-kasane-metal.png`; an empty frame is rejected.
+The command saves all trials, medians, and the Zipzi/Cubism FPS ratio in
+`artifacts/results/latest-render-comparison.json`. Zipzi also saves its last
+frame as `artifacts/results/latest-zipzi-metal.png`; an empty frame is rejected.
 Both cases use the same model hash, 40 instances, grid, viewport, mipmaps,
-warmup, and sampling duration. Kasane's frame time includes animation, geometry
+warmup, and sampling duration. Zipzi's frame time includes animation, geometry
 evaluation, scene assembly, Metal buffer synchronization, encoding, and GPU
 completion. It renders to an offscreen target. The official Native case updates
 the Cubism runtime and presents an OpenGL window. Interpret the reported ratio
 as a stack-level comparison; the two graphics APIs and presentation paths differ.
 This is **not a matched rendering workload**: Native hardcodes model height
-`0.44` and vertical offset `1.27`, whereas Kasane fits the canvas to `cell_fill`.
+`0.44` and vertical offset `1.27`, whereas Zipzi fits the canvas to `cell_fill`.
 Native swaps with VSync disabled but does not explicitly wait for GPU completion;
-Kasane waits after every frame. Native uses the Framework's default 256×256 mask
-buffer; Kasane sizes masks at canvas-pixel density with padding. Native selects
+Zipzi waits after every frame. Native uses the Framework's default 256×256 mask
+buffer; Zipzi sizes masks at canvas-pixel density with padding. Native selects
 an Idle motion (Mao currently has only Idle index 0), rather than reading the
 configured motion. The `model_hash` hashes only model3.json, not all referenced
 assets. The comparison validator checks instance count, viewport, mipmaps, and
 that hash; it does not establish pixel equivalence or equal mask quality.
 
-Use unchanged Kasane workload/settings for optimization acceptance. The
-[Metal optimization audit](results/historical/2026-09-29-kasane-metal-optimized.md)
+Use unchanged Zipzi workload/settings for optimization acceptance. The
+[Metal optimization audit](results/historical/2026-09-29-zipzi-metal-optimized.md)
 records the 20 FPS target and before/after measurements.
 
 ## Measurement rules
@@ -155,7 +155,7 @@ records the 20 FPS target and before/after measurements.
 
 ### Animation and geometry profiling
 
-The Kasane result separates `p50_animation_update_ms` (Motion, Expression,
+The Zipzi result separates `p50_animation_update_ms` (Motion, Expression,
 Physics, Pose and rescheduling) from `p50_geometry_evaluation_ms` (drawable
 geometry, Part opacity and model opacity). The combined
 `p50_animation_evaluation_ms` remains the enclosing end-to-end phase. Each
@@ -173,7 +173,7 @@ read these timers; the matrix runner calls `evaluate_drawables_timed`.
 For deterministic CPU output comparison across code revisions:
 
 ```sh
-cargo run --release --locked -p cubism-matrix-kasane --example evaluation_trace -- \
+cargo run --release --locked -p cubism-matrix-zipzi --example evaluation_trace -- \
   models/local/mao/runtime/mao_pro.model3.json /tmp/evaluation-trace.jsonl
 ```
 

@@ -31,8 +31,8 @@ python3 scripts/property-chain-benchmark.py \
   models/local/mao/runtime/mao_pro.model3.json target/c6-property-retained --reader-policy retained
 ./scripts/timeline-benchmark.sh target/c6-timeline 120
 
-# 相邻 kasane-2d 根目录；各命令顺序执行
-cargo build --locked --release -p kasane-sdk \
+# 相邻 zipzi-2d 根目录；各命令顺序执行
+cargo build --locked --release -p zipzi-sdk \
   --example c6_authoring_benchmark --example c4_authoring_benchmark
 target/release/examples/c6_authoring_benchmark /absolute/path/to/model.model3.json
 target/release/examples/c4_authoring_benchmark /absolute/path/to/model.model3.json

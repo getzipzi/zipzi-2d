@@ -115,7 +115,7 @@ Uncaptured capability returns `CAPTURE_NOT_AVAILABLE`, never a fresh snapshot.
 The O1 public subset uses `RawInspectionRequest(roi, resolution,
 padding_canvas)` and exposes `inspect`, `inspect_animation`, `render`,
 `InspectionPacket.save`, and `open_inspection_packet` for raw context views.
-Its manifest is `kasane-inspection-packet` schema 2, with explicit capability
+Its manifest is `zipzi-inspection-packet` schema 2, with explicit capability
 flags. The full `InspectionRequest`/`InspectionView` contract above, label and
 presentation channels, CPU queries after analysis reopen, batch layout and
 complete run report v2 are implemented in O2/O3. A live preview capture keeps

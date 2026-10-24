@@ -110,7 +110,7 @@ gd-cubism 保留为独立对照，不替换 Editor 的 Rust renderer。它对扩
 
 | ID | 必须实现 | 主要改动位置 | 完成条件 |
 |---|---|---|---|
-| F01 | 安全结构检查与兼容性报告分离 | `kasane-moc3/inspector.rs`、Godot 文件桥接 | 安全解析后一次列出全部阻塞项、数量、对象/字段；损坏文件不继续解引用 |
+| F01 | 安全结构检查与兼容性报告分离 | `zipzi-moc3/inspector.rs`、Godot 文件桥接 | 安全解析后一次列出全部阻塞项、数量、对象/字段；损坏文件不继续解引用 |
 | F02 | Parameter 类型 | core types/document、codec、bridge、参数面板 | Normal / BlendShape 导入、编辑、保存、导出一致；非法绑定类型组合拒绝 |
 | F03 | BlendShape key table、增量 binding、constraint | core、新增读写映射 | 稳定 ID、基准键、共享约束、目标类型和顺序均可检查与编辑 |
 | F04 | Mesh/Warp 增量求值 | core evaluation/keyforms | 位置、颜色、opacity、顺序按目标类型正确叠加 |
@@ -198,7 +198,7 @@ Mao 附带 Physics、Pose、DisplayInfo、8 个 Expression 和 7 个 Motion；mo
 
 ## 6. 验收计划
 
-沿用 [统一验收规则](../VALIDATION.md)，新增 `tools/validate_m3b.py` 作为计划中的入口，报告目录拟为 `target/kasane/m3b/`。**该入口当前不存在**，实现时再公布可执行命令。
+沿用 [统一验收规则](../VALIDATION.md)，新增 `tools/validate_m3b.py` 作为计划中的入口，报告目录拟为 `target/zipzi/m3b/`。**该入口当前不存在**，实现时再公布可执行命令。
 
 ### 6.1 结构与数值
 
@@ -227,7 +227,7 @@ Mao 附带 Physics、Pose、DisplayInfo、8 个 Expression 和 7 个 Motion；mo
 - 使用正式打包 Editor 完成导入、选择、参数预览、脚本编辑、保存重开、导出，不能只跑库测试或旧 demo。
 - 记录导入各阶段耗时、峰值内存、首帧 ready、参数连续拖动的 p50/p95、保存/导出耗时与 GPU 资源数。当前没有 Mao Editor 性能基线，阶段 A/B 后确定可复现硬件上的响应目标；测量前不承诺帧率，不预先为性能扩大架构。
 
-现有回归入口：`cargo test -p kasane-core -p kasane-moc3 -p kasane-project --locked`、`cargo test -p kasane-godot --lib --locked`、`cargo check --workspace --locked`，以及既有 M3/Godot/GPU 验证工具。新报告记录每条实际运行命令与状态；本设计文档不把历史结果或未执行命令记为通过。
+现有回归入口：`cargo test -p zipzi-core -p zipzi-moc3 -p zipzi-project --locked`、`cargo test -p zipzi-godot --lib --locked`、`cargo check --workspace --locked`，以及既有 M3/Godot/GPU 验证工具。新报告记录每条实际运行命令与状态；本设计文档不把历史结果或未执行命令记为通过。
 
 ## 7. 当前结论与后续范围
 

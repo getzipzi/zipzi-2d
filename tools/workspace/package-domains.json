@@ -1,24 +1,24 @@
 {
   "sdk": [
-    "cubism-matrix-kasane",
-    "kasane-animation",
-    "kasane-cmo3",
-    "kasane-core",
-    "kasane-live2d",
-    "kasane-moc3",
-    "kasane-moc3-psd",
-    "kasane-project",
-    "kasane-psd",
-    "kasane-python",
-    "kasane-render",
-    "kasane-render-metal",
-    "kasane-render-wgpu",
-    "kasane-sdk",
-    "kasane-sdk-observe"
+    "cubism-matrix-zipzi",
+    "zipzi-animation",
+    "zipzi-cmo3",
+    "zipzi-core",
+    "zipzi-live2d",
+    "zipzi-moc3",
+    "zipzi-moc3-psd",
+    "zipzi-project",
+    "zipzi-psd",
+    "zipzi-python",
+    "zipzi-render",
+    "zipzi-render-metal",
+    "zipzi-render-wgpu",
+    "zipzi-sdk",
+    "zipzi-sdk-observe"
   ],
   "editor": [
-    "editor-core",
-    "editor-render",
-    "kasane-editor"
+    "zipzi-editor-core",
+    "zipzi-editor-render",
+    "zipzi-editor"
   ]
 }

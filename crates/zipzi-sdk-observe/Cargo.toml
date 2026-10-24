@@ -1,0 +1,32 @@
+[package]
+name = "zipzi-sdk-observe"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Immutable observation inputs and GPU capture for Zipzi SDK"
+
+[features]
+default = ["framework-texture-filtering"]
+framework-texture-filtering = []
+
+[dependencies]
+zipzi-animation = { path = "../zipzi-animation" }
+zipzi-core = { path = "../zipzi-core" }
+zipzi-sdk = { path = "../zipzi-sdk" }
+zipzi-project = { path = "../zipzi-project" }
+zipzi-render = { path = "../zipzi-render" }
+png = { workspace = true }
+sha2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+zipzi-render-metal = { path = "../zipzi-render-metal" }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+zipzi-render-wgpu = { path = "../zipzi-render-wgpu" }
+wgpu = { workspace = true }

@@ -23,7 +23,7 @@ stub types. Signatures retain input and result types, with source locations for
 review. Public input/result declarations are recorded separately as local value
 types or backend references; their Rust definitions are not wire layouts.
 Private implementation types such as `Occupied` are excluded. The old
-`crates/kasane-python/python-coverage.json` has 123 entries and its checker reads
+`crates/zipzi-python/python-coverage.json` has 123 entries and its checker reads
 only selected source files. Its evidence is retained separately; it cannot
 establish complete connected coverage.
 
@@ -48,7 +48,7 @@ it is not a Rust compiler. New macros generating public APIs or changes to
 re-exports require review of discovery as well as regeneration. Trait-derived
 value operations (Clone, Debug, equality, serialization) are local value behavior,
 not remote operations. The native stub inventory records the current PyO3 type
-boundary even for types not exported by `kasane.__all__`.
+boundary even for types not exported by `zipzi.__all__`.
 
 ## Contracts for indexed APIs
 
@@ -155,7 +155,7 @@ The license-free fixture contains 128 12×12 mesh grids (21,632 vertices), an
 explicitly sampled parameter binding, a one-second parameter motion and a
 1024×1024 in-memory RGBA asset. IDs/pixels are deterministic and the driven
 geometry change is asserted. Its source is
-`crates/kasane-sdk/examples/support/runtime_fixture.rs`; later Runtime tests can
+`crates/zipzi-sdk/examples/support/runtime_fixture.rs`; later Runtime tests can
 reuse it without loading licensed models. The optional model uses its original
 SDK import API and is saved only into the fresh output directory.
 
@@ -169,7 +169,7 @@ For native control measurements independent of an imported model's parent
 invertibility, generate a separate small fixture:
 
 ```sh
-cargo run --locked --release -p kasane-sdk --example runtime_native_fixture -- /absolute/fresh/output
+cargo run --locked --release -p zipzi-sdk --example runtime_native_fixture -- /absolute/fresh/output
 ```
 
 It contains two visible 12×12 meshes, a faint framing quad, an asymmetric

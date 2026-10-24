@@ -44,7 +44,7 @@
 
 ## 复现
 
-先按 [`modules/kasane-python/README.md`](../../modules/kasane-python/README.md) 构建并安装带 `observe` feature 的 wheel，然后在仓库根目录运行：
+先按 [`modules/zipzi-python/README.md`](../../modules/zipzi-python/README.md) 构建并安装带 `observe` feature 的 wheel，然后在仓库根目录运行：
 
 ```sh
 .venv/bin/python docs/experiments/shirousagi_head_x.py --output output/head-x-experiment/new-run

@@ -77,11 +77,11 @@
 从仓库根目录运行：
 
 ```sh
-cargo test -p kasane-core -p kasane-moc3 -p kasane-project
+cargo test -p zipzi-core -p zipzi-moc3 -p zipzi-project
 cargo check --workspace
 python3 tools/validate_m3.py
 ```
 
 数值验收包含构造模型、外部 3.3 / 5.0 模型，以及绑定索引 0、独立颜色窗口、画布方向的变体。参数采样覆盖默认值、各参数边界、绑定关键值及中点、二/三轴绑定的关键值与中点组合。按 drawable ID 对齐，比较原 MOC3、导入 Document、再导出 MOC3 的位置、UV、拓扑、遮罩、颜色、透明度、可见性及实际叠放顺序；同时满足统一浮点阈值和 0.05 像素上限。
 
-报告、参数集合、Document 快照及两个 Core 的输出保存在 `target/kasane/m3/`。缺少必需外部模型或 SDK 时失败；错误报告包含具体对象、expected / actual，不将缺失输入或旧产物视为通过。工程测试另覆盖关系环不替换当前会话、两种入口的坏纹理诊断，以及脱离源文件后画布方向和绘制分组的保存重开。
+报告、参数集合、Document 快照及两个 Core 的输出保存在 `target/zipzi/m3/`。缺少必需外部模型或 SDK 时失败；错误报告包含具体对象、expected / actual，不将缺失输入或旧产物视为通过。工程测试另覆盖关系环不替换当前会话、两种入口的坏纹理诊断，以及脱离源文件后画布方向和绘制分组的保存重开。

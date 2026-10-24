@@ -2,7 +2,7 @@
 
 `input/project/` 是从真实 Shirousagi PSD 导入的可编辑静态工程；
 `input/Shirousagi.psd` 是原始 24 层素材。`input/references.json` 列出交付模型的
-参考帧及参数值。你拿不到原 rig。请使用公开 `kasane` API，让两只眼睛能**独立**
+参考帧及参数值。你拿不到原 rig。请使用公开 `zipzi` API，让两只眼睛能**独立**
 眨眼：`ParamEyeLOpen` 和 `ParamEyeROpen` 都是普通参数，范围 `[0,1]`、默认 `1`，
 `0` 为闭眼。创建参数时指定相同的运行时 ID，使导出的 model3/MOC3 可按这些 ID
 驱动。两眼同时闭合、只闭一眼和任意中间值都应自然；参考帧中的耳朵和身体动态

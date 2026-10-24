@@ -6,7 +6,7 @@ component selection but keep navigation and presentation independent.
 
 ## Where behavior lives
 
-[`editor-core/src/tools/`](../../crates/editor-core/src/tools/) groups interaction
+[`zipzi-editor-core/src/tools/`](../../crates/zipzi-editor-core/src/tools/) groups interaction
 behavior by operation:
 
 - `select.rs`: shared hit/selection preparation, deferred object clicks,
@@ -31,7 +31,7 @@ never own model transactions.
 
 ## Lifecycle
 
-[`viewport/interaction.rs`](../../crates/editor-core/src/viewport/interaction.rs)
+[`viewport/interaction.rs`](../../crates/zipzi-editor-core/src/viewport/interaction.rs)
 owns interaction acquisition and
 release for both UI and synchronous core clients:
 
@@ -118,7 +118,7 @@ Run focused checks from the repository root:
 ./tools/test-editor.sh ui input_routing::policy::
 ```
 
-The shell entrypoint clears `KASANE_DEV_SESSION_DIR`. See
+The shell entrypoint clears `ZIPZI_DEV_SESSION_DIR`. See
 [test coverage](../../tools/README.md#test-coverage) for broader gates.
 
 

@@ -9,7 +9,7 @@ Kit Dock 与布局持久化、CanvasView 与基础顶点工具；自动化回归
 
 ## 产品范围
 
-Kasane 是 Cubism Editor 的替代品。第一阶段仅做模型制作，包括后续的参数和关键形编辑；
+Zipzi 是 Cubism Editor 的替代品。第一阶段仅做模型制作，包括后续的参数和关键形编辑；
 不引入独立动画文档。采用单窗口、多模型标签页，每个模型先只有一个画布视图。
 
 Python 继续作为独立、无界面的 SDK 客户端。现阶段不嵌入 CPython，
@@ -33,11 +33,11 @@ Python 继续作为独立、无界面的 SDK 客户端。现阶段不嵌入 CPyt
 
 实现 agent 可根据职责内聚、依赖隔离、复用和测试需求，
 自行决定使用现有模块或新建 crate，无需为正常的 crate 拆分另行确认。
-现有 editor、editor-core、editor-render 是起点，不限制最终 crate 数量；
+现有 editor、zipzi-editor-core、zipzi-editor-render 是起点，不限制最终 crate 数量；
 拆分须保持业务核心不依赖 UI/GPUI、渲染不承担模型编辑和项目 IO，并避免循环依赖。
 交付说明中简述新增 crate 的职责与拆分理由即可。
 
-Editor 的应用状态与协调逻辑属于 editor-core；editor crate 仅承担 UI 与平台适配，
+Editor 的应用状态与协调逻辑属于 zipzi-editor-core；editor crate 仅承担 UI 与平台适配，
 包括 GPUI 控件、焦点、原生对话框、宿主任务调度和预览合成。
 当前已迁移文档/视口所有权、编辑命令、忙碌状态、加载结果处理、关闭判定与预览版本；
 后续多文档与工具协调也在 core 扩展，不能重新堆回 EditorView。
@@ -73,7 +73,7 @@ Editor 的应用状态与协调逻辑属于 editor-core；editor crate 仅承担
 - 后台任务与异步结果绑定文档身份，不能通过完成时的活跃标签页确定接收者。
 - 预览结果还须校验请求版本，避免切换文档或连续编辑后显示过期帧。
 
-首期默认：editor-core::Editor 承担工作区协调，每个打开的模型有独立文档会话。
+首期默认：zipzi-editor-core::Editor 承担工作区协调，每个打开的模型有独立文档会话。
 使用运行期 DocumentId 区分会话，不能直接以 SDK 模型 UUID 或文件路径充当会话身份：
 同一模型的两个文件副本可能有相同 UUID，未保存文档没有路径，另存为会改变路径。
 异步操作另带 OperationId，结果仅允许回到仍持有该任务的会话。
@@ -96,7 +96,7 @@ Editor 的应用状态与协调逻辑属于 editor-core；editor crate 仅承担
 
 ### 职责边界
 
-- editor-core 定义稳定的命令标识、参数、业务作用域、可用状态与执行入口。
+- zipzi-editor-core 定义稳定的命令标识、参数、业务作用域、可用状态与执行入口。
   编辑、文档、工具和视口命令都应有明确目标，不依赖某个按钮或菜单是否存在。
 - 菜单、工具栏和快捷键映射到同一命令，共用业务可用性判断。即使 UI 未及时禁用入口，
   core 仍须拒绝忙碌文档或无效目标上的操作。
@@ -157,11 +157,11 @@ UI 根据实际焦点与模态状态建立 GPUI 上下文，命令执行时固�
 | 部分 | 所有者与输出 |
 | --- | --- |
 | CanvasView | editor：测量画布实际区域、接收输入、处理焦点和捕获、合成模型纹理与辅助图形 |
-| ViewportState / ViewportTransform | editor-core：缩放、平移及坐标变换的唯一事实来源 |
-| 工具控制器 | editor-core：将画布输入转成选择、手势和 SDK 操作 |
-| SceneSnapshot | core 通过 SDK 求值得到不可变模型场景，交给 editor-render |
+| ViewportState / ViewportTransform | zipzi-editor-core：缩放、平移及坐标变换的唯一事实来源 |
+| 工具控制器 | zipzi-editor-core：将画布输入转成选择、手势和 SDK 操作 |
+| SceneSnapshot | core 通过 SDK 求值得到不可变模型场景，交给 zipzi-editor-render |
 | OverlaySnapshot | core 输出顶点、线段、选框、手柄和样式角色等纯数据，由 UI 或 renderer 绘制 |
-| 模型渲染器 | editor-render：模型材质、纹理、遮罩和最终作品内容，不认识编辑工具或选区 |
+| 模型渲染器 | zipzi-editor-render：模型材质、纹理、遮罩和最终作品内容，不认识编辑工具或选区 |
 
 辅助图形不写入模型、历史或导出内容。首期使用 GPUI 绘制少量控制点、线和选框，
 避免为每个顶点创建独立的 GPUI Entity 或事件监听器；密集网格需要时可转为 Metal 批量绘制，
@@ -237,7 +237,7 @@ DocumentId + SceneRevision + ViewportRevision。渲染任务另带 RequestId，
 保存失败解除冻结并保留文档及未保存状态。保存成功后才能完成依赖它的关闭请求。
 同一文档的写盘操作串行执行。
 
-当前 busy 属于 editor-core 中的单文档 Editor，UI 的 save_to 同步调用 Editor::save，仍会阻塞 UI 线程。
+当前 busy 属于 zipzi-editor-core 中的单文档 Editor，UI 的 save_to 同步调用 Editor::save，仍会阻塞 UI 线程。
 后续需将任务状态移到文档级，并验证 SDK 会话的后台保存移交方式。
 暂不开放保存期间继续编辑，也不额外设计快照保存协议。
 

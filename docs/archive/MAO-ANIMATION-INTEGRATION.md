@@ -9,12 +9,12 @@
 先构建 Python wheel 和已有的官方 Framework CPU probe，然后从源码目录外运行：
 
 ```sh
-uv build --wheel --python 3.14 --out-dir target/python-wheels modules/kasane-python
+uv build --wheel --python 3.14 --out-dir target/python-wheels modules/zipzi-python
 python3 tools/run_framework_animation_cpu_probe.py
 python3 tools/run_framework_cdi_probe.py
 cd /tmp
 uv run --no-project --no-cache --python 3.14 \
-  --with /absolute/path/to/target/python-wheels/kasane-0.1.0-cp314-cp314-macosx_11_0_arm64.whl \
+  --with /absolute/path/to/target/python-wheels/zipzi-0.1.0-cp314-cp314-macosx_11_0_arm64.whl \
   python /absolute/path/to/tools/run_mao_animation_integration.py
 ```
 

@@ -5,8 +5,8 @@
 ## 代码与边界
 
 - `evaluation.hpp` / `evaluate_frame`：纯内存求值，输出 renderer 与数据检查共用的 DrawableFrame，不调用编码器。
-- `moc3.hpp` / `kasane_moc3`：编码字节、model3.json、纹理槽描述；不访问文件或 Core ABI。
-- `package.hpp` / `kasane_package`：独立文件适配器，使用 libpng 解码校验素材，调用必需的 ArtifactValidator，再发布完整目录。
+- `moc3.hpp` / `zipzi_moc3`：编码字节、model3.json、纹理槽描述；不访问文件或 Core ABI。
+- `package.hpp` / `zipzi_package`：独立文件适配器，使用 libpng 解码校验素材，调用必需的 ArtifactValidator，再发布完整目录。
 - `moc3_sections.inc`：v5 的完整 152 个 section、显式字段宽度与 count 索引，来源为 Purism `moc3.h`。验收脚本自动核对字段表。
 - `moc3_tests.cpp`：同一构造/编辑程序分别链接官方 Core、Purism；不复用已有 MOC3 字节。
 

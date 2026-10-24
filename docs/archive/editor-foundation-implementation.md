@@ -15,7 +15,7 @@
 | editor / EditorView | 平台 Action/KeyBinding、文件对话框、后台执行器、属性控件和菜单 |
 | editor / docking + canvas | Kit DockArea/DockSkin、持久布局、独立 CanvasView、实测 bounds/DPI、焦点/指针捕获、辅助图形 |
 | editor / preview | 共享 GPUI device/queue；一个执行中请求与一个可替换的最新待执行请求 |
-| editor-render | 不可变 Metal 输出，消费 core 变换；按内容哈希与尺寸复用纹理，128 MiB 近期缓存 |
+| zipzi-editor-render | 不可变 Metal 输出，消费 core 变换；按内容哈希与尺寸复用纹理，128 MiB 近期缓存 |
 
 沿用三个业务 crate，模块拆分已维持 UI/核心/渲染边界，没有新增插件框架、历史栈或事件总线。
 
@@ -34,7 +34,7 @@
 
 ## 配置与键位安装
 
-macOS 默认目录为 `~/Library/Application Support/Kasane Editor`；可用 `KASANE_CONFIG_DIR`
+macOS 默认目录为 `~/Library/Application Support/Zipzi Editor`；可用 `ZIPZI_CONFIG_DIR`
 注入其他目录，测试只使用临时目录。键位配置为 `keybindings.json`，修改后重启生效：
 
 ```json

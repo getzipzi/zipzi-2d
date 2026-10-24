@@ -1,7 +1,7 @@
 [project]
-name = "kasane-dev"
+name = "zipzi-dev"
 version = "0.1.0"
-description = "Development and validation tools for the Kasane 2D monorepo"
+description = "Development and validation tools for the Zipzi 2D monorepo"
 requires-python = ">=3.14,<3.15"
 dependencies = []
 

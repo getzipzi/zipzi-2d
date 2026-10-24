@@ -1,4 +1,4 @@
-# Kasane 导入导出体验设计
+# Zipzi 导入导出体验设计
 
 状态：菜单、导出设置、快照发布与 Cubism 工程导入主流程已实现；真实 Mao 工程已完成导入、保存重开和双向输出验收。更新日期：2026-10-18。
 
@@ -8,13 +8,13 @@
 
 文件菜单按具体文件类型组织导入和导出。只有确实存在可调参数时才打开设置对话框；文件路径和保存位置使用系统原生面板选择。
 
-导入统一新建 Kasane 项目，不替换当前项目，不添加或合并图层。导出默认包含完整内容，不提供动作、表情、纹理或模型二进制的拆分入口。普通保存继续保存 Kasane 项目，不回写外部源文件。
+导入统一新建 Zipzi 项目，不替换当前项目，不添加或合并图层。导出默认包含完整内容，不提供动作、表情、纹理或模型二进制的拆分入口。普通保存继续保存 Zipzi 项目，不回写外部源文件。
 
 | 方向 | 菜单项 | 输入或产物 | 当前基础 |
 | --- | --- | --- | --- |
 | 导入 | Live2D 模型 | 选择 `.model3.json` 或 `.moc3`，通过 model3 入口完整导入 | 已接入 model3 导入及 MOC3 同目录入口解析 |
 | 导入 | PSD | `.psd`，保留现有导入行为，不开放可调参数 | 已有 PSD 导入 |
-| 导入 | Cubism 工程 | `.cmo3` / `.can3` 及关联资源，转换为 Kasane 项目 | 已新增原生 CAFF/XML 解析器，已验证真实 Mao 工程 |
+| 导入 | Cubism 工程 | `.cmo3` / `.can3` 及关联资源，转换为 Zipzi 项目 | 已新增原生 CAFF/XML 解析器，已验证真实 Mao 工程 |
 | 导出 | Live2D 运行时模型 | 完整 model3、MOC3、纹理、动作、表情、设置与附件 | 已接通菜单、设置、内存资源快照和完整包发布 |
 | 导出 | Cubism 工程 | 一组 CMO3/CAN3；没有 motions 且没有 expressions 时只输出 CMO3 | 已接通分组导出；模型独立输出时不生成空 CAN3 |
 
@@ -44,7 +44,7 @@
 
 PSD 没有图层筛选、网格、缩放、裁边、目标 Part、位移或其他导入设置。Live2D 沿用现有导入、缺失依赖、错误与警告处理，不新增预检页、修复向导或手动 ID 映射流程。Cubism 工程也以选择入口后直接导入为目标。
 
-文件选择取消不创建项目。导入失败不替换或破坏当前文档。成功导入产生新的未保存 Kasane 文档。沿用现有编辑提交、异步加载与错误展示生命周期。
+文件选择取消不创建项目。导入失败不替换或破坏当前文档。成功导入产生新的未保存 Zipzi 文档。沿用现有编辑提交、异步加载与错误展示生命周期。
 
 ### 导出
 
@@ -76,12 +76,12 @@ PSD 没有图层筛选、网格、缩放、裁边、目标 Part、位移或其�
 
 ### Cubism 工程
 
-必须支持 Cubism Editor 生成的真实工程，不能只识别 Kasane 自己导出的 CMO3/CAN3。反向解析器独立读取工程内容，不依赖同目录运行时模型替代工程解析。
+必须支持 Cubism Editor 生成的真实工程，不能只识别 Zipzi 自己导出的 CMO3/CAN3。反向解析器独立读取工程内容，不依赖同目录运行时模型替代工程解析。
 
 - 选择 CMO3：解析模型，自动查找同目录配套 CAN3；存在配套动画时一起导入，没有时允许仅导入模型。
 - 选择 CAN3：定位工程引用的 CMO3，一起导入；缺少关联模型直接报错。
 - 配套关系必须核对工程引用与对象身份，不仅匹配文件名；存在歧义时直接报错。
-- 保留可表达的模型结构、纹理、参数、变形器、绑定、动作和关联数据，转换为可编辑的 Kasane 文档。
+- 保留可表达的模型结构、纹理、参数、变形器、绑定、动作和关联数据，转换为可编辑的 Zipzi 文档。
 - 源画布等元数据用于导出默认值，资源引用必须闭合。
 - 损坏、缺失关联、未知必要结构或转换不完整直接报错，不以静默丢弃内容获得成功结果。
 
@@ -91,7 +91,7 @@ PSD 没有图层筛选、网格、缩放、裁边、目标 Part、位移或其�
 
 ### 画布与 PPU
 
-以 `kasane_core::ExportSettings` 为现有契约，必要时直接调整 SDK 接口，使设置确实贯穿最终编码。运行时模型和 Cubism 工程共用项目的画布设置。
+以 `zipzi_core::ExportSettings` 为现有契约，必要时直接调整 SDK 接口，使设置确实贯穿最终编码。运行时模型和 Cubism 工程共用项目的画布设置。
 
 | 配置 | 行为 |
 | --- | --- |
@@ -108,7 +108,7 @@ PSD 没有图层筛选、网格、缩放、裁边、目标 Part、位移或其�
 
 ### 设置记忆
 
-点击设置对话框的“继续”且参数合法后，立即按项目记住配置，并随 Kasane 项目保存；不必等到文件实际导出成功。之后即使取消系统保存面板，已确认的配置也保留。
+点击设置对话框的“继续”且参数合法后，立即按项目记住配置，并随 Zipzi 项目保存；不必等到文件实际导出成功。之后即使取消系统保存面板，已确认的配置也保留。
 
 在设置对话框中取消，不提交草稿参数。重新进入时使用项目已记住的配置。数值非法时留在设置对话框，定位具体字段，不打开系统保存面板。
 
@@ -124,7 +124,7 @@ CAN3 没有 motion/expression 类型标记，暂按内容自动分类，不增�
 - 存在后续关键帧（即使数值相同）、延迟出现的首个关键帧、事件或其他动画内容时，导入为 motion。空场景仍作为 motion。
 - 名称和场景时长不参与判断；例如 Mao 的 `exp_01` 长度为 8 帧，仍是 expression。按此约定，静止的参数 motion 也会归为 expression。
 - CAN3 表情默认使用 Add：保存“场景参数初始值 − 模型参数默认值”的差值，零差值也保留。不根据参数是否为 BlendShape 猜测混合方式。
-- Kasane 已明确写入动作注册播放列表的场景保留 motion 身份；其他原生场景仍按初始值规则分类。普通 Cubism 播放列表不自动解释为 model3 动作分组。
+- Zipzi 已明确写入动作注册播放列表的场景保留 motion 身份；其他原生场景仍按初始值规则分类。普通 Cubism 播放列表不自动解释为 model3 动作分组。
 - 首帧部件可见性属于场景初始设置，连同原时长、FPS 和轨道淡入淡出保存在 expression 的来源场景元数据中，保存重开和工程重导出时保留；运行时 exp3 只输出表情参数，不携带编辑器来源元数据。
 - 工程导出将 Add 差值加回当前模型参数默认值，恢复 CAN3 的绝对初始姿态；未显式指定 Blend 时也按 Add 处理。重新导入后仍按同一规则分类并恢复 Add 差值。Multiply/Overwrite 无法按该约定保留混合方式，工程导出明确报错；运行时 exp3 导入保留文件原有混合方式。
 
@@ -169,10 +169,10 @@ CMO3 与 CAN3 是同一个菜单项、同一次输出，使用统一基础名称
 1. 文件菜单显示三种导入、两种导出；无 PNG、PSD 导出或拆分资源入口。
 2. PSD 无设置，直接选择文件并生成新项目；既有导入错误与警告路径保持可用。
 3. Live2D 选择 model3 或同目录 MOC3 导入相同完整模型；缺少匹配入口明确报错。
-4. 分别以真实 Mao CMO3、CAN3 为入口导入，配套模型/动画关联正确，导入后可编辑并保存为 Kasane 项目。
+4. 分别以真实 Mao CMO3、CAN3 为入口导入，配套模型/动画关联正确，导入后可编辑并保存为 Zipzi 项目。
 5. CAN3 缺少 CMO3、引用错误或关联有歧义时失败，不产生半个新项目。
 6. Live2D 与 Cubism 导入元数据正确初始化画布、原点、PPU；重新导出不出现无故缩放、翻转或偏移。
-7. 自动/手动画布配置有效；点击“继续”后记住，取消保存面板后仍保留，保存并重开 Kasane 项目后仍一致。
+7. 自动/手动画布配置有效；点击“继续”后记住，取消保存面板后仍保留，保存并重开 Zipzi 项目后仍一致。
 8. 未保存 PSD 项目可导出完整运行时模型和 Cubism 工程，内存纹理正确且原 PSD 不变。
 9. 无 motions/expressions 只输出 CMO3；存在时输出关联有效的工程文件组，不静默遗漏内容。
 10. 运行时包所有引用存在；CMO3/CAN3 可由 Cubism Editor 实际打开、编辑和保存。SDK 结构校验不能代替目标程序验收。
@@ -181,23 +181,23 @@ CMO3 与 CAN3 是同一个菜单项、同一次输出，使用统一基础名称
 
 ## 工程依据
 
-- 文件命令与菜单：`crates/editor-core/src/commands.rs`、`crates/editor/src/menus.rs`、`crates/editor/src/project.rs`。
-- 文档与编辑生命周期：`crates/editor-core/src/document.rs`。
-- 导出设置和源画布：`../kasane-2d/modules/kasane-core/src/types.rs`、`geometry.rs`。
-- SDK 导入与导出：`../kasane-2d/modules/kasane-sdk/src/project_io.rs`、`session.rs`。
-- 项目存储及发布：`../kasane-2d/modules/kasane-project/src/`。
-- CMO3/CAN3 现有编码器：`../kasane-2d/modules/kasane-cmo3/src/`；新增反向解析不能复用“已有导出”作为完成证明。
+- 文件命令与菜单：`crates/zipzi-editor-core/src/commands.rs`、`crates/editor/src/menus.rs`、`crates/editor/src/project.rs`。
+- 文档与编辑生命周期：`crates/zipzi-editor-core/src/document.rs`。
+- 导出设置和源画布：`../zipzi-2d/modules/zipzi-core/src/types.rs`、`geometry.rs`。
+- SDK 导入与导出：`../zipzi-2d/modules/zipzi-sdk/src/project_io.rs`、`session.rs`。
+- 项目存储及发布：`../zipzi-2d/modules/zipzi-project/src/`。
+- CMO3/CAN3 现有编码器：`../zipzi-2d/modules/zipzi-cmo3/src/`；新增反向解析不能复用“已有导出”作为完成证明。
 
-实现可以按底层转换、SDK 接口、编辑器设置和菜单逐步接通；每项只有通过相应验收后才标为可用。当前 Cubism 导入验证范围包括 Mao 的 CMO3 5.2 工程与 CAN3 5.4 工程，以及 Kasane 自身的 5.3 输出；不声称已覆盖全部 Cubism 工程语义。
+实现可以按底层转换、SDK 接口、编辑器设置和菜单逐步接通；每项只有通过相应验收后才标为可用。当前 Cubism 导入验证范围包括 Mao 的 CMO3 5.2 工程与 CAN3 5.4 工程，以及 Zipzi 自身的 5.3 输出；不声称已覆盖全部 Cubism 工程语义。
 
 
 ## 实现与验收记录
 
-- 核心入口：`crates/editor-core/src/transfer.rs`、`document/transfer.rs`、`workspace/transfer.rs`。
+- 核心入口：`crates/zipzi-editor-core/src/transfer.rs`、`document/transfer.rs`、`workspace/transfer.rs`。
 - 导出交互：`crates/editor/src/transfer.rs`、`ui/export.rs`；中英文设置截图见 `target/transfer-screenshots/`。
-- 原生解析：`../kasane-2d/modules/kasane-cmo3/src/import/`；关联文件和安全发布在 project/SDK 层。
+- 原生解析：`../zipzi-2d/modules/zipzi-cmo3/src/import/`；关联文件和安全发布在 project/SDK 层。
 - Mao 验证保留 128 个参数、175 个变形器、261 个网格、7 组 Glue、124 组 BlendShape 绑定、16 组物理链；15 个动画场景按初始值约定分为 7 个 motion 和 8 个 expression。
-- CAN3 分类回归验证：editor-core 310 项通过、1 项忽略；SDK/core/project/CMO3 相关测试 301 项通过。Mao 双入口均验证 7 个动作、8 个表情，保存重开、运行时 exp3 输出及工程重导入分类一致；本机 Cubism 读取器已读取重新输出的全部 15 个场景。记录见 `target/can3-expression-*-tests.log` 和 `target/can3-expression-cubism-check.log`。
+- CAN3 分类回归验证：zipzi-editor-core 310 项通过、1 项忽略；SDK/core/project/CMO3 相关测试 301 项通过。Mao 双入口均验证 7 个动作、8 个表情，保存重开、运行时 exp3 输出及工程重导入分类一致；本机 Cubism 读取器已读取重新输出的全部 15 个场景。记录见 `target/can3-expression-*-tests.log` 和 `target/can3-expression-cubism-check.log`。
 - 原生工程中的区间外关键帧保存在项目的来源时间范围元数据中；运行时输出精确分割曲线到播放区间，工程输出保留原始关键帧和播放时长。
 - 本机 Cubism 读取器已读取输出 CMO3，建立模型实例，并解析关联 CAN3 的全部场景、采样曲线；这不等于已完成 GUI 人工编辑验收。
 - 使用原始 Mao CMO3 与导入后求值的四个姿态作本机 Cubism 几何对照，24,064 个顶点最大差异约 0.0553px，验收阈值为 0.1px。
@@ -206,9 +206,9 @@ CMO3 与 CAN3 是同一个菜单项、同一次输出，使用统一基础名称
 复现：
 
 ```sh
-cargo test --locked -p editor-core --test integration transfer
-cargo test --locked -p kasane-editor --lib headless_tests::transfer
-env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=transfer cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
+cargo test --locked -p zipzi-editor-core --test integration transfer
+cargo test --locked -p zipzi-editor --lib headless_tests::transfer
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=transfer cargo test --locked -p zipzi-editor --features test-support --test headless_screenshot
 ```
 
 

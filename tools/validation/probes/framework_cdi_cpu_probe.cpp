@@ -75,7 +75,7 @@ static void json_string(const char* value) {
 int main(int argc, char** argv) {
     try {
         const bool loadOnly = argc == 3 && std::string(argv[1]) == "--load";
-        if (argc != 2 && !loadOnly) throw std::runtime_error("usage: kasane_framework_cdi_cpu_probe [--load] CDI3.json");
+        if (argc != 2 && !loadOnly) throw std::runtime_error("usage: zipzi_framework_cdi_cpu_probe [--load] CDI3.json");
         auto bytes = read_file(argv[loadOnly ? 2 : 1]);
         Allocator allocator;
         FrameworkSession session(allocator);

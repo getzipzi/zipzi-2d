@@ -1,4 +1,4 @@
-# Kasane Editor 工程路线图
+# Zipzi Editor 工程路线图
 
 更新：2026-09-21。本文定义工程目标与交付依赖；各里程碑独立成文。
 
@@ -14,7 +14,7 @@ Agent 通过进程内 GDScript 直接操作模型。人的界面用于查看、�
 2. **工程持久化**：完整保存、读取 Document 和素材引用，重开后继续编辑。
 3. **MOC3 导入**：从运行模型创建真正可编辑的 Document，修改后可以再次导出。
 4. **MOC3 导出**：从 Document 生成新的 MOC3 和加载所需的资源描述，在现有运行时中驱动、显示。
-5. **Rust Godot renderer**：在 `kasane-godot` 定型直接消费 Document 求值帧的绘制实现，供 Editor 与后续 Rust Viewer 使用；`gd-cubism` 独立作为 GPU 对照基准。
+5. **Rust Godot renderer**：在 `zipzi-godot` 定型直接消费 Document 求值帧的绘制实现，供 Editor 与后续 Rust Viewer 使用；`gd-cubism` 独立作为 GPU 对照基准。
 6. **Godot Agent-first editor**：通过 GDScript 完成素材、mesh、deformer、parameter、keyform 的编辑，提供检查界面和执行反馈。
 7. **Godot MOC3 viewer**：独立打开模型、调整参数和浏览结果，排在编辑器之后。
 
@@ -24,8 +24,8 @@ Agent 通过进程内 GDScript 直接操作模型。人的界面用于查看、�
 
 | 产物 | 使用方式 |
 |---|---|
-| Kasane Editor 桌面应用 | 用户直接启动，导入、建模、保存、导出；不需要安装 Godot、创建 Godot 项目或安装 addon |
-| Kasane 工程文件与素材 | 保存完整可编辑数据，由 Editor 打开并继续编辑 |
+| Zipzi Editor 桌面应用 | 用户直接启动，导入、建模、保存、导出；不需要安装 Godot、创建 Godot 项目或安装 addon |
+| Zipzi 工程文件与素材 | 保存完整可编辑数据，由 Editor 打开并继续编辑 |
 | Live2D 运行模型包 | MOC3、纹理、model3.json，由现有 Live2D 运行时加载 |
 | 独立 Viewer 桌面应用 | 直接打开运行模型并浏览，M6 交付 |
 
@@ -38,7 +38,7 @@ Godot 是应用实现技术。Document、求值、Rust renderer 和运行时绑�
 ```text
 PNG / 新建模型 ────────────────┐
                              ▼
-MOC3 + 纹理 ──导入──→ Document ←──读写──→ Kasane 工程 + 素材
+MOC3 + 纹理 ──导入──→ Document ←──读写──→ Zipzi 工程 + 素材
                              ↑
                    GDScript / 编辑界面
                              │
@@ -64,8 +64,8 @@ MOC3 + 纹理 ──导入──→ Document ←──读写──→ Kasane 工
 
 | 现有代码 | 复用内容 | 必须补齐或改变的边界 |
 |---|---|---|
-| [kasane-core](../modules/kasane-core/src/evaluation.rs) | Document 求值、稳定 ID、最终绘制帧 | 保持编辑模型与 Godot 绘制资源隔离 |
-| [kasane-godot](../modules/kasane-godot/src/document_preview.rs) | Rust Godot 数据绑定和 Document 预览 | M4 定型资源复用、Shader、遮罩和观察就绪状态 |
+| [zipzi-core](../modules/zipzi-core/src/evaluation.rs) | Document 求值、稳定 ID、最终绘制帧 | 保持编辑模型与 Godot 绘制资源隔离 |
+| [zipzi-godot](../modules/zipzi-godot/src/document_preview.rs) | Rust Godot 数据绑定和 Document 预览 | M4 定型资源复用、Shader、遮罩和观察就绪状态 |
 | [PurismCore 格式实现](../modules/purism-core/src/moc3.h) | 文件结构、校验、加载与求值算法 | M6 经 C99 FFI 转换运行帧，不直接成为编辑模型 |
 | `gd-cubism renderer` (historical) | 独立播放与官方 Core GPU 对照 | 保持独立，不强制接入 Rust renderer |
 | [运行时对照](../benchmarks/cubism-matrix/README.md) | Purism / 官方 Core 和 Godot / Native 对照设施 | 加入导出文件、导入往返和编辑预览的一致性验证 |

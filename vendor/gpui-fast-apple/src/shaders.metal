@@ -1279,7 +1279,7 @@ float4 fill_color(Background background,
   return color;
 }
 
-// Kasane supplies premultiplied color; do not multiply its alpha a second time.
+// Zipzi supplies premultiplied color; do not multiply its alpha a second time.
 fragment float4 rgba_surface_fragment(SurfaceFragmentInput input [[stage_in]],
     texture2d<float> source [[texture(SurfaceInputIndex_YTexture)]],
     constant float &opacity [[buffer(0)]]) {

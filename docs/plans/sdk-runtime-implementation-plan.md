@@ -1,14 +1,14 @@
 # SDK Runtime 分阶段实施计划
 
-合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/kasane-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
+合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
 日期：2026 年 10 月 23 日。状态：**R0 实施准备进行中，R1–R7 尚未开始**。
 
-架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。当前不存在 `kasane-runtime` 或连接后端；后续新增模块、测试名称和命令模板仍为待实现目标，不能作为已经通过的证据。R0 已落地产物与未完成项见 [实施记录](sdk-runtime/r0-preparation.md)。
+架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。当前不存在 `zipzi-runtime` 或连接后端；后续新增模块、测试名称和命令模板仍为待实现目标，不能作为已经通过的证据。R0 已落地产物与未完成项见 [实施记录](sdk-runtime/r0-preparation.md)。
 
 ## 1. 执行规则与阶段总览
 
 - 先读两个仓库 README 和各自 AGENTS；保留工作区已有改动。当前 editor 仍在进行 UI 统一，R0 需要重新确认切入基线，不能依赖聊天中的旧文件布局。
-- 每阶段先交付 kasane-2d 的公共能力，再接 editor 适配；记录可配对的两仓 revision、必要的 lockfile/依赖变更。路径依赖不由 Cargo.lock 固定，不能只写“使用最新 SDK”。
+- 每阶段先交付 zipzi-2d 的公共能力，再接 editor 适配；记录可配对的两仓 revision、必要的 lockfile/依赖变更。路径依赖不由 Cargo.lock 固定，不能只写“使用最新 SDK”。
 - 日常迭代运行受影响模块/过滤测试；全套门禁用于最终交付或确有跨域风险的阶段。检查通过后不无原因重复扩展测试。
 - Runtime 保持薄层。发现新领域规则归 core/SDK；连接适配只能转换类型和调用。
 - 每阶段有行为测试和可复核证据，不能以“编译成功”“接口已添加”替代验收。未知/跳过的 GPU 或模型用例不计为通过。
@@ -29,7 +29,7 @@
 
 ## 2. R0：基线、清单与实施准备
 
-### kasane-2d 改动/产物
+### zipzi-2d 改动/产物
 
 - 从 SDK 公共 API、Python facade、现有 `python-coverage.json` 和 `tools/check_coverage.py` 建立新的连接覆盖清单，不以旧绑定统计推定完整。
 - 为每项列出：领域、SDK 入口、Python 入口、SourceRef、输入/结果、修改/历史效果、Plan/句柄生命周期、批量形式、长操作属性、对应验收。
@@ -56,9 +56,9 @@
 
 ### R1：Runtime 核心及 SDK 契约
 
-**kasane-2d**
+**zipzi-2d**
 
-- 新增 `kasane-runtime` 并接入 workspace，基础构建无 GPUI/PyO3/GPU 要求。
+- 新增 `zipzi-runtime` 并接入 workspace，基础构建无 GPUI/PyO3/GPU 要求。
 - 实现会话注册、RuntimeInstanceId、SessionId、操作表、所有权转移与 Ready/Busy/Faulted/Closing/Closed 状态；提供进程内类型化接口。持有正式会话的 worker panic 且一致性无法确认时进入 Faulted，保留可用的版本化冻结读视图，拒绝继续写入或保存，不自动恢复 Ready。
 - 注册表统一管理已打开工程身份和在途 Open/Save As 的路径预留；按工程规范化身份识别目录、manifest 等等价入口，在派发 IO 前原子检查并预留，不能仅靠每会话 Busy 防止跨会话覆盖。保存期间保留旧路径身份，成功后更新身份，失败保留原身份；临时预留在任务完成或确认停止后释放，不能收到取消请求就提前释放。
 - 实现 SDK 回执的唯一消费点、原子订阅快照/游标、管理事件、有限事件缓冲与 resync。
@@ -68,7 +68,7 @@
 **editor**
 
 - 仅准备新的路径依赖和最小类型对接；主文档所有权迁移在 R2 完成。
-- 用 editor-core 测试 fixture 验证可直接读 Runtime 中的文档数据，不复制一套正式会话。
+- 用 zipzi-editor-core 测试 fixture 验证可直接读 Runtime 中的文档数据，不复制一套正式会话。
 
 **退出门槛**
 
@@ -82,7 +82,7 @@
 
 ### R2：Editor 所有权、发布和窗口生命周期
 
-**kasane-2d**
+**zipzi-2d**
 
 - 为 Editor 迁移补齐必要的短调用、SDK 回执和共享读取接口。
 - 落实交互占用与会话 Busy 契约，确保它们不成为新的持久模型字段。
@@ -108,7 +108,7 @@
 
 ### R3：IPC 与 Python 最小闭环
 
-**kasane-2d**
+**zipzi-2d**
 
 - 实现本机 framing/DTO、严格握手、请求去重、远端 token、事件、预算和有限重连。
 - 分离 Python facade 与 `_native` 的 import 依赖，提供连接模式所需纯 Python 类型/异常和安装产物；保留 NativeBackend。
@@ -136,7 +136,7 @@
 
 ### R4：完整 Modeling、资源与工程操作
 
-**kasane-2d**
+**zipzi-2d**
 
 - 覆盖场景对象、参数/分组、层级/排序、网格与拓扑、变形器、绑定/关键形/BlendShape、Glue、Offscreen、引用和文档元数据。
 - 接入只读规划、成本/损失报告、能力查询、稳定字段地址和 SDK 句柄；删除、移动、Undo 后失效语义与 NativeBackend 一致。
@@ -163,7 +163,7 @@
 
 ### R5：Animation、Preview、Observer 与调度
 
-**kasane-2d**
+**zipzi-2d**
 
 - 完成 Motion/Track/Key/Event、注册组、Expression、Physics、Pose 及相关 Plan/地址的连接覆盖。
 - 在 R4 无状态 CPU 求值与来源契约上，实现每客户端/每视图独立 Preview、动画批量采样、seek、播放结果和空间诊断。
@@ -185,7 +185,7 @@
 
 ### R6：候选 Review 和人工接续
 
-**kasane-2d**
+**zipzi-2d**
 
 - 实现 Edit seal 为 Proposal 的所有权转移、基准/候选来源、报告、资源固定、释放与预算，复用 R4 的底层资源持有、计费和回收接口。
 - seal 在 Runtime 协调下检查正式 Version 等于 edit 基准，捕获该基准的只读快照并固定基准/候选资源，完成预算检查后才消费 Edit 并登记 Proposal。若准备工作移到后台，登记前再次检查版本；提前发生外部提交则返回 `STALE_VERSION`，不生成 Proposal，也不把当前正式内容冒充旧基准。Busy 或资源/预算准备失败不吞掉 Edit，版本过期后的候选仅按设计保留只读诊断来源。
@@ -208,7 +208,7 @@
 
 ### R7：完整闭环、发行与总验收
 
-**kasane-2d**
+**zipzi-2d**
 
 - 覆盖清单达到第 4 节全量目标，发布产物包括可独立安装的连接客户端及可选原生后端。
 - 更新 README、API、架构、能力报告、构建与验证工具；记录实际支持 Python 版本。
@@ -218,7 +218,7 @@
 
 - 打包桌面宿主、IPC 与窗口入口，验证应用包无窗口启动和重新显示窗口。
 - 用实际发行安装位置重跑 A06 冷启动与仲裁用例，验证客户端可定位并启动应用包，桌面启动与 Python 启动仍复用同一 endpoint；不依赖仓库路径或开发脚本。
-- 更新 README、DEPENDENCIES、开发脚本与关闭/后台运行说明；记录可配对的 kasane-2d revision。
+- 更新 README、DEPENDENCIES、开发脚本与关闭/后台运行说明；记录可配对的 zipzi-2d revision。
 - 完成合成端到端、可用的真实授权模型验收和性能/内存报告。
 
 **退出门槛**
@@ -298,12 +298,12 @@ CPU fixture 必须可在无授权素材环境运行。GPU 与真实模型测试�
 现有命令从各自仓库根目录运行。以下列出可复用的聚焦入口；实际执行结果以各阶段实施记录为准：
 
 ```sh
-# kasane-editor
+# zipzi-editor
 ./tools/test-editor.sh fast
 ./tools/test-editor.sh ui headless_tests::ui_performance
 ./tools/test-editor.sh tools
 
-# kasane-2d
+# zipzi-2d
 ./tools/test-sdk.sh fast
 ./tools/test-sdk.sh python -- -k history
 ```

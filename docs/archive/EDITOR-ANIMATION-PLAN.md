@@ -4,7 +4,7 @@
 
 状态：P0–P6 的 Rust/Python 编辑、v6 存储（兼容 v5 迁移）、typed wire、CPU 预览及资源包闭环已落地。官方 Framework 加载、Physics 长序列差分，以及 18 个 Motion/Pose GPU 帧（含嵌套 Offscreen 与宿主显式应用 Model opacity）已通过。Model EyeBlink/LipSync 动态映射按原计划后置并有预览覆盖诊断。具体证据与复现命令见 [实施记录](EDITOR-ANIMATION-IMPLEMENTATION.md)。日期：2026-09-25。
 
-目标是让 Kasane 编辑器能创建、导入、编辑、保存、预览和导出 Expression、Motion、Physics、Pose、CDI；最终产物为可交给 Live2D 宿主加载的模型资源包。这里的“完整运行时包”指模型及其关联资源，不包含 SDK 二进制、播放器应用或 Cubism 编辑器工程格式。
+目标是让 Zipzi 编辑器能创建、导入、编辑、保存、预览和导出 Expression、Motion、Physics、Pose、CDI；最终产物为可交给 Live2D 宿主加载的模型资源包。这里的“完整运行时包”指模型及其关联资源，不包含 SDK 二进制、播放器应用或 Cubism 编辑器工程格式。
 
 对照基准是本地 `third_party/CubismSdkForNative-5-r.5/Framework/src` 的实际代码，样例取自同目录 SDK 的 `Samples/Resources`。以下新增类型、模块和 API 名称均为设计提案，不代表现有接口。
 
@@ -30,39 +30,39 @@ EyeBlink/LipSync 的 model3 Groups，以及 motion3 内已有的同名 Model 曲
 
 | 位置 | 当前行为 | 对方案的影响 |
 | --- | --- | --- |
-| `kasane-moc3/src/importer.rs` | Moc、Textures 之外附件进入 `unimported_attachments` | 必须把整包解析提升到 project 层；保留裸 MOC3 导入入口 |
-| `kasane-moc3/src/encoder/context.rs` | MOC3 编码顺便生成最小 model3 | model3 完整组装迁出二进制编码职责，过渡期保留旧 artifact 兼容字段 |
-| `kasane-project/src/package.rs` | 原子发布 MOC3、model3、PNG；validator 只接收 Moc3Artifact | 增加整包计划、引用图、附件验证与整包校验入口 |
-| `kasane-core/src/document.rs`、checkpoint/history | 文档状态、撤销、modified 判定有多份内容视图 | 新集合必须进入所有快照、大小估算、引用及历史路径 |
-| `kasane-core/src/types.rs::Part` | 有 enabled、层级、draw order，没有运行时输入 opacity | Pose 需要独立部件透明度状态，不能借用 enabled 或 offscreen opacity |
-| `kasane-core/src/evaluation/parameters.rs` | 未知参数报错；repeat 采用当前 Kasane 规则 | 新增兼容运行时状态，不改变现有 authoring evaluate 的契约 |
-| `kasane-core/src/preview.rs` | 缓存键是 generation/document/preview revision | 动画时间、激活片段、物理状态和事件历史必须进入独立缓存身份 |
-| `kasane-project/src/codec` | 当前写 v4、读 v1–v4 | 新版本不能让旧 reader 静默丢掉动画；计划写 v5、继续读 v1–v4 |
-| `kasane-sdk-observe` | 由参数映射重新求值并捕获 frame | 新增捕获已求值动画快照的路径，不能再次采样而丢掉 Pose/Physics 状态 |
+| `zipzi-moc3/src/importer.rs` | Moc、Textures 之外附件进入 `unimported_attachments` | 必须把整包解析提升到 project 层；保留裸 MOC3 导入入口 |
+| `zipzi-moc3/src/encoder/context.rs` | MOC3 编码顺便生成最小 model3 | model3 完整组装迁出二进制编码职责，过渡期保留旧 artifact 兼容字段 |
+| `zipzi-project/src/package.rs` | 原子发布 MOC3、model3、PNG；validator 只接收 Moc3Artifact | 增加整包计划、引用图、附件验证与整包校验入口 |
+| `zipzi-core/src/document.rs`、checkpoint/history | 文档状态、撤销、modified 判定有多份内容视图 | 新集合必须进入所有快照、大小估算、引用及历史路径 |
+| `zipzi-core/src/types.rs::Part` | 有 enabled、层级、draw order，没有运行时输入 opacity | Pose 需要独立部件透明度状态，不能借用 enabled 或 offscreen opacity |
+| `zipzi-core/src/evaluation/parameters.rs` | 未知参数报错；repeat 采用当前 Zipzi 规则 | 新增兼容运行时状态，不改变现有 authoring evaluate 的契约 |
+| `zipzi-core/src/preview.rs` | 缓存键是 generation/document/preview revision | 动画时间、激活片段、物理状态和事件历史必须进入独立缓存身份 |
+| `zipzi-project/src/codec` | 当前写 v4、读 v1–v4 | 新版本不能让旧 reader 静默丢掉动画；计划写 v5、继续读 v1–v4 |
+| `zipzi-sdk-observe` | 由参数映射重新求值并捕获 frame | 新增捕获已求值动画快照的路径，不能再次采样而丢掉 Pose/Physics 状态 |
 
 特别需要先用 probe 锁定的行为：
 
 1. `Motion/CubismMotion.cpp` 的 PartOpacity 分支调用 `GetParameterIndex`、`SetParameterValue`，不是 `SetPartOpacity`。应保留轨道类别并写同名真实/虚拟参数；Pose 再消费它。
 2. `Effect/CubismPose.cpp` 以 PartId 同时查 parameter 和 part。不存在同名 MOC3 参数在 Framework 中可成为虚拟参数，这是正常路径，不能一律当导入错误，也不能给 MOC3 强行加参数。
-3. Framework 的参数 clamp/repeat、权重应用顺序与 Kasane 现有求值不一定一致；特别是 repeat 区间最大值与跨边界插值。新预览状态必须有明确 Cubism 兼容策略，并验证进入几何求值时不会二次归一化改变结果。
+3. Framework 的参数 clamp/repeat、权重应用顺序与 Zipzi 现有求值不一定一致；特别是 repeat 区间最大值与跨边界插值。新预览状态必须有明确 Cubism 兼容策略，并验证进入几何求值时不会二次归一化改变结果。
 4. Motion 默认 `MotionBehavior_V2`；Bezier 有 restricted/unrestricted 路径；循环边界有专门处理。不能只做线性时间轴就称支持 motion3。
 5. Physics 的 Fps 缺失或为 0 时使用传入 delta，Fps > 0 时固定子步并插值。不能无条件改成一个固定频率并声称匹配原文件。
 6. CDI 包含 `Parameters`、`ParameterGroups`（GroupId 父链）、`Parts`、`CombinedParameters`；Physics Meta 中还有用于编辑的 `PhysicsDictionary`。
 
 ## 3. 模块边界
 
-建议增加两个有独立职责的 crate，不把所有功能塞入 `kasane-moc3`：
+建议增加两个有独立职责的 crate，不把所有功能塞入 `zipzi-moc3`：
 
 | 模块 | 职责 |
 | --- | --- |
-| `kasane-core` | 动画资产领域类型、文档集合、结构不变量、引用关系；几何求值新增运行时输入通道 |
-| 新 `kasane-live2d` | model3/exp3/motion3/physics3/pose3/cdi3 的 typed wire、解码/编码、格式诊断；不执行文件 IO、不持有播放状态 |
-| 新 `kasane-animation` | 编译编辑资产、运行时参数状态、Motion/Expression/Pose/Physics 求值、调度、seek/replay；依赖 core，不依赖 project 或 GPU |
-| `kasane-moc3` | 保持 MOC3 二进制读写、runtime ID 与 texture slot 映射 |
-| `kasane-project` | 资源解析与存储、工程迁移、整包导入、ExportPlan、原子发布；调用 live2d 和 moc3 |
-| `kasane-sdk` | 编辑事务、跨资产引用与历史、session 生命周期、创建动画预览会话；依赖 animation |
-| `kasane-python` | typed records、API 适配和脚本工作流；不再实现另一份混合、曲线或物理算法 |
-| `kasane-sdk-observe` / renderer | 渲染动画快照，保持参数与物理求值规则在 CPU 层 |
+| `zipzi-core` | 动画资产领域类型、文档集合、结构不变量、引用关系；几何求值新增运行时输入通道 |
+| 新 `zipzi-live2d` | model3/exp3/motion3/physics3/pose3/cdi3 的 typed wire、解码/编码、格式诊断；不执行文件 IO、不持有播放状态 |
+| 新 `zipzi-animation` | 编译编辑资产、运行时参数状态、Motion/Expression/Pose/Physics 求值、调度、seek/replay；依赖 core，不依赖 project 或 GPU |
+| `zipzi-moc3` | 保持 MOC3 二进制读写、runtime ID 与 texture slot 映射 |
+| `zipzi-project` | 资源解析与存储、工程迁移、整包导入、ExportPlan、原子发布；调用 live2d 和 moc3 |
+| `zipzi-sdk` | 编辑事务、跨资产引用与历史、session 生命周期、创建动画预览会话；依赖 animation |
+| `zipzi-python` | typed records、API 适配和脚本工作流；不再实现另一份混合、曲线或物理算法 |
+| `zipzi-sdk-observe` / renderer | 渲染动画快照，保持参数与物理求值规则在 CPU 层 |
 
 依赖保持单向：core ← live2d / animation / moc3；project → core + live2d + moc3；sdk → project + animation。没有 animation → sdk 回依赖。
 
@@ -255,12 +255,12 @@ synthetic fixtures 可纳入仓库；本地 SDK 与厂商样例继续按仓库�
 
 - P0 的 CPU probe 在自己的可执行目标中提供空 `CubismRenderer::StaticRelease()`，只满足无图形资源情况下的后端清理链接点。Framework 正常初始化与销毁，第三方源码不修改；此 shim 不进入产品或 GPU probe。CPU 输出不作为渲染正确性的证明。
 - 本地 Framework 的 `CubismJson::ParseNumeric` 不接受数字紧邻 `]` 等部分合法 JSON 写法。后续导出采用经过该 parser 实测的 JSON 编码约定；P0 保留合法但被拒绝的原始输入作为负控制，同时验证数值表示、终止符及读取数值是否准确。不能只凭换行样例成功就认定全部数字兼容，也不能修改参考 parser 来掩盖导出兼容问题。
-- Repeat 基线同时记录 Framework 默认模型级 override 与关闭该 override、遵循 MOC repeat 标志两种配置。每份 trace 明示配置及模型原始标志；P0 不改变 Kasane 默认行为。默认 override 使 SDK 侧初始 repeat=false 生效，不能将这一宿主设置误认为 MOC 无循环参数。
+- Repeat 基线同时记录 Framework 默认模型级 override 与关闭该 override、遵循 MOC repeat 标志两种配置。每份 trace 明示配置及模型原始标志；P0 不改变 Zipzi 默认行为。默认 override 使 SDK 侧初始 repeat=false 生效，不能将这一宿主设置误认为 MOC 无循环参数。
 - 2026-09-25 后续工作由主代理直接实施。阶段按验收结果推进；新的阻塞、兼容性冲突或需改变方案的问题先暂停，与用户讨论。
 
 P0 必须解决、无需提前让用户猜测的技术问题：
 
-- Part/Offscreen/Model opacity 在官方 Core+Framework 的准确应用路径及现有 Kasane 所需改动。
+- Part/Offscreen/Model opacity 在官方 Core+Framework 的准确应用路径及现有 Zipzi 所需改动。
 - repeat/clamp 的差异如何在新 runtime input 路径处理，确保不回归现有 keyform 与循环参数测试。
 - Physics 允许范围、缺参数与退化 rig 的 Framework 行为；区分可恢复导入和不可执行资产。
 - 真实 motion 文件的 Target 顺序和混合/循环边界；明确 canonical 编码策略与兼容差异。
@@ -272,8 +272,8 @@ CPU 数值、打包路径和附件独立性，以及选定动画帧的 GPU 图�
 ## 12. 源码索引
 
 - [现有架构](../../MONOREPO.md#crate-responsibilities)
-- [当前导入](../modules/kasane-moc3/src/importer.rs)、[MOC3 artifact](../modules/kasane-moc3/src/types.rs)、[包发布](../modules/kasane-project/src/package.rs)
-- [文档](../modules/kasane-core/src/document.rs)、[Part 求值](../modules/kasane-core/src/evaluation/parts.rs)、[preview](../modules/kasane-core/src/preview.rs)
+- [当前导入](../modules/zipzi-moc3/src/importer.rs)、[MOC3 artifact](../modules/zipzi-moc3/src/types.rs)、[包发布](../modules/zipzi-project/src/package.rs)
+- [文档](../modules/zipzi-core/src/document.rs)、[Part 求值](../modules/zipzi-core/src/evaluation/parts.rs)、[preview](../modules/zipzi-core/src/preview.rs)
 - [Framework motion](../third_party/CubismSdkForNative-5-r.5/Framework/src/Motion/CubismMotion.cpp)、[expression manager](../third_party/CubismSdkForNative-5-r.5/Framework/src/Motion/CubismExpressionMotionManager.cpp)
 - [Framework scheduler](../third_party/CubismSdkForNative-5-r.5/Framework/src/Motion/CubismUpdateScheduler.cpp)、[update order](../third_party/CubismSdkForNative-5-r.5/Framework/src/Motion/ICubismUpdater.hpp)
 - [Framework physics](../third_party/CubismSdkForNative-5-r.5/Framework/src/Physics/CubismPhysics.cpp)、[pose](../third_party/CubismSdkForNative-5-r.5/Framework/src/Effect/CubismPose.cpp)

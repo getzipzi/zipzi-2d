@@ -1,19 +1,19 @@
-diff --git a/modules/kasane-sdk/Cargo.toml b/modules/kasane-sdk/Cargo.toml
---- a/modules/kasane-sdk/Cargo.toml
-+++ b/modules/kasane-sdk/Cargo.toml
+diff --git a/modules/zipzi-sdk/Cargo.toml b/modules/zipzi-sdk/Cargo.toml
+--- a/modules/zipzi-sdk/Cargo.toml
++++ b/modules/zipzi-sdk/Cargo.toml
 @@ -5,6 +5,9 @@
  rust-version.workspace = true
  license.workspace = true
- description = "Engine-independent authoring SDK for Kasane 2D"
+ description = "Engine-independent authoring SDK for Zipzi 2D"
 +
 +[features]
 +experimental-alpha-sdf = []
 
  [dependencies]
- kasane-core = { path = "../kasane-core" }
-diff --git a/modules/kasane-sdk/src/lib.rs b/modules/kasane-sdk/src/lib.rs
---- a/modules/kasane-sdk/src/lib.rs
-+++ b/modules/kasane-sdk/src/lib.rs
+ zipzi-core = { path = "../zipzi-core" }
+diff --git a/modules/zipzi-sdk/src/lib.rs b/modules/zipzi-sdk/src/lib.rs
+--- a/modules/zipzi-sdk/src/lib.rs
++++ b/modules/zipzi-sdk/src/lib.rs
 @@ -9,6 +9,8 @@
  mod types;
 
@@ -23,35 +23,35 @@ diff --git a/modules/kasane-sdk/src/lib.rs b/modules/kasane-sdk/src/lib.rs
  pub use assets::{
      prepare_png_asset, prepare_png_asset_from_base, prepare_relocated_asset, rectangle_mesh,
  };
-diff --git a/modules/kasane-sdk/tests/alpha_mesh.rs b/modules/kasane-sdk/tests/alpha_mesh.rs
---- a/modules/kasane-sdk/tests/alpha_mesh.rs
-+++ b/modules/kasane-sdk/tests/alpha_mesh.rs
+diff --git a/modules/zipzi-sdk/tests/alpha_mesh.rs b/modules/zipzi-sdk/tests/alpha_mesh.rs
+--- a/modules/zipzi-sdk/tests/alpha_mesh.rs
++++ b/modules/zipzi-sdk/tests/alpha_mesh.rs
 @@ -1,7 +1,38 @@
  use std::collections::{BTreeMap, BTreeSet};
 
- use kasane_core::Vec2;
--use kasane_sdk::{alpha_mesh_geometry, AlphaMask, AlphaMeshOptions, MeshGeometry};
-+use kasane_sdk::{AlphaMask, AlphaMeshOptions, MeshGeometry};
+ use zipzi_core::Vec2;
+-use zipzi_sdk::{alpha_mesh_geometry, AlphaMask, AlphaMeshOptions, MeshGeometry};
++use zipzi_sdk::{AlphaMask, AlphaMeshOptions, MeshGeometry};
 +
 +// Opt-in contract experiment, separate from the production/default test run:
-+// KASANE_ALPHA_TEST_SDF_STEP=1 [KASANE_ALPHA_TEST_SDF_HYBRID=1]
-+// cargo test --release -p kasane-sdk --features experimental-alpha-sdf --test alpha_mesh
++// ZIPZI_ALPHA_TEST_SDF_STEP=1 [ZIPZI_ALPHA_TEST_SDF_HYBRID=1]
++// cargo test --release -p zipzi-sdk --features experimental-alpha-sdf --test alpha_mesh
 +fn alpha_mesh_geometry(
 +    mask: AlphaMask<'_>,
 +    options: &AlphaMeshOptions,
-+) -> Result<MeshGeometry, kasane_sdk::SdkError> {
++) -> Result<MeshGeometry, zipzi_sdk::SdkError> {
 +    #[cfg(feature = "experimental-alpha-sdf")]
-+    if let Ok(step) = std::env::var("KASANE_ALPHA_TEST_SDF_STEP") {
-+        return kasane_sdk::alpha_mesh_geometry_sdf(
++    if let Ok(step) = std::env::var("ZIPZI_ALPHA_TEST_SDF_STEP") {
++        return zipzi_sdk::alpha_mesh_geometry_sdf(
 +            mask,
 +            options,
-+            kasane_sdk::AlphaMeshSdfOptions {
-+                preserve_vector_outline: std::env::var("KASANE_ALPHA_TEST_SDF_INTERIOR").as_deref()
++            zipzi_sdk::AlphaMeshSdfOptions {
++                preserve_vector_outline: std::env::var("ZIPZI_ALPHA_TEST_SDF_INTERIOR").as_deref()
 +                    == Ok("1"),
 +                grid_step: step
 +                    .parse()
-+                    .expect("KASANE_ALPHA_TEST_SDF_STEP must be a number"),
-+                vector_ring_limit: if std::env::var("KASANE_ALPHA_TEST_SDF_HYBRID").as_deref()
++                    .expect("ZIPZI_ALPHA_TEST_SDF_STEP must be a number"),
++                vector_ring_limit: if std::env::var("ZIPZI_ALPHA_TEST_SDF_HYBRID").as_deref()
 +                    == Ok("1")
 +                {
 +                    64
@@ -61,23 +61,23 @@ diff --git a/modules/kasane-sdk/tests/alpha_mesh.rs b/modules/kasane-sdk/tests/a
 +            },
 +        );
 +    }
-+    kasane_sdk::alpha_mesh_geometry(mask, options)
++    zipzi_sdk::alpha_mesh_geometry(mask, options)
 +}
 
  fn pixels(width: u32, height: u32, f: impl Fn(u32, u32) -> u8) -> Vec<u8> {
      (0..height)
-diff --git a/modules/kasane-sdk/examples/alpha_mesh_profile.rs b/modules/kasane-sdk/examples/alpha_mesh_profile.rs
---- a/modules/kasane-sdk/examples/alpha_mesh_profile.rs
-+++ b/modules/kasane-sdk/examples/alpha_mesh_profile.rs
+diff --git a/modules/zipzi-sdk/examples/alpha_mesh_profile.rs b/modules/zipzi-sdk/examples/alpha_mesh_profile.rs
+--- a/modules/zipzi-sdk/examples/alpha_mesh_profile.rs
++++ b/modules/zipzi-sdk/examples/alpha_mesh_profile.rs
 @@ -1,7 +1,91 @@
- //! cargo run --release --locked -p kasane-sdk --example alpha_mesh_profile -- 9
+ //! cargo run --release --locked -p zipzi-sdk --example alpha_mesh_profile -- 9
 -//! Deterministic synthetic inputs; timing excludes mask construction and QA.
 +//! Optional arguments: STEP [pure|hybrid|interior] [OUTPUT_DIRECTORY].
 +//! Enable --features experimental-alpha-sdf for STEP. Use "vector" in place of
 +//! STEP to export baseline meshes. Timing excludes input construction and QA.
 +//! QA areas are measured against independent vector offsets, in square pixels.
 +use geo::{unary_union, Area, BooleanOps, Buffer, MultiPolygon, Polygon, Rect};
- use kasane_sdk::{alpha_mesh_geometry, AlphaMask, AlphaMeshOptions, MeshGeometry};
+ use zipzi_sdk::{alpha_mesh_geometry, AlphaMask, AlphaMeshOptions, MeshGeometry};
  use std::{hint::black_box, time::Instant};
 +
 +fn reference(
@@ -263,10 +263,10 @@ diff --git a/modules/kasane-sdk/examples/alpha_mesh_profile.rs b/modules/kasane-
 +            };
 +            #[cfg(feature = "experimental-alpha-sdf")]
 +            if let Some(step) = sdf_step {
-+                return kasane_sdk::alpha_mesh_geometry_sdf(
++                return zipzi_sdk::alpha_mesh_geometry_sdf(
 +                    mask,
 +                    &options,
-+                    kasane_sdk::AlphaMeshSdfOptions {
++                    zipzi_sdk::AlphaMeshSdfOptions {
 +                        grid_step: step,
 +                        vector_ring_limit: if hybrid { 64 } else { 0 },
 +                        preserve_vector_outline: interior,
@@ -369,7 +369,7 @@ new file mode 100644
 +    root = Path(__file__).resolve().parents[1]
 +    output = (root / args.output).resolve()
 +    output.mkdir(parents=True, exist_ok=True)
-+    build = ["cargo", "build", "--release", "--locked", "-p", "kasane-sdk",
++    build = ["cargo", "build", "--release", "--locked", "-p", "zipzi-sdk",
 +             "--features", "experimental-alpha-sdf", "--example", "alpha_mesh_profile"]
 +    # Cargo's JSON output locates the binary even with CARGO_TARGET_DIR overrides.
 +    built = subprocess.run(build + ["--message-format=json"], cwd=root, text=True, stdout=subprocess.PIPE, check=True)
@@ -396,17 +396,17 @@ new file mode 100644
 +                "rustc": subprocess.check_output(["rustc", "--version"], text=True).strip(),
 +                "contracts": {}}
 +    if args.contracts:
-+        command = ["cargo", "test", "--release", "--locked", "-p", "kasane-sdk",
++        command = ["cargo", "test", "--release", "--locked", "-p", "zipzi-sdk",
 +                   "--features", "experimental-alpha-sdf", "--test", "alpha_mesh"]
 +        for name, step, mode in configurations:
 +            env = os.environ.copy()
-+            env.pop("KASANE_ALPHA_TEST_SDF_STEP", None)
-+            env.pop("KASANE_ALPHA_TEST_SDF_HYBRID", None)
-+            env.pop("KASANE_ALPHA_TEST_SDF_INTERIOR", None)
++            env.pop("ZIPZI_ALPHA_TEST_SDF_STEP", None)
++            env.pop("ZIPZI_ALPHA_TEST_SDF_HYBRID", None)
++            env.pop("ZIPZI_ALPHA_TEST_SDF_INTERIOR", None)
 +            if step != "vector":
-+                env["KASANE_ALPHA_TEST_SDF_STEP"] = step
-+                env["KASANE_ALPHA_TEST_SDF_HYBRID"] = "1" if mode != "pure" else "0"
-+                env["KASANE_ALPHA_TEST_SDF_INTERIOR"] = "1" if mode == "interior" else "0"
++                env["ZIPZI_ALPHA_TEST_SDF_STEP"] = step
++                env["ZIPZI_ALPHA_TEST_SDF_HYBRID"] = "1" if mode != "pure" else "0"
++                env["ZIPZI_ALPHA_TEST_SDF_INTERIOR"] = "1" if mode == "interior" else "0"
 +            result = subprocess.run(command, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 +            (output / f"contracts-{name}.log").write_text(result.stdout)
 +            summary = re.search(r"test result: \w+\. (\d+) passed; (\d+) failed", result.stdout)
@@ -511,9 +511,9 @@ new file mode 100644
 +
 +if __name__ == "__main__":
 +    main()
-diff --git a/modules/kasane-sdk/src/alpha_mesh/domain.rs b/modules/kasane-sdk/src/alpha_mesh/domain.rs
---- a/modules/kasane-sdk/src/alpha_mesh/domain.rs
-+++ b/modules/kasane-sdk/src/alpha_mesh/domain.rs
+diff --git a/modules/zipzi-sdk/src/alpha_mesh/domain.rs b/modules/zipzi-sdk/src/alpha_mesh/domain.rs
+--- a/modules/zipzi-sdk/src/alpha_mesh/domain.rs
++++ b/modules/zipzi-sdk/src/alpha_mesh/domain.rs
 @@ -1,6 +1,6 @@
 -use super::{error, limit, spatial, AlphaMask, AlphaMeshOptions};
 +use super::{error, limit, offset::Offsets, spatial, AlphaMask, AlphaMeshOptions};
@@ -572,9 +572,9 @@ diff --git a/modules/kasane-sdk/src/alpha_mesh/domain.rs b/modules/kasane-sdk/sr
      let redistributed = super::resample::smooth(
          &outline,
          &expanded,
-diff --git a/modules/kasane-sdk/src/alpha_mesh/mod.rs b/modules/kasane-sdk/src/alpha_mesh/mod.rs
---- a/modules/kasane-sdk/src/alpha_mesh/mod.rs
-+++ b/modules/kasane-sdk/src/alpha_mesh/mod.rs
+diff --git a/modules/zipzi-sdk/src/alpha_mesh/mod.rs b/modules/zipzi-sdk/src/alpha_mesh/mod.rs
+--- a/modules/zipzi-sdk/src/alpha_mesh/mod.rs
++++ b/modules/zipzi-sdk/src/alpha_mesh/mod.rs
 @@ -4,7 +4,10 @@
  mod domain;
  mod islands;
@@ -651,9 +651,9 @@ diff --git a/modules/kasane-sdk/src/alpha_mesh/mod.rs b/modules/kasane-sdk/src/a
 +    };
 +    triangulate::generate(mask, options, &foreground, &outline, offsets)
 +}
-diff --git a/modules/kasane-sdk/src/alpha_mesh/simplify.rs b/modules/kasane-sdk/src/alpha_mesh/simplify.rs
---- a/modules/kasane-sdk/src/alpha_mesh/simplify.rs
-+++ b/modules/kasane-sdk/src/alpha_mesh/simplify.rs
+diff --git a/modules/zipzi-sdk/src/alpha_mesh/simplify.rs b/modules/zipzi-sdk/src/alpha_mesh/simplify.rs
+--- a/modules/zipzi-sdk/src/alpha_mesh/simplify.rs
++++ b/modules/zipzi-sdk/src/alpha_mesh/simplify.rs
 @@ -1,8 +1,8 @@
  //! Preserve difficult corners locally while simplifying smooth spans.
 -use super::spatial;
@@ -702,9 +702,9 @@ diff --git a/modules/kasane-sdk/src/alpha_mesh/simplify.rs b/modules/kasane-sdk/
 +        );
      }
  }
-diff --git a/modules/kasane-sdk/src/alpha_mesh/triangulate.rs b/modules/kasane-sdk/src/alpha_mesh/triangulate.rs
---- a/modules/kasane-sdk/src/alpha_mesh/triangulate.rs
-+++ b/modules/kasane-sdk/src/alpha_mesh/triangulate.rs
+diff --git a/modules/zipzi-sdk/src/alpha_mesh/triangulate.rs b/modules/zipzi-sdk/src/alpha_mesh/triangulate.rs
+--- a/modules/zipzi-sdk/src/alpha_mesh/triangulate.rs
++++ b/modules/zipzi-sdk/src/alpha_mesh/triangulate.rs
 @@ -2,13 +2,14 @@
      classify::{self, Cdt},
      error, limit,
@@ -720,7 +720,7 @@ diff --git a/modules/kasane-sdk/src/alpha_mesh/triangulate.rs b/modules/kasane-s
 +    unary_union, Area, BooleanOps, BoundingRect, Contains, Coord, InteriorPoint, LineString,
 +    MultiLineString, MultiPolygon, Point, Polygon, Simplify,
  };
- use kasane_core::Vec2;
+ use zipzi_core::Vec2;
  use spade::{handles::FixedVertexHandle, Point2, Triangulation};
 @@ -146,6 +147,7 @@
      options: &AlphaMeshOptions,
@@ -823,10 +823,10 @@ diff --git a/modules/kasane-sdk/src/alpha_mesh/triangulate.rs b/modules/kasane-s
      let fill_index = PolygonIndex::new(&fill);
      for polygon in &inner.0 {
          let bounds = polygon
-diff --git a/modules/kasane-sdk/src/alpha_mesh/offset.rs b/modules/kasane-sdk/src/alpha_mesh/offset.rs
+diff --git a/modules/zipzi-sdk/src/alpha_mesh/offset.rs b/modules/zipzi-sdk/src/alpha_mesh/offset.rs
 new file mode 100644
 --- /dev/null
-+++ b/modules/kasane-sdk/src/alpha_mesh/offset.rs
++++ b/modules/zipzi-sdk/src/alpha_mesh/offset.rs
 @@ -0,0 +1,31 @@
 +//! Keep the vector implementation as the default and oracle for SDF experiments.
 +use crate::SdkError;
@@ -859,10 +859,10 @@ new file mode 100644
 +        self.buffer(&MultiPolygon(vec![source.clone()]), distance)
 +    }
 +}
-diff --git a/modules/kasane-sdk/src/alpha_mesh/sdf.rs b/modules/kasane-sdk/src/alpha_mesh/sdf.rs
+diff --git a/modules/zipzi-sdk/src/alpha_mesh/sdf.rs b/modules/zipzi-sdk/src/alpha_mesh/sdf.rs
 new file mode 100644
 --- /dev/null
-+++ b/modules/kasane-sdk/src/alpha_mesh/sdf.rs
++++ b/modules/zipzi-sdk/src/alpha_mesh/sdf.rs
 @@ -0,0 +1,459 @@
 +//! Experimental raster offsets. Pixel-square boundaries seed an exact grid EDT;
 +//! rasterization of non-raster polygons and contour interpolation remain approximate.

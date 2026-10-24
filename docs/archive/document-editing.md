@@ -1,21 +1,21 @@
 # Document editing
 
-The editor is a Rust client of `kasane-sdk`. SDK owns model semantics, transactions,
+The editor is a Rust client of `zipzi-sdk`. SDK owns model semantics, transactions,
 validation, publication and undo/redo. No Python runtime, IPC, second history stack
 or event bus is introduced.
 
 ```text
 editor (EditorView: GPUI, controls, native dialogs, executor and preview composition)
-  ├── editor-core
+  ├── zipzi-editor-core
   │     ├── Editor (window workspace, document identities, tasks and close/exit)
   │     │     └── DocumentSession (viewport, scene cache/revisions and ToolController)
-  │     │           └── Document → kasane-sdk::AuthoringSession
+  │     │           └── Document → zipzi-sdk::AuthoringSession
   │     └── SceneSnapshot (evaluated frame and shared decoded textures)
-  └── editor-render → kasane-render + kasane-render-metal
+  └── zipzi-editor-render → zipzi-render + zipzi-render-metal
         └── immutable Metal texture → GPUI composition
 ```
 
-`editor-core/src/workspace.rs` implements the public `Editor`. Each model has a
+`zipzi-editor-core/src/workspace.rs` implements the public `Editor`. Each model has a
 runtime `DocumentId`, independent of model UUID and project path. `session.rs`
 owns each tab's model/view/tool state as a private `DocumentSession`. No new crate is needed: these modules have the same dependency
 boundary and neither depends on GPUI or GPU types. `editor.rs` declares editing

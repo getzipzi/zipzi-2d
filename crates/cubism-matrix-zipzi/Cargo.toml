@@ -1,0 +1,18 @@
+[package]
+name = "cubism-matrix-zipzi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+zipzi-core = { path = "../zipzi-core" }
+zipzi-render = { path = "../zipzi-render" }
+zipzi-render-metal = { path = "../zipzi-render-metal" }
+zipzi-sdk = { path = "../zipzi-sdk" }
+zipzi-sdk-observe = { path = "../zipzi-sdk-observe" }
+png = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }

@@ -76,14 +76,14 @@ def run_tests(args, test_arguments, directory):
     outside = directory / "run"
     outside.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
-    for key in ["VIRTUAL_ENV", "PYTHONPATH", "PYTHONHOME", "KASANE_DEV_SESSION_DIR"]:
+    for key in ["VIRTUAL_ENV", "PYTHONPATH", "PYTHONHOME", "ZIPZI_DEV_SESSION_DIR"]:
         env.pop(key, None)
     env["UV_PROJECT_ENVIRONMENT"] = str(environment)
     # Share unchanged Rust dependencies with ordinary SDK tests. Cargo keeps
     # Debug/Release and feature variants separate inside the workspace target.
     env["CARGO_TARGET_DIR"] = str(ROOT / "target")
     uv = ["uv", "run", "--locked", "--project", ROOT]
-    manifest = ROOT / "crates/kasane-python/Cargo.toml"
+    manifest = ROOT / "crates/zipzi-python/Cargo.toml"
     features = ["--features", "observe"] if args.observe else []
 
     if args.wheel:
@@ -104,9 +104,9 @@ def run_tests(args, test_arguments, directory):
     # Detect a stale/wrong feature variant before any passing CPU tests can
     # accidentally hide that the extension was not rebuilt or installed.
     expected = repr(args.observe)
-    check = f"import kasane; actual = kasane.capabilities()['gpu_observation']; assert actual == {expected}, (actual, {expected})"
+    check = f"import zipzi; actual = zipzi.capabilities()['gpu_observation']; assert actual == {expected}, (actual, {expected})"
     execute([*uv, "python", "-c", check], cwd=outside, env=env)
-    tests = ROOT / "crates/kasane-python/tests"
+    tests = ROOT / "crates/zipzi-python/tests"
     patterns = ["test_cpu.py", "test_inspection.py"]
     if args.observe:
         patterns.append("test_observe.py")

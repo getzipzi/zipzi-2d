@@ -24,15 +24,15 @@
 
 | 代码入口 | 当前事实 | 实施要求 |
 | --- | --- | --- |
-| `kasane-sdk-observe/src/lib.rs` | ObservationInput 保留 frame、资产描述、root；之后才读纹理 | 新捕获必须把同一批纹理 bytes 固定下来，供所有通道复用 |
-| `kasane-sdk-observe/src/gpu.rs` | 每次 observe 固定配置、自动居中、读回 RGBA；PNG 原样编码 | 引入每视图 RenderRequest；旧入口语义不变 |
-| `kasane-python/src/observe.rs` | session 锁内 capture，锁外 GPU；返回大 tuple | 新接口使用独立 typed result，避免扩充破坏旧 tuple |
-| `python/kasane/_observe.py` | 标准库编码、每帧动态裁剪、未标注拼图、report v1 | 新 presentation/report 管线独立，旧 API 与 schema 保持 |
+| `zipzi-sdk-observe/src/lib.rs` | ObservationInput 保留 frame、资产描述、root；之后才读纹理 | 新捕获必须把同一批纹理 bytes 固定下来，供所有通道复用 |
+| `zipzi-sdk-observe/src/gpu.rs` | 每次 observe 固定配置、自动居中、读回 RGBA；PNG 原样编码 | 引入每视图 RenderRequest；旧入口语义不变 |
+| `zipzi-python/src/observe.rs` | session 锁内 capture，锁外 GPU；返回大 tuple | 新接口使用独立 typed result，避免扩充破坏旧 tuple |
+| `python/zipzi/_observe.py` | 标准库编码、每帧动态裁剪、未标注拼图、report v1 | 新 presentation/report 管线独立，旧 API 与 schema 保持 |
 | `evaluation/types.rs` | Drawable 有 positions/UV/indices，没有 authoring vertex IDs 或求值后 deformer trace | 同一 capture 附加拓扑身份和可选求值 trace |
 | `evaluation/transforms.rs` | 求值中的 TransformState 包含 pose、points、继承状态，未公开 | 诊断从此处导出受控 trace，不能 Python 重写求值算法 |
-| `kasane-render/src/scene.rs` | 已有 mask、target、destination-read 和层内顺序 | 诊断依赖图与绘制顺序复用 ScenePlan |
+| `zipzi-render/src/scene.rs` | 已有 mask、target、destination-read 和层内顺序 | 诊断依赖图与绘制顺序复用 ScenePlan |
 | `render-wgpu/src/modern.rs`、`encoding.rs` | 有 resize；主场景/离屏/遮罩存在透明 clear；最终输出 Replace/Composite | 显式背景必须初始化实际主场景 target，不能只改最终输出 load |
-| `kasane-sdk/src/diagnostics.rs` | 几何诊断看 base_positions | 保留旧行为，新增 evaluated geometry 诊断 |
+| `zipzi-sdk/src/diagnostics.rs` | 几何诊断看 base_positions | 保留旧行为，新增 evaluated geometry 诊断 |
 | Python wheel | 目前无 Pillow runtime dependency，GPU 是可选 Cargo feature | 展示依赖隔离为 Python extra；CPU authoring import 不被阻断 |
 
 当前工作树还有动画、CDI、Expression 等修改。实现每阶段前重新核对相关文件，不覆盖既有工作；新诊断能力不要求改变工程保存格式。
@@ -225,15 +225,15 @@ resources: timing, render/readback counts, output pixels/bytes, peak estimates
 
 | 模块 | 拟改动/新增文件 | 负责内容 |
 | --- | --- | --- |
-| kasane-core | `evaluation/types.rs`、`evaluator.rs`、`transforms.rs`、`meshes.rs`、`glue.rs` | 可选 trace、隐藏几何与当前姿态对应；不画文字/PNG |
-| kasane-sdk | 新 `observation_snapshot.rs`、诊断纯计算模块 | 冻结 authoring metadata、vertex IDs、父链与 evaluated geometry 诊断 |
-| kasane-sdk-observe | 从 `gpu.rs` 拆 `capture.rs`、`view.rs`、`inspection.rs`、`query.rs` | 纹理生命周期、view、渲染请求、packet 原生数据、GPU query |
-| kasane-render | 新 `diagnostic.rs`；复用 `scene.rs` | 模式与依赖闭包、合成路径、diagnostic plan |
-| kasane-render-wgpu | `modern.rs`、`encoding.rs`、`shaders.rs`；新诊断 pass 模块 | 主 target 背景、coverage/mask 输出、buffer readback |
-| kasane-python | 新 native inspection bindings、`_inspection.py`、`_presentation.py`、`_comparison.py`、新 types | 公共请求/结果、布局/标注、对比、schema、保存 |
+| zipzi-core | `evaluation/types.rs`、`evaluator.rs`、`transforms.rs`、`meshes.rs`、`glue.rs` | 可选 trace、隐藏几何与当前姿态对应；不画文字/PNG |
+| zipzi-sdk | 新 `observation_snapshot.rs`、诊断纯计算模块 | 冻结 authoring metadata、vertex IDs、父链与 evaluated geometry 诊断 |
+| zipzi-sdk-observe | 从 `gpu.rs` 拆 `capture.rs`、`view.rs`、`inspection.rs`、`query.rs` | 纹理生命周期、view、渲染请求、packet 原生数据、GPU query |
+| zipzi-render | 新 `diagnostic.rs`；复用 `scene.rs` | 模式与依赖闭包、合成路径、diagnostic plan |
+| zipzi-render-wgpu | `modern.rs`、`encoding.rs`、`shaders.rs`；新诊断 pass 模块 | 主 target 背景、coverage/mask 输出、buffer readback |
+| zipzi-python | 新 native inspection bindings、`_inspection.py`、`_presentation.py`、`_comparison.py`、新 types | 公共请求/结果、布局/标注、对比、schema、保存 |
 | tools/tests/docs | 新 `tests/fixtures/observe_inspection/`；扩展 wheel validator 和 API/README/VALIDATION | synthetic fixtures、集成门禁、可运行 recipe |
 
-Python 新增 `inspection` extra，首选 Pillow 负责字体、标注、布局和图片处理；版本需在 CPython 3.14 安装验证后固定支持范围，开发依赖更新 root pyproject/uv.lock。基础 `import kasane` 与旧 observe 不要求该 extra；调用展示功能缺依赖给可操作错误。数值 geometry/SVD 留 Rust，避免再加 NumPy。
+Python 新增 `inspection` extra，首选 Pillow 负责字体、标注、布局和图片处理；版本需在 CPython 3.14 安装验证后固定支持范围，开发依赖更新 root pyproject/uv.lock。基础 `import zipzi` 与旧 observe 不要求该 extra；调用展示功能缺依赖给可操作错误。数值 geometry/SVD 留 Rust，避免再加 NumPy。
 
 内置确定字体资源与许可记录，默认编号使用小型数字/ASCII 字体；中文显示名原样保留 JSON。图内完整名称允许显式字体，缺字时回退到编号与 runtime ID 并报告，禁止依赖实现机器的系统字体导致标签位置漂移。
 
@@ -278,13 +278,13 @@ renderer 改动必须跑现有 blend/mask/offscreen 回归；不修改旧图基�
 实施阶段使用的既有命令（本计划编写时未执行运行时测试）：
 
 ```sh
-cargo test -p kasane-sdk-observe --locked
-cargo test -p kasane-render --locked
-cargo test -p kasane-render-wgpu --locked
+cargo test -p zipzi-sdk-observe --locked
+cargo test -p zipzi-render --locked
+cargo test -p zipzi-render-wgpu --locked
 cargo fmt --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
-uv run --locked maturin build --manifest-path modules/kasane-python/Cargo.toml --release --features observe --out target/python-wheels
+uv run --locked maturin build --manifest-path modules/zipzi-python/Cargo.toml --release --features observe --out target/python-wheels
 ```
 
 wheel validator 需增加可选 inspection suite，并在新功能发布 profile 中强制执行且安装 extra；旧 `--full` 的检查不能被替换掉。实际 wheel 路径与 probe 参数遵循 [VALIDATION](VALIDATION.md)，不在计划中假定一次构建后的文件名。

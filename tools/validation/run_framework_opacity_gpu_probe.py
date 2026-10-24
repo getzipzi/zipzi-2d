@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SDK = ROOT / "third_party/CubismSdkForNative-5-r.5"
 BUILD = ROOT / "target/animation-gpu-probe"
 OUTPUT = ROOT / "target/animation-opacity-gpu-probe"
-PROBE = BUILD / "kasane_framework_gpu_probe"
+PROBE = BUILD / "zipzi_framework_gpu_probe"
 SHADERS = SDK / "Framework/src/Rendering/OpenGL/Shaders/Standard"
 MOC = ROOT / "fixtures/animation_cpu/model.moc3"
 TEXTURE = ROOT / "fixtures/external_v50/texture_00.png"
@@ -36,9 +36,9 @@ def main() -> int:
     report: dict = {"status": "failed", "checks": {}, "inputs": {}, "offscreen": "not_run"}
     try:
         run(["cmake", "-S", "tools/validation/probes", "-B", str(BUILD),
-             f"-DKASANE_CUBISM_ROOT={SDK}", "-DKASANE_BUILD_GPU_PROBE=ON",
+             f"-DZIPZI_CUBISM_ROOT={SDK}", "-DZIPZI_BUILD_GPU_PROBE=ON",
              "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"])
-        run(["cmake", "--build", str(BUILD), "--target", "kasane_framework_gpu_probe", "-j4"])
+        run(["cmake", "--build", str(BUILD), "--target", "zipzi_framework_gpu_probe", "-j4"])
         scenarios = {"base": [], "model_half": ["--model-opacity", "0.5"],
                      "renderer_half": ["--renderer-opacity", "0.5"],
                      "part_half": ["--part-opacity", "0", "0.5"]}
@@ -65,7 +65,7 @@ def main() -> int:
             raise AssertionError("Part0 opacity changed the other Part's center pixel")
         report["checks"]["part_opacity_spatial_scope"] = "passed"
         offscreen_moc = OUTPUT / "model_offscreen.moc3"
-        run(["cargo", "run", "-q", "-p", "kasane-moc3", "--example",
+        run(["cargo", "run", "-q", "-p", "zipzi-moc3", "--example",
              "create_animation_offscreen_fixture", "--", str(MOC), str(offscreen_moc)])
         offscreen_scenarios = {
             "offscreen_base": [],
@@ -100,7 +100,7 @@ def main() -> int:
         report["part_difference_bounds"] = part_diff
         for source in (MOC, TEXTURE, PROBE, offscreen_moc,
                        ROOT / "tools/validation/probes/framework_gpu_probe.cpp",
-                       ROOT / "crates/kasane-moc3/examples/create_animation_offscreen_fixture.rs"):
+                       ROOT / "crates/zipzi-moc3/examples/create_animation_offscreen_fixture.rs"):
             report["inputs"][str(source.relative_to(ROOT))] = digest(source)
         report["status"] = "passed"
     except Exception as failure:

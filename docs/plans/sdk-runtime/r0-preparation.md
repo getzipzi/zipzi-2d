@@ -7,10 +7,10 @@ R0 准备产物已交付；R1–R7 尚未实现。本文不把目标接口、现
 
 | 仓库 | 分支 | 起始 revision | 本阶段修改 |
 | --- | --- | --- | --- |
-| kasane-editor | `codex/sdk-runtime` | `73c414d5c1361b96d9b2c6fd4e20f1ae47ba601f` | 静态迁移清单、生成工具、阶段记录和计划状态 |
-| kasane-2d | `codex/sdk-runtime` | `26afe00939ddae59a38ee96a6c69618aa7fcb063` | 完整源接口清单、默认配置、合成 fixture、Release CPU 探针、采集/校验工具 |
+| zipzi-editor | `codex/sdk-runtime` | `73c414d5c1361b96d9b2c6fd4e20f1ae47ba601f` | 静态迁移清单、生成工具、阶段记录和计划状态 |
+| zipzi-2d | `codex/sdk-runtime` | `26afe00939ddae59a38ee96a6c69618aa7fcb063` | 完整源接口清单、默认配置、合成 fixture、Release CPU 探针、采集/校验工具 |
 
-两个工作树位于同一父目录，保持 Editor 原有 `../kasane-2d` 路径依赖；未改变
+两个工作树位于同一父目录，保持 Editor 原有 `../zipzi-2d` 路径依赖；未改变
 Cargo manifests/lockfile 或运行期行为。起始两个主工作区均干净。实施期间原 Editor
 主工作区另有动画/UI 工作及并行编译出现；本阶段未复制、覆盖或提交那些变更。
 基线采集不包含这些后续变更；合并时已整合主分支的动画/UI 提交至 `ada2599`，
@@ -25,8 +25,8 @@ lockfile 在 R0 交付时与表中的起始 revision 相同；R0 新增的是工
 采集时的工作目录（合并后清理）：
 
 ```text
-/Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor
-/Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-2d
+/Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor
+/Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-2d
 ```
 
 清理前将原始数据完整复制至主工作区的同名 `target/runtime-r0*` 目录：
@@ -133,9 +133,9 @@ candidate 交替进程，分别报告各进程 P50/P95 的中位数与范围。�
 
 所有桌面、开发和 Python 入口使用同一用户/显式 profile 身份，默认 `default`，
 不把 SDK build、工程路径或是否有窗口写进身份而静默产生另一宿主。
-macOS 默认目录 `/tmp/kasane-runtime-<uid>`，0700 且拒绝非本用户/符号链接目录；
+macOS 默认目录 `/tmp/zipzi-runtime-<uid>`，0700 且拒绝非本用户/符号链接目录；
 socket 为 `<profile>.sock`，锁为 `<profile>.lock`，权限 0600。profile 限 ASCII
-`[a-z0-9_-]{1,24}`，保证 Unix socket 路径长度；显式 `KASANE_RUNTIME_DIR` 覆盖须
+`[a-z0-9_-]{1,24}`，保证 Unix socket 路径长度；显式 `ZIPZI_RUNTIME_DIR` 覆盖须
 是私有绝对目录且所有入口共用。发现记录仅提供诊断，成功监听后的严格握手才表示就绪。
 
 冷启动持有同一个 endpoint 的排他 owner flock；启动者将已锁定文件描述符传给宿主，
@@ -144,8 +144,8 @@ socket 为 `<profile>.sock`，锁为 `<profile>.lock`，权限 0600。profile �
 协议不匹配直接返回不兼容，不启动替代宿主。只有取得 owner lock 且确认无活跃宿主后
 才清理残留 socket；监听前失败退出释放本次锁，允许后续重试。此为 R3 契约，尚未实现。
 
-可执行文件按顺序定位：显式绝对 `KASANE_EDITOR_HOST`；当前安装目录/调用者配置的
-`.app/Contents/MacOS/kasane-editor`；macOS 以现有 bundle ID `dev.kasane.editor`
+可执行文件按顺序定位：显式绝对 `ZIPZI_EDITOR_HOST`；当前安装目录/调用者配置的
+`.app/Contents/MacOS/zipzi-editor`；macOS 以现有 bundle ID `dev.zipzi.editor`
 查询已安装 bundle。无法唯一定位则返回明确错误及显式配置方式，不使用 cwd 中偶然
 存在的 Debug 二进制。开发脚本设置配对构建的显式路径；发行验收必须使用发行包。
 
@@ -167,13 +167,13 @@ uv run --locked python tools/runtime_inventory.py --check
 uv run --locked python -m unittest discover -s tools -p test_runtime_inventory.py
 uv run --locked python tools/runtime_baseline.py target/runtime-r0-clean \
   --model /absolute/path/to/mao_pro.model3.json
-cargo test --locked -p kasane-sdk --test integration -- vertical_slice:: handles:: history_budget::
+cargo test --locked -p zipzi-sdk --test integration -- vertical_slice:: handles:: history_budget::
 
 # Editor
 python3 scripts/runtime-migration-inventory.py --check
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration workspaces::
-env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace --features kasane-editor/test-support --lib headless_tests::ui_performance
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration workspaces::
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked --workspace --features zipzi-editor/test-support --lib headless_tests::ui_performance
 # R2 使用同机/同模型/同窗口脚本完成成对比较；此处只保留可复用入口。
-uv run --project ../kasane-2d --locked python scripts/property-chain-benchmark.py /absolute/MODEL target/runtime-r2-chain --rounds 5
+uv run --project ../zipzi-2d --locked python scripts/property-chain-benchmark.py /absolute/MODEL target/runtime-r2-chain --rounds 5
 ./scripts/timeline-benchmark.sh target/runtime-r2-timeline 600
 ```

@@ -89,7 +89,7 @@ These results do not support claiming that every control sustains 120 Hz.
 
 ## Regression checks
 
-- 22 editor-core unit tests, including immutable index snapshots, fresh-build
+- 22 zipzi-editor-core unit tests, including immutable index snapshots, fresh-build
   equivalence, labels/visibility, geometry sharing and Undo/Redo.
 - 26 property integration tests, including keyform scope, grouped baselines,
   locks, invalid writes and identity/reference preservation.
@@ -102,8 +102,8 @@ These results do not support claiming that every control sustains 120 Hz.
 ## Reproduction and evidence
 
 ```sh
-KASANE_BENCH_WARMUP=1 ./scripts/properties-benchmark.sh target/cpu-final-all 3 120
-KASANE_BENCH_PROPERTY_CASE=name KASANE_BENCH_WARMUP=1 \
+ZIPZI_BENCH_WARMUP=1 ./scripts/properties-benchmark.sh target/cpu-final-all 3 120
+ZIPZI_BENCH_PROPERTY_CASE=name ZIPZI_BENCH_WARMUP=1 \
   ./scripts/properties-benchmark.sh target/cpu-final-name 3 120
 ```
 

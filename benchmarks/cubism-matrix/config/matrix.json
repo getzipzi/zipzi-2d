@@ -22,9 +22,9 @@
       "host": "core-only"
     },
     {
-      "id": "kasane-metal",
-      "core": "kasane",
-      "host": "kasane-render-metal"
+      "id": "zipzi-metal",
+      "core": "zipzi",
+      "host": "zipzi-render-metal"
     }
   ]
 }

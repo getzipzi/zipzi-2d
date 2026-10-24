@@ -42,7 +42,7 @@ failures:
 
 ---- collapsed_insets_have_distributed_support_in_isolated_and_attached_strips stdout ----
 
-thread 'collapsed_insets_have_distributed_support_in_isolated_and_attached_strips' (14032952) panicked at modules/kasane-sdk/tests/alpha_mesh.rs:826:13:
+thread 'collapsed_insets_have_distributed_support_in_isolated_and_attached_strips' (14032952) panicked at modules/zipzi-sdk/tests/alpha_mesh.rs:826:13:
 unsupported strip span 190..236, attached=false
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
@@ -52,4 +52,4 @@ failures:
 
 test result: FAILED. 34 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
 
-error: test failed, to rerun pass `-p kasane-sdk --test alpha_mesh`
+error: test failed, to rerun pass `-p zipzi-sdk --test alpha_mesh`

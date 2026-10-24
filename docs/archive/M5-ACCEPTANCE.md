@@ -4,7 +4,7 @@
 
 ## 交付
 
-- 应用包：`dist/editor/Kasane-Editor.zip`，解压后直接启动 `Kasane Editor.app`。
+- 应用包：`dist/editor/Zipzi-Editor.zip`，解压后直接启动 `Zipzi Editor.app`。
 - Godot 4.7.2 debug export template + release Rust 原生库；引擎、原生库、renderer 与应用脚本随包加载。保留 debug 模板是为了完整捕获运行时脚本错误，不要求使用者安装 Godot。
 - 新建/打开/保存工程、PNG 建模、MOC3 导入和导出、完整对象与 Keyform 脚本编辑、参数预览、公共 renderer、对象检查、显式 UndoRedo Action、本地串行脚本请求与版本化截图均已接通。
 - 修复了嵌套数组转顶点时静默归零、删除后同 ID 对象使旧句柄复活、多个变形器 runtime ID 冲突等闭环中发现的问题。
@@ -15,16 +15,16 @@
 python3 tools/build_editor.py \
   --godot target/godot-tools/standard/Godot.app/Contents/MacOS/Godot \
   --template target/godot-tools/templates/macos.zip \
-  --export dist/editor/Kasane-Editor.zip
-python3 tools/validate_m5.py --application dist/editor/Kasane-Editor.zip
+  --export dist/editor/Zipzi-Editor.zip
+python3 tools/validate_m5.py --application dist/editor/Zipzi-Editor.zip
 python3 tools/validate_godot.py --suite all \
   --godot target/godot-tools/standard/Godot.app/Contents/MacOS/Godot \
   --output-dir target/m5-godot-regression
-cargo test -p kasane-core --tests --locked
-cargo test -p kasane-godot --lib --locked
+cargo test -p zipzi-core --tests --locked
+cargo test -p zipzi-godot --lib --locked
 ```
 
-Godot 标准版、导出模板、官方/Purism 运行时探针及外部输入需按应用说明和 M3 验收说明准备；不提交第三方二进制或素材。Agent 自检记录来自独立的实际交互，默认读取 `target/kasane/m5-agent-review/review.json`；缺失时整体验收不通过。
+Godot 标准版、导出模板、官方/Purism 运行时探针及外部输入需按应用说明和 M3 验收说明准备；不提交第三方二进制或素材。Agent 自检记录来自独立的实际交互，默认读取 `target/zipzi/m5-agent-review/review.json`；缺失时整体验收不通过。
 
 ## 结果
 
@@ -45,11 +45,11 @@ Godot 标准版、导出模板、官方/Purism 运行时探针及外部输入需
 
 ## 证据
 
-主报告：`target/kasane/m5/report.json`，记录应用 SHA256、Git/submodule 状态、引擎、输入 SHA、逐项结果和独立目录路径。接口详细记录、工程、请求/结果、导出包、运行时采样、截图与差异图保存在报告指定的独立目录。最终 UI 截图为该目录的 `application-ui.png`。
+主报告：`target/zipzi/m5/report.json`，记录应用 SHA256、Git/submodule 状态、引擎、输入 SHA、逐项结果和独立目录路径。接口详细记录、工程、请求/结果、导出包、运行时采样、截图与差异图保存在报告指定的独立目录。最终 UI 截图为该目录的 `application-ui.png`。
 
 本轮应用 SHA256：`ac1454f6b62d1caba0c0df7c586b76c0e5ce9e47c2b79157b0ead49e7f1da2c7`。
 
-Agent 自检证据在 `target/kasane/m5-agent-review/`：读取首次空白观察图和 drawable 数据，定位坐标及嵌套数组转换问题；保留对象 ID 修正后再检查图像，发现第二层方向倒置，修正 Rotation 基准角后再次观察，确认两层绿色角标均位于左上。记录包含三次脚本、结果和前后图，不由验收入口生成。回归报告为 `target/m5-godot-regression/report.json`。
+Agent 自检证据在 `target/zipzi/m5-agent-review/`：读取首次空白观察图和 drawable 数据，定位坐标及嵌套数组转换问题；保留对象 ID 修正后再检查图像，发现第二层方向倒置，修正 Rotation 基准角后再次观察，确认两层绿色角标均位于左上。记录包含三次脚本、结果和前后图，不由验收入口生成。回归报告为 `target/m5-godot-regression/report.json`。
 
 以上是本机实际运行结果；`target/`、`dist/` 和独立临时目录均为本地证据与产物，不纳入源码提交。
 

@@ -1,6 +1,6 @@
 # SDK Runtime 与 Editor 同进程详细设计
 
-合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/kasane-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
+合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
 日期：2026 年 10 月 23 日。状态：**配对工作树中已交付 R0 准备；Runtime/连接能力尚未实现**。
 
 实际进展与证据见 [R0 实施记录](sdk-runtime/r0-preparation.md)，不以本文的目标能力代替实施结果。
@@ -13,8 +13,8 @@ Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观�
 
 确定采用以下架构：
 
-1. 保留 `kasane-sdk`，继续拥有领域编辑契约、候选、版本、历史和工程操作。
-2. 在 `kasane-2d` 新增薄的 `kasane-runtime` crate，管理会话托管、操作对象、调度、事件和客户端生命周期，不依赖 GPUI。
+1. 保留 `zipzi-sdk`，继续拥有领域编辑契约、候选、版本、历史和工程操作。
+2. 在 `zipzi-2d` 新增薄的 `zipzi-runtime` crate，管理会话托管、操作对象、调度、事件和客户端生命周期，不依赖 GPUI。
 3. Editor 与 Runtime 位于同一个桌面进程。Editor 通过类型化 Rust 接口调用 Runtime，无 IPC 编解码开销。
 4. Python 在独立进程和自己的环境中运行，通过连接后端调用 Runtime 中的 SDK。保留现有独立执行的 NativeBackend。
 5. 每个托管会话只有一个正式 `AuthoringSession` 和一套历史。Python 按需读取数据，不为连接建立第二份完整工程。
@@ -27,20 +27,20 @@ Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观�
 
 ## 2. 现状与证据
 
-调查基线为 editor `24601bc`、kasane-2d `b86b13b` 及当时工作区；editor 存在进行中的 UI 改动。该基线用于说明现状，实施 R0 必须重新记录两个仓库的确切 revision 和工作区差异。
+调查基线为 editor `24601bc`、zipzi-2d `b86b13b` 及当时工作区；editor 存在进行中的 UI 改动。该基线用于说明现状，实施 R0 必须重新记录两个仓库的确切 revision 和工作区差异。
 
 | 现有位置 | 已有能力 | 本次需要改变的边界 |
 | --- | --- | --- |
-| [SDK session](../../crates/kasane-sdk/src/session.rs) | `AuthoringSession`、历史、快照、事件、`begin_owned_edit` | 保持领域所有权，由 Runtime 托管实例；补齐候选观察等公共契约 |
-| [SDK edit](../../crates/kasane-sdk/src/edit.rs) | `commit_to` 校验完整 Version，原子发布并生成回执 | 提交不应被重复实现；昂贵准备与发布需要明确调度边界 |
-| [SDK project IO](../../crates/kasane-sdk/src/project_io.rs) | 保存协调历史资源路径及已保存基线 | 统一保存入口，明确忙碌和失败后的会话归还 |
-| [Editor Document](../../crates/editor-core/src/document.rs) | 同时持有 SDK 会话、候选、选择和投影缓存 | 拆开正式会话所有权与 Editor 视图适配 |
-| [工作区 entry](../../crates/editor-core/src/workspace/entry.rs)、[IO](../../crates/editor-core/src/workspace/io.rs) | 多文档、运行期身份；保存将整个文档会话交给后台 | Runtime 管理文档生命周期，Editor 保留视图和交互状态 |
-| [发布适配](../../crates/editor-core/src/authoring/publication.rs) | 回执驱动投影更新，当前会消费 SDK 事件 | 统一事件消费，保留现有增量更新策略 |
-| [应用入口](../../crates/kasane-editor/src/lib.rs) | 最后一个窗口关闭时退出应用 | 宿主常驻与窗口开关分离 |
-| [Python NativeSession](../../crates/kasane-python/src/session.rs) | 独立 `Arc<Mutex<AuthoringSession>>` | 增加连接后端，不向连接模式复制这个会话 |
-| [Python 公共包](../../crates/kasane-python/python/kasane/__init__.py)、[Session](../../crates/kasane-python/python/kasane/_session.py) | 公共 API 直接依赖 `_native`；Plan、Handle 等为 PyO3 对象 | 分离公共值类型、后端引用和可选原生扩展 |
-| [Observer](../../crates/kasane-sdk-observe/src/lib.rs) | 不可变观察输入、空间检查和离屏渲染 | 接受明确的正式/候选快照来源，按需执行 |
+| [SDK session](../../crates/zipzi-sdk/src/session.rs) | `AuthoringSession`、历史、快照、事件、`begin_owned_edit` | 保持领域所有权，由 Runtime 托管实例；补齐候选观察等公共契约 |
+| [SDK edit](../../crates/zipzi-sdk/src/edit.rs) | `commit_to` 校验完整 Version，原子发布并生成回执 | 提交不应被重复实现；昂贵准备与发布需要明确调度边界 |
+| [SDK project IO](../../crates/zipzi-sdk/src/project_io.rs) | 保存协调历史资源路径及已保存基线 | 统一保存入口，明确忙碌和失败后的会话归还 |
+| [Editor Document](../../crates/zipzi-editor-core/src/document.rs) | 同时持有 SDK 会话、候选、选择和投影缓存 | 拆开正式会话所有权与 Editor 视图适配 |
+| [工作区 entry](../../crates/zipzi-editor-core/src/workspace/entry.rs)、[IO](../../crates/zipzi-editor-core/src/workspace/io.rs) | 多文档、运行期身份；保存将整个文档会话交给后台 | Runtime 管理文档生命周期，Editor 保留视图和交互状态 |
+| [发布适配](../../crates/zipzi-editor-core/src/authoring/publication.rs) | 回执驱动投影更新，当前会消费 SDK 事件 | 统一事件消费，保留现有增量更新策略 |
+| [应用入口](../../crates/zipzi-editor/src/lib.rs) | 最后一个窗口关闭时退出应用 | 宿主常驻与窗口开关分离 |
+| [Python NativeSession](../../crates/zipzi-python/src/session.rs) | 独立 `Arc<Mutex<AuthoringSession>>` | 增加连接后端，不向连接模式复制这个会话 |
+| [Python 公共包](../../crates/zipzi-python/python/zipzi/__init__.py)、[Session](../../crates/zipzi-python/python/zipzi/_session.py) | 公共 API 直接依赖 `_native`；Plan、Handle 等为 PyO3 对象 | 分离公共值类型、后端引用和可选原生扩展 |
+| [Observer](../../crates/zipzi-sdk-observe/src/lib.rs) | 不可变观察输入、空间检查和离屏渲染 | 接受明确的正式/候选快照来源，按需执行 |
 
 旧[第一阶段架构](../archive/editor-foundation.md)把 Python 连接排除在当时范围之外。本设计更新该范围，保留其中的单一历史、文档身份、SDK 领域所有权和后台结果版本检查原则。对象身份与编辑规则继续遵循[对象创作核心方案](unified-object-authoring-core.md)。
 
@@ -48,13 +48,13 @@ Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观�
 
 ```mermaid
 flowchart TD
-    Python[外部 Python 与第三方依赖] --> Client[kasane ConnectedBackend]
+    Python[外部 Python 与第三方依赖] --> Client[zipzi ConnectedBackend]
     Client --> IPC[本机 IPC 适配]
-    subgraph Desktop[Kasane 桌面进程]
+    subgraph Desktop[Zipzi 桌面进程]
         Host[桌面宿主 启停与执行器]
-        UI[Editor 与 editor-core]
-        Runtime[kasane-runtime 会话与操作管理]
-        SDK[kasane-sdk]
+        UI[Editor 与 zipzi-editor-core]
+        Runtime[zipzi-runtime 会话与操作管理]
+        SDK[zipzi-sdk]
         Domain[core / project / animation]
         Observe[sdk-observe 与渲染后端]
         Host --> Runtime
@@ -70,7 +70,7 @@ flowchart TD
     Events --> Client
 ```
 
-`kasane-runtime` 的“薄”指不拥有第二套领域规则，不代表省略会话和连接管理。新增建模能力应主要修改 core/SDK 与绑定；Runtime 只增加路由或类型适配。禁止在 Runtime 重新定义 Mesh/Binding/Motion 的合法性、复制闭包、默认结构或 Undo。
+`zipzi-runtime` 的“薄”指不拥有第二套领域规则，不代表省略会话和连接管理。新增建模能力应主要修改 core/SDK 与绑定；Runtime 只增加路由或类型适配。禁止在 Runtime 重新定义 Mesh/Binding/Motion 的合法性、复制闭包、默认结构或 Undo。
 
 | 层 | 负责 | 不应承担 |
 | --- | --- | --- |
@@ -78,11 +78,11 @@ flowchart TD
 | SDK | 查询、编辑、规划、版本、句柄、原子提交、唯一历史、候选观察 | socket、窗口、线程池实现 |
 | Runtime | 会话注册、操作对象、执行协调、预算、事件分发、客户端生命周期 | 建模算法、通用第二文档树、第二历史栈 |
 | IPC 适配 | 握手、DTO/二进制传输、请求关联、错误映射 | 领域算法、直接访问可变文档 |
-| editor-core | 选择、工具、交互协调、投影与缓存更新 | 持有另一份可写正式工程 |
+| zipzi-editor-core | 选择、工具、交互协调、投影与缓存更新 | 持有另一份可写正式工程 |
 | Editor / 宿主 | GPUI、原生窗口、执行器、进程启停、连接监听装配 | Python 解释器或 agent 执行环境 |
 | Python facade | 类型、上下文管理器、Python 工作流、后端适配 | 复制领域规则或隐式同步完整工程 |
 
-Runtime 放在 kasane-2d，以便独立测试和未来无界面宿主复用。基础 crate 不强制依赖 GPU、GPUI 或 PyO3；观察能力通过可选适配接入。首期协议与本机 transport 可作为该 crate 中边界清楚的模块/feature，只有独立依赖图或复用需要时再拆 crate。
+Runtime 放在 zipzi-2d，以便独立测试和未来无界面宿主复用。基础 crate 不强制依赖 GPU、GPUI 或 PyO3；观察能力通过可选适配接入。首期协议与本机 transport 可作为该 crate 中边界清楚的模块/feature，只有独立依赖图或复用需要时再拆 crate。
 
 SDK 不反向依赖 Runtime；standalone Rust/Python 可继续直接调用 SDK。桌面托管会话的可变引用只在 Runtime 内部使用，不向 UI 或 IPC 暴露可绕过发布流程的 `&mut AuthoringSession`。
 
@@ -151,7 +151,7 @@ R0 建立接口清单：每项登记领域、SDK 入口、Python 入口、读取
 示意代码尚不存在：
 
 ```python
-runtime = kasane.connect(endpoint)
+runtime = zipzi.connect(endpoint)
 session = runtime.session(session_id)
 
 with session.edit("制作头部转向", expected_version=version) as edit:
@@ -286,7 +286,7 @@ Plan/Edit/Preview/Address token 在 Runtime 表中解析并检查所属会话、
 
 ## 11. 桌面宿主、Editor 上下文与退出
 
-桌面可执行程序始终包含显示 Editor 的能力，支持无窗口启动，随后打开同一进程的窗口。现有 `KASANE_DEV_BACKGROUND` 仍会创建窗口，不能直接当成已完成的无窗口宿主实现。未来真正无 GUI 的宿主可以复用 Runtime，但不承诺一个未链接 UI 的二进制稍后在原进程显示 Editor。
+桌面可执行程序始终包含显示 Editor 的能力，支持无窗口启动，随后打开同一进程的窗口。现有 `ZIPZI_DEV_BACKGROUND` 仍会创建窗口，不能直接当成已完成的无窗口宿主实现。未来真正无 GUI 的宿主可以复用 Runtime，但不承诺一个未链接 UI 的二进制稍后在原进程显示 Editor。
 
 首个客户端可请求启动宿主；启动过程按用户/endpoint 协调，避免两个客户端同时启动两个正式会话宿主。由 Python 发起启动不意味着进程跟随脚本退出。
 
@@ -303,7 +303,7 @@ R3 交付 endpoint 发现、按需启动和仲裁，桌面启动/重开与 Pytho
 
 第一版不增加跨重启 Undo 日志。若之后加入恢复日志，必须单独定义 durable acknowledgment、资源内容与历史恢复范围，不能把驻留内存当成持久化。
 
-EditorContextProvider 由 editor-core/宿主适配提供，返回 ViewId、SessionId、内容 Version、context_revision、选区、编辑模式、预览时间/参数等明确信息。无窗口时返回无上下文，模型 API 仍可用。读取上下文不赋予持续控制当前活动文档的隐式目标；脚本后续使用固定 SessionId。
+EditorContextProvider 由 zipzi-editor-core/宿主适配提供，返回 ViewId、SessionId、内容 Version、context_revision、选区、编辑模式、预览时间/参数等明确信息。无窗口时返回无上下文，模型 API 仍可用。读取上下文不赋予持续控制当前活动文档的隐式目标；脚本后续使用固定 SessionId。
 
 ## 12. 两仓改动地图
 
@@ -311,15 +311,15 @@ EditorContextProvider 由 editor-core/宿主适配提供，返回 ViewId、Sessi
 
 | 仓库/位置 | 计划改动 | 保持的边界 |
 | --- | --- | --- |
-| kasane-2d：`crates/kasane-runtime`（新增） | 会话/操作表、调度状态机、事件、预算、协议及可选本机 transport | 无 GPUI；无第二模型/历史；可独立 CPU 测试 |
-| kasane-2d：`crates/kasane-sdk` | 通用候选读取/快照、发布契约、后台准备接口、必要的批量查询 | 领域行为唯一实现，standalone 继续可用 |
-| kasane-2d：core/project/animation | 仅在候选/资源/后台契约需要时补底层原语 | 不引入连接、窗口和 Runtime 依赖 |
-| kasane-2d：`crates/kasane-sdk-observe` | 明确来源、候选及内存资源观察、异步宿主适配 | 渲染/诊断结果可无窗口获得 |
-| kasane-2d：`crates/kasane-python` | facade/backend 分离、连接客户端、远端引用、可选原生扩展分发、API 清单与一致性测试 | 同一创作语义；连接 import 不要求 `_native` |
-| kasane-2d：workspace、工具与文档 | 加 crate/锁文件，新增聚焦 Runtime/连接测试入口，更新构建与包文档 | 保留现有 focused test 策略 |
-| editor：`crates/editor-core` | Document/Session/Workspace 所有权重构、Runtime 引用、事件驱动投影、每视图 Preview、上下文 provider | UI 交互策略留在此处；可测试且不依赖 GPUI |
+| zipzi-2d：`crates/zipzi-runtime`（新增） | 会话/操作表、调度状态机、事件、预算、协议及可选本机 transport | 无 GPUI；无第二模型/历史；可独立 CPU 测试 |
+| zipzi-2d：`crates/zipzi-sdk` | 通用候选读取/快照、发布契约、后台准备接口、必要的批量查询 | 领域行为唯一实现，standalone 继续可用 |
+| zipzi-2d：core/project/animation | 仅在候选/资源/后台契约需要时补底层原语 | 不引入连接、窗口和 Runtime 依赖 |
+| zipzi-2d：`crates/zipzi-sdk-observe` | 明确来源、候选及内存资源观察、异步宿主适配 | 渲染/诊断结果可无窗口获得 |
+| zipzi-2d：`crates/zipzi-python` | facade/backend 分离、连接客户端、远端引用、可选原生扩展分发、API 清单与一致性测试 | 同一创作语义；连接 import 不要求 `_native` |
+| zipzi-2d：workspace、工具与文档 | 加 crate/锁文件，新增聚焦 Runtime/连接测试入口，更新构建与包文档 | 保留现有 focused test 策略 |
+| editor：`crates/zipzi-editor-core` | Document/Session/Workspace 所有权重构、Runtime 引用、事件驱动投影、每视图 Preview、上下文 provider | UI 交互策略留在此处；可测试且不依赖 GPUI |
 | editor：`crates/editor` | 应用级 Host、IPC 装配、窗口 attach/detach、任务反馈与 Review、输入边界适配 | UI 不直接取得托管 SDK 的可变引用 |
-| editor：`crates/editor-render` | 接收版本化来源，按需适配资源共享与结果失效 | 保留原生 Metal 输出；不承担编辑或网络 |
+| editor：`crates/zipzi-editor-render` | 接收版本化来源，按需适配资源共享与结果失效 | 保留原生 Metal 输出；不承担编辑或网络 |
 | editor：测试、脚本、依赖文档 | 双客户端真实闭环、生命周期、性能、配对版本记录 | 不修改测试断言来掩盖架构回归 |
 
 ## 13. 已冻结行为与实施时需要测量的参数

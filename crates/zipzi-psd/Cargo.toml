@@ -1,0 +1,21 @@
+[package]
+name = "zipzi-psd"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Import layered PSD artwork into a Zipzi document draft"
+
+[dependencies]
+ag-psd = "=0.3.0"
+zipzi-core = { path = "../zipzi-core" }
+png.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+zipzi-moc3-psd = { path = "../zipzi-moc3-psd" }
+
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+zipzi-render = { path = "../zipzi-render" }
+zipzi-render-metal = { path = "../zipzi-render-metal" }

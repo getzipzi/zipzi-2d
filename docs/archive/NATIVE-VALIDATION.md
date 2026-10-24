@@ -1,7 +1,7 @@
 # Native validation
 
 Run these commands from the repository root. The root CMake presets include all
-Kasane source, codec, package, native project and Purism unit tests. They do not need the
+Zipzi source, codec, package, native project and Purism unit tests. They do not need the
 proprietary Cubism SDK or external model fixtures.
 
 ```sh
@@ -30,14 +30,14 @@ both tools and libFuzzer. Run:
 
 ```sh
 cmake --preset core-debug
-target/kasane/buildenv/bin/python -m SCons -C modules/kasane-gd platform=macos arch=arm64 target=template_debug compiledb
+target/zipzi/buildenv/bin/python -m SCons -C modules/zipzi-gd platform=macos arch=arm64 target=template_debug compiledb
 python3 tools/check_cpp_quality.py
 ```
 
 Use `--compile-commands target/cmake/core-make` when using the Makefiles preset.
 The format gate checks owned C/C++ files, excluding generated and vendor
 sources. Any formatting edit required by clang-format fails the gate.
-The selected tidy defect checks cover Kasane core, project and Godot translation units.
+The selected tidy defect checks cover Zipzi core, project and Godot translation units.
 Its two compilation databases come from CMake and SCons.
 
 `validation_negative_controls` is part of CTest. It requires zero cases,
@@ -49,8 +49,8 @@ it is **not run** and must not be reported as passed.
 The reusable regression runners are `tools/validate_core.py`,
 `tools/validate_godot.py` and `tools/validate_gpu.py`. Run them separately on
 the supported macOS setup for official Core compatibility, Godot integration
-and GPU comparisons. Their reports live under `target/kasane/core-regression/`,
-`target/kasane/godot-boundary/` and `target/kasane/gpu-regression/`.
+and GPU comparisons. Their reports live under `target/zipzi/core-regression/`,
+`target/zipzi/godot-boundary/` and `target/zipzi/gpu-regression/`.
 CTest also checks the Purism C99 bundle. The CMake native suite is the fast
 development gate; Godot and GPU checks require their own runtime environment.
 

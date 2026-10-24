@@ -2,7 +2,7 @@
 
 状态：2026-10-07 已接入核心命令与编辑器界面。覆盖参数与参数组的新增、编辑、删除，以及它们与属性面板、拖拽排序、撤销重做的关系。
 
-将现有单独的新增参数流程扩展为完整管理能力：参数创建与编辑共用表单和业务校验，参数组具有独立表单；删除参数先检查使用关系，删除分组默认保留成员。所有持久修改通过 editor-core 命令进入 SDK 事务。
+将现有单独的新增参数流程扩展为完整管理能力：参数创建与编辑共用表单和业务校验，参数组具有独立表单；删除参数先检查使用关系，删除分组默认保留成员。所有持久修改通过 zipzi-editor-core 命令进入 SDK 事务。
 
 ## 现有实现与缺口
 
@@ -16,7 +16,7 @@
 
 现有 `replace_parameter` 会用候选参数校验普通绑定、场景绑定、Glue、BlendShape 关键值表及约束。参数自己的 CDI 显示条目也会被 `references_to` 返回，所以“没有绑定的新参数”仍不能直接调用 `erase_object` 删除。
 
-代码依据：[参数创建](../crates/editor-core/src/parameter.rs)、[创建表单](../crates/editor/src/panels/parameters/form.rs)、[属性编辑](../crates/editor-core/src/document.rs)、[属性权限](../crates/editor-core/src/objects.rs)、[排序](../crates/editor-core/src/sorting.rs)。相邻 SDK 仓库的 `modules/kasane-core/src/document/parameters.rs`、`references.rs` 和 `modules/kasane-sdk/src/edit/cdi.rs` 定义底层行为。
+代码依据：[参数创建](../crates/zipzi-editor-core/src/parameter.rs)、[创建表单](../crates/editor/src/panels/parameters/form.rs)、[属性编辑](../crates/zipzi-editor-core/src/document.rs)、[属性权限](../crates/zipzi-editor-core/src/objects.rs)、[排序](../crates/zipzi-editor-core/src/sorting.rs)。相邻 SDK 仓库的 `modules/zipzi-core/src/document/parameters.rs`、`references.rs` 和 `modules/zipzi-sdk/src/edit/cdi.rs` 定义底层行为。
 
 ## 操作入口与目标
 
@@ -150,7 +150,7 @@
 
 参数创建与编辑使用 `form.rs`，分组表单使用 `group_form.rs`，删除预览使用 `delete_confirmation.rs`，行菜单及操作路由使用 `management.rs`。新增 `parameter_group.rs` 和 `parameter_export.rs` 分别负责组事务和候选导出诊断。`NewParameter` 与既有创建命令保持兼容；界面创建使用携带版本基线的 `CreateParameterChecked`，共享草稿和校验通过 `ParameterDraft`、`ParameterValidationError` 暴露。
 
-范围变动的预览协调在 editor-core 完成，无需改动 SDK。分组解散先迁移成员，再通过 `erase_object` 移除组，保留 SDK 对象生命周期行为。重新载入按钮仅在文档版本变化后出现。导出错误按已有和本次新增区分，原生项目仍可保存。
+范围变动的预览协调在 zipzi-editor-core 完成，无需改动 SDK。分组解散先迁移成员，再通过 `erase_object` 移除组，保留 SDK 对象生命周期行为。重新载入按钮仅在文档版本变化后出现。导出错误按已有和本次新增区分，原生项目仍可保存。
 
 核心新增 7 项回归，覆盖编辑事务、身份、组排序与层级、删除、预览、文档隔离、导入未解析条目与扩展，以及导出预检查。界面新增 4 项回归，覆盖参数编辑删除、分组管理、取消和草稿重新载入。完整工作区测试通过 260 项、忽略 3 项；另通过真实 Metal 无窗口截图验证，并检查新增参数编辑、创建分组和删除分组弹窗。
 

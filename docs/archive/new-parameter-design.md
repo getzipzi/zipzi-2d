@@ -10,7 +10,7 @@ Parameters 面板已支持参数预览、数值输入、参数聚焦、分组浏
 
 参数有两种身份：内部 `id` 是规范 UUID，由编辑器生成；用户填写的“参数 ID”对应 `runtime_id`，用于运行时识别。显示名称与这两种身份独立。现有 SDK 校验要求运行时 ID 在参数之间唯一，并拒绝与未解析 CDI 参数条目的运行时 ID 冲突。
 
-相关实现：[参数面板](../crates/editor/src/panels/parameters.rs)、[文档协调](../crates/editor-core/src/document.rs)、[编辑命令](../crates/editor-core/src/editor.rs)。面板联动沿用 [Document 面板与参数绑定设计](archive/document-panels-design.md)。
+相关实现：[参数面板](../crates/editor/src/panels/parameters.rs)、[文档协调](../crates/zipzi-editor-core/src/document.rs)、[编辑命令](../crates/zipzi-editor-core/src/editor.rs)。面板联动沿用 [Document 面板与参数绑定设计](archive/document-panels-design.md)。
 
 ## 入口与创建流程
 
@@ -64,7 +64,7 @@ Parameters 面板已支持参数预览、数值输入、参数聚焦、分组浏
 | 原文档已关闭或活动文档变化 | 文档已变化，请重新打开新增参数 | 不写入其他文档 |
 | SDK 提交失败 | 展示对应业务错误 | 不留下部分创建结果 |
 
-界面预校验用于及时反馈；最终提交仍由 editor-core 和 SDK 校验。两次数值校验都必须使用转换后的 `f32`，覆盖转换溢出以及两个不同文本转成相同数值的情况。
+界面预校验用于及时反馈；最终提交仍由 zipzi-editor-core 和 SDK 校验。两次数值校验都必须使用转换后的 `f32`，覆盖转换溢出以及两个不同文本转成相同数值的情况。
 
 ## 提交与撤销
 
@@ -114,6 +114,6 @@ Document 在创建事务中生成 UUID、创建参数并设置分组。建议即
 | 高级字段布局 | 类型、循环、精度和分组放在高级选项 | 初始弹窗显示名称、ID 和范围 |
 | 名称是否必填 | 必填，初始值为“新参数” | 创建入口提供明确显示名称 |
 
-核心创建与校验见 [参数创建](../crates/editor-core/src/parameter.rs)，弹窗见 [创建界面](../crates/editor/src/panels/parameters/create.rs)。核心回归覆盖事务、历史、身份、保存重开、导入显示信息、非法输入与文档隔离；GPUI headless 回归覆盖 Enter、取消、错误恢复、长列表定位，以及类型和分组下拉选择。
+核心创建与校验见 [参数创建](../crates/zipzi-editor-core/src/parameter.rs)，弹窗见 [创建界面](../crates/editor/src/panels/parameters/create.rs)。核心回归覆盖事务、历史、身份、保存重开、导入显示信息、非法输入与文档隔离；GPUI headless 回归覆盖 Enter、取消、错误恢复、长列表定位，以及类型和分组下拉选择。
 
 验证：`cargo test --locked --workspace` 通过，共 207 项通过、1 项忽略；新增核心与界面回归各 5 项。`cargo fmt --all -- --check` 和编辑器 Debug 构建通过。Mac 锁屏导致实机可视检查未完成，窗口事件与定位行为已经过 GPUI headless 检查。

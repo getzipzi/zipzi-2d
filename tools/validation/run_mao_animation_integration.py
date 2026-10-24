@@ -4,7 +4,7 @@
 Run from outside the source tree with the freshly built wheel, for example:
   cd /tmp
   uv run --no-project --no-cache --python 3.14 \
-    --with /absolute/repo/target/python-wheels/kasane-*.whl \
+    --with /absolute/repo/target/python-wheels/zipzi-*.whl \
     python /absolute/repo/tools/validation/run_mao_animation_integration.py
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 import zipfile
 
-import kasane
+import zipzi
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "models/local/mao/runtime/mao_pro.model3.json"
@@ -26,8 +26,8 @@ PROJECT = OUT / "project"
 PACKAGE = OUT / "live2d-model"
 MODEL3 = PACKAGE / "model.model3.json"
 ARCHIVE = OUT / "mao-live2d-model.zip"
-FRAMEWORK = ROOT / "target/animation-cpu-probe/kasane_framework_animation_cpu_probe"
-CDI_FRAMEWORK = ROOT / "target/cdi-probe-build/kasane_framework_cdi_cpu_probe"
+FRAMEWORK = ROOT / "target/animation-cpu-probe/zipzi_framework_animation_cpu_probe"
+CDI_FRAMEWORK = ROOT / "target/cdi-probe-build/zipzi_framework_cdi_cpu_probe"
 
 
 def check(condition: bool, message: str) -> None:
@@ -103,7 +103,7 @@ def main() -> None:
     if ARCHIVE.exists():
         ARCHIVE.unlink()
 
-    session = kasane.Session("00000000-0000-4000-8000-000000000001",
+    session = zipzi.Session("00000000-0000-4000-8000-000000000001",
                              64, 64, (32, 32))
     imported = session.import_model3(SOURCE)
     check(not session.validate_structure(), "imported document has structure issues")
@@ -118,7 +118,7 @@ def main() -> None:
 
     save = session.save(PROJECT)
     check(save.durable, "project save was not durable")
-    reopened = kasane.open_project(PROJECT)
+    reopened = zipzi.open_project(PROJECT)
     check(len(reopened.motion_ids()) == 7 and len(reopened.expression_ids()) == 8,
           "saved project lost animation assets")
     check(reopened.motion_groups() == groups, "saved project changed registrations")
@@ -248,7 +248,7 @@ def main() -> None:
                         moc, detached / detached_refs["Physics"])
         check(len(physics["frames"]) == 120,
               "Framework Physics sequence was incomplete")
-        detached_session = kasane.Session(
+        detached_session = zipzi.Session(
             "00000000-0000-4000-8000-000000000002", 64, 64, (32, 32)
         )
         detached_session.import_model3(detached_model3)

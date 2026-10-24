@@ -185,21 +185,21 @@ def main() -> int:
             "probe_sha256": sha256(ROOT / "tools/validation/probes/framework_cdi_cpu_probe.cpp"),
             "shim_sha256": sha256(ROOT / "tools/validation/probes/framework_cpu_renderer_cleanup.cpp"),
             "runner_sha256": sha256(Path(__file__)),
-            "crate_sha256": sha256(ROOT / "crates/kasane-live2d/src/cdi3.rs"),
-            "fixture_source_sha256": sha256(ROOT / "crates/kasane-live2d/examples/cdi_fixture.rs"),
+            "crate_sha256": sha256(ROOT / "crates/zipzi-live2d/src/cdi3.rs"),
+            "fixture_source_sha256": sha256(ROOT / "crates/zipzi-live2d/examples/cdi_fixture.rs"),
         }
         configure = run(["cmake", "-S", "tools/validation/probes", "-B", str(build),
-                         f"-DKASANE_CUBISM_ROOT={SDK}", "-DCMAKE_BUILD_TYPE=Release"],
+                         f"-DZIPZI_CUBISM_ROOT={SDK}", "-DCMAKE_BUILD_TYPE=Release"],
                         output / "configure.log")
         if configure.returncode:
             raise AssertionError("CMake configure failed")
         compiled = run(["cmake", "--build", str(build), "--target",
-                        "kasane_framework_cdi_cpu_probe", "-j", "4"], output / "build.log")
+                        "zipzi_framework_cdi_cpu_probe", "-j", "4"], output / "build.log")
         if compiled.returncode:
             raise AssertionError("official CDI CPU probe build failed")
-        probe = build / "kasane_framework_cdi_cpu_probe"
+        probe = build / "zipzi_framework_cdi_cpu_probe"
         report["provenance"]["probe_binary_sha256"] = sha256(probe)
-        fixture = run(["cargo", "run", "--locked", "-q", "-p", "kasane-live2d",
+        fixture = run(["cargo", "run", "--locked", "-q", "-p", "zipzi-live2d",
                        "--example", "cdi_fixture"], output / "fixture.log")
         if fixture.returncode:
             raise AssertionError("Rust CDI fixture generation failed")

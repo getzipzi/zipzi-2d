@@ -36,7 +36,7 @@ Timeline 通过 `AnimationTimeline` 注册为 Animation 专属的 Dock Panel，�
 
 ## 行树与通道
 
-参数行来自模型参数顺序、CDI 分组和归属，轨道通过 target 关联到参数。复用现有 parameter_groups、ParameterValue.group_id 及排序语义，将通用层级投影移入 editor-core，避免两个 UI 各自维护树构造规则。
+参数行来自模型参数顺序、CDI 分组和归属，轨道通过 target 关联到参数。复用现有 parameter_groups、ParameterValue.group_id 及排序语义，将通用层级投影移入 zipzi-editor-core，避免两个 UI 各自维护树构造规则。
 
 默认显示已有动画的通道，保留祖先分组；空动作自动显示全部参数。筛选提供“已有动画”和“全部”，并支持名称与 runtime ID 搜索。搜索可发现尚未建轨的参数，临时展开命中路径；退出搜索恢复原来的展开状态。新增的轨道被选中并定位。筛选或折叠导致关键点不可见时，从可操作选区移除这些点，避免 Delete 操作隐藏内容。
 
@@ -157,7 +157,7 @@ Timeline 行内数值始终代表编辑时间的原始通道采样；选中关�
 
 求值身份包含文档、工作区、已提交模型版本、候选编辑 ID／版本、预览模式、预览配方版本、请求序号和视口版本。候选曲线每次变化都失效化相应编译曲线和 seek cache；合并未开始的请求，仅接收当前候选的结果。取消、提交、撤销、切换上下文都建立接受屏障，旧候选 CPU 或 GPU 结果不能重新覆盖画布。
 
-SDK 事务负责资源变更和历史；editor-core 负责 Timeline 命令、选择与快照协调；GPUI 层负责坐标、命中、焦点和绘制。现有文档统一历史继续使用，不为 Timeline 建立第二套 Undo 栈。撤销重做后按 UUID 保留仍存在的选择，清理失效引用。
+SDK 事务负责资源变更和历史；zipzi-editor-core 负责 Timeline 命令、选择与快照协调；GPUI 层负责坐标、命中、焦点和绘制。现有文档统一历史继续使用，不为 Timeline 建立第二套 Undo 栈。撤销重做后按 UUID 保留仍存在的选择，清理失效引用。
 
 ## 绘制与交互成本
 
@@ -171,8 +171,8 @@ Animation Properties 按文档版本、Motion 注册、Expression 与语言缓�
 
 ## 实现顺序与验收
 
-1. 在 kasane-2d 增加关键点 ID、按 ID 的批量曲线编辑和导入导出适配。覆盖 ID 保存、撤销恢复、四种插值、受限与普通 Bezier 拆分以及冲突原子性。
-2. 在 editor-core 建立行树投影、Timeline 选择与命令、候选快照和两种预览模式。覆盖文档隔离、取消／提交／Undo 屏障、空轨道建帧、重复目标和能力诊断。
+1. 在 zipzi-2d 增加关键点 ID、按 ID 的批量曲线编辑和导入导出适配。覆盖 ID 保存、撤销恢复、四种插值、受限与普通 Bezier 拆分以及冲突原子性。
+2. 在 zipzi-editor-core 建立行树投影、Timeline 选择与命令、候选快照和两种预览模式。覆盖文档隔离、取消／提交／Undo 屏障、空轨道建帧、重复目标和能力诊断。
 3. 用总览视图替换 PlaybackBar，接入事件、数值编辑、框选与批量移动，然后接入共用状态的曲线视图。首版完成前两种视图均需可用。
 4. 用真实导入动作验证关键帧密集、子帧、末端容差、同目标多轨、未解析通道和未知扩展。测量滚动、拖动到呈现延迟、连续播放与快速 seek，防止退化。
 
@@ -180,7 +180,7 @@ Animation Properties 按文档版本、Motion 注册、Expression 与语言缓�
 
 ### 第一阶段实现记录（2026-10-14）
 
-已在相邻 kasane-2d 仓库实现 `MotionKey`：initial 和段终点保存 UUID，控制点仍为 `MotionPoint`。项目写入格式为 v11，不迁移旧动画记录；导入分配新关键帧身份，项目保存重开保留身份。UUID 参与结构校验与历史内存计量，不进入 motion3 数字数组、opaque 内容指纹或运行时 `CompiledCurve`。
+已在相邻 zipzi-2d 仓库实现 `MotionKey`：initial 和段终点保存 UUID，控制点仍为 `MotionPoint`。项目写入格式为 v11，不迁移旧动画记录；导入分配新关键帧身份，项目保存重开保留身份。UUID 参与结构校验与历史内存计量，不进入 motion3 数字数组、opaque 内容指纹或运行时 `CompiledCurve`。
 
 `MotionClipCandidate` 提供按 UUID 的同时移动、采样插入、批量删除、四种插值切换、独立手柄和显式时间缩放。碰撞不排序、不合并、不覆盖；失败保留最后合法候选。Bezier 插入复用运行时反解分支并使用 De Casteljau，受限段在编辑时规范化有效控制点时间。非单调时间曲线拒绝拆分和端点时间编辑，保留端点改值；f32 反解精度不足、采样探测超出容差的拆分原子拒绝。
 
@@ -188,15 +188,15 @@ Animation Properties 按文档版本、Motion 注册、Expression 与语言缓�
 
 已运行验证：
 
-- kasane-2d：`cargo test --locked -p kasane-core -p kasane-project -p kasane-animation -p kasane-sdk`；新增曲线测试覆盖批量冲突、一次提交一次撤销、候选隔离、四种插值、受限／普通 Bezier 保形、子帧、尾点容差、只读目标与精度拒绝；持久化测试覆盖重开身份、重新导入和 opaque 指纹。
-- kasane-editor：`cargo test --locked -p editor-core`，以及 `cargo check --locked --workspace --tests`。
-- kasane-2d：`cargo check --locked -p kasane-python`；Python 运行时测试尚未执行。
+- zipzi-2d：`cargo test --locked -p zipzi-core -p zipzi-project -p zipzi-animation -p zipzi-sdk`；新增曲线测试覆盖批量冲突、一次提交一次撤销、候选隔离、四种插值、受限／普通 Bezier 保形、子帧、尾点容差、只读目标与精度拒绝；持久化测试覆盖重开身份、重新导入和 opaque 指纹。
+- zipzi-editor：`cargo test --locked -p zipzi-editor-core`，以及 `cargo check --locked --workspace --tests`。
+- zipzi-2d：`cargo check --locked -p zipzi-python`；Python 运行时测试尚未执行。
 
 第一阶段测试不能替代完整 UI 手势、取消恢复画面和播放呈现验收。后续阶段的实现与验证记录如下。
 
 ### 第二阶段实现记录（2026-10-14）
 
-参数面板、结果监视与 Timeline 共用 editor-core 的 `ParameterLayout`。`TimelineProjection` 从模型实际轨道建立通道、UUID 索引、能力诊断和行树；支持 CDI 顺序与归属、重复目标的具体轨道子行、模型／部件／未解析分类、精确时间分组摘要、子帧与尾点范围。投影不随播放重建。`TimelineViewState` 按文档与 Clip 保存筛选、搜索、折叠、滚动、时间范围、显示模式和选区；搜索临时展开命中路径，隐藏的关键点从可操作选区中移除。
+参数面板、结果监视与 Timeline 共用 zipzi-editor-core 的 `ParameterLayout`。`TimelineProjection` 从模型实际轨道建立通道、UUID 索引、能力诊断和行树；支持 CDI 顺序与归属、重复目标的具体轨道子行、模型／部件／未解析分类、精确时间分组摘要、子帧与尾点范围。投影不随播放重建。`TimelineViewState` 按文档与 Clip 保存筛选、搜索、折叠、滚动、时间范围、显示模式和选区；搜索临时展开命中路径，隐藏的关键点从可操作选区中移除。
 
 `TimelineCommand` 与 `TimelineEdit` 已接入空动作创建、当前时间写值与采样插入、批量移动／删除、插值、手柄、事件、时长／FPS 与显式时间缩放。同 Clip 复制粘贴保留相对节奏及连续选区的内部段，分配新 UUID，跨轨冲突原子拒绝；单轨可指定兼容参数目标。一次手势从原始 Clip 和总位移重算，非法更新保留最后合法候选，提交一次 SDK 历史。Save 结束有效编辑，手势中的 Undo 先取消；播放、切换 Clip／文档／工作区、重置与关闭取消候选。
 
@@ -206,9 +206,9 @@ Animation Properties 按文档版本、Motion 注册、Expression 与语言缓�
 
 已运行第二阶段验证：
 
-- `cargo test --locked -p editor-core`，其中 Timeline 专项覆盖文档／Clip 隔离、缓存复用、取消／提交／Undo 屏障、重复目标、空轨建帧、锚点吸附、事件稳定顺序、跨轨粘贴原子性、保存重开、只读通道及尾点容差。
-- `cargo test --locked -p kasane-editor --bin kasane-editor headless_tests`：151 通过，1 项原有忽略项；另验证后台动画 worker 的取消与请求合并。
-- kasane-2d 的 core／project／animation／sdk 回归，以及编辑预览的默认基线、即时 Pose、错误原子性、循环零点与名义结束位置映射测试；Python 绑定通过编译检查。
+- `cargo test --locked -p zipzi-editor-core`，其中 Timeline 专项覆盖文档／Clip 隔离、缓存复用、取消／提交／Undo 屏障、重复目标、空轨建帧、锚点吸附、事件稳定顺序、跨轨粘贴原子性、保存重开、只读通道及尾点容差。
+- `cargo test --locked -p zipzi-editor --bin zipzi-editor headless_tests`：151 通过，1 项原有忽略项；另验证后台动画 worker 的取消与请求合并。
+- zipzi-2d 的 core／project／animation／sdk 回归，以及编辑预览的默认基线、即时 Pose、错误原子性、循环零点与名义结束位置映射测试；Python 绑定通过编译检查。
 
 第三、四阶段实现与验证记录如下。
 
@@ -226,8 +226,8 @@ Animation 工作区底部已用跨工作区宽度、可调整高度的 `Timeline
 
 最终已运行验证：
 
-- `env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace`：437 项测试通过，4 项原有忽略项；其中 Timeline headless 专项 12 项通过，另通过完整编辑器截图流程与 Mao、Shirousagi、heijiao 三份本地模型的既有动画／Metal 验收。
-- `env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --test headless_screenshot`：五张 Timeline 截图与候选／取消恢复像素对比通过。
+- `env -u ZIPZI_DEV_SESSION_DIR cargo test --locked --workspace`：437 项测试通过，4 项原有忽略项；其中 Timeline headless 专项 12 项通过，另通过完整编辑器截图流程与 Mao、Shirousagi、heijiao 三份本地模型的既有动画／Metal 验收。
+- `env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=timeline cargo test --locked -p zipzi-editor --test headless_screenshot`：五张 Timeline 截图与候选／取消恢复像素对比通过。
 - `cargo fmt --all -- --check` 与 `git diff --check` 通过。
 
 动作属性区区分资源默认与显式淡入淡出，可恢复默认；打开属性和输入框格式化不会改写资产。既有结果管线验收显式选择结果预览，截图定位使用明确的目标时间，并在当前预览身份实际呈现后检查像素。
@@ -242,15 +242,15 @@ Animation 工作区底部已用跨工作区宽度、可调整高度的 `Timeline
 
 Release 下真实动作版拖动到当前 Metal 画布并完成 GPUI draw 的 P95 为 14.1 ms；34,438 点压力版为 45.1 ms，复用原始候选／投影前为 59.7 ms。两者分别运行 600 次滚动、600 次快速 seek 和 10 秒连续播放；静态曲线层均为零重建、零重绘。压力版仍不能承诺每次拖动满足 16.67 ms，完整数值、复现命令及测量范围见[验收报告](animation-timeline-validation.md)。原生窗口测试脚本检测到 Mac 锁屏后退出，没有把 headless draw 耗时解释为系统合成或显示呈现延迟。
 
-最终 `env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace` 通过 441 项常规测试（4 项原有忽略项），另完成三份本地模型验收、完整 Metal 截图与新增 Timeline 验收；Release 专项、格式、差异空白及脚本语法检查均通过。
+最终 `env -u ZIPZI_DEV_SESSION_DIR cargo test --locked --workspace` 通过 441 项常规测试（4 项原有忽略项），另完成三份本地模型验收、完整 Metal 截图与新增 Timeline 验收；Release 专项、格式、差异空白及脚本语法检查均通过。
 
 ## 代码依据
 
-- 编辑器预览会话与配方：[animation.rs](../crates/editor-core/src/animation.rs)。
+- 编辑器预览会话与配方：[animation.rs](../crates/zipzi-editor-core/src/animation.rs)。
 - Timeline 面板：[timeline/mod.rs](../crates/editor/src/panels/timeline/mod.rs)，绘制与缓存：[drawing.rs](../crates/editor/src/panels/timeline/drawing.rs)，输入与事务：[input.rs](../crates/editor/src/panels/timeline/input.rs)。
-- 面板目录：[panels.rs](../crates/editor-core/src/panels.rs)，停靠与布局持久化：[docking.rs](../crates/editor/src/docking.rs)。
+- 面板目录：[panels.rs](../crates/zipzi-editor-core/src/panels.rs)，停靠与布局持久化：[docking.rs](../crates/editor/src/docking.rs)。
 - 参数分组投影：[grouping.rs](../crates/editor/src/panels/parameters/grouping.rs)。
-- 参数分组与属性：[parameter.rs](../crates/editor-core/src/parameter.rs)。
+- 参数分组与属性：[parameter.rs](../crates/zipzi-editor-core/src/parameter.rs)。
 - 最终结果监视：[parameters.rs](../crates/editor/src/panels/animation_panel/parameters.rs)。
-- 当前事务封装：[document.rs](../crates/editor-core/src/document.rs)。
-- 相邻 kasane-2d 仓库：`modules/kasane-core/src/document/motions.rs`、`modules/kasane-sdk/src/edit/motion.rs`、`modules/kasane-animation/src/motion.rs`、`motion_runtime.rs` 和 `motion_preview.rs`。
+- 当前事务封装：[document.rs](../crates/zipzi-editor-core/src/document.rs)。
+- 相邻 zipzi-2d 仓库：`modules/zipzi-core/src/document/motions.rs`、`modules/zipzi-sdk/src/edit/motion.rs`、`modules/zipzi-animation/src/motion.rs`、`motion_runtime.rs` 和 `motion_preview.rs`。

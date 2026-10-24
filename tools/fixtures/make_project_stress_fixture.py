@@ -1,4 +1,4 @@
-"""Expand a real Kasane project while preserving its mesh/keyform relationships.
+"""Expand a real Zipzi project while preserving its mesh/keyform relationships.
 
 Usage: python3 tools/fixtures/make_project_stress_fixture.py SOURCE_DIR OUTPUT_DIR COPIES
 COPIES includes the original set of meshes and bindings. Assets are hard-linked.
@@ -20,7 +20,7 @@ def main() -> None:
     if copies < 1:
         raise ValueError("COPIES must be positive")
     output.mkdir(parents=True, exist_ok=True)
-    input_data = json.loads((source / "project.kasane.json").read_text())
+    input_data = json.loads((source / "project.zipzi.json").read_text())
     document = input_data["document"]
     original_meshes = list(document["meshes"])
     original_bindings = list(document["bindings"])
@@ -30,7 +30,7 @@ def main() -> None:
         raise ValueError("Binding references a missing mesh")
 
     for index in range(1, copies):
-        ids = {m["id"]: str(uuid.uuid5(uuid.NAMESPACE_URL, f"kasane-stress/{index}/{m['id']}"))
+        ids = {m["id"]: str(uuid.uuid5(uuid.NAMESPACE_URL, f"zipzi-stress/{index}/{m['id']}"))
                for m in original_meshes}
         for original in original_meshes:
             mesh = copy.deepcopy(original)
@@ -41,7 +41,7 @@ def main() -> None:
             document["meshes"].append(mesh)
         for original in original_bindings:
             binding = copy.deepcopy(original)
-            binding["id"] = str(uuid.uuid5(uuid.NAMESPACE_URL, f"kasane-stress/{index}/{original['id']}"))
+            binding["id"] = str(uuid.uuid5(uuid.NAMESPACE_URL, f"zipzi-stress/{index}/{original['id']}"))
             binding["mesh_id"] = ids[original["mesh_id"]]
             document["bindings"].append(binding)
 
@@ -51,7 +51,7 @@ def main() -> None:
         target = assets / path.name
         if not target.exists():
             os.link(path, target)
-    (output / "project.kasane.json").write_text(
+    (output / "project.zipzi.json").write_text(
         json.dumps(input_data, ensure_ascii=False, indent=2) + "\n"
     )
     print(f"{output}: {len(document['meshes'])} meshes, {len(document['bindings'])} bindings")

@@ -1237,7 +1237,7 @@
       "gpui_backend": "gpui-fast",
       "view_retention": true,
       "scroll_layers": true,
-      "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+      "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
       "samples": 3,
       "warmup": 1,
       "parameters_only": false,

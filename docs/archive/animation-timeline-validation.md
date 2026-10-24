@@ -10,7 +10,7 @@
 - 真实来源为本地 Mao 的 `special_03.motion3.json`：132 条曲线、619 段、751 个关键点。增加一条重复参数轨道及一条缺失参数轨道后，验收版有 134 条轨道、779 个关键点。已有未解析目标一并保留，合计 4 条未解析轨道。
 - 压力版用 SDK 原始采样为每条轨道生成 257 个线性关键点，共 34,438 点；保留各轨道的合法尾点范围。这是单独标明的压力数据，不代表原动作已有这些关键点。另导入带未知 vendor 扩展的只读变体。
 
-许可模型缺失时，普通测试显式 `SKIP`；性能脚本设置 `KASANE_TIMELINE_REQUIRE_ASSET=1`，缺失模型会失败。原始资源不修改，临时变体与资源副本自动清理，没有将许可数据、截图或原始结果提交到仓库。
+许可模型缺失时，普通测试显式 `SKIP`；性能脚本设置 `ZIPZI_TIMELINE_REQUIRE_ASSET=1`，缺失模型会失败。原始资源不修改，临时变体与资源副本自动清理，没有将许可数据、截图或原始结果提交到仓库。
 
 ## 功能证据
 
@@ -25,7 +25,7 @@
 
 ## 性能测量
 
-滚动和拖动通过 GPUI 原生事件分发。拖动延迟从注入鼠标移动开始，到当前候选的 SDK／Metal 纹理被编辑器接受并完成一次 GPUI draw；不包含截图回读、OS 输入投递或系统合成呈现。定位从 editor-core 定位调用开始，使用相同的当前身份检查。测量不能将等待期间保留的旧画面计为新结果。
+滚动和拖动通过 GPUI 原生事件分发。拖动延迟从注入鼠标移动开始，到当前候选的 SDK／Metal 纹理被编辑器接受并完成一次 GPUI draw；不包含截图回读、OS 输入投递或系统合成呈现。定位从 zipzi-editor-core 定位调用开始，使用相同的当前身份检查。测量不能将等待期间保留的旧画面计为新结果。
 
 每个版本滚动 600 次、拖动采样 32 次、逐次定位 32 次，另连续发送 600 个快速定位目标并等待最终身份。两组播放各以 60 Hz 驱动 600 个时钟目标，约 10 秒。
 
@@ -48,21 +48,21 @@
 
 ## 回归结果
 
-- `env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace`：441 项常规测试通过，4 项原有忽略项；另外完成 Mao、Shirousagi、heijiao 三份本地模型验收、完整 Metal 截图流程及新增的真实 Timeline 验收。
+- `env -u ZIPZI_DEV_SESSION_DIR cargo test --locked --workspace`：441 项常规测试通过，4 项原有忽略项；另外完成 Mao、Shirousagi、heijiao 三份本地模型验收、完整 Metal 截图流程及新增的真实 Timeline 验收。
 - Release 性能入口完整通过，含两组各 600 次滚动／快速定位／播放时钟目标，以及 SDK 快照、几何和持久化对比。
 - `cargo fmt --all -- --check`、`git diff --check` 和 `bash -n scripts/timeline-benchmark.sh` 通过。
 
 ## 复现与输出
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeline_acceptance
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --test timeline_acceptance
 ./scripts/timeline-benchmark.sh target/timeline-new-run 600
 
 # 需要 Mac 已解锁，窗口可见且激活：
-env -u KASANE_DEV_SESSION_DIR ./scripts/animation-window-benchmark.sh \
+env -u ZIPZI_DEV_SESSION_DIR ./scripts/animation-window-benchmark.sh \
   models/local/mao/runtime/mao_pro.model3.json target/timeline-native-new-run 600
 ```
 
-`KASANE_TIMELINE_MODEL` 可指定本地 model3 来源；本验收需要其中存在 Bezier、子帧及合法尾点的动作。`KASANE_TIMELINE_OUTPUT` 和 `KASANE_TIMELINE_SAMPLES` 控制直接运行测试时的输出目录和采样数。
+`ZIPZI_TIMELINE_MODEL` 可指定本地 model3 来源；本验收需要其中存在 Bezier、子帧及合法尾点的动作。`ZIPZI_TIMELINE_OUTPUT` 和 `ZIPZI_TIMELINE_SAMPLES` 控制直接运行测试时的输出目录和采样数。
 
 本次结果位于忽略的 `target/timeline-final-release/`，包含环境、构建／运行日志、`results.json` 和 Natural／Dense 的候选前、候选中、取消后三组截图。优化前后对照为 `target/timeline-before-candidate-cache/` 与 `target/timeline-candidate-cache/`。`target/timeline-native-result/` 没有有效合成测量；锁屏退出原因保留于本次运行日志 `/tmp/timeline4-native.log`。

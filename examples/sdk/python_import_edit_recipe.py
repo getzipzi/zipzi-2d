@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 import sys
 
-import kasane
+import zipzi
 
 
 DOCUMENT = "20000000-0000-4000-8000-000000000001"
@@ -23,7 +23,7 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
-def positions(session: kasane.Session, values: dict[str, float], mesh_id: str) -> list[list[float]]:
+def positions(session: zipzi.Session, values: dict[str, float], mesh_id: str) -> list[list[float]]:
     frame = session.evaluate(values)
     return [list(point) for drawable in frame.drawables if drawable.id == mesh_id
             for point in drawable.positions]
@@ -45,7 +45,7 @@ def run(output: Path) -> Path:
     model3 = fixture / "model.model3.json"
     moc3 = fixture / "model.moc3"
     texture = fixture / "texture_00.png"
-    session = kasane.Session(DOCUMENT, 100, 100, (50, 50))
+    session = zipzi.Session(DOCUMENT, 100, 100, (50, 50))
     imported = session.import_model3(model3)
     assert imported.moc_version == 5
     # This synthetic fixture intentionally references two absent attachments.
@@ -95,16 +95,16 @@ def run(output: Path) -> Path:
         edit.set_deform_parent(mesh_id, warp_id)
         edit.replace_mesh_binding(
             binding_id, mesh_id, binding.axes,
-            [kasane.MeshKeyform(
+            [zipzi.MeshKeyform(
                 keyform.keys,
                 [(x + offset, y) for x, y in keyform.positions],
                 keyform.appearance, keyform.draw_order,
             ) for keyform in binding.keyforms],
         )
         edit.update_mesh_properties(
-            mesh_id, kasane.MeshProperties(
+            mesh_id, zipzi.MeshProperties(
                 appearance.texture_asset_id,
-                kasane.Appearance(0.9, appearance.appearance.multiply,
+                zipzi.Appearance(0.9, appearance.appearance.multiply,
                                   appearance.appearance.screen),
                 appearance.draw_order + 1, appearance.blend_mode,
                 appearance.enabled, appearance.double_sided,
@@ -122,7 +122,7 @@ def run(output: Path) -> Path:
                for before, after in zip(before_samples, after_samples, strict=True))
     after_save = session.save(output / "after")
     assert after_save.durable
-    reopened = kasane.open_project(after_save.manifest)
+    reopened = zipzi.open_project(after_save.manifest)
     assert reopened.mesh_ids() == [mesh_id]
     assert reopened.binding_ids() == [binding_id]
     assert reopened.validate_structure() == [] and reopened.diagnose_resources() == []

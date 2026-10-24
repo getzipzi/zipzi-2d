@@ -7,7 +7,7 @@
 
 ## 公共契约
 
-SDK 的[对象创作契约](../../../kasane-2d/modules/kasane-sdk/AUTHORING.md)列出各领域
+SDK 的[对象创作契约](../../../zipzi-2d/modules/zipzi-sdk/AUTHORING.md)列出各领域
 规划／执行／事务入口、稳定身份、字段地址、锁、单一历史、通知消费、支持矩阵、
 有限预算与诊断处理。SDK README 中旧版“忽略锁”、项目版本及已合并的测试入口已修正。
 
@@ -25,8 +25,8 @@ SDK 的[对象创作契约](../../../kasane-2d/modules/kasane-sdk/AUTHORING.md)�
 
 ## 第 10 节验收映射
 
-SDK 测试模块均注册在相邻仓库 `modules/kasane-sdk/tests/integration.rs`。
-下表中的 Editor 指本仓库 `crates/editor-core/tests/cases`；模块名是可直接筛选的入口。
+SDK 测试模块均注册在相邻仓库 `modules/zipzi-sdk/tests/integration.rs`。
+下表中的 Editor 指本仓库 `crates/zipzi-editor-core/tests/cases`；模块名是可直接筛选的入口。
 每行覆盖核心方案同序场景；完整支持范围与各领域例外仍见覆盖矩阵和公共契约。
 
 | # | 场景 | 回归依据 |
@@ -87,13 +87,13 @@ SDK 测试模块均注册在相邻仓库 `modules/kasane-sdk/tests/integration.r
 # Editor：工具、所有 Rust 目标、无界面 UI、原生和真实模型验收
 ./scripts/test.sh full
 
-# 相邻 kasane-2d：普通工作区门禁，排除 alpha mesh 随机压力余项
+# 相邻 zipzi-2d：普通工作区门禁，排除 alpha mesh 随机压力余项
 ./tools/test.sh regression --no-fail-fast
 ./tools/test.sh python
 
 # 新增专项；总门禁已覆盖这些用例，无需把计数重复相加
-cargo test --locked -p kasane-sdk --test integration authoring_acceptance::
-cargo test --locked -p kasane-sdk-observe --lib --test capture
+cargo test --locked -p zipzi-sdk --test integration authoring_acceptance::
+cargo test --locked -p zipzi-sdk-observe --lib --test capture
 ```
 
 ## 验证结果

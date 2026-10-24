@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generate an independent external v50 (csmMocVersion_50) MOC3 fixture for M3 validation.
-Constructed directly via raw binary struct layout (independent of kasane_moc3::encode_moc3).
+Constructed directly via raw binary struct layout (independent of zipzi_moc3::encode_moc3).
 """
 import os
 import struct

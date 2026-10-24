@@ -9,7 +9,7 @@
 cargo fmt --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
-KASANE_MOC3_DISABLE_CORE_VALIDATION=1 cargo test -p kasane-moc3 --no-default-features --test safety_tests --locked
+ZIPZI_MOC3_DISABLE_CORE_VALIDATION=1 cargo test -p zipzi-moc3 --no-default-features --test safety_tests --locked
 uv run --locked python -m unittest discover -s tests -p test_acceptance_validators.py -v
 ```
 
@@ -18,8 +18,8 @@ Rust SDK 测试覆盖隔离编辑、句柄、history、导入、工程保存和�
 ## 仓库外 wheel 集成测试
 
 ```sh
-uv build --wheel --python 3.14 --out-dir target/python-wheels modules/kasane-python
-uv run --locked python tools/validate_sdk.py --wheel /absolute/path/to/kasane.whl
+uv build --wheel --python 3.14 --out-dir target/python-wheels modules/zipzi-python
+uv run --locked python tools/validate_sdk.py --wheel /absolute/path/to/zipzi.whl
 ```
 
 门禁在临时虚拟环境安装 wheel，从仓库外运行 Python CPU 测试、两素材创作/保存/导出与外部 model3 导入编辑；保留输入哈希、命令日志与结果。CPU wheel 无 GPU 功能时报告 `partial`，不是完整验收。
@@ -29,8 +29,8 @@ uv run --locked python tools/validate_sdk.py --wheel /absolute/path/to/kasane.wh
 ```sh
 uv run --locked python tools/validate_sdk.py --full \
   --wheel /absolute/path/to/observe-wheel.whl \
-  --official-probe /absolute/path/to/kasane_document_official_probe \
-  --purism-probe /absolute/path/to/kasane_document_purism_probe
+  --official-probe /absolute/path/to/zipzi_document_official_probe \
+  --purism-probe /absolute/path/to/zipzi_document_purism_probe
 uv run --locked python tools/compare_wgpu_blends.py
 ```
 

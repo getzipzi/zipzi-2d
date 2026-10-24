@@ -21,7 +21,7 @@
 | `evaluate_snapshot` | 提供完整求值网格及绘制属性；`evaluate` 仅提供精简 positions | 可复用快照做网格与对象标注，但必须与观察图版本一致 |
 | `diagnose_geometry` | 当前检查基础几何的小三角形、绕序与画布范围 | 不能替代指定参数状态的形变检查 |
 
-实现依据：[GPU observer](../modules/kasane-sdk-observe/src/gpu.rs)、[Python observation](../modules/kasane-python/python/kasane/_observe.py)、[Python API](../modules/kasane-python/API.md)、[geometry diagnostics](../modules/kasane-sdk/src/diagnostics.rs)。
+实现依据：[GPU observer](../modules/zipzi-sdk-observe/src/gpu.rs)、[Python observation](../modules/zipzi-python/python/zipzi/_observe.py)、[Python API](../modules/zipzi-python/API.md)、[geometry diagnostics](../modules/zipzi-sdk/src/diagnostics.rs)。
 
 已有实验支持以下需求，但尚不能证明增强功能的收益：
 
@@ -66,7 +66,7 @@
 
 第一版使用几何 bounds/轮廓并注明 `geometry`，不假装知道最终可见轮廓。对象表包含 UUID、runtime ID、显示名、Part、deformer parent、坐标空间、render order 与 mask IDs。不同工程间对照必须由调用方提供对象映射，不能认为编号相同就是同一部件。
 
-[Set-of-Mark 研究](https://arxiv.org/abs/2310.11441)提供了“可引用视觉标记帮助 grounding”的实验依据。Kasane 已有对象身份，可以直接从场景生成标记，无需先做图像分割；但研究模型与任务不同，收益仍须本项目对照实验确认。
+[Set-of-Mark 研究](https://arxiv.org/abs/2310.11441)提供了“可引用视觉标记帮助 grounding”的实验依据。Zipzi 已有对象身份，可以直接从场景生成标记，无需先做图像分割；但研究模型与任务不同，收益仍须本项目对照实验确认。
 
 ### 4. 对比应定位变化，而非只给一个分数
 
@@ -88,7 +88,7 @@
 
 明确三种模式：`context` 保留完整场景；`isolated` 展示目标及必要 mask/offscreen 依赖；`xray` 忽略部分遮挡规则，必须有诊断标识。先实现依赖闭包，再考虑支持隔离；不要临时编辑 session 的 visibility 来渲染诊断图。
 
-复用 [ScenePlan](../modules/kasane-render/src/scene.rs) 的 target、mask、destination-read 关系。multiply、destination-reading 和 offscreen 使隔离结果依赖背景；无法保证原场景语义时显式标注受限模式。
+复用 [ScenePlan](../modules/zipzi-render/src/scene.rs) 的 target、mask、destination-read 关系。multiply、destination-reading 和 offscreen 使隔离结果依赖背景；无法保证原场景语义时显式标注受限模式。
 
 几何命中只返回候选。覆盖查询必须考虑纹理 alpha、mask、反转 mask、绘制顺序和合成层。单一整数 ID buffer 只能表达定义好的拾取规则，不能完整表达多个半透明对象的贡献。
 

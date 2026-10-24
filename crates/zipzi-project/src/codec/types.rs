@@ -1,0 +1,471 @@
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use zipzi_core::document::{
+    ExpressionAsset, MotionClip, MotionGroup, PackageAttachment, PhysicsAsset, PoseAsset,
+};
+use zipzi_core::draw_order::DrawOrderGroup;
+use zipzi_core::types::{
+    Appearance, BindingAxis, BlendShapeTargetKind, ImageAsset, OffscreenKeyform, Part, RotationPose,
+};
+
+#[derive(Debug, Default)]
+pub(super) enum Present<T> {
+    #[default]
+    Absent,
+    Present(T),
+}
+
+impl<T> Present<T> {
+    pub(super) fn is_absent(&self) -> bool {
+        matches!(self, Self::Absent)
+    }
+}
+
+impl<T: Serialize> Serialize for Present<T> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Absent => serializer.serialize_none(),
+            Self::Present(value) => value.serialize(serializer),
+        }
+    }
+}
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Present<T> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        T::deserialize(deserializer).map(Self::Present)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct MeshPropertiesWire {
+    pub(super) part_id: String,
+    pub(super) deformer_id: String,
+    pub(super) appearance: AppearanceWire,
+    pub(super) blend_mode: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) raw_blend_mode: Option<u32>,
+    pub(super) enabled: bool,
+    pub(super) double_sided: bool,
+    pub(super) inverted_mask: bool,
+    pub(super) masks: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) draw_order: Option<f32>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct MeshWire {
+    pub(super) id: String,
+    pub(super) runtime_id: String,
+    pub(super) name: String,
+    pub(super) texture_asset_id: zipzi_core::SceneReference,
+    pub(super) vertex_ids: Vec<u32>,
+    pub(super) base_positions: Vec<[f32; 2]>,
+    pub(super) uvs: Vec<[f32; 2]>,
+    pub(super) triangles: Vec<u32>,
+    pub(super) properties: MeshPropertiesWire,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub(super) struct AppearanceWire {
+    pub(super) opacity: f32,
+    pub(super) multiply: [f32; 3],
+    pub(super) screen: [f32; 3],
+}
+
+impl From<&Appearance> for AppearanceWire {
+    fn from(a: &Appearance) -> Self {
+        Self {
+            opacity: a.opacity,
+            multiply: a.multiply,
+            screen: a.screen,
+        }
+    }
+}
+
+impl From<AppearanceWire> for Appearance {
+    fn from(a: AppearanceWire) -> Self {
+        Self {
+            opacity: a.opacity,
+            multiply: a.multiply,
+            screen: a.screen,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub(super) struct RotationPoseWire {
+    pub(super) origin: [f64; 2],
+    pub(super) angle: f32,
+    pub(super) scale: f32,
+    pub(super) reflect_x: bool,
+    pub(super) reflect_y: bool,
+}
+
+impl From<&RotationPose> for RotationPoseWire {
+    fn from(r: &RotationPose) -> Self {
+        Self {
+            origin: [r.origin.x, r.origin.y],
+            angle: r.angle,
+            scale: r.scale,
+            reflect_x: r.reflect_x,
+            reflect_y: r.reflect_y,
+        }
+    }
+}
+
+impl From<RotationPoseWire> for RotationPose {
+    fn from(r: RotationPoseWire) -> Self {
+        Self {
+            origin: zipzi_core::types::PreciseVec2::new(r.origin[0], r.origin[1]),
+            angle: r.angle,
+            scale: r.scale,
+            reflect_x: r.reflect_x,
+            reflect_y: r.reflect_y,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct TransformWire {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) bezier: Option<zipzi_core::WarpBezier>,
+    pub(super) id: String,
+    pub(super) runtime_id: String,
+    pub(super) name: String,
+    pub(super) part_id: String,
+    pub(super) parent_id: String,
+    pub(super) kind: i32,
+    pub(super) base_angle: f32,
+    pub(super) rotation: RotationPoseWire,
+    pub(super) rows: u32,
+    pub(super) columns: u32,
+    pub(super) quad: bool,
+    pub(super) enabled: bool,
+    pub(super) points: Vec<[f32; 2]>,
+    pub(super) appearance: AppearanceWire,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct MeshKeyformWire {
+    pub(super) samples: Vec<String>,
+    pub(super) positions: Vec<[f32; 2]>,
+    #[serde(default)]
+    pub(super) appearance: Option<AppearanceWire>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) draw_order: Option<f32>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct SceneKeyformWire {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) bezier: Option<zipzi_core::WarpBezier>,
+    pub(super) samples: Vec<String>,
+    pub(super) positions: Vec<[f32; 2]>,
+    pub(super) rotation: RotationPoseWire,
+    #[serde(default)]
+    pub(super) appearance: Option<AppearanceWire>,
+    #[serde(default)]
+    pub(super) draw_order: f32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct MeshBindingWire {
+    pub(super) id: String,
+    pub(super) mesh_id: String,
+    pub(super) axes: Vec<BindingAxisWire>,
+    pub(super) keyforms: Vec<MeshKeyformWire>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct SceneBindingWire {
+    pub(super) id: String,
+    pub(super) target_id: String,
+    pub(super) axes: Vec<BindingAxisWire>,
+    pub(super) keyforms: Vec<SceneKeyformWire>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct BindingAxisWire {
+    pub(super) id: String,
+    pub(super) parameter_id: String,
+    pub(super) samples: Vec<zipzi_core::BindingSample>,
+}
+impl From<&BindingAxis> for BindingAxisWire {
+    fn from(b: &BindingAxis) -> Self {
+        Self {
+            id: b.id.clone(),
+            parameter_id: b.parameter_id.clone(),
+            samples: b.samples.clone(),
+        }
+    }
+}
+impl From<BindingAxisWire> for BindingAxis {
+    fn from(b: BindingAxisWire) -> Self {
+        Self {
+            id: b.id,
+            parameter_id: b.parameter_id,
+            samples: b.samples,
+            keys: vec![],
+        }
+    }
+}
+#[derive(Serialize, Deserialize)]
+pub(super) struct BlendShapeKeyTableWire {
+    pub(super) id: String,
+    pub(super) parameter_id: String,
+    pub(super) samples: Vec<zipzi_core::BindingSample>,
+    pub(super) base_sample_id: String,
+}
+#[derive(Serialize, Deserialize)]
+pub(super) struct BlendShapeConstraintWire {
+    pub(super) id: String,
+    pub(super) parameter_id: String,
+    pub(super) samples: Vec<zipzi_core::ConstraintSample>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct DeltaMeshKeyformWire {
+    pub(super) sample_id: String,
+    pub(super) positions: Vec<[f32; 2]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) opacity: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) draw_order: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) multiply: Option<[f32; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) screen: Option<[f32; 3]>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct DeltaWarpKeyformWire {
+    pub(super) sample_id: String,
+    pub(super) points: Vec<[f32; 2]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) opacity: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) multiply: Option<[f32; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) screen: Option<[f32; 3]>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct DeltaRotationKeyformWire {
+    pub(super) sample_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) origin: Option<[f32; 2]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) angle: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) scale: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) opacity: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) multiply: Option<[f32; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) screen: Option<[f32; 3]>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct DeltaPartKeyformWire {
+    pub(super) sample_id: String,
+    pub(super) draw_order: f32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct DeltaGlueKeyformWire {
+    pub(super) sample_id: String,
+    pub(super) intensity: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub(super) struct DeltaOffscreenKeyformWire {
+    pub(super) sample_id: String,
+    pub(super) opacity: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) multiply: Option<[f32; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) screen: Option<[f32; 3]>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type", content = "items", rename_all = "snake_case")]
+pub(super) enum DeltaKeyformsWire {
+    Mesh(Vec<DeltaMeshKeyformWire>),
+    Warp(Vec<DeltaWarpKeyformWire>),
+    Rotation(Vec<DeltaRotationKeyformWire>),
+    Part(Vec<DeltaPartKeyformWire>),
+    Glue(Vec<DeltaGlueKeyformWire>),
+    Offscreen(Vec<DeltaOffscreenKeyformWire>),
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct BlendShapeBindingWire {
+    pub(super) id: String,
+    pub(super) target_id: String,
+    pub(super) target_kind: BlendShapeTargetKind,
+    pub(super) key_table_id: String,
+    pub(super) constraint_ids: Vec<String>,
+    pub(super) keyforms: DeltaKeyformsWire,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct GlueVertexPairWire {
+    pub(super) id: String,
+    pub(super) vertex_a: Option<u32>,
+    pub(super) vertex_b: Option<u32>,
+    pub(super) weight_a: f32,
+    pub(super) weight_b: f32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct GlueWire {
+    pub(super) id: String,
+    pub(super) runtime_id: String,
+    pub(super) name: String,
+    pub(super) mesh_a_id: zipzi_core::SceneReference,
+    pub(super) mesh_b_id: zipzi_core::SceneReference,
+    pub(super) pairs: Vec<GlueVertexPairWire>,
+    pub(super) intensity: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) binding: Option<zipzi_core::types::GlueBinding>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) binding_id: Option<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub(super) struct OffscreenKeyformWire {
+    pub(super) opacity: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) multiply: Option<[f32; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) screen: Option<[f32; 3]>,
+}
+
+impl From<&OffscreenKeyform> for OffscreenKeyformWire {
+    fn from(k: &OffscreenKeyform) -> Self {
+        Self {
+            opacity: k.opacity,
+            multiply: k.multiply,
+            screen: k.screen,
+        }
+    }
+}
+
+impl From<OffscreenKeyformWire> for OffscreenKeyform {
+    fn from(k: OffscreenKeyformWire) -> Self {
+        Self {
+            opacity: k.opacity,
+            multiply: k.multiply,
+            screen: k.screen,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct OffscreenWire {
+    pub(super) id: String,
+    pub(super) runtime_id: String,
+    pub(super) name: String,
+    pub(super) part_id: String,
+    #[serde(default = "default_enabled", skip_serializing_if = "is_enabled")]
+    pub(super) enabled: bool,
+    pub(super) blend_mode: u32,
+    pub(super) flags: u8,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(super) masks: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(super) part_keyform_indices: Vec<i32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(super) keyforms: Vec<OffscreenKeyformWire>,
+}
+
+fn default_enabled() -> bool {
+    true
+}
+
+fn is_enabled(value: &bool) -> bool {
+    *value
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct DocumentWire {
+    pub(super) id: String,
+    pub(super) export_settings: zipzi_core::ExportSettings,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) source_canvas: Option<zipzi_core::Canvas>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) draw_order_groups: Option<Vec<DrawOrderGroup>>,
+    pub(super) assets: Vec<ImageAsset>,
+    pub(super) meshes: Vec<MeshWire>,
+    pub(super) parts: Vec<Part>,
+    pub(super) transforms: Vec<TransformWire>,
+    pub(super) parameters: Vec<zipzi_core::types::Parameter>,
+    pub(super) bindings: Vec<MeshBindingWire>,
+    pub(super) scene_bindings: Vec<SceneBindingWire>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(super) blend_key_tables: Vec<BlendShapeKeyTableWire>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(super) blend_constraints: Vec<BlendShapeConstraintWire>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(super) blend_bindings: Vec<BlendShapeBindingWire>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(super) glues: Vec<GlueWire>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(super) offscreens: Vec<OffscreenWire>,
+    #[serde(default, skip_serializing_if = "Present::is_absent")]
+    pub(super) display_info: Present<Option<zipzi_core::document::DisplayInfo>>,
+    #[serde(
+        default,
+        skip_serializing_if = "zipzi_core::document::HierarchyOrder::is_empty"
+    )]
+    pub(super) hierarchy_order: zipzi_core::document::HierarchyOrder,
+    #[serde(default, skip_serializing_if = "Present::is_absent")]
+    pub(super) editor_state: Present<zipzi_core::document::EditorState>,
+    #[serde(default, skip_serializing_if = "Present::is_absent")]
+    pub(super) animation_assets: Present<Option<AnimationAssetsWire>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) deformers: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) deformation_links: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) organization_links: Option<serde_json::Value>,
+    #[serde(flatten)]
+    pub(super) extra: BTreeMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+pub(super) struct AnimationAssetsWire {
+    #[serde(default)]
+    pub(super) expressions: Vec<ExpressionAsset>,
+    #[serde(default)]
+    pub(super) motions: Vec<MotionClip>,
+    #[serde(default)]
+    pub(super) motion_groups: Vec<MotionGroup>,
+    #[serde(default)]
+    pub(super) motion_roots: Vec<zipzi_core::document::MotionRegistration>,
+    #[serde(default)]
+    pub(super) pose: Option<PoseAsset>,
+    #[serde(default)]
+    pub(super) physics: Option<PhysicsAsset>,
+    #[serde(default)]
+    pub(super) missing_attachments: Vec<String>,
+    #[serde(default = "empty_model3_settings")]
+    pub(super) model3_settings: serde_json::Value,
+    #[serde(default)]
+    pub(super) package_attachments: Vec<PackageAttachment>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct ProjectWire {
+    pub(super) format: String,
+    pub(super) format_version: u32,
+    pub(super) document: DocumentWire,
+    #[serde(flatten)]
+    pub(super) extra: BTreeMap<String, serde_json::Value>,
+}
+
+fn empty_model3_settings() -> serde_json::Value {
+    serde_json::json!({})
+}

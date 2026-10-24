@@ -62,7 +62,7 @@ SHA-256 校验。该素材统一使用 `local/mao/`，不保留单独的 `local/
 
 The SDK's 27 source files and Editor's 51 source files were hashed before copying.
 Their overlap had no content conflicts. The merged root `models/local/` retains
-48 asset files after excluding `.DS_Store`, `.kasane.lock` and `cat_import.af~lock~`;
+48 asset files after excluding `.DS_Store`, `.zipzi.lock` and `cat_import.af~lock~`;
 original model assets remain untouched. A source application lock changed externally
 during verification; it is excluded from the asset comparison. All 26 model3 file references resolve.
 Private per-file hashes and source provenance are retained in

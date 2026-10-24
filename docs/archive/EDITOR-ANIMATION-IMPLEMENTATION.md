@@ -4,11 +4,11 @@
 
 ## 已接入的资产与编辑路径
 
-- `kasane-live2d` 提供 cdi3、exp3、motion3、physics3、pose3 的 typed codec。导出重建计数并使用已通过官方 Framework JSON parser 验证的数字编码。
-- `kasane-core` 的 v6 工程数据（兼容读取并迁移 v1–v5）持久化 DisplayInfo、Expression、Motion/注册组、Pose、Physics、model3 Groups/Layout/HitAreas，以及 Sound/UserData 的受管字节。相关对象进入 checkpoint、撤销、引用检查和大小估算。
-- `kasane-project` 在候选工程中导入附件，发布时生成 model3 及资源；缺失附件在工程中持久记录并阻止整包发布。编辑器可在修复后或明确决定舍弃时逐项清除记录。未知字段与无法安全重写的 runtime ID 变更执行严格导出保护。
+- `zipzi-live2d` 提供 cdi3、exp3、motion3、physics3、pose3 的 typed codec。导出重建计数并使用已通过官方 Framework JSON parser 验证的数字编码。
+- `zipzi-core` 的 v6 工程数据（兼容读取并迁移 v1–v5）持久化 DisplayInfo、Expression、Motion/注册组、Pose、Physics、model3 Groups/Layout/HitAreas，以及 Sound/UserData 的受管字节。相关对象进入 checkpoint、撤销、引用检查和大小估算。
+- `zipzi-project` 在候选工程中导入附件，发布时生成 model3 及资源；缺失附件在工程中持久记录并阻止整包发布。编辑器可在修复后或明确决定舍弃时逐项清除记录。未知字段与无法安全重写的 runtime ID 变更执行严格导出保护。
 - Rust SDK 和 Python wheel 暴露相应创建、替换、导入、导出与预览入口。Motion 预览按 Motion → Expression → Physics → Pose 执行，播放状态不修改工程；`seek` 从初态或标准时间格点检查点按 60 Hz 重放输入与激活时间表，进度回调可取消且不改变取消前状态。Physics 另有独立预览入口，支持 reset 与 stabilization。
-- `kasane-sdk-observe` 可直接捕获已求值动画帧，并检查预览所属 session、generation 与 revision。宿主可显式选择把 Motion `Model/Opacity` 作为 Framework renderer color alpha 应用于 Drawable；Offscreen 自身的 opacity 独立计算。Framework 默认不自动应用 Model opacity。
+- `zipzi-sdk-observe` 可直接捕获已求值动画帧，并检查预览所属 session、generation 与 revision。宿主可显式选择把 Motion `Model/Opacity` 作为 Framework renderer color alpha 应用于 Drawable；Offscreen 自身的 opacity 独立计算。Framework 默认不自动应用 Model opacity。
 
 ## 参考验证
 
@@ -16,7 +16,7 @@
 
 ```sh
 cargo test --workspace
-cargo clippy -p kasane-animation -p kasane-core -p kasane-live2d -p kasane-project -p kasane-sdk -p kasane-python -p kasane-sdk-observe --all-targets -- -D warnings
+cargo clippy -p zipzi-animation -p zipzi-core -p zipzi-live2d -p zipzi-project -p zipzi-sdk -p zipzi-python -p zipzi-sdk-observe --all-targets -- -D warnings
 python3 tools/run_framework_animation_cpu_probe.py
 python3 tools/run_framework_cdi_probe.py
 python3 tools/run_framework_expression_probe.py
@@ -28,14 +28,14 @@ uv run --locked python tools/run_animation_gpu_probe.py
 
 Physics 差分覆盖缺省、零、30 FPS 和串联双 rig，每种 120 帧与 stabilization 后 20 帧。报告位于 `target/physics-sequence-probe/report.json`。联合包 probe 先导出模型，复制到独立目录并移除原包，再核对所有 model3 相对引用及官方 Framework 的 model3、CDI、Expression、Motion、Physics、Pose 加载；报告位于 `target/animation-package-probe/report.json`。
 
-GPU probe 取 Motion/Pose 的 0.25、0.50、0.75 秒，分别在普通模型、单层 Offscreen、嵌套 Offscreen 上对照官方 OpenGL 与 Kasane WGPU；每帧再比较宿主显式把 Model opacity 设为 renderer color alpha 的变体，共 18 张 128×128 图。全部通过，每通道最大像素误差为 1/255。报告及图片位于 `target/animation-frame-gpu-probe/`。此探针读取 Rust 预览采样的参数与 Part opacity，官方 GPU 探针以相同数值绘制；Motion/Pose 的时间求值由独立官方 CPU 差分验证。它覆盖选定场景，不能替代所有宿主 GPU 与资源包组合。
+GPU probe 取 Motion/Pose 的 0.25、0.50、0.75 秒，分别在普通模型、单层 Offscreen、嵌套 Offscreen 上对照官方 OpenGL 与 Zipzi WGPU；每帧再比较宿主显式把 Model opacity 设为 renderer color alpha 的变体，共 18 张 128×128 图。全部通过，每通道最大像素误差为 1/255。报告及图片位于 `target/animation-frame-gpu-probe/`。此探针读取 Rust 预览采样的参数与 Part opacity，官方 GPU 探针以相同数值绘制；Motion/Pose 的时间求值由独立官方 CPU 差分验证。它覆盖选定场景，不能替代所有宿主 GPU 与资源包组合。
 
 Python wheel 验证：
 
 ```sh
-uv build --wheel --python 3.14 --out-dir target/python-wheels modules/kasane-python
+uv build --wheel --python 3.14 --out-dir target/python-wheels modules/zipzi-python
 cd /tmp
-uv run --no-project --no-cache --python 3.14 --with /absolute/path/to/kasane-0.1.0-cp314-cp314-macosx_11_0_arm64.whl python /absolute/path/to/kasane-2d/modules/kasane-python/tests/test_cpu.py
+uv run --no-project --no-cache --python 3.14 --with /absolute/path/to/zipzi-0.1.0-cp314-cp314-macosx_11_0_arm64.whl python /absolute/path/to/zipzi-2d/modules/zipzi-python/tests/test_cpu.py
 ```
 
 上面的绝对路径应替换为当前仓库 `target/python-wheels` 中实际 wheel 路径。
@@ -65,12 +65,12 @@ uv run --no-project --no-cache --python 3.14 --with /absolute/path/to/kasane-0.1
 - Motion 文档存储使用 `Arc<MotionClip>`；track segments 使用 `Arc<Vec<MotionSegment>>`。checkpoint 共享资产，修改一条轨道时采用 copy-on-write。历史预算仍保守计入每份快照可达的共享内存，不低估预算。
 - `build_export_plan` 捕获所有生成文件与受管资源字节、SHA-256、文件类型和引用边。`publish_export_plan` 在包级验证后发布相同字节，保留原有 stage/backup/rollback 契约。Rust `ArtifactValidator/ArtifactValidation` 替换为 `PackageValidator/PackageValidation`；回调接收完整 `ExportPlan`，报告分别记录 Core、model3 loader、animation、render 的验证状态。
 - model3 Groups、Layout、HitAreas 改为 typed records；已解析的 Parameter/Mesh 引用使用 UUID，未解析引用显式保留 runtime ID。结构校验、删除保护、undo/redo、大小估算与持久化均接入。未知扩展及 UserData 的保守 namespace 保护继续保留。
-- 工程写 v6、读 v1–v6。v5 原始 model3 JSON 在 codec 边界按已保存的 namespace 迁移，随后使用 typed 结构；旧 reader 必须拒绝 v6。Python Groups/HitAreas 的字典形状改为领域字段，示例见 `modules/kasane-python/API.md`。
+- 工程写 v6、读 v1–v6。v5 原始 model3 JSON 在 codec 边界按已保存的 namespace 迁移，随后使用 typed 结构；旧 reader 必须拒绝 v6。Python Groups/HitAreas 的字典形状改为领域字段，示例见 `modules/zipzi-python/API.md`。
 
-存储基准可运行 `cargo run --release -p kasane-animation --example storage_benchmark`。本机一次样本：64 条轨道、每条 2048 segments、100 次操作，checkpoint 约 0.084 ms、单轨道 copy-on-write 约 0.491 ms、模拟整 clip segment 深复制约 19.320 ms。该合成基准只衡量存储复制路径，不代表包含校验、渲染和 GUI 的整体交互耗时。
+存储基准可运行 `cargo run --release -p zipzi-animation --example storage_benchmark`。本机一次样本：64 条轨道、每条 2048 segments、100 次操作，checkpoint 约 0.084 ms、单轨道 copy-on-write 约 0.491 ms、模拟整 clip segment 深复制约 19.320 ms。该合成基准只衡量存储复制路径，不代表包含校验、渲染和 GUI 的整体交互耗时。
 
 
-本次架构重构验证：`cargo test --workspace`、`cargo test -p kasane-project --features binary-prototype`、七个相关 crate 的严格 Clippy 全部通过；重新构建并安装 CPython 3.14 wheel 后，49 项 CPU 测试通过。Expression 官方差分、Physics 长序列、独立资源包 probe 均通过。重新执行 18 帧 GPU 差分通过，每通道最大误差仍为 1/255；其覆盖范围及独立报告位置与上文相同。
+本次架构重构验证：`cargo test --workspace`、`cargo test -p zipzi-project --features binary-prototype`、七个相关 crate 的严格 Clippy 全部通过；重新构建并安装 CPython 3.14 wheel 后，49 项 CPU 测试通过。Expression 官方差分、Physics 长序列、独立资源包 probe 均通过。重新执行 18 帧 GPU 差分通过，每通道最大误差仍为 1/255；其覆盖范围及独立报告位置与上文相同。
 
 ## 提交后边界复查
 

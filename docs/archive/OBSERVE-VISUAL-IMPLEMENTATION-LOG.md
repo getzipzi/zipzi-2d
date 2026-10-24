@@ -15,7 +15,7 @@ The Python O1 API includes `capture_scene`, `capture_scenes`,
 `capture_animation_scene`, `render_scene`, `save_scene`, `open_scene`,
 `inspect`, `inspect_animation`, `render(packet)`, `packet.save`, and
 `open_inspection_packet`; it is documented in
-`modules/kasane-python/API.md`. The saved scene has no resumable animation
+`modules/zipzi-python/API.md`. The saved scene has no resumable animation
 runtime state. `CapturedScene.source` records the current animation snapshot,
 host Model opacity policy, last successful operation identity, and
 `history_status=not_recorded`; events in that
@@ -29,9 +29,9 @@ geometry are present. CPU geometry/coverage query is not yet implemented.
 | Command/evidence | Result |
 | --- | --- |
 | `build_fixtures.py --verify` with final GPU wheel | passed, 9 files and 3 projects |
-| `cargo test -p kasane-sdk-observe --locked` | passed: 4 unit + 6 integration tests; multi-sample snapshot, canonical digest normalization/nonfinite rejection, cross-process scene reopen, corruption/version/path rejection |
+| `cargo test -p zipzi-sdk-observe --locked` | passed: 4 unit + 6 integration tests; multi-sample snapshot, canonical digest normalization/nonfinite rejection, cross-process scene reopen, corruption/version/path rejection |
 | `cargo test --workspace --locked` | passed after O1 capture/operation work |
-| `cargo test -p kasane-moc3-psd --locked` | passed after those test lint edits |
+| `cargo test -p zipzi-moc3-psd --locked` | passed after those test lint edits |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | passed after O1 capture/operation work |
 | `cargo fmt --check`, `git diff --check` | passed |
 | release GPU wheel, isolated CPython 3.14 environment | passed 8 `test_observe.py` tests, including Pose opacity, batch name ambiguity, profile capability gates, packet corruption and independent-process scene packet reopen |

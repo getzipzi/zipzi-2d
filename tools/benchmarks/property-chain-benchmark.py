@@ -179,7 +179,7 @@ def model_manifest(model):
     return {
         str(path.relative_to(model.parent)): digest(path)
         for path in sorted(model.parent.rglob("*"))
-        if path.is_file() and path.name != ".kasane.lock"
+        if path.is_file() and path.name != ".zipzi.lock"
     }
 
 
@@ -256,12 +256,12 @@ def main():
     # Fingerprint the model subtree, including moc3, attachments and textures.
     provenance["model_files"] = model_manifest(model)
     env = os.environ.copy()
-    env.pop("KASANE_DEV_SESSION_DIR", None)
+    env.pop("ZIPZI_DEV_SESSION_DIR", None)
     if env.get("CARGO_TARGET_DIR"):
         env["CARGO_TARGET_DIR"] = str(Path(env["CARGO_TARGET_DIR"]).resolve())
     binaries = {}
     for mode in ["plain", "instrumented"]:
-        args = ["cargo", "build", "--locked", "--release", "--message-format=json-render-diagnostics", "-p", "editor-core", "--example", "property_chain_benchmark"]
+        args = ["cargo", "build", "--locked", "--release", "--message-format=json-render-diagnostics", "-p", "zipzi-editor-core", "--example", "property_chain_benchmark"]
         if mode == "instrumented":
             args += ["--features", "bench-instrumentation"]
         build = subprocess.run(args, cwd=ROOT, env=env, check=True, stdout=subprocess.PIPE, text=True)

@@ -29,8 +29,8 @@ def run(cmd, cwd=ROOT, text_input=None):
 
 def ensure_probes(build_dir: Path, sdk_dir: Path):
     build_dir.mkdir(parents=True, exist_ok=True)
-    official_probe = build_dir / "kasane_document_official_probe"
-    purism_probe = build_dir / "kasane_document_purism_probe"
+    official_probe = build_dir / "zipzi_document_official_probe"
+    purism_probe = build_dir / "zipzi_document_purism_probe"
     if official_probe.is_file() and purism_probe.is_file():
         return official_probe, purism_probe
 
@@ -40,9 +40,9 @@ def ensure_probes(build_dir: Path, sdk_dir: Path):
         "-S", ROOT / "tools/validation/probes",
         "-B", build_dir,
         "-DCMAKE_BUILD_TYPE=Release",
-        f"-DKASANE_CUBISM_ROOT={sdk_dir.resolve()}",
+        f"-DZIPZI_CUBISM_ROOT={sdk_dir.resolve()}",
     ])
-    run(["cmake", "--build", build_dir, "--target", "kasane_document_official_probe", "kasane_document_purism_probe", "-j4"])
+    run(["cmake", "--build", build_dir, "--target", "zipzi_document_official_probe", "zipzi_document_purism_probe", "-j4"])
     return official_probe, purism_probe
 
 
@@ -85,7 +85,7 @@ def main():
     fixtures_dir = args.output_dir / "fixtures"
 
     print("Step 1: Exporting Rust conformance fixtures...")
-    run(["cargo", "run", "-p", "kasane-moc3", "--example", "export_conformance_cases", "--", fixtures_dir])
+    run(["cargo", "run", "-p", "zipzi-moc3", "--example", "export_conformance_cases", "--", fixtures_dir])
 
     print("Step 2: Checking/building official and Purism Core probes...")
     official_probe, purism_probe = ensure_probes(args.probe_dir.resolve(), args.sdk.resolve())

@@ -16,7 +16,7 @@ import shutil
 import struct
 import zlib
 
-import kasane
+import zipzi
 
 ROOT = Path(__file__).resolve().parent
 TEXTURES = ROOT / "textures"
@@ -72,13 +72,13 @@ def make_textures() -> dict[str, Path]:
     return {"padding": padding, "line": line, "mask": mask}
 
 
-def new_session(number: int) -> kasane.Session:
-    return kasane.Session(ident(number), 100, 100, (37, 62), 7.5)
+def new_session(number: int) -> zipzi.Session:
+    return zipzi.Session(ident(number), 100, 100, (37, 62), 7.5)
 
 
-def save(model: kasane.Session, name: str) -> Path:
+def save(model: zipzi.Session, name: str) -> Path:
     PROJECTS.mkdir(parents=True, exist_ok=True)
-    destination = PROJECTS / f"{name}.kasane.json"
+    destination = PROJECTS / f"{name}.zipzi.json"
     receipt = model.save(destination)
     assert receipt.manifest == destination
     assert model.validate_structure() == []
@@ -94,9 +94,9 @@ def pixel_project(textures: dict[str, Path]) -> Path:
         edit.create_rectangle(ident(22), "same name", ident(12), (62, 24), (82, 44))
         edit.create_parameter(ident(31), "Shift", 0, 1, 0)
         edit.create_mesh_binding(
-            ident(41), ident(21), [kasane.Axis(ident(31), [0, 1])], [
-                kasane.MeshKeyform([0], [(20, 20), (60, 20), (60, 60), (20, 60)]),
-                kasane.MeshKeyform([1], [(24, 20), (64, 20), (64, 60), (24, 60)]),
+            ident(41), ident(21), [zipzi.Axis(ident(31), [0, 1])], [
+                zipzi.MeshKeyform([0], [(20, 20), (60, 20), (60, 60), (20, 60)]),
+                zipzi.MeshKeyform([1], [(24, 20), (64, 20), (64, 60), (24, 60)]),
             ],
         )
     return save(model, "pixel-binding")
@@ -113,13 +113,13 @@ def hierarchy_project(textures: dict[str, Path]) -> Path:
         edit.create_rectangle(ident(23), "warped mesh", ident(13), (20, 20), (60, 60))
         edit.create_part(ident(51), "head")
         edit.create_rotation_transform(
-            ident(61), "rotate", kasane.RotationData(
-                0, kasane.RotationPose((37, 62), angle=25)
+            ident(61), "rotate", zipzi.RotationData(
+                0, zipzi.RotationPose((37, 62), angle=25)
             ), ident(51),
         )
         edit.create_warp_transform(
             ident(62), "compressed warp",
-            kasane.WarpData(1, 1, True, quad), ident(51), ident(61),
+            zipzi.WarpData(1, 1, True, quad), ident(51), ident(61),
         )
         edit.set_deform_parent(ident(23), ident(62))
         edit.set_mesh_part(ident(23), ident(51))
@@ -145,13 +145,13 @@ def composition_project(textures: dict[str, Path]) -> Path:
         edit.create_rectangle(ident(26), "masked target", ident(14), (30, 30), (70, 70))
         edit.create_rectangle(ident(27), "front cover", ident(14), (40, 40), (65, 65))
         edit.set_mesh_part(ident(26), ident(52))
-        edit.create_offscreen(kasane.OffscreenSpec(
+        edit.create_offscreen(zipzi.OffscreenSpec(
             ident(71), "half-opacity layer", ident(52),
-            keyforms=[kasane.OffscreenKeyform(0.5)],
+            keyforms=[zipzi.OffscreenKeyform(0.5)],
         ))
     properties = model.mesh_properties(ident(26))
     with model.edit("attach mask") as edit:
-        edit.update_mesh_properties(ident(26), kasane.MeshProperties(
+        edit.update_mesh_properties(ident(26), zipzi.MeshProperties(
             properties.texture_asset_id, properties.appearance,
             properties.draw_order, properties.blend_mode, properties.enabled,
             properties.double_sided, properties.inverted_mask, [ident(25)],
@@ -173,7 +173,7 @@ def main() -> None:
             if not path.is_relative_to(ROOT) or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
                 raise RuntimeError(f"Fixture checksum mismatch: {relative}")
         for relative in manifest["projects"]:
-            model = kasane.open_project((ROOT / relative).resolve())
+            model = zipzi.open_project((ROOT / relative).resolve())
             if model.validate_structure():
                 raise RuntimeError(f"Fixture structure invalid: {relative}")
         print(f"Verified {len(manifest['files'])} files and {len(manifest['projects'])} projects")
@@ -185,7 +185,7 @@ def main() -> None:
     textures = make_textures()
     projects = [pixel_project(textures), hierarchy_project(textures),
                 composition_project(textures)]
-    (PROJECTS / ".kasane.lock").unlink(missing_ok=True)
+    (PROJECTS / ".zipzi.lock").unlink(missing_ok=True)
     files = sorted([*textures.values(), *PROJECTS.rglob("*")])
     manifest = {
         "schema_version": 1,
@@ -193,7 +193,7 @@ def main() -> None:
         "projects": [str(path.relative_to(ROOT)) for path in projects],
         "files": {
             str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in files if path.is_file() and path.name != ".kasane.lock"
+            for path in files if path.is_file() and path.name != ".zipzi.lock"
         },
     }
     (ROOT / "manifest.json").write_text(

@@ -1,0 +1,15 @@
+[package]
+name = "zipzi-render-wgpu"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+bytemuck = { workspace = true }
+zipzi-core = { path = "../zipzi-core" }
+zipzi-render = { path = "../zipzi-render" }
+wgpu = { workspace = true }
+
+[dev-dependencies]
+png = { workspace = true }

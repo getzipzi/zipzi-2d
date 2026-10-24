@@ -1,12 +1,12 @@
 # M4：Rust 原生公共 Godot renderer
 
-状态：已实施并通过本机验收，见 [M4 验收记录](M4-ACCEPTANCE.md)。渲染核心由 `kasane-godot`（Rust GDExtension）维护；C++ `gd-cubism` 保留为独立 GPU 对照基准。返回 [总路线图](../ROADMAP.md)。
+状态：已实施并通过本机验收，见 [M4 验收记录](M4-ACCEPTANCE.md)。渲染核心由 `zipzi-godot`（Rust GDExtension）维护；C++ `gd-cubism` 保留为独立 GPU 对照基准。返回 [总路线图](../ROADMAP.md)。
 
 ## 1. 交付结果
 
-在 `kasane-godot` 中定型纯 Rust 实现的 Godot 2D 渲染核心（基于成熟的 `KasaneDocumentPreview` 与 `KasaneMeshView`）。
+在 `zipzi-godot` 中定型纯 Rust 实现的 Godot 2D 渲染核心（基于成熟的 `ZipziDocumentPreview` 与 `ZipziMeshView`）。
 
-1. **直接驱动编辑模型**：直接消费 `kasane-core::evaluate_frame()` 产出的内存数据（`DrawableFrame`），消除向 MOC3 编码的额外开销与延迟，实现高帧率交互预览。
+1. **直接驱动编辑模型**：直接消费 `zipzi-core::evaluate_frame()` 产出的内存数据（`DrawableFrame`），消除向 MOC3 编码的额外开销与延迟，实现高帧率交互预览。
 2. **纯 Rust 统一渲染管线**：在 Rust 侧完整管理材质 Shader、Multiply / Screen 颜色、混合模式、正反向剪贴遮罩、动态顶点缓冲与图层排序。
 3. **预留运行模型接入路径**：绘制核心接收已求值的 `DrawableFrame` 和纹理表，不要求构造 Document。M6 再实现 `purism-core` C99 FFI、运行帧转换和 Viewer；M4 不将 FFI 接入本阶段验收。
 4. **解耦 C++ 播放器**：不将 `gd-cubism` 作为该渲染器的消费者接入。`gd-cubism` 维持独立，作为现有游戏播放框架与 GPU 像素对照基准。
@@ -14,15 +14,15 @@
 ## 2. 架构与边界
 
 ```text
-Document (编辑态) ──> kasane-core::evaluate_frame() ─┐
-                                                     ├─> 统一绘制契约 (DrawableFrame) ─> Rust 公共 Renderer (kasane-godot)
+Document (编辑态) ──> zipzi-core::evaluate_frame() ─┐
+                                                     ├─> 统一绘制契约 (DrawableFrame) ─> Rust 公共 Renderer (zipzi-godot)
 MOC3 (M6 Viewer) ──> purism-core (C FFI) ──> 帧转换 ┘
 
 [独立外部验证基准 (Oracle)]
 gd-cubism (C++) ──> GPU 自动化像素比对 (validate_gpu.py) ──> 按统一阈值验收
 ```
 
-公共渲染器由 `kasane-godot` 独占实现与维护。公共层可以依赖 Godot API（`godot-rust`），但不得包含撤销重做（UndoRedo）、编辑器选择、历史记录或脚本宿主。
+公共渲染器由 `zipzi-godot` 独占实现与维护。公共层可以依赖 Godot API（`godot-rust`），但不得包含撤销重做（UndoRedo）、编辑器选择、历史记录或脚本宿主。
 
 | 输入契约 | 内容 | 对应数据类型 |
 |---|---|---|
@@ -37,7 +37,7 @@ gd-cubism (C++) ──> GPU 自动化像素比对 (validate_gpu.py) ──> 按�
 
 ## 3. 实施与定型顺序
 
-1. **固化动态顶点缓冲复用**：完善 `KasaneMeshView`，在拓扑不变时严格复用 `ArrayMesh` 与 RID，仅更新顶点缓冲（`FLAG_USE_DYNAMIC_UPDATE`），避免每帧分配销毁节点。
+1. **固化动态顶点缓冲复用**：完善 `ZipziMeshView`，在拓扑不变时严格复用 `ArrayMesh` 与 RID，仅更新顶点缓冲（`FLAG_USE_DYNAMIC_UPDATE`），避免每帧分配销毁节点。
 2. **定型材质与着色器规范**：提取标准 Live2D 着色器为公共 shader 资源，确保 `Multiply` / `Screen` 颜色公式、Normal / Additive / Multiplicative 混合模式行为与官方规范严格等价。
 3. **完善剪贴遮罩管线**：维护多图层正向与反向遮罩隔离（SubViewport / Stencil 机制），避免跨帧残影与缩放锯齿。
 4. **独立编辑覆盖层（Overlay Layer）**：高亮框、旋转手柄、网格控制点通过独立的 CanvasItem 覆盖层绘制，按稳定 ID 匹配当前几何，不修改底层模型材质或数据源。
@@ -68,6 +68,6 @@ renderer 记录最后成功提交的输入版本和错误；截图与视觉比�
 | **双路径隔离** | 编辑预览不依赖 MOC3 导出与 C++ `gd-cubism`；绘制核心可直接接受外部求值帧，M6 再验收运行模型接入 |
 | **崩溃与边界安全** | 快速切换参数、窗口缩放、视口隐藏与重入借用均安全无 panic |
 
-交付物包含：`kasane-godot` 内定型的公共渲染组件、Shader 资源、GPU 自动化比对套件与测试报告。
+交付物包含：`zipzi-godot` 内定型的公共渲染组件、Shader 资源、GPU 自动化比对套件与测试报告。
 
-从仓库根目录运行 `cargo build --release -p kasane-godot --locked`，再运行 `python3 tools/validate_m4.py --library target/release/libkasane_godot.dylib`；结果写入 `target/kasane/m4/report.json`。验收入口同时运行 Rust 帧校验单元测试和真实 GPU 的观察状态/覆盖层回归。
+从仓库根目录运行 `cargo build --release -p zipzi-godot --locked`，再运行 `python3 tools/validate_m4.py --library target/release/libzipzi_godot.dylib`；结果写入 `target/zipzi/m4/report.json`。验收入口同时运行 Rust 帧校验单元测试和真实 GPU 的观察状态/覆盖层回归。

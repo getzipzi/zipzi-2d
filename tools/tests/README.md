@@ -26,7 +26,7 @@ those explicitly. Experiment wheel tests skip unless `SDK_EXPERIMENT_WHEEL` is s
 | `tools/tests/` | Regression tests for repository tools |
 | `crates/<crate>/src/` | Rust unit tests near their implementation |
 | `crates/<crate>/tests/` | Crate-owned integration and native acceptance tests |
-| `crates/kasane-python/tests/` | Tests of the built Python extension |
+| `crates/zipzi-python/tests/` | Tests of the built Python extension |
 | `fixtures/` | [Shared test data](../../fixtures/README.md), independent of tooling |
 | `models/local/` | Ignored, separately obtained licensed model assets |
 

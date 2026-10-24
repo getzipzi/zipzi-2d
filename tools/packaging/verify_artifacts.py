@@ -10,12 +10,12 @@ import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-EDITOR_ASSETS = ROOT/'crates/kasane-editor/assets'
+EDITOR_ASSETS = ROOT/'crates/zipzi-editor/assets'
 
 
 def check_notices():
     for name in ['LICENSE-MIT', 'THIRD_PARTY_NOTICES.md']:
-        assert (ROOT/'crates/kasane-python'/name).read_bytes() == (ROOT/name).read_bytes(), f'Stale Python distribution notice: {name}'
+        assert (ROOT/'crates/zipzi-python'/name).read_bytes() == (ROOT/name).read_bytes(), f'Stale Python distribution notice: {name}'
 
 
 def check_wheel(path):
@@ -26,25 +26,28 @@ def check_wheel(path):
             matches = [n for n in names if n.endswith('.dist-info/licenses/'+name)]
             assert len(matches) == 1 and wheel.read(matches[0]) == (ROOT/name).read_bytes(), name
         metadata = next(n for n in names if n.endswith('.dist-info/METADATA'))
+        assert b'Name: zipzi' in wheel.read(metadata).splitlines()
         assert b'License-Expression: MIT' in wheel.read(metadata)
-        assert 'kasane/py.typed' in names and 'kasane/_native.pyi' in names
-        native = [n for n in names if n.startswith('kasane/_native') and n.endswith(('.so', '.pyd'))]
+        assert 'zipzi/py.typed' in names and 'zipzi/_native.pyi' in names
+        native = [n for n in names if n.startswith('zipzi/_native') and n.endswith(('.so', '.pyd'))]
         assert len(native) == 1, native
-        assert not any(n.startswith(('models/', 'assets/', 'crates/kasane-editor/', 'vendor/')) for n in names)
+        assert not any(n.startswith(('models/', 'assets/', 'crates/zipzi-editor/', 'vendor/')) for n in names)
     print(f'PASS wheel: {path.name}; MIT/notices, typing and native extension')
 
 
 def check_app(path):
     resources = path/'Contents/Resources'
     plist = plistlib.loads((path/'Contents/Info.plist').read_bytes())
-    assert plist['CFBundleExecutable'] == 'kasane-editor'
+    assert plist['CFBundleIdentifier'] == 'dev.zipzi.editor'
+    assert plist['CFBundleName'] == 'Zipzi Editor'
+    assert plist['CFBundleExecutable'] == 'zipzi-editor'
     binary = path/'Contents/MacOS'/plist['CFBundleExecutable']
     assert binary.is_file() and binary.stat().st_mode & 0o111
     data = binary.read_bytes()
     for name in ['LICENSE-MIT', 'LICENSE-GPL-3.0', 'LICENSING.md', 'THIRD_PARTY_NOTICES.md']:
         assert (resources/name).read_bytes() == (ROOT/name).read_bytes(), name
     assert (resources/'LICENSE').read_bytes() == (ROOT/'LICENSE-GPL-3.0').read_bytes()
-    assert (resources/'AppIcon.icns').read_bytes() == (EDITOR_ASSETS/'app-icons/kasane-editor-icon-vector.icns').read_bytes()
+    assert (resources/'AppIcon.icns').read_bytes() == (EDITOR_ASSETS/'app-icons/zipzi-editor-icon-vector.icns').read_bytes()
     for path in (EDITOR_ASSETS/'icons').glob('*.svg'):
         assert path.read_bytes() in data, f'Missing embedded icon: {path.name}'
     for path in (EDITOR_ASSETS/'locales').glob('*.toml'):
@@ -71,11 +74,11 @@ def check_source(path):
             assert hashlib.sha256(archive.extractfile(member).read()).hexdigest() == digest, name
         for name in ['LICENSE-MIT','LICENSE-GPL-3.0','THIRD_PARTY_NOTICES.md','Cargo.toml','Cargo.lock',
                      'third_party/purism-core/include/PurismCore.h',
-                     'crates/kasane-editor/assets/app-icons/kasane-editor-icon-vector.icns',
-                     'crates/kasane-editor/assets/icons/bezier-curve.svg',
-                     'crates/kasane-editor/assets/icons/origin-crosshair.svg',
-                     'crates/kasane-editor/assets/locales/en.toml',
-                     'crates/kasane-editor/assets/locales/zh-CN.toml']:
+                     'crates/zipzi-editor/assets/app-icons/zipzi-editor-icon-vector.icns',
+                     'crates/zipzi-editor/assets/icons/bezier-curve.svg',
+                     'crates/zipzi-editor/assets/icons/origin-crosshair.svg',
+                     'crates/zipzi-editor/assets/locales/en.toml',
+                     'crates/zipzi-editor/assets/locales/zh-CN.toml']:
             assert 'zipzi-2d/'+name in names, name
         for crate in (ROOT/'crates').iterdir():
             if (crate/'Cargo.toml').exists():assert 'zipzi-2d/crates/'+crate.name+'/Cargo.toml' in names

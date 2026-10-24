@@ -24,7 +24,7 @@ def main() -> None:
         # Alternate execution order to reduce thermal/order bias.
         for policy in (["global", "cropped"] if iteration % 2 == 0 else ["cropped", "global"]):
             directory = output / f"{iteration}-{policy}"
-            command = ["cargo", "run", "--locked", "--release", "-p", "kasane-render-metal", "--example", "offscreen_benchmark"]
+            command = ["cargo", "run", "--locked", "--release", "-p", "zipzi-render-metal", "--example", "offscreen_benchmark"]
             if policy == "global":
                 command += ["--features", "benchmark-global-surfaces"]
             command += ["--", str(directory)]

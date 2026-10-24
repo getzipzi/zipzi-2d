@@ -27,9 +27,9 @@ def classify(path: str) -> tuple[str, str]:
         return "test-fixture", "retain baseline; add Runtime-backed fixtures in R1/R2"
     if path.endswith("/dev_session.rs") or path.endswith("/benchmark.rs"):
         return "host-adapter", "use common Runtime/host entrypoints; retain dev and benchmark behavior"
-    if path == "crates/kasane-editor/src/project.rs":
+    if path == "crates/zipzi-editor/src/project.rs":
         return "host-task-completion", "move task owner and completion before weak view update to application Host"
-    if path == "crates/kasane-editor/src/lib.rs":
+    if path == "crates/zipzi-editor/src/lib.rs":
         return "host-lifecycle", "close detaches view; explicit shutdown owns quit and dirty decisions"
     if "/workspace/io.rs" in path or "/workspace/entry.rs" in path:
         return "runtime-registry-io", "Runtime owns formal session, Busy job, paths and reservations; view retains frozen projection"
@@ -42,7 +42,7 @@ def classify(path: str) -> tuple[str, str]:
 
 def collect(root: Path = ROOT) -> list[dict]:
     rows = []
-    for directory in ["crates/editor-core/src", "crates/kasane-editor/src", "crates/kasane-editor/headless_tests"]:
+    for directory in ["crates/zipzi-editor-core/src", "crates/zipzi-editor/src", "crates/zipzi-editor/headless_tests"]:
         for path in sorted((root / directory).rglob("*.rs")):
             relative = str(path.relative_to(root))
             area, destination = classify(relative)

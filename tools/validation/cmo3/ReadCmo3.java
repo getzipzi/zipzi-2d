@@ -1,6 +1,6 @@
 // Optional interoperability probe. Compile against a locally installed Cubism
 // Editor's res/*.jar; proprietary binaries are never copied into the repository.
-package kasane.cmo3probe;
+package zipzi.cmo3probe;
 import java.io.File;
 import java.util.HashMap;
 import org.jdom.Document;
@@ -100,7 +100,7 @@ public final class ReadCmo3 {
                     (com.live2d.cubism.doc.animation.movie.track.CMvTrack_Live2DModel_Source)track;
                 for (com.live2d.cubism.doc.animation.movie.effect.ICMvEffect effect : model.getEffectManager().getEffectList()) {
                     for (com.live2d.cubism.doc.animation.movie.effect.attr.ICMvAttr attr : effect.getAttrList()) {
-                        Object operation = attr.getOptionParam("KASANE_EXPRESSION_ENTRY_V1");
+                        Object operation = attr.getOptionParam("ZIPZI_EXPRESSION_ENTRY_V1");
                         if (operation != null) result.put(scene.getSceneName() + "/" + attr.getId().getIdString(), operation.toString());
                     }
                 }
@@ -164,7 +164,7 @@ public final class ReadCmo3 {
             }
         }
         System.out.println("Geometry: " + cases.size() + " poses, " + vertices + " vertices, max error " + maximum + " px");
-        if (orderedPoses > 0) System.out.println("Draw order: " + orderedPoses + " poses match Kasane back-to-front");
+        if (orderedPoses > 0) System.out.println("Draw order: " + orderedPoses + " poses match Zipzi back-to-front");
         if (maximum > tolerance) throw new AssertionError("Geometry error exceeds " + tolerance + " px: " + worst);
     }
     private static void checkAnimationValues(com.live2d.cubism.doc.animation.CAnimation animation, File reference) throws Exception {

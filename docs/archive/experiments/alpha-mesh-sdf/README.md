@@ -16,7 +16,7 @@
 保留的基准入口：
 
 ```sh
-cargo run --release --locked -p kasane-sdk --example alpha_mesh_profile -- 9
+cargo run --release --locked -p zipzi-sdk --example alpha_mesh_profile -- 9
 ```
 
 ## SDF 实验范围
@@ -98,8 +98,8 @@ cargo run --release --locked -p kasane-sdk --example alpha_mesh_profile -- 9
 
 ```sh
 archive_commit=$(git log -1 --format=%H -- docs/archive/experiments/alpha-mesh-sdf/README.md)
-git worktree add --detach ../kasane-alpha-sdf-repro "$archive_commit"
-cd ../kasane-alpha-sdf-repro
+git worktree add --detach ../zipzi-alpha-sdf-repro "$archive_commit"
+cd ../zipzi-alpha-sdf-repro
 git apply --check docs/archive/experiments/alpha-mesh-sdf/experiment.patch
 git apply docs/archive/experiments/alpha-mesh-sdf/experiment.patch
 uv run --locked python tools/alpha_mesh_sdf_bench.py --contracts

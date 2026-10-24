@@ -2,7 +2,7 @@
 
 日期：2026-10-15。状态：Compact 运行时改造已完成；首轮与完整实现记录见第 8、9 节。
 
-目标：以 Blender 的密集编辑器界面为参考，让 Kasane 在更小的空间里保持清楚的操作入口、属性结构和工作区边界。默认采用 Compact 密度。
+目标：以 Blender 的密集编辑器界面为参考，让 Zipzi 在更小的空间里保持清楚的操作入口、属性结构和工作区边界。默认采用 Compact 密度。
 
 ## 1. 调研范围与现状
 
@@ -33,13 +33,13 @@
 
 ## 2. Blender 中值得借鉴的设计
 
-Blender 将编辑器划分为主区域、header、工具栏、侧栏等区域；header 承载该编辑器的菜单和常用操作。Kasane 现有单行 Dock header 已经符合这个方向，可以继续强化。[官方 Regions 文档](https://docs.blender.org/manual/id/4.5/interface/window_system/regions.html)
+Blender 将编辑器划分为主区域、header、工具栏、侧栏等区域；header 承载该编辑器的菜单和常用操作。Zipzi 现有单行 Dock header 已经符合这个方向，可以继续强化。[官方 Regions 文档](https://docs.blender.org/manual/id/4.5/interface/window_system/regions.html)
 
-Blender 的数字字段兼具直接输入、拖动调整等操作，文本字段有明确的圆角边界。Kasane 的 `SlideNumberInput` 已实现点击编辑、横拖、Shift 精调和 Escape 恢复，优先统一外观与反馈即可。[官方 Input Fields 文档](https://docs.blender.org/manual/en/latest/interface/controls/buttons/fields.html)
+Blender 的数字字段兼具直接输入、拖动调整等操作，文本字段有明确的圆角边界。Zipzi 的 `SlideNumberInput` 已实现点击编辑、横拖、Shift 精调和 Escape 恢复，优先统一外观与反馈即可。[官方 Input Fields 文档](https://docs.blender.org/manual/en/latest/interface/controls/buttons/fields.html)
 
 Blender 提供 UI 缩放、线宽和区域边界宽度设置。紧凑视觉与易命中的操作区域可以同时设计。[官方 Interface Preferences](https://docs.blender.org/manual/en/4.5/editors/preferences/interface.html)
 
-以下尺寸、配色和按钮方案是面向 Kasane 的建议值，并非 Blender 的精确测量值。Blender 的区域分割交互不在第一轮照搬范围内，现有 Dock 分组、拖放和最大化已能支持目标布局。
+以下尺寸、配色和按钮方案是面向 Zipzi 的建议值，并非 Blender 的精确测量值。Blender 的区域分割交互不在第一轮照搬范围内，现有 Dock 分组、拖放和最大化已能支持目标布局。
 
 ## 3. 建议的 Compact 尺寸基线
 
@@ -171,10 +171,10 @@ Blender 提供 UI 缩放、线宽和区域边界宽度设置。紧凑视觉与�
 验证入口：
 
 ```sh
-cargo check --locked -p kasane-editor -p component-playground
+cargo check --locked -p zipzi-editor -p component-playground
 cargo fmt --all -- --check
-env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace
-env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=dock cargo test --locked -p kasane-editor --test headless_screenshot
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked --workspace
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=dock cargo test --locked -p zipzi-editor --test headless_screenshot
 ```
 
 验证结果：全工作区测试通过；最后的按钮选中状态修正后，185 项 headless 交互测试通过（1 项跳过），Dock Metal 截图重新生成并检查；格式检查通过。
@@ -213,7 +213,7 @@ env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=dock cargo test --locked -
 
 - 完整工作区测试、编辑器 218 项测试（188 项交互 + 30 项其他测试）、真实模型动画与 Timeline 验收通过；新增缩放、属性组折叠和空 dock 清理覆盖。截图验收关闭过渡动画，避免把工作区切换或缩放的中间帧当成基线。
 - `target/compact-ui-complete/` 保存建模、Timeline、窄布局、表单、中英文和深浅主题截图。
-- `KASANE_SCREENSHOT_SCENE=compact` 对三档缩放分别生成深色英文、浅色中文截图，并把模型放大到完全覆盖画布，对不透明 Metal 的底部圆角作像素断言。
+- `ZIPZI_SCREENSHOT_SCENE=compact` 对三档缩放分别生成深色英文、浅色中文截图，并把模型放大到完全覆盖画布，对不透明 Metal 的底部圆角作像素断言。
 - `compact-metrics.json` 记录逻辑窗口、display scale、UI scale、画布净面积、树行容量、header bounds 和 overflow 数量。测试窗口为 1100 × 740，display scale 为 2。
 
 | UI Scale | 画布逻辑尺寸 | 画布净面积 | 树可容纳完整行数 | Header overflow |
@@ -252,10 +252,10 @@ env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=dock cargo test --locked -
 
 ### 验证结果
 
-- 编译检查：`cargo check --locked -p kasane-editor -p component-playground` 零警告。
+- 编译检查：`cargo check --locked -p zipzi-editor -p component-playground` 零警告。
 - 代码格式：`cargo fmt --all -- --check` 完全通过。
-- 自动化测试：`env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace` 全工作区通过（218 项 editor 单元/集成测试、全部模型动画验收及真实 Metal 测试均绿）。
-- 截图与度量验证：`env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact cargo test --locked -p kasane-editor --test headless_screenshot` 生成 100%、110%、125% 深色英文与浅色中文截图，不透明 Metal 底层圆角断言与 `compact-metrics.json` 保持一致。
+- 自动化测试：`env -u ZIPZI_DEV_SESSION_DIR cargo test --locked --workspace` 全工作区通过（218 项 editor 单元/集成测试、全部模型动画验收及真实 Metal 测试均绿）。
+- 截图与度量验证：`env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=compact cargo test --locked -p zipzi-editor --test headless_screenshot` 生成 100%、110%、125% 深色英文与浅色中文截图，不透明 Metal 底层圆角断言与 `compact-metrics.json` 保持一致。
 
 
 

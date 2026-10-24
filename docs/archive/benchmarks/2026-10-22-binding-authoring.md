@@ -6,7 +6,7 @@
 
 ## 测量方法
 
-相邻 `kasane-2d` 的 `modules/kasane-sdk/examples/c4_authoring_benchmark.rs`
+相邻 `zipzi-2d` 的 `modules/zipzi-sdk/examples/c4_authoring_benchmark.rs`
 是可复现入口。它导入真实 model3、预热求值，按普通 Mesh 网格的
 “形态数 × 顶点数”选择前三个绑定，在首段插入中点。每个绑定执行八次规划、提交、
 Undo；每次均检查真实提交和取消后的版本／历史。身份由导入生成，输出 ID 只用于
@@ -22,12 +22,12 @@ Undo；每次均检查真实提交和取消后的版本／历史。身份由导�
 干扰耗时。未进行旧版／新版配对速度测量。
 
 ```sh
-cargo build --manifest-path ../kasane-2d/Cargo.toml --locked --release \
-  -p kasane-sdk --example c4_authoring_benchmark
-../kasane-2d/target/release/examples/c4_authoring_benchmark \
+cargo build --manifest-path ../zipzi-2d/Cargo.toml --locked --release \
+  -p zipzi-sdk --example c4_authoring_benchmark
+../zipzi-2d/target/release/examples/c4_authoring_benchmark \
   "$PWD/models/local/mao/runtime/mao_pro.model3.json"
-../kasane-2d/target/release/examples/c4_authoring_benchmark \
-  /absolute/path/to/kasane-2d/models/local/Shirousagi/Shirousagi.model3.json
+../zipzi-2d/target/release/examples/c4_authoring_benchmark \
+  /absolute/path/to/zipzi-2d/models/local/Shirousagi/Shirousagi.model3.json
 ```
 
 授权模型不纳入仓库；缺少模型时必须提供合法本地路径。无普通网格的模型不是此探针的

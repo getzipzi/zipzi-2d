@@ -223,6 +223,6 @@ Headless 动画两版三模型功能验收通过，Mao 各 600 个 60 Hz 采样�
 
 复算命令：先运行 `python3 target/kit-version-comparison/merge-mesh.py`，再运行 `python3 target/kit-version-comparison/summarize.py`。原生窗口逐轮表由同目录 `window-tables.py` 生成；这些统计脚本随本机原始证据保留。
 
-清理后保留原始日志、trace、图片、测量二进制及 SHA-256；临时旧版源码副本和升级前 vendor 备份已删除，可由记录的 Git commit 与 harness patch 重建。复跑最终源码时不再设置已移除的 `KASANE_BENCH_LAYOUT_STATS` / `KASANE_BENCH_SCENE`。
+清理后保留原始日志、trace、图片、测量二进制及 SHA-256；临时旧版源码副本和升级前 vendor 备份已删除，可由记录的 Git commit 与 harness patch 重建。复跑最终源码时不再设置已移除的 `ZIPZI_BENCH_LAYOUT_STATS` / `ZIPZI_BENCH_SCENE`。
 
 提交前清理验证：release 工作区 **400 passed、0 failed、4 ignored**，Python 测试 **28 passed**；清理后的 pan/idle CPU benchmark 均通过冒烟测试。格式、两份 vendor patch 反向校验和文档链接检查通过。冒烟运行不替代上文固定轮次的性能数据。

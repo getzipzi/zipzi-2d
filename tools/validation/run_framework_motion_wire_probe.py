@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "fixtures/animation_cpu"
 OUTPUT = ROOT / "target/motion-wire-probe"
-PROBE = ROOT / "target/animation-cpu-probe/kasane_framework_animation_cpu_probe"
+PROBE = ROOT / "target/animation-cpu-probe/zipzi_framework_animation_cpu_probe"
 
 
 def run(command: list[str]) -> str:
@@ -49,7 +49,7 @@ def main() -> int:
         for name in ("loop", "minimal"):
             source = FIXTURES / f"{name}.motion3.json"
             encoded = OUTPUT / f"{name}.motion3.json"
-            run(["cargo", "run", "-q", "-p", "kasane-live2d", "--example",
+            run(["cargo", "run", "-q", "-p", "zipzi-live2d", "--example",
                  "reencode_motion3", "--", str(source), str(encoded)])
             if trace(source) != trace(encoded):
                 raise AssertionError(f"Framework motion trace drift for {name}")
@@ -58,7 +58,7 @@ def main() -> int:
             report["inputs"][str(encoded.relative_to(ROOT))] = digest(encoded)
         source = FIXTURES / "typed.motion3.json"
         encoded = OUTPUT / "typed.motion3.json"
-        run(["cargo", "run", "-q", "-p", "kasane-live2d", "--example",
+        run(["cargo", "run", "-q", "-p", "zipzi-live2d", "--example",
              "reencode_motion3", "--", str(source), str(encoded)])
         parsed = run([str(PROBE), "--motion-json-check", str(encoded)])
         lines = [json.loads(line) for line in parsed.splitlines() if line.startswith("{")]
@@ -81,7 +81,7 @@ def main() -> int:
         for name, expected_values in bezier_expected.items():
             source = FIXTURES / f"{name}.motion3.json"
             encoded = OUTPUT / f"{name}.motion3.json"
-            run(["cargo", "run", "-q", "-p", "kasane-live2d", "--example",
+            run(["cargo", "run", "-q", "-p", "zipzi-live2d", "--example",
                  "reencode_motion3", "--", str(source), str(encoded)])
             original = curve_trace(source)
             rewritten = curve_trace(encoded)

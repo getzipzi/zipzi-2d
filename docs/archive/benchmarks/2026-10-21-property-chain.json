@@ -28,7 +28,7 @@
         "expressions": 8,
         "instrumented": false,
         "meshes": 260,
-        "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+        "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
         "motion_keys": 341,
         "motion_tracks": 132,
         "motions": 7,
@@ -53,11 +53,11 @@
       "repositories": {
         "editor": {
           "head": "a432b1561ba0c1af7f542eb7d782ffa40b0df4f9",
-          "status": "M README.md\n M crates/editor-core/Cargo.toml\n M crates/editor-core/src/animation/evaluation.rs\n M crates/editor-core/src/animation/playback.rs\n M crates/editor-core/src/canvas_topology.rs\n M crates/editor-core/src/document.rs\n M crates/editor-core/src/document/properties.rs\n M crates/editor-core/src/objects/build.rs\n M crates/editor-core/src/objects/properties.rs\n M crates/editor-core/src/parameter.rs\n M crates/editor-core/src/picking/scene.rs\n M crates/editor-core/src/property.rs\n M crates/editor-core/src/property/mesh.rs\n M crates/editor-core/src/session.rs\n M crates/editor-core/src/timeline/projection.rs\n M crates/editor/Cargo.toml\n M crates/editor/src/benchmark/properties.rs\n M docs/benchmarks/2026-10-20-physics-patches.md\n M scripts/properties-trace-report.py\n M scripts/test_properties_trace_report.py\n M scripts/window-benchmark.sh\n?? crates/editor-core/examples/property_chain_benchmark.rs\n?? docs/references/property-chain-benchmark.md\n?? scripts/property-chain-benchmark.py\n?? scripts/test_property_chain_benchmark.py"
+          "status": "M README.md\n M crates/zipzi-editor-core/Cargo.toml\n M crates/zipzi-editor-core/src/animation/evaluation.rs\n M crates/zipzi-editor-core/src/animation/playback.rs\n M crates/zipzi-editor-core/src/canvas_topology.rs\n M crates/zipzi-editor-core/src/document.rs\n M crates/zipzi-editor-core/src/document/properties.rs\n M crates/zipzi-editor-core/src/objects/build.rs\n M crates/zipzi-editor-core/src/objects/properties.rs\n M crates/zipzi-editor-core/src/parameter.rs\n M crates/zipzi-editor-core/src/picking/scene.rs\n M crates/zipzi-editor-core/src/property.rs\n M crates/zipzi-editor-core/src/property/mesh.rs\n M crates/zipzi-editor-core/src/session.rs\n M crates/zipzi-editor-core/src/timeline/projection.rs\n M crates/editor/Cargo.toml\n M crates/editor/src/benchmark/properties.rs\n M docs/benchmarks/2026-10-20-physics-patches.md\n M scripts/properties-trace-report.py\n M scripts/test_properties_trace_report.py\n M scripts/window-benchmark.sh\n?? crates/zipzi-editor-core/examples/property_chain_benchmark.rs\n?? docs/references/property-chain-benchmark.md\n?? scripts/property-chain-benchmark.py\n?? scripts/test_property_chain_benchmark.py"
         },
         "sdk": {
           "head": "4289e3b09b6a0c72913e7e0ab70e2370d0e8d22a",
-          "status": "M modules/kasane-core/Cargo.toml\n M modules/kasane-core/src/document.rs\n M modules/kasane-core/src/document/checkpoint.rs\n M modules/kasane-core/src/document/checkpoint/size.rs\n M modules/kasane-core/src/document/meshes.rs\n M modules/kasane-core/src/document/motions.rs\n M modules/kasane-core/src/document/parameters.rs\n M modules/kasane-core/src/document/physics/patch.rs\n M modules/kasane-core/src/document/structure.rs\n M modules/kasane-core/src/evaluation/evaluator.rs\n M modules/kasane-core/src/evaluation/prepared.rs\n M modules/kasane-core/src/lib.rs\n M modules/kasane-sdk/Cargo.toml\n M modules/kasane-sdk/src/edit.rs\n M modules/kasane-sdk/src/motion_edit.rs\n M modules/kasane-sdk/src/session.rs\n?? modules/kasane-core/src/benchmark.rs"
+          "status": "M modules/zipzi-core/Cargo.toml\n M modules/zipzi-core/src/document.rs\n M modules/zipzi-core/src/document/checkpoint.rs\n M modules/zipzi-core/src/document/checkpoint/size.rs\n M modules/zipzi-core/src/document/meshes.rs\n M modules/zipzi-core/src/document/motions.rs\n M modules/zipzi-core/src/document/parameters.rs\n M modules/zipzi-core/src/document/physics/patch.rs\n M modules/zipzi-core/src/document/structure.rs\n M modules/zipzi-core/src/evaluation/evaluator.rs\n M modules/zipzi-core/src/evaluation/prepared.rs\n M modules/zipzi-core/src/lib.rs\n M modules/zipzi-sdk/Cargo.toml\n M modules/zipzi-sdk/src/edit.rs\n M modules/zipzi-sdk/src/motion_edit.rs\n M modules/zipzi-sdk/src/session.rs\n?? modules/zipzi-core/src/benchmark.rs"
         }
       },
       "source_fingerprint_sha256": "6092ce4eb737dc0b0b0650406cad2e4b9b940ffddd1b3c11a4ce25c91d02b0c8",
@@ -66,8 +66,8 @@
         "instrumented": "9fed291a2aa16e5c9893a27deb8bab425be6633a5f31f7832401dae77617205b"
       },
       "arguments": {
-        "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
-        "output": "/Users/liangbohao/web/kasane-editor/target/property-chain-20261021-unique",
+        "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
+        "output": "/Users/liangbohao/web/zipzi-editor/target/property-chain-20261021-unique",
         "samples": 60,
         "warmup": 10,
         "updates": 12,
@@ -11508,7 +11508,7 @@
         "expressions": 8,
         "instrumented": false,
         "meshes": 260,
-        "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+        "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
         "motion_keys": 341,
         "motion_tracks": 132,
         "motions": 7,
@@ -11533,11 +11533,11 @@
       "repositories": {
         "editor": {
           "head": "a432b1561ba0c1af7f542eb7d782ffa40b0df4f9",
-          "status": "M README.md\n M crates/editor-core/Cargo.toml\n M crates/editor-core/src/animation/evaluation.rs\n M crates/editor-core/src/animation/playback.rs\n M crates/editor-core/src/canvas_topology.rs\n M crates/editor-core/src/document.rs\n M crates/editor-core/src/document/properties.rs\n M crates/editor-core/src/objects/build.rs\n M crates/editor-core/src/objects/properties.rs\n M crates/editor-core/src/parameter.rs\n M crates/editor-core/src/picking/scene.rs\n M crates/editor-core/src/property.rs\n M crates/editor-core/src/property/mesh.rs\n M crates/editor-core/src/session.rs\n M crates/editor-core/src/timeline/projection.rs\n M crates/editor/Cargo.toml\n M crates/editor/src/benchmark/properties.rs\n M docs/benchmarks/2026-10-20-physics-patches.md\n M scripts/properties-trace-report.py\n M scripts/test_properties_trace_report.py\n M scripts/window-benchmark.sh\n?? crates/editor-core/examples/property_chain_benchmark.rs\n?? docs/references/property-chain-benchmark.md\n?? scripts/property-chain-benchmark.py\n?? scripts/test_property_chain_benchmark.py"
+          "status": "M README.md\n M crates/zipzi-editor-core/Cargo.toml\n M crates/zipzi-editor-core/src/animation/evaluation.rs\n M crates/zipzi-editor-core/src/animation/playback.rs\n M crates/zipzi-editor-core/src/canvas_topology.rs\n M crates/zipzi-editor-core/src/document.rs\n M crates/zipzi-editor-core/src/document/properties.rs\n M crates/zipzi-editor-core/src/objects/build.rs\n M crates/zipzi-editor-core/src/objects/properties.rs\n M crates/zipzi-editor-core/src/parameter.rs\n M crates/zipzi-editor-core/src/picking/scene.rs\n M crates/zipzi-editor-core/src/property.rs\n M crates/zipzi-editor-core/src/property/mesh.rs\n M crates/zipzi-editor-core/src/session.rs\n M crates/zipzi-editor-core/src/timeline/projection.rs\n M crates/editor/Cargo.toml\n M crates/editor/src/benchmark/properties.rs\n M docs/benchmarks/2026-10-20-physics-patches.md\n M scripts/properties-trace-report.py\n M scripts/test_properties_trace_report.py\n M scripts/window-benchmark.sh\n?? crates/zipzi-editor-core/examples/property_chain_benchmark.rs\n?? docs/references/property-chain-benchmark.md\n?? scripts/property-chain-benchmark.py\n?? scripts/test_property_chain_benchmark.py"
         },
         "sdk": {
           "head": "4289e3b09b6a0c72913e7e0ab70e2370d0e8d22a",
-          "status": "M modules/kasane-core/Cargo.toml\n M modules/kasane-core/src/document.rs\n M modules/kasane-core/src/document/checkpoint.rs\n M modules/kasane-core/src/document/checkpoint/size.rs\n M modules/kasane-core/src/document/meshes.rs\n M modules/kasane-core/src/document/motions.rs\n M modules/kasane-core/src/document/parameters.rs\n M modules/kasane-core/src/document/physics/patch.rs\n M modules/kasane-core/src/document/structure.rs\n M modules/kasane-core/src/evaluation/evaluator.rs\n M modules/kasane-core/src/evaluation/prepared.rs\n M modules/kasane-core/src/lib.rs\n M modules/kasane-sdk/Cargo.toml\n M modules/kasane-sdk/src/edit.rs\n M modules/kasane-sdk/src/motion_edit.rs\n M modules/kasane-sdk/src/session.rs\n?? modules/kasane-core/src/benchmark.rs"
+          "status": "M modules/zipzi-core/Cargo.toml\n M modules/zipzi-core/src/document.rs\n M modules/zipzi-core/src/document/checkpoint.rs\n M modules/zipzi-core/src/document/checkpoint/size.rs\n M modules/zipzi-core/src/document/meshes.rs\n M modules/zipzi-core/src/document/motions.rs\n M modules/zipzi-core/src/document/parameters.rs\n M modules/zipzi-core/src/document/physics/patch.rs\n M modules/zipzi-core/src/document/structure.rs\n M modules/zipzi-core/src/evaluation/evaluator.rs\n M modules/zipzi-core/src/evaluation/prepared.rs\n M modules/zipzi-core/src/lib.rs\n M modules/zipzi-sdk/Cargo.toml\n M modules/zipzi-sdk/src/edit.rs\n M modules/zipzi-sdk/src/motion_edit.rs\n M modules/zipzi-sdk/src/session.rs\n?? modules/zipzi-core/src/benchmark.rs"
         }
       },
       "source_fingerprint_sha256": "6092ce4eb737dc0b0b0650406cad2e4b9b940ffddd1b3c11a4ce25c91d02b0c8",
@@ -11546,8 +11546,8 @@
         "instrumented": "9fed291a2aa16e5c9893a27deb8bab425be6633a5f31f7832401dae77617205b"
       },
       "arguments": {
-        "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
-        "output": "/Users/liangbohao/web/kasane-editor/target/property-chain-20261021-retained-opacity",
+        "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
+        "output": "/Users/liangbohao/web/zipzi-editor/target/property-chain-20261021-retained-opacity",
         "samples": 60,
         "warmup": 10,
         "updates": 12,
@@ -13059,7 +13059,7 @@
         "expressions": 8,
         "instrumented": false,
         "meshes": 260,
-        "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+        "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
         "motion_keys": 341,
         "motion_tracks": 132,
         "motions": 7,
@@ -13084,11 +13084,11 @@
       "repositories": {
         "editor": {
           "head": "a432b1561ba0c1af7f542eb7d782ffa40b0df4f9",
-          "status": "M README.md\n M crates/editor-core/Cargo.toml\n M crates/editor-core/src/animation/evaluation.rs\n M crates/editor-core/src/animation/playback.rs\n M crates/editor-core/src/canvas_topology.rs\n M crates/editor-core/src/document.rs\n M crates/editor-core/src/document/properties.rs\n M crates/editor-core/src/objects/build.rs\n M crates/editor-core/src/objects/properties.rs\n M crates/editor-core/src/parameter.rs\n M crates/editor-core/src/picking/scene.rs\n M crates/editor-core/src/property.rs\n M crates/editor-core/src/property/mesh.rs\n M crates/editor-core/src/session.rs\n M crates/editor-core/src/timeline/projection.rs\n M crates/editor/Cargo.toml\n M crates/editor/src/benchmark/properties.rs\n M docs/benchmarks/2026-10-20-physics-patches.md\n M scripts/properties-trace-report.py\n M scripts/test_properties_trace_report.py\n M scripts/window-benchmark.sh\n?? crates/editor-core/examples/property_chain_benchmark.rs\n?? docs/references/property-chain-benchmark.md\n?? scripts/property-chain-benchmark.py\n?? scripts/test_property_chain_benchmark.py"
+          "status": "M README.md\n M crates/zipzi-editor-core/Cargo.toml\n M crates/zipzi-editor-core/src/animation/evaluation.rs\n M crates/zipzi-editor-core/src/animation/playback.rs\n M crates/zipzi-editor-core/src/canvas_topology.rs\n M crates/zipzi-editor-core/src/document.rs\n M crates/zipzi-editor-core/src/document/properties.rs\n M crates/zipzi-editor-core/src/objects/build.rs\n M crates/zipzi-editor-core/src/objects/properties.rs\n M crates/zipzi-editor-core/src/parameter.rs\n M crates/zipzi-editor-core/src/picking/scene.rs\n M crates/zipzi-editor-core/src/property.rs\n M crates/zipzi-editor-core/src/property/mesh.rs\n M crates/zipzi-editor-core/src/session.rs\n M crates/zipzi-editor-core/src/timeline/projection.rs\n M crates/editor/Cargo.toml\n M crates/editor/src/benchmark/properties.rs\n M docs/benchmarks/2026-10-20-physics-patches.md\n M scripts/properties-trace-report.py\n M scripts/test_properties_trace_report.py\n M scripts/window-benchmark.sh\n?? crates/zipzi-editor-core/examples/property_chain_benchmark.rs\n?? docs/references/property-chain-benchmark.md\n?? scripts/property-chain-benchmark.py\n?? scripts/test_property_chain_benchmark.py"
         },
         "sdk": {
           "head": "4289e3b09b6a0c72913e7e0ab70e2370d0e8d22a",
-          "status": "M modules/kasane-core/Cargo.toml\n M modules/kasane-core/src/document.rs\n M modules/kasane-core/src/document/checkpoint.rs\n M modules/kasane-core/src/document/checkpoint/size.rs\n M modules/kasane-core/src/document/meshes.rs\n M modules/kasane-core/src/document/motions.rs\n M modules/kasane-core/src/document/parameters.rs\n M modules/kasane-core/src/document/physics/patch.rs\n M modules/kasane-core/src/document/structure.rs\n M modules/kasane-core/src/evaluation/evaluator.rs\n M modules/kasane-core/src/evaluation/prepared.rs\n M modules/kasane-core/src/lib.rs\n M modules/kasane-sdk/Cargo.toml\n M modules/kasane-sdk/src/edit.rs\n M modules/kasane-sdk/src/motion_edit.rs\n M modules/kasane-sdk/src/session.rs\n?? modules/kasane-core/src/benchmark.rs"
+          "status": "M modules/zipzi-core/Cargo.toml\n M modules/zipzi-core/src/document.rs\n M modules/zipzi-core/src/document/checkpoint.rs\n M modules/zipzi-core/src/document/checkpoint/size.rs\n M modules/zipzi-core/src/document/meshes.rs\n M modules/zipzi-core/src/document/motions.rs\n M modules/zipzi-core/src/document/parameters.rs\n M modules/zipzi-core/src/document/physics/patch.rs\n M modules/zipzi-core/src/document/structure.rs\n M modules/zipzi-core/src/evaluation/evaluator.rs\n M modules/zipzi-core/src/evaluation/prepared.rs\n M modules/zipzi-core/src/lib.rs\n M modules/zipzi-sdk/Cargo.toml\n M modules/zipzi-sdk/src/edit.rs\n M modules/zipzi-sdk/src/motion_edit.rs\n M modules/zipzi-sdk/src/session.rs\n?? modules/zipzi-core/src/benchmark.rs"
         }
       },
       "source_fingerprint_sha256": "6092ce4eb737dc0b0b0650406cad2e4b9b940ffddd1b3c11a4ce25c91d02b0c8",
@@ -13097,8 +13097,8 @@
         "instrumented": "9fed291a2aa16e5c9893a27deb8bab425be6633a5f31f7832401dae77617205b"
       },
       "arguments": {
-        "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
-        "output": "/Users/liangbohao/web/kasane-editor/target/property-chain-20261021-retained-physics",
+        "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
+        "output": "/Users/liangbohao/web/zipzi-editor/target/property-chain-20261021-retained-physics",
         "samples": 60,
         "warmup": 10,
         "updates": 12,
@@ -14814,7 +14814,7 @@
       "gpui_backend": "gpui-fast",
       "view_retention": true,
       "scroll_layers": true,
-      "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+      "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
       "samples": 60,
       "warmup": 10,
       "parameters_only": false,

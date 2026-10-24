@@ -38,17 +38,17 @@
 从仓库根目录运行，先完成现有 SDK 回归验证，再构建候选 wheel：
 
 ```sh
-uv build --wheel --python 3.14 --out-dir target/python-wheels modules/kasane-python
+uv build --wheel --python 3.14 --out-dir target/python-wheels modules/zipzi-python
 uv run --locked python tools/sdk_experiments.py init \
-  --experiment /tmp/kasane-study-v1 \
-  --wheel /absolute/path/to/kasane.whl
+  --experiment /tmp/zipzi-study-v1 \
+  --wheel /absolute/path/to/zipzi.whl
 ```
 
 Shirousagi 和其他视觉任务需要 Observer wheel；构建时使用
-`uv run --locked maturin build --manifest-path modules/kasane-python/Cargo.toml --release --features observe --out target/python-wheels`。
+`uv run --locked maturin build --manifest-path modules/zipzi-python/Cargo.toml --release --features observe --out target/python-wheels`。
 
 接手任务在 `init` 时另加 `--handoff-project /absolute/path/to/passed/project`，
-该目录须含 `project.kasane.json`；底座将其冻结，并在准备任务包时复制到 `input/project`。
+该目录须含 `project.zipzi.json`；底座将其冻结，并在准备任务包时复制到 `input/project`。
 真实 Shirousagi 任务另加 `--shirousagi-root /absolute/path/to/Shirousagi`，冻结
 model3、MOC3、纹理和 24 层 PSD；`shirousagi-repair` 的 `prepare` 用
 `--variant a|b|c` 选择故障变体。`shirousagi-blink` 的三个任务包来自同一 PSD，
@@ -91,7 +91,7 @@ study/
 
 ```sh
 uv run --locked python tools/sdk_experiments.py prepare \
-  --experiment /tmp/kasane-study-v1 \
+  --experiment /tmp/zipzi-study-v1 \
   --trial create-01 --task create \
   --model exact-model-id \
   --model-config '{"reasoning":"medium","runner":"your-runner-version"}' \
@@ -110,11 +110,11 @@ uv run --locked python tools/sdk_experiments.py prepare \
 受试者可以安装第三方依赖，所有受试者共用本轮 `.venv`：
 
 ```sh
-uv pip install --python /tmp/kasane-study-v1/.venv/bin/python pillow
+uv pip install --python /tmp/zipzi-study-v1/.venv/bin/python pillow
 ```
 
 不要求每位受试者创建 uv 项目或提交独立锁文件。安装耗时计入预算，在 notes.md
-注明依赖用途；被测 kasane 的版本及内容保持冻结。底座在准备、运行前后、验收与
+注明依赖用途；被测 zipzi 的版本及内容保持冻结。底座在准备、运行前后、验收与
 审阅时记录 `uv pip freeze` 清单。工作目录重放仍使用这个共享环境，不重建依赖。
 因此这些结果衡量的是共享环境中的可用性，不代表从干净依赖环境重新安装的能力。
 依赖变化会影响后续受试者；要比较同一依赖条件的结果，可按记录的清单分组。
@@ -125,7 +125,7 @@ uv pip install --python /tmp/kasane-study-v1/.venv/bin/python pillow
 
 ```sh
 uv run --locked python tools/sdk_experiments.py run \
-  --experiment /tmp/kasane-study-v1 --trial create-01 -- \
+  --experiment /tmp/zipzi-study-v1 --trial create-01 -- \
   /absolute/path/to/your-agent-runner
 ```
 
@@ -134,11 +134,11 @@ runner 的工作目录是任务包，接收以下环境变量：
 
 | 变量 | 含义 |
 | --- | --- |
-| `KASANE_TASK` | 任务 Markdown 的绝对路径 |
-| `KASANE_PACKET` | 任务目录 |
-| `KASANE_PYTHON` | 本轮共享环境的 Python |
-| `KASANE_UV` | 创建实验时使用的 uv 可执行文件 |
-| `KASANE_TRACE` | 推荐输出完整工具轨迹的 JSONL 路径 |
+| `ZIPZI_TASK` | 任务 Markdown 的绝对路径 |
+| `ZIPZI_PACKET` | 任务目录 |
+| `ZIPZI_PYTHON` | 本轮共享环境的 Python |
+| `ZIPZI_UV` | 创建实验时使用的 uv 可执行文件 |
+| `ZIPZI_TRACE` | 推荐输出完整工具轨迹的 JSONL 路径 |
 
 runner 应读取任务、配置指定模型、执行工具循环，并把可观察的调用、返回、异常、
 时间和人工干预写入轨迹。不要把 API key 放进命令行参数，因为 argv 会被记录。
@@ -163,7 +163,7 @@ runner 应读取任务、配置指定模型、执行工具循环，并把可观�
 
 ```sh
 uv run --locked python tools/sdk_experiments.py assess \
-  --experiment /tmp/kasane-study-v1 --trial create-01
+  --experiment /tmp/zipzi-study-v1 --trial create-01
 ```
 
 保存一次不可覆盖的验收记录及提交快照，核对输入和文档，独立验收原作品。
@@ -177,13 +177,13 @@ uv run --locked python tools/sdk_experiments.py assess \
 
 ```sh
 uv run --locked python tools/sdk_experiments.py review \
-  --experiment /tmp/kasane-study-v1 --trial create-01 \
+  --experiment /tmp/zipzi-study-v1 --trial create-01 \
   --reviewer reviewer-name --human-prompts 0 --public-api yes \
   --trace /absolute/path/to/full-agent-trace.jsonl \
   --notes '已审阅全部工具调用；记录实际观察到的阻碍及恢复方法。'
 uv run --locked python tools/sdk_experiments.py summarize \
-  --experiment /tmp/kasane-study-v1 \
-  --output /tmp/kasane-study-v1-summary.json
+  --experiment /tmp/zipzi-study-v1 \
+  --output /tmp/zipzi-study-v1-summary.json
 ```
 
 审阅是人工声明，程序不自动判断任意 Python 是否只使用公开 API。不要仅凭空日志
@@ -239,7 +239,7 @@ uv run --locked python -m unittest discover -s tests -p test_sdk_experiments.py 
 其他受试者和重放脚本能在共享环境使用它：
 
 ```sh
-SDK_EXPERIMENT_WHEEL=/absolute/path/to/kasane.whl \
+SDK_EXPERIMENT_WHEEL=/absolute/path/to/zipzi.whl \
   uv run --locked python -m unittest discover -s tests -p test_sdk_experiments.py -v
 ```
 

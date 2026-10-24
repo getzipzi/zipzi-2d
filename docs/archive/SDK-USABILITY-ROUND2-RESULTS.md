@@ -4,7 +4,7 @@
 
 ## 设计
 
-三个独立的 `gpt-6-luna` subagent，均无先前试验对话；一个对照、两个实验。全部使用相同的 CPython 3.14/macOS arm64 CPU wheel、已安装 `kasane` 的 Python、`SDK-API.md`、任务目标和内容相同的输入工程。Git HEAD 为 `0aa822a`，wheel SHA-256 为 `b8665e694bb0ee3caf123abcb25b0a9ade27ed7282ed4114fa69415fc32cc333`，三份输入 manifest SHA-256 均为 `fb065b2e8c7690dbf16f27b09dba722979769faf545ec53baa641f590dcac266`。
+三个独立的 `gpt-6-luna` subagent，均无先前试验对话；一个对照、两个实验。全部使用相同的 CPython 3.14/macOS arm64 CPU wheel、已安装 `zipzi` 的 Python、`SDK-API.md`、任务目标和内容相同的输入工程。Git HEAD 为 `0aa822a`，wheel SHA-256 为 `b8665e694bb0ee3caf123abcb25b0a9ade27ed7282ed4114fa69415fc32cc333`，三份输入 manifest SHA-256 均为 `fb065b2e8c7690dbf16f27b09dba722979769faf545ec53baa641f590dcac266`。
 
 对照组收到第一轮格式的任务，实验组仅额外收到“提交前用 Pyright 1.1.414 检查脚本，通过后运行并重开工程验证”的指令。任务包的其他差异只是各自的输入和输出路径。没有向受试者提供[类型速查](SDK-PYTHON-TYPING.md)、源码、现有 recipe、测试或判分器。主持人事后对**全部三份**脚本运行同一 Pyright 命令，并用同一独立判分器检查工程。受试者笔记中的时间和查阅范围为自报，未做完整命令轨迹审计。
 

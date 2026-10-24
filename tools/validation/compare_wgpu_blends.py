@@ -71,7 +71,7 @@ def main() -> int:
     try:
         with (output / "wgpu.log").open("w") as log:
             result = subprocess.run(
-                ["cargo", "run", "-p", "kasane-render-wgpu", "--example", "blend_matrix",
+                ["cargo", "run", "-p", "zipzi-render-wgpu", "--example", "blend_matrix",
                  "--locked", "--", str(image)],
                 cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
             )

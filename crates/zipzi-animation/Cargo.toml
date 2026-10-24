@@ -1,0 +1,17 @@
+[package]
+name = "zipzi-animation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Deterministic CPU animation state and scheduling for Zipzi 2D"
+
+[dependencies]
+zipzi-core = { path = "../zipzi-core" }
+thiserror = { workspace = true }
+serde = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+zipzi-project = { path = "../zipzi-project" }
+serde_json = { workspace = true }

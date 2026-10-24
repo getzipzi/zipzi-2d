@@ -138,7 +138,7 @@ Mipmapped/filtering edges and values near the alpha threshold can differ from th
 final displayed pixel. Picking performs no GPU wait or readback. A coarse bounds
 check avoids triangle work outside each mesh.
 
-The companion kasane-core evaluation exposes transient, non-serialized deformer
+The companion zipzi-core evaluation exposes transient, non-serialized deformer
 points on `DrawableFrame`, sampled in the same evaluation pass as meshes. The
 editor does not approximate a posed warp grid from its undeformed authoring data.
 Both mesh and deformer snapshots include the final Y reversal requested by
@@ -191,9 +191,9 @@ tries eligible vertex drags followed by cancellation. It never saves the models.
 Reported CPU timings exclude GPU rendering and native display latency.
 
 ```sh
-cargo run --locked -p editor-core --example canvas_selftest -- \
-  models/local/mao_pro.kasane/project.kasane.json \
-  models/local/Shirousagi.kasane/project.kasane.json
+cargo run --locked -p zipzi-editor-core --example canvas_selftest -- \
+  models/local/mao_pro.zipzi/project.zipzi.json \
+  models/local/Shirousagi.zipzi/project.zipzi.json
 ```
 
 Actual native pointer capture outside the window and visual feedback on different

@@ -14,19 +14,19 @@
     "sdk": {
       "revision": "26afe00939ddae59a38ee96a6c69618aa7fcb063",
       "branch": "codex/sdk-runtime",
-      "status": "?? docs/runtime/\n?? modules/kasane-sdk/examples/runtime_baseline.rs\n?? modules/kasane-sdk/examples/support/runtime_fixture.rs\n?? tools/runtime_baseline.py\n?? tools/runtime_inventory.py\n?? tools/test_runtime_inventory.py"
+      "status": "?? docs/runtime/\n?? modules/zipzi-sdk/examples/runtime_baseline.rs\n?? modules/zipzi-sdk/examples/support/runtime_fixture.rs\n?? tools/runtime_baseline.py\n?? tools/runtime_inventory.py\n?? tools/test_runtime_inventory.py"
     }
   },
   "probe_sources_sha256": {
     "Cargo.lock": "fc4ee25ff88bddb93f26f2ee60f8813883c57907bb3f4edffe5be3936fd7a181",
     "Cargo.toml": "74865bcc65d635b0f820a07efcd8599367576727ee888bc8acf8b208cda2d42e",
-    "modules/kasane-sdk/examples/alpha_mesh_profile.rs": "505b9b3dcfa1872f31745f9b1034e25db35fec15fe08a58f522c6f8987bec354",
-    "modules/kasane-sdk/examples/c4_authoring_benchmark.rs": "ef21f8cfcce9950887bc28ae0b759dc875b9c404a1e98931df4301b8851f7953",
-    "modules/kasane-sdk/examples/c6_authoring_benchmark.rs": "1aa68bec8579619c27586e2219ccb826126968bedff3577a42105a0483fff166",
-    "modules/kasane-sdk/examples/checkpoint_profile.rs": "958627f7b059e518caec23b2a5d432dd3042f86d56376a604010252e43b0165d",
-    "modules/kasane-sdk/examples/runtime_baseline.rs": "6323720f12d2bd17b185d1909c6c02fe866b83c81d5590fcf375d6dccee1b982",
-    "modules/kasane-sdk/examples/support/allocation.rs": "554df19a8d71f6ba1fe23557664c6fddf46f703c9c9deb9302f3694ddae57eb5",
-    "modules/kasane-sdk/examples/support/runtime_fixture.rs": "17c96dd1d321634ebe7b6fab617703905f7542262d059fa4c7c945a62d41ccd8",
+    "modules/zipzi-sdk/examples/alpha_mesh_profile.rs": "505b9b3dcfa1872f31745f9b1034e25db35fec15fe08a58f522c6f8987bec354",
+    "modules/zipzi-sdk/examples/c4_authoring_benchmark.rs": "ef21f8cfcce9950887bc28ae0b759dc875b9c404a1e98931df4301b8851f7953",
+    "modules/zipzi-sdk/examples/c6_authoring_benchmark.rs": "1aa68bec8579619c27586e2219ccb826126968bedff3577a42105a0483fff166",
+    "modules/zipzi-sdk/examples/checkpoint_profile.rs": "958627f7b059e518caec23b2a5d432dd3042f86d56376a604010252e43b0165d",
+    "modules/zipzi-sdk/examples/runtime_baseline.rs": "6323720f12d2bd17b185d1909c6c02fe866b83c81d5590fcf375d6dccee1b982",
+    "modules/zipzi-sdk/examples/support/allocation.rs": "554df19a8d71f6ba1fe23557664c6fddf46f703c9c9deb9302f3694ddae57eb5",
+    "modules/zipzi-sdk/examples/support/runtime_fixture.rs": "17c96dd1d321634ebe7b6fab617703905f7542262d059fa4c7c945a62d41ccd8",
     "tools/runtime_baseline.py": "141344ca86b352d607dd2f907e56900b8d18a67ebeef7a84821c4976827ef64a"
   },
   "model_files_sha256": {
@@ -52,7 +52,7 @@
     "motions/special_02.motion3.json": "6bc5d29371ea5edffe030271bd09a1a4fd51d35eaa511d977fbfb5703de75a57",
     "motions/special_03.motion3.json": "5e3b89bb95f5abe067cdec47395c19c88882846051b4b35e5f7c8bc875b83d17"
   },
-  "raw_directory": "../kasane-2d/target/runtime-r0-clean",
+  "raw_directory": "../zipzi-2d/target/runtime-r0-clean",
   "artifacts_sha256": {
     "build.jsonl": "8b0a295b4e0bd48137e534edc129879ac048b5cdd9c604f09ab2a258d8b15ea4",
     "build.log": "87ec0afeb3f4bca9aa4f6a7b508bb76a4aca05625787f7066960b75395603ad8",

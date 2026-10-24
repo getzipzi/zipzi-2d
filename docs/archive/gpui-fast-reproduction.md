@@ -168,8 +168,8 @@ cargo bench --locked -p gpui-base --bench text_view_scroll -- --sample-size 30 -
 cargo bench --locked -p gpui-base --bench text_view_scroll --features gpui-fast -- --sample-size 30 --warm-up-time 1 --measurement-time 2
 
 # 普通 editor CPU 基准；临时布局统计探针已清理，模型路径必须是绝对路径。
-cd ../kasane-editor
-KASANE_BENCH_MODEL="$PWD/models/local/mao/runtime/mao_pro.model3.json" GPUI_VIEW_RETENTION=1 cargo test --locked --release -p kasane-editor --bin kasane-editor canvas_ui_cpu_benchmark -- --ignored --nocapture
+cd ../zipzi-editor
+ZIPZI_BENCH_MODEL="$PWD/models/local/mao/runtime/mao_pro.model3.json" GPUI_VIEW_RETENTION=1 cargo test --locked --release -p zipzi-editor --bin zipzi-editor canvas_ui_cpu_benchmark -- --ignored --nocapture
 
 # 当前源码已包含正式修复；反向 check 核对补丁与源码一致，不修改源码。
 git apply --reverse --check vendor/cache-boundary.patch

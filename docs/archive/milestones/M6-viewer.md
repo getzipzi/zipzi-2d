@@ -10,7 +10,7 @@
 
 - 打开 `model3.json` 及其引用的 MOC3/纹理。
 - 直接打开 `.moc3` 时要求明确的纹理槽映射，不猜测图片路径。
-- 经 PurismCore C99 FFI 加载、驱动 MOC3，将运行帧转换为 M4 的绘制契约，使用 `kasane-godot` Rust renderer；`gd-cubism` 保持独立，用于画面对照。
+- 经 PurismCore C99 FFI 加载、驱动 MOC3，将运行帧转换为 M4 的绘制契约，使用 `zipzi-godot` Rust renderer；`gd-cubism` 保持独立，用于画面对照。
 - 显示模型路径、文件版本、画布、参数 ID/范围/默认值；调整参数、恢复默认。
 - 缩放、平移、适配画布、设置背景、保存当前状态截图。
 - 缺文件、未知版本、无效模型和纹理错误显示具体原因，失败不覆盖当前有效模型。

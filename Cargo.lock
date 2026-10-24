@@ -1270,14 +1270,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "cubism-matrix-kasane"
+name = "cubism-matrix-zipzi"
 version = "0.1.0"
 dependencies = [
- "kasane-core",
- "kasane-render",
- "kasane-render-metal",
- "kasane-sdk",
- "kasane-sdk-observe",
+ "zipzi-core",
+ "zipzi-render",
+ "zipzi-render-metal",
+ "zipzi-sdk",
+ "zipzi-sdk-observe",
  "png 0.17.16",
  "serde",
  "serde_json",
@@ -1459,14 +1459,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
-name = "editor-core"
+name = "zipzi-editor-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "kasane-cmo3",
- "kasane-core",
- "kasane-project",
- "kasane-sdk",
+ "zipzi-cmo3",
+ "zipzi-core",
+ "zipzi-project",
+ "zipzi-sdk",
  "serde",
  "serde_json",
  "tempfile",
@@ -1474,14 +1474,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "editor-render"
+name = "zipzi-editor-render"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "editor-core",
- "kasane-core",
- "kasane-render",
- "kasane-render-metal",
+ "zipzi-editor-core",
+ "zipzi-core",
+ "zipzi-render",
+ "zipzi-render-metal",
  "objc2 0.6.4",
 ]
 
@@ -3889,11 +3889,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-animation"
+name = "zipzi-animation"
 version = "0.1.0"
 dependencies = [
- "kasane-core",
- "kasane-project",
+ "zipzi-core",
+ "zipzi-project",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
@@ -3901,14 +3901,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-cmo3"
+name = "zipzi-cmo3"
 version = "0.1.0"
 dependencies = [
  "crc32fast",
  "flate2",
- "kasane-animation",
- "kasane-core",
- "kasane-live2d",
+ "zipzi-animation",
+ "zipzi-core",
+ "zipzi-live2d",
  "png 0.17.16",
  "roxmltree 0.20.0",
  "serde",
@@ -3919,7 +3919,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-core"
+name = "zipzi-core"
 version = "0.1.0"
 dependencies = [
  "png 0.17.16",
@@ -3930,20 +3930,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-editor"
+name = "zipzi-editor"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
- "editor-core",
- "editor-render",
+ "zipzi-editor-core",
+ "zipzi-editor-render",
  "gpui-fast-apple",
  "gpui-fps",
  "gpui-kit",
  "image",
- "kasane-core",
- "kasane-sdk",
- "kasane-sdk-observe",
+ "zipzi-core",
+ "zipzi-sdk",
+ "zipzi-sdk-observe",
  "libc",
  "metal",
  "objc2 0.6.4",
@@ -3957,10 +3957,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-live2d"
+name = "zipzi-live2d"
 version = "0.1.0"
 dependencies = [
- "kasane-core",
+ "zipzi-core",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -3968,12 +3968,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-moc3"
+name = "zipzi-moc3"
 version = "0.1.0"
 dependencies = [
  "cc",
- "kasane-core",
- "kasane-project",
+ "zipzi-core",
+ "zipzi-project",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -3981,24 +3981,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-moc3-psd"
+name = "zipzi-moc3-psd"
 version = "0.1.0"
 dependencies = [
  "ag-psd",
- "kasane-core",
- "kasane-moc3",
+ "zipzi-core",
+ "zipzi-moc3",
 ]
 
 [[package]]
-name = "kasane-project"
+name = "zipzi-project"
 version = "0.1.0"
 dependencies = [
  "ciborium",
- "kasane-cmo3",
- "kasane-core",
- "kasane-live2d",
- "kasane-moc3",
- "kasane-psd",
+ "zipzi-cmo3",
+ "zipzi-core",
+ "zipzi-live2d",
+ "zipzi-moc3",
+ "zipzi-psd",
  "png 0.17.16",
  "serde",
  "serde_json",
@@ -4008,26 +4008,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-psd"
+name = "zipzi-psd"
 version = "0.1.0"
 dependencies = [
  "ag-psd",
- "kasane-core",
- "kasane-moc3-psd",
- "kasane-render",
- "kasane-render-metal",
+ "zipzi-core",
+ "zipzi-moc3-psd",
+ "zipzi-render",
+ "zipzi-render-metal",
  "png 0.17.16",
  "sha2 0.11.0",
 ]
 
 [[package]]
-name = "kasane-python"
+name = "zipzi-python"
 version = "0.1.0"
 dependencies = [
- "kasane-core",
- "kasane-moc3",
- "kasane-sdk",
- "kasane-sdk-observe",
+ "zipzi-core",
+ "zipzi-moc3",
+ "zipzi-sdk",
+ "zipzi-sdk-observe",
  "pyo3",
  "serde",
  "serde_json",
@@ -4035,43 +4035,43 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-render"
+name = "zipzi-render"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "kasane-core",
+ "zipzi-core",
 ]
 
 [[package]]
-name = "kasane-render-metal"
+name = "zipzi-render-metal"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "kasane-core",
- "kasane-render",
+ "zipzi-core",
+ "zipzi-render",
  "metal",
  "thiserror 2.0.20",
 ]
 
 [[package]]
-name = "kasane-render-wgpu"
+name = "zipzi-render-wgpu"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "kasane-core",
- "kasane-render",
+ "zipzi-core",
+ "zipzi-render",
  "png 0.17.16",
  "wgpu",
 ]
 
 [[package]]
-name = "kasane-sdk"
+name = "zipzi-sdk"
 version = "0.1.0"
 dependencies = [
  "geo",
- "kasane-animation",
- "kasane-core",
- "kasane-project",
+ "zipzi-animation",
+ "zipzi-core",
+ "zipzi-project",
  "png 0.17.16",
  "rstar",
  "serde",
@@ -4080,16 +4080,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "kasane-sdk-observe"
+name = "zipzi-sdk-observe"
 version = "0.1.0"
 dependencies = [
- "kasane-animation",
- "kasane-core",
- "kasane-project",
- "kasane-render",
- "kasane-render-metal",
- "kasane-render-wgpu",
- "kasane-sdk",
+ "zipzi-animation",
+ "zipzi-core",
+ "zipzi-project",
+ "zipzi-render",
+ "zipzi-render-metal",
+ "zipzi-render-wgpu",
+ "zipzi-sdk",
  "png 0.17.16",
  "serde",
  "serde_json",

@@ -25,7 +25,7 @@ benchmark:
 ./tools/benchmarks/properties-benchmark.sh target/properties-run 300 120
 ```
 
-`KASANE_BENCH_MODEL` overrides the model. `KASANE_BENCH_PROPERTY_CASE` selects one
+`ZIPZI_BENCH_MODEL` overrides the model. `ZIPZI_BENCH_PROPERTY_CASE` selects one
 case from the checklist below. The runner requires an unlocked Mac, a visible,
 active native window, and real Metal. Avoid input and concurrent builds while it
 runs. It chooses the visible mesh with the most vertices, restores committed
@@ -125,7 +125,7 @@ uv run --locked python tools/benchmarks/property-chain-benchmark.py \
 
 Requires the local model and the SDK sources in this workspace; no sibling
 checkout is needed. A saved
-`project.kasane.json` can also be supplied. Missing resources are explicitly
+`project.zipzi.json` can also be supplied. Missing resources are explicitly
 reported as skips; a missing model, failed edit or incomplete run is an error.
 Output directories must be new. Source model files are never saved or modified.
 
@@ -227,8 +227,8 @@ document; these changes reduce repeated candidate work within a gesture.
 Check actual native ownership with the existing window harness:
 
 ```sh
-KASANE_BENCH_CHAIN_STAGES=1 KASANE_BENCH_PROPERTY_CASE=opacity_drag \
-  KASANE_BENCH_WARMUP=10 \
+ZIPZI_BENCH_CHAIN_STAGES=1 ZIPZI_BENCH_PROPERTY_CASE=opacity_drag \
+  ZIPZI_BENCH_WARMUP=10 \
   ./tools/benchmarks/properties-benchmark.sh target/property-chain-native-opacity 60 120
 ```
 

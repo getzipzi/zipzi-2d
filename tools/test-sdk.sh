@@ -42,16 +42,16 @@ mode=${1:-full}
 if [ "$#" -gt 0 ]; then shift; fi
 case "$mode" in
     fast)
-        exec cargo test --locked -p kasane-sdk --lib --test integration "$@"
+        exec cargo test --locked -p zipzi-sdk --lib --test integration "$@"
         ;;
     regression)
         daily_rust_tests python3 tools/workspace/cargo_domain.py sdk test --locked --lib --tests "$@"
         ;;
     mesh)
-        daily_rust_tests cargo test --locked -p kasane-sdk --test alpha_mesh "$@"
+        daily_rust_tests cargo test --locked -p zipzi-sdk --test alpha_mesh "$@"
         ;;
     stress)
-        exec cargo test --locked -p kasane-sdk --test alpha_mesh "$@"
+        exec cargo test --locked -p zipzi-sdk --test alpha_mesh "$@"
         ;;
     python)
         exec uv run --locked python tools/python/test_python.py "$@"

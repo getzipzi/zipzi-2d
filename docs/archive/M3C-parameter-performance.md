@@ -4,11 +4,11 @@
 
 ## 结论
 
-本机显著卡顿的主要原因是源码 Editor 使用未优化的 Rust debug 原生库。S6 完成记录明确说明将 `apps/editor/native/libkasane_godot.dylib` 同步为 debug 库；常规 `tools/build_editor.py` 原本构建并安装 release 库。
+本机显著卡顿的主要原因是源码 Editor 使用未优化的 Rust debug 原生库。S6 完成记录明确说明将 `apps/editor/native/libzipzi_godot.dylib` 同步为 debug 库；常规 `tools/build_editor.py` 原本构建并安装 release 库。
 
 参数滑块事件还存在五次整帧求值，放大了 debug 开销。这条重复求值路径在 M3C 前已存在，不能全部归因于新增 Offscreen。
 
-本轮已将源码 Editor 的原生库恢复为当前源码的 release 构建，未改动参数事件或求值业务逻辑。旧库备份在 `target/kasane/param-profile/source-editor-debug-backup.dylib`。已经运行的 Godot 进程需要退出重启才能加载替换后的库。
+本轮已将源码 Editor 的原生库恢复为当前源码的 release 构建，未改动参数事件或求值业务逻辑。旧库备份在 `target/zipzi/param-profile/source-editor-debug-backup.dylib`。已经运行的 Godot 进程需要退出重启才能加载替换后的库。
 
 ## 同代码 debug / release 对照
 
@@ -34,7 +34,7 @@
 
 其中三次 get_frame 还会复制所有 drawable 的顶点、UV、索引及其他帧信息到 Godot 容器。滑块实际需要的是参数值和操作状态。
 
-调用链位置：`apps/editor/ui/docks/parameter_dock.gd`、`apps/editor/main.gd`、`modules/kasane-godot/src/document_bridge.rs` 和 `document_preview.rs`。
+调用链位置：`apps/editor/ui/docks/parameter_dock.gd`、`apps/editor/main.gd`、`modules/zipzi-godot/src/document_bridge.rs` 和 `document_preview.rs`。
 
 ## 排除和补充证据
 
@@ -56,8 +56,8 @@
 ## 复现材料
 
 - 脚本：`tools/profile_editor_params.gd`，创建自己的 Editor 实例，先测 Mao，再测 Ren。
-- 原始结果：`target/kasane/param-profile/baseline-debug.json`、`current-release.json`。
-- 构建和环境：`target/kasane/param-profile/metadata.json`。
+- 原始结果：`target/zipzi/param-profile/baseline-debug.json`、`current-release.json`。
+- 构建和环境：`target/zipzi/param-profile/metadata.json`。
 - 纯求值对照：同目录 `pre-m3c-core.log`、`current-core.log`。
 - CPU 栈：同目录 `sample.txt`。
 

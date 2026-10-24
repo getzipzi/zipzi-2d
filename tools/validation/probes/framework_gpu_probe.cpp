@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
         const float fit = matrix_mode ? 64 : std::stof(argv[6]);
         if (!glfwInit()) throw std::runtime_error("glfwInit failed");
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        auto* window = glfwCreateWindow(64, 64, "Kasane official image oracle", nullptr, nullptr);
+        auto* window = glfwCreateWindow(64, 64, "Zipzi official image oracle", nullptr, nullptr);
         if (!window) throw std::runtime_error("GL context failed");
         glfwMakeContextCurrent(window);
         if (glewInit() != GLEW_OK) throw std::runtime_error("glewInit failed");

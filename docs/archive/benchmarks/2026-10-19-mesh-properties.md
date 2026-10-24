@@ -142,7 +142,7 @@ tooltip 使用 1,200 次复测替代主测的小样本。修复后的五项均�
 
 ```sh
 ./scripts/properties-benchmark.sh target/new-properties-run 300 120
-KASANE_BENCH_PROPERTY_CASE=picker_swatches ./scripts/properties-benchmark.sh target/new-tooltip-run 1200 120
+ZIPZI_BENCH_PROPERTY_CASE=picker_swatches ./scripts/properties-benchmark.sh target/new-tooltip-run 1200 120
 ```
 
 [完整负载和计时说明](../../../tools/benchmarks/README.md#mesh-properties-native-window-benchmark)。

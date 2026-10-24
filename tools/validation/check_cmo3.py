@@ -10,10 +10,10 @@ import subprocess
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("models", type=Path, nargs="+")
-    parser.add_argument("--editor", type=Path, default=os.environ.get("KASANE_CUBISM_EDITOR"),
-                        help="Cubism installation directory containing res/ (or KASANE_CUBISM_EDITOR)")
+    parser.add_argument("--editor", type=Path, default=os.environ.get("ZIPZI_CUBISM_EDITOR"),
+                        help="Cubism installation directory containing res/ (or ZIPZI_CUBISM_EDITOR)")
     parser.add_argument("--expected-geometry", type=Path,
-                        help="Compare a single CMO3 against captured Kasane poses (canvas pixels and optional render_order)")
+                        help="Compare a single CMO3 against captured Zipzi poses (canvas pixels and optional render_order)")
     parser.add_argument("--geometry-tolerance-px", type=float, default=0.05)
     parser.add_argument("--expected-animation", type=Path,
                         help="Compare a single CAN3 against captured parameter/part values, optional subframe checks and scene FPS; validate serialized curves separately from native Bezier approximation")
@@ -31,7 +31,7 @@ def main():
     if args.resave_animation and (args.resave_animation.exists() or args.resave_animation.suffix != ".can3"):
         parser.error("--resave-animation requires a new CAN3 destination")
     if args.editor is None:
-        parser.error("set --editor or KASANE_CUBISM_EDITOR to your Cubism installation")
+        parser.error("set --editor or ZIPZI_CUBISM_EDITOR to your Cubism installation")
     root = Path(__file__).resolve().parents[2]
     res = args.editor.resolve() / "res"
     if not (res / "Live2D_Cubism.jar").is_file():
@@ -52,7 +52,7 @@ def main():
             geometry += ["--resave", str(args.resave_animation.resolve())]
         result = subprocess.run(["java", "-Djava.awt.headless=true", "-cp",
                                  os.pathsep.join([str(classes), str(res / "*")]),
-                                 "kasane.cmo3probe.ReadCmo3", str(model.resolve()), *geometry],
+                                 "zipzi.cmo3probe.ReadCmo3", str(model.resolve()), *geometry],
                                 cwd=work, capture_output=True, text=True,
                                 timeout=180 if args.resave_animation else 60)
         read_errors = any(marker in result.stderr for marker in ("error :", "error >>", "Exception"))

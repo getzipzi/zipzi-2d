@@ -16,7 +16,7 @@ import tempfile
 from typing import NamedTuple, Sequence
 from uuid import uuid4
 
-import kasane
+import zipzi
 
 
 ANGLES = (-30.0, 0.0, 30.0)
@@ -24,11 +24,11 @@ SAMPLE_ANGLES = (-30.0, -15.0, 0.0, 15.0, 30.0)
 BODY = "ArtMesh30"
 
 
-def new_session() -> kasane.Session:
-    return kasane.Session(str(uuid4()), 1, 1, (0, 0), 1)
+def new_session() -> zipzi.Session:
+    return zipzi.Session(str(uuid4()), 1, 1, (0, 0), 1)
 
 
-def source_positions(session: kasane.Session, angle: float) -> dict[str, list[tuple[float, float]]]:
+def source_positions(session: zipzi.Session, angle: float) -> dict[str, list[tuple[float, float]]]:
     canvas = session.canvas
     names = {mesh_id: session.mesh_record(mesh_id).name for mesh_id in session.mesh_ids()}
     result = {}
@@ -45,12 +45,12 @@ def grid_size(name: str, width: float, height: float) -> tuple[int, int]:
     return max(3, min(10, round(width / 80))), max(3, min(10, round(height / 80)))
 
 
-def grid_geometry(mesh: kasane.MeshRecordSnapshot) -> kasane.MeshGeometryData:
+def grid_geometry(mesh: zipzi.MeshRecordSnapshot) -> zipzi.MeshGeometryData:
     source = mesh.geometry
     left, top = source.positions[0]
     right, bottom = source.positions[2]
     nx, ny = grid_size(mesh.name, right - left, bottom - top)
-    return kasane.rectangle_grid_geometry(source, nx, ny)
+    return zipzi.rectangle_grid_geometry(source, nx, ny)
 
 
 class Projection(NamedTuple):
@@ -59,7 +59,7 @@ class Projection(NamedTuple):
 
 
 def project_mesh_displacement(
-    reference: kasane.MeshGeometryData,
+    reference: zipzi.MeshGeometryData,
     neutral: Sequence[tuple[float, float]],
     posed: Sequence[tuple[float, float]],
     target_positions: Sequence[tuple[float, float]],
@@ -97,10 +97,10 @@ def project_mesh_displacement(
 
 
 def deformation_forms(
-    original: kasane.MeshRecordSnapshot,
-    grid: kasane.MeshGeometryData,
+    original: zipzi.MeshRecordSnapshot,
+    grid: zipzi.MeshGeometryData,
     sampled: dict[float, dict[str, list[tuple[float, float]]]],
-) -> tuple[list[kasane.MeshKeyform], int]:
+) -> tuple[list[zipzi.MeshKeyform], int]:
     neutral = sampled[0.0][original.name]
     result = []
     outside_points = 0
@@ -110,7 +110,7 @@ def deformation_forms(
             original.geometry, neutral, target, grid.positions,
         )
         outside_points = projection.outside_points
-        result.append(kasane.MeshKeyform([angle], projection.positions))
+        result.append(zipzi.MeshKeyform([angle], projection.positions))
     return result, outside_points
 
 
@@ -170,13 +170,13 @@ def main() -> None:
             )
             edit.replace_mesh(mesh._replace(geometry=grid))
             edit.create_mesh_binding(
-                str(uuid4()), mesh.id, [kasane.Axis(parameter_id, list(ANGLES))],
+                str(uuid4()), mesh.id, [zipzi.Axis(parameter_id, list(ANGLES))],
                 forms,
             )
 
     saved = baseline.save(output / "project")
     published = baseline.export_package(output / "package")
-    reopened = kasane.open_project(saved.manifest)
+    reopened = zipzi.open_project(saved.manifest)
     package = new_session()
     package_import = package.import_model3(output / "package" / "model.model3.json")
     report = {
@@ -208,11 +208,11 @@ def main() -> None:
         relocated = Path(temporary)
         shutil.copytree(saved.manifest.parent, relocated / "project")
         shutil.copytree(output / "package", relocated / "package")
-        moved_project = kasane.open_project(relocated / "project")
+        moved_project = zipzi.open_project(relocated / "project")
         moved_package = new_session()
         moved_package.import_model3(relocated / "package" / "model.model3.json")
-        with kasane.Observer(768, 768, 768) as observer:
-            static_frame = observer.observe(kasane.open_project(imported.manifest), {})
+        with zipzi.Observer(768, 768, 768) as observer:
+            static_frame = observer.observe(zipzi.open_project(imported.manifest), {})
             if args.keep_debug:
                 static_frame.save_png(output / "psd-default.png")
             for angle in SAMPLE_ANGLES:

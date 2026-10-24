@@ -1,6 +1,6 @@
 # 2d authoring 发布修复与复测 — 2026-10-23
 
-本次修复落在 kasane-2d 的通用发布路径：复用未变化 Binding/Motion 的验证结果，缓存身份集合，并按持久数据域裁剪 ChangeSet 汇总。editor 产品源码保持 `61371c0`，没有加入单属性优化。
+本次修复落在 zipzi-2d 的通用发布路径：复用未变化 Binding/Motion 的验证结果，缓存身份集合，并按持久数据域裁剪 ChangeSet 汇总。editor 产品源码保持 `61371c0`，没有加入单属性优化。
 
 修复前为 2d `c7f1651`，修复后为同一提交加本地补丁；源码补丁和二进制 SHA-256 见机器可读结果。最初 editor `279f569` / 2d `01db56a` 的基线对比保留在[原始报告](2026-10-23-ui-comparison.md)，根因证据见[定位报告](2026-10-23-ui-authoring-diagnosis.md)。本表采用重新运行的修复前/后 A/B。
 
@@ -60,11 +60,11 @@ Opacity 文本会修改存储的 Binding keyform，不能只覆盖 Mesh 本体�
 
 ## 验证
 
-- `cargo test --locked -p kasane-core --lib`：14 passed。
-- `cargo test --locked -p kasane-core --test checkpoint_size_tests`：1 passed。
-- `cargo test --locked -p kasane-sdk --features bench-instrumentation --lib`：12 passed。
-- `cargo test --locked -p kasane-sdk --features bench-instrumentation --test integration`：320 passed，2 ignored。
-- `cargo test --locked -p editor-core --lib document::properties::tests`：3 passed。
+- `cargo test --locked -p zipzi-core --lib`：14 passed。
+- `cargo test --locked -p zipzi-core --test checkpoint_size_tests`：1 passed。
+- `cargo test --locked -p zipzi-sdk --features bench-instrumentation --lib`：12 passed。
+- `cargo test --locked -p zipzi-sdk --features bench-instrumentation --test integration`：320 passed，2 ignored。
+- `cargo test --locked -p zipzi-editor-core --lib document::properties::tests`：3 passed。
 - Release editor 构建、格式检查及 `git diff --check` 通过；没有运行昂贵的整个双仓库完整套件。
 
 新增覆盖包括无效依赖、身份冲突、ID 未变但 keyform 无效、快照/分支证明、checkpoint 往返、缓存工作次数，以及裁剪/完整 ChangeSet 的差分比较和 Undo/Redo 收据比较。SDK 集成套件还覆盖删除重建、旧 handle/address 失效、取消、预算和失败原子性。

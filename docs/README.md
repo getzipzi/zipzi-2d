@@ -1,13 +1,13 @@
 # Documentation
 
 - [Repository layout](../MONOREPO.md) and [licensing](../LICENSING.md)
-- [SDK boundaries](../MONOREPO.md#sdk-and-language-boundaries), [Python SDK](../crates/kasane-python/README.md) and [API](../crates/kasane-python/API.md)
-- [Editor development](../crates/kasane-editor/README.md) and [dependencies](../vendor/README.md#dependencies)
+- [SDK boundaries](../MONOREPO.md#sdk-and-language-boundaries), [Python SDK](../crates/zipzi-python/README.md) and [API](../crates/zipzi-python/API.md)
+- [Editor development](../crates/zipzi-editor/README.md) and [dependencies](../vendor/README.md#dependencies)
 - [Test domains and CI](../tools/README.md#test-coverage)
 - [Source, wheel and app artifacts](../tools/README.md#local-distribution-artifacts)
 - [Tool guide](../tools/README.md) and [model inventory](../models/README.md)
 - [Runtime preparation](runtime/README.md) and [Runtime plan](plans/sdk-runtime-implementation-plan.md)
-- [Editor application](../crates/kasane-editor/README.md), [editing core](../crates/editor-core/README.md) and [render adapter](../crates/editor-render/README.md)
+- [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)
 

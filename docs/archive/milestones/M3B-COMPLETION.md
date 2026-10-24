@@ -41,9 +41,9 @@ Cargo 构建脚本同时跟踪 Purism 的 include/src，避免修改子模块头
 ```sh
 python3 tools/build_editor.py \
   --godot target/godot-tools/standard/Godot.app/Contents/MacOS/Godot \
-  --export dist/editor/Kasane-Editor.zip \
+  --export dist/editor/Zipzi-Editor.zip \
   --template target/godot-tools/templates/macos.zip
-python3 tools/validate_m3b.py --output-dir target/kasane/m3b-final
+python3 tools/validate_m3b.py --output-dir target/zipzi/m3b-final
 ```
 
 完整入口依次执行 Rust/双 Core 数值、原始 Core 基线、独立打包 Editor、合成 GPU 检查。任何必需项未运行或失败都不能得到 passed；子进程失败时清除旧成功报告，避免把历史结果误当成本次通过。
@@ -51,14 +51,14 @@ python3 tools/validate_m3b.py --output-dir target/kasane/m3b-final
 也可独立诊断各层：
 
 ```sh
-python3 tools/validate_m3b.py --numerical-only --output-dir target/kasane/m3b-final
-python3 tools/m3b_baseline.py --output-dir target/kasane/m3b-final
-python3 tools/validate_m3b_editor.py --output-dir target/kasane/m3b-final/editor
+python3 tools/validate_m3b.py --numerical-only --output-dir target/zipzi/m3b-final
+python3 tools/m3b_baseline.py --output-dir target/zipzi/m3b-final
+python3 tools/validate_m3b_editor.py --output-dir target/zipzi/m3b-final/editor
 python3 tools/validate_gpu.py \
   --godot target/godot-tools/standard/Godot.app/Contents/MacOS/Godot \
-  --library target/release/libkasane_godot.dylib \
-  --output-dir target/kasane/m3b-final/gpu
-python3 tools/validate_m3b.py --collect-acceptance --output-dir target/kasane/m3b-final
+  --library target/release/libzipzi_godot.dylib \
+  --output-dir target/zipzi/m3b-final/gpu
+python3 tools/validate_m3b.py --collect-acceptance --output-dir target/zipzi/m3b-final
 ```
 
 `--collect-acceptance` 只汇总已存在的证据，不运行或补造检查；记录每份报告路径和 SHA，并检查原模型身份一致。`--numerical-only` 明确只代表数值子集。
@@ -67,7 +67,7 @@ python3 tools/validate_m3b.py --collect-acceptance --output-dir target/kasane/m3
 
 ## 最终验收结果
 
-2026-09-21，macOS arm64，Godot 4.7.2、OpenGL compatibility，release GDExtension 与独立 export-debug 应用。总报告 `target/kasane/m3b-final/report.json` 为 **passed**，数值失败数为 0。证据在本地 target 下生成，不提交大体积模型、截图或探针快照。
+2026-09-21，macOS arm64，Godot 4.7.2、OpenGL compatibility，release GDExtension 与独立 export-debug 应用。总报告 `target/zipzi/m3b-final/report.json` 为 **passed**，数值失败数为 0。证据在本地 target 下生成，不提交大体积模型、截图或探针快照。
 
 | 检查 | 结果 |
 |---|---|
@@ -79,7 +79,7 @@ python3 tools/validate_m3b.py --collect-acceptance --output-dir target/kasane/m3
 | 合成 GPU / Workspace | 84 / 10 项通过 |
 | Rust / Python / Purism | Rust 70 项测试及 workspace all-targets 检查、Python 7 项、Purism 402 个断言通过 |
 
-验收模型 MOC3 SHA-256：`247d028f9900be2a46e4530816ece5749524d35013ba77424bd943598e0e54ff`。打包产物 `dist/editor/Kasane-Editor.zip` SHA-256：`5475b2b8de172a68aec289806cfbd9fffe11257ba1427c986074282b569cafdc`。Purism 修复提交为 `ad51276`。报告保留测试时工作区 revision、dirty 状态、输入清单、引擎/构建配置和各证据 SHA；本次是在提交前的最终工作区运行验收。
+验收模型 MOC3 SHA-256：`247d028f9900be2a46e4530816ece5749524d35013ba77424bd943598e0e54ff`。打包产物 `dist/editor/Zipzi-Editor.zip` SHA-256：`5475b2b8de172a68aec289806cfbd9fffe11257ba1427c986074282b569cafdc`。Purism 修复提交为 `ad51276`。报告保留测试时工作区 revision、dirty 状态、输入清单、引擎/构建配置和各证据 SHA；本次是在提交前的最终工作区运行验收。
 
 ## 保留的范围边界与后续建议
 

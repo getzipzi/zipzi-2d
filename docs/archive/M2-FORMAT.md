@@ -1,21 +1,21 @@
-# Kasane 目录工程格式
+# Zipzi 目录工程格式
 
-格式标识为 `kasane-directory-project`，版本为 `1`。它与旧实验 `kasane-project` 的 v1–v5 没有版本继承关系。旧标识一律返回 `LEGACY_PROJECT`，包含版本与拒绝原因；新标识的未知版本返回 `UNSUPPORTED_VERSION`。
+格式标识为 `zipzi-directory-project`，版本为 `1`。它与旧实验 `zipzi-project` 的 v1–v5 没有版本继承关系。旧标识一律返回 `LEGACY_PROJECT`，包含版本与拒绝原因；新标识的未知版本返回 `UNSUPPORTED_VERSION`。
 
 ## 目录与 API
 
 ```text
 my-model/
-  project.kasane.json
+  project.zipzi.json
   assets/
     <sha256>.png
 ```
 
-`KasaneProjectIO.save_project(document, path)` / `open_project(document, path)` 接受工程目录，或以 `.json` 结尾的清单路径；目录参数使用 `project.kasane.json`。清单所在目录是工程根。另存为就是向另一个目录调用 `save_project`。保存和打开无需场景树、画布或 GPU，也不调用 MOC3 编码器。
+`ZipziProjectIO.save_project(document, path)` / `open_project(document, path)` 接受工程目录，或以 `.json` 结尾的清单路径；目录参数使用 `project.zipzi.json`。清单所在目录是工程根。另存为就是向另一个目录调用 `save_project`。保存和打开无需场景树、画布或 GPU，也不调用 MOC3 编码器。
 
 生产 API 只接受本机绝对路径，不解析 `res://`、`user://` 或相对工作目录。UI 在选择文件时提供系统路径。
 
-`modules/kasane-document` 是独立原生模块：`DocumentSession` 持有 Document、工程路径和保存基线；`DocumentStore` 实现保存与打开；codec 使用 nlohmann JSON，PNG 使用 libpng，SHA-256 使用 OpenSSL。内部 `FileSystem` 接口统一读写、独占创建、锁、重命名与同步。标准库提供普通路径和读取操作，平台 API 提供标准库不能表达的操作。测试注入同一个接口的失败，不保留 Godot 文件系统后端。
+`modules/zipzi-document` 是独立原生模块：`DocumentSession` 持有 Document、工程路径和保存基线；`DocumentStore` 实现保存与打开；codec 使用 nlohmann JSON，PNG 使用 libpng，SHA-256 使用 OpenSSL。内部 `FileSystem` 接口统一读写、独占创建、锁、重命名与同步。标准库提供普通路径和读取操作，平台 API 提供标准库不能表达的操作。测试注入同一个接口的失败，不保留 Godot 文件系统后端。
 
 Godot 适配层只转换脚本参数、结果、信号和 RGBA 纹理；持久化测试可以完全不启动 Godot。
 

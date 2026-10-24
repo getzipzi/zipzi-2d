@@ -1,8 +1,8 @@
-# Kasane 创作 SDK：调研结论与实施计划
+# Zipzi 创作 SDK：调研结论与实施计划
 
 状态：历史实施记录。调研日期：2026-09-23。代码基线：`8b283f8eeca785b506e6dbae0552cc2358f49053`。
 
-本文记录 SDK 从 Godot Document Bridge 迁移时的设计与阶段验收，涉及的旧目录和脚本可能已移除。当前架构、可运行命令和 API 分别见 [MONOREPO.md](../../MONOREPO.md#sdk-and-language-boundaries)、[工具指南](../../tools/README.md#test-coverage) 和 [Python API](../../crates/kasane-python/API.md)。
+本文记录 SDK 从 Godot Document Bridge 迁移时的设计与阶段验收，涉及的旧目录和脚本可能已移除。当前架构、可运行命令和 API 分别见 [MONOREPO.md](../../MONOREPO.md#sdk-and-language-boundaries)、[工具指南](../../tools/README.md#test-coverage) 和 [Python API](../../crates/zipzi-python/API.md)。
 
 本文把当时已验证的仓库事实、建议设计和未来验收分开记录。其余新 crate、目录和命令描述是实施时的记录，不代表当前状态。
 
@@ -25,22 +25,22 @@
 
 | 事实与代码证据 | 实施含义 |
 | --- | --- |
-| [Document Bridge](../modules/kasane-godot/src/document_bridge.rs) 是 Godot 门面，包含 generation、object epoch、预览缓存、变更发布和分模块编辑入口 | 用作能力清单；不迁移 Godot 类型和主线程约束 |
-| [Document](../modules/kasane-core/src/document.rs) 已独立于引擎，领域操作在 `document/` 下 | 复用验证和求值；不在 Python 再实现一套规则 |
-| [DocumentSession](../modules/kasane-project/src/store.rs) 拥有文档、历史、manifest 路径和保存基线 | SDK 可以持有它；需明确 SDK 与旧 history 的单一所有权 |
+| [Document Bridge](../modules/zipzi-godot/src/document_bridge.rs) 是 Godot 门面，包含 generation、object epoch、预览缓存、变更发布和分模块编辑入口 | 用作能力清单；不迁移 Godot 类型和主线程约束 |
+| [Document](../modules/zipzi-core/src/document.rs) 已独立于引擎，领域操作在 `document/` 下 | 复用验证和求值；不在 Python 再实现一套规则 |
+| [DocumentSession](../modules/zipzi-project/src/store.rs) 拥有文档、历史、manifest 路径和保存基线 | SDK 可以持有它；需明确 SDK 与旧 history 的单一所有权 |
 | 当时 core `History` 的 delta 仅支持 `MeshName` 和 `Vertex`；无 receipt 的编辑触发 `HISTORY_UNSUPPORTED_EDIT` 并清空历史 | 不能声称现有 begin/end action 已能撤销创建对象、绑定或资源替换 |
-| [transaction](../modules/kasane-core/src/document/transactions.rs) 仅暂存顶点位置和 mesh 名称；其它修改在 transaction 激活时被阻止 | SDK 的完整原子编辑必须新实现，不能简单包装旧 transaction |
+| [transaction](../modules/zipzi-core/src/document/transactions.rs) 仅暂存顶点位置和 mesh 名称；其它修改在 transaction 激活时被阻止 | SDK 的完整原子编辑必须新实现，不能简单包装旧 transaction |
 | `Document::restore_from` 保留当前 saved baseline，并推进 revision；`Document::clone` 同时涉及派生缓存和 saved content | 新增不含缓存/历史/保存基线的内容 checkpoint，避免直接深拷贝完整 Session |
-| [PreviewState](../modules/kasane-core/src/preview.rs) 用 generation、evaluation revision、preview revision 缓存不可变帧 | 延续区分；普通 metadata 修改可能复用较早求值帧 |
-| [valid_uuid](../modules/kasane-core/src/document/validation.rs) 要求非零、规范小写 UUID | `eye.left` 是显示名/脚本符号的示例，不能直接作为底层对象 ID |
-| [binding 验证](../modules/kasane-core/src/document/bindings.rs) 要求完整笛卡尔积 keyform；mesh binding 支持 1–16 个轴 | 不能先发布空 binding，再逐个补 keyform；在 builder 内组装完整值后提交 |
-| [to_parent_positions](../modules/kasane-core/src/evaluation/types.rs) 对无父对象进行 canvas → runtime 转换，有父对象则保留父空间坐标 | 不能把所有源顶点统称为画布像素；reparent 必须说明坐标语义 |
-| [parameters 求值](../modules/kasane-core/src/evaluation/parameters.rs) 普通参数钳制，repeat 参数循环映射 | 返回 requested 和 actual；不能给所有参数统一承诺 clamp |
-| [ProjectIO](../modules/kasane-godot/src/project_io.rs) 在 bridge 之外承载打开、保存、资源替换、MOC3 IO | 仅迁移 `document_bridge.rs` 不能组成完整 SDK 闭环 |
+| [PreviewState](../modules/zipzi-core/src/preview.rs) 用 generation、evaluation revision、preview revision 缓存不可变帧 | 延续区分；普通 metadata 修改可能复用较早求值帧 |
+| [valid_uuid](../modules/zipzi-core/src/document/validation.rs) 要求非零、规范小写 UUID | `eye.left` 是显示名/脚本符号的示例，不能直接作为底层对象 ID |
+| [binding 验证](../modules/zipzi-core/src/document/bindings.rs) 要求完整笛卡尔积 keyform；mesh binding 支持 1–16 个轴 | 不能先发布空 binding，再逐个补 keyform；在 builder 内组装完整值后提交 |
+| [to_parent_positions](../modules/zipzi-core/src/evaluation/types.rs) 对无父对象进行 canvas → runtime 转换，有父对象则保留父空间坐标 | 不能把所有源顶点统称为画布像素；reparent 必须说明坐标语义 |
+| [parameters 求值](../modules/zipzi-core/src/evaluation/parameters.rs) 普通参数钳制，repeat 参数循环映射 | 返回 requested 和 actual；不能给所有参数统一承诺 clamp |
+| [ProjectIO](../modules/zipzi-godot/src/project_io.rs) 在 bridge 之外承载打开、保存、资源替换、MOC3 IO | 仅迁移 `document_bridge.rs` 不能组成完整 SDK 闭环 |
 | `DocumentStore::save_inner` 复制资源、改写 source/hash，成功后替换当前文档；保存带外部修改检测和发布后 warning | 全内容历史必须处理保存后的资源路径；不得破坏既有 IO 发布语义 |
-| [kasane-preview](../modules/kasane-preview/src/lib.rs) 已有资源检查协议；[wgpu 验证宿主](../apps/wgpu-validate/src/main.rs) 已有 device、纹理上传和读回路径 | 可以写独立观察宿主，不需要窗口或 editor |
+| [zipzi-preview](../modules/zipzi-preview/src/lib.rs) 已有资源检查协议；[wgpu 验证宿主](../apps/wgpu-validate/src/main.rs) 已有 device、纹理上传和读回路径 | 可以写独立观察宿主，不需要窗口或 editor |
 | [wgpu 验证库](../apps/wgpu-validate/src/lib.rs) 的 `LoadedModel` 以 model3 case 为输入，不能直接观察未保存的 SDK 文档 | 新观察层直接消费 SDK 快照，不通过导出后再导入绕行 |
-| [kasane-moc3](../modules/kasane-moc3/Cargo.toml) 默认启用 Purism 验证；project 依赖它 | “无 Godot”不等于构建没有 C 编译器/子模块依赖，打包必须记录实际能力 |
+| [zipzi-moc3](../modules/zipzi-moc3/Cargo.toml) 默认启用 Purism 验证；project 依赖它 | “无 Godot”不等于构建没有 C 编译器/子模块依赖，打包必须记录实际能力 |
 
 已有 core 的公开操作包括 canvas 和 draw-order groups，范围略大于旧 bridge。第一版一并提供读取和显式替换，避免导入再保存时丢失这些语义。
 
@@ -49,8 +49,8 @@
 环境：本地 `rustc 1.98.1`、`Python 3.14.3`。workspace 声明 Rust 最低版本为 1.94；本次没有在该最低版本验证。
 
 ```sh
-cargo test -p kasane-core --locked --test history_tests --test preview_state_tests
-cargo test -p kasane-project --locked --test project_tests --test sequence_tests
+cargo test -p zipzi-core --locked --test history_tests --test preview_state_tests
+cargo test -p zipzi-project --locked --test project_tests --test sequence_tests
 ```
 
 结果：6 个 history、5 个 preview、38 个 project、1 个 sequence，共 50 个测试通过，无跳过。覆盖了历史边界、预览失败保留状态、保存冲突、保存前失败、发布后 warning、save-as 和既有 delta history 跨保存等行为。这不是新 SDK 验收，也没有重新验收 GPU 或官方 Core。
@@ -67,7 +67,7 @@ cargo test -p kasane-project --locked --test project_tests --test sequence_tests
 
 Blender 的直接数据访问和可组合脚本值得借鉴；其 operator 的上下文依赖和对象底层数据生命周期则说明，SDK 应显式传入目标并校验句柄，不依赖活动对象或当前面板。参见 [Using Operators](https://docs.blender.org/api/main/info_gotchas_operators.html) 和 [Internal Data & Their Python Objects](https://docs.blender.org/api/5.0/info_gotchas_internal_data_and_python_objects.html)。
 
-Python 绑定建议用 PyO3，wheel 用 maturin 构建。混合 Python/Rust 布局可将原生模块命名为 `kasane._native`，并交付 `.pyi` 和 `py.typed`；这是 maturin 直接支持的布局。[maturin Project Layout](https://www.maturin.rs/project_layout.html)
+Python 绑定建议用 PyO3，wheel 用 maturin 构建。混合 Python/Rust 布局可将原生模块命名为 `zipzi._native`，并交付 `.pyi` 和 `py.typed`；这是 maturin 直接支持的布局。[maturin Project Layout](https://www.maturin.rs/project_layout.html)
 
 线程安全由原生层明确实现。PyO3 文档指出 Python 对象可能跨线程共享，单靠 GIL 或 `unsendable` 不是通用方案；采用短时锁与显式 edit token，禁止跨 Python 调用持有 Rust 可变借用。[PyO3 thread safety](https://pyo3.rs/v0.29.0/class/thread-safety.html)
 
@@ -78,15 +78,15 @@ Python 绑定建议用 PyO3，wheel 用 maturin 构建。混合 Python/Rust 布�
 按阶段新增以下内容；不是第一天同时建立所有空壳。
 
 ```text
-modules/kasane-sdk/                 # S1：会话、对象 API、编辑、查询、历史
+modules/zipzi-sdk/                 # S1：会话、对象 API、编辑、查询、历史
   src/{session,edit,history,handles,query,error,events,validation}.rs
   src/authoring/                   # 按 mesh/parameter/binding 等领域分文件
   tests/                           # 仅使用公开 API 的契约测试
-modules/kasane-sdk-observe/         # S4：无窗口 wgpu 观察、PNG 和报告
-modules/kasane-python/             # S3：薄 PyO3 绑定
+modules/zipzi-sdk-observe/         # S4：无窗口 wgpu 观察、PNG 和报告
+modules/zipzi-python/             # S3：薄 PyO3 绑定
   Cargo.toml
   pyproject.toml
-  python/kasane/{__init__.py,_native.pyi,py.typed,__main__.py}
+  python/zipzi/{__init__.py,_native.pyi,py.typed,__main__.py}
   tests/
 examples/sdk/                      # 可分发素材、小型完整创作脚本和测试
 tools/validate_sdk.py              # S5：统一验收入口
@@ -97,17 +97,17 @@ docs/SDK-ACCEPTANCE.md             # 实际命令、产物和验证结果
 依赖方向：
 
 ```text
-未来 UI ───────────────> kasane-sdk ──> kasane-project ──> kasane-core
-Python ─> kasane-python ─────┘
-                 └──> kasane-sdk-observe ──> kasane-sdk（只读观察输入）
-                                  └───────> kasane-preview / render / render-wgpu
+未来 UI ───────────────> zipzi-sdk ──> zipzi-project ──> zipzi-core
+Python ─> zipzi-python ─────┘
+                 └──> zipzi-sdk-observe ──> zipzi-sdk（只读观察输入）
+                                  └───────> zipzi-preview / render / render-wgpu
 ```
 
-- `kasane-sdk` 默认不依赖 Godot、wgpu、窗口库或 Python。
-- `kasane-sdk-observe` 拥有 GPU device/queue、纹理缓存、读回和观察产物；不拥有编辑权。
-- Python crate 用可选 `observe` feature 接入观察层。首个开发 wheel 可包含该 feature，但 `import kasane` 不初始化 GPU。
+- `zipzi-sdk` 默认不依赖 Godot、wgpu、窗口库或 Python。
+- `zipzi-sdk-observe` 拥有 GPU device/queue、纹理缓存、读回和观察产物；不拥有编辑权。
+- Python crate 用可选 `observe` feature 接入观察层。首个开发 wheel 可包含该 feature，但 `import zipzi` 不初始化 GPU。
 - 不让 SDK 依赖 `apps/wgpu-validate`。以它作为宿主实现参考；需要共享的通用资源代码抽到合适的 module，避免反向依赖 app。
-- `kasane-moc3` 的已有验证 feature 不在这一轮静默关闭。CPU 测试的最小依赖方案若需 feature 透传，应作为独立小改动，并检查 Cargo feature 合并后的实际构建。
+- `zipzi-moc3` 的已有验证 feature 不在这一轮静默关闭。CPU 测试的最小依赖方案若需 feature 透传，应作为独立小改动，并检查 Cargo feature 合并后的实际构建。
 
 ## 5. 会话与公开接口契约
 
@@ -151,7 +151,7 @@ Python 读数组返回独立副本；修改副本不会修改文档，批量写�
 
 错误至少包含 `code`、`message`、`operation`、`object_ids`、可选 `field_path`、`expected/actual_version` 和修复所需的 referrers。保留 core 错误码；SDK 新增码采用明确命名，例如 `STALE_HANDLE`、`EDIT_ACTIVE`、`EDIT_ABORTED`、`AMBIGUOUS_NAME`。无法从现有 Status 获得字段路径时留空，不通过解析人类 message 伪造结构化信息。
 
-Rust 返回 edit receipt；Python 失败抛 `KasaneError`，带相同字段，不能只打印日志。成功 receipt 含前后版本、直接修改对象、change kind、history 和 warnings。事件分为 document、preview、project/resource、history；首版提供 `drain_events()`，不在锁内同步调用用户回调。结构和混合修改允许保守标记 Structure；直接修改的 mesh 列表不是 renderer 的完整 dirty 集合。
+Rust 返回 edit receipt；Python 失败抛 `ZipziError`，带相同字段，不能只打印日志。成功 receipt 含前后版本、直接修改对象、change kind、history 和 warnings。事件分为 document、preview、project/resource、history；首版提供 `drain_events()`，不在锁内同步调用用户回调。结构和混合修改允许保守标记 Structure；直接修改的 mesh 列表不是 renderer 的完整 dirty 集合。
 
 ## 6. 原子编辑、历史和保存
 
@@ -245,7 +245,7 @@ S0 生成逐方法 coverage 文件，将 bridge 的每个公开领域方法映�
 
 ```python
 from pathlib import Path
-import kasane as ks
+import zipzi as ks
 
 session = ks.open_project(Path("character").resolve())
 eye = session.meshes.require_unique(name="eye.left")
@@ -281,7 +281,7 @@ session.save()
 
 ### 8.2 开发与执行入口
 
-普通使用方式为 `python create_model.py` 和标准 Python 测试。另交付 `python -m kasane run <script> --report <path>`：编译脚本、收集异常栈/行号、stdout/stderr、会话版本和 observation 产物索引。runner 不自动给整份脚本包事务；显式 with edit 内回滚，已经提交的批次保留。
+普通使用方式为 `python create_model.py` 和标准 Python 测试。另交付 `python -m zipzi run <script> --report <path>`：编译脚本、收集异常栈/行号、stdout/stderr、会话版本和 observation 产物索引。runner 不自动给整份脚本包事务；显式 with edit 内回滚，已经提交的批次保留。
 
 开发时支持在普通 Python REPL 中长期持有 Session 和 Observer，反复查询、编辑和观察；仅修改创作脚本无需重编译 Rust。示例按“创建 fixture → 执行 edit → 数值断言 → 可选观察”拆成可组合函数，agent 可只运行相关测试。首次 wheel 编译成本与后续脚本迭代耗时分别报告。
 
@@ -289,7 +289,7 @@ runner 是一次性进程；不建立后台 daemon，也不提供逐顶点网络
 
 Python 分发要求：
 
-- maturin mixed layout；公开 `kasane`，原生扩展 `kasane._native`。
+- maturin mixed layout；公开 `zipzi`，原生扩展 `zipzi._native`。
 - `.pyi`、`py.typed`、docstring、异常字段、数组复制规则和可运行 recipes 随 wheel 交付。
 - Rust 依赖进入 Cargo.lock；Python 构建/测试工具精确锁定。版本选择需验证 workspace MSRV 和本地 CPython。
 - 在仓库外新 venv 安装 wheel，清空仓库 `PYTHONPATH`，运行 CPU 创建/保存/重开和 GPU 观察样例。
@@ -315,7 +315,7 @@ Python 分发要求：
 1. 捕获文档与资源描述。若有未结束 edit，默认观察已提交文档；v0 不提供 candidate 渲染。
 2. 明确采样参数，使用独立 evaluator，记录普通参数钳制、repeat 映射后的实际值。
 3. 校验并读取纹理，hash 计算与上传使用同一份字节，避免检查后重新读取造成不一致。缺失/hash/尺寸错误明确失败。
-4. 复用 `kasane-preview` 的资源校验规则。必要时在该 crate 加入只读资源来源抽象，使 snapshot 和旧 DocumentSession adapter 共用实现；不复制第二套资源判定策略。
+4. 复用 `zipzi-preview` 的资源校验规则。必要时在该 crate 加入只读资源来源抽象，使 snapshot 和旧 DocumentSession adapter 共用实现；不复制第二套资源判定策略。
 5. 调用现有 `WgpuRenderer::sync_model/update_view/encode`，提交 GPU 工作，等待对应读回完成，去除 row padding，输出 PNG 和报告。
 6. 每个观察 run 使用独立目录，图像成功后才将 manifest 标为完成；失败报告不引用上一 run 的图片作为本次结果。
 
@@ -361,7 +361,7 @@ artifacts/<run-id>/
 
 ### S1：纯 Rust 编辑 SDK
 
-新增 `modules/kasane-sdk`；在 workspace 注册。新增 core opaque checkpoint、结构校验和必要的候选发布支持；在 project 增加保留 manifest/saved baseline 的受限发布入口。新增接口需明确是否影响 legacy history，不能让两套记录器混用。
+新增 `modules/zipzi-sdk`；在 workspace 注册。新增 core opaque checkpoint、结构校验和必要的候选发布支持；在 project 增加保留 manifest/saved baseline 的受限发布入口。新增接口需明确是否影响 legacy history，不能让两套记录器混用。
 
 完成第 7 节标记 S1 的所有领域接口、受控写入、edit token、rollback、history、句柄、查询、preview/evaluate、error 和事件。checkpoint 估算包含 Vec/String capacity 等动态占用，不通过 clone 保存每个操作的 GPU/求值缓存。
 
@@ -385,13 +385,13 @@ artifacts/<run-id>/
 
 ### S3：Python SDK 与 CPU harness
 
-新增 `modules/kasane-python`，交付 wheel、类型提示、异常和 `python -m kasane run`。Python fixture 与 Rust fixture使用同一输入数据和预期结果。完整接口 coverage 自动检查公开方法和测试映射，避免只绑定演示脚本用到的少数方法。
+新增 `modules/zipzi-python`，交付 wheel、类型提示、异常和 `python -m zipzi run`。Python fixture 与 Rust fixture使用同一输入数据和预期结果。完整接口 coverage 自动检查公开方法和测试映射，避免只绑定演示脚本用到的少数方法。
 
 通过标准：外部 venv 中完成无 GPU 的查询、建模、绑定、参数采样、save/reopen；异常行号和业务错误字段可读；with edit 内错误回滚、块外已有提交保留；两线程交叉访问返回预定结果，无死锁/借用 panic；Python 快照数组修改不影响文档。
 
 ### S4：wgpu 观察 harness
 
-新增 `modules/kasane-sdk-observe`，接入 Python 可选 feature。实现不可变观察输入、资源检查、GPU lifecycle、图像读回、裁剪、参数拼图和报告。
+新增 `modules/zipzi-sdk-observe`，接入 Python 可选 feature。实现不可变观察输入、资源检查、GPU lifecycle、图像读回、裁剪、参数拼图和报告。
 
 通过标准：直接观察未保存的模型；同一 Observer 连续观察参数变化、几何变化和纹理变化，图片及资源版本正确变化；仅 view 变化遵循 renderer 已有缓存契约；错误不能复用旧图冒充成功；采样不改变会话 preview；裁剪保留合成关系。没有窗口也能验收，但必须实际运行 GPU。
 
@@ -438,8 +438,8 @@ artifacts/<run-id>/
 当前 Rust 和 wheel 门禁命令：
 
 ```sh
-cargo test -p kasane-sdk --locked
-cargo test -p kasane-sdk-observe --locked
+cargo test -p zipzi-sdk --locked
+cargo test -p zipzi-sdk-observe --locked
 python3.14 tools/validate_sdk.py --wheel /absolute/path/to/cpu-wheel.whl
 python3.14 tools/validate_sdk.py --full --wheel /absolute/path/to/observe-wheel.whl --official-probe /absolute/path/to/official-probe --purism-probe /absolute/path/to/purism-probe --godot /absolute/path/to/Godot
 ```
@@ -471,7 +471,7 @@ python3.14 tools/validate_sdk.py --full --wheel /absolute/path/to/observe-wheel.
 
 从 S0 和 S1 的最小纵切开始：新增 crate；新建文档；导入一张 PNG 的描述；创建一个矩形 mesh；查询与批量位置更新；候选提交/回滚；结构编辑 undo/redo；CPU 求值。这个纵切只证明会话和编辑内核成立，不作为全部 bridge 能力完成。
 
-2026-09-23 首轮实施记录：新增 `kasane-sdk`、core 内容 checkpoint、project 受限发布入口、非对称 PNG fixture 与三项公开 API 契约测试。首轮 `cargo test -p kasane-sdk --locked` 三项通过；core/project 原 50 项指定基线通过；`cargo clippy -p kasane-sdk --locked --all-targets -- -D warnings` 通过。当时 S1 的句柄和字节预算尚未完成。
+2026-09-23 首轮实施记录：新增 `zipzi-sdk`、core 内容 checkpoint、project 受限发布入口、非对称 PNG fixture 与三项公开 API 契约测试。首轮 `cargo test -p zipzi-sdk --locked` 三项通过；core/project 原 50 项指定基线通过；`cargo clippy -p zipzi-sdk --locked --all-targets -- -D warnings` 通过。当时 S1 的句柄和字节预算尚未完成。
 
 2026-09-23 续实施记录：已增加 capacity 感知的全内容 checkpoint 估算、可配置历史预算、提交前超限拒绝、mesh/asset 显式替换、拓扑映射、参数与完整 mesh binding、稳定对象句柄，以及纯 mesh 名称编辑保留求值 revision。SDK 15 项契约测试、core 容量测试及原 50 项基线通过；Clippy 无警告。尚待 S1c 其它变形/Part/SceneBinding、S1d/S1e、S0 性能和 Python 兼容性验收。
 
@@ -493,7 +493,7 @@ python3.14 tools/validate_sdk.py --full --wheel /absolute/path/to/observe-wheel.
 
 2026-09-23 同轮路径契约修正：`prepare_png_asset` 现要求绝对路径；相对用户路径通过 `prepare_png_asset_from_base` 显式传入绝对 base，避免按进程 cwd 解析。SDK 测试覆盖错误路径与正确解析。
 
-2026-09-23 S3 首批实施：新增 `kasane-python` mixed-layout wheel，固定 PyO3 0.29.2 与 maturin 1.15.0；原生 Session 使用短时锁，`with edit` 收集命令后一次调用 Rust SDK 发布。已接入 PNG/矩形建模、参数和完整 mesh binding、位置更新、CPU 求值、工程导入/保存/导出、结构化业务异常，以及一次性 runner 的 stdout/stderr、异常行号与会话版本报告。仓库外 CPython 3.14 venv 的 7 项测试与 CPU recipe 通过；公开入口覆盖检查记录 29/115 已绑定，剩余 86 项及 GPU 观察仍待实施。
+2026-09-23 S3 首批实施：新增 `zipzi-python` mixed-layout wheel，固定 PyO3 0.29.2 与 maturin 1.15.0；原生 Session 使用短时锁，`with edit` 收集命令后一次调用 Rust SDK 发布。已接入 PNG/矩形建模、参数和完整 mesh binding、位置更新、CPU 求值、工程导入/保存/导出、结构化业务异常，以及一次性 runner 的 stdout/stderr、异常行号与会话版本报告。仓库外 CPython 3.14 venv 的 7 项测试与 CPU recipe 通过；公开入口覆盖检查记录 29/115 已绑定，剩余 86 项及 GPU 观察仍待实施。
 
 2026-09-23 S3 同轮后续：补工程重置、asset/mesh/parameter/几何快照、全部对象 ID 列表、名称与引用查询、结构诊断、历史状态和事件、独立预览值与帧。Python 快照的版本与数据在同一次原生锁内读取；预览失败不覆盖旧值。仓库外 wheel 的 9 项 Python CPU 测试通过；公开入口覆盖升至 59/115，剩余 56 项待绑定。
 
@@ -529,7 +529,7 @@ python3.14 tools/validate_sdk.py --full --wheel /absolute/path/to/observe-wheel.
 
 2026-09-23 S3 CPU 验收：仓库外 CPython 3.14 venv 安装 wheel，`test_cpu.py` 28 项通过；`python_cpu_recipe.py` 在仓库外独立输出目录完成创建、采样、保存和重开。Rust SDK 与 Python 基础 fixture 共用 `asymmetric-2x2.png`、100×100 画布及 40–60 矩形，检查相同的中点采样结果；两线程版本竞争、with edit 回滚、快照副本及 runner 异常行号均由 wheel 测试覆盖。覆盖检查 `--require-complete`、Rust 测试和 Clippy 均通过。S3 在当前 CPython 3.14/macOS arm64 环境的 CPU 验收完成；S4 GPU 观察与 S5 完整 agent 流程仍待实施。
 
-2026-09-23 S4 首批：新增 `kasane-sdk-observe`；`ObservationInput` 从已提交 Session 捕获明确参数的帧、版本、资源描述与项目 root，随后在会话锁外用 Project 共用 PNG/hash/尺寸验证读取纹理。`Observer` 复用 wgpu device、renderer 和按内容 hash 管理的纹理，提供透明 RGBA 与 PNG 字节；可选 Python `observe` feature 暴露同一入口，默认 CPU wheel 不初始化 GPU。Python `observe_run` 将逐样本 PNG、实际参数、来源版本、focus crop、contact sheet 和诊断写入独立运行目录；crop 从完整合成图按本次求值和 view 的 mesh bounds 裁剪，保留 mask/offscreen 遮挡。失败报告标记失败样本，不把旧图标成新结果。真实 GPU Rust 测试覆盖未保存工程、连续几何/纹理/view 变化；仓库外 feature wheel 的 2 项测试覆盖资源失败、PNG、运行报告、crop 像素与完整帧一致，以及 mask/Offscreen 场景。叠加层、完整报告字段及 S4 GPU 门禁仍在后续批次。
+2026-09-23 S4 首批：新增 `zipzi-sdk-observe`；`ObservationInput` 从已提交 Session 捕获明确参数的帧、版本、资源描述与项目 root，随后在会话锁外用 Project 共用 PNG/hash/尺寸验证读取纹理。`Observer` 复用 wgpu device、renderer 和按内容 hash 管理的纹理，提供透明 RGBA 与 PNG 字节；可选 Python `observe` feature 暴露同一入口，默认 CPU wheel 不初始化 GPU。Python `observe_run` 将逐样本 PNG、实际参数、来源版本、focus crop、contact sheet 和诊断写入独立运行目录；crop 从完整合成图按本次求值和 view 的 mesh bounds 裁剪，保留 mask/offscreen 遮挡。失败报告标记失败样本，不把旧图标成新结果。真实 GPU Rust 测试覆盖未保存工程、连续几何/纹理/view 变化；仓库外 feature wheel 的 2 项测试覆盖资源失败、PNG、运行报告、crop 像素与完整帧一致，以及 mask/Offscreen 场景。叠加层、完整报告字段及 S4 GPU 门禁仍在后续批次。
 
 2026-09-23 S4 观察来源补充：每帧用本次 `DrawableFrame`、校验后纹理内容 hash 和输出 view 生成 `input_sha256`；运行报告记录 SDK 版本、原生模块二进制 hash、平台、session/generation/document/source/evaluation revision，以及透明背景、线性 `RGBA8Unorm` 和未额外转换的预乘 alpha 约定。GPU wheel 测试确认几何、纹理、view 改变会改变输入指纹；外部观察 recipe 的三档参数采样生成三个不同图像和输入指纹，且不改变 Session preview。逐项图像预期对照与 S4 完整门禁继续实施。
 

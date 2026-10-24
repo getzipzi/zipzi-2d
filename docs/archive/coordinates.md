@@ -1,6 +1,6 @@
 # Coordinate contract
 
-Kasane stores geometry in origin-relative model coordinates: X right, Y up.
+Zipzi stores geometry in origin-relative model coordinates: X right, Y up.
 The model has no canvas rectangle, source-origin offset, axis flag or PPU.
 One model unit is one pixel at the default artwork import scale. Texture
 resolution does not impose a model size; resampled artwork needs an explicit

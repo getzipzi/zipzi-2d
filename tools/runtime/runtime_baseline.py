@@ -107,15 +107,15 @@ def main():
     output.mkdir(parents=True)
     environment = dict(date_utc=datetime.now(timezone.utc).isoformat(), platform=platform.platform(),
         rustc=command(["rustc", "-Vv"]), python=platform.python_version(),
-        editor=provenance(ROOT.parent / "kasane-editor"), sdk=provenance(ROOT))
+        editor=provenance(ROOT.parent / "zipzi-editor"), sdk=provenance(ROOT))
     if platform.system() == "Darwin":
         environment["hardware"] = command(["sysctl", "hw.model", "machdep.cpu.brand_string", "hw.memsize"])
         environment["graphics"] = command(["system_profiler", "SPDisplaysDataType"])
     if args.model:
         environment["model_files_sha256"] = {str(p.relative_to(args.model.parent)): digest(p)
-            for p in sorted(args.model.parent.rglob("*")) if p.is_file() and p.name != ".kasane.lock"}
+            for p in sorted(args.model.parent.rglob("*")) if p.is_file() and p.name != ".zipzi.lock"}
     (output / "environment.json").write_text(json.dumps(environment, indent=2) + "\n")
-    build = subprocess.run(["cargo", "build", "--locked", "--release", "-p", "kasane-sdk",
+    build = subprocess.run(["cargo", "build", "--locked", "--release", "-p", "zipzi-sdk",
         "--example", "runtime_baseline", "--message-format=json-render-diagnostics"], cwd=ROOT, capture_output=True, text=True)
     (output / "build.jsonl").write_text(build.stdout)
     (output / "build.log").write_text(build.stderr)
@@ -138,7 +138,7 @@ def main():
             if activity := build_activity():
                 raise RuntimeError(f"concurrent build detected before timing; retry with fresh output: {activity}")
             process = subprocess.run(invocation, cwd=ROOT, capture_output=True, text=True,
-                env={key: value for key, value in os.environ.items() if key != "KASANE_DEV_SESSION_DIR"})
+                env={key: value for key, value in os.environ.items() if key != "ZIPZI_DEV_SESSION_DIR"})
             (output / f"{name}.jsonl").write_text(process.stdout)
             (output / f"{name}.stderr").write_text(process.stderr)
             process.check_returncode()
@@ -153,12 +153,12 @@ def main():
             max_peak_bytes=max(run["measurements"][case]["peak_bytes"] for run in runs),
             max_retained_bytes=max(run["measurements"][case]["retained_bytes"] for run in runs),
         ) for case in CASES})
-    for label, root in [("editor", ROOT.parent / "kasane-editor"), ("sdk", ROOT)]:
+    for label, root in [("editor", ROOT.parent / "zipzi-editor"), ("sdk", ROOT)]:
         if provenance(root) != environment[label]:
             raise RuntimeError(f"{label} sources changed during measurement; discard timing")
     if args.model:
         after = {str(p.relative_to(args.model.parent)): digest(p)
-            for p in sorted(args.model.parent.rglob("*")) if p.is_file() and p.name != ".kasane.lock"}
+            for p in sorted(args.model.parent.rglob("*")) if p.is_file() and p.name != ".zipzi.lock"}
         if after != environment["model_files_sha256"]:
             raise RuntimeError("model files changed during measurement; discard timing")
     (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

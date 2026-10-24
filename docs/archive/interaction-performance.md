@@ -1,6 +1,6 @@
 # 120 Hz 交互优化记录
 
-日期：2026-09-28。目标帧预算 **8.33 ms**。改动同时位于 `kasane-editor` 和相邻的 `kasane-2d`，两边必须一起使用。
+日期：2026-09-28。目标帧预算 **8.33 ms**。改动同时位于 `zipzi-editor` 和相邻的 `zipzi-2d`，两边必须一起使用。
 
 ## 结果与适用范围
 
@@ -72,11 +72,11 @@ CSV 包含每帧 GPU 时间戳和计数器：
 - 模型来自本地忽略目录，资源不随提交发布。Mao 260 个 drawable；Shirousagi 24 个。
 
 ```sh
-cargo run --locked --release -p editor-render --example interaction_benchmark -- \
+cargo run --locked --release -p zipzi-editor-render --example interaction_benchmark -- \
   models/local/mao/runtime/mao_pro.model3.json 300 1280 800
 
-KASANE_BENCH_MODEL="$PWD/models/local/mao/runtime/mao_pro.model3.json" \
-  cargo test --locked --release -p kasane-editor --bin kasane-editor \
+ZIPZI_BENCH_MODEL="$PWD/models/local/mao/runtime/mao_pro.model3.json" \
+  cargo test --locked --release -p zipzi-editor --bin zipzi-editor \
   canvas_ui_cpu_benchmark -- --ignored --nocapture
 
 ./scripts/build-app.sh

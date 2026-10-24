@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render Mao's head with O1 capture, then verify saved scene and packet replay.
 
-Run with an installed ``kasane`` wheel built with the ``observe`` feature::
+Run with an installed ``zipzi`` wheel built with the ``observe`` feature::
 
     python tools/validation/run_mao_observe_o1_integration.py
 
@@ -18,7 +18,7 @@ import subprocess
 import sys
 from uuid import uuid4
 
-import kasane
+import zipzi
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,7 +40,7 @@ def main() -> None:
     run = OUTPUT / f"run-{uuid4().hex[:12]}"
     run.mkdir()
 
-    session = kasane.Session(str(uuid4()), 64, 64, (32, 32))
+    session = zipzi.Session(str(uuid4()), 64, 64, (32, 32))
     imported = session.import_model3(SOURCE)
     if imported.warnings or session.diagnose_resources():
         raise AssertionError("Mao import reported warnings or missing resources")
@@ -48,9 +48,9 @@ def main() -> None:
         raise AssertionError("Mao drawable count changed")
     canvas = session.source_canvas
     full_roi = (0.0, 0.0, canvas.width, canvas.height)
-    request = kasane.RawInspectionRequest(HEAD_ROI, HEAD_RESOLUTION)
+    request = zipzi.RawInspectionRequest(HEAD_ROI, HEAD_RESOLUTION)
 
-    with kasane.Observer(*FULL_RESOLUTION, FULL_RESOLUTION[0]) as observer:
+    with zipzi.Observer(*FULL_RESOLUTION, FULL_RESOLUTION[0]) as observer:
         scene = observer.capture_scene(session)
         full = observer.render_scene(scene, roi=full_roi, resolution=FULL_RESOLUTION)
         head = observer.render_scene(scene, roi=HEAD_ROI, resolution=HEAD_RESOLUTION)
@@ -84,9 +84,9 @@ def main() -> None:
 from hashlib import sha256
 from pathlib import Path
 import sys
-import kasane
-request = kasane.RawInspectionRequest((1300.0, 500.0, 4500.0, 3100.0), (1280, 1040))
-with kasane.Observer(1024, 1024, 1024) as observer:
+import zipzi
+request = zipzi.RawInspectionRequest((1300.0, 500.0, 4500.0, 3100.0), (1280, 1040))
+with zipzi.Observer(1024, 1024, 1024) as observer:
     packet = observer.open(Path(sys.argv[1]))
     view = observer.render(packet, request=request).views[-1]
     assert sha256(view.rgba).hexdigest() == sys.argv[2]

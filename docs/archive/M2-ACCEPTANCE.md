@@ -7,21 +7,21 @@
 依赖 CMake、C/C++ 编译器、libpng、OpenSSL Crypto、pkg-config。完整双 Core 验收需要 M1 本地官方 Core SDK；Godot/GPU 部分另外需要 Godot 与参考播放器。Python 依赖见 tools/requirements-validation.txt。
 
 ```sh
-target/kasane/buildenv/bin/python tools/validate_core.py
+target/zipzi/buildenv/bin/python tools/validate_core.py
 # 原生持久化验收：不启动 Godot
-target/kasane/buildenv/bin/python tools/validate_native_project.py
-target/kasane/buildenv/bin/python -m SCons -C modules/kasane-gd platform=macos arch=arm64 target=template_debug -j8
+target/zipzi/buildenv/bin/python tools/validate_native_project.py
+target/zipzi/buildenv/bin/python -m SCons -C modules/zipzi-gd platform=macos arch=arm64 target=template_debug -j8
 # 原生验收 + 薄绑定 + 真实 GPU
-target/kasane/buildenv/bin/python tools/validate_project.py
-target/kasane/buildenv/bin/python tools/validate_godot.py
-target/kasane/buildenv/bin/python tools/validate_gpu.py
+target/zipzi/buildenv/bin/python tools/validate_project.py
+target/zipzi/buildenv/bin/python tools/validate_godot.py
+target/zipzi/buildenv/bin/python tools/validate_gpu.py
 ```
 
 不具备官方 SDK 时，可通过根 CMake 的 core-make/core-debug 运行原生单元测试。完整验收必需项缺失时返回失败，不将跳过计为通过。
 
 ## 结果
 
-最终 M2 报告：`target/kasane/project-files/run-llr9gn67/report.json`。
+最终 M2 报告：`target/zipzi/project-files/run-llr9gn67/report.json`。
 其 `native/report.json` 包含 1,034 项原生检查（其中 1,023 项为原生单元检查），另有 37,800 项双 Core 数值比较；外层有 19 项 Godot 绑定/纹理检查和 6 项 GPU 整图/前景比较。
 
 | 范围 | 验证 |
@@ -42,4 +42,4 @@ target/kasane/buildenv/bin/python tools/validate_gpu.py
 
 ## 代码质量
 
-30 个 Kasane/Godot 翻译单元通过 clang-tidy。本次 C++ 文件通过 LLVM 22.1.8 格式检查。全仓格式门禁仍报告 Purism 子模块三个既有文件：include/PurismCore.h、include/PurismKeyform.h、src/param.c；子模块保持干净，不将全仓格式门禁记为通过。
+30 个 Zipzi/Godot 翻译单元通过 clang-tidy。本次 C++ 文件通过 LLVM 22.1.8 格式检查。全仓格式门禁仍报告 Purism 子模块三个既有文件：include/PurismCore.h、include/PurismKeyform.h、src/param.c；子模块保持干净，不将全仓格式门禁记为通过。

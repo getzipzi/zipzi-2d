@@ -64,7 +64,7 @@ S0 基线/样本/参考路径
 5. 为零三角形对象提供脚本查询/顶点编辑/补三角形；保存重开、撤销恢复、导出对象 ID 与引用一致。
 6. Rice、Hiyori、Mark 使用统一参数采样跑原文件→Document→工程→导出的数值及应用/GPU 流程。
 
-**修改位置：**`kasane-moc3/src/{inspector,decoder,encoder,layout,schema}.rs`、`kasane-core/src/{geometry,document,evaluation}.rs`、`kasane-godot/src/{render_frame_validation,document_preview,selection_overlay}.rs`。
+**修改位置：**`zipzi-moc3/src/{inspector,decoder,encoder,layout,schema}.rs`、`zipzi-core/src/{geometry,document,evaluation}.rs`、`zipzi-godot/src/{render_frame_validation,document_preview,selection_overlay}.rs`。
 
 **必需测试：**无面对象是 Glue 端点/遮罩源/被遮罩对象；无面→有面→无面的连续帧；空数组 bounds；未知版本、截断 480 表、溢出/负数/悬空索引；有/无 PurismCore 两种构建。
 
@@ -155,7 +155,7 @@ S0 基线/样本/参考路径
 4. 实现资源池、相机/尺寸变化、禁用/空组清理、同帧读写分离及失败前置校验；测量稳定帧资源复用与峰值预算。
 5. Ren 在正式 Editor 中参数预览、编辑、保存重开和再导出；原文件由官方 Framework 渲染，新文件也由官方路径复验。
 
-**修改位置：**kasane-godot document_preview、frame validation、纹理/渲染资源与 shader；必要的新渲染计划模块；GPU 工具和 Editor 验收场景。
+**修改位置：**zipzi-godot document_preview、frame validation、纹理/渲染资源与 shader；必要的新渲染计划模块；GPU 工具和 Editor 验收场景。
 
 **必需测试：**每种受支持模式、半透明重叠、透明/不透明背景、嵌套 Offscreen、无面 mask、普通/反向 mask、目标颜色读取、屏幕尺寸/相机变化、禁用后重启、重复稳定帧与 A→B→A、对象重父级。
 
@@ -181,9 +181,9 @@ S0 基线/样本/参考路径
 
 ```sh
 cargo check --workspace --locked
-cargo test -p kasane-core --locked
-cargo test -p kasane-moc3 --locked
-cargo test -p kasane-project --locked
+cargo test -p zipzi-core --locked
+cargo test -p zipzi-moc3 --locked
+cargo test -p zipzi-project --locked
 python3 tools/validate_m3b.py --help
 python3 tools/validate_gpu.py --help
 ```
@@ -211,13 +211,13 @@ python3 tools/validate_m3c.py --manifest <local-manifest.json> --stage all --out
 
 | 阶段 | 状态 | revision / 改动 | 用例及报告 | 未完成项 |
 |---|---|---|---|---|
-| S0 | passed | tools/probes/project_runtime_probe.cpp, tools/validate_m3c.py | [s0_baseline_report.json](../target/kasane/m3c/s0_baseline_report.json), [baseline_manifest.json](../target/kasane/m3c/baseline_manifest.json) | 真实 4.2、循环参数及 BlendShape Glue 外部资产待后续接入 |
-| S1 | passed | modules/kasane-core, modules/kasane-godot, modules/kasane-moc3, tools/validate_m3c.py | [s1_report.json](../target/kasane/m3c/s1_report.json) | 无；Hiyori 4 个无面网格及 Glue 引用完整保留，Rice/Hiyori/Mark 导入与求值通过，v4/v6 安全门禁已建立 |
-| S2 | not_run | modules/kasane-moc3, modules/kasane-project, tools/create_v42_external_fixture.py, tools/validate_m3c.py | [s2_report.json](../target/kasane/m3c/s2_report.json) | 代码及构造用例交付完成；真实外部 4.2 样本验收保持 not_run |
-| S3 | passed | modules/kasane-core, modules/kasane-godot, modules/kasane-moc3, modules/kasane-project, tools/create_cyclic_fixture.py, tools/validate_m3c.py | [s3_report.json](../target/kasane/m3c/s3_report.json) | 无；循环参数、wrap 数值与跨周期求值、工程 v4 迁移与未实现集合拦截、双 Core 验证通过 |
-| S4 | passed | modules/kasane-core, modules/kasane-project, modules/kasane-moc3, tools/validate_m3c.py | [s4_report.json](../target/kasane/m3c/s4_report.json) | 无；BlendShape Glue 增量强度求值、[0, 1] 钳制、decoder/encoder bs_glue_src、删除引用保护、工程 v4 往返与双 Core 0 误差通过 |
-| S5 | passed | modules/kasane-core, modules/kasane-project, modules/kasane-moc3, tools/validate_m3c.py | [s5_report.json](../target/kasane/m3c/s5_report.json) | 无；Offscreen 与 raw_blend_mode 语义、v6 480 偏移布局 (5824 头部预留)、Part 映射与求值、工程 v4 编解码、Auto/强制 5.0/5.3 预检及双 Core 24 个 Offscreen 零误差一致通过 |
-| S6 | passed | kasane-core / kasane-godot / kasane-moc3、正式 Editor、tools/validate_s6.py 与官方 Framework GPU probe | [s6_report.json](../target/kasane/m3c/s6_report.json)、[实现与验收记录](S6-offscreen-composition-fix.md) | 无；9 项门禁通过：2,160 个混合样本、106 项生命周期、103 项 Editor 官方图像检查、M4/M3B 回归及约 552 MiB 渲染资源峰值。当前源码 Editor + debug GDExtension 已验证；S7 独立打包另行验收 |
+| S0 | passed | tools/probes/project_runtime_probe.cpp, tools/validate_m3c.py | [s0_baseline_report.json](../target/zipzi/m3c/s0_baseline_report.json), [baseline_manifest.json](../target/zipzi/m3c/baseline_manifest.json) | 真实 4.2、循环参数及 BlendShape Glue 外部资产待后续接入 |
+| S1 | passed | modules/zipzi-core, modules/zipzi-godot, modules/zipzi-moc3, tools/validate_m3c.py | [s1_report.json](../target/zipzi/m3c/s1_report.json) | 无；Hiyori 4 个无面网格及 Glue 引用完整保留，Rice/Hiyori/Mark 导入与求值通过，v4/v6 安全门禁已建立 |
+| S2 | not_run | modules/zipzi-moc3, modules/zipzi-project, tools/create_v42_external_fixture.py, tools/validate_m3c.py | [s2_report.json](../target/zipzi/m3c/s2_report.json) | 代码及构造用例交付完成；真实外部 4.2 样本验收保持 not_run |
+| S3 | passed | modules/zipzi-core, modules/zipzi-godot, modules/zipzi-moc3, modules/zipzi-project, tools/create_cyclic_fixture.py, tools/validate_m3c.py | [s3_report.json](../target/zipzi/m3c/s3_report.json) | 无；循环参数、wrap 数值与跨周期求值、工程 v4 迁移与未实现集合拦截、双 Core 验证通过 |
+| S4 | passed | modules/zipzi-core, modules/zipzi-project, modules/zipzi-moc3, tools/validate_m3c.py | [s4_report.json](../target/zipzi/m3c/s4_report.json) | 无；BlendShape Glue 增量强度求值、[0, 1] 钳制、decoder/encoder bs_glue_src、删除引用保护、工程 v4 往返与双 Core 0 误差通过 |
+| S5 | passed | modules/zipzi-core, modules/zipzi-project, modules/zipzi-moc3, tools/validate_m3c.py | [s5_report.json](../target/zipzi/m3c/s5_report.json) | 无；Offscreen 与 raw_blend_mode 语义、v6 480 偏移布局 (5824 头部预留)、Part 映射与求值、工程 v4 编解码、Auto/强制 5.0/5.3 预检及双 Core 24 个 Offscreen 零误差一致通过 |
+| S6 | passed | zipzi-core / zipzi-godot / zipzi-moc3、正式 Editor、tools/validate_s6.py 与官方 Framework GPU probe | [s6_report.json](../target/zipzi/m3c/s6_report.json)、[实现与验收记录](S6-offscreen-composition-fix.md) | 无；9 项门禁通过：2,160 个混合样本、106 项生命周期、103 项 Editor 官方图像检查、M4/M3B 回归及约 552 MiB 渲染资源峰值。当前源码 Editor + debug GDExtension 已验证；S7 独立打包另行验收 |
 | S7 | not_run | — | — | 全矩阵与独立应用 |
 
 

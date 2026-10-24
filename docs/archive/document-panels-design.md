@@ -186,10 +186,10 @@ Glue、Motions、Expressions、Physics、Pose 和 BlendShapes 都拥有独立 pa
 
 ## 实现边界
 
-沿用现有 editor、editor-core 与 SDK 的职责划分：
+沿用现有 editor、zipzi-editor-core 与 SDK 的职责划分：
 
 - SDK 负责持久化模型、编辑语义、两轴限制、事务、引用校验与撤销重做。
-- editor-core 负责文档级共享选择、参数焦点、活动绑定，以及供各面板使用的对象与关系投影。
+- zipzi-editor-core 负责文档级共享选择、参数焦点、活动绑定，以及供各面板使用的对象与关系投影。
 - editor 负责 GPUI 控件、Dock 注册、布局与交互呈现。
 
 需要统一的带类型对象引用和关系索引。关系边区分部件归属、变形父级、绑定驱动、遮罩、Glue 连接和资源使用；从这份信息生成各树、列表和关系详情，不维护多个可独立修改的模型副本。

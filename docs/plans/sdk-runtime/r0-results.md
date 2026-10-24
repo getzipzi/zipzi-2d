@@ -13,9 +13,9 @@
 命令：
 
 ```sh
-CARGO_TARGET_DIR=/Users/liangbohao/web/kasane-2d/target \
+CARGO_TARGET_DIR=/Users/liangbohao/web/zipzi-2d/target \
   uv run --locked python tools/runtime_baseline.py target/runtime-r0-clean \
-  --model /Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json
+  --model /Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json
 ```
 
 每个 fixture 运行 5 个独立进程。数值为逐进程 P50/P95 的中位数，单位 ms；
@@ -63,14 +63,14 @@ AuthoringSession 的 `size_of` 为 4,640 B，只是容器本体，不能替代�
 | --- | --- |
 | SDK `uv run --locked python tools/runtime_inventory.py --check` | 952 条 API/记录源清单匹配；不等于已连接 |
 | SDK `uv run --locked python -m unittest discover -s tools -p test_runtime_inventory.py` | 3 项通过：分模块/重导出/原生导出/领域意图发现，语法与注释/字面量隔离，以及损坏/Debug/缺样本报告拒绝 |
-| SDK `cargo test --locked -p kasane-sdk --test integration -- vertical_slice:: handles:: history_budget::` | 11 项通过；owned candidate/失败/取消/完整版本/旧句柄/预算/redo 基线 |
-| Editor `cargo test --locked -p editor-core --test integration workspaces::` | 8 项通过；模式切换、手势、共享 Undo、多视图、后台保存 |
-| Editor `cargo test --locked -p editor-core --test integration -- editor:: properties:: timeline:: viewport_isolation:: viewport_states::` | 99 项通过；保存成功/失败与路径预留、属性、Timeline 编辑与播放、独立视口/隔离状态 |
-| Editor `cargo test --locked --workspace --features kasane-editor/test-support --lib headless_tests::ui_performance` | 4 项通过；Timeline scrub/overview 复用、画布通知、属性列表虚拟化与历史刷新 |
+| SDK `cargo test --locked -p zipzi-sdk --test integration -- vertical_slice:: handles:: history_budget::` | 11 项通过；owned candidate/失败/取消/完整版本/旧句柄/预算/redo 基线 |
+| Editor `cargo test --locked -p zipzi-editor-core --test integration workspaces::` | 8 项通过；模式切换、手势、共享 Undo、多视图、后台保存 |
+| Editor `cargo test --locked -p zipzi-editor-core --test integration -- editor:: properties:: timeline:: viewport_isolation:: viewport_states::` | 99 项通过；保存成功/失败与路径预留、属性、Timeline 编辑与播放、独立视口/隔离状态 |
+| Editor `cargo test --locked --workspace --features zipzi-editor/test-support --lib headless_tests::ui_performance` | 4 项通过；Timeline scrub/overview 复用、画布通知、属性列表虚拟化与历史刷新 |
 | Editor `python3 scripts/runtime-migration-inventory.py --check` | 基线采集时 70 文件、669 个源引用；整合主分支后刷新为 72 文件、692 个引用并重新检查；未宣称已迁移 |
 | SDK `cargo fmt --all -- --check`；两仓 `git diff --check` | 通过 |
 
-Editor 测试均 unset `KASANE_DEV_SESSION_DIR`。Cargo 复用各主 checkout 的 target
+Editor 测试均 unset `ZIPZI_DEV_SESSION_DIR`。Cargo 复用各主 checkout 的 target
 缓存，配对源码仍来自隔离工作树。第一次误选 `--lib workspace::` 运行到 0 项，
 不计通过数，随后改为实际 integration 的 `workspaces::` 并验证上表 8 项。
 没有运行两仓全套或 Python Release wheel 验收；本阶段未改 SDK 正式行为或绑定。
@@ -78,7 +78,7 @@ Editor 测试均 unset `KASANE_DEV_SESSION_DIR`。Cargo 复用各主 checkout �
 旧检查单独执行：
 
 ```sh
-uv run --locked python modules/kasane-python/tools/check_coverage.py --require-complete
+uv run --locked python modules/zipzi-python/tools/check_coverage.py --require-complete
 ```
 
 结果为**失败（既有清单过期）**：现有 scanner 发现若干未登记方法，且仍登记已删除
@@ -142,17 +142,17 @@ Editor 基线，不证明尚未实现的 Runtime 客户端或 R5 Preview 已隔�
 可执行文件，将编译与测量分离）：
 
 ```sh
-cargo build --locked --release -p kasane-editor --features test-support
+cargo build --locked --release -p zipzi-editor --features test-support
 # 环境与场景参数完整保存在 target/runtime-r0-native/run.py / native-summary.json。
 # SDK 命令生成合成控制 fixture；窗口基准使用其 manifest，而非修改 Mao 资源。
-cargo run --locked --release --manifest-path ../kasane-2d/Cargo.toml \
-  -p kasane-sdk --example runtime_native_fixture -- /absolute/fresh/native-fixture
+cargo run --locked --release --manifest-path ../zipzi-2d/Cargo.toml \
+  -p zipzi-sdk --example runtime_native_fixture -- /absolute/fresh/native-fixture
 
-env -u KASANE_DEV_SESSION_DIR KASANE_TIMELINE_MODEL=/absolute/mao_pro.model3.json \
-  KASANE_TIMELINE_REQUIRE_ASSET=1 KASANE_TIMELINE_SAMPLES=16 \
-  cargo test --locked --release -p kasane-editor --features test-support --test timeline_acceptance
-env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=viewports \
-  cargo test --locked --release -p kasane-editor --features test-support --test headless_screenshot
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_TIMELINE_MODEL=/absolute/mao_pro.model3.json \
+  ZIPZI_TIMELINE_REQUIRE_ASSET=1 ZIPZI_TIMELINE_SAMPLES=16 \
+  cargo test --locked --release -p zipzi-editor --features test-support --test timeline_acceptance
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=viewports \
+  cargo test --locked --release -p zipzi-editor --features test-support --test headless_screenshot
 ```
 
 ### 已知失败与 R0 退出项

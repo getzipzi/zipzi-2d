@@ -37,11 +37,11 @@ Mao model3，30 次预热、360 次测量，目标输入 120 Hz；隔离配置�
 ## 复现
 
 ```sh
-KASANE_BENCH_PARAMETERS=1 scripts/window-benchmark.sh \
+ZIPZI_BENCH_PARAMETERS=1 scripts/window-benchmark.sh \
   models/local/mao/runtime/mao_pro.model3.json target/parameter-benchmark 360 120
 ```
 
-不设置 `KASANE_BENCH_PARAMETERS` 时，原有 pan / zoom / opacity 工作负载保持不变。
+不设置 `ZIPZI_BENCH_PARAMETERS` 时，原有 pan / zoom / opacity 工作负载保持不变。
 benchmark 将 input scope 保持到 GPUI 完成事件队列 flush，确保 Slider 的异步订阅回调正确关联输入。
 报告区分窗口呈现频率和不同模型帧呈现频率；窗口失焦、trace 丢失、测试未完成会标记为无效。
 
@@ -129,12 +129,12 @@ opt-level = 2
 在临时源码副本中应用归档的 `diagnostic.patch` 后，使用以下命令；补丁仅供诊断，包含实验开关和启动预热安排：
 
 ```sh
-cargo build --locked -p kasane-editor
+cargo build --locked -p zipzi-editor
 bash docs/archive/benchmarks/2026-09-30/parameters-debug/run-probe.sh my-debug-baseline 0 0 60 5
 bash docs/archive/benchmarks/2026-09-30/parameters-debug/run-probe.sh my-selective-drag 1 0 60 5
 bash docs/archive/benchmarks/2026-09-30/parameters-debug/run-probe.sh my-uncached-panel 1 1 60 5
 
-cargo build --locked -p kasane-editor --config 'profile.dev.package.gpui-pre.opt-level=2'
+cargo build --locked -p zipzi-editor --config 'profile.dev.package.gpui-pre.opt-level=2'
 bash docs/archive/benchmarks/2026-09-30/parameters-debug/run-probe.sh my-optimized-gpui 0 0 360 30
 ```
 
@@ -176,7 +176,7 @@ Dock 缓存测试使用真实 Component skin，并同时验证指定面板保留
 可用同一脚本重新测量 Debug；脚本仍默认使用 Release：
 
 ```sh
-KASANE_BENCH_PROFILE=debug KASANE_BENCH_PARAMETERS=1 scripts/window-benchmark.sh \
+ZIPZI_BENCH_PROFILE=debug ZIPZI_BENCH_PARAMETERS=1 scripts/window-benchmark.sh \
   models/local/mao/runtime/mao_pro.model3.json target/parameter-debug-check 360 120
 ```
 

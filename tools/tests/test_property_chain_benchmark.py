@@ -52,7 +52,7 @@ class PropertyChainReportTests(unittest.TestCase):
         sources = BENCH.source_manifest()
         self.assertIn('Cargo.lock', sources)
         self.assertIn('tools/benchmarks/property-chain-benchmark.py', sources)
-        self.assertIn('crates/kasane-sdk/Cargo.toml', sources)
+        self.assertIn('crates/zipzi-sdk/Cargo.toml', sources)
         self.assertNotIn('apps/editor/Cargo.lock', sources)
         self.assertFalse(any('models/local/' in path or path.startswith('../') for path in sources))
         with mock.patch.object(BENCH, 'source_manifest', return_value={'Cargo.lock':'hash'}), \

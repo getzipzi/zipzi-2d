@@ -14,7 +14,7 @@
 - `vendor/gpui-pre/src/scene.rs`：按绘制顺序和图元类别构成 `PrimitiveBatch::Paths`。
 - `vendor/gpui-pre-apple/src/metal_renderer.rs`：每个路径批次结束主 encoder，进入全窗口尺寸的 MSAA 中间纹理清理/绘制/resolve，再恢复主 encoder 合成路径。
 
-因此一帧有约 **99–113 个 render encoder**（初始 1 个，每个路径批次增加 2 个）。大量小路径引发了重复制备中间纹理和切换 render pass 的成本；并非 Kasane 模型的三角形绘制本身占据了这些时间。这里确认的是整个路径绘制链路的成本，尚未用 GPU 硬件计数器细分 resolve 带宽与其他 pass 成本。
+因此一帧有约 **99–113 个 render encoder**（初始 1 个，每个路径批次增加 2 个）。大量小路径引发了重复制备中间纹理和切换 render pass 的成本；并非 Zipzi 模型的三角形绘制本身占据了这些时间。这里确认的是整个路径绘制链路的成本，尚未用 GPU 硬件计数器细分 resolve 带宽与其他 pass 成本。
 
 用只在追踪时生效的诊断开关，把全部边线保留为一个具有独立子路径的 Path：路径批次变成 **1 批**，对应 3 个 render encoder。模型、顶点、场景求值、命中几何及视口变换仍走原流程。
 
@@ -83,20 +83,20 @@
   models/local/mao/runtime/mao_pro.model3.json target/recheck 300 120
 ```
 
-给命令添加以下环境变量可重现对照；它们只在 `KASANE_FRAME_TRACE` 安装追踪 sink 后生效：
+给命令添加以下环境变量可重现对照；它们只在 `ZIPZI_FRAME_TRACE` 安装追踪 sink 后生效：
 
 | 变量 | 默认/可选值 | 用途 |
 | --- | --- | --- |
 | `GPUI_TRACE_DRAWABLES` | 默认 3，可选 2/3 | drawable 池大小 |
 | `GPUI_TRACE_DISPLAY_SYNC` | 默认 1，可选 0/1 | 显示同步 |
 | `GPUI_TRACE_OFFSCREEN` | 默认 0，可选 0/1 | UI 离屏与复制分段探针 |
-| `KASANE_TRACE_HIDE_MESH_EDGES` | 默认 0，可选 0/1 | 隐藏边线作排除实验 |
-| `KASANE_TRACE_BATCH_MESH_EDGES` | 默认不设置，可选 0/1 | 不设置走完整 Metal 覆盖层；显式 1/0 分别使用 GPUI 合批/逐边基线 |
+| `ZIPZI_TRACE_HIDE_MESH_EDGES` | 默认 0，可选 0/1 | 隐藏边线作排除实验 |
+| `ZIPZI_TRACE_BATCH_MESH_EDGES` | 默认不设置，可选 0/1 | 不设置走完整 Metal 覆盖层；显式 1/0 分别使用 GPUI 合批/逐边基线 |
 
 例如：
 
 ```sh
-KASANE_TRACE_BATCH_MESH_EDGES=0 ./scripts/window-benchmark.sh \
+ZIPZI_TRACE_BATCH_MESH_EDGES=0 ./scripts/window-benchmark.sh \
   models/local/mao/runtime/mao_pro.model3.json target/recheck-baseline 300 120
 ```
 

@@ -15,8 +15,8 @@ benchmarks/cubism-matrix/runners/native/build*/
 **/__pycache__/
 .venv/
 # maturin develop refreshes the native extension in the mixed Python package.
-/crates/kasane-python/python/kasane/_native*.so
-/crates/kasane-python/python/kasane/_native*.pyd
+/crates/zipzi-python/python/zipzi/_native*.so
+/crates/zipzi-python/python/zipzi/_native*.pyd
 output
 
 # Editor output is covered by root target, output, model and Python cache rules.

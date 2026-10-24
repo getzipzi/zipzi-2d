@@ -65,11 +65,11 @@ Core proof 在验证中的身份判断和 SDK 发布选择各查询一次，每�
 验证：Core `document::` 及新增身份证明测试、benchmark 计数器测试均通过；SDK `changes::`
 在普通构建通过 11 项、开启插桩通过 13 项；普通 SDK integration 321 项通过（2 项原有忽略），
 Editor 属性链 3 项通过。七入口工作次数矩阵共 42 组，复现命令如下，原始输出保存在
-`../kasane-2d/target/sdk-incremental-publication/mesh-work-counts.txt`：
+`../zipzi-2d/target/sdk-incremental-publication/mesh-work-counts.txt`：
 
 ```sh
-# cwd: ../kasane-2d
-cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::mesh_tests::mesh_publication_work_is_independent -- --nocapture
+# cwd: ../zipzi-2d
+cargo test --locked -p zipzi-sdk --features bench-instrumentation --lib changes::mesh_tests::mesh_publication_work_is_independent -- --nocapture
 ```
 
 本次完成 B 的实现、差分和工作次数验收；尚未执行第 10 节规定的 plain Release 成对耗时、
@@ -121,14 +121,14 @@ replacement／setter 共 2 次（写入、提交各一次），标量 patch／pr
 
 验证通过：Core `document::` 18 项；SDK `changes::` 普通构建 17 项、插桩构建 21 项；
 SDK 普通 integration 321 项（2 项原有忽略）；Editor 属性链普通／插桩构建各 4 项。
-工作次数原始输出保存在 `../kasane-2d/target/sdk-incremental-publication/binding-work-counts.txt`；
+工作次数原始输出保存在 `../zipzi-2d/target/sdk-incremental-publication/binding-work-counts.txt`；
 复现命令：
 
 ```sh
-# cwd: ../kasane-2d
-cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::binding_payload_tests::binding_payload_work_is_independent -- --nocapture
-# cwd: kasane-editor
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --features bench-instrumentation --lib document::properties::tests::bound_mesh_opacity
+# cwd: ../zipzi-2d
+cargo test --locked -p zipzi-sdk --features bench-instrumentation --lib changes::binding_payload_tests::binding_payload_work_is_independent -- --nocapture
+# cwd: zipzi-editor
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --features bench-instrumentation --lib document::properties::tests::bound_mesh_opacity
 ```
 
 本次完成 C 的实现、差分及工作次数验收；plain Release 成对耗时、真实 Mao 探针和原生
@@ -183,15 +183,15 @@ SDK 普通 integration 321 项（2 项原有忽略）；Editor 属性链普通�
 复现命令与原始输出：
 
 ```sh
-# cwd: ../kasane-2d
-cargo test --locked -p kasane-core --features bench-instrumentation --lib document::
-cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes:: -- --nocapture
-cargo test --locked -p kasane-sdk --features bench-instrumentation --test integration
-# cwd: kasane-editor
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --features bench-instrumentation --lib document::properties::tests
+# cwd: ../zipzi-2d
+cargo test --locked -p zipzi-core --features bench-instrumentation --lib document::
+cargo test --locked -p zipzi-sdk --features bench-instrumentation --lib changes:: -- --nocapture
+cargo test --locked -p zipzi-sdk --features bench-instrumentation --test integration
+# cwd: zipzi-editor
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --features bench-instrumentation --lib document::properties::tests
 ```
 
-`../kasane-2d/target/sdk-incremental-publication/validation-work-counts.txt` 保存 54 组局部和
+`../zipzi-2d/target/sdk-incremental-publication/validation-work-counts.txt` 保存 54 组局部和
 3 组公开完整验证计数；`stage-d-core.txt`、`stage-d-changes.txt`、`stage-d-integration.txt`
 及对应 plain 日志保存测试结果。Editor 日志为 `target/stage-d-properties.txt` 和
 `target/stage-d-plain-properties.txt`。完成 D 的有限局部验证、差分和工作次数验收；
@@ -233,7 +233,7 @@ benchmark_done 为真、唯一 end、lost_events=0、issues 为空。增量版�
 
 ## 1. 依据和当前状态
 
-源码核对基于 editor `61371c0`、kasane-2d `c7f1651` 及两个工作区当时的未提交修改。
+源码核对基于 editor `61371c0`、zipzi-2d `c7f1651` 及两个工作区当时的未提交修改。
 未提交文件仍在变化，实施前应重新核对相应函数；以下路径和符号比行号更可靠。
 
 关联文档：
@@ -241,7 +241,7 @@ benchmark_done 为真、唯一 end、lost_events=0、issues 为空。增量版�
 - [发布优化与复测](../archive/benchmarks/2026-10-23-2d-publication-fix.md)：当前保守优化的实现与数字。
 - [回归定位](../archive/benchmarks/2026-10-23-ui-authoring-diagnosis.md)：提交、ObjectIndex 和原生栈的证据。
 - [原始 UI 对照](../archive/benchmarks/2026-10-23-ui-comparison.md)：最初指定的版本基线。
-- [SDK authoring 契约](../../../kasane-2d/modules/kasane-sdk/AUTHORING.md)：身份、锁、事务、历史及通知边界。
+- [SDK authoring 契约](../../../zipzi-2d/modules/zipzi-sdk/AUTHORING.md)：身份、锁、事务、历史及通知边界。
 - [C6 验收](unified-object-authoring-c6-acceptance.md)：既有跨领域回归入口。
 
 ### 已有实现及其边界
@@ -278,7 +278,7 @@ benchmark_done 为真、唯一 end、lost_events=0、issues 为空。增量版�
 
 ### SDK 发布
 
-[`EditSession::commit_to`](../../../kasane-2d/modules/kasane-sdk/src/edit.rs) 当前依次完成：
+[`EditSession::commit_to`](../../../zipzi-2d/modules/zipzi-sdk/src/edit.rs) 当前依次完成：
 
 1. 检查 session version、预算及取消状态。
 2. `candidate.validate_structure_since(session.document())`。
@@ -365,7 +365,7 @@ Complete 只表示“自基线以来的全部持久化写入都已覆盖”，�
 
 ### 5.1 默认路径自动回退
 
-[`Document::changed`](../../../kasane-2d/modules/kasane-core/src/document.rs) 是很多修改的
+[`Document::changed`](../../../zipzi-2d/modules/zipzi-core/src/document.rs) 是很多修改的
 共同出口，但目前是在内容写入后调用，而且还会清理 editor-state 子项。因此仅在这里
 按 `ChangeKind` 收集 IDs 不足以建立完整记录。
 
@@ -405,7 +405,7 @@ tracked 写入必须在进入变更前取得与当前 snapshot 匹配的状态�
 
 ## 6. SDK 如何消费记录
 
-在 [`edit.rs::commit_to`](../../../kasane-2d/modules/kasane-sdk/src/edit.rs) 中增加一个
+在 [`edit.rs::commit_to`](../../../zipzi-2d/modules/zipzi-sdk/src/edit.rs) 中增加一个
 Core 只读查询，取得“针对本 session 基线的完整 touched 记录”，失败则执行现有代码。
 不要在 SDK 根据操作名称补写 Core 没有证明的影响范围。
 
@@ -521,7 +521,7 @@ tracker 的完整摘要参照，逐字段比较整个序列化 ChangeSet，而�
 1. 独立 SDK：同一探针、Mao ArtMesh215、Release、5 次预热＋40 个样本，保留
    `replace_mesh` 路径并增加 Label SceneEdit／MeshBinding payload 路径；Undo 在计时外。
 2. Editor 属性链：复用 `scripts/property-chain-benchmark.py` 与
-   `crates/editor-core/examples/property_chain_benchmark.rs`，分别报告 begin/update/finish、
+   `crates/zipzi-editor-core/examples/property_chain_benchmark.rs`，分别报告 begin/update/finish、
    commit、preview；测试 retained index，不能仅统计 SDK 调用。
 3. 原生 UI：Name、Opacity 文本、Enabled，5 次预热＋96 次输入、120 Hz 请求；
    直接 Opacity 拖动的 draw P95、呈现 Hz 和输入延迟另表，不与提交 CPU 混算。
@@ -540,19 +540,19 @@ tracker 的完整摘要参照，逐字段比较整个序列化 ChangeSet，而�
 Editor 属性链成对耗时复测仍待执行。
 
 ```sh
-# cwd: ../kasane-2d，迭代时按本阶段选择，避免重复跑完整套件
-cargo test --locked -p kasane-core --lib document::structure::tests
-cargo test --locked -p kasane-core --lib document::tracking::tests
-cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::
-cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::binding_payload_tests::binding_payload_work_is_independent -- --nocapture
-cargo test --locked -p kasane-sdk --features bench-instrumentation --test integration scene_lifecycle::
-cargo test --locked -p kasane-sdk --features bench-instrumentation --test integration binding_authoring::
-cargo test --locked -p kasane-sdk --test integration authoring_acceptance::
-cargo test --locked -p kasane-sdk --test integration handles::
-cargo test --locked -p kasane-sdk --test integration history_budget::
+# cwd: ../zipzi-2d，迭代时按本阶段选择，避免重复跑完整套件
+cargo test --locked -p zipzi-core --lib document::structure::tests
+cargo test --locked -p zipzi-core --lib document::tracking::tests
+cargo test --locked -p zipzi-sdk --features bench-instrumentation --lib changes::
+cargo test --locked -p zipzi-sdk --features bench-instrumentation --lib changes::binding_payload_tests::binding_payload_work_is_independent -- --nocapture
+cargo test --locked -p zipzi-sdk --features bench-instrumentation --test integration scene_lifecycle::
+cargo test --locked -p zipzi-sdk --features bench-instrumentation --test integration binding_authoring::
+cargo test --locked -p zipzi-sdk --test integration authoring_acceptance::
+cargo test --locked -p zipzi-sdk --test integration handles::
+cargo test --locked -p zipzi-sdk --test integration history_budget::
 
-# cwd: kasane-editor
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --lib document::properties::tests
+# cwd: zipzi-editor
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --lib document::properties::tests
 ```
 
 新增 tracker 单元测试使用实际模块 filter。B/C 改动公共提交链，合并前再跑一次 SDK 普通
@@ -572,9 +572,9 @@ integration 目标；不默认扩大到双仓库全部测试、GPU、wheel 或 a
 
 [tldraw RecordsDiff](https://tldraw.dev/reference/store/RecordsDiff) 采用 added／updated
 （before、after）／removed 描述记录变化；[Store API](https://tldraw.dev/reference/store/Store)
-提供提取修改记录和派生缓存的接口。本方案借鉴“写入时确定变化范围”，在 kasane 中先只存
+提供提取修改记录和派生缓存的接口。本方案借鉴“写入时确定变化范围”，在 zipzi 中先只存
 touched IDs，因为基线与 candidate 已经同时存在。tldraw 的生命周期合并规则不作为
-kasane handle／incarnation 语义的依据。
+zipzi handle／incarnation 语义的依据。
 
 [Blender dependency graph](https://developer.blender.org/docs/features/core/depsgraph/)
 主要用于场景求值更新；[rust-analyzer 架构](https://rust-analyzer.github.io/book/contributing/architecture.html)

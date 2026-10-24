@@ -1,25 +1,25 @@
 # 自动 Mesh 生成：集成方案与实验方向
 
-日期：2026-09-25。本文结合当前 Kasane 2D 源码与指定的 mesh 调研，给出实施方案。已执行现有 SDK 测试和一个独立 Spade 语义实验；完整图层自动建网及质量排名尚未验证。
+日期：2026-09-25。本文结合当前 Zipzi 2D 源码与指定的 mesh 调研，给出实施方案。已执行现有 SDK 测试和一个独立 Spade 语义实验；完整图层自动建网及质量排名尚未验证。
 
 建议主线：**原始图层 alpha → 安全轮廓 → 边界约束与内部布点 → 约束 Delaunay → 几何质量检查 → SDK 原子提交 → Observer 动态验收**。先解决未绑定 PSD/PNG 图层的初次建网，再处理已有动画的重建网格。
 
 ## 1. 调研依据与现状
 
-本次读取的正确来源是 ChatGPT 对话“编译并启动项目”（`6ab5d29d-94dc-83ec-a720-1775ca041a27`），内容确实是 Live2D 式 mesh 生成调研。此前本文引用了另一个编译任务并转向 Umamo，现已纠正；这里的算法方向以本次指定调研和当前 Kasane 源码为依据。
+本次读取的正确来源是 ChatGPT 对话“编译并启动项目”（`6ab5d29d-94dc-83ec-a720-1775ca041a27`），内容确实是 Live2D 式 mesh 生成调研。此前本文引用了另一个编译任务并转向 Umamo，现已纠正；这里的算法方向以本次指定调研和当前 Zipzi 源码为依据。
 
 调研的关键结论是：**轮廓决定生成域，支持线和尺寸场决定布点，CDT 决定连接，实际动作决定质量。**内外圈并不自动限制形变传播；Cubism 文档的内外边距、点间距参数也不能证明其内部使用某一特定算法。[官方参数说明](https://docs.live2d.com/en/cubism-editor-manual/mesh-edit/)
 
-检查时 Kasane HEAD 为 `cea3d742e8b3029155cd6076fc4cc5f267194622`。工作区存在进行中的未提交改动，以下依据包括实际工作区源码，不能仅用 HEAD 复现。
+检查时 Zipzi HEAD 为 `cea3d742e8b3029155cd6076fc4cc5f267194622`。工作区存在进行中的未提交改动，以下依据包括实际工作区源码，不能仅用 HEAD 复现。
 
 | 现有能力 | 证据位置 | 对集成的含义 |
 | --- | --- | --- |
-| PSD 图层生成四顶点、两三角形矩形；UV 为 0..1 | `modules/kasane-psd/src/lib.rs` 的 Mesh 构造 | 能作为新算法输入和中立渲染对照 |
-| 矩形规则细分，保留角点 ID | `modules/kasane-sdk/src/geometry.rs::rectangle_grid_geometry` | 已有确定性基线；不支持任意轮廓 |
+| PSD 图层生成四顶点、两三角形矩形；UV 为 0..1 | `modules/zipzi-psd/src/lib.rs` 的 Mesh 构造 | 能作为新算法输入和中立渲染对照 |
+| 矩形规则细分，保留角点 ID | `modules/zipzi-sdk/src/geometry.rs::rectangle_grid_geometry` | 已有确定性基线；不支持任意轮廓 |
 | 矩形细分时迁移普通关键形态、BlendShape、glue | 同文件 `remesh_rectangle_grid` | 可复用事务组织方式；其插值算法只适用于标准矩形 |
-| 带版本检查的原子拓扑替换 | `modules/kasane-sdk/src/edit.rs::replace_topology`、`types.rs::TopologyReplacement` | 正式生成操作应走此提交入口 |
-| 核心验证完整旧顶点映射、全部相关绑定与 glue | `modules/kasane-core/src/document/meshes.rs::replace_mesh_topology` | 删除顶点必须显式映射为 None，不能漏报依赖 |
-| 几何诊断含小三角形、绕序不一致、画布越界 | `modules/kasane-sdk/src/diagnostics.rs` | 尚不足以验收轮廓覆盖、交叉边、孔洞和动态翻折 |
+| 带版本检查的原子拓扑替换 | `modules/zipzi-sdk/src/edit.rs::replace_topology`、`types.rs::TopologyReplacement` | 正式生成操作应走此提交入口 |
+| 核心验证完整旧顶点映射、全部相关绑定与 glue | `modules/zipzi-core/src/document/meshes.rs::replace_mesh_topology` | 删除顶点必须显式映射为 None，不能漏报依赖 |
+| 几何诊断含小三角形、绕序不一致、画布越界 | `modules/zipzi-sdk/src/diagnostics.rs` | 尚不足以验收轮廓覆盖、交叉边、孔洞和动态翻折 |
 | Python 包装 Rust；Observer 输出渲染图 | `docs/ARCHITECTURE.md` | Rust 拥有正式建模规则；Python 批量跑实验、整理报告 |
 
 当前没有 alpha 轮廓、偏移、CDT 自动建网模块。已有 Shirousagi X 轴实验记录了 1,408 个头部网格顶点，其中 707 个不在参考网格的三角形域内，采用最近顶点位移回退。这说明规则矩形网格值得作为改进对象，但**不表示这 707 个点全部无用，也不证明换成 CDT 就能消除迁移误差**。该数字来自已有实验记录，不是本次重跑：[头部 X 实验](experiments/SHIROUSAGI-HEAD-X.md)。
@@ -62,14 +62,14 @@ Rust 纯算法：mask / contours / sampling / triangulation / quality
             ↓
 候选 geometry + 来源映射 + 指标 + 警告
             ↓
-kasane-sdk：检查版本、构造 TopologyReplacement、一次提交
+zipzi-sdk：检查版本、构造 TopologyReplacement、一次提交
             ↓
-kasane-python：调用与批量报告
+zipzi-python：调用与批量报告
             ↓
 Observer：中立姿态、变形姿态、保存重开、导出后检查
 ```
 
-实验期在 `kasane-sdk` 下组织独立纯算法模块即可；若 PSD 导入器之后要直接调用，再提取不依赖 SDK 的 `kasane-mesh` crate，避免 PSD → SDK 的反向依赖。首版从导入后的 SDK 操作接入，暂不改变 PSD 默认导入行为。
+实验期在 `zipzi-sdk` 下组织独立纯算法模块即可；若 PSD 导入器之后要直接调用，再提取不依赖 SDK 的 `zipzi-mesh` crate，避免 PSD → SDK 的反向依赖。首版从导入后的 SDK 操作接入，暂不改变 PSD 默认导入行为。
 
 建议的新增 API 形状（尚未实现）：
 
@@ -83,9 +83,9 @@ apply_remesh_plan(session, plan, expected_version) -> Result<EditReceipt, SdkErr
 
 建议代码落点（除列出的现有入口外，以下模块尚未实现）：
 
-- `kasane-sdk/src/mesh_generation/`：`contours / offset / sampling / triangulation / quality`；输入解码像素和明确的坐标映射，返回候选，不修改 Document。
-- SDK session 操作：复用 `kasane-project::decode_png` 及资产校验；生成在编辑事务外完成，提交时再次验证来源版本与资产哈希，通过 `EditSession::replace_topology` 一次提交。若新增 padding 资产，资产描述与 mesh 更新纳入同一编辑，资源文件先准备、失败时不发布工程。
-- `kasane-python/src/geometry.rs` 与 Python `geometry.py`：类型和错误适配；正式几何规则保持在 Rust。实验脚本负责扫参数、调用 `Observer.observe_run`、汇总图片与指标。
+- `zipzi-sdk/src/mesh_generation/`：`contours / offset / sampling / triangulation / quality`；输入解码像素和明确的坐标映射，返回候选，不修改 Document。
+- SDK session 操作：复用 `zipzi-project::decode_png` 及资产校验；生成在编辑事务外完成，提交时再次验证来源版本与资产哈希，通过 `EditSession::replace_topology` 一次提交。若新增 padding 资产，资产描述与 mesh 更新纳入同一编辑，资源文件先准备、失败时不发布工程。
+- `zipzi-python/src/geometry.rs` 与 Python `geometry.py`：类型和错误适配；正式几何规则保持在 Rust。实验脚本负责扫参数、调用 `Observer.observe_run`、汇总图片与指标。
 - 线框、轮廓和密度叠图先由实验报告生成；当前 Observer 提供渲染、裁剪和接触表，不能当成已经存在的线框查看器。基础运行时继续消费现有 Mesh 数据。
 
 首版参数建议覆盖：`alpha_min`、轮廓容差、`outside_margin`、`inside_margin`、`boundary_spacing`、`interior_spacing`、顶点上限、孔洞策略、随机种子。**距离统一为源图层像素，alpha 使用 `alpha >= alpha_min`，保真基线取 1。**Cubism 的透明阈值及基于 1024 纹理尺寸的边距定义与此不同，不直接照搬数值。先支持 root-space、标准 UV、无普通 binding/BlendShape/glue 的 PSD/PNG 初始矩形；不满足前提时返回明确错误。
@@ -99,7 +99,7 @@ apply_remesh_plan(session, plan, expected_version) -> Result<EditReceipt, SdkErr
 5. **边界重采样后再布内部点。** 先测确定性三角格点，再测固定种子的 Poisson-disk。轮廓拐角和人工特征点保留；避免内部点紧贴约束边产生狭长三角形。
 6. **CDT 需要完整区域分类。** 外环、孔洞边成为约束，输出只取有效域中的面。只按三角形重心是否落在 alpha 中筛选，不能可靠阻止跨孔洞、凹口或窄缝的三角形。后续加入内部特征线时，应单独标记边界边，避免把任意约束都当作区域边界。
 7. **统一坐标与 UV。** 首版图层局部点 `(x,y)` 映射为 `position=(left+x,top+y)`、`uv=(x/W,y/H)`；使用像素角点坐标，不混入半像素偏移。挂父变形器、atlas UV、旋转 UV 等场景另行实现映射，不能套用该公式。
-8. **外扩与纹理边缘一起验证。** 当前 `modules/kasane-render-wgpu/src/pipeline.rs` 使用 ClampToEdge。几何扩到原图之外可能重复最外行像素；首版余量限制在现有纹理域内，若需越界则同时生成透明 padding 资产、重算 UV、更新资产哈希。不要仅把 UV 钳到 0..1。
+8. **外扩与纹理边缘一起验证。** 当前 `modules/zipzi-render-wgpu/src/pipeline.rs` 使用 ClampToEdge。几何扩到原图之外可能重复最外行像素；首版余量限制在现有纹理域内，若需越界则同时生成透明 padding 资产、重算 UV、更新资产哈希。不要仅把 UV 钳到 0..1。
 9. **确定性与资源预算。** 固定种子、轮廓顺序、点插入顺序、共圆 tie-break 策略与输出编号；内部 f64，转换为项目 f32 后复查重合点和零面积。设置像素、轮廓点、顶点、细化次数预算；初期顶点上限不高于现有网格工具的 65,536，并验证导出约束。
 
 ### 边缘带的具体构造
@@ -183,9 +183,9 @@ Shirousagi 动态迁移验收可扫 `X,Y∈{-30,-15,0,15,30}` 的 25 个组合�
 
 ## 8. 本次验证状态
 
-完成：读取指定 mesh 调研、检查当前 Kasane 源码、核对库接口与 Cubism 参数、修正集成方案，并执行以下两项验证。
+完成：读取指定 mesh 调研、检查当前 Zipzi 源码、核对库接口与 Cubism 参数、修正集成方案，并执行以下两项验证。
 
-**现有 SDK 基线**：`cargo test -p kasane-sdk --test mesh_editing --locked`，本次 **6 passed / 0 failed**。覆盖矩形网格、绑定曲面与历史、完整映射、版本检查和事务回滚。此前新 crate 缺少 target 的阻塞在当前工作区已不再出现。
+**现有 SDK 基线**：`cargo test -p zipzi-sdk --test mesh_editing --locked`，本次 **6 passed / 0 failed**。覆盖矩形网格、绑定曲面与历史、完整映射、版本检查和事务回滚。此前新 crate 缺少 target 的阻塞在当前工作区已不再出现。
 
 **Spade 最小算法实验**：[独立实验源码](experiments/mesh-cdt-probe/src/main.rs)，固定 `spade=2.15.1`，自带独立 Cargo.lock，不修改生产 workspace 依赖。输入为 10×10 外框，以及可选的 4×4 内圈；最大三角形面积目标为 2，新增顶点预算为 256。
 

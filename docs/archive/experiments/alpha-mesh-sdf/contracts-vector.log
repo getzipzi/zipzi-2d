@@ -1,4 +1,4 @@
-   Compiling kasane-sdk v0.1.0 (/Users/liangbohao/web/kasane-2d/modules/kasane-sdk)
+   Compiling zipzi-sdk v0.1.0 (/Users/liangbohao/web/zipzi-2d/modules/zipzi-sdk)
     Finished `release` profile [optimized] target(s) in 2.11s
      Running tests/alpha_mesh.rs (target/release/deps/alpha_mesh-15ac834ca69298ee)
 

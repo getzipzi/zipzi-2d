@@ -7,7 +7,7 @@
 ## C1 / Stage 1：Expression / ExpressionEntry
 
 2026 年 10 月 21 日：Expression / ExpressionEntry 切片已落地于相邻
-`kasane-2d` 和本仓库。后续 C2–C6 与 UI 统一仍按原计划推进。
+`zipzi-2d` 和本仓库。后续 C2–C6 与 UI 统一仍按原计划推进。
 
 - **原生模型与领域操作**：`ExpressionEntry.id` 使用独立 UUID；
   `ExpressionTarget::Unspecified` 与已解析、导入未解析目标分开保存。
@@ -29,7 +29,7 @@
   `ExpressionEntryCandidate` 支持可恢复的非法预览、取消、no-op 和一次提交。
   候选在删除恢复、跨会话或重载后不可提交。
 - **查询与 Editor 适配**：`expression_capabilities`、`expression_collection`
-  提供领域能力和条目顺序；editor-core 的
+  提供领域能力和条目顺序；zipzi-editor-core 的
   `plan_expression_authoring` / `execute_expression_authoring` 返回
   `OperationResult`，仅附加选择与定位建议。
   `expression_authoring_capabilities` 分开保留 SDK 原因和 Editor 候选占用原因。
@@ -84,17 +84,17 @@
 # Editor 格式、脚本、核心、无界面 UI 与原生验收
 ./scripts/test.sh
 
-# 相邻 kasane-2d 的领域、格式、动画与 SDK 回归
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
-  -p kasane-core -p kasane-sdk -p kasane-animation -p kasane-project -p kasane-cmo3
+# 相邻 zipzi-2d 的领域、格式、动画与 SDK 回归
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked \
+  -p zipzi-core -p zipzi-sdk -p zipzi-animation -p zipzi-project -p zipzi-cmo3
 
 # C1 专项（含保存、格式、句柄、候选、复制闭包与 no-op）
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
-  -p kasane-sdk --test expression_entries
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked \
+  -p zipzi-sdk --test expression_entries
 ```
 
 初次 C1 实施时，Python wheel 已构建并在仓库外的临时隔离环境安装，运行
-`modules/kasane-python/tests/test_cpu.py`，包含条目端到端和 ChangeSet 方向校验。
+`modules/zipzi-python/tests/test_cpu.py`，包含条目端到端和 ChangeSet 方向校验。
 现有 `tools/validate_sdk.py` 在开始测试前引用缺失的
 `examples/sdk/python_observe_recipe.py`，因此当时直接执行其 CPU 套件并通过 53 项，
 不将完整 recipe 验证器记为通过。本轮重构未重跑 Python wheel CPU 套件，
@@ -103,7 +103,7 @@ cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
 
 ## C2：Motion 库、注册与 Attachment 引用
 
-2026 年 10 月 21 日：C2 已贯通相邻 `kasane-2d` 与本仓库，新的菜单与表单交互仍由后续 UI 阶段接入。
+2026 年 10 月 21 日：C2 已贯通相邻 `zipzi-2d` 与本仓库，新的菜单与表单交互仍由后续 UI 阶段接入。
 
 - **原生库与领域规划**：`MotionGroup.id`、`MotionRegistration.id` 独立于名称、路径和数组位置；组与显式根注册各保存一份顺序。`MotionEdit` / `MotionPlan` 提供空组、默认 Clip 与注册的联合创建、组改名/排序/解散/复制、注册添加/字段补丁/移动/复制/删除，以及 Clip 内容复制和资源删除。组复制共享 Clip；内容复制生成新的 Track、Key、Event ID。删除最后注册或其组时，迁移原注册到根列表，计划列出 `migrated_to_root`，保留 ID 与覆盖。根列表中最后注册的删除请求可以是 no-op。直接库替换也保留失去入口的 Clip 与原注册，显式删除 Clip 才移除其全部注册与拥有内容。
 - **轨道和时间内容**：`MotionTrackTarget::Unspecified` 可持久化；`motion_projection` 提供禁用原因及双向运行槽位映射。`track_order` 单独记录展示顺序，空值表示执行顺序；非空时必须是完整 ID 排列。同 Clip 的轨道移动和行重排不改变执行数组，重复写入目标的结果保持。跨 Clip 的轨道移动/复制、事件创建/移动/复制/删除及跨轨道关键帧剪切/复制由领域规划联合验证；事件按时间稳定排序。同时间 Key 冲突、目标不兼容、越界时间及不能直接保持的 Bezier 模式转换原子拒绝。关键帧粘贴保留连续选中区间的内部插值，新增连接使用 Linear，不承诺保持目标曲线。`MotionCurveEdit` / `MotionCurvePlan` 复用现有 SDK 的插点、删除、时间移动、插值、Bezier 柄和时长缩放规则。
@@ -116,16 +116,16 @@ cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
 验收入口：
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk --test integration motion_library::
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
-  -p kasane-core -p kasane-sdk -p kasane-animation -p kasane-project -p kasane-cmo3
-cargo test --locked -p editor-core --test integration
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-sdk --test integration motion_library::
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked \
+  -p zipzi-core -p zipzi-sdk -p zipzi-animation -p zipzi-project -p zipzi-cmo3
+cargo test --locked -p zipzi-editor-core --test integration
 ./scripts/test.sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked --release \
-  -p kasane-sdk --test integration motion_library::library_planning_shares_curves_in_a_large_library -- --ignored --nocapture
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked --release \
+  -p zipzi-sdk --test integration motion_library::library_planning_shares_curves_in_a_large_library -- --ignored --nocapture
 ```
 
-本轮验证：Editor 工作区 729 项 Rust 测试通过、5 项默认忽略；原生动画验收通过三个本地模型，Metal 截图通过。相邻五个领域包 413 项通过、2 项默认忽略，其中 Motion 库专项 15 项通过、1 项性能测量默认忽略；Editor 新增两项播放连续性/删除选择回归，已包含在 333 项 editor-core 集成测试中。Python wheel 在仓库外隔离环境安装后通过 54 项 CPU 测试，脚本测试隔离重跑通过 44 项。格式与 diff 检查通过；专项与全量数字有重叠，不相加。
+本轮验证：Editor 工作区 729 项 Rust 测试通过、5 项默认忽略；原生动画验收通过三个本地模型，Metal 截图通过。相邻五个领域包 413 项通过、2 项默认忽略，其中 Motion 库专项 15 项通过、1 项性能测量默认忽略；Editor 新增两项播放连续性/删除选择回归，已包含在 333 项 zipzi-editor-core 集成测试中。Python wheel 在仓库外隔离环境安装后通过 54 项 CPU 测试，脚本测试隔离重跑通过 44 项。格式与 diff 检查通过；专项与全量数字有重叠，不相加。
 
 `./scripts/test.sh` 首次在既有开发启动超时用例失败，脚本隔离重跑全部通过。单独运行完整 Rust/原生工作区时，Timeline 首帧等待曾超时；随后以同样的验收逻辑单独重跑，完整通过导入边界、真实/密集曲线编辑、取消、播放、画布导航、dock 调整、SDK 结果对照与保存往返。没有修改测试的超时策略，也不把第一次完整脚本执行记为成功。
 
@@ -157,7 +157,7 @@ Motion 库专项 22 项通过、1 项性能测量默认忽略，Editor Motion au
 
 ## C3：Physics 条目、节点与运行投影
 
-2026 年 10 月 21 日：实现覆盖相邻 `kasane-2d` 与本仓库；验收结果在本节末尾记录。
+2026 年 10 月 21 日：实现覆盖相邻 `zipzi-2d` 与本仓库；验收结果在本节末尾记录。
 
 - **原生模型与外部身份**：`document::PhysicsDefinition` / `PhysicsSetting` /
   `PhysicsInput` / `PhysicsOutput` / `PhysicsNode` 与 physics3 DTO 分开。
@@ -188,7 +188,7 @@ Motion 库专项 22 项通过、1 项性能测量默认忽略，Editor Motion au
   既有求解器数值行为和测试预览继续由原有轨迹回归验证。
 - **发布与 Editor 接入**：ChangeSet 增加 Physics 集合和参数/节点引用变化，报告
   实际实体增删改、标签、顺序、拓扑与求值输入；Undo/Redo 使用实际恢复方向。
-  editor-core 的 `plan_physics_authoring` / `execute_physics_authoring` 附加选择
+  zipzi-editor-core 的 `plan_physics_authoring` / `execute_physics_authoring` 附加选择
   建议，不激活 Motion/Expression。现有组/通道/节点结构按钮接入领域意图，数值
   候选继续使用局部字段补丁和已有取消/提交生命周期。重复字段的 `PropertyKey`
   改为携带实体 UUID；旧下标字段写入被拒绝。Physics 属性提交、结构操作和历史
@@ -210,14 +210,14 @@ Motion 库专项 22 项通过、1 项性能测量默认忽略，Editor Motion au
 验收入口：
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
-  -p kasane-sdk --test integration physics_
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
-  -p kasane-core -p kasane-sdk -p kasane-animation -p kasane-project -p kasane-cmo3
-env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace \
-  --features kasane-editor/test-support
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked --release \
-  -p kasane-sdk --test integration physics_editing::physics_field_patch_benchmark -- --ignored --nocapture
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked \
+  -p zipzi-sdk --test integration physics_
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked \
+  -p zipzi-core -p zipzi-sdk -p zipzi-animation -p zipzi-project -p zipzi-cmo3
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked --workspace \
+  --features zipzi-editor/test-support
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked --release \
+  -p zipzi-sdk --test integration physics_editing::physics_field_patch_benchmark -- --ignored --nocapture
 ```
 
 最终验证：相邻五个领域包 **434 项通过、2 项默认忽略**；Editor 工作区 **734 项通过、
@@ -274,20 +274,20 @@ C3 交付时，C4–C6 与完整 UI 统一仍待实施；C4 的后续进展见�
 本轮新增 6 项回归。验证范围聚焦 Physics SDK、Editor 集成及 UI/表单，未重跑
 全工作区、原生截图/Timeline 验收、Python wheel 或 Release 性能基准。
 
-最终验证：SDK Physics **23 项通过、1 项性能测试默认忽略**；editor-core Physics
+最终验证：SDK Physics **23 项通过、1 项性能测试默认忽略**；zipzi-editor-core Physics
 **19 项通过**（1 项单元、18 项集成）；Editor Physics UI/表单 **12 项通过**。
 共 54 项通过，新增回归包含在这些数字内。两个仓库的格式与 diff 检查通过。
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-sdk \
   --test integration physics_
-cargo test --locked -p editor-core --lib --test integration physics
-cargo test --locked -p kasane-editor --lib physics
+cargo test --locked -p zipzi-editor-core --lib --test integration physics
+cargo test --locked -p zipzi-editor --lib physics
 ```
 
 ## C4：首批转换原语（实施中，未完成 C4）
 
-2026 年 10 月 21 日：首批代码同时落在相邻 `kasane-2d` 与本仓库。当前交付
+2026 年 10 月 21 日：首批代码同时落在相邻 `zipzi-2d` 与本仓库。当前交付
 Mesh 网格转换、参数范围联合修改及静态仿射 Mesh 改父级；不将本节视为完整 C4 验收。
 
 - **Mesh 零轴与网格转换**：core 的 `MeshGridEdit` / `MeshGridPlan` 支持从目标
@@ -322,7 +322,7 @@ Mesh 网格转换、参数范围联合修改及静态仿射 Mesh 改父级；不
   ChangeSet 增加 `BindingGrid` / `DeformationChildren` 集合和 `BindingReferenceChange`，记录 Mesh/Transform
   父级与绑定目标引用，Undo/Redo 交换正确方向。现有普通 setter、字段 patch、顶点
   写入与事务补齐对应的持久化锁定检查；无标记文档直接走空状态快路径。
-- **Editor 与格式**：editor-core 的 `plan_binding_authoring` /
+- **Editor 与格式**：zipzi-editor-core 的 `plan_binding_authoring` /
   `execute_binding_authoring` 合成候选/Timeline 会话检查并消费同一回执；创建建议选择
   Binding，不自动激活 Motion/Expression。原生格式沿用既有轴/形态字段，保存重开保留
   零轴和全部基础字段；本次未变更 wire schema。MOC3 严格返回
@@ -338,18 +338,18 @@ Mesh 网格转换、参数范围联合修改及静态仿射 Mesh 改父级；不
 以及 Python 入口。上述能力已由下一节继续交付；改父级扩展、完整转换影响地址、
 可中断长转换及真实模型容量/性能验收仍未完成。
 
-本批验收（均从 `kasane-editor` 目录执行）：
+本批验收（均从 `zipzi-editor` 目录执行）：
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-core
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-core
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-sdk \
   --test binding_authoring --test scene_authoring --test effects_authoring --test mesh_editing
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-moc3 --lib \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-moc3 --lib \
   zero_axis_binding_is_rejected_before_runtime_encoding
-cargo test --locked -p editor-core --test integration binding_authoring
-cargo test --locked -p editor-core --test integration mesh
-cargo check --locked -p kasane-editor
-cargo fmt --all --check --manifest-path ../kasane-2d/Cargo.toml
+cargo test --locked -p zipzi-editor-core --test integration binding_authoring
+cargo test --locked -p zipzi-editor-core --test integration mesh
+cargo check --locked -p zipzi-editor
+cargo fmt --all --check --manifest-path ../zipzi-2d/Cargo.toml
 cargo fmt --all --check
 ```
 
@@ -406,7 +406,7 @@ Metal 截图或真实模型 Release 基准；这些结果不构成完整 C4/C6 �
   SDK `plan_available_binding_export` 列出零轴、待配置轴/表/约束及间接禁用的使用者，
   接受时检查版本；CMO3 默认拒绝，显式接受后导出相同可用投影并保留诊断。
   MOC3 在编码前明确拒绝不可表达状态。外部重导入生成新的内部身份。
-- **Editor 与 Python**：editor-core 投影稳定轴/采样对象与关系，字段规划复用 SDK；
+- **Editor 与 Python**：zipzi-editor-core 投影稳定轴/采样对象与关系，字段规划复用 SDK；
   Properties 的 MeshKeyform 地址改为采样 ID 组合，现有预览与控制点工具只读取有效轴，
   待配置 BlendBinding 不阻止基础控制点编辑。Python 的 `Edit.binding_authoring`、
   `Session.plan_binding_authoring` / `execute_binding_plan`、`binding_source`、
@@ -420,25 +420,25 @@ Metal 截图或真实模型 Release 基准；这些结果不构成完整 C4/C6 �
 当前默认预算仍为首批有限边界，尚未用真实模型基准定型。C5 的完整对象生命周期与
 后续 UI 操作统一不包含在本节交付中。
 
-本节验收命令（从 `kasane-editor` 执行）：
+本节验收命令（从 `zipzi-editor` 执行）：
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked --no-fail-fast \
-  -p kasane-core -p kasane-sdk -p kasane-project -p kasane-cmo3
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked --no-fail-fast \
+  -p zipzi-core -p zipzi-sdk -p zipzi-project -p zipzi-cmo3
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-sdk \
   --test binding_authoring --test mesh_editing
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-moc3 \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-moc3 \
   --lib --test import_tests -- blendshape_glue zero_axis_binding_is_rejected_before_runtime_encoding
-cargo test --locked -p editor-core --test integration -- \
+cargo test --locked -p zipzi-editor-core --test integration -- \
   binding_authoring properties canvas_objects panels
-cargo check --locked -p kasane-editor
-cargo fmt --all --check --manifest-path ../kasane-2d/Cargo.toml
+cargo check --locked -p zipzi-editor
+cargo fmt --all --check --manifest-path ../zipzi-2d/Cargo.toml
 cargo fmt --all --check
 ```
 
-Python 在相邻 `kasane-2d` 执行 `uv run --locked maturin build --manifest-path
-modules/kasane-python/Cargo.toml --out target/c4-wheels`，安装 CPU wheel 到独立
-`target/c4-python` 环境，再运行 `modules/kasane-python/tests/test_cpu.py`。
+Python 在相邻 `zipzi-2d` 执行 `uv run --locked maturin build --manifest-path
+modules/zipzi-python/Cargo.toml --out target/c4-wheels`，安装 CPU wheel 到独立
+`target/c4-python` 环境，再运行 `modules/zipzi-python/tests/test_cpu.py`。
 新增两项 Python 回归覆盖稳定 source、字段地址、待配置轴激活、共享表与过期计划。
 Pyright 与 Git HEAD 源文件逐条对比均为既有 **31 errors / 3 warnings**，本轮无新增诊断；
 这不是 Python 全量静态类型检查通过的声明。
@@ -477,12 +477,12 @@ MOC3 零轴边界 **1 项**及 BlendShape/Glue/Offscreen 往返 **6 项**、Edit
 本轮新增 **8 项回归**（SDK 6 项、Editor 2 项）。针对性验证命令：
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-sdk \
   --test binding_authoring --test mesh_editing --test effects_authoring --test scene_authoring
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-core \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-core \
   --test offscreen_tests --test typed_scene_tests --test keyform_tests --test blendshape_glue_tests
-cargo test --locked -p editor-core --test integration -- binding_authoring properties canvas_objects panels
-cargo check --locked -p kasane-editor
+cargo test --locked -p zipzi-editor-core --test integration -- binding_authoring properties canvas_objects panels
+cargo check --locked -p zipzi-editor
 ```
 
 最终结果：SDK **58 项**、core **28 项**、Editor **87 项**均通过；Editor 编译及
@@ -557,17 +557,17 @@ Glue 之前；域抽样仅为回归，证明依据为固定仿射坐标变换与
 或 C6 的属性链／Timeline 配对测量。新增 SDK 11 项、Editor 1 项、Python 2 项回归。
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-sdk \
   --test integration -- binding_authoring:: scene_authoring:: effects_authoring:: \
   mesh_editing:: handles:: history_budget::
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-core \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-core \
   --lib --test keyform_tests --test typed_scene_tests --test blendshape_glue_tests --test offscreen_tests
-cargo test --locked -p editor-core --test integration -- binding_authoring properties canvas_objects panels
+cargo test --locked -p zipzi-editor-core --test integration -- binding_authoring properties canvas_objects panels
 ./scripts/test.sh ui -- headless_tests::mesh_properties headless_tests::parameters \
   headless_tests::hierarchy headless_tests::ui_performance
-# 在相邻 kasane-2d 执行，构建当前 Debug extension，运行 CPU 与 inspection：
+# 在相邻 zipzi-2d 执行，构建当前 Debug extension，运行 CPU 与 inspection：
 ./tools/test.sh python
-cargo check --locked -p kasane-editor
+cargo check --locked -p zipzi-editor
 ```
 
 最终验证：SDK 筛选 **74 项通过**，包括事务内受控规划、16 轴中的单采样
@@ -624,7 +624,7 @@ Python 首次 `./tools/test.sh python -- -k binding` 的 CPU 筛选通过 8 项�
 本轮未重跑整个 workspace、原生截图或真实模型 Release 基准；上一节的性能数字
 仍是此前测量结果，不作为本轮修正后的重新测量。
 
-最终 `cargo check --locked -p kasane-editor`、两仓库格式与 diff 检查通过；
+最终 `cargo check --locked -p zipzi-editor`、两仓库格式与 diff 检查通过；
 Python facade／stub 语法检查通过。编译仍有既有第三方警告及 `block` 未来兼容提示。
 
 
@@ -687,15 +687,15 @@ C5 剩余覆盖核对：
 **1 项**回归；以下命令采用受影响测试筛选：
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk --test integration -- \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-sdk --test integration -- \
   pose_authoring:: handles:: editor_state:: document_operations:: history_budget::
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-project \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-project \
   --test pose_tests --test project_tests --test motion_tests --test cdi_tests
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-animation \
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked -p zipzi-animation \
   --test motion_preview --test motion_editing_preview
-cargo test --locked -p editor-core --test integration -- pose_authoring:: panels:: animation::
+cargo test --locked -p zipzi-editor-core --test integration -- pose_authoring:: panels:: animation::
 ./scripts/test.sh ui -- headless_tests::animation_panels
-# 在相邻 kasane-2d 执行，重建当前 Debug extension：
+# 在相邻 zipzi-2d 执行，重建当前 Debug extension：
 ./tools/test.sh python
 ```
 
@@ -704,12 +704,12 @@ Motion／CDI 筛选 **61 项通过**；animation **26 项通过**；Editor 核�
 最终稳定行 ID 版本的原生动画面板 **10 项通过**；当前源码重建的 Python Debug extension
 通过 **60 项 CPU + 4 项 inspection**。各组覆盖可能重叠，不合计数字。
 
-默认 `cargo check --locked -p kasane-editor`、两仓库 `cargo fmt --all --check` 与
+默认 `cargo check --locked -p zipzi-editor`、两仓库 `cargo fmt --all --check` 与
 `git diff --check` 通过。编译仍报告既有 vendor GPUI/Cocoa 警告及 `block`
 未来兼容提示；未修改第三方代码。
 
 未运行完整 workspace、截图／真实模型 Release 或 C6 的综合性能验收。代码保留在
-`kasane-editor` 与相邻 `kasane-2d` 工作区，未提交。
+`zipzi-editor` 与相邻 `zipzi-2d` 工作区，未提交。
 
 
 ## C5 第二批：Parameter、ParameterGroup 与 Part 组织集合
@@ -776,14 +776,14 @@ Motion／CDI 筛选 **61 项通过**；animation **26 项通过**；Editor 核�
 验证命令与结果如下（各筛选覆盖可能重叠，不合计）：
 
 ```sh
-# 相邻 kasane-2d
-cargo test --locked -p kasane-core --lib organization::index
-cargo test --locked -p kasane-sdk --test integration -- \
+# 相邻 zipzi-2d
+cargo test --locked -p zipzi-core --lib organization::index
+cargo test --locked -p zipzi-sdk --test integration -- \
   organization_authoring:: cdi_authoring:: hierarchy_order:: scene_authoring:: \
   editor_state:: binding_authoring:: mesh_editing:: effects_authoring::
 ./tools/test.sh python
-# kasane-editor
-cargo test --locked -p editor-core --test integration -- \
+# zipzi-editor
+cargo test --locked -p zipzi-editor-core --test integration -- \
   organization_authoring:: sorting:: parameter_management:: parameter_creation:: properties:: locks::
 ./scripts/test.sh ui -- headless_tests::parameter_groups headless_tests::parameter_management \
   headless_tests::parameter_creation headless_tests::parameters headless_tests::hierarchy \
@@ -796,7 +796,7 @@ SDK 筛选 **96 项通过**，core 组织缓存 **1 项通过**，Editor 集成�
 保持既有创建后定位／Undo 行为；另有集成回归覆盖根级 Part 排序与未归组场景对象共存，
 确保 After 锚点保留在对应 palette；修正后原生排序补查 **13 项通过**。
 
-最终 `cargo check --locked -p kasane-editor`、两仓库 `cargo fmt --all --check` 与
+最终 `cargo check --locked -p zipzi-editor`、两仓库 `cargo fmt --all --check` 与
 `git diff --check` 通过。仍有既有 vendor GPUI/Cocoa 警告及 `block` 未来兼容提示。
 
 本轮未运行完整 workspace、真实模型 Release 或截图验收；本节不提供新的性能测量数字。
@@ -877,24 +877,24 @@ SDK 筛选 **96 项通过**，core 组织缓存 **1 项通过**，Editor 集成�
 主要复现命令：
 
 ```sh
-# 相邻 kasane-2d
-cargo test --locked -p kasane-sdk --test integration -- \
+# 相邻 zipzi-2d
+cargo test --locked -p zipzi-sdk --test integration -- \
   scene_lifecycle:: organization_authoring:: scene_authoring:: effects_authoring:: \
   hierarchy_order:: handles:: binding_authoring:: editor_state:: document_operations:: pose_authoring::
-cargo test --locked -p kasane-render --test scene_contract
-cargo test --locked -p kasane-render-metal --test metal_smoke -- masks_atlas:: offscreens_blending::
-cargo test --locked -p kasane-moc3 --test import_tests -- \
+cargo test --locked -p zipzi-render --test scene_contract
+cargo test --locked -p zipzi-render-metal --test metal_smoke -- masks_atlas:: offscreens_blending::
+cargo test --locked -p zipzi-moc3 --test import_tests -- \
   zero_triangle_mesh model_roundtrip::rotation_edit_rebinding_and_deletion_change_export
-cargo test --locked -p kasane-cmo3 --test export
-cargo check --locked -p kasane-moc3 -p kasane-cmo3 -p kasane-render-wgpu --tests --examples
+cargo test --locked -p zipzi-cmo3 --test export
+cargo check --locked -p zipzi-moc3 -p zipzi-cmo3 -p zipzi-render-wgpu --tests --examples
 ./tools/test.sh python
-# kasane-editor
-cargo test --locked -p editor-core --test integration -- \
+# zipzi-editor
+cargo test --locked -p zipzi-editor-core --test integration -- \
   scene_lifecycle:: organization_authoring:: sorting:: properties:: locks:: panels:: \
   parameter_management:: pose_authoring::
 ./scripts/test.sh ui -- headless_tests::hierarchy headless_tests::sorting \
   headless_tests::properties headless_tests::ui_performance headless_tests::animation_panels
-cargo check --locked -p kasane-editor
+cargo check --locked -p zipzi-editor
 ```
 
 两仓库的 `cargo fmt --all --check` 与 `git diff --check` 通过。保留既有第三方
@@ -972,25 +972,25 @@ GPUI/Cocoa 警告和 `block` 未来兼容提示。没有运行完整 workspace�
 主要复现命令：
 
 ```sh
-# 相邻 kasane-2d
-cargo test --locked -p kasane-sdk --test integration -- \
+# 相邻 zipzi-2d
+cargo test --locked -p zipzi-sdk --test integration -- \
   scene_content:: scene_lifecycle:: mesh_editing:: effects_authoring:: binding_authoring:: \
   organization_authoring:: handles:: editor_state:: history_budget::
-cargo test --locked -p kasane-core --test blendshape_glue_tests --test offscreen_tests \
+cargo test --locked -p zipzi-core --test blendshape_glue_tests --test offscreen_tests \
   --test transform_tests --test checkpoint_size_tests
-cargo test --locked -p kasane-project --test project_tests --test sequence_tests \
+cargo test --locked -p zipzi-project --test project_tests --test sequence_tests \
   --test cdi_tests --test motion_tests --test pose_tests
-cargo test --locked -p kasane-moc3 --test import_tests -- blendshape_glue:: zero_triangle_mesh
-cargo test --locked -p kasane-cmo3 --test export
-cargo check --locked --keep-going -p kasane-core -p kasane-moc3 -p kasane-cmo3 \
-  -p kasane-project -p kasane-python --tests --examples
+cargo test --locked -p zipzi-moc3 --test import_tests -- blendshape_glue:: zero_triangle_mesh
+cargo test --locked -p zipzi-cmo3 --test export
+cargo check --locked --keep-going -p zipzi-core -p zipzi-moc3 -p zipzi-cmo3 \
+  -p zipzi-project -p zipzi-python --tests --examples
 ./tools/test.sh python
-# kasane-editor
-cargo test --locked -p editor-core --test integration -- \
+# zipzi-editor
+cargo test --locked -p zipzi-editor-core --test integration -- \
   scene_content:: canvas_objects:: mesh_generation:: scene_lifecycle:: properties:: locks::
 ./scripts/test.sh ui -- headless_tests::canvas headless_tests::hierarchy \
   headless_tests::properties headless_tests::animation_panels
-cargo check --locked -p kasane-editor
+cargo check --locked -p zipzi-editor
 ```
 
 额外检查包含受影响 native 库的测试与示例编译，没有运行完整 workspace suite。
@@ -1043,7 +1043,7 @@ cargo check --locked -p kasane-editor
   ObjectIndex 展示根与成员节点、拥有关系和共享目标引用，提供缺项诊断；名称发布刷新
   对象和 Document 内嵌 model_settings，保留无关关系和画布求值输入。
   Python 提供同一 `reference_*` planning／execution／patch／capabilities API 和
-  `Edit.reference_authoring`。详细命令和规范 JSON 见相邻仓库 `modules/kasane-python/API.md`。
+  `Edit.reference_authoring`。详细命令和规范 JSON 见相邻仓库 `modules/zipzi-python/API.md`。
   现有通用属性检查可查看这些节点；完整统一交互界面属于后续 UI 阶段，本批没有新增一套 UI 规则。
 - **保存和第三方格式**：native 项目保留根及成员 UUID；model3、CDI、CMO3 没有对应
   authoring 身份槽位，导出按 runtime ID 引用目标，重新导入分配身份，不把自定义 UUID
@@ -1071,23 +1071,23 @@ cargo check --locked -p kasane-editor
 主要复现命令：
 
 ```sh
-# 相邻 kasane-2d
-cargo test --locked -p kasane-sdk --test integration -- \
+# 相邻 zipzi-2d
+cargo test --locked -p zipzi-sdk --test integration -- \
   reference_authoring:: cdi_authoring:: organization_authoring:: motion_library:: \
   scene_lifecycle:: scene_content:: handles:: editor_state:: binding_authoring:: effects_authoring::
-cargo test --locked -p kasane-core --test cdi_display_info_tests --test checkpoint_size_tests
-cargo test --locked -p kasane-project --test cdi_tests --test model3_tests \
+cargo test --locked -p zipzi-core --test cdi_display_info_tests --test checkpoint_size_tests
+cargo test --locked -p zipzi-project --test cdi_tests --test model3_tests \
   --test project_tests --test motion_tests --test pose_tests
-cargo test --locked -p kasane-cmo3 --test export --test import
-cargo check --locked --keep-going -p kasane-core -p kasane-project -p kasane-cmo3 \
-  -p kasane-moc3 -p kasane-python --tests --examples
+cargo test --locked -p zipzi-cmo3 --test export --test import
+cargo check --locked --keep-going -p zipzi-core -p zipzi-project -p zipzi-cmo3 \
+  -p zipzi-moc3 -p zipzi-python --tests --examples
 ./tools/test.sh python
-# kasane-editor
-cargo test --locked -p editor-core --test integration -- \
+# zipzi-editor
+cargo test --locked -p zipzi-editor-core --test integration -- \
   reference_authoring:: scene_lifecycle:: scene_content:: properties:: locks:: panels:: organization_authoring::
 ./scripts/test.sh ui -- headless_tests::hierarchy headless_tests::properties \
   headless_tests::parameter_groups headless_tests::animation_panels
-cargo check --locked -p kasane-editor
+cargo check --locked -p zipzi-editor
 ```
 
 受影响 native 库的测试与示例编译、Editor 默认应用编译通过。两仓库
@@ -1181,32 +1181,32 @@ Release 或 C6 综合性能验收。本批代码保留在两个工作区，尚�
 主要复现命令：
 
 ```sh
-# 相邻 kasane-2d
-cargo test --locked -p kasane-sdk --test integration -- \
+# 相邻 zipzi-2d
+cargo test --locked -p zipzi-sdk --test integration -- \
   resource_authoring:: reference_authoring:: project_io:: cdi_authoring:: organization_authoring:: \
   motion_library:: scene_lifecycle:: scene_content:: binding_authoring:: effects_authoring:: \
   editor_state:: handles::
-cargo test --locked -p kasane-core --tests
-cargo test --locked -p kasane-project --test project_tests --test cdi_tests --test model3_tests \
+cargo test --locked -p zipzi-core --tests
+cargo test --locked -p zipzi-project --test project_tests --test cdi_tests --test model3_tests \
   --test motion_tests --test pose_tests --test sequence_tests
-cargo test --locked -p kasane-cmo3 --test export --test import
-cargo test --locked -p kasane-moc3 --test import_tests -- \
+cargo test --locked -p zipzi-cmo3 --test export --test import
+cargo test --locked -p zipzi-moc3 --test import_tests -- \
   validation:: version_compat:: model_roundtrip::test_import_m1_roundtrip \
   model_roundtrip::test_zero_triangle_mesh_editing_and_lifecycle
-cargo test --locked -p kasane-sdk-observe --test capture
-cargo test --locked -p kasane-moc3-psd --test export_tests
-cargo check --locked --keep-going -p kasane-core -p kasane-project -p kasane-moc3 --benches \
-  -p kasane-moc3-psd -p kasane-animation -p kasane-render-wgpu -p cubism-matrix-kasane
-cargo check --locked --keep-going -p kasane-core -p kasane-project -p kasane-cmo3 \
-  -p kasane-moc3 -p kasane-sdk -p kasane-python -p kasane-sdk-observe --tests --examples
+cargo test --locked -p zipzi-sdk-observe --test capture
+cargo test --locked -p zipzi-moc3-psd --test export_tests
+cargo check --locked --keep-going -p zipzi-core -p zipzi-project -p zipzi-moc3 --benches \
+  -p zipzi-moc3-psd -p zipzi-animation -p zipzi-render-wgpu -p cubism-matrix-zipzi
+cargo check --locked --keep-going -p zipzi-core -p zipzi-project -p zipzi-cmo3 \
+  -p zipzi-moc3 -p zipzi-sdk -p zipzi-python -p zipzi-sdk-observe --tests --examples
 ./tools/test.sh python
-# kasane-editor
-cargo test --locked -p editor-core --test integration -- \
+# zipzi-editor
+cargo test --locked -p zipzi-editor-core --test integration -- \
   resource_authoring:: reference_authoring:: scene_lifecycle:: scene_content:: properties:: \
   locks:: panels:: organization_authoring::
 ./scripts/test.sh ui -- headless_tests::hierarchy headless_tests::properties \
   headless_tests::parameter_groups headless_tests::animation_panels
-cargo check --locked -p kasane-editor
+cargo check --locked -p zipzi-editor
 ```
 
 受影响 native 库的测试／示例、基准目标、矩阵 runner 和 Editor 默认应用编译通过；两仓库格式与 diff 检查通过。
@@ -1216,7 +1216,7 @@ cargo check --locked -p kasane-editor
 
 ### C5 提交后 review（2026-10-22）
 
-审查范围：kasane-2d `df89e91..135cae1`、kasane-editor `5d917c0..bbcabd5`
+审查范围：zipzi-2d `df89e91..135cae1`、zipzi-editor `5d917c0..bbcabd5`
 各六次提交（含两端）。本轮修复以下问题，不将结果视为 C6 总验收：
 
 - Editor 通用资源操作和图像加载曾在提交后才读取纹理；文件不存在时返回错误，
@@ -1245,7 +1245,7 @@ cargo check --locked -p kasane-editor
 | SDK integration `motion_library:: project_io::` | 41 通过，1 项既有 Release 测量忽略 |
 | project lib `memory_psd_tests::` | 1 通过 |
 | Editor integration `authoring scene_ sorting:: properties::` | 82 通过 |
-| `cargo check --locked -p kasane-editor` | 通过，保留既有 vendor 警告 |
+| `cargo check --locked -p zipzi-editor` | 通过，保留既有 vendor 警告 |
 
 本轮未运行完整 workspace、原生截图或真实模型性能测试；这些验证仍保留在 C6。
 
@@ -1294,7 +1294,7 @@ Python 首次筛选在 CPU 14 项通过后，因 inspection 无匹配用例返�
 
 ### C5 适配层模板代码重构（2026-10-22）
 
-先将两轮审查修复提交为 kasane-2d `f23db9c`、kasane-editor `ee4c007`，再进行本轮
+先将两轮审查修复提交为 zipzi-2d `f23db9c`、zipzi-editor `ee4c007`，再进行本轮
 重构。公共 API、错误分类和领域规划规则保持原有行为，提取重复执行步骤：
 
 - Editor：Document 共用候选手势检查；Editor 共用活动文档、busy/exiting 和 Timeline
@@ -1341,8 +1341,8 @@ Python 首次筛选在 CPU 14 项通过后，因 inspection 无匹配用例返�
 
 验证（本次实际执行）：
 
-- `cargo test --locked -p kasane-sdk --test integration -- authoring scene_`：191 通过。
-- `cargo test --locked -p editor-core --test integration -- authoring scene_ sorting:: properties::`：83 通过。
+- `cargo test --locked -p zipzi-sdk --test integration -- authoring scene_`：191 通过。
+- `cargo test --locked -p zipzi-editor-core --test integration -- authoring scene_ sorting:: properties::`：83 通过。
 - `./tools/test.sh python -- -k pose -k organization -k scene -k reference -k resource -k attachment -k document -k saved_mapping`：当前 Debug 扩展，CPU 15、inspection 1 通过。
 - 两仓 `cargo fmt --all -- --check`、`git diff --check` 通过。
 
@@ -1354,7 +1354,7 @@ Python 首次把多个关键词写成单个 `or` 表达式；unittest 不支持�
 ## C6：核心总验收与公共契约（2026-10-22）
 
 完成 30 项核心场景的[验收映射](unified-object-authoring-c6-acceptance.md)，并在相邻 SDK
-固定 [公共契约](../../../kasane-2d/modules/kasane-sdk/AUTHORING.md)：类型化入口、句柄／
+固定 [公共契约](../../../zipzi-2d/modules/zipzi-sdk/AUTHORING.md)：类型化入口、句柄／
 地址／异步请求存活、领域锁、单历史、组合 ChangeSet、支持矩阵、默认预算和诊断处理。
 
 新增 SDK 跨领域单事务、末尾失败回滚及 12 类直接／规划执行的等价发布验收；

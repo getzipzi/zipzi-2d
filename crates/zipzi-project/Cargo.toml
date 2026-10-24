@@ -1,0 +1,33 @@
+[package]
+name = "zipzi-project"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Project persistence, document codec, resource management and publication for Zipzi 2D"
+
+[features]
+binary-prototype = ["dep:ciborium"]
+
+[dependencies]
+zipzi-core = { path = "../zipzi-core" }
+zipzi-live2d = { path = "../zipzi-live2d" }
+zipzi-cmo3 = { path = "../zipzi-cmo3" }
+zipzi-moc3 = { path = "../zipzi-moc3" }
+zipzi-psd = { path = "../zipzi-psd" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+png = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+ciborium = { version = "0.2.2", optional = true }
+
+[[example]]
+name = "project_binary_prototype"
+required-features = ["binary-prototype"]
+
+[[bench]]
+name = "codec_benchmark"
+harness = false

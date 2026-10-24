@@ -8,7 +8,7 @@
 - `editor/src/editing.rs` 从 Save 提取统一输入边界，接入 Parameter 管理、Physics 列表操作、Motion 创建、资源行激活、文档/工作区切换、Open/Import、New、GenerateMesh 和文档 Undo/Redo。合法文本提交，非法文本恢复并显示原因；数值、颜色、Timeline 与画布的未完成候选取消。候选取消先于 Redo 可用性查询；原生文本的快捷键和菜单路由继续优先。没有用全局暂停替代输入结算，因此纯展示操作不会因边界本身暂停普通播放。
 - 结算后的字段值与 revision 同步回控件，阻止排队的 Blur/Change 或迟到 Release 重复提交。保存/关闭后台文档不清理当前文档的输入捕获。输入法组合未完成时阻止依赖输入结算的操作。
 - 新建后通过 `OperationResult.suggested_selection` 检查结果、显示 Properties，并在延迟回调中复核文档、上下文、revision 和检查对象后聚焦名称。资源检查使用独立检查接口；共享适配不把重排伪造成一次预览点击。Parameter 的祖先展开和滚动沿用现有定位器。
-- `editor-core/src/authoring/creation.rs` 统一 Parameter/ParameterGroup 创建默认值、内部 ID、runtime ID 与稳定插入位置。名称可以由 UI 本地化；关系、名称校验、身份、锁和最终提交继续由 core/SDK 负责。
+- `zipzi-editor-core/src/authoring/creation.rs` 统一 Parameter/ParameterGroup 创建默认值、内部 ID、runtime ID 与稳定插入位置。名称可以由 UI 本地化；关系、名称校验、身份、锁和最终提交继续由 core/SDK 负责。
 - Parameter 工具栏、命令和行菜单共用创建路径。普通参数之后插入；单个文件夹内追加；空组可嵌套；同容器多目标按完整文档顺序确定末尾，跨容器回到根集合。右键使用点击行上下文，延迟命令不重新读取全局选择。创建与后续名称编辑分开进入历史，Esc 不删除新对象。
 
 ## 阶段状态
@@ -33,12 +33,12 @@
 
 ## 首轮验证
 
-Editor 与相邻 `kasane-2d` 都在独立 worktree 中。依赖固定为 `kasane-2d` 的已提交版本 `4bb2fee`；本轮没有修改该仓库产品源码，也没有使用原 checkout 的未提交更改。
+Editor 与相邻 `zipzi-2d` 都在独立 worktree 中。依赖固定为 `zipzi-2d` 的已提交版本 `4bb2fee`；本轮没有修改该仓库产品源码，也没有使用原 checkout 的未提交更改。
 
 ```sh
 # 受影响 UI、属性表单和输入路由
 # 多个过滤词由测试 harness 取并集，不执行无关全套。
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::authoring headless_tests::parameter_creation \
   headless_tests::parameter_groups headless_tests::parameter_management \
   headless_tests::parameters headless_tests::properties headless_tests::physics \
@@ -47,7 +47,7 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
   headless_tests::ui_performance properties::form::tests
 
 # 创建规划和组织关系
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core \
   --test integration organization_authoring::
 
 cargo fmt --all -- --check
@@ -63,9 +63,9 @@ git diff --check
 
 ## 第二轮实现：共享移动规划与交互
 
-2026 年 10 月 23 日：依照用户要求，直接在已搬回的当前 checkout 继续，不再创建 worktree。本轮依赖 `kasane-2d b86b13b`，没有修改该仓库。
+2026 年 10 月 23 日：依照用户要求，直接在已搬回的当前 checkout 继续，不再创建 worktree。本轮依赖 `zipzi-2d b86b13b`，没有修改该仓库。
 
-- 新增 `editor-core/src/authoring/moving.rs`：`PaletteMove` 捕获投影、源对象集合、稳定目标和 Before/After/Inside；规划转成现有 Organization/Scene SDK 计划。原生集合提供顺序，SDK 负责祖先归并、锁、循环、整体预校验、no-op、过期计划拒绝和单条历史。`plan_palette_step` 用同一适配生成菜单上下移的计划，按完整集合定位相邻项。
+- 新增 `zipzi-editor-core/src/authoring/moving.rs`：`PaletteMove` 捕获投影、源对象集合、稳定目标和 Before/After/Inside；规划转成现有 Organization/Scene SDK 计划。原生集合提供顺序，SDK 负责祖先归并、锁、循环、整体预校验、no-op、过期计划拒绝和单条历史。`plan_palette_step` 用同一适配生成菜单上下移的计划，按完整集合定位相邻项。
 - `panels/sorting.rs` 移除 UI 的父级表、循环遍历和同父级/组嵌套限制。命中与释放使用同一 core 规划入口，释放时重规划并校验上下文；不再调用原来各自分散的排序 `EditorCommand`。旧公共命令仍保留给其他调用者，未宣称完成全部旧入口清理。
 - 文件夹支持进入另一个文件夹，Before/After 支持合法跨父级移动；Part 组织移动可携带现有树多选集合。SDK 归并已选祖先的后代，并保持来源投影顺序；锁定成员导致整个计划失败。多选拖放不伪造单击，也不更改当前选择。
 - 手动排序视图在搜索/类型过滤下仍可拖放，通过完整集合的稳定对象锚点确定位置，不清除筛选、不用可见行号写模型。保留现有虚拟列表、边缘滚动、Esc、失活和文档切换取消行为。
@@ -78,7 +78,7 @@ git diff --check
 第二轮验证：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::sorting headless_tests::hierarchy headless_tests::authoring \
   headless_tests::parameter_creation headless_tests::parameter_groups \
   headless_tests::parameter_management headless_tests::parameters \
@@ -86,7 +86,7 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
   headless_tests::workspaces headless_tests::command_targets \
   headless_tests::input_routing headless_tests::ui_performance properties::form::tests
 
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration -- \
   palette_moves:: organization_authoring:: sorting::
 ```
 
@@ -95,7 +95,7 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integrat
 
 ## 第三轮实现：组织树创建与筛选显露
 
-前两轮代码已提交为 `65dd84a`。依照用户“commit 后继续”的要求，本轮在当前 checkout 接续 U2；依赖仍为 `kasane-2d b86b13b`，没有修改相邻仓库。
+前两轮代码已提交为 `65dd84a`。依照用户“commit 后继续”的要求，本轮在当前 checkout 接续 U2；依赖仍为 `zipzi-2d b86b13b`，没有修改相邻仓库。
 
 - 新增 core `SceneObjectType` / `SceneObjectCreationPlan`：统一 Part、空 Mesh、Warp、Rotation、Offscreen 的创建规划。UI 只提供本地化名称与捕获的上下文；core 分配 UUID、按拥有者避重默认名称、确定完整集合插入锚点，SDK 生成数据默认值、验证归属/锁并发布单条历史。
 - 单个 Part 内追加；普通行同级之后创建；同拥有者多选在完整顺序的最后选中项之后创建；跨拥有者选择回到根集合。根部 Part 与未归属对象按各自显示分支确定顺序。组织树中的变形器行只表示组织归属，创建不会意外改变实际变形父级。
@@ -108,13 +108,13 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integrat
 第三轮定向门禁：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::scene_creation headless_tests::hierarchy headless_tests::sorting \
   headless_tests::authoring headless_tests::properties headless_tests::panel_toolbar \
   headless_tests::command_targets headless_tests::ui_performance \
   panels::hierarchy_tree::filter
 
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration -- \
   scene_creation:: scene_lifecycle:: palette_moves:: organization_authoring:: sorting::
 
 cargo fmt --all -- --check
@@ -126,7 +126,7 @@ git diff --check
 
 ## 第四轮实现：树选择与可配置移动快捷键
 
-第三轮组织树创建已提交为 `5359c2d`。本轮继续在当前 checkout 工作，没有创建 worktree 或修改相邻 `kasane-2d`。
+第三轮组织树创建已提交为 `5359c2d`。本轮继续在当前 checkout 工作，没有创建 worktree 或修改相邻 `zipzi-2d`。
 
 - 新增层级树 `selection.rs`，以稳定对象引用保存 Shift 锚点，以稳定行键保存键盘焦点。Cmd 切换成员；Shift 以当前可见行作范围；Cmd+Shift 合并范围。反向范围仍以点击项作为 primary，重复 Shift 保留原锚点。过滤和折叠不会自动清除模型中的既有选择；范围不纳入隐藏行，也不把行号当对象身份。
 - 普通上下键移动行焦点、滚动到焦点，Enter 才更新选择；Shift+上下扩展选择，左右键折叠/展开或进入子级/返回父级，Home/End 定位首尾。箭头和 Enter 不截获搜索框输入；父级折叠保留隐藏成员的选择。文档或工作区 token 改变后重置光标和锚点，删除对象后校正锚点。
@@ -138,7 +138,7 @@ git diff --check
 第四轮定向验证：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::tree_selection headless_tests::palette_commands \
   headless_tests::hierarchy headless_tests::sorting headless_tests::scene_creation \
   headless_tests::parameters headless_tests::parameter_groups \
@@ -147,7 +147,7 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
   headless_tests::input_routing headless_tests::ui_performance \
   keybindings::tests input_routing::policy
 
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration -- \
   commands:: keyboard:: sorting:: palette_moves::
 
 cargo fmt --all -- --check
@@ -159,7 +159,7 @@ git diff --check
 
 ## 第五轮实现：指定容器移动
 
-第四轮树选择和移动快捷键已提交为 `412c7ee`。继续使用当前 checkout，依赖 `kasane-2d b86b13b`；本轮没有修改相邻仓库。
+第四轮树选择和移动快捷键已提交为 `412c7ee`。继续使用当前 checkout，依赖 `zipzi-2d b86b13b`；本轮没有修改相邻仓库。
 
 - core 新增轻量 `PaletteMoveDestination` 与 `palette_move_destinations`。根集合、Part 和 ParameterGroup 按原生容器顺序提供稳定身份与完整祖先路径；空容器也可选择，同名路径保留不同身份。使用迭代遍历，不复制整棵场景树及非容器对象，也不为每个容器生成移动计划。
 - 组织树和 Parameter/文件夹行菜单增加“移到…”；点在现有树多选内时冻结整个集合，点在集合外时只捕获点击对象。目标选择器可搜索完整路径；同名路径附加内部 ID 以区分。根集合是明确选项，成功移动追加到目标的完整顺序末尾。
@@ -173,7 +173,7 @@ git diff --check
 第五轮定向门禁：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::palette_move_to panels::sorting::destination::tests \
   headless_tests::tree_selection headless_tests::palette_commands \
   headless_tests::hierarchy headless_tests::sorting headless_tests::scene_creation \
@@ -184,7 +184,7 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
   headless_tests::ui_performance keybindings::tests input_routing::policy \
   panels::hierarchy_tree::filter
 
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration -- \
   palette_moves:: organization_authoring:: sorting:: keyboard:: commands::
 
 cargo fmt --all -- --check
@@ -196,7 +196,7 @@ git diff --check
 
 ## 第六轮实现：多选上下移动
 
-第五轮指定容器移动已提交为 `25bf0f9`。本轮继续在当前 checkout 实施；依赖仍为 `kasane-2d b86b13b`，没有修改相邻仓库。
+第五轮指定容器移动已提交为 `25bf0f9`。本轮继续在当前 checkout 实施；依赖仍为 `zipzi-2d b86b13b`，没有修改相邻仓库。
 
 - 新增 core `plan_palette_steps`，单对象 `plan_palette_step` 也委托此入口。按完整原生集合识别连续选区，每段跨过一个未选邻居，保留段内顺序和选区间隔；边界选区不动。向上从前往后、向下从后往前规划，并按稳定对象锚点解析候选顺序，不使用过滤后的行号。
 - 组织树与 Parameters 可同时处理多个拥有者集合；根 Part/未归属对象、根变形器/根 Mesh 和文件夹/参数按各自显示集合处理。原生组织子树查询归并被选祖先内的后代，锁检查覆盖全部源子树，包含已经到达边界的源。锁定成员使整个操作失败，避免只移动其他选区。
@@ -207,7 +207,7 @@ git diff --check
 第六轮定向门禁：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::palette_steps headless_tests::palette_move_to \
   panels::sorting::destination::tests \
   headless_tests::tree_selection headless_tests::palette_commands \
@@ -219,7 +219,7 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
   headless_tests::ui_performance keybindings::tests input_routing::policy \
   panels::hierarchy_tree::filter
 
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration -- \
   palette_steps:: palette_moves:: organization_authoring:: sorting:: keyboard:: commands::
 
 cargo fmt --all -- --check
@@ -233,7 +233,7 @@ U2 仍未完成：变形树创建的位置契约、保持形态改父级、Param
 
 ## 第七轮实现：Parameter 文件夹选择与键盘导航
 
-第六轮多选上下移已提交为 `24601bc`。本轮继续使用当前 checkout，没有创建 worktree 或修改相邻 `kasane-2d`。
+第六轮多选上下移已提交为 `24601bc`。本轮继续使用当前 checkout，没有创建 worktree 或修改相邻 `zipzi-2d`。
 
 - Parameter 文件夹名称单击检查文件夹，箭头独立展开/折叠；原检查按钮复用同一激活路径。参数仍使用既有 `FocusParameter`，文件夹使用 `Navigate`，保留场景选择、参数预览值和参数焦点。空文件夹也可以检查，折叠不清除隐藏对象的检查身份。
 - 新增仅用于展示的稳定对象光标。上下键及 Home/End 只移动焦点并滚动，Enter 才激活；左右键展开/折叠、进入首个可见子行或返回父行。空文件夹不会跳入下一个根组；“未分组”有独立展示身份，可以折叠和导航，但不会提交对象检查或移动。
@@ -244,7 +244,7 @@ U2 仍未完成：变形树创建的位置契约、保持形态改父级、Param
 第七轮定向门禁：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::parameter_navigation \
   headless_tests::palette_steps headless_tests::palette_move_to \
   panels::sorting::destination::tests \
@@ -268,7 +268,7 @@ U2 仍待变形树创建的位置契约、保持形态改父级和其余创建�
 
 ## 第八轮实现：创建主菜单与可配置命令
 
-第七轮 Parameter 文件夹导航已提交为 `db58fce`。本轮继续使用当前 checkout，依赖仍为 `kasane-2d b86b13b`；没有创建 worktree 或修改相邻仓库。
+第七轮 Parameter 文件夹导航已提交为 `db58fce`。本轮继续使用当前 checkout，依赖仍为 `zipzi-2d b86b13b`；没有创建 worktree 或修改相邻仓库。
 
 - 命令目录新增 `scene.create-part`、`scene.create-mesh`、`scene.create-warp`、`scene.create-rotation`、`scene.create-offscreen`。均为 Modeling 文档命令，无默认键位、不可按住连发，可通过现有 `keybindings.json` 配置；文本、搜索框、输入法字符输入和模态继续由既有路由隔离。原 `tool.generate-mesh` 保留其内容生成用途。
 - “编辑 → 创建”主菜单列出五种场景创建，以及已有 Parameter 和 ParameterGroup 创建命令。场景命令在调用时捕获与组织树工具栏相同的场景选择，使用组织投影的完整集合位置，不因焦点处于变形树就隐式指定实际变形父级。右键继续使用显式点击行上下文。
@@ -279,7 +279,7 @@ U2 仍待变形树创建的位置契约、保持形态改父级和其余创建�
 第八轮定向门禁：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::scene_creation_commands headless_tests::parameter_navigation \
   headless_tests::palette_steps headless_tests::palette_move_to \
   panels::sorting::destination::tests \
@@ -292,7 +292,7 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
   headless_tests::ui_performance keybindings::tests input_routing::policy \
   panels::hierarchy_tree::filter menus::tests
 
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration -- \
   scene_creation:: scene_lifecycle:: organization_authoring:: palette_steps:: \
   palette_moves:: sorting:: keyboard:: commands::
 
@@ -307,7 +307,7 @@ U2 仍未全量验收：变形树创建需要核心方案第 6.1 节的双投影
 
 ## 第九轮实现：变形树创建与双投影位置
 
-第八轮创建主菜单和快捷键已提交为 `6db8b70`，没有包含其他任务已暂存的 SDK 设计文档。本轮在当前 checkout 继续；`kasane-2d` 以 `b86b13b` 为基础补充原生契约，Editor 与 SDK 本轮改动均尚未提交，没有创建 worktree。
+第八轮创建主菜单和快捷键已提交为 `6db8b70`，没有包含其他任务已暂存的 SDK 设计文档。本轮在当前 checkout 继续；`zipzi-2d` 以 `b86b13b` 为基础补充原生契约，Editor 与 SDK 本轮改动均尚未提交，没有创建 worktree。
 
 - 补齐[核心方案第 6.1 节](unified-object-authoring-core.md#61-ui-u2-发现的后续创建位置契约)：原生 `SceneEdit::Create` 增加独立可选的 `deformation_before`，组织集合仍由 `part_id` / `before` 确定，实际变形集合由 `parent_id` / `deformation_before` 确定。创建 planner 校验两个拥有者、锁和稳定锚点，在同一创建 delta 内发布两份顺序；不使用创建后再移动的第二条历史。Offscreen 和 Glue 拒绝变形锚点。SDK 的版本校验、事务回滚、双集合变化摘要与 Undo/Redo 沿用原生路径。
 - core 新增按明确投影创建的入口，计划携带投影供结果定位；原组织创建入口委托此入口。变形树只支持 Mesh、Warp、Rotation。单个变形器内追加，单个 Mesh 同父级之后插入，同父级多选按完整顺序的最后成员之后插入；跨实际父级选择回到根集合。根变形器与根 Mesh 保留各自展示集合顺序。
@@ -319,8 +319,8 @@ U2 仍未全量验收：变形树创建需要核心方案第 6.1 节的双投影
 第九轮定向门禁：
 
 ```sh
-# kasane-editor
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+# zipzi-editor
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --lib -- \
   headless_tests::deformation_creation headless_tests::scene_creation_commands \
   headless_tests::parameter_navigation headless_tests::palette_steps \
   headless_tests::palette_move_to panels::sorting::destination::tests \
@@ -333,12 +333,12 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
   headless_tests::ui_performance keybindings::tests input_routing::policy \
   panels::hierarchy_tree::filter menus::tests
 
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration -- \
   deformation_creation:: scene_creation:: scene_lifecycle:: organization_authoring:: \
   palette_steps:: palette_moves:: sorting:: keyboard:: commands::
 
-# ../kasane-2d
-cargo test --locked -p kasane-sdk --test integration -- \
+# ../zipzi-2d
+cargo test --locked -p zipzi-sdk --test integration -- \
   scene_creation_placement:: scene_lifecycle:: scene_content:: scene_authoring:: \
   organization_authoring:: hierarchy_order:: authoring_acceptance::
 
@@ -369,7 +369,7 @@ git diff --check
 第十轮定向门禁：
 
 ```sh
-# kasane-editor：沿用第九轮的 UI/core 过滤集合，并加入以下专项
+# zipzi-editor：沿用第九轮的 UI/core 过滤集合，并加入以下专项
 ./scripts/test.sh regression -- \
   panels::sorting::reparent panels::sorting::destination \
   headless_tests::deformation_creation headless_tests::scene_creation_commands \
@@ -385,8 +385,8 @@ git diff --check
   deformation_creation:: scene_creation:: scene_lifecycle:: organization_authoring:: \
   palette_steps:: palette_moves:: palette_reparent:: sorting:: keyboard:: commands::
 
-# ../kasane-2d
-cargo test --locked -p kasane-sdk --test integration -- \
+# ../zipzi-2d
+cargo test --locked -p zipzi-sdk --test integration -- \
   binding_authoring::conversions::reparent scene_creation_placement:: scene_lifecycle:: \
   scene_content:: scene_authoring:: organization_authoring:: hierarchy_order:: \
   authoring_acceptance::
@@ -419,7 +419,7 @@ U1 的共享适配功能在本轮收口。U3 的 Motion/Expression 新管理入�
 
 - Editor：沿用第十轮创建、移动、保持形态、导航、输入边界和虚拟化过滤集合，加入 `authoring_coordination`、Physics、Animation 面板、工作区、Timeline、紧凑布局和受影响领域适配测试。**UI 285 项、core 集成 112 项、core 单元 4 项通过**。
 - SDK：对象/集合能力、绑定、Motion、Expression、Physics、Pose、组织/场景/内容、引用、资源、身份与锁、保持形态和共享回执等定向过滤集合，**278 项通过**；既有 Release 大库规划测量 1 项按默认忽略。
-- Project：`cargo test --locked -p kasane-project --test project_tests -- resources_codec version_migration`，**18 项通过**。
+- Project：`cargo test --locked -p zipzi-project --test project_tests -- resources_codec version_migration`，**18 项通过**。
 - 两个仓库分别执行 `cargo fmt --all -- --check` 与 `git diff --check`。
 
 新增 7 项 core 协调用例、5 项 UI 协调用例和 4 项 SDK 集合/范围/锁定保存回读用例；旧的引用删除回归改为验证原生禁用状态和原因。既有测试跨轮有重叠，不累计相加。
@@ -462,7 +462,7 @@ git diff --check
 
 ## U3 首轮：Motion、Expression 与稳定成员编辑
 
-2026 年 10 月 23 日，在当前 checkout 开始 U3。依赖 `kasane-2d 26afe00`；本轮没有修改相邻仓库。
+2026 年 10 月 23 日，在当前 checkout 开始 U3。依赖 `zipzi-2d 26afe00`；本轮没有修改相邻仓库。
 
 - core 新增 `AnimationLibraryPlan`，统一 Motion、空 MotionGroup、空 Expression 和未配置 ExpressionEntry 的身份、名称与稳定插入位置。创建与初始排序通过原生类型化操作组合在一个 SDK 事务内，创建和后续改名分别撤销。旧 Timeline New Motion 也复用核心默认创建路径。
 - 工具栏、行菜单、主菜单和可配置创建命令调用同一适配器；右键捕获点击对象。Motion 创建后激活当前注册并重置时间，不自动播放；Expression 创建使用空参数表并沿用原选择路径。成员创建明确捕获拥有者，显示 Properties 并聚焦参数选择。
@@ -500,7 +500,7 @@ git diff --check
 
 ## U3 续轮：Motion 复制、已有引用与删除影响审阅
 
-2026 年 10 月 23 日继续实施，仍使用 `kasane-2d 26afe00`，未修改相邻仓库。
+2026 年 10 月 23 日继续实施，仍使用 `zipzi-2d 26afe00`，未修改相邻仓库。
 
 - 行菜单区分“复制动作内容”“添加已有动作引用”和“复制动作组”。内容复制由原生 `DuplicateClip` 重建 Clip、轨道、关键帧和事件身份，外部资源共享；组复制重建组与注册身份，保留共享 Clip、注册覆盖和引用集合。核心负责唯一名称与稳定相邻插入，复制和定位检查结果不激活预览。
 - Motion 工具栏和行菜单共用可搜索引用选择器，捕获目标组或相邻注册；同名 Clip 以 ID 区分，空组可以接收引用。确认添加单个注册，初始 fade/sound 使用继承值，不复制 Clip。选择时生成原生计划，搜索与绘制不规划；取消不产生历史，过期上下文拒绝执行。
@@ -536,7 +536,7 @@ git diff --check
 
 ## U4：Physics、Pose 业务集合与稳定子项
 
-2026 年 10 月 23 日开始实施，依赖仍为 `kasane-2d 26afe00`；本轮未改相邻仓库。
+2026 年 10 月 23 日开始实施，依赖仍为 `zipzi-2d 26afe00`；本轮未改相邻仓库。
 
 - core 新增 Physics/Pose 的类型化 `BusinessAction` / `BusinessPlan` 适配。单例默认内容、组的唯一默认名称、相邻 Pose 成员/links 插入位置、执行顺序和节点链位置由 core 解析稳定身份，再交给 SDK 原生规划。边界移动为 no-op，保留 redo；计划以原生版本冻结，确认后单条历史发布。
 - 新建物理组、Pose 组、成员和 link 同时提供工具栏、上下文菜单、主菜单与可配置命令。不存在根资源时，首个组在一个原生事务内创建根；已有根时复用同一身份。Pose 初始组为空，成员与 link 的 Part 初始为未配置，不凭 UI 猜测业务目标。
@@ -589,7 +589,7 @@ git diff --check
 
 ## U5-A：普通绑定创作闭环
 
-2026 年 10 月 23 日完成本轮功能接入。普通绑定删除、快照规划接口及对应 SDK 回归已随 U5-B 配套修改一并提交到 `kasane-2d e27230a`；此版本或兼容后继是本轮完整功能的依赖基线，见 `DEPENDENCIES.md`。
+2026 年 10 月 23 日完成本轮功能接入。普通绑定删除、快照规划接口及对应 SDK 回归已随 U5-B 配套修改一并提交到 `zipzi-2d e27230a`；此版本或兼容后继是本轮完整功能的依赖基线，见 `DEPENDENCIES.md`。
 
 - core 新增 `OrdinaryBindingAction`、不可变捕获和版本化计划适配。Mesh、Warp、Rotation、Part 从合法目标创建零轴普通绑定，已有绑定直接打开；绑定、轴、采样点、所属目标始终以稳定身份定位。新轴可待配置，也可显式选 Parameter 并用其最小值、默认值和最大值生成初始关键值，最终合法性由原生校验。
 - Properties 接入创建/管理绑定、目标形态定位、轴参数配置、关键值增改删、轴删除及绑定删除。可搜索参数选择保留未配置和缺失目标的区别；绑定根、轴和采样点可相互检查，不依赖其他面板当前选择或长期数组位置。
@@ -613,8 +613,8 @@ git diff --check
   headless_tests::docking_tabs headless_tests::animation_panels \
   headless_tests::business_authoring
 
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
-  -p kasane-sdk --test integration binding_authoring::
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked \
+  -p zipzi-sdk --test integration binding_authoring::
 
 cargo fmt --all -- --check
 git diff --check
@@ -629,7 +629,7 @@ git diff --check
 
 ## U5-B：纹理资源闭环
 
-2026 年 10 月 23 日完成功能接入。SDK `import_prepared_image` 原子导入接口及资源回归已与 U5-A 的相邻仓库修改一起提交到 `kasane-2d e27230a`；编辑器依赖记录已同步，两个仓库分别提交交付。
+2026 年 10 月 23 日完成功能接入。SDK `import_prepared_image` 原子导入接口及资源回归已与 U5-A 的相邻仓库修改一起提交到 `zipzi-2d e27230a`；编辑器依赖记录已同步，两个仓库分别提交交付。
 
 - Modeling 的 Resources 面板提供“新建纹理”和“导入 PNG”。New 立即创建空资源、检查并聚焦 Properties 名称；Properties 再选择图像，取消选择保留空资源。直接 Import 在后台解码成功后才以一次历史事务创建资源并写入内容，取消、无效图像或过期结果不创建条目。
 - Mesh Properties 增加可搜索的纹理选择，支持未配置、现有空资源与已有图片资源；导入的未解析引用保留原状态，直到用户显式替换。引用修改使用原生 `SceneField::Texture`，不把引用或图像资源拼装成 UI JSON。空资源仍保留 Mesh 的求值顶点和几何编辑能力。
@@ -651,8 +651,8 @@ git diff --check
   headless_tests::deformation_creation headless_tests::business_authoring \
   headless_tests::animation_authoring
 
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
-  -p kasane-sdk --test integration resource_authoring::
+cargo test --manifest-path ../zipzi-2d/Cargo.toml --locked \
+  -p zipzi-sdk --test integration resource_authoring::
 ```
 
 结果：**53 项 core 集成、87 项 UI、19 项 SDK 资源测试，共 159 项通过**。新增 4 项 core、7 项 UI、1 项 SDK 回归，覆盖实际按钮与选择器、新建/导入取消及坏图像、单步历史导入、空纹理配置给 Mesh、缺失来源修复、依赖审阅与替换、锁定使用者、旧请求及文档切换、缓存纹理刷新、仅重命名复用帧、保存重开及 Undo/Redo。格式与两个仓库空白检查通过；未执行昂贵全套、原生截图或 Release 性能测量，完整验收仍随 U6。

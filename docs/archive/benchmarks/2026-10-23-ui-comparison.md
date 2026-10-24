@@ -4,12 +4,12 @@
 
 ## 版本与方法
 
-| 组合 | editor | kasane-2d |
+| 组合 | editor | zipzi-2d |
 | --- | --- | --- |
 | 基线 | `279f569b5eed8eb31926b4898a4ff302cabc0a0f` | `01db56a5e572d9050197a0bf019f22077f68daa7` |
 | 当前 | `61371c0e7b82d00df0ee8b02083783e4e17b3517` | `c7f165161ed7d9b15880532fb2ec9b1aa74e6acb` |
 
-两个仓库在构建前均无未提交改动。基线由独立 detached worktree 构建，分别保存二进制；所有测量直接运行保存的二进制，期间不进行编译或测试。两个版本的 benchmark 驱动、vendored GPUI、追踪报告脚本一致。构建使用 `cargo build --locked --release -p kasane-editor --features test-support`，未启用 `bench-instrumentation`。
+两个仓库在构建前均无未提交改动。基线由独立 detached worktree 构建，分别保存二进制；所有测量直接运行保存的二进制，期间不进行编译或测试。两个版本的 benchmark 驱动、vendored GPUI、追踪报告脚本一致。构建使用 `cargo build --locked --release -p zipzi-editor --features test-support`，未启用 `bench-instrumentation`。
 
 Apple M4 / 10 核 GPU / 16 GiB，macOS 27.0.1；CB27U1 3840×2160，逻辑 1920×1080，120 Hz。相同 Mao runtime 模型，属性控件均选择 ArtMesh215；每次使用独立配置，默认 Metal mesh overlay、关闭 HUD。模型及纹理哈希、二进制哈希、请求尺寸和 fixture 身份保存在 JSON 与本地 audit 中。
 
@@ -141,16 +141,16 @@ Apple M4 / 10 核 GPU / 16 GiB，macOS 27.0.1；CB27U1 3840×2160，逻辑 1920�
 单次复现继续使用原项目入口（两个版本都使用相同开关和模型）：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR ./scripts/window-benchmark.sh \
+env -u ZIPZI_DEV_SESSION_DIR ./scripts/window-benchmark.sh \
   models/local/mao/runtime/mao_pro.model3.json target/ui-repro-canvas 300 120
-env -u KASANE_DEV_SESSION_DIR KASANE_BENCH_PROPERTY_CASE=name KASANE_BENCH_WARMUP=5 \
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_BENCH_PROPERTY_CASE=name ZIPZI_BENCH_WARMUP=5 \
   ./scripts/properties-benchmark.sh target/ui-repro-name 96 120
 ```
 
 完整变形器复现：
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR KASANE_BENCH_DEFORMATIONS=1 KASANE_BENCH_WARP=5101be9b-3d35-45a7-8764-b8d62616ada4 \
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_BENCH_DEFORMATIONS=1 ZIPZI_BENCH_WARP=5101be9b-3d35-45a7-8764-b8d62616ada4 \
   ./scripts/window-benchmark.sh models/local/mao/runtime/mao_pro.model3.json \
   target/ui-repro-deformations 300 120
 ```

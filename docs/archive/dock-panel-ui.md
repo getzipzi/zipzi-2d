@@ -74,5 +74,5 @@ restoration and the floating toolbar. Existing hierarchy, parameter, timeline,
 focus and cache-boundary regression tests remain applicable.
 
 Real Metal screenshots are captured by `headless_screenshot`; use
-`KASANE_SCREENSHOT_SCENE=timeline` for narrow Timeline views and
-`KASANE_SCREENSHOT_SCENE=dock` for selector and compact-header views.
+`ZIPZI_SCREENSHOT_SCENE=timeline` for narrow Timeline views and
+`ZIPZI_SCREENSHOT_SCENE=dock` for selector and compact-header views.

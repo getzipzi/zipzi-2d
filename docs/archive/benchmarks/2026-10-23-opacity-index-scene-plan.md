@@ -54,9 +54,9 @@ Core ScenePlan 新增只读 preserves_identities 证明。证明来自生成后�
 
 ## 验证
 
-- editor-core Opacity 回归：1 passed；连续输入、cancel、commit、失败 commit、值恢复后无变化 commit 均不重建预热索引，并比较完整重建结果。保留旧 Arc<ObjectIndex> 与 candidate 快照，验证未变化记录/关系/绑定/拓扑的共享。
-- editor-core 属性单元测试：3 passed，实际 set_object_property(Name) → SceneEdit::Patch(Label) 全链为 0 次 sdk.keys_in。
-- editor-core document 集成：15 passed；锁相关集成：16 passed。
+- zipzi-editor-core Opacity 回归：1 passed；连续输入、cancel、commit、失败 commit、值恢复后无变化 commit 均不重建预热索引，并比较完整重建结果。保留旧 Arc<ObjectIndex> 与 candidate 快照，验证未变化记录/关系/绑定/拓扑的共享。
+- zipzi-editor-core 属性单元测试：3 passed，实际 set_object_property(Name) → SceneEdit::Patch(Label) 全链为 0 次 sdk.keys_in。
+- zipzi-editor-core document 集成：15 passed；锁相关集成：16 passed。
 - SDK integration：321 passed、2 ignored。新增直接 edit_scene 和 apply_scene_plan 的 Label 工作次数验证，并验证清除/重建相同 Glue pair 后旧 handle 在提交、Undo、Redo 后持续失效；Core 删除/转换计划的证明为 false。
 - Release 构建、两个仓库的格式与差异检查通过；没有运行整个工作区完整套件。
 

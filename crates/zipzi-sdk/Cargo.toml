@@ -1,0 +1,32 @@
+[package]
+name = "zipzi-sdk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Engine-independent authoring SDK for Zipzi 2D"
+autotests = false
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+
+[[test]]
+name = "alpha_mesh"
+path = "tests/alpha_mesh.rs"
+
+[features]
+bench-instrumentation = ["zipzi-core/bench-instrumentation"]
+
+[dependencies]
+zipzi-core = { path = "../zipzi-core" }
+zipzi-animation = { path = "../zipzi-animation" }
+zipzi-project = { path = "../zipzi-project" }
+serde = { workspace = true }
+geo = { version = "0.33.1", default-features = false }
+spade = "2.15.1"
+rstar = "0.12.2"
+
+[dev-dependencies]
+png = { workspace = true }
+serde_json = { workspace = true }

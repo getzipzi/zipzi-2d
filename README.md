@@ -1,6 +1,6 @@
 # Zipzi 2D
 
-Zipzi 2D brings the Kasane Rust authoring SDK, Python bindings and native macOS
+Zipzi 2D brings the Zipzi Rust authoring SDK, Python bindings and native macOS
 Editor into one workspace. It supports editable 2D model documents, animation,
 Live2D/Cubism format interoperability, and WGPU/Metal rendering. The project is
 under development and has not been officially released; APIs and file formats
@@ -8,11 +8,11 @@ may change.
 
 ## Start here
 
-- **Desktop Editor:** [setup, development and native tests](crates/kasane-editor/README.md).
-- **Rust SDK:** [authoring API](crates/kasane-sdk/README.md) and
+- **Desktop Editor:** [setup, development and native tests](crates/zipzi-editor/README.md).
+- **Rust SDK:** [authoring API](crates/zipzi-sdk/README.md) and
   [crate responsibilities](MONOREPO.md#crate-responsibilities).
-- **Python SDK:** [installation and examples](crates/kasane-python/README.md),
-  [API reference](crates/kasane-python/API.md), [recipes](examples/sdk/README.md).
+- **Python SDK:** [installation and examples](crates/zipzi-python/README.md),
+  [API reference](crates/zipzi-python/API.md), [recipes](examples/sdk/README.md).
 - **Contributing:** [repository structure](MONOREPO.md),
   [test gates](tools/README.md#test-coverage), [tools](tools/README.md) and
   [documentation index](docs/README.md).
@@ -28,10 +28,10 @@ uv sync --locked
 python3 tools/workspace/cargo_domain.py --check
 
 # Focused SDK development
-cargo test --locked -p kasane-sdk --test integration physics_editing::
+cargo test --locked -p zipzi-sdk --test integration physics_editing::
 
 # Native Editor (macOS)
-cargo run --locked -p kasane-editor
+cargo run --locked -p zipzi-editor
 ./tools/test-editor.sh fast timeline::
 
 # Repository tooling tests; no native application build
@@ -41,7 +41,7 @@ uv run --locked python tools/test_tools.py
 For Python development, `./tools/test-sdk.sh python` refreshes the Debug extension
 before running CPU and inspection tests; add `--observe` for GPU coverage.
 `./tools/test-sdk.sh wheel` builds a Release wheel and validates its isolated
-installation. The wheel is an independent package under `crates/kasane-python`;
+installation. The wheel is an independent package under `crates/zipzi-python`;
 root `pyproject.toml` and `uv.lock` manage development tools.
 
 ## Tests
@@ -64,13 +64,13 @@ commands from the repository root; inspect available modes with
 Filters and filenames are placeholders; omit them to run the selected gate.
 For a crate's integration targets, inspect its README and `tests/`, or list cases
 with `cargo test --locked -p <crate> --test <target> -- --list`.
-Editor shell gates clear `KASANE_DEV_SESSION_DIR`; clear it explicitly when
+Editor shell gates clear `ZIPZI_DEV_SESSION_DIR`; clear it explicitly when
 running Editor Cargo tests directly.
 
 [Full coverage, prerequisites and CI](tools/README.md#test-coverage) define
 regression, stress, native acceptance and packaged-wheel gates. Both domain
 scripts default to expensive **full** runs when no mode is supplied.
-Plain `cargo test` selects only `kasane-core`, `kasane-project` and `kasane-sdk`.
+Plain `cargo test` selects only `zipzi-core`, `zipzi-project` and `zipzi-sdk`.
 Tooling tests belong in `tools/tests/`, crate tests stay with their crate, and
 shared data belongs in [`fixtures/`](fixtures/README.md).
 

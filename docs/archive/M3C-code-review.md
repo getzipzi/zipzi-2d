@@ -6,7 +6,7 @@
 
 ### P1：静态 Offscreen 导出丢失外观，求值忽略显式键映射
 
-位置：`modules/kasane-moc3/src/encoder.rs` 的 `part_key_src.key_idx` 写入、`modules/kasane-core/src/evaluation.rs` 的静态 Offscreen 求值。
+位置：`modules/zipzi-moc3/src/encoder.rs` 的 `part_key_src.key_idx` 写入、`modules/zipzi-core/src/evaluation.rs` 的静态 Offscreen 求值。
 
 没有 Part SceneBinding、映射为空但有静态关键形态时，预览使用第一个关键形态，encoder 却写入 -1。新增测试在修正前复现透明度从 0.3 变为 1.0，颜色同样会丢失。静态求值还直接使用 keyforms[0]，忽略显式映射 [1] 或 [-1]。
 
@@ -14,7 +14,7 @@
 
 ### P1：新增 BlendShape 引用依赖可选 Core 校验，非法输入可 panic
 
-位置：`modules/kasane-moc3/src/decoder.rs` 的 BlendShape 目标表及绑定窗口读取。
+位置：`modules/zipzi-moc3/src/decoder.rs` 的 BlendShape 目标表及绑定窗口读取。
 
 Glue / Offscreen 等目标索引直接下标访问 Vec。没有可选 native consistency checker 时，section 范围合法并不意味着内部索引合法；越界目标导致 panic，异常绑定窗口还可触发过量遍历。Offscreen 关键形态和颜色索引也可能读到其他 section 的字节。
 
@@ -22,7 +22,7 @@ Glue / Offscreen 等目标索引直接下标访问 Vec。没有可选 native con
 
 ### P2：Offscreen 映射不变量没有覆盖编辑路径
 
-位置：`modules/kasane-core/src/document.rs` 的 `validate_offscreen`、SceneBinding 创建/替换及引用删除保护。
+位置：`modules/zipzi-core/src/document.rs` 的 `validate_offscreen`、SceneBinding 创建/替换及引用删除保护。
 
 原实现仅在 Part 已有绑定时校验索引。静态 Part 的越界索引可以写入；替换绑定、改变关键形态数量或删除绑定后，已有 Offscreen 映射会失效。保存工程后重新加载可能被新的长度检查拒绝。
 
@@ -30,7 +30,7 @@ Glue / Offscreen 等目标索引直接下标访问 Vec。没有可选 native con
 
 ### P2：有限循环参数输入仍可计算出 NaN
 
-位置：`modules/kasane-core/src/evaluation.rs` 的 repeat 归一化。
+位置：`modules/zipzi-core/src/evaluation.rs` 的 repeat 归一化。
 
 `(requested - minimum) / range_length` 在减法或除法阶段可能溢出，即使三个值和范围长度都有限。随后 `inf - floor(inf)` 得到 NaN，原有上下界比较无法拦截。
 
@@ -54,7 +54,7 @@ S2 同时写入 `real_42_asset_acceptance: not_run` 和 `passed: true`，退出�
 
 ## 验证及限制
 
-- `cargo test -p kasane-core -p kasane-moc3 -p kasane-project -p kasane-godot --locked`：117 项通过，其中新增 6 项 Rust 回归测试。
+- `cargo test -p zipzi-core -p zipzi-moc3 -p zipzi-project -p zipzi-godot --locked`：117 项通过，其中新增 6 项 Rust 回归测试。
 - `cargo check --workspace --locked`：通过。
 - `python3 -m unittest discover -s tools -p test_validate_m3c.py`：2 项通过。
 - `git diff --check`：通过。

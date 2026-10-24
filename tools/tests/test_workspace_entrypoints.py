@@ -19,7 +19,7 @@ class PackagingPaths(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix='editor paths ')
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve() / 'workspace'
-        self.app = self.root / 'crates/kasane-editor'
+        self.app = self.root / 'crates/zipzi-editor'
         (self.root / 'tools').mkdir(parents=True)
         self.app.mkdir(parents=True)
         (self.app / 'assets/app-icons').mkdir(parents=True)
@@ -35,7 +35,7 @@ class PackagingPaths(unittest.TestCase):
         (self.root/'vendor/library/LICENSE').write_text('third-party license')
         (self.root / 'Cargo.toml').write_text('[workspace]')
         (self.root / 'Cargo.lock').write_text('version = 4')
-        (self.app / 'assets/app-icons/kasane-editor-icon-vector.icns').write_bytes(b'icon')
+        (self.app / 'assets/app-icons/zipzi-editor-icon-vector.icns').write_bytes(b'icon')
         self.outside = Path(self.temp.name).resolve() / 'elsewhere'
         self.outside.mkdir()
         self.bin = Path(self.temp.name).resolve() / 'bin'
@@ -46,17 +46,17 @@ args=sys.argv[1:]
 if os.environ.get('BUILD_FAIL'): sys.exit(7)
 root=pathlib.Path.cwd()
 if args[0]=='test':
-    output=pathlib.Path(os.environ['KASANE_TIMELINE_OUTPUT'])
+    output=pathlib.Path(os.environ['ZIPZI_TIMELINE_OUTPUT'])
     for name in ['results.json','number-probe.json','trace.jsonl']: (output/name).write_text('{}')
     sys.exit(0)
 profile='release' if args[args.index('--profile')+1]=='release' else 'debug'
 target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(root/'target')))
 if os.environ.get('CARGO_BUILD_TARGET'): target/=os.environ['CARGO_BUILD_TARGET']
-binary=target/profile/'kasane-editor'
+binary=target/profile/'zipzi-editor'
 binary.parent.mkdir(parents=True,exist_ok=True)
 binary.write_bytes(b'actual artifact')
 (root/'invocation.json').write_text(json.dumps({'cwd':str(root),'target':str(target),'args':args}))
-print(json.dumps({'reason':'compiler-artifact','target':{'name':'kasane-editor','kind':['bin']},'executable':str(binary)}))
+print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi-editor','kind':['bin']},'executable':str(binary)}))
 ''')
         cargo.chmod(0o755)
         self.env = {**os.environ, 'PATH': f'{self.bin}:{os.environ["PATH"]}', 'CARGO_BUILD_TARGET': 'aarch64-apple-darwin'}
@@ -69,8 +69,8 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'kasane-editor',
                         env={**self.env, 'CARGO_TARGET_DIR': 'custom target'}, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
                     bundle = Path(result.stdout.strip())
-                    self.assertEqual(bundle, self.root/'target/Kasane Editor.app')
-                    self.assertEqual((bundle/'Contents/MacOS/kasane-editor').read_bytes(), b'actual artifact')
+                    self.assertEqual(bundle, self.root/'target/Zipzi Editor.app')
+                    self.assertEqual((bundle/'Contents/MacOS/zipzi-editor').read_bytes(), b'actual artifact')
                     self.assertEqual((bundle/'Contents/Resources/LICENSE').read_text(), 'Editor GPL fixture')
                     self.assertEqual((bundle/'Contents/Resources/AppIcon.icns').read_bytes(), b'icon')
                     self.assertEqual((bundle/'Contents/Resources/LICENSE-MIT').read_text(), 'SDK MIT fixture')
@@ -78,11 +78,11 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'kasane-editor',
                     self.assertEqual((bundle/'Contents/Resources/vendor-notices/library/LICENSE').read_text(), 'third-party license')
                     call = json.loads((self.root/'invocation.json').read_text())
                     self.assertEqual(Path(call['target']), cwd/'custom target/aarch64-apple-darwin')
-                    before = (bundle/'Contents/MacOS/kasane-editor').read_bytes()
+                    before = (bundle/'Contents/MacOS/zipzi-editor').read_bytes()
                     failed = subprocess.run(['sh', str(self.root/'tools/build-editor-app.sh'), 'editor', profile], cwd=cwd,
                         env={**self.env, 'BUILD_FAIL': '1'}, capture_output=True, text=True)
                     self.assertEqual(failed.returncode, 7)
-                    self.assertEqual((bundle/'Contents/MacOS/kasane-editor').read_bytes(), before)
+                    self.assertEqual((bundle/'Contents/MacOS/zipzi-editor').read_bytes(), before)
 
     def test_benchmark_wrappers_preserve_caller_paths_and_single_repository_provenance(self):
         for name in ['window-benchmark.sh', 'properties-benchmark.sh', 'timeline-benchmark.sh', 'timeline-number-benchmark.sh']:
@@ -94,8 +94,8 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'kasane-editor',
             tool = self.bin/name
             tool.write_text(f'#!{sys.executable}\n' + """import json,os,pathlib,sys
 if pathlib.Path(sys.argv[0]).name=='caffeinate':
-    pathlib.Path(os.environ['KASANE_FRAME_TRACE']).write_text('{}')
-    pathlib.Path('launch.json').write_text(json.dumps({'binary':sys.argv[-1], 'model':os.environ['KASANE_BENCH_MODEL']}))
+    pathlib.Path(os.environ['ZIPZI_FRAME_TRACE']).write_text('{}')
+    pathlib.Path('launch.json').write_text(json.dumps({'binary':sys.argv[-1], 'model':os.environ['ZIPZI_BENCH_MODEL']}))
 """)
             tool.chmod(0o755)
         subprocess.run(['git','init','-q'],cwd=self.root,check=True)
@@ -111,8 +111,8 @@ if pathlib.Path(sys.argv[0]).name=='caffeinate':
                 output = f'output {counter}'
                 args = ['model space/model.json',output,'2','120'] if script=='window-benchmark.sh' else [output,'2']
                 result = subprocess.run(['bash',str(self.root/'tools/benchmarks'/script),*args],cwd=cwd,
-                    env={**self.env,'CARGO_TARGET_DIR':'custom target','KASANE_BENCH_MODEL':'model space/model.json',
-                         'KASANE_TIMELINE_MODEL':'model space/model.json'},capture_output=True,text=True)
+                    env={**self.env,'CARGO_TARGET_DIR':'custom target','ZIPZI_BENCH_MODEL':'model space/model.json',
+                         'ZIPZI_TIMELINE_MODEL':'model space/model.json'},capture_output=True,text=True)
                 self.assertEqual(result.returncode,0,result.stderr)
                 provenance = json.loads((cwd/output/'provenance.json').read_text())
                 self.assertEqual(provenance['model'],str(model))
@@ -122,9 +122,9 @@ if pathlib.Path(sys.argv[0]).name=='caffeinate':
                 if script in ['window-benchmark.sh','properties-benchmark.sh']:
                     launch = json.loads((self.root/'launch.json').read_text())
                     self.assertEqual(launch['model'],str(model))
-                    self.assertEqual(Path(launch['binary']),cwd/'custom target/aarch64-apple-darwin/release/kasane-editor')
+                    self.assertEqual(Path(launch['binary']),cwd/'custom target/aarch64-apple-darwin/release/zipzi-editor')
         failed = subprocess.run(['bash',str(self.root/'tools/benchmarks/timeline-benchmark.sh'),'failure'],cwd=self.outside,
-            env={**self.env,'KASANE_TIMELINE_MODEL':str(model),'BUILD_FAIL':'1'},capture_output=True,text=True)
+            env={**self.env,'ZIPZI_TIMELINE_MODEL':str(model),'BUILD_FAIL':'1'},capture_output=True,text=True)
         self.assertEqual(failed.returncode,7,failed.stderr)
         missing = subprocess.run(['bash',str(self.root/'tools/benchmarks/window-benchmark.sh'),'missing-model.json','missing-output'],cwd=self.outside,
             env=self.env,capture_output=True,text=True)
@@ -132,10 +132,10 @@ if pathlib.Path(sys.argv[0]).name=='caffeinate':
         self.assertIn('missing-model.json',missing.stderr)
 
     def test_ambiguous_or_missing_artifacts_fail(self):
-        item = {'reason':'compiler-artifact', 'target':{'name':'kasane-editor','kind':['bin']},'executable':'/a'}
+        item = {'reason':'compiler-artifact', 'target':{'name':'zipzi-editor','kind':['bin']},'executable':'/a'}
         for messages in ['', '\n'.join(map(json.dumps, [item, {**item,'executable':'/b'}]))]:
             with self.assertRaises(RuntimeError):
-                executable(messages, 'kasane-editor')
+                executable(messages, 'zipzi-editor')
 
 
 class SourceArchive(unittest.TestCase):
@@ -144,7 +144,7 @@ class SourceArchive(unittest.TestCase):
             root = Path(tmp)/'repo'
             root.mkdir()
             subprocess.run(['git','init','-q',str(root)], check=True)
-            for name in ['Cargo.toml','Cargo.lock','crates/core/src/lib.rs','crates/editor-core/src/lib.rs',
+            for name in ['Cargo.toml','Cargo.lock','crates/core/src/lib.rs','crates/zipzi-editor-core/src/lib.rs',
                          'tools/probe.py','vendor/library/src/lib.rs']:
                 path = root/name
                 path.parent.mkdir(parents=True,exist_ok=True)

@@ -43,7 +43,7 @@
 
 使用 Metal `GPUStartTime/GPUEndTime`，检查每个 command 完成状态与时间戳。编译 shader、初始化缓冲和目标纹理、PNG 回读、日志写入均在正式计时之外。额外记录候选方案初始化时间与资源大小。
 
-这是无窗口、单帧在途的渲染完成延迟比较。背景为相同色块，未运行模型本体的 kasane-render、整个编辑器布局、输入处理或 drawable 呈现；不能把这些结果直接解释为编辑器 FPS 或 input-to-photon 延迟。
+这是无窗口、单帧在途的渲染完成延迟比较。背景为相同色块，未运行模型本体的 zipzi-render、整个编辑器布局、输入处理或 drawable 呈现；不能把这些结果直接解释为编辑器 FPS 或 input-to-photon 延迟。
 
 ## 正确性与输出
 

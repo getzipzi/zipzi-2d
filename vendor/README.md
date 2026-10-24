@@ -10,14 +10,14 @@ updating these sources.
 | --- | --- |
 | GPUI Kit 0.7.3 | [longbridge/gpui-kit](https://github.com/longbridge/gpui-kit), pinned to `507e82b8115ac73af92b7d3856501f9d7b73b2c9`; local `gpui-component` patches are described under [compact menus and tooltips](#kit-compact-menus-and-tooltips). |
 | GPUI Fast 0.1.7 | Local patches for `gpui-fast`, `gpui-fast-macos` and `gpui-fast-apple`; see the [native Metal changes](#native-metal-changes-by-file). |
-| Kasane | SDK sources under [`crates/`](../crates), built from the same repository commit and root `Cargo.lock`. |
+| Zipzi | SDK sources under [`crates/`](../crates), built from the same repository commit and root `Cargo.lock`. |
 | Metal 0.33 | crates.io |
 
 Sources and overrides are defined in [Cargo.toml](../Cargo.toml). All workspace
 crates share [Cargo.lock](../Cargo.lock); build and test with `--locked`.
-Kasane uses local path dependencies, so Cargo.lock does not pin their source
-revision. Use one checkout for all Kasane crates, including
-`kasane-sdk-observe` for tests. No sibling GPUI checkout is needed.
+Zipzi uses local path dependencies, so Cargo.lock does not pin their source
+revision. Use one checkout for all Zipzi crates, including
+`zipzi-sdk-observe` for tests. No sibling GPUI checkout is needed.
 
 The workspace enables `gpui-fast` on GPUI Kit and the optional FPS monitor.
 The local Fast patches support native Metal surfaces, shared queues, headless
@@ -56,7 +56,7 @@ The existing unconditional `stop_active_drag` API remains available.
 
 Timeline number scrubbing holds this token directly, replacing the Editor's
 global DragOwner. Regressions in
-[input_routing.rs](../crates/kasane-editor/headless_tests/input_routing.rs)
+[input_routing.rs](../crates/zipzi-editor/headless_tests/input_routing.rs)
 exercise real GPUI drag replacement and repeated cancellation. `AnyDrag` gains
 an internal identity field; downstream code constructing it directly needs
 adaptation. Recheck and apply this patch after the existing local patches when
@@ -111,17 +111,17 @@ window. Leaving an old button cannot close a newer button's tooltip or cancel
 its pending display. Identity is captured during prepaint and matched across
 redraws, avoiding dependence on hover-callback order.
 
-[tooltips.rs](../crates/kasane-editor/headless_tests/tooltips.rs) covers repeated
+[tooltips.rs](../crates/zipzi-editor/headless_tests/tooltips.rs) covers repeated
 switching in both directions, switching before first display, staying beyond
 the hide grace period, normal hiding on departure, click dismissal and pending
 display cancellation. Kit's standard `test_support()` interface exposes the outer
 tooltip for tests; observation is a no-op in production builds.
 
-[compact_popups.rs](../crates/kasane-editor/headless_tests/compact_popups.rs)
+[compact_popups.rs](../crates/zipzi-editor/headless_tests/compact_popups.rs)
 covers light/dark themes, three UI scales, both submenu constructors, multiline
 content and ordinary/searchable Selects in real Editor dialogs. Existing Dock,
 Canvas and parameter-management tests cover context-menu actions. Native Metal
-screenshots use `KASANE_SCREENSHOT_SCENE=compact-popups`.
+screenshots use `ZIPZI_SCREENSHOT_SCENE=compact-popups`.
 
 ### Dock resize handles
 
@@ -149,8 +149,8 @@ git apply --reverse --check vendor/kit-workspace.patch
 git apply --reverse --check vendor/compact-menu.patch
 git apply --reverse --check vendor/compact-tooltip.patch
 git apply --reverse --check vendor/dock-handle-line.patch
-cargo test --locked -p kasane-editor --lib headless_tests::compact_popups
-cargo test --locked -p kasane-editor --lib headless_tests::tooltips
+cargo test --locked -p zipzi-editor --lib headless_tests::compact_popups
+cargo test --locked -p zipzi-editor --lib headless_tests::tooltips
 ```
 
 ## Fast virtual-list cache boundaries
@@ -166,7 +166,7 @@ rebuilds. Notifications, full refreshes and other existing invalidation rules
 still apply. Production code contains no experimental environment variables or
 diagnostic logging.
 
-[view_cache.rs](../crates/kasane-editor/headless_tests/view_cache.rs) covers
+[view_cache.rs](../crates/zipzi-editor/headless_tests/view_cache.rs) covers
 retention on/off, cached virtual-list rows and ordinary descendants, unnotified
 updates, notified redraws, unchanged sibling reuse and full refreshes. These
 regressions fail before the fix and pass after it. See the
@@ -183,7 +183,7 @@ from shrinking and the last row from becoming unreachable.
 
 The regression is
 `variable_list_resize_preserves_scroll_estimates_and_remeasures_visible_rows` in
-[view_cache.rs](../crates/kasane-editor/headless_tests/view_cache.rs). Timeline
+[view_cache.rs](../crates/zipzi-editor/headless_tests/view_cache.rs). Timeline
 Metal acceptance also checks that the final row of a real Motion remains
 reachable.
 
@@ -202,8 +202,8 @@ to GPUI's Metal compositor.
 | [gpui-fast/src/gpui.rs](gpui-fast/src/gpui.rs), [frame_trace.rs](gpui-fast/src/frame_trace.rs) | Export optional timing sinks, a shared host clock, process-local IDs and nested input scopes; allocate no events and read no clock while disabled. | Share timing and IDs between the Editor and platform renderer while keeping logging policy in the Editor. |
 | [gpui-fast/src/scene.rs](gpui-fast/src/scene.rs) | Replace `PaintSurface.image_buffer` with `source: SurfaceSource`, add `opacity: f32`, and add an optional `frame_trace_id` to Scene. | Retain texture ownership and carry opacity through replay, batching and composition. |
 | [gpui-fast-macos/src/window.rs](gpui-fast-macos/src/window.rs) | Add a four-line `PlatformWindow::metal_context()` implementation forwarding to the native renderer. | Connect the platform interface to the window's actual renderer. |
-| [gpui-fast-apple/src/metal_renderer.rs](gpui-fast-apple/src/metal_renderer.rs) | Add `shared_metal_context()` and an RGBA surface pipeline. Validate device identity and ShaderRead usage; bind texture/opacity with existing vertices, clipping, instance indices and batching. Use premultiplied blend factors only for the new pipeline. Preserve CoreVideo buffer extraction and optionally trace drawable acquisition, composition submission, GPU completion and display timing. | Composite Kasane textures without readback, re-upload or double alpha multiplication; retain YUV behavior. |
-| [gpui-fast-apple/src/shaders.metal](gpui-fast-apple/src/shaders.metal) | Add `rgba_surface_fragment`, sampling the texture and multiplying by element opacity. | Preserve Kasane's premultiplied output without multiplying texture alpha again. |
+| [gpui-fast-apple/src/metal_renderer.rs](gpui-fast-apple/src/metal_renderer.rs) | Add `shared_metal_context()` and an RGBA surface pipeline. Validate device identity and ShaderRead usage; bind texture/opacity with existing vertices, clipping, instance indices and batching. Use premultiplied blend factors only for the new pipeline. Preserve CoreVideo buffer extraction and optionally trace drawable acquisition, composition submission, GPU completion and display timing. | Composite Zipzi textures without readback, re-upload or double alpha multiplication; retain YUV behavior. |
+| [gpui-fast-apple/src/shaders.metal](gpui-fast-apple/src/shaders.metal) | Add `rgba_surface_fragment`, sampling the texture and multiplying by element opacity. | Preserve Zipzi's premultiplied output without multiplying texture alpha again. |
 
 ## Interface contracts and compatibility
 
@@ -232,7 +232,7 @@ and read by `build.rs`; it is not a fourth patch package to remove.
 
 ## Validation and maintenance
 
-[Native composition tests](../crates/kasane-editor/tests/native_render.rs) cover
+[Native composition tests](../crates/zipzi-editor/tests/native_render.rs) cover
 RGBA/BGRA, transparent backgrounds, combined document/element opacity, clipping,
 UI occlusion, hiding, old-frame retention, resizing and scaling. Only the final
 result is read back for assertions. Real-window interaction is validated by the

@@ -6,7 +6,7 @@
 
 | 顺序 | 方案 | 负责范围 |
 | --- | --- | --- |
-| 1 | [对象创作核心架构改造](unified-object-authoring-core.md) | 全部对象的身份与集合、原生数据模型、SDK/editor-core 操作契约、事务、执行与格式、核心验收 |
+| 1 | [对象创作核心架构改造](unified-object-authoring-core.md) | 全部对象的身份与集合、原生数据模型、SDK/zipzi-editor-core 操作契约、事务、执行与格式、核心验收 |
 | 2 | [Editor UI 交互统一](unified-object-authoring-ui.md) | 创建入口、Properties、文件夹、选择与预览、拖拽、键盘焦点、反馈及 UI 验收 |
 
 核心阶段先完成可独立测试的领域能力，并提供让现有 Editor 继续运行的必要适配；UI 阶段再全面接入统一交互。新 UI 不自行补写领域规则。

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import sys
 
-import kasane
+import zipzi
 
 from python_two_asset_recipe import MESH_B, PARAMETER, WARP, run as create_model
 
@@ -16,11 +16,11 @@ def run(output: Path) -> Path:
         raise ValueError("Output path must be absolute")
     creation_report = create_model(output / "draft")
     creation = json.loads(creation_report.read_text(encoding="utf-8"))
-    session = kasane.open_project(Path(creation["project_manifest"]))
-    with kasane.Observer(256, 256, 256) as observer:
+    session = zipzi.open_project(Path(creation["project_manifest"]))
+    with zipzi.Observer(256, 256, 256) as observer:
         observation = observer.observe_run(
             session, [{PARAMETER: 0.5}], output / "draft-observation",
-            crop_targets=[kasane.ObjectRef("mesh", MESH_B)],
+            crop_targets=[zipzi.ObjectRef("mesh", MESH_B)],
         )
     handoff = {
         "schema_version": 1,

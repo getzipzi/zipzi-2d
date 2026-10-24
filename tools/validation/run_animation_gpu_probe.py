@@ -13,7 +13,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[2]
 SDK = ROOT / "third_party/CubismSdkForNative-5-r.5"
 OUT = ROOT / "target/animation-frame-gpu-probe"
-GPU = ROOT / "target/animation-gpu-probe/kasane_framework_gpu_probe"
+GPU = ROOT / "target/animation-gpu-probe/zipzi_framework_gpu_probe"
 SHADERS = SDK / "Framework/src/Rendering/OpenGL/Shaders/Standard"
 SOURCE = ROOT / "fixtures/animation_cpu"
 TEXTURE = ROOT / "fixtures/external_v50/texture_00.png"
@@ -65,7 +65,7 @@ def compare(a_path: Path, b_path: Path) -> dict:
         raise AssertionError(f"GPU pixel error {max_error} exceeds 1 at {a_path}")
     return {"max_channel_error": max_error,
             "nonidentical_pixels": sum(any(value for value in row) for row in differences),
-            "center_kasane": a.getpixel((64, 64)),
+            "center_zipzi": a.getpixel((64, 64)),
             "center_framework": b.getpixel((64, 64))}
 
 
@@ -75,24 +75,24 @@ def main() -> int:
                     "model_opacity_application": "not_run"}
     try:
         run(["cmake", "-S", "tools/validation/probes", "-B", str(GPU.parent),
-             f"-DKASANE_CUBISM_ROOT={SDK}", "-DKASANE_BUILD_GPU_PROBE=ON",
+             f"-DZIPZI_CUBISM_ROOT={SDK}", "-DZIPZI_BUILD_GPU_PROBE=ON",
              "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"])
         run(["cmake", "--build", str(GPU.parent), "--target", GPU.name, "-j4"])
         variants = {"plain": SOURCE / "model.moc3"}
         for name, flag in (("offscreen", []), ("nested_offscreen", ["--nested"])):
             moc = OUT / f"{name}.moc3"
-            run(["cargo", "run", "-q", "-p", "kasane-moc3", "--example",
+            run(["cargo", "run", "-q", "-p", "zipzi-moc3", "--example",
                  "create_animation_offscreen_fixture", "--",
                  str(variants["plain"]), str(moc), *flag])
             variants[name] = moc
         for variant, moc in variants.items():
             for time in (0.25, 0.5, 0.75):
                 key = f"{variant}_{time:.2f}"
-                kasane = OUT / f"{key}_kasane.png"
+                zipzi = OUT / f"{key}_zipzi.png"
                 official = OUT / f"{key}_framework.png"
-                output = run(["cargo", "run", "-q", "-p", "kasane-sdk-observe",
+                output = run(["cargo", "run", "-q", "-p", "zipzi-sdk-observe",
                               "--example", "animation_gpu_frame", "--", str(moc),
-                              str(TEXTURE), str(MOTION), str(POSE), str(kasane), str(time)])
+                              str(TEXTURE), str(MOTION), str(POSE), str(zipzi), str(time)])
                 parameters, parts, model_opacity = numeric_state(output)
                 framework_output = run([str(GPU), str(SHADERS), str(moc), str(TEXTURE),
                                         str(official), "128x128", "128", *parameters, *parts,
@@ -104,30 +104,30 @@ def main() -> int:
                 expected_offscreens = {"plain": 0, "offscreen": 1, "nested_offscreen": 2}[variant]
                 if framework_details[0]["offscreen_count"] != expected_offscreens:
                     raise AssertionError(f"incorrect Offscreen topology: {framework_details}")
-                report["frames"][key] = {**compare(kasane, official),
+                report["frames"][key] = {**compare(zipzi, official),
                                          "model_opacity": model_opacity,
                                          "offscreen_count": expected_offscreens}
-                report["inputs"][str(kasane.relative_to(ROOT))] = digest(kasane)
+                report["inputs"][str(zipzi.relative_to(ROOT))] = digest(zipzi)
                 report["inputs"][str(official.relative_to(ROOT))] = digest(official)
                 applied_key = f"{key}_model_applied"
-                applied_kasane = OUT / f"{applied_key}_kasane.png"
+                applied_zipzi = OUT / f"{applied_key}_zipzi.png"
                 applied_official = OUT / f"{applied_key}_framework.png"
-                run(["cargo", "run", "-q", "-p", "kasane-sdk-observe", "--example",
+                run(["cargo", "run", "-q", "-p", "zipzi-sdk-observe", "--example",
                      "animation_gpu_frame", "--", str(moc), str(TEXTURE), str(MOTION),
-                     str(POSE), str(applied_kasane), str(time), "--apply-model-opacity"])
+                     str(POSE), str(applied_zipzi), str(time), "--apply-model-opacity"])
                 run([str(GPU), str(SHADERS), str(moc), str(TEXTURE),
                      str(applied_official), "128x128", "128", *parameters, *parts,
                      "--model-opacity", str(model_opacity),
                      "--renderer-opacity", str(model_opacity)])
                 report["frames"][applied_key] = {
-                    **compare(applied_kasane, applied_official),
+                    **compare(applied_zipzi, applied_official),
                     "model_opacity": model_opacity,
                     "offscreen_count": expected_offscreens,
                 }
-                report["inputs"][str(applied_kasane.relative_to(ROOT))] = digest(applied_kasane)
+                report["inputs"][str(applied_zipzi.relative_to(ROOT))] = digest(applied_zipzi)
                 report["inputs"][str(applied_official.relative_to(ROOT))] = digest(applied_official)
         for path in (MOTION, POSE, TEXTURE, GPU, SOURCE / "model.moc3",
-                     ROOT / "crates/kasane-sdk-observe/examples/animation_gpu_frame.rs",
+                     ROOT / "crates/zipzi-sdk-observe/examples/animation_gpu_frame.rs",
                      ROOT / "tools/validation/probes/framework_gpu_probe.cpp"):
             report["inputs"][str(path.relative_to(ROOT))] = digest(path)
         report["model_opacity_application"] = "passed"

@@ -118,8 +118,8 @@ Mao 滑块的成功呈现样本变快，但 accepted_not_composed 增加到 25/3
 
 ```sh
 cargo test --locked --release --workspace
-cargo test --locked --release -p kasane-editor --bin kasane-editor virtual_list_cached_rows_ignore_render_writes_but_refresh_notified_inputs
-GPUI_VIEW_RETENTION=1 KASANE_BENCH_MODEL="$PWD/models/local/mao/runtime/mao_pro.model3.json" cargo test --locked --release -p kasane-editor --bin kasane-editor canvas_ui_cpu_benchmark -- --ignored --nocapture
+cargo test --locked --release -p zipzi-editor --bin zipzi-editor virtual_list_cached_rows_ignore_render_writes_but_refresh_notified_inputs
+GPUI_VIEW_RETENTION=1 ZIPZI_BENCH_MODEL="$PWD/models/local/mao/runtime/mao_pro.model3.json" cargo test --locked --release -p zipzi-editor --bin zipzi-editor canvas_ui_cpu_benchmark -- --ignored --nocapture
 GPUI_VIEW_RETENTION=1 bash scripts/window-benchmark.sh models/local/mao/runtime/mao_pro.model3.json target/window-cache-fixed 300 120
 # 核对当前源码，以下命令不改文件。
 git apply --reverse --check vendor/cache-boundary.patch

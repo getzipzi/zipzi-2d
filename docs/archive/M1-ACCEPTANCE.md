@@ -1,8 +1,8 @@
 # M1 验收与复现
 
-2026-09-20：在提交 `871c5b158a98f8f87c899187935279ec0831656a` 上重新执行独立验收，通过。Core 全新构建的 8 项 CTest（含 Purism unit、验证器负例与 C99 bundle）、59 项 Godot 集成检查、84 项真实 GPU 检查全部通过；gd-cubism 与 kasane-gd 的 SCons 构建成功。双 Core 最大数值误差分别为 0 与 `7.15256e-7`。环境为 macOS arm64 / Apple M4 / Godot 4.7.2 / OpenGL Compatibility。报告位于 `target/kasane/core-regression/report.json`、`target/kasane/godot-boundary/report.json`、`target/kasane/gpu-regression/report.json`。本次沿用下述范围与阈值；首次动态导入退出问题仍不计为通过。
+2026-09-20：在提交 `871c5b158a98f8f87c899187935279ec0831656a` 上重新执行独立验收，通过。Core 全新构建的 8 项 CTest（含 Purism unit、验证器负例与 C99 bundle）、59 项 Godot 集成检查、84 项真实 GPU 检查全部通过；gd-cubism 与 zipzi-gd 的 SCons 构建成功。双 Core 最大数值误差分别为 0 与 `7.15256e-7`。环境为 macOS arm64 / Apple M4 / Godot 4.7.2 / OpenGL Compatibility。报告位于 `target/zipzi/core-regression/report.json`、`target/zipzi/godot-boundary/report.json`、`target/zipzi/gpu-regression/report.json`。本次沿用下述范围与阈值；首次动态导入退出问题仍不计为通过。
 
-2026-09-19：本机 M1 统一验收通过。代码创建、编辑、内存求值、MOC3 导出及运行包路径已贯通。原始证据保存在 `target/kasane/runs/<run-id>/report.json`；这是当时的验收快照，后续回归以各项独立检查的结果为准。
+2026-09-19：本机 M1 统一验收通过。代码创建、编辑、内存求值、MOC3 导出及运行包路径已贯通。原始证据保存在 `target/zipzi/runs/<run-id>/report.json`；这是当时的验收快照，后续回归以各项独立检查的结果为准。
 
 本次结果：7 项 CTest、59 项 Godot 集成检查、84 项 GPU 检查与 C99 bundle 均通过。两个 Core 各比较 7712 项数值；Purism 最大误差 0，官方 Core 最大误差 `7.15256e-7` 运行单位，最大位置误差 `0.000071526` 原画像素。三个状态的图像及局部裁剪逐像素一致；独立解析像素预期最大通道误差 `0.002048`，低于 `2/255`。
 
@@ -11,24 +11,24 @@
 本机验收配置：macOS arm64，Godot 4.7.2 mono，OpenGL Compatibility，640×480，Apple M4 GPU。Core、Godot 和 GPU 回归分别运行；GPU 检查需要真实图形环境。
 
 ```sh
-python3 -m venv target/kasane/buildenv
-target/kasane/buildenv/bin/python -m pip install -r tools/requirements-validation.txt
+python3 -m venv target/zipzi/buildenv
+target/zipzi/buildenv/bin/python -m pip install -r tools/requirements-validation.txt
 # 系统需要 CMake、C/C++ 编译器和 libpng 开发库；SDK 路径按本机安装位置调整。
-target/kasane/buildenv/bin/python tools/validate_core.py
-target/kasane/buildenv/bin/python -m SCons -C modules/gd-cubism platform=macos arch=arm64 target=template_release CUBISM_SDK_ROOT="$PWD/third_party/CubismSdkForNative-5-r.5" -j8
-target/kasane/buildenv/bin/python -m SCons -C modules/kasane-gd platform=macos arch=arm64 target=template_debug -j8
-target/kasane/buildenv/bin/python tools/validate_godot.py
-target/kasane/buildenv/bin/python tools/validate_gpu.py
+target/zipzi/buildenv/bin/python tools/validate_core.py
+target/zipzi/buildenv/bin/python -m SCons -C modules/gd-cubism platform=macos arch=arm64 target=template_release CUBISM_SDK_ROOT="$PWD/third_party/CubismSdkForNative-5-r.5" -j8
+target/zipzi/buildenv/bin/python -m SCons -C modules/zipzi-gd platform=macos arch=arm64 target=template_debug -j8
+target/zipzi/buildenv/bin/python tools/validate_godot.py
+target/zipzi/buildenv/bin/python tools/validate_gpu.py
 ```
 
 `validate_core.py` 可用 `--sdk /absolute/path` 指定本地 SDK；Godot 和 GPU 脚本可用 `--godot /absolute/path` 指定 Godot。默认 SDK 为 `third_party/CubismSdkForNative-5-r.5`；实际 Core 版本从报告读取，不能由目录名推断。SDK 不提交到仓库。各检查失败时返回非零。
 
 检查内容：
 
-1. 构建 kasane-core、编码器和通用发布器；运行 CTest（包含两个 Core、Purism unit、验证器负例与 C99 bundle smoke）。Purism 外部模型 conformance 需另外提供模型与参考数据。
-2. 重建官方 Core 的 gd-cubism 参考播放器及 kasane-gd。
+1. 构建 zipzi-core、编码器和通用发布器；运行 CTest（包含两个 Core、Purism unit、验证器负例与 C99 bundle smoke）。Purism 外部模型 conformance 需另外提供模型与参考数据。
+2. 重建官方 Core 的 gd-cubism 参考播放器及 zipzi-gd。
 3. Godot headless 源数据、预览生命周期、工程快照和失效原子性检查。
-4. 启动真实 GPU 窗口，比较现有 gd-cubism 官方 Core 播放与直接消费 Document 的 KasaneDocumentPreview。
+4. 启动真实 GPU 窗口，比较现有 gd-cubism 官方 Core 播放与直接消费 Document 的 ZipziDocumentPreview。
 
 ## 验收对应关系
 
@@ -49,14 +49,14 @@ GPU 使用统一的线性/mipmap 过滤、透明背景、画布和相机。生�
 
 ## 产物位置
 
-当前独立检查分别写入 `target/kasane/core-regression/`、`target/kasane/godot-boundary/` 和 `target/kasane/gpu-regression/`。以下路径属于 2026-09-19 的历史整体验收记录；删除总入口不会删除已有记录。
+当前独立检查分别写入 `target/zipzi/core-regression/`、`target/zipzi/godot-boundary/` 和 `target/zipzi/gpu-regression/`。以下路径属于 2026-09-19 的历史整体验收记录；删除总入口不会删除已有记录。
 
-- `target/kasane/runs/<run-id>/report.json`：整体状态、所有门禁、源码指纹、环境与 SHA-256。
-- `target/kasane/runs/<run-id>/core/report.json`：数值/编码/编辑/发布验证。Core 子报告不单独代表 GPU 验收。
-- `target/kasane/runs/<run-id>/core/package*/`：静态、1D/2D/3D 参数和四种嵌套构造模型包。
-- `target/kasane/runs/<run-id>/core/{official,purism}/publication/gpu-package/`：由正式发布器生成的多层/遮罩运行包。
-- `target/kasane/runs/<run-id>/godot/report.json`：源/预览/持久化集成检查。
-- `target/kasane/runs/<run-id>/gpu/`：参考、实际、差异及裁剪 PNG，参数/相机采样与像素明细。
+- `target/zipzi/runs/<run-id>/report.json`：整体状态、所有门禁、源码指纹、环境与 SHA-256。
+- `target/zipzi/runs/<run-id>/core/report.json`：数值/编码/编辑/发布验证。Core 子报告不单独代表 GPU 验收。
+- `target/zipzi/runs/<run-id>/core/package*/`：静态、1D/2D/3D 参数和四种嵌套构造模型包。
+- `target/zipzi/runs/<run-id>/core/{official,purism}/publication/gpu-package/`：由正式发布器生成的多层/遮罩运行包。
+- `target/zipzi/runs/<run-id>/godot/report.json`：源/预览/持久化集成检查。
+- `target/zipzi/runs/<run-id>/gpu/`：参考、实际、差异及裁剪 PNG，参数/相机采样与像素明细。
 
 构造模型是由源码 API 新建的合成测试资产，纹理由程序生成，不冒称来自 Cubism Editor 的外部模型。官方 Core 加载、驱动和 Godot 播放证据不等于测试了 Cubism 官方 Viewer 应用。
 

@@ -9,7 +9,7 @@ import struct
 import sys
 import zlib
 
-import kasane
+import zipzi
 
 
 def digest(path: Path) -> str:
@@ -91,7 +91,7 @@ def run(handoff_path: Path, output: Path) -> Path:
     minimum_visible_width = 40
     if before_width >= minimum_visible_width:
         raise RuntimeError("No undersized target detected; existing model was not edited")
-    session = kasane.open_project(Path(handoff["project_manifest"]))
+    session = zipzi.open_project(Path(handoff["project_manifest"]))
     source_mesh_ids = session.mesh_ids()
     source_asset_hashes = {id: session.asset(id).sha256 for id in session.asset_ids()}
     source_other_mesh = session.mesh_record(next(id for id in source_mesh_ids if id != mesh_id))
@@ -103,17 +103,17 @@ def run(handoff_path: Path, output: Path) -> Path:
         edit.update_warp_points(warp_id, new_points)
     saved = session.save(output / "repaired-project")
     assert saved.durable
-    reopened = kasane.open_project(saved.manifest)
+    reopened = zipzi.open_project(saved.manifest)
     assert reopened.mesh_ids() == source_mesh_ids
     assert {id: reopened.asset(id).sha256 for id in reopened.asset_ids()} == source_asset_hashes
     assert reopened.mesh_record(source_other_mesh.id)._replace(version=source_other_mesh.version) == source_other_mesh
     assert reopened.transform(warp_id).warp.points == new_points
     assert reopened.validate_structure() == [] and reopened.diagnose_resources() == []
-    with kasane.Observer(256, 256, 256) as observer:
+    with zipzi.Observer(256, 256, 256) as observer:
         after_observation = observer.observe_run(
             reopened, [{handoff["parameter_id"]: 0.5}],
             output / "repaired-observation",
-            crop_targets=[kasane.ObjectRef("mesh", mesh_id)],
+            crop_targets=[zipzi.ObjectRef("mesh", mesh_id)],
         )
     after_crop = target_crop(after_observation.report, mesh_id)
     after_width, after_pixels = visible_width(after_crop)

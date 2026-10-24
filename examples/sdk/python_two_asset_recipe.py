@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 import sys
 
-import kasane
+import zipzi
 
 
 DOCUMENT = "10000000-0000-4000-8000-000000000001"
@@ -33,7 +33,7 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
-def frame_positions(session: kasane.Session, value: float) -> dict[str, list[list[float]]]:
+def frame_positions(session: zipzi.Session, value: float) -> dict[str, list[list[float]]]:
     evaluation = session.evaluate({PARAMETER: value})
     actual = next(sample.value for sample in evaluation.parameters if sample.id == PARAMETER)
     assert math.isclose(actual, value, abs_tol=1e-6)
@@ -49,7 +49,7 @@ def run(output: Path) -> Path:
     output.mkdir(parents=True, exist_ok=True)
     source_a = Path(__file__).with_name("asymmetric-2x2.png").resolve()
     source_b = Path(__file__).resolve().parents[2] / "fixtures/external_v50/texture_00.png"
-    session = kasane.Session(DOCUMENT, 120, 100, (60, 50))
+    session = zipzi.Session(DOCUMENT, 120, 100, (60, 50))
     with session.edit("two materials and hierarchy") as edit:
         edit.add_png_asset(ASSET_A, "asymmetric 2x2", source_a)
         edit.add_png_asset(ASSET_B, "external 4x4", source_b)
@@ -60,11 +60,11 @@ def run(output: Path) -> Path:
         edit.set_mesh_part(MESH_B, PART)
         edit.create_rotation_transform(
             ROTATION, "root rotation",
-            kasane.RotationData(0, kasane.RotationPose((60, 50), angle=10)), PART,
+            zipzi.RotationData(0, zipzi.RotationPose((60, 50), angle=10)), PART,
         )
         edit.create_warp_transform(
             WARP, "child warp",
-            kasane.WarpData(1, 1, True, [(0, 0), (1, 0), (0, 1), (1, 1)]), PART, ROTATION,
+            zipzi.WarpData(1, 1, True, [(0, 0), (1, 0), (0, 1), (1, 1)]), PART, ROTATION,
         )
         edit.set_deform_parent(MESH_A, ROTATION)
         edit.set_deform_parent(MESH_B, WARP)
@@ -81,14 +81,14 @@ def run(output: Path) -> Path:
     with session.edit("two animated meshes") as edit:
         edit.create_parameter(PARAMETER, "expression", 0, 1, 0)
         edit.create_mesh_binding(
-            BINDING_A, MESH_A, [kasane.Axis(PARAMETER, [0, 1])],
-            [kasane.MeshKeyform([0], positions_a),
-             kasane.MeshKeyform([1], [(x + 0.6, y + 0.2) for x, y in positions_a])],
+            BINDING_A, MESH_A, [zipzi.Axis(PARAMETER, [0, 1])],
+            [zipzi.MeshKeyform([0], positions_a),
+             zipzi.MeshKeyform([1], [(x + 0.6, y + 0.2) for x, y in positions_a])],
         )
         edit.create_mesh_binding(
-            BINDING_B, MESH_B, [kasane.Axis(PARAMETER, [0, 1])],
-            [kasane.MeshKeyform([0], positions_b),
-             kasane.MeshKeyform([1], [(x - 0.1, y + 0.05) for x, y in positions_b])],
+            BINDING_B, MESH_B, [zipzi.Axis(PARAMETER, [0, 1])],
+            [zipzi.MeshKeyform([0], positions_b),
+             zipzi.MeshKeyform([1], [(x - 0.1, y + 0.05) for x, y in positions_b])],
         )
     assert session.validate_structure() == []
     assert session.diagnose_resources() == []
@@ -106,7 +106,7 @@ def run(output: Path) -> Path:
     assert max_pixel_error <= 0.05, max_pixel_error
     saved = session.save(output / "project")
     assert saved.durable
-    reopened = kasane.open_project(saved.manifest)
+    reopened = zipzi.open_project(saved.manifest)
     assert reopened.validate_structure() == []
     assert reopened.diagnose_resources() == []
     for value in (0.0, 0.5, 1.0):

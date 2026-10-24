@@ -1,6 +1,6 @@
 {
   "binary_sha256": "3af330bc4d4fe142181e9f7446ca5a3f208381cf1958568dc6018e10cb0d8d5a",
-  "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+  "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
   "samples": 120,
   "warmup": 30,
   "hz": 120,
@@ -19,7 +19,7 @@
           "gpui_backend": "gpui-fast",
           "view_retention": true,
           "scroll_layers": true,
-          "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+          "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
           "samples": 120,
           "warmup": 30,
           "parameters_only": false,
@@ -920,7 +920,7 @@
     "deformations": {
       "validated": true,
       "compiler_noise": false,
-      "model": "/Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/fixture-fit-project/project.kasane.json",
+      "model": "/Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/fixture-fit-project/project.zipzi.json",
       "trace_sha256": "9683ba12011937c604424e386ef65760ae2e30dddf8f85844a36ee502b744877",
       "report": {
         "metadata": {
@@ -932,7 +932,7 @@
           "gpui_backend": "gpui-fast",
           "view_retention": true,
           "scroll_layers": true,
-          "model": "/Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/fixture-fit-project/project.kasane.json",
+          "model": "/Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/fixture-fit-project/project.zipzi.json",
           "samples": 120,
           "warmup": 30,
           "parameters_only": false,
@@ -2059,7 +2059,7 @@
     "properties-opacity": {
       "validated": true,
       "compiler_noise": false,
-      "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+      "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
       "trace_sha256": "61f111e72cd9f10bdf4414d5b7060a0c580fb7ee8234d56faf12569e5721dd00",
       "report": {
         "metadata": {
@@ -2071,7 +2071,7 @@
           "gpui_backend": "gpui-fast",
           "view_retention": true,
           "scroll_layers": true,
-          "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+          "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
           "samples": 120,
           "warmup": 30,
           "parameters_only": false,
@@ -2280,7 +2280,7 @@
     "properties-color": {
       "validated": true,
       "compiler_noise": false,
-      "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+      "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
       "trace_sha256": "8d02abcfcc067bef852b9cbc00221fb2452d6ce1169366cf9240a9d703ec8c1b",
       "report": {
         "metadata": {
@@ -2292,7 +2292,7 @@
           "gpui_backend": "gpui-fast",
           "view_retention": true,
           "scroll_layers": true,
-          "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+          "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
           "samples": 120,
           "warmup": 30,
           "parameters_only": false,
@@ -2500,7 +2500,7 @@
     "animation": {
       "validated": true,
       "compiler_noise": false,
-      "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+      "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
       "trace_sha256": "88996c4be9be27d93a8618e98ab659b38788b8de534cd3ce78b22ac1c2d9254a",
       "report": {
         "profile": "release",
@@ -2663,7 +2663,7 @@
     "animation-canvas": {
       "validated": true,
       "compiler_noise": false,
-      "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+      "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
       "trace_sha256": "fb5382e1ee438f121ad1e6160d50a1d519b3295170438479c9ba43ce5d1fe590",
       "report": {
         "profile": "release",
@@ -2680,7 +2680,7 @@
     "animation-number": {
       "validated": true,
       "compiler_noise": false,
-      "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+      "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
       "trace_sha256": "0226b429ee0aa8d95a1a533995907df2f13dc9b1b5a7018878887d2a6024d493",
       "report": {
         "profile": "release",
@@ -3191,8 +3191,8 @@
     ],
     "measurement": "injected GPUI input through current SDK/Metal canvas acceptance and GPUI draw; excludes OS input delivery, screenshot readback and compositor presentation",
     "source": {
-      "model": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
-      "motion": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/motions/special_03.motion3.json",
+      "model": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/mao_pro.model3.json",
+      "motion": "/Users/liangbohao/web/zipzi-editor/models/local/mao/runtime/motions/special_03.motion3.json",
       "original_curves": 132,
       "original_segments": 619,
       "dense_points_per_track": 257
@@ -3487,7 +3487,7 @@
   },
   "fixture_project_sha256": {
     "assets/4d01524111816b33.png": "4d01524111816b3318a093b852f8da4b823b092462d290cc15e0ad401573cd9e",
-    "project.kasane.json": "a593a8c7fd2e06769ee6ef06c88c2de38eee52394fb65e7ee45aa2ff7bcf16dc"
+    "project.zipzi.json": "a593a8c7fd2e06769ee6ef06c88c2de38eee52394fb65e7ee45aa2ff7bcf16dc"
   },
   "notes": [
     "Seven native scenes each ran once after calibration; not five alternating baseline/candidate pairs.",
@@ -3497,7 +3497,7 @@
   ],
   "viewports": {
     "validated": true,
-    "log": "Screenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-isolation-full.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-isolation-dim.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-isolation-hidden.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-origin-visible.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-origin-hidden.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-transparency-dark.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-transparency-light.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-Modeling-before.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-Modeling-after.png\nDual viewport Modeling: bounds=[Bounds { origin: Point { x: 0px, y: 32px }, size: Size { 550px \u00d7 689px } }, Bounds { origin: Point { x: 550px, y: 32px }, size: Size { 550px \u00d7 689px } }], changed=(157285, 0), pixels=2200x1480\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-pair-modeling.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-Animation-before.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-Animation-after.png\nDual viewport Animation: bounds=[Bounds { origin: Point { x: 0px, y: 32px }, size: Size { 550px \u00d7 689px } }, Bounds { origin: Point { x: 550px, y: 32px }, size: Size { 550px \u00d7 689px } }], changed=(219166, 0), pixels=2200x1480\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor/target/runtime-r0-native/viewports/viewport-pair-animation.png\nDual viewport Metal screenshots passed.\n",
+    "log": "Screenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-isolation-full.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-isolation-dim.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-isolation-hidden.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-origin-visible.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-origin-hidden.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-transparency-dark.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-transparency-light.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-Modeling-before.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-Modeling-after.png\nDual viewport Modeling: bounds=[Bounds { origin: Point { x: 0px, y: 32px }, size: Size { 550px \u00d7 689px } }, Bounds { origin: Point { x: 550px, y: 32px }, size: Size { 550px \u00d7 689px } }], changed=(157285, 0), pixels=2200x1480\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-pair-modeling.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-Animation-before.png\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-Animation-after.png\nDual viewport Animation: bounds=[Bounds { origin: Point { x: 0px, y: 32px }, size: Size { 550px \u00d7 689px } }, Bounds { origin: Point { x: 550px, y: 32px }, size: Size { 550px \u00d7 689px } }], changed=(219166, 0), pixels=2200x1480\nScreenshot: /Users/liangbohao/.codex/worktrees/sdk-runtime/zipzi-editor/target/runtime-r0-native/viewports/viewport-pair-animation.png\nDual viewport Metal screenshots passed.\n",
     "png_sha256": {
       "viewport-Animation-after.png": "adf2206b35e9e5611a15941bb2b81fc8f35d0e0f4028e48815c322eb39f42d1f",
       "viewport-Animation-before.png": "b496c89812b2504c90705b72849cbe60cc820d0afb5976d5aa6705e7043d021f",

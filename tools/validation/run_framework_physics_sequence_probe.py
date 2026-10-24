@@ -10,7 +10,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "fixtures/animation_cpu"
-PROBE = ROOT / "target/animation-cpu-probe/kasane_framework_animation_cpu_probe"
+PROBE = ROOT / "target/animation-cpu-probe/zipzi_framework_animation_cpu_probe"
 OUTPUT = ROOT / "target/physics-sequence-probe"
 
 
@@ -36,7 +36,7 @@ def main() -> int:
         for name in ("missing", "zero", "thirty", "multi"):
             source = FIXTURES / f"{name}.physics3.json"
             official = trace(run([str(PROBE), "--physics-sequence", str(FIXTURES / "model.moc3"), str(source)]))
-            rust = trace(run(["cargo", "run", "-q", "-p", "kasane-animation", "--example",
+            rust = trace(run(["cargo", "run", "-q", "-p", "zipzi-animation", "--example",
                               "physics_sequence", "--", str(source)]))
             maximum = 0.0
             for index, (expected, actual) in enumerate(zip(official, rust)):
@@ -52,7 +52,7 @@ def main() -> int:
             official_stable = json.loads([line for line in run(
                 [str(PROBE), "--physics-stabilize", str(FIXTURES / "model.moc3"), str(source)]
             ).splitlines() if line.startswith("{")][0])
-            rust_stable = json.loads(run(["cargo", "run", "-q", "-p", "kasane-animation", "--example",
+            rust_stable = json.loads(run(["cargo", "run", "-q", "-p", "zipzi-animation", "--example",
                                           "physics_sequence", "--", str(source), "--stabilize"]))
             stable_errors = [abs(official_stable["stabilized"] - rust_stable["stabilized"])]
             stable_errors.extend(abs(left - right) for left, right in zip(

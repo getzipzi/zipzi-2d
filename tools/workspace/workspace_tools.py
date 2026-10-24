@@ -63,7 +63,7 @@ def main():
     parser.add_argument('--model', type=Path)
     args = parser.parse_args()
     if args.command == 'executable':
-        print(executable(args.input.read_text(), 'kasane-editor'))
+        print(executable(args.input.read_text(), 'zipzi-editor'))
     else:
         if args.model is None:
             parser.error('provenance requires --model')
@@ -74,7 +74,7 @@ def main():
             'lock_sha256': digest(ROOT / 'Cargo.lock'),
             'model': str(path), 'model_files': {
                 str(p.relative_to(path.parent)): digest(p) for p in sorted(path.parent.rglob('*'))
-                if p.is_file() and p.name != '.kasane.lock'},
+                if p.is_file() and p.name != '.zipzi.lock'},
             'build_environment': {k: v for k, v in os.environ.items()
                                   if k in {'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_BUILD_TARGET', 'CARGO_TARGET_DIR'}
                                   or k.startswith('CARGO_PROFILE_')},

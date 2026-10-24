@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sys
 
-import kasane
+import zipzi
 
 
 DOCUMENT = "30000000-0000-4000-8000-000000000001"
@@ -14,7 +14,7 @@ DOCUMENT = "30000000-0000-4000-8000-000000000001"
 def run(model3: Path, output: Path) -> Path:
     if not model3.is_absolute() or not output.is_absolute():
         raise ValueError("Model3 and output paths must be absolute")
-    session = kasane.Session(DOCUMENT, 100, 100, (50, 50))
+    session = zipzi.Session(DOCUMENT, 100, 100, (50, 50))
     imported = session.import_model3(model3)
     if {(issue.asset_id, issue.code) for issue in imported.diagnostics} != {
         ("Physics", "MISSING_PHYSICS_ATTACHMENT"),
@@ -39,7 +39,7 @@ def run(model3: Path, output: Path) -> Path:
     roi = (-canvas.origin_x, canvas.origin_y - canvas.height,
            canvas.width - canvas.origin_x, canvas.origin_y)
     output.mkdir(parents=True, exist_ok=True)
-    with kasane.Observer(256, 256, 256) as observer:
+    with zipzi.Observer(256, 256, 256) as observer:
         scene = observer.capture_scene(session)
         frame = observer.render_scene(scene, roi=roi, resolution=(256, 256)).frame
     if len(frame.drawable_bounds) != 1 or frame.drawable_bounds[0].bounds is None:

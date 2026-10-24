@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Read-only M2 oracle: evaluate an exported MOC3 in one provider per process.
-#ifdef KASANE_OFFICIAL_CORE
+#ifdef ZIPZI_OFFICIAL_CORE
 #include <Live2DCubismCore.h>
 #else
 #include <PurismCore.h>

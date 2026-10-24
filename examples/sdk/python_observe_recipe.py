@@ -6,7 +6,7 @@ Run from an output directory with a wheel built using `--features observe`.
 from pathlib import Path
 import sys
 
-import kasane
+import zipzi
 
 
 DOCUMENT = "00000000-0000-4000-8000-000000000001"
@@ -20,9 +20,9 @@ PARAMETER = "00000000-0000-4000-8000-000000000008"
 BINDING = "00000000-0000-4000-8000-000000000009"
 
 
-def create() -> kasane.Session:
+def create() -> zipzi.Session:
     texture = Path(__file__).with_name("asymmetric-2x2.png").resolve()
-    model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
+    model = zipzi.Session(DOCUMENT, 100, 100, (50, 50))
     with model.edit("masked layer") as edit:
         edit.add_png_asset(ASSET, "texture", texture)
         edit.create_part(PART, "masked group")
@@ -30,32 +30,32 @@ def create() -> kasane.Session:
         edit.create_rectangle(MASK, "mask", ASSET, (40, 40), (55, 60))
         edit.create_rectangle(TARGET, "target", ASSET, (40, 40), (60, 60))
         edit.set_mesh_part(TARGET, PART)
-        edit.create_offscreen(kasane.OffscreenSpec(
-            OFFSCREEN, "layer", PART, keyforms=[kasane.OffscreenKeyform(0.75)],
+        edit.create_offscreen(zipzi.OffscreenSpec(
+            OFFSCREEN, "layer", PART, keyforms=[zipzi.OffscreenKeyform(0.75)],
         ))
     base = model.mesh(TARGET).positions
     shifted = [(x + 8, y) for x, y in base]
     properties = model.mesh_properties(TARGET)
     with model.edit("animated mask") as edit:
-        edit.update_mesh_properties(TARGET, kasane.MeshProperties(
+        edit.update_mesh_properties(TARGET, zipzi.MeshProperties(
             properties.texture_asset_id, properties.appearance,
             properties.draw_order, properties.blend_mode, properties.enabled,
             properties.double_sided, properties.inverted_mask, [MASK],
         ))
         edit.create_parameter(PARAMETER, "slide", 0, 1, 0)
-        edit.create_mesh_binding(BINDING, TARGET, [kasane.Axis(PARAMETER, [0, 1])], [
-            kasane.MeshKeyform([0], base), kasane.MeshKeyform([1], shifted),
+        edit.create_mesh_binding(BINDING, TARGET, [zipzi.Axis(PARAMETER, [0, 1])], [
+            zipzi.MeshKeyform([0], base), zipzi.MeshKeyform([1], shifted),
         ])
     return model
 
 
-def run(output: Path) -> kasane.ObservationRun:
+def run(output: Path) -> zipzi.ObservationRun:
     model = create()
     preview_before = model.preview_values
-    with kasane.Observer(256, 256, 256) as observer:
+    with zipzi.Observer(256, 256, 256) as observer:
         result = observer.observe_run(
             model, [{PARAMETER: value} for value in (0.0, 0.5, 1.0)],
-            output.resolve(), crop_targets=[kasane.ObjectRef("mesh", TARGET)],
+            output.resolve(), crop_targets=[zipzi.ObjectRef("mesh", TARGET)],
         )
     assert model.preview_values == preview_before
     return result

@@ -7,7 +7,7 @@
 - 同色、同线宽的网格边线合为具有独立子路径的 Path，每条边仍单独 `move_to`，不会连接原本分离的线段。顶点和选中/悬浮标记仍最后绘制。
 - 每 4,096 条边分块，避开 GPUI PathBuilder 的 `u16` tessellation 索引上限；单批构建失败时退回逐边构建，避免整批有效边线丢失。
 - 路径包围盒增加 1 个逻辑像素的余量，防止复制 MSAA 中间纹理时裁掉亚像素边缘；线宽仍为 1 个逻辑像素，画布 content mask 保持生效。
-- 追踪时显式设置 `KASANE_TRACE_BATCH_MESH_EDGES=1` 使用此处的合批实现，`=0` 使用逐边实现；普通启动使用完整 Metal 覆盖层。
+- 追踪时显式设置 `ZIPZI_TRACE_BATCH_MESH_EDGES=1` 使用此处的合批实现，`=0` 使用逐边实现；普通启动使用完整 Metal 覆盖层。
 
 ## 正确性检查
 
@@ -55,8 +55,8 @@ Mao 的路径批次由 49–56 批降为 1 批，Shirousagi 由 17–22 批降�
 ./scripts/window-benchmark.sh models/local/mao/runtime/mao_pro.model3.json target/edges-default 300 120
 
 # 旧逐边路径作对照
-KASANE_TRACE_BATCH_MESH_EDGES=0 ./scripts/window-benchmark.sh \
+ZIPZI_TRACE_BATCH_MESH_EDGES=0 ./scripts/window-benchmark.sh \
   models/local/mao/runtime/mao_pro.model3.json target/edges-baseline 300 120
 
-cargo test --locked -p kasane-editor --test mesh_edges
+cargo test --locked -p zipzi-editor --test mesh_edges
 ```

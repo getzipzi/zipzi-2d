@@ -4,7 +4,7 @@
 
 验证同一个 Mao 文档在保存、导出、重新导入后是否丢失可编辑内容或运行时行为，并区分首次转换差异与多轮累积漂移。测试调用生产 SDK 的导入、保存与完整文件组发布入口，不使用接受损失模式，也不修改本地授权素材。
 
-原生工程和官方运行时包分别作为基线：两者本来就可能包含不同数据，不能直接将它们的差异判为转换错误。基线在首次导入 Kasane 后建立；本测试不能证明原始 CMO3/CAN3 中尚未被解析的字段均已保留，也不能代替 Cubism Editor 的真实读取与渲染校验。
+原生工程和官方运行时包分别作为基线：两者本来就可能包含不同数据，不能直接将它们的差异判为转换错误。基线在首次导入 Zipzi 后建立；本测试不能证明原始 CMO3/CAN3 中尚未被解析的字段均已保留，也不能代替 Cubism Editor 的真实读取与渲染校验。
 
 ## 输入与路径
 
@@ -12,7 +12,7 @@
 
 - 工程基线：`mao_pro_t06.cmo3`，另外验证选择 `mao_pro_t06.can3` 得到相同内容。
 - 运行时基线：`runtime/mao_pro.model3.json`，另外验证选择配套 `.moc3` 并解析 model3 入口得到相同内容。
-- K：保存为 Kasane 工程，然后创建全新会话重新打开。
+- K：保存为 Zipzi 工程，然后创建全新会话重新打开。
 - C：完整发布 CMO3/CAN3 文件组，然后创建全新会话从 CAN3 导入。
 - R：完整发布 model3/MOC3 运行时包，然后创建全新会话从 model3 导入。
 
@@ -20,7 +20,7 @@
 
 | 路径 | 每轮操作 | 检查目标 |
 | --- | --- | --- |
-| Kasane | K | 自有格式持久化是否完整 |
+| Zipzi | K | 自有格式持久化是否完整 |
 | Cubism | C | 工程反复编码后是否退化 |
 | Runtime | R | 运行时包首次转换与后续漂移 |
 | Mixed C/R/K | C → R → K | 工程经运行时后还剩下哪些编辑语义 |
@@ -58,23 +58,23 @@
 
 始终断言源素材未改变、导入文档结构有效、纹理资源齐全、导出不修改源文档、失败发布不留下半成品，以及 K 保存/打开不产生内容差异。K 的文档、采样结果和顶点要求完全一致，不使用浮点容差。输入包中原有的未解析参数、部件等语义诊断单独记录，不修补或删除它们来使转换通过。另有删除表情、改变混合方式、数值漂移和顶点偏移的负向测试，验证比较器能发现损失。
 
-输出目录必须是新目录。默认保留基线、各路径最终归一化文档、`report.json` 和可读的 `report.md`，中间授权素材位于临时目录并在测试后清理。需要人工检查输出文件时设置 `KASANE_ROUNDTRIP_KEEP_ARTIFACTS=1`；不要提交这些数据。
+输出目录必须是新目录。默认保留基线、各路径最终归一化文档、`report.json` 和可读的 `report.md`，中间授权素材位于临时目录并在测试后清理。需要人工检查输出文件时设置 `ZIPZI_ROUNDTRIP_KEEP_ARTIFACTS=1`；不要提交这些数据。
 
 ```sh
 # 默认完整 5 轮；授权素材缺失会报错，不会以跳过伪装成通过。
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration \
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration \
   transfer_roundtrip::mao_repeated -- --ignored --nocapture
 
 # 固定新报告目录，并保留实际导出物。
-env -u KASANE_DEV_SESSION_DIR \
-  KASANE_ROUNDTRIP_OUTPUT="$PWD/target/mao-roundtrip-review" \
-  KASANE_ROUNDTRIP_ROUNDS=5 KASANE_ROUNDTRIP_KEEP_ARTIFACTS=1 \
-  cargo test --locked -p editor-core --test integration \
+env -u ZIPZI_DEV_SESSION_DIR \
+  ZIPZI_ROUNDTRIP_OUTPUT="$PWD/target/mao-roundtrip-review" \
+  ZIPZI_ROUNDTRIP_ROUNDS=5 ZIPZI_ROUNDTRIP_KEEP_ARTIFACTS=1 \
+  cargo test --locked -p zipzi-editor-core --test integration \
   transfer_roundtrip::mao_repeated -- --ignored --nocapture
 
 # 要求所有路径无损；发现差异或中断时在写完报告后失败。
-env -u KASANE_DEV_SESSION_DIR KASANE_ROUNDTRIP_ASSERT_LOSSLESS=1 \
-  cargo test --locked -p editor-core --test integration \
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_ROUNDTRIP_ASSERT_LOSSLESS=1 \
+  cargo test --locked -p zipzi-editor-core --test integration \
   transfer_roundtrip::mao_repeated -- --ignored --nocapture
 ```
 
@@ -86,7 +86,7 @@ env -u KASANE_DEV_SESSION_DIR KASANE_ROUNDTRIP_ASSERT_LOSSLESS=1 \
 
 | 路径 | 结果 |
 | --- | --- |
-| 两种起点分别保存/打开 Kasane 5 轮 | 10 次均完全一致，包括文档、采样和顶点 |
+| 两种起点分别保存/打开 Zipzi 5 轮 | 10 次均完全一致，包括文档、采样和顶点 |
 | 原生工程反复 CMO3/CAN3 5 轮 | 首轮两个纹理名称变化；后 4 轮无新增差异 |
 | 原生工程反复运行时包 5 轮 | 首轮丢失对象显示名称、表情来源场景及区间外动作关键帧，并改变部分内部表示；后 4 轮稳定 |
 | 官方运行时包反复运行时包 5 轮 | 首轮 60 处数值/标志差异，涉及画布 flag、旋转原点和关键形；后 4 轮稳定 |

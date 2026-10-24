@@ -28,11 +28,11 @@
 
 全部通过：
 
-- `cargo test -p kasane-sdk-observe -p kasane-render-wgpu -p kasane-render -p kasane-animation --locked`
+- `cargo test -p zipzi-sdk-observe -p zipzi-render-wgpu -p zipzi-render -p zipzi-animation --locked`
   （含实际 GPU mask/blend/offscreen 回归）。
-- `cargo test -p kasane-sdk-observe --no-default-features --locked`
+- `cargo test -p zipzi-sdk-observe --no-default-features --locked`
   （含追加的超大纹理描述负控制）。
-- `cargo clippy -p kasane-sdk-observe -p kasane-render-wgpu -p kasane-python --features kasane-python/observe --all-targets --locked -- -D warnings`
+- `cargo clippy -p zipzi-sdk-observe -p zipzi-render-wgpu -p zipzi-python --features zipzi-python/observe --all-targets --locked -- -D warnings`
 - `cargo fmt --all --check`、`git diff --check`。
 - CPython 3.14 observe wheel 构建后安装至独立 `/tmp` venv，从仓库外
   执行 `test_observe.py`（8 tests）与 `test_inspection.py`（3 tests）。

@@ -425,15 +425,15 @@ def main() -> int:
         report["core_headers_sha256"] = source_sha256(sdk / "Core/include")
         report["core_library_sha256"] = sha256(core)
         configure = run(["cmake", "-S", str(ROOT / "tools/validation/probes"), "-B", str(build),
-                         f"-DKASANE_CUBISM_ROOT={sdk}", "-DCMAKE_BUILD_TYPE=Release"],
+                         f"-DZIPZI_CUBISM_ROOT={sdk}", "-DCMAKE_BUILD_TYPE=Release"],
                         output / "configure.log")
         if configure.returncode:
             raise AssertionError("CMake configure failed")
         built = run(["cmake", "--build", str(build), "--target",
-                     "kasane_framework_animation_cpu_probe", "-j4"], output / "build.log", timeout=240)
+                     "zipzi_framework_animation_cpu_probe", "-j4"], output / "build.log", timeout=240)
         if built.returncode:
             raise AssertionError("CPU probe build failed")
-        probe = build / "kasane_framework_animation_cpu_probe"
+        probe = build / "zipzi_framework_animation_cpu_probe"
         report["probe_binary_sha256"] = sha256(probe)
         command = [str(probe), str(FIXTURES / "model.moc3"),
                    str(FIXTURES / "minimal.motion3.json"),

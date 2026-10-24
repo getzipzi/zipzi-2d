@@ -10,8 +10,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "target/animation-package-probe"
-PROBE = ROOT / "target/animation-cpu-probe/kasane_framework_animation_cpu_probe"
-CDI_PROBE = ROOT / "target/cdi-probe-build/kasane_framework_cdi_cpu_probe"
+PROBE = ROOT / "target/animation-cpu-probe/zipzi_framework_animation_cpu_probe"
+CDI_PROBE = ROOT / "target/cdi-probe-build/zipzi_framework_cdi_cpu_probe"
 
 
 def run(args: list[str]) -> str:
@@ -50,7 +50,7 @@ def main() -> int:
         run([sys.executable, str(ROOT / "tools/validation/run_framework_cdi_probe.py")])
         if package.exists(): shutil.rmtree(package)
         if detached.exists(): shutil.rmtree(detached)
-        run(["cargo", "run", "-q", "-p", "kasane-project", "--example", "animation_package", "--", str(package)])
+        run(["cargo", "run", "-q", "-p", "zipzi-project", "--example", "animation_package", "--", str(package)])
         shutil.copytree(package, detached)
         shutil.rmtree(package)
         model3_path = detached / "model.model3.json"
@@ -84,7 +84,7 @@ def main() -> int:
         physics_trace = json_line(run([str(PROBE), "--physics-sequence", str(moc), str(physics)]))
         if len(physics_trace["frames"]) != 120: raise AssertionError("Framework physics trace incomplete")
         report["checks"]["attachment_loaders"] = "passed"
-        rust_trace = json_line(run(["cargo", "run", "-q", "-p", "kasane-animation", "--example", "physics_sequence", "--", str(physics)]))
+        rust_trace = json_line(run(["cargo", "run", "-q", "-p", "zipzi-animation", "--example", "physics_sequence", "--", str(physics)]))
         max_error = max(abs(a["output"] - b["output"]) for a, b in zip(physics_trace["frames"], rust_trace["frames"]))
         if max_error > 0.0001: raise AssertionError(f"Physics drift: {max_error}")
         report["checks"]["physics_max_error"] = max_error

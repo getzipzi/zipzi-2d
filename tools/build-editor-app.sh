@@ -4,10 +4,10 @@ tools_dir=$(CDPATH= cd -- "$(dirname -- "$0")/." && pwd)
 . "$tools_dir/workspace/workspace.sh"
 case "${1:-editor}" in
   editor)
-    package="kasane-editor"
-    name="Kasane Editor"
-    bundle_id="dev.kasane.editor"
-    icon_asset="$repo_root/crates/kasane-editor/assets/app-icons/kasane-editor-icon-vector.icns"
+    package="zipzi-editor"
+    name="Zipzi Editor"
+    bundle_id="dev.zipzi.editor"
+    icon_asset="$repo_root/crates/zipzi-editor/assets/app-icons/zipzi-editor-icon-vector.icns"
     ;;
   *)
     printf 'usage: %s [editor] [release|debug]\n' "$0" >&2

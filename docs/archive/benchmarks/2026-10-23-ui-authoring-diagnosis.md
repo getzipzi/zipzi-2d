@@ -2,18 +2,18 @@
 
 属性提交回归已在不依赖 editor 的独立 SDK 探针中复现，主要来自 2d authoring 的全结构校验、身份枚举和跨域变化汇总。直接 Opacity 的逐帧减速另有明确路径：旧的全量 ObjectIndex 失效逻辑遇到新版更大的 authoring 投影，每帧重建由约 6.3 ms 增至约 14.1 ms。两者应分别修复，不能把每帧预览都解释成 SDK commit。
 
-这是定位结果；未修改两个主工作区的产品源码。新增时钟只位于 `target/ui-diagnosis-20261023/source/kasane-2d/` 的隔离工作树，受 `bench-instrumentation` 特性控制。
+这是定位结果；未修改两个主工作区的产品源码。新增时钟只位于 `target/ui-diagnosis-20261023/source/zipzi-2d/` 的隔离工作树，受 `bench-instrumentation` 特性控制。
 
 ## 证据与实验边界
 
 沿用 [原生 UI 对比](2026-10-23-ui-comparison.md) 的 Mao、Apple M4、Release 环境与基线：editor `279f569` / 2d `01db56a`，当前 editor `61371c0` / 2d `c7f1651`。
 
 1. 现有 editing-chain：两个组合版本分别运行，retained index，5 次预热、24 次正式交互、每手势 6 次更新、两轮 plain/probe。它把 editor 提交、SDK 发布和 CPU preview 分开。
-2. 独立 SDK：同一份 Rust 源码仅依赖 kasane-core/SDK，不依赖 editor 或 GPUI。两个版本各两轮 plain/probe，5+40 个样本。选择 ArtMesh215，调用 `begin_owned_edit → replace_mesh → commit_to`；每次提交后在计时外 Undo，并断言内容恢复、receipt.changed 为真。另单独测量 `validate_structure`、fork 和内存预算估计。
-3. 独立 ObjectIndex：同一份 editor-core 探针、与原窗口负载相同的首个可见 Mesh，5+60 次交替 Opacity 输入，每次读取索引并执行/present CPU preview；两个版本各两轮 plain/probe。索引存在与场景接受均有断言。
+2. 独立 SDK：同一份 Rust 源码仅依赖 zipzi-core/SDK，不依赖 editor 或 GPUI。两个版本各两轮 plain/probe，5+40 个样本。选择 ArtMesh215，调用 `begin_owned_edit → replace_mesh → commit_to`；每次提交后在计时外 Undo，并断言内容恢复、receipt.changed 为真。另单独测量 `validate_structure`、fork 和内存预算估计。
+3. 独立 ObjectIndex：同一份 zipzi-editor-core 探针、与原窗口负载相同的首个可见 Mesh，5+60 次交替 Opacity 输入，每次读取索引并执行/present CPU preview；两个版本各两轮 plain/probe。索引存在与场景接受均有断言。
 4. 原生调用栈：使用此前保存的两个未插桩 Release 窗口二进制，只在 Opacity 正式阶段各 `sample` 3 秒。该运行只用于调用路径确认，不把采样期间的耗时当成性能基线。
 
-所有构建在测量前完成。SDK 对照和 ObjectIndex 对照各自的第三方 Cargo.lock 包名/版本/来源集合完全相同；差异在对应的 Kasane/Editor 源码。plain 时细分时钟编译移除，绝对耗时以 plain 为准。下表为两进程中位数的中位数，单位 ms、同步调用墙钟；不能与原生 UI 报告的线程 CPU P95 直接作同一指标比较。
+所有构建在测量前完成。SDK 对照和 ObjectIndex 对照各自的第三方 Cargo.lock 包名/版本/来源集合完全相同；差异在对应的 Zipzi/Editor 源码。plain 时细分时钟编译移除，绝对耗时以 plain 为准。下表为两进程中位数的中位数，单位 ms、同步调用墙钟；不能与原生 UI 报告的线程 CPU P95 直接作同一指标比较。
 
 ## 1. 不经过 editor，2d 提交仍显著变慢
 
@@ -41,7 +41,7 @@ Mesh 字段替换本身仍约 0.06 ms，回归集中在创建/发布 candidate �
 
 ## 2. SDK 发布开销的具体来源
 
-`modules/kasane-sdk/src/edit.rs:679` 对任意提交执行完整 `candidate.validate_structure()`。该调用与“遍历所有 Binding/Motion”的框架在基线就存在，回归不是这些调用突然从 0 次变成 1 次；authoring 改造扩大了里面的身份和字段验证工作。
+`modules/zipzi-sdk/src/edit.rs:679` 对任意提交执行完整 `candidate.validate_structure()`。该调用与“遍历所有 Binding/Motion”的框架在基线就存在，回归不是这些调用突然从 0 次变成 1 次；authoring 改造扩大了里面的身份和字段验证工作。
 
 以下是当前 Opacity commit 的细分 span 均值，再取两个进程的中位数；属于插桩归因，不替代 plain 总耗时。结构校验父阶段包含下面的 Binding、Motion、身份校验，不能重复相加。
 
@@ -58,10 +58,10 @@ Mesh 字段替换本身仍约 0.06 ms，回归集中在创建/发布 candidate �
 
 具体机制：
 
-- `kasane-core/src/document/structure.rs:245` 对全部绑定 `binding.clone()` 后重新 canonicalize。`bindings.rs:25` / `:307` 现在还要 normalize 稳定 Axis/Sample ID、检查身份冲突，并为每个 keyform 重新解析 samples/keys 坐标。这些绑定没有因单个 Mesh 名字或透明度提交而改变。
+- `zipzi-core/src/document/structure.rs:245` 对全部绑定 `binding.clone()` 后重新 canonicalize。`bindings.rs:25` / `:307` 现在还要 normalize 稳定 Axis/Sample ID、检查身份冲突，并为每个 keyform 重新解析 samples/keys 坐标。这些绑定没有因单个 Mesh 名字或透明度提交而改变。
 - `structure.rs:114` 的 `binding_identities()` 会复制完整身份数组及其字符串，再插入全局身份 HashSet。公开的借用迭代器已存在，但完整验证当前走的是复制接口。这个阶段不是全部回归来源，只是一个可独立消除的分配成本。
 - `motions.rs:449` 在每次完整验证中扫描所有 Motion；每个 Track/Key 的 `contains_base_identity` 又查询 expression、motion registration、physics 子项、Pose 等身份。与基线相比，身份检查域变大；7 个 Motion 的验证已是毫秒级，即便此次只改 Mesh。
-- `kasane-sdk/src/edit.rs:694` 重建 before/after keys；`session.rs:1140` 现在还包含 BindingAxis/Sample、MotionKey、ExpressionEntry、Physics 子对象等身份。`begin_owned_edit` 也会枚举 base_keys。身份不变的 scalar patch 仍支付这些全局枚举成本。
+- `zipzi-sdk/src/edit.rs:694` 重建 before/after keys；`session.rs:1140` 现在还包含 BindingAxis/Sample、MotionKey、ExpressionEntry、Physics 子对象等身份。`begin_owned_edit` 也会枚举 base_keys。身份不变的 scalar patch 仍支付这些全局枚举成本。
 - `changes.rs:515` 起依次汇总 Motion、Physics、Pose、Organization、Scene、Binding、References、Content、Resources、Document。部分域内部有过滤，但 Organization 等仍先构造两份全模型集合、排序/比较。源码跟踪表明 ChangeSet 汇总从 C1 开始引入，后续 C2–C6 逐域扩展；不是最后一次小型代码整理才独立引入的功能。
 
 Name 还存在附加路径：editor `document/properties.rs:250` 把单字段标签改为通用 `edit_scene(SceneEdit::Patch)`，完整链的 `editor.apply_properties` self 均值从微秒级升至约 1.4 ms。它有贡献，但小于 SDK 的通用发布增量。

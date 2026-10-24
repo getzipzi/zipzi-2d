@@ -6,10 +6,10 @@ tools_dir=$(CDPATH= cd -- "$(dirname -- "$0")/." && pwd)
 
 case "${1:-editor}" in
   editor)
-    package=kasane-editor
-    name='Kasane Editor'
-    bundle_id=dev.kasane.editor.watch
-    icon_asset="$repo_root/crates/kasane-editor/assets/app-icons/kasane-editor-icon-vector.icns"
+    package=zipzi-editor
+    name='Zipzi Editor'
+    bundle_id=dev.zipzi.editor.watch
+    icon_asset="$repo_root/crates/zipzi-editor/assets/app-icons/zipzi-editor-icon-vector.icns"
     ;;
   *)
     printf 'usage: %s [editor] [watch|run]\n' "$0" >&2
@@ -34,9 +34,9 @@ watch_lock="$PWD/target/dev-$package.watch.lock"
 reload_lock="$PWD/target/dev-$package.reload.lock"
 owned_lock=
 launch_pid_file=
-dev_attempts="${KASANE_DEV_ATTEMPTS:-50}"
-dev_interval="${KASANE_DEV_SLEEP_INTERVAL:-0.1}"
-dev_watch_interval="${KASANE_DEV_WATCH_INTERVAL:-0.5}"
+dev_attempts="${ZIPZI_DEV_ATTEMPTS:-50}"
+dev_interval="${ZIPZI_DEV_SLEEP_INTERVAL:-0.1}"
+dev_watch_interval="${ZIPZI_DEV_WATCH_INTERVAL:-0.5}"
 
 # mkdir is atomic on macOS too. Never steal a lock: concurrent recovery can
 # otherwise remove a new owner's lock. A crash leaves an explicit stale-lock error.
@@ -254,12 +254,12 @@ PLIST
     launch_pid_file="$pid_file.launch.$$"
     : > "$launch_pid_file"
     if ! open -g -n \
-      --env KASANE_DEV_BACKGROUND=1 \
-      --env "KASANE_DEV_SESSION_DIR=$PWD/target/dev-session-$package" \
+      --env ZIPZI_DEV_BACKGROUND=1 \
+      --env "ZIPZI_DEV_SESSION_DIR=$PWD/target/dev-session-$package" \
       --env MTL_HUD_ENABLED=1 \
       --env MTL_HUD_ALIGNMENT=bottomleft \
       --env MTL_HUD_SCALE=0.16 \
-      --env "KASANE_DEV_PID_FILE=$launch_pid_file" \
+      --env "ZIPZI_DEV_PID_FILE=$launch_pid_file" \
       --stdout "$run_log" --stderr "$run_log" "$app" >>"$log" 2>&1; then
       printf 'Build succeeded, but the background launch failed; details: %s\n' "$log" >&2
       exit 1

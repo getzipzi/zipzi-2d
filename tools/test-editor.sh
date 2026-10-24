@@ -7,7 +7,7 @@ usage() {
     cat <<'EOF'
 Usage: ./tools/test-editor.sh [fast|ui|regression|acceptance|tools|full] [test arguments...]
 
-  fast        editor-core unit and synthetic integration tests
+  fast        zipzi-editor-core unit and synthetic integration tests
   ui          Editor libraries/headless UI tests, with the full feature graph
   regression  Editor libraries and synthetic integration tests
   acceptance  licensed model, native rendering and screenshot tests
@@ -28,16 +28,16 @@ mode=${1:-full}
 if [ "$#" -gt 0 ]; then shift; fi
 case "$mode" in
     fast)
-        exec env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --lib --test integration "$@"
+        exec env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --lib --test integration "$@"
         ;;
     ui)
-        exec env -u KASANE_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features kasane-editor/test-support --lib "$@"
+        exec env -u ZIPZI_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features zipzi-editor/test-support --lib "$@"
         ;;
     regression)
-        exec env -u KASANE_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features kasane-editor/test-support --lib --test integration "$@"
+        exec env -u ZIPZI_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features zipzi-editor/test-support --lib --test integration "$@"
         ;;
     acceptance)
-        exec env -u KASANE_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features kasane-editor/test-support \
+        exec env -u ZIPZI_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features zipzi-editor/test-support \
             --test acceptance --test native_render --test headless_screenshot \
             --test animation_acceptance --test timeline_acceptance "$@"
         ;;
@@ -47,7 +47,7 @@ case "$mode" in
     full)
         python3 "$repo_root/tools/workspace/cargo_domain.py" editor fmt -- --check
         python3 "$repo_root/tools/test_tools.py"
-        exec env -u KASANE_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features kasane-editor/test-support "$@"
+        exec env -u ZIPZI_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features zipzi-editor/test-support "$@"
         ;;
     -h|--help|help)
         usage

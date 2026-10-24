@@ -9,7 +9,7 @@
 ## 环境与测量口径
 
 - Apple M4（10 核 GPU），16 GiB RAM；macOS 27.0.1（26A434）；Rust 1.99.0。
-- Kasane 依赖：`8d448d09df299bd960183e5e9f6b229ecf7c02e3`；编辑器基线：`dcaac1d78444ad2b6c3c4d577425c2fb3f0d9444` 加本次工作区变更。
+- Zipzi 依赖：`8d448d09df299bd960183e5e9f6b229ecf7c02e3`；编辑器基线：`dcaac1d78444ad2b6c3c4d577425c2fb3f0d9444` 加本次工作区变更。
 - Release 构建，关闭 Metal HUD，暂停开发监听器；各 benchmark 串行执行，测量期间不并行编译。
 - 显示器镜像配置：CB27U1 3840×2160 / 1920×1080 @120 Hz，Redmi 27 NQS 镜像 @75 Hz。记录实际呈现时间，不能只用显示器标称刷新率推断性能。
 - 窗口交互每负载 300 次正式输入 + 30 次预热，目标 120 Hz；缩放平滑动画可使请求记录多于输入数。
@@ -168,7 +168,7 @@ bash scripts/window-benchmark.sh models/local/mao/runtime/mao_pro.model3.json ta
 # 只关闭视图保留做对照，仍使用 Fast 后端
 GPUI_VIEW_RETENTION=0 bash scripts/window-benchmark.sh models/local/mao/runtime/mao_pro.model3.json target/window-no-retention 300 120
 # 参数控件
-KASANE_BENCH_PARAMETERS=1 bash scripts/window-benchmark.sh models/local/Shirousagi/Shirousagi.model3.json target/parameter-fast 300 120
+ZIPZI_BENCH_PARAMETERS=1 bash scripts/window-benchmark.sh models/local/Shirousagi/Shirousagi.model3.json target/parameter-fast 300 120
 ```
 
 本次修正了 benchmark 的滑块选择：固定 25% 位置会命中关键帧标记，只选值而不开始拖动。现在选取实际手柄位置，并同时检查当前展开的行及滚动视口，过滤虚拟化行保留的非可见测量边界。最初及中间排查的失败日志保留；三个模型均重测参数控件，报告采用 `*-parameter-thumb` 结果。

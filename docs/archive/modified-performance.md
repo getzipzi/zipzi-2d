@@ -73,10 +73,10 @@ Core/SDK 111 项与编辑器 workspace 69 项测试通过。新增回归覆盖�
 ## 复现与原始数据
 
 ```sh
-cargo run --locked --release -p editor-core --example modified_benchmark -- \
+cargo run --locked --release -p zipzi-editor-core --example modified_benchmark -- \
   models/local/mao/runtime/mao_pro.model3.json 1000 > modified-release.csv
 
-cargo run --locked -p editor-core --example modified_benchmark -- \
+cargo run --locked -p zipzi-editor-core --example modified_benchmark -- \
   models/local/mao/runtime/mao_pro.model3.json 1000 > modified-debug.csv
 ```
 
@@ -86,4 +86,4 @@ cargo run --locked -p editor-core --example modified_benchmark -- \
 - [Debug](benchmarks/2026-09-28/modified/mao-debug-1.csv)
 - [模型与运行元数据](benchmarks/2026-09-28/modified/mao-release-1.txt)
 
-基准源码：`crates/editor-core/examples/modified_benchmark.rs`。四次运行的全部预期状态断言通过；合计 32,000 个计时样本。
+基准源码：`crates/zipzi-editor-core/examples/modified_benchmark.rs`。四次运行的全部预期状态断言通过；合计 32,000 个计时样本。

@@ -15,7 +15,7 @@ import shutil
 import tempfile
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-import kasane
+import zipzi
 
 
 ANGLE_KEYS = (-30.0, 0.0, 30.0)
@@ -89,11 +89,11 @@ PARTS = (
 
 
 def stable_id(name: str) -> str:
-    return str(uuid5(NAMESPACE_URL, f"kasane/shirousagi/head-xy/{name}"))
+    return str(uuid5(NAMESPACE_URL, f"zipzi/shirousagi/head-xy/{name}"))
 
 
-def new_session() -> kasane.Session:
-    return kasane.Session(str(uuid4()), 1, 1, (0, 0), 1)
+def new_session() -> zipzi.Session:
+    return zipzi.Session(str(uuid4()), 1, 1, (0, 0), 1)
 
 
 def vertical_scales(angle: float) -> tuple[float, ...]:
@@ -125,7 +125,7 @@ def image_delta(first: bytes, second: bytes) -> dict[str, int]:
     }
 
 
-def pose_values(session: kasane.Session, x: int, y: int, *, include_y: bool = True) -> dict[str, int]:
+def pose_values(session: zipzi.Session, x: int, y: int, *, include_y: bool = True) -> dict[str, int]:
     ids = {session.parameter(pid).runtime_id: pid for pid in session.parameter_ids()}
     values = {ids["ParamAngleX"]: x}
     if include_y:
@@ -136,7 +136,7 @@ def pose_values(session: kasane.Session, x: int, y: int, *, include_y: bool = Tr
 def author(output: Path, input_project: Path, source: Path) -> None:
     if min(vertical_scales(30.0)) < 0.8:
         raise ValueError("Upward warp compresses a row interval below 80%")
-    project = kasane.open_project(input_project)
+    project = zipzi.open_project(input_project)
     meshes = [project.mesh_record(mesh_id) for mesh_id in project.mesh_ids()]
     if {mesh.runtime_id for mesh in meshes} != set(LAYERS):
         raise ValueError("Input project does not have the expected 24 PSD layer identities")
@@ -147,7 +147,7 @@ def author(output: Path, input_project: Path, source: Path) -> None:
 
     canvas = project.canvas
     bindings = {mesh.id: project.binding_for_mesh(mesh.id) for mesh in meshes}
-    with kasane.Observer(768, 768, 768) as observer:
+    with zipzi.Observer(768, 768, 768) as observer:
         view = observer.observe(project, {})
     source_rows = tuple((row - view.view_offset[1]) / view.view_scale for row in SCREEN_ROWS)
     rows = len(source_rows) - 1
@@ -199,31 +199,31 @@ def author(output: Path, input_project: Path, source: Path) -> None:
             edit.create_part(part_ids[key], title, part_ids[parent] if parent else "", draw_order=order)
         edit.create_parameter(y_id, "角度 Y｜整模", -30, 30, 0, runtime_id="ParamAngleY")
         edit.create_warp_transform(
-            warp_id, "整模 Y 轴共享变形", kasane.WarpData(rows, 1, True, warp_points(0.0)),
+            warp_id, "整模 Y 轴共享变形", zipzi.WarpData(rows, 1, True, warp_points(0.0)),
             part_id=part_ids["root"],
         )
         edit.create_scene_binding(
             stable_id("binding/model-y"), "warp", warp_id,
-            [kasane.Axis(y_id, list(ANGLE_KEYS))],
-            [kasane.SceneWarpKeyform([angle], warp_points(angle)) for angle in ANGLE_KEYS],
+            [zipzi.Axis(y_id, list(ANGLE_KEYS))],
+            [zipzi.SceneWarpKeyform([angle], warp_points(angle)) for angle in ANGLE_KEYS],
         )
         edit.create_warp_transform(
-            mouth_warp_id, "嘴部 Y 轴协同修形", kasane.WarpData(1, 1, True, mouth_points(0.0)),
+            mouth_warp_id, "嘴部 Y 轴协同修形", zipzi.WarpData(1, 1, True, mouth_points(0.0)),
             part_id=part_ids["mouth"], parent_id=warp_id,
         )
         edit.create_scene_binding(
             stable_id("binding/mouth-y"), "warp", mouth_warp_id,
-            [kasane.Axis(y_id, list(ANGLE_KEYS))],
-            [kasane.SceneWarpKeyform([angle], mouth_points(angle)) for angle in ANGLE_KEYS],
+            [zipzi.Axis(y_id, list(ANGLE_KEYS))],
+            [zipzi.SceneWarpKeyform([angle], mouth_points(angle)) for angle in ANGLE_KEYS],
         )
         edit.create_warp_transform(
-            ear_warp_id, "双耳 Y 轴相对位移", kasane.WarpData(ear_rows, 1, True, ear_points(0.0)),
+            ear_warp_id, "双耳 Y 轴相对位移", zipzi.WarpData(ear_rows, 1, True, ear_points(0.0)),
             part_id=part_ids["ears"], parent_id=warp_id,
         )
         edit.create_scene_binding(
             stable_id("binding/ears-y"), "warp", ear_warp_id,
-            [kasane.Axis(y_id, list(ANGLE_KEYS))],
-            [kasane.SceneWarpKeyform([angle], ear_points(angle)) for angle in ANGLE_KEYS],
+            [zipzi.Axis(y_id, list(ANGLE_KEYS))],
+            [zipzi.SceneWarpKeyform([angle], ear_points(angle)) for angle in ANGLE_KEYS],
         )
         for mesh in meshes:
             part, label = LAYERS[mesh.runtime_id]
@@ -247,19 +247,19 @@ def author(output: Path, input_project: Path, source: Path) -> None:
 
     saved = project.save(output / "project")
     published = project.export_package(output / "package")
-    reopened = kasane.open_project(saved.manifest)
+    reopened = zipzi.open_project(saved.manifest)
     package = new_session()
     package_import = package.import_model3(output / "package" / "model.model3.json")
     reference = new_session()
     reference.import_model3(source / "Shirousagi.model3.json")
-    before = kasane.open_project(input_project)
+    before = zipzi.open_project(input_project)
 
     checks = [(-30, 0), (-15, 0), (0, 0), (15, 0), (30, 0),
               (0, -30), (0, -15), (0, 15), (0, 30),
               (-30, -30), (-30, 30), (-15, 15), (15, -15), (30, 30)]
     report = {
         "input_sha256": hashlib.sha256(
-            (input_project / "project.kasane.json" if input_project.is_dir() else input_project).read_bytes()
+            (input_project / "project.zipzi.json" if input_project.is_dir() else input_project).read_bytes()
         ).hexdigest(),
         "method": "image-only Y visual fitting with upward head-scale constraint; semantic Parts",
         "screen_rows": SCREEN_ROWS,
@@ -290,10 +290,10 @@ def author(output: Path, input_project: Path, source: Path) -> None:
         relocated = Path(temporary)
         shutil.copytree(saved.manifest.parent, relocated / "project")
         shutil.copytree(output / "package", relocated / "package")
-        moved_project = kasane.open_project(relocated / "project")
+        moved_project = zipzi.open_project(relocated / "project")
         moved_package = new_session()
         moved_package.import_model3(relocated / "package" / "model.model3.json")
-        with kasane.Observer(768, 768, 768) as observer:
+        with zipzi.Observer(768, 768, 768) as observer:
             for x, y in checks:
                 target = observer.observe(reference, {"ParamAngleX": x, "ParamAngleY": y})
                 old = observer.observe(before, pose_values(before, x, y, include_y=False))

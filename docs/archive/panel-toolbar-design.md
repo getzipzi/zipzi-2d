@@ -129,4 +129,4 @@ Parameters 的分组按钮使用 selected 表示列表展开，tooltip 与可访
 
 新增 [工具栏 headless 回归](../crates/editor/headless_tests/panel_toolbar.rs) 覆盖宽度变化、输入与焦点保持、清除回调、弹窗焦点恢复、工具栏键盘导航、禁用按钮以及参数分组入口。布局已经过 headless 测量，单图标按钮和标题间距已通过真实 Metal 无头截图确认；原生窗口视觉尚未检查。
 
-验证：`cargo test --locked --workspace` 通过，210 项通过、1 项忽略；新增工具栏回归 3 项。`cargo build --locked -p kasane-editor`、`cargo fmt --all -- --check` 与 `git diff --check` 通过。
+验证：`cargo test --locked --workspace` 通过，210 项通过、1 项忽略；新增工具栏回归 3 项。`cargo build --locked -p zipzi-editor`、`cargo fmt --all -- --check` 与 `git diff --check` 通过。

@@ -3,7 +3,7 @@
 Date: 2026-09-25. Source HEAD before implementation:
 `768f129506baf357c81fef9e98cb6a0099cbb994`. The working tree already
 had user edits to the visual plan/research files; these are excluded from the
-baseline claim. The raw measurements below used the installed `kasane 0.1.0`
+baseline claim. The raw measurements below used the installed `zipzi 0.1.0`
 wheel **before rebuilding it with the new Rust ROI code**. Machine:
 macOS 27 arm64, Apple M4 / Metal. The fixture manifest SHA-256 was
 `a971cfc4a93a55c3a335ae35df8f425968f4e5490dbe3ce1c333a0eacf530331`.
@@ -17,7 +17,7 @@ uv run --locked python tests/fixtures/observe_inspection/build_fixtures.py --rep
 uv run --locked python tests/fixtures/observe_inspection/build_fixtures.py --verify
 uv run --locked python tools/run_observe_visual_baseline.py \
   --output "$PWD/target/observe-visual-baseline.json"
-cargo test -p kasane-sdk-observe --locked
+cargo test -p zipzi-sdk-observe --locked
 ```
 
 `build_fixtures.py` uses only locally generated PNG pixels and public authoring
@@ -71,7 +71,7 @@ for other blend modes.
 
 ## Existing test and animation scope
 
-At baseline, `cargo test -p kasane-sdk-observe --locked` passed 3 integration
+At baseline, `cargo test -p zipzi-sdk-observe --locked` passed 3 integration
 tests in `tests/capture.rs` in 0.83 s test execution time. The tests cover
 frozen evaluated frame values after a session edit, animation frame capture
 with stale-preview rejection, and GPU reuse across edits/texture changes.
@@ -80,7 +80,7 @@ background composition, save/open, pixel query or animation trace.
 
 Existing `tools/run_animation_gpu_probe.py` renders 18 selected Motion/Pose
 frames across plain/single/nested Offscreen with Model opacity on/off, comparing
-Kasane and Framework images. It uses supplied CPU animation samples; it does
+Zipzi and Framework images. It uses supplied CPU animation samples; it does
 not implement the planned independent `PlaybackSpec`, interval event journal,
 stage trace, or temporal report. It was **not run** in this O0 baseline. The
 current Rust `ObservationInput::capture_motion*` already captures the actual

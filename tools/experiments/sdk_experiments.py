@@ -67,7 +67,7 @@ def environment_state(lock, packet):
     location = subprocess.run([str(python), "-I", "-c",
         "import sysconfig; print(sysconfig.get_path('purelib'))"],
         cwd=packet, env=clean_env(), text=True, capture_output=True, check=True)
-    sdk_hashes = hashes(Path(location.stdout.strip()) / "kasane")
+    sdk_hashes = hashes(Path(location.stdout.strip()) / "zipzi")
     return {"requirements": sorted(requirements.splitlines()),
             "sdk_hashes": sdk_hashes, "sdk_unchanged": sdk_hashes == lock["package_hashes"]}
 
@@ -120,9 +120,9 @@ def checked(argv, cwd, log, timeout=180):
 
 
 def identity(python, cwd, log):
-    code = ("import json,sys,platform,kasane; from importlib.metadata import version; "
+    code = ("import json,sys,platform,zipzi; from importlib.metadata import version; "
             "print(json.dumps(dict(python=sys.version,platform=platform.platform(),"
-            "package=kasane.__file__,sdk_version=version('kasane'),capabilities=kasane.capabilities())))")
+            "package=zipzi.__file__,sdk_version=version('zipzi'),capabilities=zipzi.capabilities())))")
     return json.loads(checked([str(python), "-I", "-c", code], cwd, log))
 
 
@@ -143,13 +143,13 @@ def initialize(args):
         shutil.copy2(SUPPORT / name, frozen / name)
     shutil.copy2(Path(__file__), frozen / "sdk_experiments.py")
     for name in ("README.md", "API.md"):
-        shutil.copy2(ROOT / "crates/kasane-python" / name, frozen / name)
+        shutil.copy2(ROOT / "crates/zipzi-python" / name, frozen / name)
     for name in ("delivery-transfer.md", "resource-recovery.md", "visual-locate.md", "visual-parent.md", "compose-expression.md", "handoff-revision.md", "shirousagi-repair.md", "shirousagi-blink.md", "shirousagi-art-revision.md"):
         shutil.copy2(ROOT / "docs/experiments/tasks" / name, frozen / name)
     if args.handoff_project is not None:
         project = args.handoff_project.resolve(strict=True)
-        if not project.is_dir() or not (project / "project.kasane.json").is_file():
-            raise ValueError("--handoff-project must contain project.kasane.json")
+        if not project.is_dir() or not (project / "project.zipzi.json").is_file():
+            raise ValueError("--handoff-project must contain project.zipzi.json")
         hashes(project)
         shutil.copytree(project, frozen / "handoff-project")
     if args.shirousagi_root is not None:
@@ -160,7 +160,7 @@ def initialize(args):
             raise ValueError("--shirousagi-root must contain model3, MOC3, PSD and texture")
         hashes(source)
         shutil.copytree(source, frozen / "shirousagi", ignore=shutil.ignore_patterns(".DS_Store"))
-    shutil.copy2(ROOT / "crates/kasane-python/tests/fixtures/asymmetric-2x2.png", frozen / "texture.png")
+    shutil.copy2(ROOT / "crates/zipzi-python/tests/fixtures/asymmetric-2x2.png", frozen / "texture.png")
     uv = shutil.which(args.uv)
     if not uv:
         raise ValueError("uv not found; install uv before initializing an experiment")
@@ -258,11 +258,11 @@ def prepare(args):
 
 工作目录：`{packet}`；本轮实验共用的 Python：`{lock['python']}`。
 时间预算 {args.budget} 秒。公开文档在 docs/README.md 和 docs/API.md。
-只通过公开 kasane API 创作或编辑工程；不要直接编辑工程 JSON 或使用 _native。
+只通过公开 zipzi API 创作或编辑工程；不要直接编辑工程 JSON 或使用 _native。
 可以检查公开包签名、类型提示，使用 Python 标准库，也允许安装第三方依赖。
 使用 `uv pip install --python "{lock['python']}" <包名>` 在共享环境安装依赖。
 不要求提交单独的锁文件，底座会记录依赖清单。不要创建新的受试环境。
-安装耗时计入实验预算；在 notes.md 说明依赖用途。不得替换、卸载或修改被测 kasane。
+安装耗时计入实验预算；在 notes.md 说明依赖用途。不得替换、卸载或修改被测 zipzi。
 不得修改 input/、docs/、TASK.md；不得读取主持人目录、其他任务或源仓库。
 工程输出必须位于本任务的 output/ 中；重放时必须使用传入的新输出目录。
 数值验收绝对容差为 1e-6。资源路径因保存而迁移是允许的。
@@ -311,11 +311,11 @@ def run_agent(args):
     write(host / "environment-before.json", environment_state(lock, packet))
     # One measured agent session per trial; retries belong inside that session.
     result = command(argv, packet, host / "agent", record["budget_seconds"], {
-        "KASANE_TASK": str(packet / "TASK.md"), "KASANE_PYTHON": lock["python"],
-        "KASANE_UV": lock["uv"], "VIRTUAL_ENV": str(root / ".venv"),
+        "ZIPZI_TASK": str(packet / "TASK.md"), "ZIPZI_PYTHON": lock["python"],
+        "ZIPZI_UV": lock["uv"], "VIRTUAL_ENV": str(root / ".venv"),
         "UV_PYTHON": lock["python"],
         "PATH": str(Path(lock["python"]).parent) + os.pathsep + os.environ.get("PATH", ""),
-        "KASANE_PACKET": str(packet), "KASANE_TRACE": str(packet / "agent-trace.jsonl")})
+        "ZIPZI_PACKET": str(packet), "ZIPZI_TRACE": str(packet / "agent-trace.jsonl")})
     write(host / "agent/artifacts.json", packet_hashes(packet))
     try:
         write(host / "agent/environment.json", environment_state(lock, packet))

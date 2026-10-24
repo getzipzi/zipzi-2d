@@ -8,7 +8,7 @@ scripts/deformation-benchmark.sh \
   target/deformation-mao 300 120
 ```
 
-参数依次为模型、输出目录、每项正式样本数、目标输入 Hz。支持 `.model3.json` 和 `.kasane`；默认 Release，每项预热 30 次、测量 300 次、目标 120 Hz。输出目录中的 trace 必须不存在。测试会激活窗口，运行时保持窗口可见、有焦点，不要操作测试窗口；结束后自动退出，不保存模型修改。
+参数依次为模型、输出目录、每项正式样本数、目标输入 Hz。支持 `.model3.json` 和 `.zipzi`；默认 Release，每项预热 30 次、测量 300 次、目标 120 Hz。输出目录中的 trace 必须不存在。测试会激活窗口，运行时保持窗口可见、有焦点，不要操作测试窗口；结束后自动退出，不保存模型修改。
 
 | 报告负载 | 操作 |
 | --- | --- |
@@ -28,13 +28,13 @@ Mesh / Warp 的位移为水平 ±12、垂直 ±6 logical px 的周期轨迹；Ro
 可用环境变量调整：
 
 ```sh
-KASANE_BENCH_VERTICES=16 KASANE_BENCH_WARMUP=60 \
-  scripts/deformation-benchmark.sh models/local/mao_pro.kasane target/deformation-16 360 120
+ZIPZI_BENCH_VERTICES=16 ZIPZI_BENCH_WARMUP=60 \
+  scripts/deformation-benchmark.sh models/local/mao_pro.zipzi target/deformation-16 360 120
 ```
 
-- `KASANE_BENCH_VERTICES`：多顶点项的精确选中数量，范围 2–10000；不会静默减少。
-- `KASANE_BENCH_MESH`、`KASANE_BENCH_WARP`、`KASANE_BENCH_ROTATION`：可选的内部对象 ID，限制各项选择目标。用固定 `.kasane` 项目复现这些 ID；重新导入 model3 可能生成新的 ID。
-- `KASANE_BENCH_PROFILE=debug`：Debug 测试。报告仍按既有规则返回非零并标识不适合作为 Release 验收；应检查是否还有其他 issues。
+- `ZIPZI_BENCH_VERTICES`：多顶点项的精确选中数量，范围 2–10000；不会静默减少。
+- `ZIPZI_BENCH_MESH`、`ZIPZI_BENCH_WARP`、`ZIPZI_BENCH_ROTATION`：可选的内部对象 ID，限制各项选择目标。用固定 `.zipzi` 项目复现这些 ID；重新导入 model3 可能生成新的 ID。
+- `ZIPZI_BENCH_PROFILE=debug`：Debug 测试。报告仍按既有规则返回非零并标识不适合作为 Release 验收；应检查是否还有其他 issues。
 
 `application.log` 的 `benchmark fixture` JSON 记录实际对象 ID、控制点 ID 和目标 mesh / deformer 子树的可见顶点总数。单点和多点项各自选择可满足条件的 mesh；比较性能时确认它们使用同一个对象。跨版本比较也应保持模型、目标对象、控制点数量、窗口尺寸、显示器和追踪开关一致。
 
@@ -50,9 +50,9 @@ KASANE_BENCH_VERTICES=16 KASANE_BENCH_WARMUP=60 \
 
 ```sh
 scripts/window-benchmark.sh MODEL OUTPUT_DIR 300 120
-KASANE_BENCH_PARAMETERS=1 scripts/window-benchmark.sh MODEL OUTPUT_DIR 360 120
+ZIPZI_BENCH_PARAMETERS=1 scripts/window-benchmark.sh MODEL OUTPUT_DIR 360 120
 # 新脚本等价于：
-KASANE_BENCH_DEFORMATIONS=1 scripts/window-benchmark.sh MODEL OUTPUT_DIR 300 120
+ZIPZI_BENCH_DEFORMATIONS=1 scripts/window-benchmark.sh MODEL OUTPUT_DIR 300 120
 ```
 
 Parameters 与 deformations 两个开关不能同时为 1。
@@ -117,7 +117,7 @@ Mao 实际窗口 Release：每项预热 30 次、正式输入 300 次、目标 1
 
 这些指标不含 SDK 模型求值、GPUI、Metal 或显示呈现，不能直接换算为窗口 FPS。基线窗口 trace 在 `target/deformation-fps-before/`，定位采样在 `target/deformation-fps-profile/`；CPU 对照的独立源码副本、探针、CSV 和 overlay 输出保存在 `target/fps-cpu-before/`、`target/fps-cpu-after/`，汇总在 `target/fps-cpu-comparison.json`。临时探针不参与编辑器构建。实际窗口验证见下一节。
 
-验证：112 项 editor-core 测试、11 项报告脚本测试、Release 构建、格式和 diff 检查通过。新增回归覆盖旧快照尚未被查询时修改父级、keyform 和预览参数，并验证两种 Canvas Y 方向的原控制点命中。Debug / Release 下，Mao 所有可见 Warp 的完整 overlay 输出与基线逐字相同。编辑器测试仍为 51 通过、6 失败、1 忽略，与上次记录的布局 2 项、参数面板 4 项失败一致。
+验证：112 项 zipzi-editor-core 测试、11 项报告脚本测试、Release 构建、格式和 diff 检查通过。新增回归覆盖旧快照尚未被查询时修改父级、keyform 和预览参数，并验证两种 Canvas Y 方向的原控制点命中。Debug / Release 下，Mao 所有可见 Warp 的完整 overlay 输出与基线逐字相同。编辑器测试仍为 51 通过、6 失败、1 忽略，与上次记录的布局 2 项、参数面板 4 项失败一致。
 
 ## 持续拖动的完成帧接收与窗口验证（2026-10-03）
 
@@ -140,9 +140,9 @@ Mao 实际窗口 Release：每项预热 30 次、正式输入 300 次、目标 1
 
 原始记录分别在 `target/deformation-fps-before/`（HEAD 基线）、`target/deformation-fps-after/`（仅几何优化）、`target/deformation-fps-progressive/`（最终 Debug）和 `target/deformation-fps-release-final/`。`target/deformation-fps-window-comparison.json` 保存相同 fixture 的校验、指标和最终源文件 SHA-256。
 
-最终 115 项 editor-core 测试及 11 项报告脚本测试通过，Release 构建、格式和 diff 检查通过。新回归验证多次输入未呈现时仍能连续显示完成姿态、后续移动不发生目标漂移、图像与 overlay 使用同一几何，以及手势结束和上下文改变后拒绝旧帧；原有跨编辑、尺寸变化和文档激活保护也继续通过。编辑器完整测试仍为 51 通过、6 项同名既有失败、1 忽略。
+最终 115 项 zipzi-editor-core 测试及 11 项报告脚本测试通过，Release 构建、格式和 diff 检查通过。新回归验证多次输入未呈现时仍能连续显示完成姿态、后续移动不发生目标漂移、图像与 overlay 使用同一几何，以及手势结束和上下文改变后拒绝旧帧；原有跨编辑、尺寸变化和文档激活保护也继续通过。编辑器完整测试仍为 51 通过、6 项同名既有失败、1 忽略。
 
-随后修正上述 6 项测试：`dcc58b7` 更改默认布局后，2 项布局测试仍读取旧面板层级，4 项参数测试未显式打开默认隐藏的 Keyforms 面板。布局测试现检查当前三列结构和根节点保存的实测尺寸，参数测试先显示 Keyforms，保留原有业务断言；导航测试也确认面板确实关闭后能重新显示。`cargo test -p kasane-editor` 通过：主测试 57 通过、0 失败、1 忽略，另有 10 项原生渲染集成测试通过。记录位于 `target/editor-tests-layout-fixed.log`。
+随后修正上述 6 项测试：`dcc58b7` 更改默认布局后，2 项布局测试仍读取旧面板层级，4 项参数测试未显式打开默认隐藏的 Keyforms 面板。布局测试现检查当前三列结构和根节点保存的实测尺寸，参数测试先显示 Keyforms，保留原有业务断言；导航测试也确认面板确实关闭后能重新显示。`cargo test -p zipzi-editor` 通过：主测试 57 通过、0 失败、1 忽略，另有 10 项原生渲染集成测试通过。记录位于 `target/editor-tests-layout-fixed.log`。
 
 ## 连续姿态的增量几何与呈现复测（2026-10-03）
 
@@ -174,4 +174,4 @@ Release 本来已接近显示器上限，本轮没有证据表明窗口 FPS 稳�
 
 CPU 源码副本、探针、两轮 CSV 和输出位于 `target/fps-incremental-before/`、`target/fps-incremental-after/`；`target/fps-incremental-source-verification.json` 核对基线与当前生产源码。窗口记录位于 `target/fps-present-before-{2,3}/`、`target/fps-present-before-repeat-{2,3}/`、`target/fps-present-incremental-{2,3}/`、`target/fps-present-incremental-repeat-3/`。`target/fps-incremental-comparison.json` 汇总指标、fixture、源码及二进制 SHA-256。
 
-验证：`cargo test --locked --workspace` 共 187 通过、0 失败、1 忽略（editor-core 118，editor-render 2，editor 67）；Release 构建、格式与 diff 检查通过。新增回归覆盖连续拖动共享未变网格、旧帧位置保持、取消恢复、包围盒 / 边界与命中更新，以及 drawable 重排、Canvas 坐标变化和 topology 更新时的重建。完整测试日志在 `target/fps-incremental-workspace-tests-final.log`。
+验证：`cargo test --locked --workspace` 共 187 通过、0 失败、1 忽略（zipzi-editor-core 118，zipzi-editor-render 2，editor 67）；Release 构建、格式与 diff 检查通过。新增回归覆盖连续拖动共享未变网格、旧帧位置保持、取消恢复、包围盒 / 边界与命中更新，以及 drawable 重排、Canvas 坐标变化和 topology 更新时的重建。完整测试日志在 `target/fps-incremental-workspace-tests-final.log`。

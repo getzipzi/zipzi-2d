@@ -10,7 +10,7 @@
 - 增量发布：同一 editor，SDK 同一 HEAD 加 A–D 工作区补丁；editor 工作区代码差异只在 `#[cfg(test)]` 中，未改变 Release 产品代码。
 - 最初基线：editor `279f569` / SDK `01db56a`，沿用先前保存且 SHA-256 已核实的二进制，重新测量。与当前的 benchmark 驱动及报告脚本逐文件一致；产品其余部分跨版本变化，因此只将保守／增量组合用于隔离本轮 SDK 贡献。
 
-Apple M4（10 核 GPU）、16 GiB、macOS 27.0.1，CB27U1 3840×2160／逻辑 1920×1080／120 Hz；同一 Mao runtime 模型（属性控件均选择 ArtMesh215，canvas 沿用首个可见 Mesh 的选择规则）、Metal mesh overlay、关闭 HUD、每进程隔离配置。构建使用 `cargo build --locked --release -p kasane-editor --features test-support`，未启用 `bench-instrumentation`。两个变体全部构建并保存后才开始测量，测量期间不编译、不运行测试。
+Apple M4（10 核 GPU）、16 GiB、macOS 27.0.1，CB27U1 3840×2160／逻辑 1920×1080／120 Hz；同一 Mao runtime 模型（属性控件均选择 ArtMesh215，canvas 沿用首个可见 Mesh 的选择规则）、Metal mesh overlay、关闭 HUD、每进程隔离配置。构建使用 `cargo build --locked --release -p zipzi-editor --features test-support`，未启用 `bench-instrumentation`。两个变体全部构建并保存后才开始测量，测量期间不编译、不运行测试。
 
 三轮版本顺序依次为“保守→增量→原始”“原始→增量→保守”“增量→保守→原始”。每轮的 Name／Opacity 文本／Enabled 各 5 次预热＋96 次正式输入、120 Hz 请求；canvas 同进程的 pan／zoom／opacity 各 30 次预热＋300 次正式输入、120 Hz 请求。
 

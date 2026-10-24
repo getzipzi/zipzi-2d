@@ -14,9 +14,9 @@
 
 | 试次 | 故障 | 作品分 | 原作品 | 空目录重放 | 报告 |
 | --- | --- | ---: | --- | --- | --- |
-| s6-a | `Warp10` 的一个组合 keyform，X 偏移 | 100/100 | 通过 | 通过 | [report.json](/private/tmp/kasane-shirousagi-s6-final-20260924/host/trials/s6-a/assessments/20260924T102309-14c4ab85/report.json) |
-| s6-b | `Warp11` 的另一组合 keyform，X 偏移 | 100/100 | 通过 | 通过 | [report.json](/private/tmp/kasane-shirousagi-s6-final-20260924/host/trials/s6-b/assessments/20260924T102352-e6b33b98/report.json) |
-| s6-c | `Warp10` 的第三组合 keyform，Y 偏移 | 100/100 | 通过 | 通过 | [report.json](/private/tmp/kasane-shirousagi-s6-final-20260924/host/trials/s6-c/assessments/20260924T102052-031a4668/report.json) |
+| s6-a | `Warp10` 的一个组合 keyform，X 偏移 | 100/100 | 通过 | 通过 | [report.json](/private/tmp/zipzi-shirousagi-s6-final-20260924/host/trials/s6-a/assessments/20260924T102309-14c4ab85/report.json) |
+| s6-b | `Warp11` 的另一组合 keyform，X 偏移 | 100/100 | 通过 | 通过 | [report.json](/private/tmp/zipzi-shirousagi-s6-final-20260924/host/trials/s6-b/assessments/20260924T102352-e6b33b98/report.json) |
+| s6-c | `Warp10` 的第三组合 keyform，Y 偏移 | 100/100 | 通过 | 通过 | [report.json](/private/tmp/zipzi-shirousagi-s6-final-20260924/host/trials/s6-c/assessments/20260924T102052-031a4668/report.json) |
 
 每份报告在原作品、搬迁后的工程和搬迁后的 package 上都检查了 11 个姿态
 （3 个公开、8 个未公开），并检查结构、资源、对象身份及非目标状态。三种变体的
@@ -62,15 +62,15 @@ S7 从 24 层 PSD 的静态工程出发，让受试者创作局部动态行为�
 
 | 试次 | 创作方式 | 作品分 | 原作品 / 空目录重放 | 正式更正版报告 |
 | --- | --- | ---: | --- | --- |
-| s7-a | 两端关键形态，四顶点眼部网格压扁 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/kasane-shirousagi-s7-corrected-20260924/host/trials/s7-a/assessments/20260924T111849-30faf935/report.json) |
-| s7-b | 两端加 0.5 中间关键形态 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/kasane-shirousagi-s7-corrected-20260924/host/trials/s7-b/assessments/20260924T111856-b7c809eb/report.json) |
-| s7-c | 两端关键形态，逐眼调整宽度和位置 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/kasane-shirousagi-s7-corrected-20260924/host/trials/s7-c/assessments/20260924T111905-05aa271b/report.json) |
+| s7-a | 两端关键形态，四顶点眼部网格压扁 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/zipzi-shirousagi-s7-corrected-20260924/host/trials/s7-a/assessments/20260924T111849-30faf935/report.json) |
+| s7-b | 两端加 0.5 中间关键形态 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/zipzi-shirousagi-s7-corrected-20260924/host/trials/s7-b/assessments/20260924T111856-b7c809eb/report.json) |
+| s7-c | 两端关键形态，逐眼调整宽度和位置 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/zipzi-shirousagi-s7-corrected-20260924/host/trials/s7-c/assessments/20260924T111905-05aa271b/report.json) |
 
 三份原脚本与原任务包中的脚本 SHA-256 相同，新旧任务包的 PSD 与输入工程哈希
 相同；更正版仅改评分器的合法 keyform 结构规则，沿用原先全部视觉与交付门槛。
 首次冻结评估中，A、C 直接通过；B 的画面、源状态、package 和重放检查也全部
 通过，但评分器错误要求绑定恰好只有 `0`、`1` 两个 keyform，因此把符合任务要求的
-`0.5` 关键形态判失败。保留了[原失败报告](/private/tmp/kasane-shirousagi-s7-final-20260924/host/trials/s7-b/assessments/20260924T110721-d04301af/report.json)及[更正评估](/private/tmp/kasane-shirousagi-s7-final-20260924/host/trials/s7-b/assessments/corrected-adjudication-20260924.json)，再在新冻结实验里原样重跑 A、B、C；三者正式通过。该问题归因于**实验评分器过窄**，不是 B 的 SDK 使用失败。
+`0.5` 关键形态判失败。保留了[原失败报告](/private/tmp/zipzi-shirousagi-s7-final-20260924/host/trials/s7-b/assessments/20260924T110721-d04301af/report.json)及[更正评估](/private/tmp/zipzi-shirousagi-s7-final-20260924/host/trials/s7-b/assessments/corrected-adjudication-20260924.json)，再在新冻结实验里原样重跑 A、B、C；三者正式通过。该问题归因于**实验评分器过窄**，不是 B 的 SDK 使用失败。
 
 S7 准备阶段另暴露两个真实系统缺口，均在发放前修复并重新构建冻结 wheel：
 
@@ -106,9 +106,9 @@ S7 稳定后，主持人从真实 PSD 提取目标图层，按公开 RGB 倍率�
 
 | 试次 | 目标图层 | 作品分 | 原作品 / 空目录重放 | 报告 |
 | --- | --- | ---: | --- | --- |
-| s8-a | `ArtMesh15` 左眼 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/kasane-shirousagi-s8-final-20260924/host/trials/s8-a/assessments/20260924T114853-96c8fc6c/report.json) |
-| s8-b | `ArtMesh14` 右眼 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/kasane-shirousagi-s8-final-20260924/host/trials/s8-b/assessments/20260924T114512-4a496ed5/report.json) |
-| s8-c | `ArtMesh22` 腮红 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/kasane-shirousagi-s8-final-20260924/host/trials/s8-c/assessments/20260924T115550-e3c01216/report.json) |
+| s8-a | `ArtMesh15` 左眼 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/zipzi-shirousagi-s8-final-20260924/host/trials/s8-a/assessments/20260924T114853-96c8fc6c/report.json) |
+| s8-b | `ArtMesh14` 右眼 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/zipzi-shirousagi-s8-final-20260924/host/trials/s8-b/assessments/20260924T114512-4a496ed5/report.json) |
+| s8-c | `ArtMesh22` 腮红 | 100/100 | 通过 / 通过 | [report.json](/private/tmp/zipzi-shirousagi-s8-final-20260924/host/trials/s8-c/assessments/20260924T115550-e3c01216/report.json) |
 
 三份最终报告的 10 姿态目标裁剪区、目标外画面、图集其他区域及 alpha、
 原 rig 的非目标状态、工程和 package 搬迁、空目录重放均通过。A 用原 PSD 图层的

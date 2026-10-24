@@ -78,7 +78,7 @@ schema 集中声明 167 个命名 section、元素宽度、关联 count、最小
 无 Core 测试命令：
 
 ```sh
-KASANE_MOC3_DISABLE_CORE_VALIDATION=1 cargo test -p kasane-moc3 \
+ZIPZI_MOC3_DISABLE_CORE_VALIDATION=1 cargo test -p zipzi-moc3 \
   --no-default-features --test safety_tests --locked
 ```
 
@@ -88,7 +88,7 @@ KASANE_MOC3_DISABLE_CORE_VALIDATION=1 cargo test -p kasane-moc3 \
 
 ## 验证结果
 
-本机 Apple M4 / Godot 4.7.2 mono，GL Compatibility。报告位于 `target/kasane/m3c/`（忽略的本地产物）。
+本机 Apple M4 / Godot 4.7.2 mono，GL Compatibility。报告位于 `target/zipzi/m3c/`（忽略的本地产物）。
 
 | 验证 | 结果 / 证据 |
 |---|---|
@@ -98,7 +98,7 @@ KASANE_MOC3_DISABLE_CORE_VALIDATION=1 cargo test -p kasane-moc3 \
 | S5 / Ren 双 Core | passed；`optimization-evidence/s5_report.json`。三组采样，位置最大误差 2.6226043701171875e-6，Offscreen 透明度误差 0 |
 | S2 缺失证据行为 | not_run；`optimization-evidence/s2_report.json`。构造 fixture 和 Rust 测试通过，真实外部素材及对应 Editor/GPU 仍缺失 |
 | S6 全量最终代码验收 | passed，9/9 gate；`optimization-final-s6/report.json`。147 个 Mao 数值用例分别通过官方/Purism Core 对照，Editor 的 10 组官方 GPU 比较全部通过（含联合编辑后 3 个采样），源码及证据 hash 校验一致 |
-| Release 构建与源码 Editor 启动 | 通过；release 库已原子替换至 `apps/editor/native/libkasane_godot.dylib`，启动日志为 `optimization-evidence/m3c-source-startup.log` |
+| Release 构建与源码 Editor 启动 | 通过；release 库已原子替换至 `apps/editor/native/libzipzi_godot.dylib`，启动日志为 `optimization-evidence/m3c-source-startup.log` |
 
 `cargo fmt --check` 仍在未改动的九个既有文件中报告格式差异；严格 Clippy 在已有 evaluator 的六处 `needless_range_loop` 处失败。本轮没有顺带重排整个仓库。原始日志：`optimization-evidence/m3c-final-fmt.log`、`optimization-evidence/m3c-final-clippy.log`。因此不宣称全仓 CI 已通过。
 

@@ -1,14 +1,14 @@
-# Kasane SDK API
+# Zipzi SDK API
 
 当前 Rust SDK、Python wheel 与 GPU 观察入口已实现；完整门禁和运行范围见 [验证说明](VALIDATION.md)。下文保留各阶段的实施记录，最新接口以本文件的可运行 API 和测试为准。
 
 ## 当前可运行的 Rust API
 
-`kasane-sdk` 不依赖 Godot、Python、wgpu 或窗口。调用者传入规范小写、非零的文档和对象 UUID。当前不会自动生成 UUID，也没有持久化 alias。
+`zipzi-sdk` 不依赖 Godot、Python、wgpu 或窗口。调用者传入规范小写、非零的文档和对象 UUID。当前不会自动生成 UUID，也没有持久化 alias。
 
 ```rust
-use kasane_core::{Canvas, PreviewValues, Vec2};
-use kasane_sdk::{AuthoringSession, prepare_png_asset_from_base, rectangle_mesh};
+use zipzi_core::{Canvas, PreviewValues, Vec2};
+use zipzi_sdk::{AuthoringSession, prepare_png_asset_from_base, rectangle_mesh};
 
 let mut session = AuthoringSession::new(
     "00000000-0000-4000-8000-000000000001",
@@ -32,7 +32,7 @@ let geometry = session.geometry("00000000-0000-4000-8000-000000000003").unwrap()
 let frame = session.evaluate(&PreviewValues::new())?;
 session.undo()?;
 session.redo()?;
-# Ok::<(), kasane_sdk::SdkError>(())
+# Ok::<(), zipzi_sdk::SdkError>(())
 ```
 
 `AuthoringSession::begin_edit(label, expected_version)` 创建隔离候选文档。`EditSession::commit` 发布一次 revision；丢弃 `EditSession` 回滚。任一方法失败后，即便调用者捕获错误，`commit` 仍返回 `EDIT_ABORTED`。`session.edit` 是自动提交的闭包形式。无内容且无身份变化的批次不产生历史或事件，也不清除 redo；同批次删除并以相同 ID、相同内容重建会推进 revision，使旧句柄过期。history 默认最多 50 条、256 MiB；`with_history_limits` 可配置，`history_state` 与 `estimated_content_bytes` 提供容量估算。超预算在发布前失败，成功提交才淘汰旧条目；估算包括持久内容的集合、字符串和数组 capacity，并不是 RSS 硬上限。
@@ -75,9 +75,9 @@ BlendShape key table、constraint、binding、Glue 和 Offscreen 均提供 `crea
 
 ## 尚未交付的契约
 
-S3 已有可安装的 CPython 3.14 wheel 初段：`kasane.Session` 支持创建/打开会话、PNG 矩形、参数与完整单 mesh binding 的原子 edit、源位置更新、查询、CPU 求值、保存/重开、导入/导出和 undo/redo。`with session.edit(...)` 在块内异常时撤回本批次；即使块内捕获输入错误，退出时也以 `EDIT_ABORTED` 拒绝发布。`SdkFailure` 暴露 code、operation、object_ids、字段路径、版本和 referrers。`python -m kasane run <script> --report <path>` 报告 stdout/stderr、异常栈与行号、会话版本；退出不自动保存。`examples/sdk/python_cpu_recipe.py` 是可运行的 CPU 创作示例。
+S3 已有可安装的 CPython 3.14 wheel 初段：`zipzi.Session` 支持创建/打开会话、PNG 矩形、参数与完整单 mesh binding 的原子 edit、源位置更新、查询、CPU 求值、保存/重开、导入/导出和 undo/redo。`with session.edit(...)` 在块内异常时撤回本批次；即使块内捕获输入错误，退出时也以 `EDIT_ABORTED` 拒绝发布。`SdkFailure` 暴露 code、operation、object_ids、字段路径、版本和 referrers。`python -m zipzi run <script> --report <path>` 报告 stdout/stderr、异常栈与行号、会话版本；退出不自动保存。`examples/sdk/python_cpu_recipe.py` 是可运行的 CPU 创作示例。
 
-S3 又接入工程重置、对象 ID 列表、asset/mesh/parameter/几何快照、名称查询、引用查询、结构诊断、历史状态与事件，以及独立的预览值/帧。快照的版本和内容来自同一次原生锁内读取；Python 返回的数组是副本。[Python 覆盖清单](../modules/kasane-python/python-coverage.json)及检查器在该阶段记录 115 个 Rust SDK 公开入口中的 59 个已绑定，56 个待绑定；后续覆盖见本节末尾。资源描述指向磁盘文件，但 CPU 求值不读取纹理。SDK 路径使用单独 checkpoint history，不写旧 delta history。
+S3 又接入工程重置、对象 ID 列表、asset/mesh/parameter/几何快照、名称查询、引用查询、结构诊断、历史状态与事件，以及独立的预览值/帧。快照的版本和内容来自同一次原生锁内读取；Python 返回的数组是副本。[Python 覆盖清单](../modules/zipzi-python/python-coverage.json)及检查器在该阶段记录 115 个 Rust SDK 公开入口中的 59 个已绑定，56 个待绑定；后续覆盖见本节末尾。资源描述指向磁盘文件，但 CPU 求值不读取纹理。SDK 路径使用单独 checkpoint history，不写旧 delta history。
 
 同轮续接 `Edit.replace_canvas`、`replace_parameter`、`erase_object` 与层级关系设置，及 mesh binding 快照查询。`replace_parameter` 保留原对象的 runtime ID 等未在简化 Python 参数表单中列出的字段。覆盖清单现为 69/115 已绑定、46 项待绑定；层级关系设置目前只完成了失败回滚测试，后续还需随 Part/Transform 创建接口验证成功路径。
 
@@ -109,13 +109,13 @@ Python BlendShape binding 的六种 target 均有对应 delta keyform 类型，�
 
 Python MeshRecord 暴露完整几何、绘制属性及关系字段，可创建自定义 mesh 或完整替换。`Edit.replace_topology` 接收源几何快照、旧顶点到新顶点的映射，以及相关普通 binding、BlendShape binding、Glue 的完整候选，同一 edit 中原子校验和发布。方法清单为 115/116 项 Python 绑定、1 项 Rust 专用、0 项待绑定。
 
-S4 可选 GPU 入口开始接入：带 `observe` feature 的 wheel 提供 `kasane.Observer(width, height, fit_long_side)`；`observe(session, values)` 返回带源版本、输入指纹、evaluation revision、RGBA、PNG、实际纹理 hash/revision 和 adapter 信息的 `ObservedFrame`，`save_png(absolute_path)` 写出 PNG。`set_fit_long_side` 更新 view 并复用 GPU 资源；失败抛带 code 和 asset_id 的 `ObservationFailure`。默认 CPU wheel 的 `capabilities()["gpu_observation"]` 为 false；feature wheel 实际探测 device 后报告可用性。
+S4 可选 GPU 入口开始接入：带 `observe` feature 的 wheel 提供 `zipzi.Observer(width, height, fit_long_side)`；`observe(session, values)` 返回带源版本、输入指纹、evaluation revision、RGBA、PNG、实际纹理 hash/revision 和 adapter 信息的 `ObservedFrame`，`save_png(absolute_path)` 写出 PNG。`set_fit_long_side` 更新 view 并复用 GPU 资源；失败抛带 code 和 asset_id 的 `ObservationFailure`。默认 CPU wheel 的 `capabilities()["gpu_observation"]` 为 false；feature wheel 实际探测 device 后报告可用性。
 
 GPU 上传前按设备限制检查全部纹理尺寸，超限返回 `TEXTURE_SIZE_LIMIT` 并保留 Observer 可复用；输出尺寸超限返回 `OUTPUT_SIZE_LIMIT`。`capabilities()["purism_core_validation"]` 表示 PurismCore 已编入；当前未接入官方 Core 验证器，因此 `official_core_validation` 为 false。Rust 与 Python 的基本创作和失败回滚使用同一 [契约 fixture](../examples/sdk/authoring-contract.json) 验证。
 
 `Observer.observe_run(session, samples, absolute_output, focus=[])` 为每次运行创建独立目录，输出逐样本 PNG、focus crop、`contact-sheet.png`、`samples.json`、`diagnostics.json` 和 `report.json`。crop 从完整合成帧裁剪，保留遮挡、mask 和 Offscreen。报告记录 SDK 版本与原生模块 hash、平台、requested/actual、session/generation/document/source/evaluation revision、求值帧加资源与 view 的输入 hash、adapter、view、资源与图像 hash，并声明颜色及 alpha 约定；成功状态为 `frames_complete`，失败状态为 `failed` 并附样本序号。S4 后续补叠加层及逐项图像预期对照。
 
-视觉对照可直接调用 `kasane.compare_png(reference, actual)`，或 `ObservedFrame.compare_png(reference)`，无需 Pillow。每个 PNG 输入可为 `Path`、字符串路径或 PNG 字节（例如 `frame.png`）。返回 `ImageComparison`，包含 `exact_match`、`changed_pixels`、`total_pixels`、`changed_bounds`（左、上、右、下；右下为排他边界）、归一化 `mean_absolute_error`/`max_channel_error`，以及可由 `save_difference_png(absolute_path)` 写出的可见差异图。差异图 RGB 表示对应通道的绝对差，变化像素绘制为不透明；仅 alpha 变化显示在红色通道。输入支持无交错 RGB8/RGBA8 PNG；尺寸不符或 PNG 损坏会明确报错。该接口只报告像素差异，不替任务决定可接受阈值。`ObservationRun.output` 与 `directory` 都指向本次运行实际创建的唯一目录；`report`、`frames` 和 `contact_sheet` 给出具体文件路径。
+视觉对照可直接调用 `zipzi.compare_png(reference, actual)`，或 `ObservedFrame.compare_png(reference)`，无需 Pillow。每个 PNG 输入可为 `Path`、字符串路径或 PNG 字节（例如 `frame.png`）。返回 `ImageComparison`，包含 `exact_match`、`changed_pixels`、`total_pixels`、`changed_bounds`（左、上、右、下；右下为排他边界）、归一化 `mean_absolute_error`/`max_channel_error`，以及可由 `save_difference_png(absolute_path)` 写出的可见差异图。差异图 RGB 表示对应通道的绝对差，变化像素绘制为不透明；仅 alpha 变化显示在红色通道。输入支持无交错 RGB8/RGBA8 PNG；尺寸不符或 PNG 损坏会明确报错。该接口只报告像素差异，不替任务决定可接受阈值。`ObservationRun.output` 与 `directory` 都指向本次运行实际创建的唯一目录；`report`、`frames` 和 `contact_sheet` 给出具体文件路径。
 
 可运行示例：以 `maturin build --features observe` 构建 wheel 并安装到外部 venv 后，从仓库外运行 `python /absolute/path/to/examples/sdk/python_observe_recipe.py /absolute/output/dir`。示例在未保存 Session 中创建 mask 与 Offscreen、采样参数 0/0.5/1，并打印报告路径。
 

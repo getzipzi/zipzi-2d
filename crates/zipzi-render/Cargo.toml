@@ -1,0 +1,16 @@
+[package]
+name = "zipzi-render"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Backend-neutral frame validation and render planning for Zipzi 2D"
+
+[dependencies]
+bytemuck = { workspace = true }
+zipzi-core = { path = "../zipzi-core" }
+
+[[bench]]
+name = "render_benchmark"
+harness = false

@@ -1,11 +1,11 @@
-"""Create a small bound model with the installed kasane wheel.
+"""Create a small bound model with the installed zipzi wheel.
 
 Run from an empty output directory: python /absolute/path/to/python_cpu_recipe.py
 """
 
 from pathlib import Path
 
-import kasane
+import zipzi
 
 DOCUMENT = "00000000-0000-4000-8000-000000000001"
 ASSET = "00000000-0000-4000-8000-000000000002"
@@ -14,9 +14,9 @@ PARAMETER = "00000000-0000-4000-8000-000000000004"
 BINDING = "00000000-0000-4000-8000-000000000005"
 
 
-def create(output: Path) -> kasane.Session:
+def create(output: Path) -> zipzi.Session:
     texture = Path(__file__).with_name("asymmetric-2x2.png").resolve()
-    session = kasane.Session(DOCUMENT, 100, 100, (50, 50))
+    session = zipzi.Session(DOCUMENT, 100, 100, (50, 50))
     with session.edit("create rectangle") as edit:
         edit.add_png_asset(ASSET, "texture", texture)
         edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
@@ -30,19 +30,19 @@ def create(output: Path) -> kasane.Session:
         edit.create_mesh_binding(
             BINDING,
             MESH,
-            [kasane.Axis(PARAMETER, [0, 1])],
-            [kasane.MeshKeyform([0], base), kasane.MeshKeyform([1], shifted)],
+            [zipzi.Axis(PARAMETER, [0, 1])],
+            [zipzi.MeshKeyform([0], base), zipzi.MeshKeyform([1], shifted)],
         )
 
     middle = session.evaluate({PARAMETER: 0.5})
     assert middle.parameters[0].value == 0.5
     assert middle.drawables[0].positions[0] == (base[0][0] + 5, base[0][1])
     receipt = session.save(output)
-    reopened = kasane.open_project(receipt.manifest)
+    reopened = zipzi.open_project(receipt.manifest)
     assert reopened.evaluate({PARAMETER: 0.5}) == middle
     return session
 
 
 if __name__ == "__main__":
-    result = create(Path.cwd() / "kasane-python-example")
+    result = create(Path.cwd() / "zipzi-python-example")
     print(result.project_path)

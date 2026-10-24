@@ -6,14 +6,14 @@
 
 | Crate | 职责 |
 |---|---|
-| `kasane-core` | Document、几何编辑、引用关系、关键形态、纯求值 |
-| `kasane-moc3` | MOC3 编码与 Purism 对照测试 |
-| `kasane-project` | 工程格式、资源验证、保存与运行包发布 |
-| `kasane-godot` | Godot GDExtension 绑定与预览 |
+| `zipzi-core` | Document、几何编辑、引用关系、关键形态、纯求值 |
+| `zipzi-moc3` | MOC3 编码与 Purism 对照测试 |
+| `zipzi-project` | 工程格式、资源验证、保存与运行包发布 |
+| `zipzi-godot` | Godot GDExtension 绑定与预览 |
 
 工作区最低 Rust 版本为 **1.94**，由 Cargo manifest 显式声明，与 godot 0.5 的要求一致。当前本机验证使用 macOS ARM64、Rust 1.98.1。Godot 绑定选择 `api-4-3`；其他引擎版本需分别验收。
 
-Rust 路径通过 `sha2` 和 `png` 处理哈希和图像，不需要系统 OpenSSL/libpng。但当前 `kasane-moc3/build.rs` 仍编译仓库中的 PurismCore C 源码，所以需要 C 编译器及已初始化的子模块。不能称为“零 C 工具链依赖”。运行 C++ 对照工具仍需 CMake、libpng、OpenSSL；现有 SCons/CMake 工程尚未删除。
+Rust 路径通过 `sha2` 和 `png` 处理哈希和图像，不需要系统 OpenSSL/libpng。但当前 `zipzi-moc3/build.rs` 仍编译仓库中的 PurismCore C 源码，所以需要 C 编译器及已初始化的子模块。不能称为“零 C 工具链依赖”。运行 C++ 对照工具仍需 CMake、libpng、OpenSSL；现有 SCons/CMake 工程尚未删除。
 
 ## 本轮修复
 
@@ -24,7 +24,7 @@ Rust 路径通过 `sha2` 和 `png` 处理哈希和图像，不需要系统 OpenS
 | 修改绑定中的变形器类型/网格导致 panic | 保留绑定时返回 `KEYFORMS_REQUIRED`，文档及 revision 不变 |
 | 参数范围收缩留下非法关键形态 | 在候选文档重新验证 MeshBinding/SceneBinding，失败不提交；合法修改通知受影响网格 |
 | 另存为静默覆盖其他工程 | 没有已打开基线且目标存在时返回 `DESTINATION_EXISTS` |
-| 并发保存丢失更新 | 恢复 `.kasane.lock` 协议，在锁内检查基线，发布前再次检查；8 个写者只允许 1 个成功，C++ 持锁时 Rust 返回 `PROJECT_BUSY` |
+| 并发保存丢失更新 | 恢复 `.zipzi.lock` 协议，在锁内检查基线，发布前再次检查；8 个写者只允许 1 个成功，C++ 持锁时 Rust 返回 `PROJECT_BUSY` |
 | 复用损坏的同名素材 | 校验文件类型及哈希，不匹配时独占创建新名字，保留旧文件；中断后的部分文件也不会被复用 |
 | 导出绕过素材哈希 | 验证所有项目素材，包括未使用素材；发布的是已验证的同一批字节，不在校验后重新读源文件 |
 | 删除同步却报告 durable=true | 写入使用完整写入与文件同步，提交前同步目录，发布后同步失败返回成功、`durable=false` 和 warnings；保存基线仍推进 |
@@ -44,7 +44,7 @@ Rust 路径通过 `sha2` 和 `png` 处理哈希和图像，不需要系统 OpenS
 cargo fmt --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
-cargo build --release -p kasane-godot --locked
+cargo build --release -p zipzi-godot --locked
 
 # 验证器负控制门禁
 python3 -m unittest discover -s tools -p test_acceptance_validators.py -v
@@ -53,13 +53,13 @@ python3 -m unittest discover -s tools -p test_acceptance_validators.py -v
 python3 tools/validate_official_core.py
 
 # 真实 GPU 视觉回归测试
-python3 tools/validate_gpu.py --library target/release/libkasane_godot.dylib
+python3 tools/validate_gpu.py --library target/release/libzipzi_godot.dylib
 
 # Godot 边界、生命周期与完整工作流
-python3 tools/validate_godot.py --library target/release/libkasane_godot.dylib --suite all
+python3 tools/validate_godot.py --library target/release/libzipzi_godot.dylib --suite all
 
 # 生产级规模性能基准
-cargo bench -p kasane-core --bench production_scale_benchmark
+cargo bench -p zipzi-core --bench production_scale_benchmark
 ```
 
 本轮本机结果：
@@ -81,7 +81,7 @@ cargo bench -p kasane-core --bench production_scale_benchmark
    - 在 1D、2D 参数、嵌套变形与遮罩用例的 28 个参数采样点下，Rust 求值结果与官方 Core 的最大顶点坐标误差约 0.05348 像素（按逐坐标绝对/相对容差判断；未统计平均误差），图层排序、透明度、乘色/滤色和遮罩关系 100% 一致。
 2. **真实 GPU 视觉回归**：
    - 在 Apple M4 GPU（Metal 兼容渲染器）上，以官方 Core 驱动的 `GDCubismUserModel` 为基准；
-   - 检验 Rust `KasaneDocumentPreview` 的混合模式、正反向剪贴遮罩、多层嵌套变形、透明羽化及动态纹理热更；
+   - 检验 Rust `ZipziDocumentPreview` 的混合模式、正反向剪贴遮罩、多层嵌套变形、透明羽化及动态纹理热更；
    - 84 项 GPU 检查全部通过（全图均值差异 0.0，关键特征单通道最大误差 0.001688 $\ll 2/255$）。
 3. **Godot 生命周期安全与完整工作流**：
    - 句柄世代失效保护（`STALE_HANDLE`）、多预览销毁隔离、信号回调重入借用安全、50 轮连续加载卸载压力测试全部通过（修正后 128 项 Godot 检查通过）；

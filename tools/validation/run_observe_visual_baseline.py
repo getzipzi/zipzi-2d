@@ -16,8 +16,8 @@ import resource
 from statistics import median
 from time import perf_counter
 
-import kasane
-from kasane import _native
+import zipzi
+from zipzi import _native
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "fixtures/observe_inspection"
@@ -27,7 +27,7 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def frame_record(frame: kasane.ObservedFrame, elapsed_ms: float) -> dict:
+def frame_record(frame: zipzi.ObservedFrame, elapsed_ms: float) -> dict:
     pixels = [frame.rgba[index:index + 4]
               for index in range(0, len(frame.rgba), 4)]
     nonzero = [pixel for pixel in pixels if pixel[3] != 0]
@@ -75,7 +75,7 @@ def main() -> None:
     ]
     result = {
         "schema_version": 1,
-        "kasane_version": version("kasane"),
+        "zipzi_version": version("zipzi"),
         "native_binary_sha256": sha(Path(_native.__file__).read_bytes()),
         "platform": platform.platform(),
         "fixture_manifest_sha256": sha(manifest_bytes),
@@ -84,10 +84,10 @@ def main() -> None:
         "background": "transparent",
         "cases": {},
     }
-    with kasane.Observer(128, 128, 128) as observer:
+    with zipzi.Observer(128, 128, 128) as observer:
         for name, project, values in cases:
-            session = kasane.open_project(
-                (FIXTURES / "projects" / f"{project}.kasane.json").resolve()
+            session = zipzi.open_project(
+                (FIXTURES / "projects" / f"{project}.zipzi.json").resolve()
             )
             times = []
             frame = None

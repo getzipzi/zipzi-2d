@@ -16,7 +16,7 @@ class TestRunnerTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
-        self.app = self.root / "crates/kasane-editor"
+        self.app = self.root / "crates/zipzi-editor"
         (self.root / "tools").mkdir(parents=True)
         self.app.mkdir(parents=True)
         for name in ["test-editor.sh", "workspace/workspace.sh", "workspace/cargo_domain.py", "workspace/package-domains.json"]:
@@ -30,12 +30,12 @@ class TestRunnerTests(unittest.TestCase):
 if pathlib.Path(sys.argv[0]).name == 'python3' and pathlib.Path(sys.argv[1]).name == 'cargo_domain.py':
     os.execv(sys.executable, [sys.executable, *sys.argv[1:]])
 with open('calls.jsonl','a') as out:
-    out.write(json.dumps({'tool':pathlib.Path(sys.argv[0]).name,'args':sys.argv[1:],'session':os.environ.get('KASANE_DEV_SESSION_DIR')})+'\\n')
+    out.write(json.dumps({'tool':pathlib.Path(sys.argv[0]).name,'args':sys.argv[1:],'session':os.environ.get('ZIPZI_DEV_SESSION_DIR')})+'\\n')
 if sys.argv[1:2]==['fmt']:sys.exit(int(os.environ.get('FORMAT_EXIT','0')))
 sys.exit(int(os.environ.get('TEST_EXIT','0')))
 ''')
             tool.chmod(0o755)
-        self.env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}", "KASANE_DEV_SESSION_DIR": "live-development-session"}
+        self.env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}", "ZIPZI_DEV_SESSION_DIR": "live-development-session"}
 
     def assert_editor_packages(self, args):
         expected = json.loads((self.root / 'tools/workspace/package-domains.json').read_text())['editor']
@@ -91,7 +91,7 @@ sys.exit(int(os.environ.get('TEST_EXIT','0')))
         self.assertEqual(result.returncode, 0, result.stderr)
         args = calls[0]["args"]
         self.assert_editor_packages(args)
-        self.assertIn("kasane-editor/test-support", args)
+        self.assertIn("zipzi-editor/test-support", args)
         self.assertEqual(args[-1], "headless_tests::ui_performance")
         self.assertIsNone(calls[0]["session"])
 

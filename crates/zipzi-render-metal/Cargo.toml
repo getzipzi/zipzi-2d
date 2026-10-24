@@ -1,0 +1,19 @@
+[package]
+name = "zipzi-render-metal"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+# A/B control for pixel validation and GPU measurements; keep disabled in hosts.
+benchmark-global-surfaces = []
+
+[dependencies]
+bytemuck = { workspace = true }
+zipzi-core = { path = "../zipzi-core" }
+zipzi-render = { path = "../zipzi-render" }
+thiserror = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+metal = "0.33"

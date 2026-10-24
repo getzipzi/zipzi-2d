@@ -13,5 +13,5 @@ coverage; each crate README describes its focused tests. Inspect `--help` on
 arguments. Both domain shell scripts default to expensive full runs.
 
 Tooling tests live in `tools/tests/`; shared test data lives in `fixtures/`.
-Editor shell gates clear `KASANE_DEV_SESSION_DIR`; clear it explicitly for direct
+Editor shell gates clear `ZIPZI_DEV_SESSION_DIR`; clear it explicitly for direct
 Editor Cargo test commands.

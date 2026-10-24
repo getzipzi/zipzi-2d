@@ -4,7 +4,7 @@
 
 第 4、5 节定义完整核心范围；已实现接口及边界以实施记录和覆盖矩阵为准。C6 已完成核心验收、性能复核和公共契约定稿；验收映射、结果及边界见 [C6 交付记录](unified-object-authoring-c6-acceptance.md)，随后进入 UI 统一实施。
 
-先完成原生创作模型、SDK 与 editor-core 的统一对象能力，使创建、属性修改、集合移动、复制、删除和引用修复具有稳定身份、明确的领域规则和单一事务历史。随后按 [Editor UI 交互统一方案](unified-object-authoring-ui.md)接入新的界面操作。
+先完成原生创作模型、SDK 与 zipzi-editor-core 的统一对象能力，使创建、属性修改、集合移动、复制、删除和引用修复具有稳定身份、明确的领域规则和单一事务历史。随后按 [Editor UI 交互统一方案](unified-object-authoring-ui.md)接入新的界面操作。
 
 本文是数据模型、领域能力、操作契约和核心验收的权威定义。完整对象清单在第 4 节，模型改动在第 5 节；菜单、焦点、键盘、拖拽命中和表单事件规则由 UI 方案维护。
 
@@ -16,14 +16,14 @@
 
 | 本阶段负责 | 后续 UI 阶段负责 |
 | --- | --- |
-| kasane-core 原生模型、有效数据投影 | 面板、树和列表的具体展示 |
+| zipzi-core 原生模型、有效数据投影 | 面板、树和列表的具体展示 |
 | SDK 类型化编辑、校验、单一历史 | 工具栏、右键、主菜单和快捷键接入 |
-| editor-core 身份/集合投影、会话能力与命令适配 | 创建后的选择、定位、展开和控件焦点 |
+| zipzi-editor-core 身份/集合投影、会话能力与命令适配 | 创建后的选择、定位、展开和控件焦点 |
 | 字段地址、上下文 token、候选生命周期接口 | 输入法、Enter、失焦、Esc、颜色与数值控件事件 |
 | 保存、资产内容、导入导出、诊断 | 错误、待配置提示、影响说明和修复入口 |
 | 保持现有 UI 可编译和行为兼容的必要适配 | 新交互的批量接入与重复 UI 逻辑清理 |
 
-核心阶段允许修改 editor 适配代码，以承接新 ID、模型和 API，并确保已有功能继续运行；不借此提前统一全部菜单、布局或拖拽交互。核心验收不能依赖尚未实现的 UI 按钮，应能直接调用 SDK/editor-core 验证所有能力。
+核心阶段允许修改 editor 适配代码，以承接新 ID、模型和 API，并确保已有功能继续运行；不借此提前统一全部菜单、布局或拖拽交互。核心验收不能依赖尚未实现的 UI 按钮，应能直接调用 SDK/zipzi-editor-core 验证所有能力。
 
 本阶段不新增第二套 Undo 栈、通用数据库或复制所有领域关系的通用对象树。原生数据模型改动、领域命令与格式适配必须一起完成，不能只交付接口空壳。
 
@@ -37,7 +37,7 @@
 
 不为每个数值和控制柄创建 UUID。已有 Mesh VertexId 和 MotionKey ID 保留；Bezier 控制柄通过端点关键帧 ID 与柄角色定位；三角形和网格控制点通过专用拓扑地址定位。拓扑变化使旧地址失效，旧编辑必须取消，不能继续按旧数组下标写入。
 
-持久化引用与操作句柄分开。持久化引用回答“文档中的哪个实体”，操作句柄还携带 SDK session、generation 和实体 incarnation，回答“是否仍是开始操作时的那次存活”。复用现有 SDK ObjectHandle/incarnation 机制，并覆盖新增的组、注册、条目、轴和采样点；不能另建一套仅在 editor-core 生效的存活判断。
+持久化引用与操作句柄分开。持久化引用回答“文档中的哪个实体”，操作句柄还携带 SDK session、generation 和实体 incarnation，回答“是否仍是开始操作时的那次存活”。复用现有 SDK ObjectHandle/incarnation 机制，并覆盖新增的组、注册、条目、轴和采样点；不能另建一套仅在 zipzi-editor-core 生效的存活判断。
 
 改名、重排和合法跨拥有者移动保持 ID 与 incarnation，但依赖旧拥有者或结构的编辑仍需重新校验。删除使原句柄永久失效；Undo/Redo 恢复原 ID 时分配新的 incarnation，不复活删除前的句柄。项目重载或替换推进 generation。incarnation、会话版本和失效 epoch 不写入原生文件，也不随历史 checkpoint 回滚；只读查询、失败和 no-op 不推进它们。
 
@@ -69,7 +69,7 @@
 flowchart TD
     UI[列表 树 Properties Timeline 画布] --> Actions[统一操作入口与交互协调]
     Actions --> SDK[SDK 规划与执行入口 事务 Undo Redo]
-    SDK --> Domain[kasane-core 领域规则与联合修改]
+    SDK --> Domain[zipzi-core 领域规则与联合修改]
     Domain --> Model[原生创作数据模型]
     SDK -->|原子发布| Model
     Model --> Projection[对象与集合投影 能力与诊断]
@@ -81,19 +81,19 @@ flowchart TD
 
 ### 3.1 原生模型与 SDK
 
-`kasane-core` 负责创作模型及领域不变量。`kasane-sdk` 负责事务、验证、发布和唯一的 Undo/Redo 历史。原生项目保存完整创作状态；运行时与外部格式使用显式转换。
+`zipzi-core` 负责创作模型及领域不变量。`zipzi-sdk` 负责事务、验证、发布和唯一的 Undo/Redo 历史。原生项目保存完整创作状态；运行时与外部格式使用显式转换。
 
 新增组和条目身份、未配置引用、集合编辑应在这一层具备类型化接口。任何 UI 都不能通过自行拼装整个资源来定义业务规则。
 
-领域规划和执行的权威在 core/SDK：集合归属、创建默认结构、复制闭包与内部引用重映射、最后一个 Motion 注册的处理、依赖删除、网格转换、改父级保证和运行投影均不能只存在于 editor-core。SDK 对外提供同源的能力查询、只读规划和执行接口，Python 等非 Editor 调用方获得相同规则。core 实现领域不变量和联合修改原语，SDK 在其上负责版本、句柄、容量、资产内容与原子发布；规划结果不授予跳过提交校验的权限。
+领域规划和执行的权威在 core/SDK：集合归属、创建默认结构、复制闭包与内部引用重映射、最后一个 Motion 注册的处理、依赖删除、网格转换、改父级保证和运行投影均不能只存在于 zipzi-editor-core。SDK 对外提供同源的能力查询、只读规划和执行接口，Python 等非 Editor 调用方获得相同规则。core 实现领域不变量和联合修改原语，SDK 在其上负责版本、句柄、容量、资产内容与原子发布；规划结果不授予跳过提交校验的权限。
 
 按关系类型声明复制与删除的闭包：拥有的内容随拥有者处理，组织归属按所选子树策略处理，外部共享引用默认保留。Part 组织树与 Deformer 关系不能用同一个通用“递归子节点”函数推导复制范围。SDK 规划列出闭包及需重映射的边，执行使用同一规则。
 
-### 3.2 editor-core
+### 3.2 zipzi-editor-core
 
 增加对象操作模块，按场景、参数、动画、物理、Pose、绑定和资源拆分。模块名可以是 `authoring`，不要求新建 crate。
 
-该模块将编辑上下文转换为 SDK 意图，并协调检查、预览和建议定位；不重新实现领域规划。领域能力与 Editor 会话可用性分层合成：类型、引用、归属和持久化锁定规则由 core/SDK 校验；工作区、焦点、播放策略由 editor-core 管理；SDK 保存占用与版本条件由 SDK 提供。合成结果保留原因来源，执行时各责任层再次校验。持久化锁定不能被其他 SDK 入口绕过，Editor 特有焦点也不应成为无界面 SDK 写入的前提。
+该模块将编辑上下文转换为 SDK 意图，并协调检查、预览和建议定位；不重新实现领域规划。领域能力与 Editor 会话可用性分层合成：类型、引用、归属和持久化锁定规则由 core/SDK 校验；工作区、焦点、播放策略由 zipzi-editor-core 管理；SDK 保存占用与版本条件由 SDK 提供。合成结果保留原因来源，执行时各责任层再次校验。持久化锁定不能被其他 SDK 入口绕过，Editor 特有焦点也不应成为无界面 SDK 写入的前提。
 
 统一入口接收类型化意图，示意如下，具体 Rust API 在实施时确定：
 
@@ -108,7 +108,7 @@ RepairReference(document, slot, replacement)
 
 `CreatePayload` 等使用按领域区分的 Rust enum。不要用任意 JSON 填充统一对象，也不要做所有类型共享的巨型结构体。
 
-SDK 提供以下领域只读查询，editor-core 在返回值上附加会话条件：
+SDK 提供以下领域只读查询，zipzi-editor-core 在返回值上附加会话条件：
 
 - `capabilities(context, entity_or_collection)`：操作是否支持、是否当前可用、不可用原因。
 - `plan_move / plan_delete / plan_create`：校验后得到目标实体、受影响关系、操作效果和诊断。
@@ -121,7 +121,7 @@ SDK 提供以下领域只读查询，editor-core 在返回值上附加会话条�
 
 ### 3.3 共享的操作结果
 
-一次成功操作返回领域结果和提交回执；editor-core 在其上添加建议选择目标和需定位的集合位置，组成面向 UI 的 OperationResult。领域结果包括稳定引用、诊断、转换保证和执行失效范围；选择与焦点建议不成为持久化事实或运行缓存失效依据。
+一次成功操作返回领域结果和提交回执；zipzi-editor-core 在其上添加建议选择目标和需定位的集合位置，组成面向 UI 的 OperationResult。领域结果包括稳定引用、诊断、转换保证和执行失效范围；选择与焦点建议不成为持久化事实或运行缓存失效依据。
 
 领域层不操作 GPUI、不聚焦控件、不决定停靠布局。创建与归属、初始顺序在同一 SDK 事务完成，操作后的滚动和焦点不进入模型历史。
 
@@ -129,11 +129,11 @@ SDK 发布统一 ChangeSet，覆盖普通编辑、候选提交、Undo、Redo、�
 
 Undo/Redo 按实际恢复方向产生 ChangeSet，不重放创建后的选中或动画激活建议；不能继续用固定 `Structure` 加空对象列表冒充精确变化。可保存正反向变化摘要或按受影响存储计算差异，无须每次序列化全模型。项目整体替换可显式标记全量失效，普通重命名或排序不可采用该退路。no-op 返回 changed=false，不发布模型变化事件。
 
-对象索引、运行投影和渲染/动画缓存消费同一提交事件。直接 SDK 调用与 editor-core 调用得到相同领域变化；OperationResult 只引用同一回执，不产生第二次失效。播放暂停、重建等会话策略由 editor-core 根据变化类别及领域转换结果决定，SDK 不操作播放器。
+对象索引、运行投影和渲染/动画缓存消费同一提交事件。直接 SDK 调用与 zipzi-editor-core 调用得到相同领域变化；OperationResult 只引用同一回执，不产生第二次失效。播放暂停、重建等会话策略由 zipzi-editor-core 根据变化类别及领域转换结果决定，SDK 不操作播放器。
 
 ### 3.4 属性地址与集合描述
 
-保留 editor-core 中的 PropertySpec、PropertyPatch 和预览 token 基础。字段地址分开表达实体身份和字段身份；重复字段使用子实体 ID，提交时解析为当前存储位置。PropertyKey.at(index) 只用于绑定结构版本的短期投影，版本失效时拒绝旧地址。
+保留 zipzi-editor-core 中的 PropertySpec、PropertyPatch 和预览 token 基础。字段地址分开表达实体身份和字段身份；重复字段使用子实体 ID，提交时解析为当前存储位置。PropertyKey.at(index) 只用于绑定结构版本的短期投影，版本失效时拒绝旧地址。
 
 集合描述提供成员类型、允许的创建与结构动作、字段数据和领域效果。返回结构化诊断与变化范围，不包含 GPUI 控件、焦点句柄或视图坐标。
 
@@ -216,7 +216,7 @@ Mesh 顶点、UV、三角形、Warp 控制点、Bezier 控制柄、GlueVertexPai
 | 编辑器状态 | 展开、滚动、搜索、选择、预览不混入对象内容历史；锁定与可见性遵循现有明确的编辑器状态存储策略 |
 | 不透明扩展和来源信息 | 保留并按现有格式规则验证，不自动生成任意 JSON 编辑器 |
 
-U5-B 补充 SDK `import_prepared_image`：后台 `prepare_image_load` 完成解码后，以单次原子事务创建 ImageAsset 并写入内容，成功发布才保留内存图片，取消或准备失败不创建资源。已有资源仍用 `ImageLoadToken` 替换内容并保持身份。editor-core 提供 `TextureInfo`（资源描述及实际使用者）、导入适配和原生 `SceneField::Texture` 的 Mesh 属性适配；资源名称使用原生资源 patch，属性地址包含版本。宿主发布后同时核对求值版本和纹理快照，刷新缓存场景；仅资源名称变化复用原有纹理与帧。
+U5-B 补充 SDK `import_prepared_image`：后台 `prepare_image_load` 完成解码后，以单次原子事务创建 ImageAsset 并写入内容，成功发布才保留内存图片，取消或准备失败不创建资源。已有资源仍用 `ImageLoadToken` 替换内容并保持身份。zipzi-editor-core 提供 `TextureInfo`（资源描述及实际使用者）、导入适配和原生 `SceneField::Texture` 的 Mesh 属性适配；资源名称使用原生资源 patch，属性地址包含版本。宿主发布后同时核对求值版本和纹理快照，刷新缓存场景；仅资源名称变化复用原有纹理与帧。
 
 ## 5 数据模型改动
 
@@ -294,7 +294,7 @@ U5-B 补充 SDK `import_prepared_image`：后台 `prepare_image_load` 完成解�
 | GlueVertexPair | 无条目 ID，依靠数组位置定位 | 采用 PairId；新增时允许未指定顶点，完整后参与粘合 |
 | 可逐行编辑的引用集合 | masks、constraint_ids、行为组成员、CombinedSet 成员等直接存引用 | 需要保留逐行草稿时使用 `ReferenceEntry { id, target }`；批量选择型字段仍可整组原子替换 |
 
-“创作层”是 Kasane 原生持久化模型，不是 UI 中另一份临时资源。Physics 当前与 physics3 字段形状接近；应将新增原生身份和可空引用放入类型化创作结构，再通过转换器产生 physics3。不得依赖 serde flatten 让内部 UUID 意外写入第三方格式。
+“创作层”是 Zipzi 原生持久化模型，不是 UI 中另一份临时资源。Physics 当前与 physics3 字段形状接近；应将新增原生身份和可空引用放入类型化创作结构，再通过转换器产生 physics3。不得依赖 serde flatten 让内部 UUID 意外写入第三方格式。
 
 PhysicsGroup 名称目前来自 dictionary。创作模型可把名称与组身份一起提供访问接口，但名称只能有一个权威来源；导出 dictionary 由该来源生成。导入的外部组 ID 与内部稳定身份若分离，必须分别保存并做明确映射，不能在加载时任意替换外部标识。
 
@@ -438,7 +438,7 @@ UI 的失焦、Esc、Save 等由 UI 方案协调为具体生命周期调用；�
 
 持久化内容可以由历史恢复，操作有效期不可回退。资源内容 epoch 在该内容实际改变及 Undo/Redo 改变内容时推进，无关改名不必使加载失败。拓扑与集合版本同样不能复用已失效的旧值；新增子条目必须同时纳入 SDK 对象存在性、incarnation 管理、反向引用和变更事件。选择可用稳定引用重新定位恢复后的对象，但必须获取新句柄后才能开始新的编辑。
 
-运行会话将“检查对象”“内容编辑目标”“预览选择”作为不同状态保存。现有 UI 的 Motion/Expression 激活仍组合调用这些能力。改名、重排、移组使用稳定引用协调会话状态，不伪造再次点击；删除当前预览目标清理失效选择与触发。SDK 返回领域失效范围，editor-core 的统一会话策略将其解释为暂停或重建要求，面板不自行决定。
+运行会话将“检查对象”“内容编辑目标”“预览选择”作为不同状态保存。现有 UI 的 Motion/Expression 激活仍组合调用这些能力。改名、重排、移组使用稳定引用协调会话状态，不伪造再次点击；删除当前预览目标清理失效选择与触发。SDK 返回领域失效范围，zipzi-editor-core 的统一会话策略将其解释为暂停或重建要求，面板不自行决定。
 
 ## 8 移动复制删除与修复规则
 
@@ -520,7 +520,7 @@ Part、PhysicsGroup、PoseGroup 是具有业务关系的组。Part 解散要同�
 
 引用目标存在外部使用者时，默认拒绝普通删除并返回使用者。提供显式替换引用或删除依赖操作；不默认静默级联。删除 Mesh 顶点、Physics 节点、关键值等，由领域规划同时处理依赖映射，不能留下错误索引。
 
-SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附加建议检查目标，供 UI 决定反馈。删除后会话协调不得自动触发另一个 Motion/Expression；确认界面和焦点定位由 UI 方案负责。
+SDK 删除计划返回受影响对象和可执行策略；zipzi-editor-core 据此附加建议检查目标，供 UI 决定反馈。删除后会话协调不得自动触发另一个 Motion/Expression；确认界面和焦点定位由 UI 方案负责。
 
 ### 8.4 引用修复
 
@@ -570,7 +570,7 @@ SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附�
 | 核心交付 | UI 可依赖的保证 |
 | --- | --- |
 | 稳定实体引用、操作句柄与集合位置 | 改名、排序、移组不改身份；删除恢复不复活旧句柄；结构失效可检测 |
-| capabilities 与集合描述 | SDK 领域能力及 editor-core 会话条件来源明确，面板无重复判断 |
+| capabilities 与集合描述 | SDK 领域能力及 zipzi-editor-core 会话条件来源明确，面板无重复判断 |
 | Create/Patch/Move/Duplicate/Delete/RepairReference | 类型化意图，领域规则和原子事务已实现 |
 | 只读操作规划 | 可落点、依赖、影响范围和拒绝原因可用于预览 |
 | 编辑 token 与候选生命周期 | 旧控件不能写入新目标，取消和 no-op 保留历史 |
@@ -616,10 +616,10 @@ C1–C5 已完成。C5 的完整操作、修复路径、来源边界和领域限
 | 新父级引入另一驱动参数、奇异或非线性不可表达转换 | 当前状态保持不冒充参数域保持；无证明的域保证被拒绝，模型和历史不变 |
 | 资源开始异步加载 → 删除 → Undo → 旧结果返回 | 原 ID 恢复但 incarnation 不同，旧结果丢弃；必须重新取得句柄才能编辑 |
 | 内容替换 → Undo 恢复相同字节；子条目删除 → Undo | 内容 epoch 与句柄有效期不回退，旧请求/字段手势不可复活 |
-| 直接 SDK 写入与 editor-core 写入、Undo/Redo | 相同领域结果和正确方向 ChangeSet；无重复通知，普通标签变化不全量重建 |
+| 直接 SDK 写入与 zipzi-editor-core 写入、Undo/Redo | 相同领域结果和正确方向 ChangeSet；无重复通知，普通标签变化不全量重建 |
 | 规划后依赖或集合变化 | 重验或重新规划；影响范围扩大的删除/转换不能沿用旧计划的接受结果 |
 
-这些场景通过 SDK/editor-core 领域测试、保存往返和执行对比验证。每个切片对必要适配补跑已有 UI 回归，重点保留 Motion/Expression 激活逻辑；新控件的截图和完整交互验收属于后续 UI 阶段。转换测试必须包含成功、失败、边界和 Undo 恢复；域内抽样是回归证据，不替代第 8.1 节的保证依据。
+这些场景通过 SDK/zipzi-editor-core 领域测试、保存往返和执行对比验证。每个切片对必要适配补跑已有 UI 回归，重点保留 Motion/Expression 激活逻辑；新控件的截图和完整交互验收属于后续 UI 阶段。转换测试必须包含成功、失败、边界和 Undo 恢复；域内抽样是回归证据，不替代第 8.1 节的保证依据。
 
 ## 11 性能边界
 
@@ -649,11 +649,11 @@ C1–C5 按下表策略落地。未来产品策略若调整，必须同步更新
 
 ## 13 代码依据
 
-- [对象类型与关系](../../crates/editor-core/src/objects/types.rs)、[对象索引构建](../../crates/editor-core/src/objects/build.rs)。
-- [核心属性契约](../../crates/editor-core/src/property.rs)、[核心排序](../../crates/editor-core/src/sorting.rs)。
-- [动画选择与预览](../../crates/editor-core/src/animation/playback.rs)、[Motion 创建](../../crates/editor-core/src/timeline_document.rs)。
-- [层级与排序回归](../../crates/editor-core/tests/cases/sorting.rs)。
-- 相邻 kasane-2d 的 `modules/kasane-core/src/types.rs`、`document.rs`、`document/motions.rs`、`document/pose.rs`、`document/display_info.rs`、`document/model3.rs`、`document/expressions.rs`、`document/physics.rs`、`physics.rs` 和 `draw_order.rs`。
-- 本轮契约核对还依据相邻 kasane-2d 的 `modules/kasane-sdk/src/session.rs`（句柄、incarnation、Undo/Redo）、`edit.rs`（候选、逐步校验和发布）、`modules/kasane-core/src/document/parameters.rs` 与 `bindings.rs`（参数和网格依赖校验）、`evaluation/meshes.rs`（纹理求值条件）、`modules/kasane-render/src/validation.rs`（遮罩引用完整性）。这些路径已随对应切片适配，当前支持边界与验收见覆盖矩阵和实施记录。
+- [对象类型与关系](../../crates/zipzi-editor-core/src/objects/types.rs)、[对象索引构建](../../crates/zipzi-editor-core/src/objects/build.rs)。
+- [核心属性契约](../../crates/zipzi-editor-core/src/property.rs)、[核心排序](../../crates/zipzi-editor-core/src/sorting.rs)。
+- [动画选择与预览](../../crates/zipzi-editor-core/src/animation/playback.rs)、[Motion 创建](../../crates/zipzi-editor-core/src/timeline_document.rs)。
+- [层级与排序回归](../../crates/zipzi-editor-core/tests/cases/sorting.rs)。
+- 相邻 zipzi-2d 的 `modules/zipzi-core/src/types.rs`、`document.rs`、`document/motions.rs`、`document/pose.rs`、`document/display_info.rs`、`document/model3.rs`、`document/expressions.rs`、`document/physics.rs`、`physics.rs` 和 `draw_order.rs`。
+- 本轮契约核对还依据相邻 zipzi-2d 的 `modules/zipzi-sdk/src/session.rs`（句柄、incarnation、Undo/Redo）、`edit.rs`（候选、逐步校验和发布）、`modules/zipzi-core/src/document/parameters.rs` 与 `bindings.rs`（参数和网格依赖校验）、`evaluation/meshes.rs`（纹理求值条件）、`modules/zipzi-render/src/validation.rs`（遮罩引用完整性）。这些路径已随对应切片适配，当前支持边界与验收见覆盖矩阵和实施记录。
 
 上述是原设计依据；C1–C4 已完成的结构、入口、支持边界与验收见[实施记录](unified-object-authoring-core-implementation.md)，C5 的全部领域及覆盖核对已完成，C6 核心总验收已完成，证据与性能边界见 [C6 交付记录](unified-object-authoring-c6-acceptance.md)。
