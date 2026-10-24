@@ -6,7 +6,7 @@ case "${1:-editor}" in
     package="kasane-editor"
     name="Kasane Editor"
     bundle_id="dev.kasane.editor"
-    icon_asset="$repo_root/assets/editor/app-icons/kasane-editor-icon-vector.icns"
+    icon_asset="$repo_root/crates/kasane-editor/assets/app-icons/kasane-editor-icon-vector.icns"
     ;;
   *)
     printf 'usage: %s [editor] [release|debug]\n' "$0" >&2

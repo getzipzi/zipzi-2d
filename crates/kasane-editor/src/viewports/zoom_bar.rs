@@ -230,9 +230,10 @@ impl RenderOnce for CanvasZoomBar {
                         Button::new("btn_origin_crosshair"),
                         header.show_origin_crosshair,
                     ))
-                    .icon(Icon::default().data(include_bytes!(
-                        "../../../../assets/editor/icons/origin-crosshair.svg"
-                    )))
+                    .icon(
+                        Icon::default()
+                            .data(include_bytes!("../../assets/icons/origin-crosshair.svg")),
+                    )
                     .accessibility_label(t!("dock.origin_crosshair").into_owned())
                     .tooltip(t!("dock.origin_crosshair"))
                     .disabled(!header.origin_crosshair_enabled)

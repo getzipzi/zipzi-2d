@@ -25,7 +25,7 @@
 
 - `crates/kasane-editor/`, `crates/editor-core/`, `crates/editor-render/` — GPL Editor UI, authoring and rendering.
 - `crates/cubism-matrix-kasane/` — SDK Rust comparison runner.
-- `assets/editor/{app-icons,icons,locales}/` — application and packaging assets.
+- `crates/kasane-editor/assets/{app-icons,icons,locales}/` — application and packaging assets owned by the Editor crate.
 - `vendor/` — third-party GPUI patches; inner workspaces remain independent.
 - `tools/dev-editor.sh`, `tools/build-editor-app.sh`, `tools/test-editor.sh` — Editor entrypoints.
 - `tools/test-sdk.sh` — SDK entrypoint. Both test entrypoints and CI use `tools/package-domains.json`; new members must be assigned to one domain.

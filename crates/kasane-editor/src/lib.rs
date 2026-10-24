@@ -1,4 +1,4 @@
-rust_i18n::i18n!("../../assets/editor/locales", fallback = "en");
+rust_i18n::i18n!("assets/locales", fallback = "en");
 
 #[cfg(all(feature = "test-support", target_os = "macos"))]
 #[path = "../acceptance/mod.rs"]

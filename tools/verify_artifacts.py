@@ -10,6 +10,7 @@ import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+EDITOR_ASSETS = ROOT/'crates/kasane-editor/assets'
 
 
 def check_notices():
@@ -29,7 +30,7 @@ def check_wheel(path):
         assert 'kasane/py.typed' in names and 'kasane/_native.pyi' in names
         native = [n for n in names if n.startswith('kasane/_native') and n.endswith(('.so', '.pyd'))]
         assert len(native) == 1, native
-        assert not any(n.startswith(('models/', 'assets/editor/', 'vendor/')) for n in names)
+        assert not any(n.startswith(('models/', 'assets/', 'crates/kasane-editor/', 'vendor/')) for n in names)
     print(f'PASS wheel: {path.name}; MIT/notices, typing and native extension')
 
 
@@ -43,10 +44,10 @@ def check_app(path):
     for name in ['LICENSE-MIT', 'LICENSE-GPL-3.0', 'LICENSING.md', 'THIRD_PARTY_NOTICES.md']:
         assert (resources/name).read_bytes() == (ROOT/name).read_bytes(), name
     assert (resources/'LICENSE').read_bytes() == (ROOT/'LICENSE-GPL-3.0').read_bytes()
-    assert (resources/'AppIcon.icns').read_bytes() == (ROOT/'assets/editor/app-icons/kasane-editor-icon-vector.icns').read_bytes()
-    for path in (ROOT/'assets/editor/icons').glob('*.svg'):
+    assert (resources/'AppIcon.icns').read_bytes() == (EDITOR_ASSETS/'app-icons/kasane-editor-icon-vector.icns').read_bytes()
+    for path in (EDITOR_ASSETS/'icons').glob('*.svg'):
         assert path.read_bytes() in data, f'Missing embedded icon: {path.name}'
-    for path in (ROOT/'assets/editor/locales').glob('*.toml'):
+    for path in (EDITOR_ASSETS/'locales').glob('*.toml'):
         catalog = tomllib.loads(path.read_text())
         assert catalog['app']['description'].encode() in data, f'Missing embedded locale: {path.name}'
     for path in (ROOT/'vendor').rglob('*'):
@@ -69,7 +70,12 @@ def check_source(path):
             assert member.isfile(), name
             assert hashlib.sha256(archive.extractfile(member).read()).hexdigest() == digest, name
         for name in ['LICENSE-MIT','LICENSE-GPL-3.0','THIRD_PARTY_NOTICES.md','Cargo.toml','Cargo.lock',
-                     'third_party/purism-core/include/PurismCore.h','assets/editor/locales/en.toml','assets/editor/locales/zh-CN.toml']:
+                     'third_party/purism-core/include/PurismCore.h',
+                     'crates/kasane-editor/assets/app-icons/kasane-editor-icon-vector.icns',
+                     'crates/kasane-editor/assets/icons/bezier-curve.svg',
+                     'crates/kasane-editor/assets/icons/origin-crosshair.svg',
+                     'crates/kasane-editor/assets/locales/en.toml',
+                     'crates/kasane-editor/assets/locales/zh-CN.toml']:
             assert 'zipzi-2d/'+name in names, name
         for crate in (ROOT/'crates').iterdir():
             if (crate/'Cargo.toml').exists():assert 'zipzi-2d/crates/'+crate.name+'/Cargo.toml' in names

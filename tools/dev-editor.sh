@@ -8,7 +8,7 @@ case "${1:-editor}" in
     package=kasane-editor
     name='Kasane Editor'
     bundle_id=dev.kasane.editor.watch
-    icon_asset="$repo_root/assets/editor/app-icons/kasane-editor-icon-vector.icns"
+    icon_asset="$repo_root/crates/kasane-editor/assets/app-icons/kasane-editor-icon-vector.icns"
     ;;
   *)
     printf 'usage: %s [editor] [watch|run]\n' "$0" >&2
@@ -103,7 +103,7 @@ case "${2:-watch}" in
       watched_pid=$initial_pid
     fi
     watchexec --on-busy-update=queue --exts rs,toml,lock,metal,svg,icns \
-      --watch "$repo_root/crates" --watch "$repo_root/assets" --watch "$repo_root/vendor" \
+      --watch "$repo_root/crates" --watch "$repo_root/vendor" \
       --watch "$repo_root/Cargo.toml" --watch "$repo_root/Cargo.lock" \
       -- "$repo_root/tools/dev-editor.sh" "${1:-editor}" reload &
     watcher_pid=$!

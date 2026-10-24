@@ -1,4 +1,4 @@
-//! Editor locale selection. The catalogs live in `assets/editor/locales/`.
+//! Editor locale selection. The catalogs live in `crates/kasane-editor/assets/locales/`.
 //! `activate` sets rust-i18n's process-wide locale, also used by GPUI Kit.
 
 /// Select a shipped catalog for a BCP-47 locale or a POSIX-style locale.
@@ -75,10 +75,8 @@ mod tests {
 
     #[test]
     fn catalog_keys_and_placeholders_match() {
-        let en: toml::Value = include_str!("../../../assets/editor/locales/en.toml")
-            .parse()
-            .unwrap();
-        let zh: toml::Value = include_str!("../../../assets/editor/locales/zh-CN.toml")
+        let en: toml::Value = include_str!("../assets/locales/en.toml").parse().unwrap();
+        let zh: toml::Value = include_str!("../assets/locales/zh-CN.toml")
             .parse()
             .unwrap();
         fn entries(value: &toml::Value) -> BTreeMap<String, Vec<String>> {

@@ -5,7 +5,7 @@ The imported Editor is [GPL-3.0-only](LICENSE-GPL-3.0). Third-party notices and
 individual file headers take precedence over these general source boundaries.
 
 - SDK crates, including `cubism-matrix-kasane`, retain MIT unless their own notices say otherwise.
-- `crates/kasane-editor`, `crates/editor-core`, `crates/editor-render` and `assets/editor` retain GPL-3.0-only.
+- `crates/kasane-editor` (including its assets), `crates/editor-core` and `crates/editor-render` retain GPL-3.0-only.
 - Editor-derived tools, documentation and patches retain their original licensing after moving into shared directories.
   The [complete source map](docs/repository-merge/p3f-file-map.json) identifies each imported file with `origin: editor`, its original blob and old path.
 - Root `AGENTS.md`, `.gitignore`, `.gitattributes` and `models/README.md` combine SDK and Editor material; original portions retain their respective licenses. New integration glue does not grant a blanket MIT license to Editor content.

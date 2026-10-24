@@ -1,6 +1,6 @@
 # SDK Runtime 与 Editor 同进程详细设计
 
-合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `assets/editor/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
+合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/kasane-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
 日期：2026 年 10 月 23 日。状态：**配对工作树中已交付 R0 准备；Runtime/连接能力尚未实现**。
 
 实际进展与证据见 [R0 实施记录](sdk-runtime/r0-preparation.md)，不以本文的目标能力代替实施结果。

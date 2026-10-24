@@ -592,9 +592,8 @@ impl Timeline {
 
 fn tool_icon(id: &str, fallback: IconName) -> gpui_kit::component::Icon {
     if id == "timeline-view" {
-        gpui_kit::component::Icon::default().data(include_bytes!(
-            "../../../../../assets/editor/icons/bezier-curve.svg"
-        ))
+        gpui_kit::component::Icon::default()
+            .data(include_bytes!("../../../assets/icons/bezier-curve.svg"))
     } else {
         gpui_kit::component::Icon::new(fallback)
     }

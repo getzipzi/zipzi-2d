@@ -21,7 +21,7 @@ class PackagingPaths(unittest.TestCase):
         self.app = self.root / 'crates/kasane-editor'
         (self.root / 'tools').mkdir(parents=True)
         self.app.mkdir(parents=True)
-        (self.root / 'assets/editor/app-icons').mkdir(parents=True)
+        (self.app / 'assets/app-icons').mkdir(parents=True)
         for name in ['workspace.sh', 'workspace_tools.py', 'build-editor-app.sh']:
             shutil.copy(SCRIPTS / name, self.root / 'tools' / name)
         (self.root / 'LICENSE-GPL-3.0').write_text('Editor GPL fixture')
@@ -33,7 +33,7 @@ class PackagingPaths(unittest.TestCase):
         (self.root/'vendor/library/LICENSE').write_text('third-party license')
         (self.root / 'Cargo.toml').write_text('[workspace]')
         (self.root / 'Cargo.lock').write_text('version = 4')
-        (self.root / 'assets/editor/app-icons/kasane-editor-icon-vector.icns').write_bytes(b'icon')
+        (self.app / 'assets/app-icons/kasane-editor-icon-vector.icns').write_bytes(b'icon')
         self.outside = Path(self.temp.name).resolve() / 'elsewhere'
         self.outside.mkdir()
         self.bin = Path(self.temp.name).resolve() / 'bin'

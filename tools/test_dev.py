@@ -205,7 +205,7 @@ while True:
         watcher = self.start('watch')
         self.wait_for(lambda:(self.root/'watch-args.json').exists())
         args = json.loads((self.root/'watch-args.json').read_text())
-        for path in [self.root/'crates', self.root/'assets', self.root/'vendor', self.root/'Cargo.toml', self.root/'Cargo.lock']:
+        for path in [self.root/'crates', self.root/'vendor', self.root/'Cargo.toml', self.root/'Cargo.lock']:
             self.assertIn(str(path), args)
         self.assertIn(str(self.root/'tools/dev-editor.sh'), args)
 

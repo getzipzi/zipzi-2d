@@ -1,8 +1,8 @@
 # Zipzi 2D 仓库整合计划（修订版）
 
-修订日期：2026-10-23。用户要求更彻底地合并：平铺所有自有 crate，统一 Editor 资产、工具和文档。**最终不保留 `apps/editor/` 项目壳，也不保留 `modules/` 与 `crates/` 两套源码布局。**
+修订日期：2026-10-24。用户要求更彻底地合并：平铺所有自有 crate，统一 Editor 资产、工具和文档；后续明确要求把 Editor 资产放回其 crate。**最终不保留 `apps/editor/` 项目壳，也不保留 `modules/` 与 `crates/` 两套源码布局。**
 
-状态：P0–P3、**P3F：目录平铺与二次路径适配**、P4 测试/CI 包集合划分、P5 本地素材/产物核验及 P6 本地总体验收已完成；见 [P3F](../repository-merge/p3f-flattening.md)、[P4](../repository-merge/p4-test-domains.md)、[P5](../repository-merge/p5-artifacts.md)、[P6 本机验收](../repository-merge/p6-local-acceptance.md)。18 个自有 crate、Editor 资产、工具、文档、vendor 与 Purism 已按下述布局落位；用户后续要求的本机 Cubism SDK 与 Cargo 配置也已迁入忽略目录，官方/Purism Core 本机门禁通过。托管 CI、未推送分支的 GitHub 许可展示及最终切换仍待外部条件。
+状态：P0–P3、**P3F：目录平铺与二次路径适配**、P4 测试/CI 包集合划分、P5 本地素材/产物核验及 P6 本地总体验收已完成；见 [P3F](../repository-merge/p3f-flattening.md)、[P4](../repository-merge/p4-test-domains.md)、[P5](../repository-merge/p5-artifacts.md)、[P6 本机验收](../repository-merge/p6-local-acceptance.md)。18 个自有 crate、Editor 资产、工具、文档、vendor 与 Purism 已按下述布局落位；P3F 最初把资产放在根 `assets/editor/`，现按用户修订归入 `crates/kasane-editor/assets/`，历史映射仍记录当时结果。用户后续要求的本机 Cubism SDK 与 Cargo 配置也已迁入忽略目录，官方/Purism Core 本机门禁通过。托管 CI、未推送分支的 GitHub 许可展示及最终切换仍待外部条件。
 
 权威计划现位于 `docs/plans/repository-merge-plan.md`。执行事实和测试结果见[实施记录](../repository-merge/README.md)。旧版计划可在提交 `9e3c98cc` 的 `apps/editor/docs/plans/repository-merge-plan.md` 查看；不另存一份可编辑的旧计划。
 
@@ -51,13 +51,10 @@ zipzi-2d/
 │   ├── kasane-sdk-observe/
 │   ├── kasane-python/               # 保留 python/、pyproject.toml 与独立 wheel
 │   ├── kasane-editor/               # 原 crates/editor，包名不变
+│   │   └── assets/                  # app-icons/、icons/、locales/
 │   ├── editor-core/
 │   ├── editor-render/
 │   └── cubism-matrix-kasane/        # Rust benchmark runner 也平铺
-├── assets/editor/                  # 所有 Editor 运行时/打包资产
-│   ├── app-icons/
-│   ├── icons/
-│   └── locales/
 ├── vendor/                         # GPUI 补丁；保留第三方内部结构与声明
 ├── tools/                          # 合并两侧开发、测试、报告和 inventory 工具
 ├── docs/
@@ -90,9 +87,9 @@ zipzi-2d/
 | `apps/editor/crates/editor-core`、`editor-render` | `crates/editor-core/`、`crates/editor-render/` |
 | `benchmarks/cubism-matrix/runners/kasane` | `crates/cubism-matrix-kasane/`；更新矩阵工具引用，其他 runner 不搬 |
 | `modules/purism-core` | `third_party/purism-core`；更新 .gitmodules、CMake/probe/build.rs；gitlink SHA 保持 `ad5127666ccffb34552d8e660852995858bee437` |
-| `apps/editor/assets/*`（当前 5 文件） | `assets/editor/app-icons/*` |
-| `apps/editor/crates/editor/assets/icons/*`（当前 2 文件） | `assets/editor/icons/*` |
-| `apps/editor/crates/editor/locales/*`（当前 2 文件） | `assets/editor/locales/*`；调整 i18n 宏及编译期路径 |
+| `apps/editor/assets/*`（当前 5 文件） | `crates/kasane-editor/assets/app-icons/*` |
+| `apps/editor/crates/editor/assets/icons/*`（当前 2 文件） | `crates/kasane-editor/assets/icons/*` |
+| `apps/editor/crates/editor/locales/*`（当前 2 文件） | `crates/kasane-editor/assets/locales/*`；调整 i18n 宏及编译期路径 |
 | `apps/editor/vendor/*` | `vendor/*`；Cargo patch/exclude、补丁说明与相对资源引用同步改 |
 | 两侧工具 | 统一到 `tools/`，无 `tools/editor/` 整仓复制 |
 | 原 SDK `tools/test.sh` | `tools/test-sdk.sh` |
@@ -134,8 +131,8 @@ zipzi-2d/
 1. 根 members/default-members、workspace dependencies、crate path dependencies、patch/exclude 全部指向新位置；保持 P2 版本、features、profile、edition 和许可结果。纯搬迁不应引发依赖升级，意外 lockfile 差异必须解释。
 2. Python wheel 的 pyproject/Maturin、uv 配置、开发环境、validator、仓外 import、typing 路径同步更新。检查 package include/license、README/API 文档链接和 CI wheel 收集路径。
 3. 更新根 CMake、MOC3 build.rs、native probes、Purism 工具、Rust benchmark runner 对旧 modules/runner 的依赖，保留平台和原生 Core 可选条件。
-4. 工具统一按根目录定位；开发 watcher 明确监视所需 crates、assets、vendor 及根 Cargo 文件；保留失败不重启、锁归属、late PID 恢复和两 checkout 进程隔离。
-5. 重新调整 Rust `CARGO_MANIFEST_DIR`、`#[path]`、`include_*`、i18n 宏和资源打包路径。开发运行、headless test、debug/release bundle 都能找到根 assets；不要求启动目录有素材，也不依赖旧 Editor crate assets 副本。
+4. 工具统一按根目录定位；开发 watcher 明确监视所需 crates（含 Editor assets）、vendor 及根 Cargo 文件；保留失败不重启、锁归属、late PID 恢复和两 checkout 进程隔离。
+5. 重新调整 Rust `CARGO_MANIFEST_DIR`、`#[path]`、`include_*`、i18n 宏和资源打包路径。开发运行、headless test、debug/release bundle 都能找到 Editor crate 内 assets；不要求启动目录有素材，也不保留根目录副本。
 6. root target/dev、PID/锁/日志约定不变；继续使用 Cargo artifacts 定位自定义 `CARGO_TARGET_DIR` / build target 下的二进制。caller-relative 参数语义保持。
 7. 基准来源清单改为新 crates/assets/vendor/tools/tests 等显式目录；记录一个 SHA/dirty、锁文件、模型与源码哈希，不归档本地模型或整个工作区。
 8. 两个 Runtime inventory 都从根目录定位源码，更新分类器中依赖旧路径的条件，重新生成路径与行号。合并后的 Editor 索引统一报告根相对路径，消除“同一份 JSON 中路径根不明”的问题；语义状态不因搬迁改变。
@@ -162,7 +159,7 @@ zipzi-2d/
 - 两个 full/no-arg 都是各自域内完整门禁；若加仓库全量入口则显式命名，不能偷换 full 含义。
 - SDK Linux/macOS/Windows CI 保留 clippy、decoder safety、Rust regression、wheel、typing、negative controls 和已有平台条件，不编译 Editor。
 - Editor macOS CI 覆盖构建、工具、headless、synthetic Metal/native；先确认 runner 的 Metal 能力，真实授权素材验收保留本机入口并记录 skip。
-- 触发规则依据包依赖与公共路径：SDK 改动也触发 Editor 接入验证；root Cargo、公共 tools、CI 改动触发两域；assets/editor/、Editor crate 和相关 vendor 触发 Editor。格式检查不扩大到 vendor 原始源码。
+- 触发规则依据包依赖与公共路径：SDK 改动也触发 Editor 接入验证；root Cargo、公共 tools、CI 改动触发两域；`crates/kasane-editor/assets/`、Editor crate 和相关 vendor 触发 Editor。格式检查不扩大到 vendor 原始源码。
 
 通过条件：所有原门禁都有去向，失败向上传播，源码目录平铺后不会漏掉消费者或误编译 GUI。先正确覆盖，再优化路径过滤。
 

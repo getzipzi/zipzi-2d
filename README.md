@@ -5,8 +5,8 @@ MIT licensed; Editor code and assets retain GPL-3.0-only. See [licensing](LICENS
 The workspace, tools and CI share explicit SDK (15 packages) and Editor
 (3 packages) test domains; see [test gates](docs/development/testing.md).
 See the [migration status](docs/repository-merge/README.md) and the
-[revised flattening plan](docs/plans/repository-merge-plan.md). All 18 owned crates are flat under `crates/`; Editor assets, tools, docs and
-third-party patches are integrated into root directories.
+[revised flattening plan](docs/plans/repository-merge-plan.md). All 18 owned crates are flat under `crates/`; Editor assets live in `crates/kasane-editor/assets/`, while tools, docs and
+third-party patches use root directories.
 See the [Editor guide](docs/development/editor.md) and [documentation index](docs/README.md).
 
 Kasane 2D provides a Rust authoring SDK, Python bindings, and a WGPU renderer

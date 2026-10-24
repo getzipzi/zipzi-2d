@@ -1,6 +1,6 @@
 # SDK Runtime 分阶段实施计划
 
-合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `assets/editor/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
+合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/kasane-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
 日期：2026 年 10 月 23 日。状态：**R0 实施准备进行中，R1–R7 尚未开始**。
 
 架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。当前不存在 `kasane-runtime` 或连接后端；后续新增模块、测试名称和命令模板仍为待实现目标，不能作为已经通过的证据。R0 已落地产物与未完成项见 [实施记录](sdk-runtime/r0-preparation.md)。
