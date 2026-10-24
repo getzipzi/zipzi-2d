@@ -8,7 +8,9 @@ if TYPE_CHECKING:
     from ._lifecycle import Edit, Job, Session
     from ._values import Receipt, SaveReceipt, SessionInfo, WriteResult
     from .meshes import Snapshot
-    RecoveryResult = Edit | Session | SessionInfo | Snapshot | WriteResult | Receipt | SaveReceipt | Job[Receipt] | Job[SaveReceipt] | Job[Session] | None
+    from .plans import Plan
+    from .resources import PreparedImage, ImagePixels, Snapshot as ImageSnapshot, Usage
+    RecoveryResult = Plan | PreparedImage | ImagePixels | ImageSnapshot | Usage | Edit | Session | SessionInfo | Snapshot | WriteResult | Receipt | SaveReceipt | Job[Receipt] | Job[SaveReceipt] | Job[Session] | None
 
 class SdkFailure(Exception):
     def __init__(self, code: str, message: str, *, operation: str = "", object_ids: tuple[str, ...] = (),

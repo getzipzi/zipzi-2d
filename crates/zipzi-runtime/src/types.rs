@@ -33,6 +33,7 @@ ids!(
     JobId,
     OperationId,
     PlanId,
+    ImageId,
     BlobId
 );
 impl From<EditId> for OperationId {

@@ -173,6 +173,19 @@ impl Runtime {
         edit: EditId,
         plan: PlanId,
     ) -> Result<()> {
+        self.apply_authoring(
+            client,
+            edit,
+            vec![crate::authoring::EditOperation::ApplyPlan { plan }],
+        )
+        .map(|_| ())
+    }
+    pub(super) fn resolve_plan(
+        &self,
+        client: ClientId,
+        edit: EditId,
+        plan: PlanId,
+    ) -> Result<(Arc<zipzi_sdk::ModelingPlan>, bool)> {
         self.client(client)?;
         let p = self
             .plans
@@ -198,22 +211,7 @@ impl Runtime {
                     && entry.sequence == sequence
             }
         };
-        let sdk_plan = p.plan.clone();
-        self.apply_edit(client, edit, |candidate| {
-            if !valid {
-                return Err(zipzi_sdk::SdkError {
-                    code: "STALE_PLAN".into(),
-                    message: "Plan source no longer matches this candidate".into(),
-                    operation: "apply_modeling_plan",
-                    object_ids: vec![],
-                    field_path: None,
-                    expected_version: None,
-                    actual_version: None,
-                    referrers: Box::new([]),
-                });
-            }
-            sdk_plan.apply(candidate)
-        })
+        Ok((p.plan.clone(), valid))
     }
     pub fn release_modeling_plan(&mut self, client: ClientId, plan: PlanId) -> Result<()> {
         self.client(client)?;
@@ -229,4 +227,24 @@ impl Runtime {
     pub fn modeling_plan_count(&self) -> usize {
         self.plans.len()
     }
+}
+
+pub(super) fn apply_plan(
+    plan: &zipzi_sdk::ModelingPlan,
+    valid: bool,
+    candidate: &mut zipzi_sdk::EditSession<'_>,
+) -> std::result::Result<(), zipzi_sdk::SdkError> {
+    if !valid {
+        return Err(zipzi_sdk::SdkError {
+            code: "STALE_PLAN".into(),
+            message: "Plan source no longer matches this candidate".into(),
+            operation: "apply_modeling_plan",
+            object_ids: vec![],
+            field_path: None,
+            expected_version: None,
+            actual_version: None,
+            referrers: Box::new([]),
+        });
+    }
+    plan.apply(candidate)
 }

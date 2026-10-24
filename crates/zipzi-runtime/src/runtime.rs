@@ -3,6 +3,7 @@ pub use editor::CandidateWork;
 mod authoring;
 mod blobs;
 mod modeling;
+mod resources;
 mod typed;
 use crate::events::EventLog;
 use crate::jobs::Task;
@@ -71,6 +72,7 @@ pub struct Runtime {
     registry: EventLog,
     image_budget: zipzi_project::ImageMemoryBudget,
     plans: HashMap<PlanId, modeling::PlanEntry>,
+    prepared_images: HashMap<ImageId, resources::ImageEntry>,
     blobs: HashMap<BlobId, blobs::BlobEntry>,
 }
 impl Default for Runtime {
@@ -90,6 +92,7 @@ impl Runtime {
         Self {
             image_budget: zipzi_project::ImageMemoryBudget::new(limits.image_bytes),
             plans: HashMap::new(),
+            prepared_images: HashMap::new(),
             blobs: HashMap::new(),
             instance,
             next_id: 0,
@@ -171,6 +174,8 @@ impl Runtime {
     pub fn release_client(&mut self, client: ClientId) {
         self.clients.remove(&client);
         self.plans.retain(|_, p| p.client != client);
+        self.prepared_images
+            .retain(|_, image| image.client != client);
         self.blobs.retain(|_, b| b.client != client);
         self.edits.retain(|_, edit| edit.client != client);
         self.jobs
@@ -518,6 +523,15 @@ impl Runtime {
                 sdk.collect_image_resources();
             }
         }
+        Ok(())
+    }
+    fn abort_edit(&mut self, client: ClientId, edit: EditId) -> Result<()> {
+        self.edit(client, edit)?;
+        let entry = self.edits.get_mut(&edit).unwrap();
+        entry.state = EditState::Aborted;
+        entry.sdk = None;
+        entry.bytes = 0;
+        self.collect_image_resources();
         Ok(())
     }
     fn take_edit(
@@ -1025,6 +1039,7 @@ impl Runtime {
                     .bytes()
                     .saturating_add(self.image_budget.usage().total_bytes())
                     .saturating_add(self.plans.values().map(|p| p.bytes).sum::<usize>())
+                    .saturating_add(self.prepared_images.len().saturating_mul(1024))
                     .saturating_add(self.candidate_bytes())
                     .saturating_add(self.frozen_bytes())
                     .saturating_add(

@@ -70,3 +70,6 @@ mod candidate_snapshot;
 
 #[path = "image_memory.rs"]
 mod image_memory;
+
+#[path = "image_edit.rs"]
+mod image_edit;

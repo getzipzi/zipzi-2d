@@ -1,8 +1,8 @@
 """Direct mechanical PyO3 conversion; local authoring does not serialize JSON."""
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
-from .. import ops
+from typing import TYPE_CHECKING, Literal, cast
+from .. import ops, plans
 from .._errors import PendingRequest, SdkFailure, unwrap
 from . import JobKind
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ class LocalBackend:
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-1":
+        if self._native.contract != "zipzi-python2-2":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 
@@ -29,10 +29,22 @@ class LocalBackend:
         return unwrap(self._native.info(session))
     def begin(self, session: object, label: str, owner: object) -> object:
         return unwrap(self._native.begin_edit(session, label))
-    def apply(self, edit: object, operations: tuple[ops.MeshOperation, ...], owner: object) -> object:
+    def apply(self, edit: object, operations: tuple[ops.Operation, ...], owner: object) -> object:
         return unwrap(self._native.apply(edit, operations))
     def mesh(self, session: object, id: str, edit: object | None, owner: object) -> object:
         return unwrap(self._native.mesh(session, id, edit))
+    def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
+        return unwrap(self._native.prepare_image(width, height, rgba))
+    def prepared_pixels(self, image: object, owner: object) -> object:
+        return unwrap(self._native.prepared_pixels(image))
+    def image(self, session: object, id: str, edit: object | None, owner: object) -> object:
+        return unwrap(self._native.image(session, id, edit))
+    def plan(self, session: object, edit: object | None, intent: plans.Intent, owner: object) -> object:
+        return unwrap(self._native.plan(session, edit, intent))
+    def release_handle(self, kind: Literal["image", "plan"], token: object, owner: object) -> None:
+        unwrap(self._native.release_handle(kind, token))
+    def statistics(self, owner: object) -> object:
+        return unwrap(self._native.statistics())
     def release(self, edit: object, owner: object) -> None:
         unwrap(self._native.release_edit(edit))
     def commit(self, edit: object, owner: object) -> object:

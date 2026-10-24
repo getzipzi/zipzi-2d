@@ -1,6 +1,6 @@
 # zipzi-python2 实施记录
 
-日期：2026-10-24。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../crates/zipzi-python2/README.md)。
+日期：2026-10-25。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../crates/zipzi-python2/README.md)。
 
 ## 项目边界
 
@@ -13,7 +13,7 @@
 | 阶段 | 已实现 | 尚未满足的退出门槛 |
 | --- | --- | --- |
 | P0 | 新包边界、两分发配置、选定输入/结果/失败契约、能力范围；新包自身的固定性能采集入口 | 全部工作负载接线、Rust 编码/实际复制/存活峰值指标、噪声调查与阈值冻结 |
-| P1 | 纯 Python 公共类型/异常/包装、薄 PyO3、两后端同 recipe；网格创建/位置/候选查询/批次、历史、保存重开、主要响应恢复 | Python PreparedImage、正式/候选 Plan、完整取消/worker 失败/过期矩阵 |
+| P1 | 纯 Python 公共类型/异常/包装、薄 PyO3、两后端；网格、图片准备/创建/替换/查询、正式/候选 Plan、混合批次、历史、保存重开和响应恢复 | 完整取消/worker 失败/请求过期、客户端过期和宿主重启的 Python 矩阵 |
 | P2–P5/P7 | 未开始 | 按计划交付 |
 | P6 | 纯包/原生包分别构建；初步隔离安装 recipe | sdist、完整版本/平台配对、宿主发现、真实 Editor 和全部领域安装验收 |
 
@@ -29,18 +29,33 @@
 - Job 完成由宿主主动消费；本地调用、等待、close 和常规原生析构释放 GIL。Job 结果转换到 Python 后才释放 Runtime 结果槽。
 - 本地适配没有 JSON 字符串/Value 树往返。实际 Local 调用在禁止 Python `json.dumps/loads` 的测试中完成建模、查询及保存。
 
-当前连接入口需要已有的绝对 socket 路径。尚无宿主发现/启动流程；没有 GPU、资源、Plan 或其他领域的空壳 API。
+当前连接入口需要已有的绝对 socket 路径。尚无宿主发现/启动流程；没有 GPU 或其他未接线领域的空壳 API。
+
+## 2026-10-25 资源与 Plan 切片
+
+提交 `ad868c8a` 已保存独立新包基础。本节是该提交之后的工作区验收，不能用旧提交重现本节新增功能；尚未生成 P2 绑定。
+
+- SDK 新增 `ImageCreateSpec`，身份/default 在 SDK；Runtime 增加按 client 持有的 PreparedImage 表，与文档和历史各自持有引用。独立准备失败不污染 Edit，创建/替换失败与其他写入共用候选失败作用域。
+- `EditOperation` 包含网格、接纳/替换图片及应用 Plan；两个后端共用 `Runtime::apply_authoring`。批次只推进一次序号；Plan 仅可位于批次开头，后续项可继续编辑。过期、错误 owner 或释放引用使候选不可提交，无正式部分发布。
+- 纯 Python `PreparedImage` 与 `Plan` 共用 `_owned.py` 的少量持有/释放/恢复逻辑。像素/报告不可变，报告在过期和 close 后仍可读。准备/规划请求从发送前已有恢复 owner，关闭不能误消费待确认读取，丢失释放响应恢复后仍保持幂等关闭。
+- 当前 RGBA 控制负载上限 1 MiB，P4 再做二进制/大图片；`resources.usage()` 是只读 Runtime 总量和真实 Rust 图片缓冲统计，不是进程 RSS 或完整 Rust 堆指标。原生契约更新为 `zipzi-python2-2`，IPC 新能力为 `typed_resources_plans`。
+- Release 源码验证通过 **19 项 unittest**（多项跨两后端和多种故障）、严格 Pyright 正例和原有三条精确反例。保留原有 10 项断言，扩展本地禁止 Python JSON 的测试，加入 A/B 独立、接纳后关闭、创建/替换、Plan 来源、失败读隔离、混合回滚、响应恢复、保存重开，以及两后端各 100 次取消后底层条目/存活字节归零。
+- Rust 定向测试：Runtime authoring/host/modeling/protocol/resources 共 27 项，以及 SDK `image_edit::` 1 项、`image_memory::` 7 项。SDK identity、像素读回和候选替换有独立固定预期；未运行昂贵的全 SDK/Editor/GPU。
+- wheel 分别重建并装入 `target/python2/installed-client` 与 `installed-local`，从 `/tmp` 以 `-I` 运行扩展后的 `installed_recipe.py`。连接环境没有原生包；两者均验证纹理、候选 Plan、网格同一步历史，以及新 Runtime/新宿主从磁盘重开后像素一致。
+- P0 新增图片和 Plan 工作负载，采用相同 5 进程 × 32 样本/4 预热。基线见下节；不把尚缺的 Rust 复制/堆峰值或 Connected 性能填成零。
+
 
 ## 验证入口
 
 ```sh
-# 10 项新包测试，其中多项对 Local/Connected 或多种故障分别验证；加严格正反类型检查。
+# 19 项新包测试，其中多项对 Local/Connected 或多种故障分别验证；加严格正反类型检查。
 ./tools/test-sdk.sh python2
 ./tools/test-sdk.sh python2 --release
 
 # 独立共享 Rust 语义和来源/预算。
 cargo test --locked -p zipzi-sdk --test integration mesh_editing::
-./tools/test-sdk.sh runtime
+cargo test --locked -p zipzi-sdk --test integration image_edit::
+cargo test --locked -p zipzi-runtime --test resources --test modeling --test authoring --test protocol --test host
 
 # 仓库接入和 P0 工具证据检查。
 python3 tools/workspace/cargo_domain.py --check
@@ -63,7 +78,9 @@ Rust 聚焦门禁覆盖 SDK 网格编辑及 Runtime 会话/来源/预算/任务�
 uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/python2/baseline-first
 ```
 
-先测已实现的小查询、单项编辑、100 项批次和位置数组；图片、Plan、CPU 采样明确列为待接线工作负载。每次 4 次预热、32 个计时样本，默认 5 次独立进程。计时与 Python profile/tracemalloc 探针分开；校验 Release 构建元数据与实际加载扩展哈希。
+已测小查询、单项编辑、100 项批次、位置数组、256×256 RGBA 准备/创建/提交/释放，以及正式 Plan 创建/应用/提交/释放。CPU 采样留待 P5；Connected 性能仍待补测。每次 4 次预热、32 个计时样本，默认 5 次独立进程。计时与 Python profile/tracemalloc 探针分开；校验 Release 构建元数据与实际加载扩展哈希。
+
+2026-10-25 补测记录为 [`p0-resources-baseline.json`](p0-resources-baseline.json)，对应 `ad868c8a` 之后的资源/Plan 工作区及文件内的 Release 扩展、客户端源码及测量脚本哈希；仍为 `partial`。在相同采样规则下，图片工作负载 P50/P95 约 266/385 μs，Plan 约 71/82 μs；单项编辑的进程间 P50 相对范围约 26%，未冻结阈值。新记录补充首次四项基线，不覆盖其历史证据。
 
 探针报告 Python JSON 和原生边界调用，以及 Python 堆存活/峰值。Rust 编码次数、真实复制字节和 Rust 堆指标缺失时为 `null`，不能用逻辑输入大小或 Python 堆指标替代。阈值尚未冻结，结果只能标 `partial`。
 

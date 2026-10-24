@@ -2,15 +2,18 @@
 //! the pure Python client; native calls own their inputs before releasing GIL.
 use pyo3::{
     prelude::*,
-    types::{PyAny, PyDict, PyList, PyModule},
+    types::{PyAny, PyBytes, PyDict, PyList, PyModule},
 };
 use std::{path::Path, sync::Arc};
 use zipzi_core::Vec2;
+use zipzi_runtime::authoring::{
+    EditOperation, ImagePixels, MAX_IMAGE_BYTES, PlanIntent, PlanSnapshot,
+};
 use zipzi_runtime::{
     host::{HostError, HostResult, LocalHost},
     *,
 };
-use zipzi_sdk::{MeshCreateSpec, MeshGeometry, MeshOperation, Version};
+use zipzi_sdk::{ImageCreateSpec, MeshCreateSpec, MeshGeometry, MeshOperation, Version};
 
 #[pyclass(frozen, name = "_SessionToken")]
 struct SessionToken {
@@ -23,6 +26,15 @@ struct EditToken {
 #[pyclass(frozen, name = "_JobToken")]
 struct JobToken {
     id: JobId,
+}
+
+#[pyclass(frozen, name = "_ImageToken")]
+struct ImageToken {
+    id: ImageId,
+}
+#[pyclass(frozen, name = "_PlanToken")]
+struct PlanToken {
+    id: PlanId,
 }
 
 #[pyclass(frozen, name = "_Runtime")]
@@ -170,12 +182,35 @@ fn read_points(value: Bound<'_, PyAny>) -> PyResult<Vec<Vec2>> {
         .map(|(x, y)| Vec2::new(x, y))
         .collect())
 }
-fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<MeshOperation>> {
+fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>> {
     operations
         .try_iter()?
         .map(|value| {
             let op = value?;
-            match op.getattr("kind")?.extract::<String>()?.as_str() {
+            let mesh = match op.getattr("kind")?.extract::<String>()?.as_str() {
+                "create_image" => {
+                    let image = op.getattr("image")?.getattr("_token")?;
+                    return Ok(EditOperation::CreateImage {
+                        spec: ImageCreateSpec {
+                            id: op.getattr("id")?.extract()?,
+                            name: op.getattr("name")?.extract()?,
+                        },
+                        image: image.extract::<PyRef<'_, ImageToken>>()?.id,
+                    });
+                }
+                "replace_image" => {
+                    let image = op.getattr("image")?.getattr("_token")?;
+                    return Ok(EditOperation::ReplaceImage {
+                        id: op.getattr("id")?.extract()?,
+                        image: image.extract::<PyRef<'_, ImageToken>>()?.id,
+                    });
+                }
+                "apply_plan" => {
+                    let plan = op.getattr("plan")?.getattr("_token")?;
+                    return Ok(EditOperation::ApplyPlan {
+                        plan: plan.extract::<PyRef<'_, PlanToken>>()?.id,
+                    });
+                }
                 "create" => {
                     let spec = op.getattr("spec")?;
                     let g = spec.getattr("geometry")?;
@@ -205,9 +240,40 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<MeshOperation>
                 _ => Err(pyo3::exceptions::PyTypeError::new_err(
                     "Unknown mesh operation",
                 )),
-            }
+            }?;
+            Ok(EditOperation::Mesh { operation: mesh })
         })
         .collect()
+}
+fn pixels(py: Python<'_>, r: ImagePixels) -> PyResult<Bound<'_, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("width", r.width)?;
+    d.set_item("height", r.height)?;
+    d.set_item("rgba", PyBytes::new(py, &r.rgba))?;
+    Ok(d)
+}
+fn plan_snapshot(py: Python<'_>, p: PlanSnapshot) -> PyResult<Bound<'_, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("plan", Py::new(py, PlanToken { id: p.plan })?)?;
+    d.set_item("source", source(py, p.source)?)?;
+    let r = PyDict::new(py);
+    r.set_item("version", version(py, p.report.version)?)?;
+    r.set_item("affected_ids", p.report.affected_ids)?;
+    r.set_item("copied_ids", p.report.copied_ids)?;
+    r.set_item("losses", p.report.losses)?;
+    r.set_item("no_op", p.report.no_op)?;
+    if let Some(cost) = p.report.cost {
+        let c = PyDict::new(py);
+        c.set_item("sample_combinations", cost.sample_combinations)?;
+        c.set_item("payload_bytes", cost.payload_bytes)?;
+        c.set_item("temporary_bytes", cost.temporary_bytes)?;
+        c.set_item("history_bytes", cost.history_bytes)?;
+        r.set_item("cost", c)?;
+    } else {
+        r.set_item("cost", py.None())?;
+    }
+    d.set_item("report", r)?;
+    Ok(d)
 }
 fn receipt<'py>(py: Python<'py>, r: &zipzi_sdk::EditReceipt) -> PyResult<Bound<'py, PyDict>> {
     let d = PyDict::new(py);
@@ -236,7 +302,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-1"
+        "zipzi-python2-2"
     }
     fn close(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
         let result = py.detach(|| self.host.close());
@@ -292,7 +358,7 @@ impl NativeRuntime {
         let (value, state) = py
             .detach(|| {
                 self.host.call(move |rt| {
-                    let result = rt.edit_meshes(client, edit, operations);
+                    let result = rt.apply_authoring(client, edit, operations);
                     let state = rt.edit_state(client, edit).ok();
                     Ok((result, state))
                 })
@@ -336,6 +402,155 @@ impl NativeRuntime {
             d.set_item("id", r.id)?;
             d.set_item("name", r.name)?;
             d.set_item("geometry", geometry(py, r.geometry)?)?;
+            Ok(d.into_any())
+        })
+    }
+    fn prepare_image(
+        &self,
+        py: Python<'_>,
+        width: u32,
+        height: u32,
+        rgba: &Bound<'_, PyBytes>,
+    ) -> PyResult<Py<PyDict>> {
+        if rgba.as_bytes().len() > MAX_IMAGE_BYTES {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "Initial pixel transport is limited to 1 MiB",
+            ));
+        }
+        let rgba = rgba.as_bytes().to_vec();
+        let client = self.client;
+        let value = py.detach(|| {
+            self.host
+                .call(move |rt| rt.prepare_image(client, width, height, rgba))
+        });
+        reply(py, value, "resources.prepare_image", |r| {
+            let d = PyDict::new(py);
+            d.set_item("image", Py::new(py, ImageToken { id: r.image })?)?;
+            d.set_item("width", r.width)?;
+            d.set_item("height", r.height)?;
+            Ok(d.into_any())
+        })
+    }
+    fn prepared_pixels(&self, py: Python<'_>, image: &ImageToken) -> PyResult<Py<PyDict>> {
+        let (client, image) = (self.client, image.id);
+        let value = py.detach(|| {
+            self.host
+                .call(move |rt| rt.prepared_image_pixels(client, image))
+        });
+        reply(py, value, "resources.pixels", |r| {
+            Ok(pixels(py, r)?.into_any())
+        })
+    }
+    #[pyo3(signature = (session, id, edit=None))]
+    fn image(
+        &self,
+        py: Python<'_>,
+        session: &SessionToken,
+        id: String,
+        edit: Option<&EditToken>,
+    ) -> PyResult<Py<PyDict>> {
+        let (client, session, edit) = (self.client, session.id, edit.map(|e| e.id));
+        let value = py.detach(|| {
+            self.host
+                .call(move |rt| rt.image_snapshot(client, session, edit, &id))
+        });
+        reply(py, value, "resources.get", |r| {
+            let d = PyDict::new(py);
+            d.set_item("source", source(py, r.source)?)?;
+            d.set_item("id", r.id)?;
+            d.set_item("name", r.name)?;
+            d.set_item("pixels", pixels(py, r.pixels)?)?;
+            Ok(d.into_any())
+        })
+    }
+    fn plan(
+        &self,
+        py: Python<'_>,
+        session: &SessionToken,
+        edit: Option<&EditToken>,
+        intent: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyDict>> {
+        let id = intent.getattr("id")?.extract()?;
+        let expected_name = intent.getattr("expected_name")?.extract()?;
+        let name = intent.getattr("name")?.extract()?;
+        let intent = match intent.getattr("kind")?.extract::<String>()?.as_str() {
+            "mesh_rename" => PlanIntent::MeshRename {
+                id,
+                expected_name,
+                name,
+            },
+            "image_rename" => PlanIntent::ImageRename {
+                id,
+                expected_name,
+                name,
+            },
+            _ => {
+                return Err(pyo3::exceptions::PyTypeError::new_err(
+                    "Unknown Plan intent",
+                ));
+            }
+        };
+        let (client, session, edit) = (self.client, session.id, edit.map(|e| e.id));
+        let value = py.detach(|| {
+            self.host
+                .call(move |rt| rt.plan_authoring(client, session, edit, intent))
+        });
+        reply(py, value, "plan.create", |p| {
+            Ok(plan_snapshot(py, p)?.into_any())
+        })
+    }
+    fn release_handle(
+        &self,
+        py: Python<'_>,
+        kind: &str,
+        token: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyDict>> {
+        let client = self.client;
+        let value = match kind {
+            "image" => {
+                let image = token.extract::<PyRef<'_, ImageToken>>()?.id;
+                py.detach(|| {
+                    self.host
+                        .call(move |rt| rt.release_prepared_image(client, image))
+                })
+            }
+            "plan" => {
+                let plan = token.extract::<PyRef<'_, PlanToken>>()?.id;
+                py.detach(|| {
+                    self.host
+                        .call(move |rt| rt.release_modeling_plan(client, plan))
+                })
+            }
+            _ => {
+                return Err(pyo3::exceptions::PyTypeError::new_err(
+                    "Unknown handle kind",
+                ));
+            }
+        };
+        reply(py, value, &format!("{kind}.close"), |()| {
+            Ok(py.None().into_bound(py))
+        })
+    }
+    fn statistics(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
+        let value = py.detach(|| {
+            self.host.call(|rt| {
+                Ok((
+                    rt.prepared_image_count(),
+                    rt.modeling_plan_count(),
+                    rt.image_memory_usage(),
+                ))
+            })
+        });
+        reply(py, value, "resources.usage", |(images, plans, memory)| {
+            let d = PyDict::new(py);
+            let m = PyDict::new(py);
+            m.set_item("rgba_bytes", memory.rgba_bytes)?;
+            m.set_item("png_bytes", memory.png_bytes)?;
+            m.set_item("blob_bytes", memory.blob_bytes)?;
+            m.set_item("preparing_bytes", memory.preparing_bytes)?;
+            d.set_item("image_memory", m)?;
+            d.set_item("prepared_images", images)?;
+            d.set_item("plans", plans)?;
             Ok(d.into_any())
         })
     }

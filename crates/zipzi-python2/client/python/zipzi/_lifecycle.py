@@ -2,7 +2,7 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Generic, TypeVar
-from . import meshes, ops
+from . import meshes, ops, plans, resources
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
 from ._values import Receipt, SaveReceipt, SessionInfo, WriteResult, record
 from .backends import Backend, JobKind
@@ -89,6 +89,7 @@ class Runtime:
     def __init__(self, backend: Backend):
         self._backend = backend
         self.sessions = Sessions(self)
+        self.resources = resources.Resources(backend)
     def __enter__(self) -> "Runtime":
         return self
     def __exit__(self, kind: object, exception: BaseException | None, traceback: object) -> None:
@@ -125,6 +126,7 @@ class Session:
         self._runtime, self._token, self._backend = runtime, token, runtime._backend
         self.meshes = Meshes(self)
         self.project = Project(self)
+        self.resources = Images(self)
     def info(self) -> SessionInfo:
         return known(lambda: SessionInfo.read(self._backend.info(self._token, self)),
             lambda: SessionInfo.read(self._backend.recover(self)))
@@ -151,6 +153,30 @@ class Meshes:
         return known(lambda: meshes.Snapshot.read(s._backend.mesh(s._token, id, None if self._edit is None else self._edit._token, self)),
             lambda: meshes.Snapshot.read(s._backend.recover(self)))
 
+    def plan(self, intent: meshes.RenameIntent) -> plans.Plan:
+        s = self._session
+        return plans.Plan.create(s._backend, s._token, None if self._edit is None else self._edit._token, intent)
+
+class Images:
+    def __init__(self, session: Session, edit: "Edit | None" = None):
+        self._session, self._edit = session, edit
+    def get(self, id: str) -> resources.Snapshot:
+        s = self._session
+        return known(lambda: resources.Snapshot.read(s._backend.image(s._token, id, None if self._edit is None else self._edit._token, self)),
+            lambda: resources.Snapshot.read(s._backend.recover(self)))
+    def plan(self, intent: resources.RenameIntent) -> plans.Plan:
+        s = self._session
+        return plans.Plan.create(s._backend, s._token, None if self._edit is None else self._edit._token, intent)
+
+class EditableImages(Images):
+    def __init__(self, session: Session, edit: "Edit"):
+        super().__init__(session, edit)
+        self._owner = edit
+    def create_image(self, name: str, image: resources.PreparedImage, *, id: str | None = None) -> str:
+        return self._owner.apply(ops.CreateImage(name, image, id)).ids[0]
+    def replace_image(self, id: str, image: resources.PreparedImage) -> WriteResult:
+        return self._owner.apply(ops.ReplaceImage(id, image))
+
 class EditableMeshes(Meshes):
     def __init__(self, session: Session, edit: "Edit"):
         super().__init__(session, edit)
@@ -170,6 +196,7 @@ class Edit:
         self._action = "begin"
         self._job: Job[Receipt] | None = None
         self.meshes = EditableMeshes(session, self)
+        self.resources = EditableImages(session, self)
         try:
             self._token = self._backend.begin(session._token, label, self)
         except OutcomeUnknown as e:
@@ -204,18 +231,25 @@ class Edit:
             e._resume = self.recover
             raise
 
-    def apply(self, operation: ops.MeshOperation) -> WriteResult:
+    def apply(self, operation: ops.Operation) -> WriteResult:
         return self.apply_many((operation,))
 
-    def apply_many(self, operations: Sequence[ops.MeshOperation]) -> WriteResult:
+    def apply_plan(self, plan: plans.Plan) -> WriteResult:
+        return self.apply(ops.ApplyPlan(plan))
+
+    def apply_many(self, operations: Sequence[ops.Operation]) -> WriteResult:
         self._ensure_editing()
         self._action = "apply"
         try:
             owned = tuple(operations)
-            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions)) for op in owned):
-                raise TypeError("Expected typed mesh operations")
+            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan)) for op in owned):
+                raise TypeError("Expected typed authoring operations")
             for op in owned:
                 ops.validate(op)
+                if isinstance(op, (ops.CreateImage, ops.ReplaceImage)):
+                    op.image._check(self._backend)
+                elif isinstance(op, ops.ApplyPlan):
+                    op.plan._check(self._backend)
             return WriteResult.read(self._backend.apply(self._token, owned, self))
         except OutcomeUnknown as e:
             self._state = "unknown"

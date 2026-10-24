@@ -10,7 +10,8 @@ import socket
 import struct
 import threading
 import time
-from .. import ops
+from typing import Literal
+from .. import ops, plans
 from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import record, sequence
 from . import JobKind
@@ -72,8 +73,8 @@ class ConnectedBackend:
             stream.connect(str(self._endpoint))
             hello = record(unwrap(_exchange(stream, _body(dict(protocol=CONTRACT, runtime=self._runtime,
                 client=self._client, secret=self._secret)))))
-            if "typed_meshes" not in sequence(hello["capabilities"]):
-                raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed mesh operations")
+            if not {"typed_meshes", "typed_resources_plans"}.issubset(sequence(hello["capabilities"])):
+                raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed authoring operations")
         except BaseException:
             stream.close()
             raise
@@ -134,10 +135,24 @@ class ConnectedBackend:
         return self._request(dict(op="session_info", session=session), owner, "session.info")
     def begin(self, session: object, label: str, owner: object) -> object:
         return self._request(dict(op="begin_edit", session=session, label=label), owner, "edit.begin")
-    def apply(self, edit: object, operations: tuple[ops.MeshOperation, ...], owner: object) -> object:
-        return self._request(dict(op="edit_meshes", edit=edit, operations=[ops.wire(op) for op in operations]), owner, "edit.apply")
+    def apply(self, edit: object, operations: tuple[ops.Operation, ...], owner: object) -> object:
+        return self._request(dict(op="apply_authoring", edit=edit, operations=[ops.wire(op) for op in operations]), owner, "edit.apply")
     def mesh(self, session: object, id: str, edit: object | None, owner: object) -> object:
         return self._request(dict(op="mesh_snapshot", session=session, edit=edit, id=id), owner, "meshes.get")
+    def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
+        return self._request(dict(op="prepare_image", width=width, height=height, rgba=list(rgba)), owner, "resources.prepare_image")
+    def prepared_pixels(self, image: object, owner: object) -> object:
+        return self._request(dict(op="prepared_pixels", image=image), owner, "resources.pixels")
+    def image(self, session: object, id: str, edit: object | None, owner: object) -> object:
+        return self._request(dict(op="image_snapshot", session=session, edit=edit, id=id), owner, "resources.get")
+    def plan(self, session: object, edit: object | None, intent: plans.Intent, owner: object) -> object:
+        return self._request(dict(op="plan_authoring", session=session, edit=edit,
+            intent=dict(kind=intent.kind, id=intent.id, expected_name=intent.expected_name, name=intent.name)), owner, "plan.create")
+    def release_handle(self, kind: Literal["image", "plan"], token: object, owner: object) -> None:
+        operation = dict(op="release_prepared_image", image=token) if kind == "image" else dict(op="release_modeling_plan", plan=token)
+        self._request(operation, owner, f"{kind}.close")
+    def statistics(self, owner: object) -> object:
+        return self._request(dict(op="statistics"), owner, "resources.usage")
     def release(self, edit: object, owner: object) -> None:
         self._request(dict(op="release_edit", edit=edit), owner, "edit.cancel")
     def commit(self, edit: object, owner: object) -> object:

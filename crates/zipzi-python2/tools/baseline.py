@@ -16,8 +16,8 @@ import tracemalloc
 
 PACKAGE = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE.parents[1]
-CASES = ("small_query", "single_edit", "batch_100", "large_array")
-PENDING = ("image", "plan", "cpu_sample")
+CASES = ("small_query", "single_edit", "batch_100", "large_array", "image", "plan")
+PENDING = ("cpu_sample",)
 SAMPLES, WARMUP = 32, 4
 
 def fixture(zipzi, case):
@@ -35,10 +35,23 @@ def fixture(zipzi, case):
             triangles.extend(((a, b, c), (a, c, d)))
     with session.edit("fixture") as edit:
         face = edit.meshes.create(meshes.MeshSpec("Face", meshes.Geometry(ids, points, points, tuple(triangles))))
+    image_size = 256
+    payloads = tuple(bytes((color, 34, 56, 255)) * (image_size * image_size) for color in (12, 13))
+    last_image = [None]
     shifted = [tuple((x + offset, y) for x, y in points) for offset in (0., .25)]
     def invoke(index):
         if case == "small_query":
             return session.meshes.get(face)
+        if case == "image":
+            with runtime.resources.prepare_image(image_size, image_size, payloads[index % 2]) as image:
+                with session.edit(case) as edit:
+                    last_image[0] = edit.resources.create_image(f"Image {index}", image)
+            return None
+        if case == "plan":
+            with session.meshes.plan(meshes.RenameIntent(face, "Face" if index == 0 else f"Planned {index - 1}", f"Planned {index}")) as plan:
+                with session.edit(case) as edit:
+                    edit.apply_plan(plan)
+            return None
         with session.edit(case) as edit:
             if case == "single_edit":
                 edit.meshes.rename(face, f"Face {index}")
@@ -53,10 +66,19 @@ def fixture(zipzi, case):
         assert snapshot.geometry.triangles == tuple(triangles)
         assert snapshot.geometry.positions == (shifted[last % 2] if case == "large_array" else points)
         expected_name = f"Face {last}" if case == "single_edit" else f"Batch {last}-99" if case == "batch_100" else "Face"
+        if case == "plan":
+            expected_name = f"Planned {last}"
         assert snapshot.name == expected_name
+        if case == "image":
+            pixels = session.resources.get(last_image[0]).pixels
+            assert (pixels.width, pixels.height, pixels.rgba) == (image_size, image_size, payloads[last % 2])
+            assert session.resources.get(last_image[0]).name == f"Image {last}"
+        usage = runtime.resources.usage()
+        assert (usage.prepared_images, usage.plans) == (0, 0)
         writes = last if case == "large_array" else last + 1
         assert session.info().history == (1 if case == "small_query" else 1 + writes, 0)
-    return runtime, invoke, validate, len(ids) * 12 if case == "large_array" else 0
+    payload = image_size * image_size * 4 if case == "image" else len(ids) * 12 if case == "large_array" else 0
+    return runtime, invoke, validate, payload
 
 def probe(invoke, index):
     calls = Counter()
@@ -84,6 +106,14 @@ def probe(invoke, index):
     return dict(calls=dict(calls), python_live_bytes=max(0, live - base), python_peak_bytes=max(0, peak - base),
         copied_bytes=None, rust_json_calls=None, rust_live_bytes=None, rust_peak_bytes=None)
 
+def client_hash():
+    digest = hashlib.sha256()
+    for path in sorted((PACKAGE / "client/python").rglob("*.py")):
+        digest.update(str(path.relative_to(PACKAGE)).encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
 def worker(native):
     sys.path[:0] = [str(PACKAGE / "client/python"), str(native)]
     import zipzi
@@ -105,14 +135,14 @@ def worker(native):
             cases[case] = dict(wall_ns=times, input_payload_bytes=payload, probe=measured)
         finally:
             runtime.close()
-    return dict(validated=True, python=sys.version, extension_sha256=hashlib.sha256(Path(extension.__file__).read_bytes()).hexdigest(), cases=cases)
+    return dict(validated=True, python=sys.version, client_sha256=client_hash(), measurement_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), extension_sha256=hashlib.sha256(Path(extension.__file__).read_bytes()).hexdigest(), cases=cases)
 
 def summarize(runs):
     if not runs or any(not r.get("validated") for r in runs):
         raise ValueError("Measurements require independent successful validation")
     result = {}
     for run in runs:
-        if run["extension_sha256"] != runs[0]["extension_sha256"] or set(run["cases"]) != set(CASES):
+        if any(run[k] != runs[0][k] for k in ("extension_sha256", "client_sha256", "measurement_sha256")) or set(run["cases"]) != set(CASES):
             raise ValueError("Binary or workload changed")
     for case in CASES:
         medians, p95s = [], []
@@ -160,7 +190,7 @@ def measure(args, parser):
         runs.append(json.loads(process.stdout))
     if any(r["extension_sha256"] != metadata["artifact_sha256"] for r in runs):
         raise RuntimeError("Loaded native artifact differs from the measured build")
-    report = dict(schema=1, status="partial", build=metadata, runs=len(runs), samples=SAMPLES, warmup=WARMUP,
+    report = dict(schema=1, status="partial", build=metadata, client_sha256=runs[0]["client_sha256"], measurement_sha256=runs[0]["measurement_sha256"], runs=len(runs), samples=SAMPLES, warmup=WARMUP,
         measurements=summarize(runs), pending_workloads=PENDING,
         missing_metrics=["Rust codec counters", "actual copy bytes", "Rust live/peak heap", "frozen regression thresholds"])
     path = args.output / "summary.json"

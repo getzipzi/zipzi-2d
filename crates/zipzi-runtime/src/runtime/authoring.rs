@@ -1,5 +1,12 @@
 use super::*;
-use crate::authoring::{MeshSnapshot, MeshWriteResult};
+use crate::authoring::{EditOperation, MeshSnapshot, PlanIntent, PlanSnapshot, WriteResult};
+
+enum ReadyOperation {
+    Mesh(zipzi_sdk::MeshOperation),
+    Image(zipzi_sdk::ImageCreateSpec, zipzi_sdk::PreparedImageContent),
+    ReplaceImage(String, zipzi_sdk::PreparedImageContent),
+    Plan(Arc<zipzi_sdk::ModelingPlan>, bool),
+}
 
 impl Runtime {
     pub fn edit_meshes(
@@ -7,19 +14,80 @@ impl Runtime {
         client: ClientId,
         edit: EditId,
         operations: Vec<zipzi_sdk::MeshOperation>,
-    ) -> Result<MeshWriteResult> {
-        self.edit(client, edit)?;
-        if operations.len() > 1024 {
-            return Err(RuntimeError::Budget("mesh operations"));
-        }
-        let ids = self.apply_edit(client, edit, |candidate| {
+    ) -> Result<WriteResult> {
+        self.apply_authoring(
+            client,
+            edit,
             operations
                 .into_iter()
-                .map(|op| op.apply(candidate))
-                .collect::<std::result::Result<Vec<_>, _>>()
+                .map(|operation| EditOperation::Mesh { operation })
+                .collect(),
+        )
+    }
+
+    pub fn apply_authoring(
+        &mut self,
+        client: ClientId,
+        edit: EditId,
+        operations: Vec<EditOperation>,
+    ) -> Result<WriteResult> {
+        if self.edit(client, edit)?.state != EditState::Editing {
+            return Err(RuntimeError::Aborted);
+        }
+        if operations.len() > 1024 {
+            return Err(RuntimeError::Budget("authoring operations"));
+        }
+        let resolved = operations
+            .into_iter()
+            .enumerate()
+            .map(|(index, operation)| {
+                Ok(match operation {
+                    EditOperation::Mesh { operation } => ReadyOperation::Mesh(operation),
+                    EditOperation::CreateImage { spec, image } => {
+                        ReadyOperation::Image(spec, self.prepared_image(client, image)?.clone())
+                    }
+                    EditOperation::ReplaceImage { id, image } => ReadyOperation::ReplaceImage(
+                        id,
+                        self.prepared_image(client, image)?.clone(),
+                    ),
+                    EditOperation::ApplyPlan { plan } => {
+                        let (plan, valid) = self.resolve_plan(client, edit, plan)?;
+                        // No public Source describes the intermediate state of a batch.
+                        // An exact-source Plan therefore applies only at its start.
+                        ReadyOperation::Plan(plan, valid && index == 0)
+                    }
+                })
+            })
+            .collect::<Result<Vec<_>>>();
+        let resolved = match resolved {
+            Ok(operations) => operations,
+            Err(error) => {
+                self.abort_edit(client, edit)?;
+                return Err(error);
+            }
+        };
+        let ids = self.apply_edit(client, edit, |candidate| {
+            let mut ids = vec![];
+            for operation in resolved {
+                match operation {
+                    ReadyOperation::Mesh(op) => ids.push(op.apply(candidate)?),
+                    ReadyOperation::Image(spec, image) => {
+                        ids.push(candidate.create_image_spec(spec, &image)?)
+                    }
+                    ReadyOperation::ReplaceImage(id, image) => {
+                        candidate.replace_prepared_image(&id, &image)?;
+                        ids.push(id);
+                    }
+                    ReadyOperation::Plan(plan, valid) => {
+                        super::modeling::apply_plan(&plan, valid, candidate)?;
+                        ids.extend(plan.report().affected_ids);
+                    }
+                }
+            }
+            Ok(ids)
         })?;
         let entry = self.edit(client, edit)?;
-        Ok(MeshWriteResult {
+        Ok(WriteResult {
             ids,
             source: SourceRef::Edit {
                 session: entry.session,
@@ -27,6 +95,42 @@ impl Runtime {
                 base: entry.base,
                 sequence: entry.sequence,
             },
+        })
+    }
+
+    pub fn plan_authoring(
+        &mut self,
+        client: ClientId,
+        session: SessionId,
+        edit: Option<EditId>,
+        intent: PlanIntent,
+    ) -> Result<PlanSnapshot> {
+        let intent = match intent {
+            PlanIntent::MeshRename {
+                id,
+                expected_name,
+                name,
+            } => zipzi_sdk::ModelingIntent::Scene(zipzi_sdk::SceneEdit::Patch {
+                id,
+                expected: zipzi_sdk::SceneFieldValue::Label(expected_name),
+                value: zipzi_sdk::SceneFieldValue::Label(name),
+                clear_glue_pairs: false,
+            }),
+            PlanIntent::ImageRename {
+                id,
+                expected_name,
+                name,
+            } => zipzi_sdk::ModelingIntent::Resource(zipzi_sdk::ResourceEdit::PatchName {
+                id,
+                expected: expected_name,
+                name,
+            }),
+        };
+        let (plan, source, report) = self.plan_modeling(client, session, edit, intent)?;
+        Ok(PlanSnapshot {
+            plan,
+            source,
+            report,
         })
     }
 

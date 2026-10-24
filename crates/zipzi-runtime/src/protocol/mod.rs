@@ -86,9 +86,30 @@ enum Operation {
         edit: EditId,
         commands: Vec<zipzi_sdk::ModelingCommand>,
     },
-    EditMeshes {
+    ApplyAuthoring {
         edit: EditId,
-        operations: Vec<zipzi_sdk::MeshOperation>,
+        operations: Vec<crate::authoring::EditOperation>,
+    },
+    PrepareImage {
+        width: u32,
+        height: u32,
+        rgba: Vec<u8>,
+    },
+    PreparedPixels {
+        image: ImageId,
+    },
+    ReleasePreparedImage {
+        image: ImageId,
+    },
+    ImageSnapshot {
+        session: SessionId,
+        edit: Option<EditId>,
+        id: String,
+    },
+    PlanAuthoring {
+        session: SessionId,
+        edit: Option<EditId>,
+        intent: crate::authoring::PlanIntent,
     },
     MeshSnapshot {
         session: SessionId,
@@ -352,6 +373,7 @@ impl Protocol {
         remote.connection = self.next_connection;
         let mut capabilities = vec![
             "typed_meshes",
+            "typed_resources_plans",
             "modeling_batch",
             "modeling_records",
             "modeling_cpu_samples",
@@ -537,7 +559,7 @@ impl Protocol {
                     "request_results": results, "request_result_bytes": result_bytes,
                     "accounted_document_bytes": rt.accounted_bytes().saturating_sub(rt.image_memory_usage().total_bytes()),
                     "accounted_cpu_bytes": rt.accounted_bytes(),
-                    "image_memory": rt.image_memory_usage(), "plans": rt.modeling_plan_count(), "blobs": rt.blob_count(),
+                    "image_memory": rt.image_memory_usage(), "plans": rt.modeling_plan_count(), "prepared_images":rt.prepared_image_count(), "blobs": rt.blob_count(),
                     "memory_image_entries": rt.list_sessions().iter().filter_map(|s| rt.session(s.id).ok()).map(|s| s.memory_image_entries()).sum::<usize>()})
             }
             Operation::ListSessions => {
@@ -707,9 +729,27 @@ impl Protocol {
                 rt.apply_modeling(client, edit, commands)?;
                 Value::Null
             }
-            Operation::EditMeshes { edit, operations } => {
-                json!(rt.edit_meshes(client, edit, operations)?)
+            Operation::ApplyAuthoring { edit, operations } => {
+                json!(rt.apply_authoring(client, edit, operations)?)
             }
+            Operation::PrepareImage {
+                width,
+                height,
+                rgba,
+            } => json!(rt.prepare_image(client, width, height, rgba)?),
+            Operation::PreparedPixels { image } => json!(rt.prepared_image_pixels(client, image)?),
+            Operation::ReleasePreparedImage { image } => {
+                rt.release_prepared_image(client, image)?;
+                Value::Null
+            }
+            Operation::ImageSnapshot { session, edit, id } => {
+                json!(rt.image_snapshot(client, session, edit, &id)?)
+            }
+            Operation::PlanAuthoring {
+                session,
+                edit,
+                intent,
+            } => json!(rt.plan_authoring(client, session, edit, intent)?),
             Operation::MeshSnapshot { session, edit, id } => {
                 json!(rt.mesh_snapshot(client, session, edit, &id)?)
             }

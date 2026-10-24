@@ -45,6 +45,8 @@ mod geometry;
 pub use geometry::{MeshGeometry, rectangle_grid_geometry};
 mod mesh_edit;
 pub use mesh_edit::{MeshCreateSpec, MeshOperation};
+mod image_edit;
+pub use image_edit::ImageCreateSpec;
 
 mod motion_edit;
 pub use motion_edit::{

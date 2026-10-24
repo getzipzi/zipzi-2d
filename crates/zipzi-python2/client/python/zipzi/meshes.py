@@ -3,7 +3,8 @@
 Arrays have owned tuple storage in snapshots. Rust validates finite values,
 geometry and domain references. Reading a snapshot field performs no requests.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Literal
 from ._values import Source, number, integer, record, sequence, string
 
 Point = tuple[float, float]
@@ -57,3 +58,10 @@ class Snapshot:
     def read(cls, value: object) -> "Snapshot":
         r = record(value)
         return cls(Source.read(r["source"]), string(r["id"]), string(r["name"]), Geometry.read(r["geometry"]))
+
+@dataclass(frozen=True)
+class RenameIntent:
+    id: str
+    expected_name: str
+    name: str
+    kind: Literal["mesh_rename"] = field(default="mesh_rename", init=False)

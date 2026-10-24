@@ -77,6 +77,45 @@ response, or call `OutcomeUnknown.recover()` on creation, reads and Job startup.
 Lost terminal Job queries recover through `job.wait()` or the owning exception.
 Recovery uses the original immutable request bytes and request ID.
 
+## Images and source-bound plans
+
+```python
+from zipzi import resources
+
+with runtime.resources.prepare_image(1, 1, bytes((12, 34, 56, 255))) as image:
+    with session.edit("Texture") as edit:
+        asset = edit.resources.create_image("Draft", image)
+        with edit.resources.plan(resources.RenameIntent(asset, "Draft", "Texture")) as plan:
+            report = plan.report  # Immutable cached value; no request.
+            edit.apply_plan(plan)
+        pixels = edit.resources.get(asset).pixels
+```
+
+Preparation owns an independent lease. Closing it after creating or replacing an
+image leaves candidate, formal and history references intact. Use
+`edit.resources.replace_image(asset, prepared)` to retain the resource identity
+and name while changing its pixels. Pixel snapshots own immutable `bytes`;
+`runtime.resources.usage()` reports Runtime-wide lease/plan counts and tracked
+Rust image buffers (not process RSS).
+
+`session/edit.meshes.plan(meshes.RenameIntent(...))` and
+`session/edit.resources.plan(resources.RenameIntent(...))` create selected typed
+Plans. Formal Plans require an initial candidate of the exact session/version;
+candidate Plans require the exact Edit and sequence. A Plan must be first in an
+explicit batch, followed by ordinary operations. An invalid/stale Plan aborts the
+whole candidate; its cached report remains readable, including after `close()`.
+
+Image preparation, reads, Plan creation and handle close also retain their
+original recovery owner after a lost response. Call `OutcomeUnknown.recover()`;
+another action cannot consume that result. Close/context releases handles only
+after a confirmed outcome. Runtime shutdown or client expiry releases remaining
+leases. This first control-transport slice limits RGBA payloads to **1 MiB**;
+binary buffers and larger images belong to P4.
+
+The native contract is `zipzi-python2-2`. Connected hosts must advertise
+`typed_meshes` and `typed_resources_plans`; a mismatched host is rejected during
+connection.
+
 ## P0 measurements
 
 ```sh
@@ -86,11 +125,12 @@ uv run --locked python crates/zipzi-python2/tools/baseline.py \
 ```
 
 The first measurements cover selected queries, single writes, 100-operation
-batches and large position arrays. Python JSON/native boundary counts and Python
+batches, large position arrays, 256×256 RGBA preparation/create/commit/release,
+and formal Plan creation/apply/commit/release. Python JSON/native boundary counts and Python
 heap probes are measured separately from timing. Missing Rust codec/copy/heap
 metrics stay explicit; no performance gate is inferred from logical input bytes.
 
-PreparedImage/Plan Python ownership, full resource/IO cancellation, animation,
+Full resource/IO cancellation, animation,
 observer/inspection and host discovery remain planned capabilities. See the
 [construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).

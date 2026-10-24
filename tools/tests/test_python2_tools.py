@@ -15,7 +15,7 @@ SPEC.loader.exec_module(baseline)
 
 class Python2ToolsTests(unittest.TestCase):
     def record(self):
-        return dict(validated=True, extension_sha256="same", cases={case:
+        return dict(validated=True, extension_sha256="same", client_sha256="client", measurement_sha256="tool", cases={case:
             dict(wall_ns=list(range(1, baseline.SAMPLES + 1)), probe=dict(copied_bytes=None)) for case in baseline.CASES})
 
     def test_measurement_rejects_missing_cases_samples_validation_and_binary_drift(self):
@@ -26,6 +26,8 @@ class Python2ToolsTests(unittest.TestCase):
         for corrupt in (
             lambda r: r.update(validated=False),
             lambda r: r.update(extension_sha256="other"),
+            lambda r: r.update(client_sha256="other"),
+            lambda r: r.update(measurement_sha256="other"),
             lambda r: r["cases"].pop("batch_100"),
             lambda r: r["cases"]["large_array"]["wall_ns"].pop(),
             lambda r: r["cases"]["single_edit"]["wall_ns"].__setitem__(0, 0),
