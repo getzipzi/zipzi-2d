@@ -57,7 +57,7 @@ from another directory. The Python tooling runner also resolves its own checkout
 ## Test coverage
 
 Run commands from the repository root. `tools/workspace/package-domains.json` assigns every
-owned workspace package to exactly one domain: 16 SDK packages (including Python
+owned workspace package to exactly one domain: 17 SDK packages (including Python
 and the Rust comparison runner) and 3 Editor packages. New workspace members must
 be explicitly assigned; missing, stale, duplicate or overlapping names fail the
 metadata coverage gate. Vendor packages are not workspace members.
@@ -80,7 +80,7 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
 | SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic, events, protocol/framing and retention contracts; optional filter |
 | `python tools/python/test_connected.py` | Build a CPU socket host fixture and pure wheel; isolated installed Python subprocess/cold-start/fault/recovery acceptance; optional unittest names |
-| SDK `mesh` / `regression` | Daily alpha mesh / all 16 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
+| SDK `mesh` / `regression` | Daily alpha mesh / all 17 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
 | SDK `python` / `wheel` | Rebuilt Debug extension / isolated Release wheel gates |
 | SDK `full` or no argument | SDK formatting, complete 16-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
@@ -210,6 +210,11 @@ ZIPZI_BENCH_ANIMATION=1 ZIPZI_BENCH_ANIMATION_DRAG=number ./tools/benchmarks/win
 
 `runtime/runtime_inventory.py`, `runtime/runtime_baseline.py` and `runtime/runtime-migration-inventory.py`
 support [Runtime preparation](../docs/runtime/README.md).
+The independent [zipzi-python2 package](../crates/zipzi-python2/README.md) owns its
+P0/P1 tools under `crates/zipzi-python2/tools/`. `test.py` builds its native adapter
+and validates Local/Connected behavior and public static types; `baseline.py`
+measures this package's selected workloads. `./tools/test-sdk.sh python2` is the
+repository entrypoint.
 `runtime/check_editor_boundary.py` checks the R2 Editor ownership boundary;
 `runtime/editor_benchmark_pairs.py` runs five alternating prebuilt Release pairs,
 and `runtime/editor_benchmark_report.py` applies the frozen per-operation gates.
@@ -242,7 +247,7 @@ Purism sources, records hashes and checkout status, and refuses missing gitlinks
 escaping symlinks and tracked private/generated content. Initialize Purism before
 packaging. Local models, the proprietary Cubism SDK under `third_party/`,
 target, Python caches and machine Cargo config are excluded.
-It retains all 18 crate paths, Editor crate assets, patches, docs and both license texts.
+It retains all 20 crate paths, Editor crate assets, patches, docs and both license texts.
 Extract the `zipzi-2d/` directory and build from that workspace root.
 
 The wheel carries MIT and third-party notices under `.dist-info/licenses`, the

@@ -53,6 +53,19 @@ snapshot before commit. Busy and admission-budget errors leave the edit availabl
 
 ## Jobs, paths and lifetime
 
+`host::LocalHost` is the in-process host for the independent
+[zipzi-python2 SDK](../zipzi-python2/README.md). It explicitly owns
+a Runtime thread, bounded call/waiter admission and a fixed CPU worker pool.
+Typed `call` requests execute serially; `wait_job` waits on the caller thread.
+Worker completions publish without another API call. Close cancels queued work,
+consumes entered workers' actual results, then drops all sessions without saving.
+Adapters must release the Python GIL while calling/waiting/closing, and must never
+invoke user callbacks or wait for this host's jobs inside a `call` closure.
+Its thin native adapter enters this host directly; no Python callbacks run here.
+
+Focused foundation tests: `cargo test --locked -p zipzi-runtime --test host`;
+the queue admission test is under `--lib host::tests::`.
+
 `request_open`, `request_save`, `request_commit`, `request_undo` and `request_redo`
 queue ownership-carrying jobs. The application owns an `Executor`; `dispatch`
 passes it `Work`, the worker calls `Work::run`, and the application delivers the

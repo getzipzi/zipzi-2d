@@ -1,0 +1,16 @@
+[build-system]
+requires = ["uv_build==0.10.7"]
+build-backend = "uv_build"
+
+[project]
+name = "zipzi-python2"
+version = "0.1.0"
+requires-python = ">=3.14,<3.15"
+description = "Typed Python client for the Zipzi authoring Runtime"
+license = "MIT"
+license-files = ["LICENSE-MIT", "THIRD_PARTY_NOTICES.md"]
+readme = "README.md"
+
+[tool.uv.build-backend]
+module-name = "zipzi"
+module-root = "python"

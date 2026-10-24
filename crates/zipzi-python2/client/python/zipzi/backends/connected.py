@@ -1,0 +1,166 @@
+"""Bounded synchronous transport: bounded frames, owned request bytes and same-ID recovery.
+
+Connect to an explicit existing endpoint. Host discovery/start ownership is a
+separate lifecycle operation planned for P6.
+"""
+import hashlib
+import json
+from pathlib import Path
+import socket
+import struct
+import threading
+import time
+from .. import ops
+from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
+from .._values import record, sequence
+from . import JobKind
+
+CONTRACT = "zipzi-runtime-r4-1"
+MAX_FRAME = 16 << 20
+
+def _body(value: object) -> bytes:
+    return json.dumps(value, allow_nan=False, separators=(",", ":"), sort_keys=True).encode()
+
+def _read(stream: socket.socket, length: int) -> bytes:
+    chunks = bytearray()
+    while len(chunks) < length:
+        chunk = stream.recv(min(65536, length - len(chunks)))
+        if not chunk:
+            raise EOFError("Host disconnected")
+        chunks.extend(chunk)
+    return bytes(chunks)
+
+def _exchange(stream: socket.socket, body: bytes) -> object:
+    if not 0 < len(body) <= MAX_FRAME:
+        raise ValueError("Control frame exceeds budget")
+    stream.sendall(struct.pack(">I", len(body)))
+    stream.sendall(body)
+    length, = struct.unpack(">I", _read(stream, 4))
+    if not 0 < length <= MAX_FRAME:
+        raise ValueError("Invalid response length")
+    def invalid_constant(value: str) -> object:
+        raise ValueError(f"Non-finite response number: {value}")
+    return json.loads(_read(stream, length), parse_constant=invalid_constant)
+
+class ConnectedBackend:
+    def __init__(self, endpoint: Path, timeout: float = 10.) -> None:
+        if not endpoint.is_absolute():
+            raise ValueError("Endpoint must be absolute")
+        self._endpoint, self._timeout = endpoint, timeout
+        self._runtime: object = None
+        self._client: object = None
+        self._secret: object = None
+        self._stream: socket.socket | None = None
+        self._closed = False
+        self._next = 0
+        self._pending: tuple[PendingRequest, bytes, object] | None = None
+        self._lock = threading.RLock()
+        self._connect()
+
+    def _disconnect(self) -> None:
+        if self._stream is not None:
+            self._stream.close()
+            self._stream = None
+
+    def _connect(self) -> None:
+        if self._closed:
+            raise SdkFailure("HOST_CLOSED", "Connection is closed")
+        self._disconnect()
+        stream = socket.socket(socket.AF_UNIX)
+        stream.settimeout(self._timeout)
+        try:
+            stream.connect(str(self._endpoint))
+            hello = record(unwrap(_exchange(stream, _body(dict(protocol=CONTRACT, runtime=self._runtime,
+                client=self._client, secret=self._secret)))))
+            if "typed_meshes" not in sequence(hello["capabilities"]):
+                raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed mesh operations")
+        except BaseException:
+            stream.close()
+            raise
+        self._runtime, self._client, self._secret = hello["runtime"], hello["client"], hello["secret"]
+        self._stream = stream
+
+    def _send(self, pending: PendingRequest, body: bytes, owner: object) -> object:
+        try:
+            if self._stream is None:
+                self._connect()
+            assert self._stream is not None
+            response = record(_exchange(self._stream, body))
+            if ("ok" in response) == ("error" in response):
+                raise ValueError("Invalid response envelope")
+        except (OSError, EOFError, ValueError, TypeError) as e:
+            self._disconnect()
+            self._pending = pending, body, owner
+            raise OutcomeUnknown(pending, str(e)) from e
+        self._pending = None
+        if "error" in response:
+            fields = dict(record(response["error"]))
+            fields.setdefault("operation", pending.operation)
+            return unwrap(dict(error=fields))
+        return response["ok"]
+
+    def _request(self, value: dict[str, object], owner: object, operation: str) -> object:
+        with self._lock:
+            if self._closed:
+                raise SdkFailure("HOST_CLOSED", "Connection is closed", operation=operation)
+            if self._pending is not None:
+                raise Busy("BUSY", "Recover the owning pending request first", operation=operation)
+            operation_bytes = _body(value)
+            request_id = self._next + 1
+            body = _body(dict(protocol=CONTRACT, runtime=self._runtime, client=self._client,
+                request_id=request_id, operation=value))
+            if len(body) > MAX_FRAME:
+                raise ValueError("Control frame exceeds budget")
+            pending = PendingRequest(request_id, hashlib.sha256(operation_bytes).hexdigest(), operation)
+            self._next = request_id
+            return self._send(pending, body, owner)
+
+    def pending(self, owner: object) -> PendingRequest | None:
+        with self._lock:
+            return self._pending[0] if self._pending is not None and self._pending[2] is owner else None
+
+    def recover(self, owner: object) -> object:
+        with self._lock:
+            if self._pending is None or self._pending[2] is not owner:
+                raise SdkFailure("NO_PENDING_REQUEST", "No request owned by this object needs recovery")
+            pending, body, _ = self._pending
+            self._connect()
+            return self._send(pending, body, owner)
+
+    def create(self, document_id: str, owner: object) -> object:
+        # ModelSetup defaults are supplied by serde/SDK, not copied into Python.
+        return self._request(dict(op="create_session", document_id=document_id), owner, "sessions.create")
+    def info(self, session: object, owner: object) -> object:
+        return self._request(dict(op="session_info", session=session), owner, "session.info")
+    def begin(self, session: object, label: str, owner: object) -> object:
+        return self._request(dict(op="begin_edit", session=session, label=label), owner, "edit.begin")
+    def apply(self, edit: object, operations: tuple[ops.MeshOperation, ...], owner: object) -> object:
+        return self._request(dict(op="edit_meshes", edit=edit, operations=[ops.wire(op) for op in operations]), owner, "edit.apply")
+    def mesh(self, session: object, id: str, edit: object | None, owner: object) -> object:
+        return self._request(dict(op="mesh_snapshot", session=session, edit=edit, id=id), owner, "meshes.get")
+    def release(self, edit: object, owner: object) -> None:
+        self._request(dict(op="release_edit", edit=edit), owner, "edit.cancel")
+    def commit(self, edit: object, owner: object) -> object:
+        return record(self._request(dict(op="commit", edit=edit), owner, "edit.commit"))["job"]
+    def save(self, session: object, path: Path, owner: object) -> object:
+        return record(self._request(dict(op="save", session=session, path=str(path)), owner, "project.save"))["job"]
+    def open(self, path: Path, owner: object) -> object:
+        return self._request(dict(op="open", path=str(path)), owner, "sessions.open")
+    def history(self, session: object, redo: bool, owner: object) -> object:
+        return record(self._request(dict(op="redo" if redo else "undo", session=session), owner, "session.history"))["job"]
+    def wait(self, job: object, kind: JobKind, owner: object) -> object:
+        deadline = time.monotonic() + self._timeout
+        while True:
+            info = record(self._request(dict(op="job", job=job), owner, "job.wait"))
+            if info["result"] is not None:
+                result = dict(record(unwrap(info["result"])))
+                result["kind"] = kind
+                return result
+            if time.monotonic() >= deadline:
+                raise OutcomeUnknown(PendingRequest(0, "", "job.wait"), "Accepted Job is still pending; wait again")
+            time.sleep(.005)
+
+    def close(self) -> None:
+        with self._lock:
+            self._closed = True
+            self._disconnect()

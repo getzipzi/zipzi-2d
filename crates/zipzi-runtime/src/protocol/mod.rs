@@ -62,6 +62,7 @@ enum Operation {
     Statistics,
     CreateSession {
         document_id: String,
+        #[serde(default)]
         setup: ModelSetup,
     },
     AttachSession {
@@ -84,6 +85,15 @@ enum Operation {
     ApplyModeling {
         edit: EditId,
         commands: Vec<zipzi_sdk::ModelingCommand>,
+    },
+    EditMeshes {
+        edit: EditId,
+        operations: Vec<zipzi_sdk::MeshOperation>,
+    },
+    MeshSnapshot {
+        session: SessionId,
+        edit: Option<EditId>,
+        id: String,
     },
     SampleModeling {
         session: SessionId,
@@ -341,6 +351,7 @@ impl Protocol {
         remote.disconnected = None;
         remote.connection = self.next_connection;
         let mut capabilities = vec![
+            "typed_meshes",
             "modeling_batch",
             "modeling_records",
             "modeling_cpu_samples",
@@ -612,42 +623,14 @@ impl Protocol {
                 blob,
                 replace,
             } => {
-                let bytes = rt.blob(client, blob)?;
-                let image = zipzi_project::PreparedImageContent::from_rgba(
-                    width,
-                    height,
-                    bytes,
-                    rt.image_memory_budget(),
-                )
-                .map_err(|s| {
-                    RuntimeError::Sdk(zipzi_sdk::SdkError {
-                        code: s.code.into(),
-                        message: s.message.into(),
-                        operation: "prepare_rgba",
-                        object_ids: vec![id.clone()],
-                        field_path: None,
-                        expected_version: None,
-                        actual_version: None,
-                        referrers: Box::new([]),
-                    })
-                })?;
-                rt.apply_edit(client, edit, |candidate| {
-                    if replace {
-                        candidate.replace_prepared_image(&id, &image)
-                    } else {
-                        candidate.create_prepared_image(id, name, &image)
-                    }
-                })?;
+                rt.apply_rgba_blob(client, edit, id, name, width, height, blob, replace)?;
                 Value::Null
             }
             Operation::ApplyModelingBlob { edit, blob } => {
                 let bytes = rt.blob(client, blob)?;
                 let commands: Vec<zipzi_sdk::ModelingCommand> =
                     serde_json::from_slice(&bytes).map_err(|_| RuntimeError::InvalidReference)?;
-                if commands.len() > 1024 {
-                    return Err(RuntimeError::Budget("modeling commands"));
-                }
-                rt.apply_edit(client, edit, |candidate| candidate.apply_modeling(commands))?;
+                rt.apply_modeling(client, edit, commands)?;
                 Value::Null
             }
             Operation::PlanModeling {
@@ -721,11 +704,14 @@ impl Protocol {
                 )?
             }
             Operation::ApplyModeling { edit, commands } => {
-                if commands.len() > 1024 {
-                    return Err(RuntimeError::Budget("modeling commands"));
-                }
-                rt.apply_edit(client, edit, |candidate| candidate.apply_modeling(commands))?;
+                rt.apply_modeling(client, edit, commands)?;
                 Value::Null
+            }
+            Operation::EditMeshes { edit, operations } => {
+                json!(rt.edit_meshes(client, edit, operations)?)
+            }
+            Operation::MeshSnapshot { session, edit, id } => {
+                json!(rt.mesh_snapshot(client, session, edit, &id)?)
             }
             Operation::SampleModeling {
                 session,
@@ -791,31 +777,7 @@ impl Protocol {
                 rgba,
                 replace,
             } => {
-                let image = zipzi_project::PreparedImageContent::from_rgba_bytes(
-                    width,
-                    height,
-                    rgba,
-                    rt.image_memory_budget(),
-                )
-                .map_err(|s| {
-                    RuntimeError::Sdk(zipzi_sdk::SdkError {
-                        code: s.code.into(),
-                        message: s.message.into(),
-                        operation: "prepare_rgba",
-                        object_ids: vec![id.clone()],
-                        field_path: None,
-                        expected_version: None,
-                        actual_version: None,
-                        referrers: Box::new([]),
-                    })
-                })?;
-                rt.apply_edit(client, edit, |candidate| {
-                    if replace {
-                        candidate.replace_prepared_image(&id, &image)
-                    } else {
-                        candidate.create_prepared_image(id, name, &image)
-                    }
-                })?;
+                rt.apply_rgba_image(client, edit, id, name, width, height, rgba, replace)?;
                 Value::Null
             }
             Operation::BeginEdit {

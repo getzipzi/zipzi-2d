@@ -7,6 +7,7 @@
 - [Source, wheel and app artifacts](../tools/README.md#local-distribution-artifacts)
 - [Tool guide](../tools/README.md) and [model inventory](../models/README.md)
 - [Runtime evidence](runtime/README.md) and [Runtime plan](plans/sdk-runtime-implementation-plan.md), [R2 Editor migration](plans/sdk-runtime/r2-editor.md)
+- [zipzi-python2 construction plan](plans/python-sdk-rewrite-plan.md): independent package, typed API, shared Runtime execution and bounded generation
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)

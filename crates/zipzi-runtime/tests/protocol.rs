@@ -35,6 +35,77 @@ fn request(
     )
 }
 #[test]
+fn image_prepare_failure_aborts_on_host_even_if_client_never_sends_cleanup() {
+    for from_blob in [false, true] {
+        let (mut rt, mut p, client, connection, now) = setup(Default::default());
+        let session = rt
+            .create_session(
+                client,
+                &uuid::Uuid::new_v4().to_string(),
+                ModelSetup::default(),
+            )
+            .unwrap();
+        let edit = rt.begin_edit(client, session, "bad image", None).unwrap();
+        let version = rt.session_info(session).unwrap().version;
+        let parameter = uuid::Uuid::new_v4().to_string();
+        rt.apply_modeling(
+            client,
+            edit,
+            vec![zipzi_sdk::ModelingCommand::CreateParameter {
+                parameter: zipzi_core::Parameter {
+                    id: parameter.clone(),
+                    ..Default::default()
+                },
+            }],
+        )
+        .unwrap();
+        let mut operation = json!({"op":"apply_rgba", "edit":edit, "id":uuid::Uuid::new_v4().to_string(),
+            "name":"bad", "width":1, "height":1, "rgba":[1, 2, 3], "replace":false});
+        if from_blob {
+            let blob = rt.create_blob(client, 3).unwrap();
+            rt.append_blob(client, blob, 0, &[1, 2, 3]).unwrap();
+            rt.seal_blob(client, blob).unwrap();
+            operation["op"] = json!("apply_rgba_blob");
+            operation.as_object_mut().unwrap().remove("rgba");
+            operation["blob"] = json!(blob);
+        }
+        let response = request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            1,
+            operation.clone(),
+            now,
+        );
+        assert_eq!(response["error"]["code"], "INVALID_IMAGE");
+        assert_eq!(
+            request(&mut rt, &mut p, client, connection, 1, operation, now),
+            response
+        );
+        assert_eq!(
+            request(
+                &mut rt,
+                &mut p,
+                client,
+                connection,
+                2,
+                json!({"op":"commit", "edit":edit}),
+                now
+            )["error"]["code"],
+            "EDIT_ABORTED"
+        );
+        assert_eq!(rt.session_info(session).unwrap().version, version);
+        assert!(
+            rt.document(session)
+                .unwrap()
+                .get_parameter(&parameter)
+                .is_none()
+        );
+        assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
+    }
+}
+#[test]
 fn a06_strict_handshake_and_old_instance_never_register_or_mutate() {
     let (mut rt, mut p, client, connection, now) = setup(Default::default());
     let response = p.hello(&mut rt, json!({"protocol": "zipzi-runtime-r3-1"}), now);

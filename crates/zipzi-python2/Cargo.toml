@@ -1,0 +1,19 @@
+[package]
+name = "zipzi-python2"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Typed Runtime-backed Python SDK native adapter"
+
+[lib]
+name = "zipzi_python2_native"
+crate-type = ["cdylib"]
+test = false
+doctest = false
+
+[dependencies]
+zipzi-core.workspace = true
+zipzi-sdk.workspace = true
+zipzi-runtime.workspace = true
+pyo3 = "=0.29.2"

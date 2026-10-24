@@ -9315,6 +9315,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "zipzi-python2"
+version = "0.1.0"
+dependencies = [
+ "pyo3",
+ "zipzi-core",
+ "zipzi-runtime",
+ "zipzi-sdk",
+]
+
+[[package]]
 name = "zipzi-render"
 version = "0.1.0"
 dependencies = [
@@ -9371,6 +9381,7 @@ dependencies = [
  "serde",
  "serde_json",
  "spade",
+ "uuid",
  "zipzi-animation",
  "zipzi-core",
  "zipzi-project",

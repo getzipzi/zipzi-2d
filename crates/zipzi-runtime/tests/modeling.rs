@@ -15,6 +15,89 @@ fn fixture(limits: RuntimeLimits) -> (Runtime, ClientId, SessionId) {
     (rt, client, session)
 }
 #[test]
+fn image_preparation_failure_poisoning_is_shared_by_typed_and_blob_writes() {
+    for from_blob in [false, true] {
+        let (mut rt, client, session) = fixture(Default::default());
+        let edit = rt.begin_edit(client, session, "bad image", None).unwrap();
+        let parameter_id = uuid::Uuid::new_v4().to_string();
+        rt.apply_modeling(
+            client,
+            edit,
+            vec![zipzi_sdk::ModelingCommand::CreateParameter {
+                parameter: zipzi_core::Parameter {
+                    id: parameter_id.clone(),
+                    ..Default::default()
+                },
+            }],
+        )
+        .unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        let result = if from_blob {
+            let blob = rt.create_blob(client, 3).unwrap();
+            rt.append_blob(client, blob, 0, &[1, 2, 3]).unwrap();
+            rt.seal_blob(client, blob).unwrap();
+            let result = rt.apply_rgba_blob(client, edit, id, "bad".into(), 1, 1, blob, false);
+            rt.release_blob(client, blob).unwrap();
+            result
+        } else {
+            rt.apply_rgba_image(client, edit, id, "bad".into(), 1, 1, vec![1, 2, 3], false)
+        };
+        assert!(matches!(result, Err(RuntimeError::Sdk(e)) if e.code.as_ref() == "INVALID_IMAGE"));
+        assert_eq!(rt.commit_edit(client, edit), Err(RuntimeError::Aborted));
+        assert!(
+            rt.document(session)
+                .unwrap()
+                .get_parameter(&parameter_id)
+                .is_none()
+        );
+        assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
+        rt.release_edit(client, edit).unwrap();
+        assert_eq!(rt.image_memory_usage().total_bytes(), 0);
+    }
+}
+
+#[test]
+fn batch_admission_retains_source_but_mid_batch_sdk_failure_aborts_everything() {
+    let (mut rt, client, session) = fixture(Default::default());
+    let edit = rt.begin_edit(client, session, "batch", None).unwrap();
+    let commands = vec![
+        zipzi_sdk::ModelingCommand::RenameMesh {
+            id: "missing".into(),
+            name: "x".into()
+        };
+        1025
+    ];
+    assert_eq!(
+        rt.apply_modeling(client, edit, commands),
+        Err(RuntimeError::Budget("modeling commands"))
+    );
+    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 0);
+    let parameter_id = uuid::Uuid::new_v4().to_string();
+    let commands = vec![
+        zipzi_sdk::ModelingCommand::CreateParameter {
+            parameter: zipzi_core::Parameter {
+                id: parameter_id.clone(),
+                ..Default::default()
+            },
+        },
+        zipzi_sdk::ModelingCommand::EraseObject {
+            id: "missing".into(),
+        },
+    ];
+    assert!(matches!(
+        rt.apply_modeling(client, edit, commands),
+        Err(RuntimeError::Sdk(_))
+    ));
+    assert_eq!(rt.commit_edit(client, edit), Err(RuntimeError::Aborted));
+    assert!(
+        rt.document(session)
+            .unwrap()
+            .get_parameter(&parameter_id)
+            .is_none()
+    );
+    assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
+}
+#[test]
 fn a17_blob_reserves_before_growth_and_shared_pixels_are_charged_once() {
     let (mut rt, client, session) = fixture(RuntimeLimits {
         image_bytes: 16,

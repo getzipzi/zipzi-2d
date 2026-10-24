@@ -1,8 +1,10 @@
 //! Single-owner, UI-independent session host. Mutation requires `&mut Runtime`;
 //! callers receive immutable SDK borrows or explicitly versioned snapshots.
 //! There are no callbacks under session borrows and no global blocking mutex.
+pub mod authoring;
 mod config;
 mod events;
+pub mod host;
 mod jobs;
 #[cfg(unix)]
 pub mod local;

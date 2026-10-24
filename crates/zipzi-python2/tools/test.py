@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Build zipzi-python2 and validate its typed API against local and IPC hosts.
+
+This does not install/replace either production distribution. Run with uv's
+CPython 3.14. Native artifacts are copied before testing, never loaded in place
+from Cargo's mutable output directory.
+"""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import sysconfig
+from _support import exclusive_run
+
+ROOT = Path(__file__).resolve().parents[3]
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("tests", nargs="*", help="Optional unittest names, e.g. PythonSdk.test_shared_recipe")
+    parser.add_argument("--release", action="store_true", help="Build the native adapter in Release for P0 measurements")
+    args = parser.parse_args()
+    if sys.version_info[:2] != (3, 14):
+        parser.error("Run with uv run --locked python (CPython 3.14)")
+    output = ROOT / "target/python2"
+    output.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, PYO3_PYTHON=sys.executable, PYO3_BUILD_EXTENSION_MODULE="1")
+    for name in ("PYTHONPATH", "PYTHONHOME", "ZIPZI_DEV_SESSION_DIR"):
+        env.pop(name, None)
+    with exclusive_run(output / "runner.lock"):
+        command = ["cargo", "rustc", "--locked", "-p", "zipzi-python2", "--lib",
+            "--message-format=json-render-diagnostics"]
+        if args.release:
+            command.append("--release")
+        if sys.platform == "darwin":
+            # Like Maturin: bind CPython symbols from the importing interpreter.
+            # Apply to this cdylib only, not every Rust dependency/executable.
+            command += ["--", "-C", "link-arg=-Wl,-undefined,dynamic_lookup"]
+        process = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, text=True)
+        (output / "build.jsonl").write_text(process.stdout)
+        (output / "build.log").write_text(process.stderr)
+        if process.returncode:
+            sys.stderr.write(process.stderr[-8000:])
+        process.check_returncode()
+        artifacts = [row for line in process.stdout.splitlines()
+            if (row := json.loads(line)).get("reason") == "compiler-artifact"
+            and row.get("target", {}).get("name") == "zipzi_python2_native"]
+        libraries = {Path(filename) for row in artifacts for filename in row["filenames"]
+            if Path(filename).suffix in {".so", ".dylib", ".dll"}}
+        if len(libraries) != 1:
+            raise RuntimeError(f"Expected one native library, found {libraries}")
+        native = output / "native/zipzi_native"
+        native.mkdir(parents=True, exist_ok=True)
+        (native / "__init__.py").write_text('"""Source validation fixture for zipzi-python2-native."""\n')
+        extension = native / ("_native" + sysconfig.get_config_var("EXT_SUFFIX"))
+        shutil.copy2(libraries.pop(), extension)
+        (output / "build-metadata.json").write_text(json.dumps(dict(profile=artifacts[0]["profile"],
+            python=sys.version, artifact_sha256=hashlib.sha256(extension.read_bytes()).hexdigest()), indent=2) + "\n")
+        subprocess.run(["cargo", "build", "--locked", "-p", "zipzi-runtime", "--example", "local_host_fixture"], cwd=ROOT, env=env, check=True)
+        env.update(ZIPZI_PYTHON2_NATIVE=str(native.parent), ZIPZI_PYTHON2_HOST=str(ROOT / "target/debug/examples/local_host_fixture"))
+        subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_api.py"), "-v", *args.tests], cwd="/tmp", env=env, check=True)
+        subprocess.run(["uv", "run", "--locked", "pyright", "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json")], cwd=ROOT, check=True)
+        invalid = subprocess.run(["uv", "run", "--locked", "--project", str(ROOT), "pyright",
+            "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json"), "--outputjson", "--pythonpath", sys.executable,
+            str(ROOT / "crates/zipzi-python2/tests/type_invalid.py")], cwd=ROOT, capture_output=True, text=True)
+        if not invalid.stdout:
+            raise RuntimeError(f"Static checker failed before producing diagnostics: {invalid.stderr}")
+        diagnostics = json.loads(invalid.stdout)
+        actual = {(Path(d["file"]).name, d["range"]["start"]["line"], d.get("rule"))
+            for d in diagnostics["generalDiagnostics"] if d["severity"] == "error"}
+        expected = {("type_invalid.py", line, "reportArgumentType") for line in (5, 6, 7)}
+        if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 3 or actual != expected:
+            raise RuntimeError(f"Expected three real public typing failures: {invalid.stdout}\n{invalid.stderr}")
+        print("zipzi-python2: Local/Connected behavior and positive/negative static types passed")
+
+if __name__ == "__main__":
+    main()

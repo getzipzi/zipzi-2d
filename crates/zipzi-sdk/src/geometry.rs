@@ -2,7 +2,8 @@
 use crate::{AuthoringSession, EditReceipt, SdkError, TopologyReplacement, Version};
 use zipzi_core::{BlendShapeTargetKind, DeltaKeyforms, Vec2, VertexId};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MeshGeometry {
     pub vertex_ids: Vec<VertexId>,
     pub positions: Vec<Vec2>,

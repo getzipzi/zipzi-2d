@@ -1,5 +1,6 @@
 mod editor;
 pub use editor::CandidateWork;
+mod authoring;
 mod blobs;
 mod modeling;
 mod typed;
@@ -850,6 +851,14 @@ impl Runtime {
             entry.info.state = JobState::Cancelling;
         }
         Ok(())
+    }
+    pub(crate) fn cancel_host_jobs(&mut self) {
+        for entry in self.jobs.values_mut() {
+            if !entry.info.state.is_terminal() {
+                entry.cancel.store(true, Ordering::Release);
+                entry.info.state = JobState::Cancelling;
+            }
+        }
     }
     pub fn release_job(&mut self, client: ClientId, job: JobId) -> Result<()> {
         self.client(client)?;

@@ -7,6 +7,93 @@ pub(super) struct PlanEntry {
     pub bytes: usize,
 }
 impl Runtime {
+    /// Shared typed entry for local adapters and wire decoding. Admission is
+    /// separate from SDK execution; a rejected batch does not advance source.
+    pub fn apply_modeling(
+        &mut self,
+        client: ClientId,
+        edit: EditId,
+        commands: Vec<zipzi_sdk::ModelingCommand>,
+    ) -> Result<()> {
+        self.edit(client, edit)?;
+        if commands.len() > 1024 {
+            return Err(RuntimeError::Budget("modeling commands"));
+        }
+        self.apply_edit(client, edit, |candidate| candidate.apply_modeling(commands))
+    }
+
+    /// Preparation is part of this write, so a preparation failure poisons the
+    /// candidate just like a failed SDK edit. Independent preparation is still
+    /// a separate operation and has no effect on an Edit.
+    #[allow(clippy::too_many_arguments)]
+    pub fn apply_rgba_image(
+        &mut self,
+        client: ClientId,
+        edit: EditId,
+        id: String,
+        name: String,
+        width: u32,
+        height: u32,
+        rgba: Vec<u8>,
+        replace: bool,
+    ) -> Result<()> {
+        self.write_image(client, edit, id, name, replace, |budget| {
+            zipzi_project::PreparedImageContent::from_rgba_bytes(width, height, rgba, budget)
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn apply_rgba_blob(
+        &mut self,
+        client: ClientId,
+        edit: EditId,
+        id: String,
+        name: String,
+        width: u32,
+        height: u32,
+        blob: BlobId,
+        replace: bool,
+    ) -> Result<()> {
+        let bytes = self.blob(client, blob)?;
+        self.write_image(client, edit, id, name, replace, |budget| {
+            zipzi_project::PreparedImageContent::from_rgba(width, height, bytes, budget)
+        })
+    }
+
+    fn write_image(
+        &mut self,
+        client: ClientId,
+        edit: EditId,
+        id: String,
+        name: String,
+        replace: bool,
+        prepare: impl FnOnce(
+            &zipzi_project::ImageMemoryBudget,
+        ) -> std::result::Result<
+            zipzi_project::PreparedImageContent,
+            zipzi_core::Status,
+        >,
+    ) -> Result<()> {
+        let budget = self.image_budget.clone();
+        self.apply_edit(client, edit, |candidate| {
+            let image = prepare(&budget).map_err(|s| zipzi_sdk::SdkError {
+                code: s.code.into(),
+                message: s.message.into(),
+                operation: "prepare_rgba",
+                object_ids: vec![id.clone()],
+                field_path: None,
+                expected_version: None,
+                actual_version: None,
+                referrers: Box::new([]),
+            })?;
+            if replace {
+                candidate.replace_prepared_image(&id, &image)
+            } else {
+                candidate.create_prepared_image(id, name, &image)
+            }
+        })
+    }
+
     pub fn plan_modeling(
         &mut self,
         client: ClientId,

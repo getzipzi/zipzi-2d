@@ -61,6 +61,7 @@ commands from the repository root; inspect available modes with
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |
 | Editor UI (macOS/Metal) | `./tools/test-editor.sh ui <filter>` |
 | Python SDK | `./tools/test-sdk.sh python` (add `--observe` for GPU coverage) |
+| Independent Runtime Python SDK (`zipzi-python2`) | `./tools/test-sdk.sh python2` ([package and P0/P1 scope](crates/zipzi-python2/README.md)) |
 | Repository tools | `uv run --locked python tools/test_tools.py -p test_<tool>.py` |
 
 Filters and filenames are placeholders; omit them to run the selected gate.

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use zipzi_core::{Canvas, Vec2};
 use zipzi_sdk::{
-    prepare_png_asset, rectangle_mesh, AuthoringSession, MeshProperties, TopologyReplacement,
+    AuthoringSession, MeshProperties, TopologyReplacement, prepare_png_asset, rectangle_mesh,
 };
 
 const DOCUMENT_ID: &str = "00000000-0000-4000-8000-000000000101";
@@ -35,6 +35,46 @@ fn fixture() -> AuthoringSession {
         .unwrap();
     session.drain_events();
     session
+}
+
+#[test]
+fn mesh_create_spec_allocates_identity_and_keeps_defaults_in_sdk() {
+    use zipzi_sdk::{MeshCreateSpec, MeshGeometry, MeshOperation};
+    let mut session =
+        AuthoringSession::new(DOCUMENT_ID, zipzi_core::ModelSetup::default()).unwrap();
+    let mut edit = session.begin_owned_edit("spec", None).unwrap();
+    let geometry = MeshGeometry {
+        vertex_ids: vec![42, 7, 99],
+        positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+        uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+        triangles: vec![[42, 7, 99]],
+    };
+    let id = MeshOperation::Create {
+        spec: MeshCreateSpec {
+            id: None,
+            name: "Face".into(),
+            texture_asset_id: String::new(),
+            geometry,
+        },
+    }
+    .apply(&mut edit)
+    .unwrap();
+    assert_eq!(uuid::Uuid::parse_str(&id).unwrap().get_version_num(), 4);
+    MeshOperation::Rename {
+        id: id.clone(),
+        name: "Final".into(),
+    }
+    .apply(&mut edit)
+    .unwrap();
+    let receipt = edit.commit_to(&mut session).unwrap();
+    assert!(receipt.changed);
+    let mesh = session.document().get_mesh(&id).unwrap();
+    assert_eq!(mesh.runtime_id, id);
+    assert_eq!(mesh.name, "Final");
+    assert!(mesh.enabled);
+    assert_eq!(mesh.vertex_ids, [42, 7, 99]);
+    assert_eq!(mesh.appearance, zipzi_core::Appearance::default());
+    assert_eq!(session.history_lengths(), (1, 0));
 }
 
 #[test]
@@ -310,7 +350,7 @@ fn rectangle_grid_preserves_bound_surface_and_history() {
 
 #[test]
 fn rectangle_grid_rejects_invalid_geometry_and_overflow() {
-    use zipzi_sdk::{rectangle_grid_geometry, MeshGeometry};
+    use zipzi_sdk::{MeshGeometry, rectangle_grid_geometry};
     let mesh = fixture().mesh(MESH_ID).unwrap();
     let mut source = MeshGeometry {
         vertex_ids: mesh.vertex_ids,

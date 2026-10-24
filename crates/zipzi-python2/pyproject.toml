@@ -1,0 +1,18 @@
+[build-system]
+requires = ["maturin==1.15.0"]
+build-backend = "maturin"
+
+[project]
+name = "zipzi-python2-native"
+dynamic = ["version"]
+requires-python = ">=3.14,<3.15"
+description = "Optional in-process Runtime backend for zipzi-python2"
+dependencies = ["zipzi-python2==0.1.0"]
+license = "MIT"
+license-files = ["LICENSE-MIT", "THIRD_PARTY_NOTICES.md"]
+readme = "README.md"
+
+[tool.maturin]
+python-source = "native"
+module-name = "zipzi_native._native"
+bindings = "pyo3"

@@ -1,6 +1,6 @@
 # Repository structure
 
-The root Cargo workspace owns 19 crates: 16 SDK packages and 3 Editor packages.
+The root Cargo workspace owns 20 crates: 17 SDK packages and 3 Editor packages.
 `Cargo.toml` defines membership; [`tools/workspace/package-domains.json`](tools/workspace/package-domains.json)
 assigns test domains. Validate both with `python3 tools/workspace/cargo_domain.py --check`
 after adding or removing a member. All owned crates live directly under `crates/`.
@@ -24,6 +24,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
 | `zipzi-sdk-observe` | Immutable inspection and GPU capture |
 | `zipzi-python` | Python bindings and independently built wheel |
+| [`zipzi-python2`](crates/zipzi-python2/README.md) | Independent typed Python client and optional Runtime-native adapter |
 | `cubism-matrix-zipzi` | SDK comparison benchmark runner |
 | [`zipzi-editor-core`](crates/zipzi-editor-core/README.md) | UI-independent Editor state and SDK coordination |
 | [`zipzi-editor-render`](crates/zipzi-editor-render/README.md) | Editor scene/overlay adapter to Metal |
@@ -38,7 +39,8 @@ crates are MIT. Shared directories do not imply a shared license:
 
 ## SDK and language boundaries
 
-The Python wheel contains both PyO3 bindings and Python workflow code. Model
+`zipzi-python2` builds a pure Python client and an optional native adapter as
+separate distributions. Both backends enter the shared Runtime. Model
 invariants and evaluation rules belong in the Rust core/format crates;
 transactions, history and authoring rules belong in `zipzi-sdk`; resource I/O
 and publication belong in `zipzi-project`. PyO3 converts values, errors and
@@ -80,7 +82,8 @@ and the Purism submodule have their own build/test lifecycles.
 
 Root `pyproject.toml` and `uv.lock` pin development Python dependencies. Use
 `uv add --group dev <package>` and commit both files when adding one. The Python
-SDK retains its own build configuration under `crates/zipzi-python`.
+Runtime-backed Python SDK has its native build configuration under
+`crates/zipzi-python2` and pure client configuration under its `client/` directory.
 
 CI runs SDK and Editor consumer validation on every push and pull request.
 Tooling tests are automatically discovered from `tools/tests/test_*.py`; native tests,

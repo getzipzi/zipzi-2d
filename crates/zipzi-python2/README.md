@@ -1,0 +1,96 @@
+# zipzi-python2
+
+Independent typed Python SDK built on the shared Rust Runtime. The Python import
+is `zipzi`. All public values, errors and lifecycle wrappers live in this package;
+native calls use `LocalHost`, while explicit IPC connections use the same Runtime
+handlers. The native bridge owns input arrays before releasing the GIL and has
+no JSON transport conversion or direct SDK session owner.
+
+## Layout and builds
+
+| Path | Responsibility |
+| --- | --- |
+| `client/python/zipzi/` | Pure Python client, values, operation objects and backends |
+| `client/pyproject.toml` | Pure `zipzi-python2` distribution; no native dependency |
+| `src/lib.rs` | Thin PyO3 adapter; Cargo package `zipzi-python2` |
+| `native/zipzi_native/` | Native import namespace |
+| `pyproject.toml` | Optional `zipzi-python2-native` distribution |
+| `tests/` | Shared Local/Connected recipe and positive/negative type examples |
+| `tools/test.py`, `tools/baseline.py` | P0/P1 source validation and measurements |
+| [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
+
+From the repository root, using the workspace's CPython 3.14 tools:
+
+```sh
+./tools/test-sdk.sh python2
+./tools/test-sdk.sh python2 PythonSdk.test_shared_recipe
+./tools/test-sdk.sh python2 --release
+
+# Two independently built distributions:
+uv build --wheel --out-dir target/python2/client-wheels crates/zipzi-python2/client
+uv build --wheel --out-dir target/python2/native-wheels crates/zipzi-python2
+```
+
+The source test runner builds only this adapter and the CPU Runtime fixture,
+copies the native artifact into `target/python2/native`, runs a shared recipe in
+isolated Python processes, and checks actual valid/invalid public type examples.
+It uses macOS extension-module/dynamic-lookup linking, so CPython symbols come
+from the importing interpreter. Tests never load Cargo's mutable output in place.
+
+The package currently targets CPython `>=3.14,<3.15`; source acceptance is on
+macOS/Unix. Other platform/version claims require separate CI evidence.
+
+## First model
+
+After installing both local wheels:
+
+```python
+from pathlib import Path
+import zipzi
+from zipzi import meshes, ops
+
+with zipzi.local() as runtime:
+    session = runtime.sessions.create("79000000-0000-4000-8000-000000000001")
+    geometry = meshes.Geometry(
+        (42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
+        ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),),
+    )
+    with session.edit("Face") as edit:
+        face = edit.meshes.create(meshes.MeshSpec("Face", geometry))
+        snapshot = edit.meshes.get(face)
+        edit.meshes.set_positions(face, vertex_ids=snapshot.geometry.vertex_ids,
+                                 positions=((2., 3.), (3., 3.), (2., 4.)))
+        edit.apply(ops.Rename(face, "Final"))
+    saved = session.project.save(Path("/absolute/output/project")).wait()
+```
+
+For a running host, select `zipzi.connect(endpoint=absolute_socket_path)` instead.
+This endpoint entry does not start/discover a host. Snapshots own immutable tuple
+data and exact formal/candidate sources; field access sends no requests. A failed
+write makes its candidate uncommittable even when caught. Admission refusal is
+distinct from execution failure.
+
+Jobs must be waited or closed to release their bounded result slots. Their actual
+result is cached locally. `close()`/context exit waits; it does not claim to cancel
+already entered work. Keep an Edit and call `edit.recover()` after a lost write
+response, or call `OutcomeUnknown.recover()` on creation, reads and Job startup.
+Lost terminal Job queries recover through `job.wait()` or the owning exception.
+Recovery uses the original immutable request bytes and request ID.
+
+## P0 measurements
+
+```sh
+./tools/test-sdk.sh python2 --release
+uv run --locked python crates/zipzi-python2/tools/baseline.py \
+  --output target/python2/baseline-first
+```
+
+The first measurements cover selected queries, single writes, 100-operation
+batches and large position arrays. Python JSON/native boundary counts and Python
+heap probes are measured separately from timing. Missing Rust codec/copy/heap
+metrics stay explicit; no performance gate is inferred from logical input bytes.
+
+PreparedImage/Plan Python ownership, full resource/IO cancellation, animation,
+observer/inspection and host discovery remain planned capabilities. See the
+[construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
+[implementation record](../../docs/plans/python-sdk-rewrite/README.md).

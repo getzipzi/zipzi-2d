@@ -23,6 +23,7 @@ zipzi-core = { path = "../zipzi-core" }
 zipzi-animation = { path = "../zipzi-animation" }
 zipzi-project = { path = "../zipzi-project" }
 serde = { workspace = true }
+uuid.workspace = true
 geo = { version = "0.33.1", default-features = false }
 spade = "2.15.1"
 rstar = "0.12.2"

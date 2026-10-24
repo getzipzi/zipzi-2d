@@ -6,6 +6,11 @@ use zipzi_sdk::{AuthoringSnapshot, EditReceipt, SaveReceipt, SdkError, Version};
     Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
 pub struct RuntimeInstanceId(pub(crate) Uuid);
+impl std::fmt::Display for RuntimeInstanceId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 macro_rules! ids {
     ($($name:ident),*) => {$(
@@ -17,6 +22,7 @@ macro_rules! ids {
         }
         impl $name {
             pub fn runtime_instance(&self) -> RuntimeInstanceId { self.runtime }
+            pub fn serial(&self) -> u64 { self.serial }
         }
     )*};
 }
