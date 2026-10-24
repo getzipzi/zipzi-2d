@@ -123,6 +123,23 @@ impl EditorView {
             }
             state
         };
+        // One fresh domain query serves enabled state and its reason. Keep
+        // results local so selection, locks and history changes refresh them.
+        let capabilities: std::collections::HashMap<_, _> = crate::authoring::creation_commands()
+            .filter(|id| {
+                let expected = if id.scene_creation_type().is_some()
+                    || matches!(
+                        id,
+                        CommandId::CreateParameter | CommandId::CreateParameterGroup
+                    ) {
+                    zipzi_editor_core::EditingContext::Modeling
+                } else {
+                    zipzi_editor_core::EditingContext::Animation
+                };
+                !self.editor.is_busy() && self.editor.editing_context() == Some(expected)
+            })
+            .map(|id| (id, self.editor.authoring_command_capability(id)))
+            .collect();
         let settings = cx.global::<settings::Settings>();
         let state = MenuState {
             color_theme: theme::current(cx),
@@ -131,28 +148,21 @@ impl EditorView {
             commands: COMMANDS
                 .iter()
                 .map(|s| {
-                    property_state(
-                        s.id,
-                        self.editor.command_state(
-                            self.viewport_command(
-                                s.id,
-                                zipzi_editor_core::CommandSource::NativeMenu,
-                            ),
-                        ),
-                    )
+                    let command =
+                        self.viewport_command(s.id, zipzi_editor_core::CommandSource::NativeMenu);
+                    let state = if let Some(capability) = capabilities.get(&s.id) {
+                        self.editor
+                            .command_state_with_authoring_capability(command, capability)
+                    } else {
+                        self.editor.command_state(command)
+                    };
+                    property_state(s.id, state)
                 })
                 .collect(),
             creation_reasons: crate::authoring::creation_commands()
                 .map(|id| {
-                    let expected = if crate::authoring::animation::creation_kind(id).is_some() {
-                        zipzi_editor_core::EditingContext::Animation
-                    } else {
-                        zipzi_editor_core::EditingContext::Modeling
-                    };
-                    if self.editor.is_busy() || self.editor.editing_context() != Some(expected) {
-                        return None;
-                    }
-                    match self.editor.authoring_command_capability(id) {
+                    let capability = capabilities.get(&id)?;
+                    match capability {
                         Ok(zipzi_sdk::CapabilityState::Available) => None,
                         Ok(
                             zipzi_sdk::CapabilityState::Unavailable { code }
@@ -201,7 +211,8 @@ impl EditorView {
         };
         let item = |id: CommandId| {
             let command = self.viewport_command(id, zipzi_editor_core::CommandSource::NativeMenu);
-            let state = property_state(id, self.editor.command_state(command));
+            let state =
+                self.menu_state.commands[COMMANDS.iter().position(|spec| spec.id == id).unwrap()];
             let mut label = t!(id.spec().label).into_owned();
             if !state.enabled {
                 if let Some(reason) = crate::authoring::creation_commands()

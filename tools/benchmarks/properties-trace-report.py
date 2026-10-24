@@ -19,7 +19,10 @@ color_blend enabled picker_open_close picker_tabs picker_hex picker_invalid_hex
 picker_hue picker_sv picker_rgb_0_text picker_rgb_1_text picker_rgb_2_text
 picker_hsv_0_text picker_hsv_1_text picker_hsv_2_text picker_rgb_0_drag
 picker_rgb_1_drag picker_rgb_2_drag picker_hsv_0_drag picker_hsv_1_drag
-picker_hsv_2_drag picker_done picker_cancel multiply_reset picker_swatches idle picker_idle""".split()
+picker_hsv_2_drag picker_done picker_cancel multiply_reset picker_swatches idle picker_idle
+physics_name physics_input_weight_text physics_input_weight_drag physics_output_weight_text
+physics_output_scale_text physics_output_weight_drag physics_node_radius_text physics_node_mobility_text
+physics_node_mobility_drag physics_normalization_text physics_input_reflect physics_idle""".split()
 
 
 def analyze(records, budget_ms=1000 / 120):
@@ -49,7 +52,14 @@ def analyze(records, budget_ms=1000 / 120):
             handlers_by_parent[group["input_begin"]["fields"].get("parent")].append(
                 (group["input_end"]["at_ns"] - group["input_begin"]["at_ns"])/1e6)
     requested = metadata.get("property_case")
-    expected = [CASES.index(requested)] if requested else list(range(len(CASES)))
+    selected = metadata.get("property_cases")
+    if selected is not None:
+        if not selected or len(selected) != len(set(selected)) or any(name not in CASES for name in selected):
+            raise ValueError("invalid property_cases metadata")
+        expected = [CASES.index(name) for name in selected]
+    else:
+        # Historical traces keep their original 33-case interpretation.
+        expected = [CASES.index(requested)] if requested else list(range(33))
     result = {"metadata":metadata, "budget_ms":budget_ms, "issues":issues,
               "measurement":"native GPUI dispatch and Metal GPU timestamps; correlated texture presentation where available; excludes OS input delivery",
               "cases":{}}
@@ -108,7 +118,9 @@ def analyze(records, budget_ms=1000 / 120):
         if not all(checked):
             issues.append(f"{name}: unchecked input samples")
         changed = sum(e["fields"]["changed"] for e in checked if e)
-        idle = name in ("idle", "picker_idle")
+        idle = name in ("idle", "picker_idle", "physics_idle")
+        if name.startswith("physics_") and not idle and changed == 0:
+            issues.append(f"{name}: no verified value changes")
         # No new textures are expected for tabs, hover, invalid drafts or static
         # idle. Lack of GPU data during an idle phase is itself a valid result.
         if not idle and not selected:

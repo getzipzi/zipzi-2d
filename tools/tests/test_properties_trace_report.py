@@ -34,6 +34,25 @@ def fixture(case="idle"):
 
 
 class PropertiesTraceTests(unittest.TestCase):
+    def test_explicit_suite_does_not_require_unselected_cases(self):
+        records = fixture("physics_idle")
+        records[0].pop("property_case")
+        records[0]["property_cases"] = ["physics_idle"]
+        result = report.analyze(records)[1]
+        self.assertEqual(result["issues"], [])
+        self.assertEqual(list(result["cases"]), ["physics_idle"])
+
+    def test_physics_edits_require_observed_changes(self):
+        result = report.analyze(fixture("physics_input_weight_text"))[1]
+        self.assertIn("physics_input_weight_text: no verified value changes", result["issues"])
+
+    def test_invalid_suite_metadata_is_rejected(self):
+        for names in ([], ["missing"], ["idle", "idle"]):
+            records = fixture()
+            records[0]["property_cases"] = names
+            with self.assertRaisesRegex(ValueError, "property_cases"):
+                report.analyze(records)
+
     def test_chain_probes_follow_tick_identity_exclude_warmup_and_keep_noops(self):
         records = fixture() + [
             event(100, "properties_tick", 1, case=report.CASES.index("idle"), sample=0, warmup=1, timer_late_ns=0),

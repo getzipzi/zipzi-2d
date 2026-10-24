@@ -128,6 +128,9 @@ where
     }
 
     pub fn set_searchable(&mut self, searchable: bool, cx: &mut Context<Self>) {
+        if self.searchable == searchable {
+            return;
+        }
         self.searchable = searchable;
         cx.notify();
     }

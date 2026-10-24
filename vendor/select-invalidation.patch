@@ -1,0 +1,30 @@
+diff --git a/vendor/gpui-kit/crates/component/src/list/list.rs b/vendor/gpui-kit/crates/component/src/list/list.rs
+index 046b4852..84d9efd6 100644
+--- a/vendor/gpui-kit/crates/component/src/list/list.rs
++++ b/vendor/gpui-kit/crates/component/src/list/list.rs
+@@ -128,6 +128,9 @@ where
+     }
+ 
+     pub fn set_searchable(&mut self, searchable: bool, cx: &mut Context<Self>) {
++        if self.searchable == searchable {
++            return;
++        }
+         self.searchable = searchable;
+         cx.notify();
+     }
+diff --git a/vendor/gpui-kit/crates/component/src/select.rs b/vendor/gpui-kit/crates/component/src/select.rs
+index 54801199..880bbef2 100644
+--- a/vendor/gpui-kit/crates/component/src/select.rs
++++ b/vendor/gpui-kit/crates/component/src/select.rs
+@@ -373,6 +373,11 @@ where
+         self.state.selection.first().map(|(_, i)| i.value())
+     }
+ 
++    /// Whether the dropdown menu is currently open.
++    pub fn is_open(&self) -> bool {
++        self.state.open
++    }
++
+     /// Focus the select trigger input.
+     pub fn focus(&self, window: &mut Window, cx: &mut App) {
+         self.state.focus_handle.focus(window, cx);

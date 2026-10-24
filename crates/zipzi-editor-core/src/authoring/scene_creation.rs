@@ -228,7 +228,10 @@ impl Document {
                 matches!(object.kind, ObjectKind::Mesh | ObjectKind::Deformer),
                 AuthoringPlanningError::new("EXPECTED_DEFORMATION_MEMBERS")
             );
-            self.organization_authoring_capabilities(object)?;
+            // Only validate identity here. Full capabilities also scan deletion
+            // dependencies; destination availability is checked by the caller.
+            self.session
+                .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
             let owner = self
                 .model()
                 .organization_owner(&object.id)
@@ -308,7 +311,10 @@ impl Document {
                 ),
                 "Expected organization tree members"
             );
-            self.organization_authoring_capabilities(object)?;
+            // Only validate identity here. Full capabilities also scan deletion
+            // dependencies; destination availability is checked by the caller.
+            self.session
+                .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
             if selection.len() == 1 && object.kind == ObjectKind::Part {
                 return Ok((Some(object.id.clone()), false));
             }

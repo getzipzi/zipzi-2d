@@ -745,6 +745,29 @@ impl Editor {
     }
     /// Shared UI state. Dispatch always queries it again before executing.
     pub fn command_state(&self, command: Command) -> CommandState {
+        self.command_state_with_availability(command, || {
+            self.authoring_command_capability(command.id)
+                .is_ok_and(|state| state == zipzi_sdk::CapabilityState::Available)
+        })
+    }
+    /// Reuse a capability queried during this UI refresh. Target and lifecycle
+    /// gates still run; dispatch always queries fresh state through command_state.
+    pub fn command_state_with_authoring_capability(
+        &self,
+        command: Command,
+        capability: &Result<zipzi_sdk::CapabilityState>,
+    ) -> CommandState {
+        self.command_state_with_availability(command, || {
+            capability
+                .as_ref()
+                .is_ok_and(|state| *state == zipzi_sdk::CapabilityState::Available)
+        })
+    }
+    fn command_state_with_availability(
+        &self,
+        command: Command,
+        authoring_available: impl FnOnce() -> bool,
+    ) -> CommandState {
         use CommandId::*;
         let animation_navigation = matches!(command.target,
             CommandTarget::Viewport(binding) if binding.kind == crate::ViewportKind::Animation);
@@ -762,7 +785,7 @@ impl Editor {
             ToggleAncestorDeformers => self.deformer_visibility().ancestors,
             _ => false,
         };
-        let disabled_reason = if self.command_enabled(command) {
+        let disabled_reason = if self.command_enabled(command, authoring_available) {
             None
         } else if command.id.spec().scope != CommandScope::Window
             && (command.document().is_none() || command.document() != self.active_id())
@@ -786,7 +809,11 @@ impl Editor {
     pub fn command_available(&self, command: Command) -> bool {
         self.command_state(command).enabled
     }
-    fn command_enabled(&self, command: Command) -> bool {
+    fn command_enabled(
+        &self,
+        command: Command,
+        authoring_available: impl FnOnce() -> bool,
+    ) -> bool {
         use CommandId::*;
         if !self.command_target_valid(command) {
             return false;
@@ -878,22 +905,10 @@ impl Editor {
             | CreateMotionGroup
             | CreateExpression
             | CreateExpressionEntry => {
-                !modeling
-                    && target
-                    && !self.is_busy()
-                    && !self.exiting()
-                    && self
-                        .authoring_command_capability(command.id)
-                        .is_ok_and(|c| c == zipzi_sdk::CapabilityState::Available)
+                !modeling && target && !self.is_busy() && !self.exiting() && authoring_available()
             }
             CreateParameter | CreateParameterGroup => {
-                modeling
-                    && target
-                    && !self.is_busy()
-                    && !self.exiting()
-                    && self
-                        .authoring_command_capability(command.id)
-                        .is_ok_and(|s| s == zipzi_sdk::CapabilityState::Available)
+                modeling && target && !self.is_busy() && !self.exiting() && authoring_available()
             }
             CreatePart
             | CreateMesh
@@ -903,22 +918,10 @@ impl Editor {
             | CreateDeformationMesh
             | CreateDeformationWarp
             | CreateDeformationRotation => {
-                modeling
-                    && target
-                    && !self.is_busy()
-                    && !self.exiting()
-                    && self
-                        .authoring_command_capability(command.id)
-                        .is_ok_and(|s| s == zipzi_sdk::CapabilityState::Available)
+                modeling && target && !self.is_busy() && !self.exiting() && authoring_available()
             }
             EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {
-                modeling
-                    && target
-                    && !self.is_busy()
-                    && !self.exiting()
-                    && self
-                        .authoring_command_capability(command.id)
-                        .is_ok_and(|s| s == zipzi_sdk::CapabilityState::Available)
+                modeling && target && !self.is_busy() && !self.exiting() && authoring_available()
             }
             Undo => target && self.can_undo(),
             Redo => target && self.can_redo(),

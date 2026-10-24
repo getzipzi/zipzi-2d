@@ -373,6 +373,11 @@ where
         self.state.selection.first().map(|(_, i)| i.value())
     }
 
+    /// Whether the dropdown menu is currently open.
+    pub fn is_open(&self) -> bool {
+        self.state.open
+    }
+
     /// Focus the select trigger input.
     pub fn focus(&self, window: &mut Window, cx: &mut App) {
         self.state.focus_handle.focus(window, cx);

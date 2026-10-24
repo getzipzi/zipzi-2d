@@ -181,9 +181,9 @@ updates need new provenance and comparison evidence. See
 ## Benchmarks and research tools
 
 See [benchmark workloads and report interpretation](benchmarks/README.md) for
-the native Mesh Properties and CPU property-editing-chain harnesses.
+the native Mesh/Physics Properties and CPU property-editing-chain harnesses.
 
-`benchmarks/timeline-benchmark.sh`, `benchmarks/timeline-number-benchmark.sh`, `benchmarks/properties-benchmark.sh`
+`benchmarks/timeline-benchmark.sh`, `benchmarks/timeline-number-benchmark.sh`, `benchmarks/properties-benchmark.sh`, `benchmarks/physics-properties-benchmark.sh`
 and `benchmarks/window-benchmark.sh` run native Editor benchmarks. `benchmarks/property-chain-benchmark.py`
 and `benchmarks/*-trace-report.py` measure and analyze editing/frame work. Native runs require
 macOS and Metal; model-dependent runs need separately obtained local assets.
@@ -193,8 +193,12 @@ macOS and Metal; model-dependent runs need separately obtained local assets.
 ./tools/benchmarks/timeline-benchmark.sh target/timeline-benchmark-run 600
 # Timeline channel-number scrubbing, CPU/GPU stages and authoring comparison:
 ./tools/benchmarks/timeline-number-benchmark.sh target/timeline-number-benchmark-run 96
-# Mesh properties and complete RGB/HSV color picker in a native window:
-./tools/benchmarks/properties-benchmark.sh target/properties-benchmark-run 300 120
+# Representative Mesh properties: 11 cases, including two color-picker cases:
+./tools/benchmarks/properties-benchmark.sh target/properties-benchmark-run 30 120
+# Physics text commits, continuous number drags, reflection and idle:
+./tools/benchmarks/physics-properties-benchmark.sh target/physics-properties-run 40 120
+# All 33 historical Mesh/color-picker cases:
+ZIPZI_BENCH_PROPERTY_SUITE=mesh-full ./tools/benchmarks/properties-benchmark.sh target/properties-full-run 30 120
 # Paired Release editing-chain totals, nested stage attribution and work counts:
 uv run --locked python tools/benchmarks/property-chain-benchmark.py models/local/mao/runtime/mao_pro.model3.json target/property-chain-run --reader-policy unique
 # Continuous Animation workspace drags in a native window (no per-input frame wait):

@@ -1,10 +1,11 @@
 //! Native properties input. Query identities only; never force a test frame or wait
 //! for a canvas frame between continuous pointer samples.
 use super::*;
+mod physics;
 use gpui_kit::{Bounds, KeyDownEvent, KeyUpEvent, Keystroke, test::TestWindowExt};
 use zipzi_editor_core::{ObjectKind, ObjectRef, PropertyKey, PropertyValue, property::mesh};
 
-const CASES: &[&str] = &[
+pub(super) const CASES: &[&str] = &[
     "name",
     "runtime_id",
     "part",
@@ -38,7 +39,94 @@ const CASES: &[&str] = &[
     "picker_swatches",
     "idle",
     "picker_idle",
+    "physics_name",
+    "physics_input_weight_text",
+    "physics_input_weight_drag",
+    "physics_output_weight_text",
+    "physics_output_scale_text",
+    "physics_output_weight_drag",
+    "physics_node_radius_text",
+    "physics_node_mobility_text",
+    "physics_node_mobility_drag",
+    "physics_normalization_text",
+    "physics_input_reflect",
+    "physics_idle",
 ];
+
+const MESH_CASES: &[&str] = &[
+    "name",
+    "runtime_id",
+    "part",
+    "masks",
+    "opacity_text",
+    "opacity_drag",
+    "color_blend",
+    "enabled",
+    "picker_open_close",
+    "picker_hex",
+    "idle",
+];
+
+fn select_cases(
+    suite: &str,
+    requested: Option<&str>,
+) -> anyhow::Result<Vec<(usize, &'static str)>> {
+    ensure!(
+        matches!(suite, "mesh" | "physics" | "mesh-full"),
+        "unknown property suite"
+    );
+    if let Some(name) = requested {
+        ensure!(CASES.contains(&name), "unknown property case");
+    }
+    Ok(CASES
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|(_, name)| {
+            requested.map_or_else(
+                || match suite {
+                    "physics" => name.starts_with("physics_"),
+                    "mesh-full" => !name.starts_with("physics_"),
+                    _ => MESH_CASES.contains(name),
+                },
+                |requested| requested == *name,
+            )
+        })
+        .collect())
+}
+
+pub(super) fn selected_cases() -> anyhow::Result<Vec<(usize, &'static str)>> {
+    select_cases(
+        &std::env::var("ZIPZI_BENCH_PROPERTY_SUITE").unwrap_or_else(|_| "mesh".into()),
+        std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok().as_deref(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_cases;
+    #[test]
+    fn property_suites_keep_trace_ids_and_limit_picker_coverage() {
+        let mesh = select_cases("mesh", None).unwrap();
+        assert_eq!(mesh.len(), 11);
+        assert_eq!(
+            mesh.iter()
+                .filter(|(_, name)| name.starts_with("picker_"))
+                .count(),
+            2
+        );
+        let physics = select_cases("physics", None).unwrap();
+        assert_eq!(physics.len(), 12);
+        assert_eq!(physics[0], (33, "physics_name"));
+        assert_eq!(select_cases("mesh-full", None).unwrap().len(), 33);
+        assert_eq!(
+            select_cases("mesh", Some("picker_sv")).unwrap(),
+            vec![(14, "picker_sv")]
+        );
+        assert!(select_cases("missing", None).is_err());
+        assert!(select_cases("mesh", Some("missing")).is_err());
+    }
+}
 
 fn key(window: &mut Window, value: &str, cx: &mut App) {
     let keystroke = Keystroke::parse(value).unwrap();
@@ -234,6 +322,10 @@ pub(super) async fn run(
     cx: &mut AsyncWindowContext,
     config: &Config,
 ) -> anyhow::Result<()> {
+    let cases = selected_cases()?;
+    if cases.iter().any(|(_, name)| name.starts_with("physics_")) {
+        return physics::run(view, cx, config, &cases).await;
+    }
     let object = view.update_in(cx, |view, window, cx| -> anyhow::Result<_> {
         let layer = view
             .editor
@@ -259,18 +351,7 @@ pub(super) async fn run(
         Ok(object)
     })??;
     pause(cx, 500).await;
-    let requested = std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok();
-    ensure!(
-        requested
-            .as_ref()
-            .is_none_or(|r| CASES.contains(&r.as_str())),
-        "unknown property case"
-    );
-    for (index, &case) in CASES
-        .iter()
-        .enumerate()
-        .filter(|(_, c)| requested.as_ref().is_none_or(|r| r == **c))
-    {
+    for (index, case) in cases {
         eprintln!("Properties workload {index}: {case}");
         let history = view.update_in(cx, |v, _, _| {
             v.editor.document().unwrap().history_lengths().0

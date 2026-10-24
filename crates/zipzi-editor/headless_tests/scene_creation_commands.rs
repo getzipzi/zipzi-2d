@@ -485,3 +485,42 @@ fn creation_resets_tree_range_anchor_to_the_new_selection(cx: &mut TestAppContex
         assert_eq!(selected, &[part, a, b]);
     });
 }
+
+#[gpui_kit::test]
+fn native_creation_state_refreshes_after_locks_undo_redo_and_selection(cx: &mut TestAppContext) {
+    let h = blank(cx);
+    invoke(&h, C::CreatePart, CommandSource::Direct, cx);
+    let part = inspected(&h, cx);
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
+    cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |view, cx| {
+            let result = view.editor.execute(EditorCommand::SetObjectsLocked {
+                objects: vec![part.clone()],
+                locked: true,
+            });
+            view.complete_edit(result, cx);
+        });
+    })
+    .unwrap();
+    let (_, label, disabled) = native_action(&h, C::CreateMesh, cx);
+    assert!(disabled, "locked owner must disable creation: {label}");
+    assert!(
+        label.contains(&crate::authoring::availability_reason("OBJECT_LOCKED")),
+        "{label}"
+    );
+    invoke(&h, C::Undo, CommandSource::Direct, cx);
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
+    invoke(&h, C::Redo, CommandSource::Direct, cx);
+    assert!(native_action(&h, C::CreateMesh, cx).2);
+    // Returning to an unlocked root changes the capability without a commit.
+    cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |view, cx| {
+            let result = view.editor.execute(EditorCommand::SelectObjects(vec![]));
+            view.complete_edit(result, cx);
+        });
+    })
+    .unwrap();
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
+    select(&h, part, cx);
+    assert!(native_action(&h, C::CreateMesh, cx).2);
+}

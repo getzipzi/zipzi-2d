@@ -85,7 +85,7 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi-editor','
                     self.assertEqual((bundle/'Contents/MacOS/zipzi-editor').read_bytes(), before)
 
     def test_benchmark_wrappers_preserve_caller_paths_and_single_repository_provenance(self):
-        for name in ['window-benchmark.sh', 'properties-benchmark.sh', 'timeline-benchmark.sh', 'timeline-number-benchmark.sh']:
+        for name in ['window-benchmark.sh', 'properties-benchmark.sh', 'physics-properties-benchmark.sh', 'timeline-benchmark.sh', 'timeline-number-benchmark.sh']:
             (self.root/'tools/benchmarks').mkdir(exist_ok=True)
             shutil.copy(SCRIPTS/'benchmarks'/name, self.root/'tools/benchmarks'/name)
         for name in ['frame-trace-report.py', 'properties-trace-report.py', 'animation-trace-report.py']:
@@ -95,7 +95,7 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi-editor','
             tool.write_text(f'#!{sys.executable}\n' + """import json,os,pathlib,sys
 if pathlib.Path(sys.argv[0]).name=='caffeinate':
     pathlib.Path(os.environ['ZIPZI_FRAME_TRACE']).write_text('{}')
-    pathlib.Path('launch.json').write_text(json.dumps({'binary':sys.argv[-1], 'model':os.environ['ZIPZI_BENCH_MODEL']}))
+    pathlib.Path('launch.json').write_text(json.dumps({'binary':sys.argv[-1], 'model':os.environ['ZIPZI_BENCH_MODEL'], 'suite':os.environ.get('ZIPZI_BENCH_PROPERTY_SUITE'), 'warmup':os.environ.get('ZIPZI_BENCH_WARMUP'), 'samples':os.environ.get('ZIPZI_BENCH_SAMPLES')}))
 """)
             tool.chmod(0o755)
         subprocess.run(['git','init','-q'],cwd=self.root,check=True)
@@ -106,7 +106,7 @@ if pathlib.Path(sys.argv[0]).name=='caffeinate':
             model = cwd/'model space/model.json'
             model.parent.mkdir(exist_ok=True)
             model.write_text('{}')
-            for script in ['window-benchmark.sh','properties-benchmark.sh','timeline-benchmark.sh','timeline-number-benchmark.sh']:
+            for script in ['window-benchmark.sh','properties-benchmark.sh','physics-properties-benchmark.sh','timeline-benchmark.sh','timeline-number-benchmark.sh']:
                 counter += 1
                 output = f'output {counter}'
                 args = ['model space/model.json',output,'2','120'] if script=='window-benchmark.sh' else [output,'2']
@@ -119,10 +119,14 @@ if pathlib.Path(sys.argv[0]).name=='caffeinate':
                 self.assertIn('repository',provenance)
                 self.assertNotIn('repositories',provenance)
                 self.assertEqual(provenance['build_environment']['CARGO_TARGET_DIR'],str(cwd/'custom target'))
-                if script in ['window-benchmark.sh','properties-benchmark.sh']:
+                if script in ['window-benchmark.sh','properties-benchmark.sh','physics-properties-benchmark.sh']:
                     launch = json.loads((self.root/'launch.json').read_text())
                     self.assertEqual(launch['model'],str(model))
                     self.assertEqual(Path(launch['binary']),cwd/'custom target/aarch64-apple-darwin/release/zipzi-editor')
+                    if script=='physics-properties-benchmark.sh':
+                        self.assertEqual(launch['suite'],'physics')
+                        self.assertEqual(launch['samples'],'2')
+                        self.assertEqual(launch['warmup'],'5')
         failed = subprocess.run(['bash',str(self.root/'tools/benchmarks/timeline-benchmark.sh'),'failure'],cwd=self.outside,
             env={**self.env,'ZIPZI_TIMELINE_MODEL':str(model),'BUILD_FAIL':'1'},capture_output=True,text=True)
         self.assertEqual(failed.returncode,7,failed.stderr)
@@ -130,6 +134,19 @@ if pathlib.Path(sys.argv[0]).name=='caffeinate':
             env=self.env,capture_output=True,text=True)
         self.assertNotEqual(missing.returncode,0)
         self.assertIn('missing-model.json',missing.stderr)
+
+    def test_physics_wrapper_rejects_unrestorable_history_before_building(self):
+        script = self.root/'tools/benchmarks/physics-properties-benchmark.sh'
+        script.parent.mkdir(exist_ok=True)
+        shutil.copy(SCRIPTS/'benchmarks/physics-properties-benchmark.sh', script)
+        for samples, warmup in [('46', '5'), ('40', '11'), ('invalid', '5'), ('2', 'invalid')]:
+            with self.subTest(samples=samples, warmup=warmup):
+                result = subprocess.run(['bash', str(script), 'output space', samples],
+                    cwd=self.outside, env={**self.env, 'ZIPZI_BENCH_WARMUP': warmup},
+                    capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn('Physics', result.stderr)
+                self.assertFalse((self.root/'invocation.json').exists())
 
     def test_ambiguous_or_missing_artifacts_fail(self):
         item = {'reason':'compiler-artifact', 'target':{'name':'zipzi-editor','kind':['bin']},'executable':'/a'}

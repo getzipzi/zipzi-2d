@@ -108,6 +108,10 @@ pub fn init() -> anyhow::Result<()> {
             (parameters_only as u8 + deformations as u8 + animation as u8 + properties as u8) <= 1,
             "choose one benchmark workload"
         );
+        #[cfg(feature = "test-support")]
+        if properties {
+            properties::selected_cases()?;
+        }
         let vertices = number("ZIPZI_BENCH_VERTICES", 8)?;
         ensure!(
             (2..=10_000).contains(&vertices),
@@ -136,6 +140,31 @@ pub fn init() -> anyhow::Result<()> {
     let thread = std::thread::spawn(move || -> std::io::Result<()> {
         let mut out = BufWriter::new(file);
         let config = CONFIG.get();
+        #[cfg(feature = "test-support")]
+        let property_cases: Vec<_> = if config.is_some_and(|c| c.properties) {
+            properties::selected_cases()
+                .expect("validated property cases")
+                .into_iter()
+                .map(|(_, name)| name)
+                .collect()
+        } else {
+            vec![]
+        };
+        #[cfg(not(feature = "test-support"))]
+        let property_cases: Vec<&str> = vec![];
+        #[cfg(feature = "test-support")]
+        let property_workloads: Vec<_> = property_cases
+            .iter()
+            .map(|name| {
+                210u64
+                    + properties::CASES
+                        .iter()
+                        .position(|case| case == name)
+                        .unwrap() as u64
+            })
+            .collect();
+        #[cfg(not(feature = "test-support"))]
+        let property_workloads: Vec<u64> = vec![];
         writeln!(
             out,
             "{}",
@@ -150,8 +179,9 @@ pub fn init() -> anyhow::Result<()> {
                 "parameters_only": config.map(|c| c.parameters_only),
                 "animation_drag": std::env::var("ZIPZI_BENCH_ANIMATION_DRAG").ok(),
                 "properties": config.map(|c| c.properties),
+                "property_cases": property_cases,
                 "property_case": std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok(),
-                "workloads": config.map(|c| if c.properties { (210..243).collect() } else if c.animation { vec![9] } else if c.deformations { vec![5, 6, 7, 8] }
+                "workloads": config.map(|c| if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.deformations { vec![5, 6, 7, 8] }
                     else if c.parameters_only { vec![4] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),

@@ -333,3 +333,75 @@ fn tree_cache_revision_and_visibility_follow_edits_not_navigation() -> anyhow::R
     }
     Ok(())
 }
+
+#[test]
+fn prefetched_authoring_state_keeps_context_guards_and_dispatch_revalidates() -> anyhow::Result<()>
+{
+    use zipzi_sdk::CapabilityState as C;
+    let mut doc = Document::new_blank()?;
+    let plan = doc.plan_scene_object_creation(SceneObjectType::Part, "Owner".into(), &[])?;
+    let owner = doc
+        .execute_scene_object_creation(&plan)?
+        .suggested_selection[0]
+        .clone();
+    let mut editor = support::editor_from_document(doc);
+    editor.execute(EditorCommand::SelectObject(owner.clone()))?;
+    let command = editor.command(CommandId::CreateMesh);
+    let available = editor.authoring_command_capability(command.id);
+    assert_eq!(available.as_ref().unwrap(), &C::Available);
+    assert_eq!(
+        editor.command_state_with_authoring_capability(command, &available),
+        editor.command_state(command)
+    );
+    for capability in [
+        Ok(C::Unavailable {
+            code: "OBJECT_LOCKED",
+        }),
+        Ok(C::Unsupported {
+            code: "NO_CHILD_COLLECTION",
+        }),
+        Err(anyhow::anyhow!("Creation context expired")),
+    ] {
+        let state = editor.command_state_with_authoring_capability(command, &capability);
+        assert!(!state.enabled);
+        assert_eq!(
+            state.disabled_reason,
+            Some(CommandDisabledReason::UnavailableInContext)
+        );
+    }
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    assert_eq!(
+        editor.command_state_with_authoring_capability(command, &available),
+        editor.command_state(command)
+    );
+    assert!(
+        !editor
+            .command_state_with_authoring_capability(command, &available)
+            .enabled
+    );
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    editor.execute(EditorCommand::SetObjectsLocked {
+        objects: vec![owner],
+        locked: true,
+    })?;
+    // A saved menu action must check the current capability again on dispatch.
+    assert!(editor.dispatch(command).is_err());
+    let locked = editor.authoring_command_capability(command.id);
+    assert_eq!(
+        editor.command_state_with_authoring_capability(command, &locked),
+        editor.command_state(command)
+    );
+    editor.execute(EditorCommand::Undo)?;
+    assert!(editor.command_available(command));
+    editor.new_document()?;
+    assert_eq!(
+        editor.command_state_with_authoring_capability(command, &available),
+        editor.command_state(command)
+    );
+    assert!(
+        !editor
+            .command_state_with_authoring_capability(command, &available)
+            .enabled
+    );
+    Ok(())
+}

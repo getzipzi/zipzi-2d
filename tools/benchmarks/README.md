@@ -6,7 +6,7 @@ and how to interpret their output; measured results belong in
 
 | Guide | Use it for |
 | --- | --- |
-| [Native Mesh Properties](#mesh-properties-native-window-benchmark) | Real-window input, UI/Metal work and presentation correlation |
+| [Native Properties: Mesh and Physics](#properties-native-window-benchmark) | Real-window input, UI/Metal work and presentation correlation |
 | [Property editing chain](#property-editing-chain-benchmark) | Synchronous CPU editing cost, stage attribution and ownership controls |
 
 Choose checks using the [UI performance reference](../../docs/references/ui-performance.md).
@@ -15,23 +15,48 @@ window and offscreen benchmark commands. Native window harnesses require macOS,
 Metal and the documented local model; CPU chain measurements do not measure
 window or GPU latency.
 
-## Mesh properties native-window benchmark
+## Properties native-window benchmark
 
-Run the same Mao source model, Release build, isolated configuration, 30 warmup
-inputs and 300 measured inputs at a target 120 Hz as the existing window UI
-benchmark:
+Use the Mao source model, a Release build and an isolated configuration. The default
+Mesh suite runs 11 representative cases with 30 measured inputs per case at a
+target 120 Hz. Physics runs 12 cases with 40 measured inputs per case:
 
 ```sh
-./tools/benchmarks/properties-benchmark.sh target/properties-run 300 120
+./tools/benchmarks/properties-benchmark.sh target/properties-run 30 120
+./tools/benchmarks/physics-properties-benchmark.sh target/physics-properties-run 40 120
 ```
 
 `ZIPZI_BENCH_MODEL` overrides the model. `ZIPZI_BENCH_PROPERTY_CASE` selects one
-case from the checklist below. The runner requires an unlocked Mac, a visible,
+case from the checklist below, including an individual `physics_*` case.
+`ZIPZI_BENCH_PROPERTY_SUITE` selects `mesh` (default), `physics`, or `mesh-full`.
+The default Mesh cases are name, runtime_id, part, masks, opacity_text,
+opacity_drag, color_blend, enabled, picker_open_close, picker_hex, and idle.
+`mesh-full` retains all 33 historical Mesh/color cases for explicit detailed checks.
+`ZIPZI_BENCH_WARMUP` overrides the scripts' defaults: 3 for Mesh and 5 for Physics.
+The runner requires an unlocked Mac, a visible,
 active native window, and real Metal. Avoid input and concurrent builds while it
 runs. It chooses the visible mesh with the most vertices, restores committed
 edits outside each measured phase, never saves the source, and quits at the end.
 
-### Checklist
+### Physics coverage
+
+Physics selects the first imported group with input/output channels and a non-root
+node through the real native group list. Cases cover group name, input weight
+(text/continuous drag), output weight (text/drag), output scale, node radius,
+node mobility (text/drag), normalization center, input reflection, and static idle.
+Numbers use native keyboard/IME dispatch and Slide Number Input pointer events.
+The driver verifies requested text values, actual candidate changes, no commits
+during a drag, exactly one commit on release, and Undo restoration outside timing.
+It never saves the model. Physics uses 5 warmup plus 40 measured inputs by
+default; their sum must be at most 50 to preserve every Undo step. Imported Physics
+UUIDs may differ per load; compare the same source file and group/channel indices.
+Both version builds must use the identical benchmark files; changes to the driver alone are not product performance changes.
+
+The trace declares `property_cases` explicitly. Historical traces without this
+field retain the original single-case/33-case interpretation. Physics idle does
+not invent model texture or presentation timings when no new preview is needed.
+
+### Mesh checklist (full suite)
 
 | Cases | Input path |
 | --- | --- |

@@ -35,6 +35,23 @@ pub(crate) struct PropertyTarget {
     pub motion: Option<zipzi_editor_core::MotionSelection>,
 }
 
+impl PropertyTarget {
+    /// Resource revisions validate edits; they do not identify the widgets.
+    pub(crate) fn same_resource(&self, other: &Self) -> bool {
+        matches!(
+            self.scope,
+            zipzi_editor_core::PropertyScope::Resource { .. }
+        ) && matches!(
+            other.scope,
+            zipzi_editor_core::PropertyScope::Resource { .. }
+        ) && self.document == other.document
+            && self.context == other.context
+            && self.object == other.object
+            && self.timeline == other.timeline
+            && self.motion == other.motion
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct Choice {
     pub label: SharedString,
@@ -135,6 +152,21 @@ pub(crate) struct NavigationSpec {
     pub select: fn(&mut Editor, &PropertyTarget, &str) -> anyhow::Result<()>,
 }
 impl FormDefinition {
+    pub(crate) fn same_controls(&self, other: &Self) -> bool {
+        self.fields.len() == other.fields.len()
+            && self.fields.iter().zip(&other.fields).all(|(a, b)| {
+                // Choices and bounds are read again when rendering. Sections
+                // and navigation belong to the row projection, not the widgets.
+                a.binding == b.binding
+                    && a.editor == b.editor
+                    && a.label == b.label
+                    && a.searchable == b.searchable
+                    && a.scale == b.scale
+                    && a.live_text == b.live_text
+                    && a.drag_distance == b.drag_distance
+            })
+    }
+
     fn new(fields: &[(PropertySpec, &'static str, FieldEditor)]) -> Self {
         Self {
             fields: fields

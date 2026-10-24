@@ -98,6 +98,19 @@ Kit's existing 4px vertical option padding. Fonts follow the existing UI scale.
 These patches retain the existing interaction behavior and do not modify
 sibling checkouts.
 
+### Select invalidation and open state
+
+[select-invalidation.patch](select-invalidation.patch) makes
+`ListState::set_searchable` a no-op when its value is unchanged. Select rendering
+sets this flag repeatedly; notifying on an unchanged value invalidates otherwise
+retained Properties panels during unrelated canvas frames.
+
+The patch also exposes `SelectState::is_open()`. The Editor reuses closed resource
+controls across revision changes, while open Selects rebuild their choices so
+locks, history and external edits cannot leave stale options. Structural and
+functional regressions live in
+[ui_performance.rs](../crates/zipzi-editor/headless_tests/ui_performance.rs).
+
 ### Tooltips
 
 [compact-tooltip.patch](compact-tooltip.patch) changes `tooltip.rs` and `root.rs`:
@@ -140,8 +153,9 @@ horizontal line appears in the bottom gap.
 Replace the component package, README, five test-support files and root workspace
 manifest with their counterparts from the new pinned commit. Adapt and apply
 `kit-workspace.patch`, `compact-menu.patch`, `compact-tooltip.patch` and
-`dock-handle-line.patch`. Update Git revisions in the reduced workspace, reassess
-whether each patch is still needed, regenerate patches against the new baseline,
+`dock-handle-line.patch` and `select-invalidation.patch`. Update Git revisions in
+the reduced workspace, reassess whether each patch is still needed, regenerate
+patches against the new baseline,
 and update the root dependencies and lockfile.
 
 ```sh
@@ -149,6 +163,7 @@ git apply --reverse --check vendor/kit-workspace.patch
 git apply --reverse --check vendor/compact-menu.patch
 git apply --reverse --check vendor/compact-tooltip.patch
 git apply --reverse --check vendor/dock-handle-line.patch
+git apply --reverse --check vendor/select-invalidation.patch
 cargo test --locked -p zipzi-editor --lib headless_tests::compact_popups
 cargo test --locked -p zipzi-editor --lib headless_tests::tooltips
 ```
@@ -253,6 +268,7 @@ git apply --reverse --check vendor/kit-workspace.patch
 git apply --reverse --check vendor/compact-menu.patch
 git apply --reverse --check vendor/compact-tooltip.patch
 git apply --reverse --check vendor/dock-handle-line.patch
+git apply --reverse --check vendor/select-invalidation.patch
 ```
 
 Reverse applicability alone does not prove that the patches capture every local

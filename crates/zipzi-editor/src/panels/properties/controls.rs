@@ -105,6 +105,14 @@ impl PropertiesPanel {
             .collect()
     }
 
+    #[cfg(test)]
+    pub(crate) fn field_select(
+        &self,
+        id: PropertyKey,
+    ) -> Entity<SelectState<SearchableVec<Choice>>> {
+        self.selects[&id].state.clone()
+    }
+
     pub(super) fn sync_form(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(owner) = self.owner.upgrade() else {
             return;
@@ -133,7 +141,17 @@ impl PropertiesPanel {
             self.resolved_target(&owner.read(cx).editor)
         };
         let context = owner.read(cx).editor.editing_context_token();
+        let mut reused_controls = false;
         if self.target != next || self.context != context {
+            let same_resource = self.preview.is_none()
+                && self.context == context
+                && !self.selects.values().any(|c| c.state.read(cx).is_open())
+                && !self.colors.values().any(|c| c.state.read(cx).is_open())
+                && self
+                    .target
+                    .as_ref()
+                    .zip(next.as_ref())
+                    .is_some_and(|(previous, next)| previous.same_resource(next));
             if self.preview.is_none() {
                 if let Some(previous) = self.target.clone() {
                     let inputs: Vec<_> = self
@@ -191,13 +209,17 @@ impl PropertiesPanel {
                 }
             }
             self.cancel_preview(cx);
-            self.controls.clear();
-            self.selects.clear();
-            self.colors.clear();
-            self.epoch += 1;
-            self.definition = next.as_ref().map_or_else(Default::default, |target| {
+            let definition = next.as_ref().map_or_else(Default::default, |target| {
                 target.definition(&owner.read(cx).editor)
             });
+            reused_controls = same_resource && self.definition.same_controls(&definition);
+            if !reused_controls {
+                self.controls.clear();
+                self.selects.clear();
+                self.colors.clear();
+                self.epoch += 1;
+            }
+            self.definition = definition;
             self.target = next;
             self.context = context;
             self.snapshot = None;
@@ -247,6 +269,11 @@ impl PropertiesPanel {
             self.snapshot = snapshot;
         } else {
             self.form = PropertyForm::default();
+        }
+        if reused_controls {
+            // A new revision has a fresh form. Reset even unsubmitted widget
+            // text, so queued events cannot carry an old draft into that form.
+            self.sync_control_values(window, cx);
         }
     }
 
@@ -625,8 +652,15 @@ impl PropertiesPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.form = form;
+        self.sync_control_values(window, cx);
+        self.snapshot = None;
+        cx.notify();
+    }
+
+    fn sync_control_values(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         for (id, control) in &mut self.controls {
-            if let Some(field) = form.fields.get(id) {
+            if let Some(field) = self.form.fields.get(id) {
                 if control.input.read(cx).value().as_ref() != field.raw {
                     control.input.update(cx, |input, cx| {
                         input.set_value(field.raw.clone(), window, cx)
@@ -636,9 +670,6 @@ impl PropertiesPanel {
                 control.settled = field.revision;
             }
         }
-        self.form = form;
-        self.snapshot = None;
-        cx.notify();
     }
 
     pub(crate) fn focus_authoring_object(
@@ -775,6 +806,9 @@ impl PropertiesPanel {
                             if this.form.fields[&id].touched || this.form.fields[&id].raw != raw {
                                 this.edit_text(id, raw, cx);
                                 this.commit_field(id, cx);
+                            }
+                            if matches!(event, InputEvent::PressEnter { .. }) {
+                                this.finish_number_text(id, window, cx);
                             }
                         }
                     }
@@ -1373,7 +1407,9 @@ impl PropertiesPanel {
                 color.update(cx, |state, cx| state.accept(window, cx));
                 return true;
             }
+            let id = self.preview.as_ref().unwrap().0;
             self.finish_text_preview(cx);
+            self.finish_number_text(id, window, cx);
             return true;
         }
         let Some((&id, _)) = self
@@ -1389,6 +1425,17 @@ impl PropertiesPanel {
         let raw = self.controls[&id].input.read(cx).value().to_string();
         self.edit_text(id, raw, cx);
         self.commit_field(id, cx);
+        self.finish_number_text(id, window, cx);
         true
+    }
+
+    fn finish_number_text(&self, id: PropertyKey, window: &mut Window, cx: &mut App) {
+        // Kept widgets must still leave text-edit mode on Enter, so the next
+        // pointer gesture scrubs rather than selecting text.
+        if self.controls.get(&id).is_some_and(|control| {
+            control.number.is_some() && control.input.read(cx).focus_handle(cx).is_focused(window)
+        }) {
+            window.focus(&self.focus, cx);
+        }
     }
 }

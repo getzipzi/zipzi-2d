@@ -458,3 +458,404 @@ fn property_choices_and_rows_survive_redraws_and_refresh_after_history(cx: &mut 
     assert!(labels.contains(&"Face".into()));
     assert!(!labels.contains(&"Eyes".into()));
 }
+
+fn physics_properties_harness(cx: &mut TestAppContext) -> super::Harness {
+    use gpui_kit::{px, size};
+    use zipzi_editor_core::{CommandId, PanelKind};
+
+    let (document, assets) = super::document_fixture::combined_animation_document().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.update(|cx| cx.set_reduce_motion(true));
+    cx.update_window(h.window, |_, window, cx| {
+        window.resize(size(px(1100.), px(1400.)));
+        window.activate_window();
+        h.view.update(cx, |view, cx| {
+            view.run_command(CommandId::AnimationWorkspace, window, cx);
+            view.dock
+                .as_ref()
+                .unwrap()
+                .show(PanelKind::AnimationPhysics, None, window, cx);
+        });
+        window.render_frame(cx);
+        window.click(("physics-group-row", 0usize), cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h
+}
+
+#[gpui_kit::test]
+fn physics_resource_commits_reuse_controls_but_keep_revision_and_structure_guards(
+    cx: &mut TestAppContext,
+) {
+    use crate::properties::physics::NumberField;
+    use zipzi_editor_core::{EditorCommand, PropertyPatch, PropertyScope, PropertyValue};
+
+    let h = physics_properties_harness(cx);
+    let panel = h
+        .view
+        .read_with(cx, |v, _| v.dock.as_ref().unwrap().properties.clone());
+    let key = h.view.read_with(cx, |v, _| {
+        NumberField::InputWeight(0)
+            .spec(
+                &v.editor
+                    .document()
+                    .unwrap()
+                    .physics_definition()
+                    .unwrap()
+                    .data
+                    .settings[0],
+            )
+            .unwrap()
+            .key
+    });
+    let (name, weight, initial) = panel.read_with(cx, |p, _| {
+        (
+            p.field_input(schema::physics::NAME.key),
+            p.field_input(key),
+            p.current_target().unwrap().clone(),
+        )
+    });
+    let mut stale_form = crate::properties::form::PropertyForm::default();
+    h.view.read_with(cx, |v, _| {
+        stale_form.sync_definition(
+            initial.definition(&v.editor),
+            initial.values(&v.editor).unwrap(),
+        )
+    });
+    stale_form.edit(&schema::physics::NAME, "Stale name".into());
+    let stale_patch = PropertyPatch {
+        scope: initial.scope.clone(),
+        ..stale_form
+            .patch(initial.object.kind, schema::physics::NAME.key)
+            .unwrap()
+    };
+
+    for (index, value) in [25., 75., 35.].into_iter().enumerate() {
+        cx.update_window(h.window, |_, window, cx| {
+            window
+                .within("physics-number-InputWeight(0)")
+                .click("slide-number-input", cx);
+            window.press("cmd-a", cx);
+            window.input(&value.to_string(), cx);
+            window.press("enter", cx);
+            window.render_frame(cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        h.view.read_with(cx, |v, cx| {
+            assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+            let doc = v.editor.document().unwrap();
+            assert_eq!(
+                doc.physics_definition().unwrap().data.settings[0].inputs[0].weight,
+                value
+            );
+            assert_eq!(doc.history_lengths(), (index + 1, 0));
+            let p = panel.read(cx);
+            assert_eq!(p.field_input(schema::physics::NAME.key), name);
+            assert_eq!(p.field_input(key), weight);
+            assert_eq!(weight.read(cx).value(), value.to_string());
+            assert_eq!(
+                p.current_target().unwrap().scope,
+                PropertyScope::Resource {
+                    revision: doc.model_generation()
+                }
+            );
+            assert_ne!(p.current_target().unwrap(), &initial);
+        });
+    }
+    h.view.update(cx, |v, _| {
+        assert!(
+            initial.commit(&mut v.editor, stale_patch).is_err(),
+            "widget reuse must not revive a captured resource revision"
+        );
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (3, 0));
+    });
+    for (command, value) in [(EditorCommand::Undo, 75.), (EditorCommand::Redo, 35.)] {
+        cx.update_window(h.window, |_, window, cx| {
+            h.view.update(cx, |v, cx| {
+                v.editor.execute(command).unwrap();
+                v.redraw(cx);
+            });
+            window.render_frame(cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        panel.read_with(cx, |p, cx| {
+            assert_eq!(p.field_input(key), weight);
+            assert_eq!(weight.read(cx).value(), value.to_string());
+            assert_eq!(
+                p.current_target()
+                    .unwrap()
+                    .values(&h.view.read(cx).editor)
+                    .unwrap()[&key],
+                PropertyValue::Float(value)
+            );
+        });
+    }
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("physics-channel-false-0", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    let after_structure = panel.read_with(cx, |p, _| {
+        assert_ne!(
+            p.field_input(key),
+            weight,
+            "new fields must invalidate the cached controls"
+        );
+        let input = p.field_input(schema::physics::NAME.key);
+        assert_ne!(input, name);
+        input
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("physics-copy-group", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    panel.read_with(cx, |p, _| {
+        assert_ne!(p.current_target().unwrap().object, initial.object);
+        assert_ne!(p.field_input(schema::physics::NAME.key), after_structure);
+    });
+}
+
+#[gpui_kit::test]
+fn physics_resource_revision_refresh_discards_unsubmitted_widget_text(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{PropertyPatch, PropertyValue};
+
+    let h = physics_properties_harness(cx);
+    let panel = h
+        .view
+        .read_with(cx, |v, _| v.dock.as_ref().unwrap().properties.clone());
+    let input = panel.read_with(cx, |p, _| p.field_input(schema::physics::NAME.key));
+    let target = panel.read_with(cx, |p, _| p.current_target().unwrap().clone());
+    let patch = h.view.read_with(cx, |v, _| PropertyPatch {
+        scope: target.scope.clone(),
+        expected: [(
+            schema::physics::NAME.key,
+            target.values(&v.editor).unwrap()[&schema::physics::NAME.key].clone(),
+        )]
+        .into(),
+        changes: [(
+            schema::physics::NAME.key,
+            PropertyValue::Text("External name".into()),
+        )]
+        .into(),
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        input.update(cx, |input, cx| {
+            // No Change event: this draft has not reached the form yet.
+            input.set_value("Unsubmitted draft", window, cx);
+            input.focus(window, cx);
+        });
+        h.view.update(cx, |v, cx| {
+            target.commit(&mut v.editor, patch).unwrap();
+            v.redraw(cx);
+        });
+        window.render_frame(cx);
+        assert_eq!(panel.read(cx).field_input(schema::physics::NAME.key), input);
+        assert_eq!(input.read(cx).value(), "External name");
+        window.press("enter", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |v, _| {
+        let doc = v.editor.document().unwrap();
+        assert_eq!(doc.history_lengths(), (1, 0));
+        assert_eq!(
+            doc.property_values(&target.object).unwrap()[&schema::physics::NAME.key].text(),
+            "External name"
+        );
+        assert!(
+            !v.property_forms
+                .dirty_document(v.editor.active_id().unwrap())
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn motion_select_keeps_static_properties_retained_during_canvas_frames(cx: &mut TestAppContext) {
+    let (document, assets) = super::document_fixture::animation_document().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.update(|cx| cx.set_reduce_motion(true));
+    let (panel, canvas) = cx
+        .update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            window.click("workspace-animation", cx);
+            window.render_frame(cx);
+            window.click(("animation-motion", 0usize), cx);
+            window.render_frame(cx);
+            window.blur(cx);
+            let dock = h.view.read(cx).dock.as_ref().unwrap();
+            (dock.properties.clone(), dock.active_viewport().clone())
+        })
+        .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        // Settle initial selection and its changed searchable configuration.
+        for _ in 0..3 {
+            window.draw(cx).clear(cx);
+        }
+        let target = panel.read(cx).current_target().unwrap().clone();
+        let sound = target
+            .definition(&h.view.read(cx).editor)
+            .fields
+            .into_iter()
+            .find(|f| f.binding.key.name() == "registration_sound")
+            .unwrap();
+        assert!(
+            window
+                .try_find(format!("property-select-{}", sound.binding.key.identity()))
+                .is_some()
+        );
+        window.reset_layout_stats();
+    })
+    .unwrap();
+    let before = panel.read_with(cx, |p, _| p.work_counts());
+    let name = panel.read_with(cx, |p, cx| {
+        p.field_input(schema::motion::NAME.key).read(cx).value()
+    });
+    for _ in 0..12 {
+        cx.update_window(h.window, |_, window, cx| {
+            canvas.update(cx, |_, cx| cx.notify());
+            window.draw(cx).clear(cx);
+        })
+        .unwrap();
+    }
+    let after = panel.read_with(cx, |p, cx| {
+        assert_eq!(
+            p.field_input(schema::motion::NAME.key).read(cx).value(),
+            name
+        );
+        p.work_counts()
+    });
+    assert_eq!(
+        after, before,
+        "unchanged Select configuration invalidated the properties subtree"
+    );
+    cx.update_window(h.window, |_, window, _| {
+        assert_eq!(window.layout_stats().frames, 12)
+    })
+    .unwrap();
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (0, 0))
+    });
+}
+
+#[gpui_kit::test]
+fn physics_resource_refresh_reuses_closed_selects_but_invalidates_open_choices(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{PropertyPatch, PropertyValue};
+
+    let h = physics_properties_harness(cx);
+    let panel = h
+        .view
+        .read_with(cx, |v, _| v.dock.as_ref().unwrap().properties.clone());
+    let key = panel.read_with(cx, |p, cx| {
+        p.current_target()
+            .unwrap()
+            .definition(&h.view.read(cx).editor)
+            .fields
+            .into_iter()
+            .find(|f| f.binding.key.name() == "input_axis")
+            .unwrap()
+            .binding
+            .key
+    });
+    let original = panel.read_with(cx, |p, _| p.field_select(key));
+    for open in [false, true] {
+        cx.update_window(h.window, |_, window, cx| {
+            if open {
+                window
+                    .within(format!("property-select-{}", key.identity()))
+                    .click("input", cx);
+                assert!(original.read(cx).is_open());
+            }
+            let target = panel.read(cx).current_target().unwrap().clone();
+            h.view.update(cx, |v, cx| {
+                let patch = PropertyPatch {
+                    scope: target.scope.clone(),
+                    expected: [(
+                        schema::physics::NAME.key,
+                        target.values(&v.editor).unwrap()[&schema::physics::NAME.key].clone(),
+                    )]
+                    .into(),
+                    changes: [(
+                        schema::physics::NAME.key,
+                        PropertyValue::Text(format!("External {open}")),
+                    )]
+                    .into(),
+                };
+                target.commit(&mut v.editor, patch).unwrap();
+                v.redraw(cx);
+            });
+            window.render_frame(cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        panel.read_with(cx, |p, cx| {
+            let current = p.field_select(key);
+            assert_eq!(current == original, !open);
+            assert!(!current.read(cx).is_open());
+        });
+    }
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (2, 0))
+    });
+}
+
+#[gpui_kit::test]
+fn list_searchable_only_notifies_when_the_value_changes(cx: &mut TestAppContext) {
+    use gpui_kit::component::{
+        IndexPath,
+        list::{ListDelegate, ListItem, ListState},
+    };
+    use gpui_kit::{Context, Window};
+    use std::{cell::Cell, rc::Rc};
+
+    struct Items;
+    impl ListDelegate for Items {
+        type Item = ListItem;
+        fn items_count(&self, _: usize, _: &gpui_kit::App) -> usize {
+            1
+        }
+        fn set_selected_index(
+            &mut self,
+            _: Option<IndexPath>,
+            _: &mut Window,
+            _: &mut Context<ListState<Self>>,
+        ) {
+        }
+        fn render_item(
+            &mut self,
+            index: IndexPath,
+            _: &mut Window,
+            _: &mut Context<ListState<Self>>,
+        ) -> Option<ListItem> {
+            Some(ListItem::new(index.row))
+        }
+    }
+    let h = setup(cx);
+    let list = cx
+        .update_window(h.window, |_, window, cx| {
+            cx.new(|cx| ListState::new(Items, window, cx))
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let notifications = Rc::new(Cell::new(0));
+    let observed = notifications.clone();
+    let _observe = cx.update(|cx| cx.observe(&list, move |_, _| observed.set(observed.get() + 1)));
+    for (searchable, expected) in [(false, 0), (true, 1), (true, 1), (false, 2), (false, 2)] {
+        cx.update_window(h.window, |_, _, cx| {
+            list.update(cx, |list, cx| list.set_searchable(searchable, cx))
+        })
+        .unwrap();
+        cx.run_until_parked();
+        assert_eq!(notifications.get(), expected);
+    }
+}
