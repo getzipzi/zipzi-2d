@@ -111,5 +111,29 @@ class ImageReferenceTests(unittest.TestCase):
             self.assertFalse(report['cases'][0]['passed'])
 
 
+class ImportedCoreCoordinateTests(unittest.TestCase):
+    def test_import_comparison_converts_source_pixels_using_saved_canvas_scale(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            recipe = {'original_ids': {'mesh': 'mesh-id', 'mesh_runtime_id': 'Mesh'},
+                      'fixture': {'moc3_sha256': 'fixture'}}
+            for stage in ('before', 'after'):
+                manifest = root / f'{stage}.json'
+                manifest.write_text(json.dumps({'document': {'source_canvas': {'pixels_per_unit': 100}}}))
+                recipe[f'{stage}_manifest'] = str(manifest)
+                recipe[f'{stage}_export'] = str(root / f'{stage}.moc3')
+                recipe[f'{stage}_export_sha256'] = stage
+                recipe[f'{stage}_samples'] = [[[150, -140]], [[50, 60]]]
+            report = root / 'recipe.json'
+            report.write_text(json.dumps(recipe))
+            sample = [{'runtime_id': 'Mesh', 'positions': [[1.5, -1.4]]}]
+            second = [{'runtime_id': 'Mesh', 'positions': [[0.5, 0.6]]}]
+            output = json.dumps({'core_version': 1, 'samples': [sample, second]})
+            with patch.object(sdk, 'command', return_value=output):
+                result = sdk.validate_official_import_edit(root/'probe', report, root, root, {}, root, 'purism')
+            self.assertEqual(result['status'], 'passed')
+            self.assertEqual(result['maximum_pixel_error'], 0)
+
+
 if __name__ == '__main__':
     unittest.main()

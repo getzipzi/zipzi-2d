@@ -19,7 +19,8 @@ def run(output: Path) -> Path:
     session = kasane.open_project(Path(creation["project_manifest"]))
     with kasane.Observer(256, 256, 256) as observer:
         observation = observer.observe_run(
-            session, [{PARAMETER: 0.5}], output / "draft-observation", focus=[MESH_B],
+            session, [{PARAMETER: 0.5}], output / "draft-observation",
+            crop_targets=[kasane.ObjectRef("mesh", MESH_B)],
         )
     handoff = {
         "schema_version": 1,

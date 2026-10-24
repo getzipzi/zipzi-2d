@@ -88,7 +88,7 @@ def run(handoff_path: Path, output: Path) -> Path:
         raise RuntimeError("Handoff IDs are absent from the created model")
     before_crop = target_crop(Path(handoff["observation_report"]), mesh_id)
     before_width, before_pixels = visible_width(before_crop)
-    minimum_visible_width = 30
+    minimum_visible_width = 40
     if before_width >= minimum_visible_width:
         raise RuntimeError("No undersized target detected; existing model was not edited")
     session = kasane.open_project(Path(handoff["project_manifest"]))
@@ -112,7 +112,8 @@ def run(handoff_path: Path, output: Path) -> Path:
     with kasane.Observer(256, 256, 256) as observer:
         after_observation = observer.observe_run(
             reopened, [{handoff["parameter_id"]: 0.5}],
-            output / "repaired-observation", focus=[mesh_id],
+            output / "repaired-observation",
+            crop_targets=[kasane.ObjectRef("mesh", mesh_id)],
         )
     after_crop = target_crop(after_observation.report, mesh_id)
     after_width, after_pixels = visible_width(after_crop)

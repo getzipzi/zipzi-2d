@@ -1,6 +1,6 @@
 # Repository merge execution record
 
-## Scope and status — 2026-10-23
+## Scope and status — 2026-10-24
 
 The user requested a new local repository named `zipzi-2d`, with `kasane-2d`
 as upstream, and to begin the repository merge plan. This checkout is an
@@ -12,13 +12,12 @@ P0 baseline capture, P1 history import, P2 workspace integration and P3 path/too
 adaptation are complete.
 **Revised scope:** the user now requests a fully flattened repository. P3F
 (flatten all owned crates, consolidate assets/tools/docs/vendor, then adapt paths)
-is complete; P4 test/CI routing and P5 artifact/model checks are also implemented
-and locally verified. P6 remains. P0–P3 results describe the intermediate layout, not
-acceptance of the flattened layout; see the new P3F evidence. Cargo resolves one
-workspace and lockfile; Editor entrypoints and fixtures use this checkout. SDK CI and broad test entrypoints now select their explicit package domains;
-hosted workflow execution is still unverified. P5 built and inspected real
-wheel and app bundles and ran focused licensed-model acceptance; broader
-runtime and regression gates remain for P6.
+is complete; P4 test/CI routing, P5 artifact/model checks and P6 local
+acceptance have also passed. P0–P3 results describe the intermediate layout,
+not acceptance of the flattened layout; see the P3F evidence. Cargo resolves
+one workspace and lockfile; Editor entrypoints and fixtures use this checkout.
+Both domains' full local gates, GPU wheel/reference, Purism parity, isolated
+checkout and focused benchmark ran. Hosted CI and final cutover remain open.
 
 The governing [implementation plan](../plans/repository-merge-plan.md)
 retains the design and acceptance matrix. Its original snapshot is historical;
@@ -116,10 +115,11 @@ See [P5 implementation and local validation](p5-artifacts.md). The local model
 assets are consolidated under the ignored root tree. A workspace source archive,
 real Release wheel and debug/release macOS app bundles were built and checked.
 
-## Next: P6 repository acceptance
+## P6: local repository acceptance
 
-Complete broad regression, optional GPU/dual-Core gates, hosted and
-cross-platform CI, fresh-clone/worktree isolation, tail-commit reconciliation
-and final cutover. GitHub license recognition remains unverified because this
-branch has not been pushed. Recheck original HEADs before the next stage and
-reconcile any new commits.
+See [P6 local results and remaining external gates](p6-local-acceptance.md).
+Both full local domains, GPU wheel/reference, Purism comparison, fresh clone,
+second worktree and a short integrated-model benchmark passed. Hosted and
+cross-platform CI, official proprietary Core, GitHub license recognition and
+final development cutover remain unverified. Recheck original HEADs before
+cutover and reconcile any new committed work.

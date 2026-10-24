@@ -55,7 +55,7 @@ def run(output: Path) -> kasane.ObservationRun:
     with kasane.Observer(256, 256, 256) as observer:
         result = observer.observe_run(
             model, [{PARAMETER: value} for value in (0.0, 0.5, 1.0)],
-            output.resolve(), focus=[TARGET],
+            output.resolve(), crop_targets=[kasane.ObjectRef("mesh", TARGET)],
         )
     assert model.preview_values == preview_before
     return result

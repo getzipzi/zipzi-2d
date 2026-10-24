@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -263,6 +264,10 @@ def validate_official_import_edit(
     comparisons = []
     maximum_pixel_error = 0.0
     for stage in ("before", "after"):
+        manifest = json.loads(Path(recipe[f"{stage}_manifest"]).read_text(encoding="utf-8"))
+        pixels_per_unit = manifest["document"]["source_canvas"]["pixels_per_unit"]
+        if not isinstance(pixels_per_unit, (int, float)) or not math.isfinite(pixels_per_unit) or pixels_per_unit <= 0:
+            raise RuntimeError(f"Invalid {stage} source canvas pixels-per-unit")
         moc3 = Path(recipe[f"{stage}_export"])
         output = command(
             f"{provider}-import-{stage}", [str(probe), str(moc3)], cwd=outside,
@@ -280,9 +285,10 @@ def validate_official_import_edit(
             if len(actual) != len(expected):
                 raise RuntimeError(f"Official Core import {stage} vertex count changed")
             for vertex, (sdk_point, core_point) in enumerate(zip(expected, actual, strict=True)):
-                for axis, (sdk_value, core_value) in enumerate(zip(sdk_point, core_point, strict=True)):
+                for axis, (source_value, core_value) in enumerate(zip(sdk_point, core_point, strict=True)):
+                    sdk_value = source_value / pixels_per_unit
                     difference = abs(sdk_value - core_value)
-                    pixel_error = difference * 100
+                    pixel_error = difference * pixels_per_unit
                     maximum_pixel_error = max(maximum_pixel_error, pixel_error)
                     tolerance = 1e-5 + 1e-5 * max(abs(sdk_value), abs(core_value))
                     comparisons.append({
@@ -334,28 +340,28 @@ def validate_image_reference(
          str(run / "sdk-reference-observation")],
         cwd=outside, env=environment, logs=logs,
     )
-    observation_report_path = Path(observation_output.splitlines()[-1]).resolve(strict=True)
-    if not observation_report_path.is_relative_to(run / "sdk-reference-observation"):
+    capture_report_path = Path(observation_output.splitlines()[-1]).resolve(strict=True)
+    if not capture_report_path.is_relative_to(run / "sdk-reference-observation"):
         raise RuntimeError("SDK reference capture wrote outside the evidence directory")
-    observation = json.loads(observation_report_path.read_text(encoding="utf-8"))
-    if observation["status"] != "frames_complete" or len(observation["frames"]) != 1:
+    capture = json.loads(capture_report_path.read_text(encoding="utf-8"))
+    if capture["status"] != "render_complete":
         raise RuntimeError("SDK reference capture is incomplete")
-    frame = observation["frames"][0]
     view = reference["view"]
-    if len(frame["crops"]) != 1 or any(
-        frame["view"][key] != view[key] for key in ("width", "height")
-    ):
+    if any(capture["view"][key] != view[key] for key in ("width", "height")):
         raise RuntimeError("SDK reference focus/view is incomplete")
-    actual = observation_report_path.parent / frame["path"]
-    if sha256(actual) != frame["sha256"]:
+    actual = Path(capture["image_path"]).resolve(strict=True)
+    if not actual.is_relative_to(run / "sdk-reference-observation") or sha256(actual) != capture["image_sha256"]:
         raise RuntimeError("SDK reference image hash mismatch")
-    if abs(view["scale"] - frame["view"]["scale"]) > 1e-5:
+    if abs(view["scale"] - capture["view"]["scale"]) > 1e-5:
         raise RuntimeError("SDK and reference view scale differ")
+    # Reference offsets use source pixels; SDK offsets use centered model coordinates.
+    expected_offset = [view["offset"][0] + capture["source_canvas"]["origin_x"] * view["scale"],
+                       view["offset"][1] + capture["source_canvas"]["origin_y"] * view["scale"]]
     if any(abs(a - b) > 1e-3 for a, b in zip(
-        view["offset"], frame["view"]["offset"], strict=True,
+        expected_offset, capture["view"]["offset"], strict=True,
     )):
         raise RuntimeError("SDK and reference view offsets differ")
-    bounds = frame["crops"][0]["bounds"]
+    bounds = capture["crop_bounds"]
     comparison_output = command(
         "sdk-image-comparison",
         [sys.executable, str(IMAGE_COMPARATOR), str(IMAGE_REFERENCE), str(actual),
@@ -369,9 +375,9 @@ def validate_image_reference(
     return {
         "status": "passed", "reference": str(IMAGE_REFERENCE.relative_to(ROOT)),
         "reference_sha256": reference["png_sha256"],
-        "observation_report": str(observation_report_path.relative_to(run)),
+        "observation_report": str(capture_report_path.relative_to(run)),
         "comparison": str(comparison_path.relative_to(run)),
-        "adapter": frame["adapter"],
+        "adapter": capture["adapter"],
         "checks": comparison["checks"],
     }
 
