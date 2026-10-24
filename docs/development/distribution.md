@@ -20,7 +20,8 @@ python3.14 tools/verify_artifacts.py --app 'target/Kasane Editor.app'
 The source tool includes tracked and non-ignored new source files plus initialized
 Purism sources, records hashes and checkout status, and refuses missing gitlinks,
 escaping symlinks and tracked private/generated content. Initialize Purism before
-packaging. Local models, target, Python caches and machine Cargo config are excluded.
+packaging. Local models, the proprietary Cubism SDK under `third_party/`,
+target, Python caches and machine Cargo config are excluded.
 It retains all 18 crate paths, root assets, patches, docs and both license texts.
 Extract the `zipzi-2d/` directory and build from that workspace root.
 

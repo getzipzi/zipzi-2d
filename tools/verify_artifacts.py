@@ -59,7 +59,10 @@ def check_source(path):
     with tarfile.open(path) as archive:
         names = archive.getnames()
         assert len(names) == len(set(names))
-        assert not any('/models/local/' in n or '/target/' in n or '/.git/' in n or '/__pycache__/' in n for n in names)
+        assert not any('/models/local/' in n or '/target/' in n or '/.git/' in n or '/__pycache__/' in n
+                       or '/third_party/CubismSdkForNative' in n
+                       or '/third_party/CubismNativeFramework/' in n
+                       or n == 'zipzi-2d/.cargo/config.toml' for n in names)
         manifest = json.load(archive.extractfile('zipzi-2d/SOURCE-MANIFEST.json'))
         for name, digest in manifest['sha256'].items():
             member = archive.getmember('zipzi-2d/'+name)

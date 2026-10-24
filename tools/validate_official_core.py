@@ -8,6 +8,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+# export_conformance_cases.rs initializes every generated canvas at this scale.
+CONFORMANCE_PIXELS_PER_UNIT = 100.0
 
 
 def run(cmd, cwd=ROOT, text_input=None):
@@ -175,17 +177,20 @@ def main():
 
                     # Check positions
                     for p_exp, p_act in zip(exp["positions"], act["positions"]):
-                        ex, ey = p_exp["x"], p_exp["y"]
+                        ex = p_exp["x"] / CONFORMANCE_PIXELS_PER_UNIT
+                        ey = p_exp["y"] / CONFORMANCE_PIXELS_PER_UNIT
                         ax, ay = p_act[0], p_act[1]
                         err_x = abs(ex - ax)
                         err_y = abs(ey - ay)
                         pos_err = max(err_x, err_y)
-                        pixel_err = pos_err * 100.0  # ppu = 100
+                        pixel_err = pos_err * CONFORMANCE_PIXELS_PER_UNIT
                         max_position_error = max(max_position_error, pos_err)
                         max_pixel_error = max(max_pixel_error, pixel_err)
 
                         # Threshold: pixel error <= 0.05 px or relative error <= 1e-4
-                        if any(abs(e - a) * 100.0 > 0.05 and abs(e - a) > 1e-4 + 1e-4 * max(abs(e), abs(a)) for e, a in ((ex, ax), (ey, ay))):
+                        if any(abs(e - a) * CONFORMANCE_PIXELS_PER_UNIT > 0.05
+                               and abs(e - a) > 1e-4 + 1e-4 * max(abs(e), abs(a))
+                               for e, a in ((ex, ax), (ey, ay))):
                             raise RuntimeError(f"{case_name}/{provider}/s{s_idx}/d{d_idx}: position error {pos_err} ({pixel_err} px): expected ({ex}, {ey}), got ({ax}, {ay})")
 
                     # Check UVs

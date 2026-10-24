@@ -1,9 +1,9 @@
 # P6 local repository acceptance
 
 Local validation on 2026-10-24, starting from P5 commit `0a3628e` on
-`codex/merge-editor-monorepo`. This is the local portion of P6. Hosted CI,
-official Core comparison and remote cutover require inputs or actions that are
-not present in this checkout; they are listed below rather than marked passed.
+`codex/merge-editor-monorepo`. This is the local portion of P6. The later
+local-only Cubism SDK migration enabled official Core comparison; hosted CI
+and remote cutover remain unverified.
 
 ## Source reconciliation and structure
 
@@ -42,9 +42,9 @@ The import checker previously compared SDK source pixels with Core runtime
 units directly; it now reads each saved stage's `pixels_per_unit` and converts
 before applying the existing tolerance. The corrected maximum import error was
 0.00037 source pixels. An explicit unit test covers the conversion. The
-resulting report is `partial` solely because this run did not provide the
-official proprietary Core probe or request GPU together with Purism; the
-separate GPU wheel gate passed.
+initial report was `partial` because the official proprietary Core probe was
+not then installed and GPU ran separately. The local SDK migration below
+subsequently enabled a passing combined `--full` report.
 
 An additional Pyright run over every restored historical example reports
 optional-value narrowing and possibly-unbound diagnostics. The configured CI
@@ -71,14 +71,35 @@ under `target/p6-property-smoke/`; its source snapshot contains 1,714 members
 and no local models. This is an entrypoint and provenance check, not evidence of
 performance parity or stable latency.
 
+## Local Cubism SDK and machine configuration addendum
+
+At the user's request, the original SDK checkout's
+`third_party/CubismSdkForNative-5-r.5/` was copied into the merged checkout.
+All 2,992 files matched their source SHA-256 hashes. The original Editor
+checkout's `.cargo/config.toml` was copied byte-for-byte: it contains the
+same local sccache/job settings as the SDK config plus vendor GPUI incremental
+settings. The configured sccache executable exists here. Both paths remain
+Git-ignored and outside source releases; the originals were not moved or
+modified.
+
+The official and Purism Core probes built from the relocated SDK. The Rust
+MOC3 conformance runner passed four fixtures with each provider (eight result
+groups), with a maximum position error of 0.00073 source pixels. Its old
+checker also compared source pixels directly with Core units; the checker and
+its negative-control fixture now apply the generated canvas's 100 pixels per
+unit before comparison. The isolated observe wheel's `validate_sdk.py --full`
+then passed CPU, creation/export, import/edit, GPU, repair, pinned image and
+both providers' new-model and imported-model checks. Local report files live
+under `target/p6-official-conformance/` and `target/p6-full-local-acceptance/`.
+
 ## Remaining external acceptance
 
 - The branch is local and has not been pushed. GitHub license/README display,
   hosted macOS Editor Metal capability and Linux/macOS/Windows SDK CI have not
   been observed.
-- The official proprietary Cubism Core probe is not installed here, so the
-  dual-Core `--full` wheel gate cannot be claimed. Purism Core and GPU/reference
-  checks passed separately.
+- The local proprietary Cubism SDK and Core probe are not shipped in Git or
+  workspace source releases. Fresh clones and hosted CI cannot run this
+  licensed local gate without separately supplied SDK files.
 - The other Editor task's uncommitted work cannot be ported as a stable commit.
   Recheck both original HEADs and port any committed tail work before cutover.
 - Final code review, repository hosting and switching new development to this

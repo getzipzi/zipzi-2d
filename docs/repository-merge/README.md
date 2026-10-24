@@ -118,8 +118,8 @@ real Release wheel and debug/release macOS app bundles were built and checked.
 ## P6: local repository acceptance
 
 See [P6 local results and remaining external gates](p6-local-acceptance.md).
-Both full local domains, GPU wheel/reference, Purism comparison, fresh clone,
-second worktree and a short integrated-model benchmark passed. Hosted and
-cross-platform CI, official proprietary Core, GitHub license recognition and
-final development cutover remain unverified. Recheck original HEADs before
+Both full local domains, GPU wheel/reference, official and Purism Core comparison,
+fresh clone, second worktree and a short integrated-model benchmark passed.
+Hosted and cross-platform CI, GitHub license recognition and final development
+cutover remain unverified. Recheck original HEADs before
 cutover and reconcile any new committed work.

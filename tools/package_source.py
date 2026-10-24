@@ -30,7 +30,9 @@ def source_files(root=ROOT):
                 raise ValueError(f'Source symlink escapes repository: {relative}')
             if source.is_dir():
                 raise ValueError(f'Nested gitlink must be explicitly handled: {relative}')
-            if relative.startswith(('models/local/', 'target/', '.git/')) or '__pycache__' in Path(relative).parts or relative == '.cargo/config.toml' or (Path(relative).name.startswith('_native') and Path(relative).suffix in {'.so', '.pyd'}):
+            if relative.startswith(('models/local/', 'target/', '.git/',
+                                    'third_party/CubismSdkForNative',
+                                    'third_party/CubismNativeFramework/')) or '__pycache__' in Path(relative).parts or relative == '.cargo/config.toml' or (Path(relative).name.startswith('_native') and Path(relative).suffix in {'.so', '.pyd'}):
                 raise ValueError(f'Private/generated content tracked: {relative}')
             files[relative] = source
     return files

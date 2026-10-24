@@ -22,13 +22,15 @@ class ConformanceGateTests(unittest.TestCase):
         expected = dict(id='mesh', runtime_id='mesh', texture_slot=0, draw_order=0,
                         render_order=0, double_sided=True, inverted_mask=False,
                         blend_mode=0, indices=[0, 1, 2], masks=[], opacity=1,
-                        positions=[dict(x=0, y=0), dict(x=1, y=0), dict(x=0, y=1)],
+                        positions=[dict(x=0, y=0), dict(x=100, y=0), dict(x=0, y=100)],
                         uvs=[dict(x=0, y=0), dict(x=1, y=0), dict(x=0, y=1)],
                         multiply_color=[1, 1, 1, 1], screen_color=[0, 0, 0, 1])
         actual = copy.deepcopy(expected)
         actual['mask_indices'] = []
-        for key in ('positions', 'uvs'):
-            actual[key] = [[p['x'], p['y']] for p in expected[key]]
+        actual['positions'] = [[p['x'] / core.CONFORMANCE_PIXELS_PER_UNIT,
+                                p['y'] / core.CONFORMANCE_PIXELS_PER_UNIT]
+                               for p in expected['positions']]
+        actual['uvs'] = [[p['x'], p['y']] for p in expected['uvs']]
         if mutate:
             mutate(actual)
         with tempfile.TemporaryDirectory() as folder:
