@@ -7,7 +7,7 @@ use std::{
 };
 use uuid::Uuid;
 use zipzi_core::{Mesh, ModelSetup, ParameterKind, preview::PreviewState};
-use zipzi_sdk::{AuthoringSession, EditReceipt, EditSession, SaveReceipt, SdkError};
+use zipzi_sdk::{AuthoringSession, EditReceipt, EditSession, SaveReceipt};
 
 #[path = "object_state.rs"]
 mod object_state;
@@ -127,7 +127,7 @@ impl PendingOriginal {
 struct PendingEdit {
     kind: Gesture,
     original: PendingOriginal,
-    edit: EditSession<'static>,
+    edit: crate::runtime_host::HostedEdit,
     preview: PreviewState,
     changed: OnceLock<bool>,
     topology_changed: bool,
@@ -135,10 +135,17 @@ struct PendingEdit {
     property_write: Option<crate::property::PropertyWrite>,
 }
 
+/// CPU presentation prepared on a load worker; contains no writable SDK state.
+pub(crate) struct PreparedDocument {
+    version: zipzi_sdk::Version,
+    textures: textures::DocumentTextures,
+    projection: Arc<crate::ObjectIndex>,
+}
+
 /// The SDK owns all persistent model state and history. Selection is editor state.
 /// A candidate edit lets a gesture preview without adding a history entry per event.
 pub struct Document {
-    session: AuthoringSession,
+    pub(crate) session: crate::runtime_host::HostedSession,
     import_name: Option<String>,
     selected: Option<String>,
     context: crate::PanelContext,
@@ -155,7 +162,7 @@ pub struct Document {
     pending: Option<PendingEdit>,
     next_property_edit: u64,
     textures: textures::DocumentTextures,
-    pristine_blank: bool,
+    pristine_blank: Option<zipzi_sdk::Version>,
 }
 
 #[path = "authoring.rs"]
@@ -181,6 +188,44 @@ mod textures;
 mod transfer;
 
 impl Document {
+    pub fn runtime_session_id(&self) -> zipzi_runtime::SessionId {
+        self.session.id
+    }
+    pub fn runtime_host(&self) -> crate::RuntimeHost {
+        self.session.host.clone()
+    }
+    pub(crate) fn sync_runtime_events(&mut self) -> Result<bool> {
+        let receipts = match self.session.receipts() {
+            Ok(receipts) => receipts,
+            Err(zipzi_runtime::RuntimeError::ResyncRequired) => {
+                self.refresh_textures()?;
+                self.reconcile_parameter_preview()?;
+                self.after_history(true);
+                self.session.refresh_metadata()?;
+                self.session.take_management_changed();
+                return Ok(true);
+            }
+            Err(error) => return Err(error.into()),
+        };
+        let changed = receipts.iter().any(|r| r.changed);
+        if changed {
+            self.refresh_textures()?;
+            self.reconcile_parameter_preview()?;
+            self.pristine_blank = None;
+            for receipt in receipts {
+                self.consume_authoring_receipt(&receipt, true);
+            }
+        }
+        self.session.refresh_metadata()?;
+        let management_changed = self.session.take_management_changed();
+        Ok(changed || management_changed)
+    }
+    pub(crate) fn set_import_name(&mut self, name: Option<String>) {
+        self.import_name = name;
+    }
+    pub(crate) fn saved_by_runtime(&mut self) {
+        self.pristine_blank = None;
+    }
     /// Presentation indexes use the projection revision as their cache key.
     /// Topology also has an unversioned cache and must be cleared explicitly.
     fn invalidate_projection(&mut self, topology_changed: bool) {
@@ -216,7 +261,11 @@ impl Document {
     }
     pub fn new_blank() -> Result<Self> {
         let mut document = Self::from_session(Self::empty_session()?)?;
-        document.pristine_blank = true;
+        document.pristine_blank = Some(document.session.version());
+        document
+            .session
+            .host
+            .mark_pristine_view(document.session.id, document.session.version());
         Ok(document)
     }
 
@@ -271,9 +320,34 @@ impl Document {
         Ok((document, notices))
     }
 
+    pub(crate) fn prepare_runtime_view(session: &AuthoringSession) -> Result<PreparedDocument> {
+        Ok(PreparedDocument {
+            version: session.version(),
+            textures: textures::DocumentTextures::new(session)?,
+            projection: Arc::new(crate::ObjectIndex::build(session.document())),
+        })
+    }
     fn from_session(session: AuthoringSession) -> Result<Self> {
-        let textures = textures::DocumentTextures::new(&session)?;
-        let projection = Arc::new(crate::ObjectIndex::build(session.document()));
+        Self::from_hosted(crate::runtime_host::HostedSession::from_session(session)?)
+    }
+    pub fn attach_runtime(host: crate::RuntimeHost, id: zipzi_runtime::SessionId) -> Result<Self> {
+        Self::from_hosted(crate::runtime_host::HostedSession::attach(host, id)?)
+    }
+    fn from_hosted(session: crate::runtime_host::HostedSession) -> Result<Self> {
+        let prepared = session.host.take_prepared_view(session.id)?;
+        let prepared = match prepared {
+            Some(prepared) if prepared.version == session.version() => prepared,
+            _ => Self::prepare_runtime_view(&session.read())?,
+        };
+        let PreparedDocument {
+            textures,
+            projection,
+            ..
+        } = prepared;
+        let pristine_blank = session
+            .host
+            .pristine_view(session.id)
+            .filter(|version| *version == session.version());
         let animation_input_revision = session.version().revision;
         Ok(Self {
             animation_input_revision,
@@ -293,18 +367,18 @@ impl Document {
             pending: None,
             next_property_edit: 0,
             textures,
-            pristine_blank: false,
+            pristine_blank,
         })
     }
 
     fn refresh_textures(&mut self) -> Result<()> {
-        self.textures.refresh(&self.session)
+        self.textures.refresh(&self.session.read())
     }
 
     pub fn save(&mut self, path: &Path) -> Result<SaveReceipt> {
         self.finish_edit()?;
         let receipt = self.session.save_project(path, None)?;
-        self.pristine_blank = false;
+        self.pristine_blank = None;
         Ok(receipt)
     }
 
@@ -325,8 +399,12 @@ impl Document {
     pub fn import_name(&self) -> Option<&str> {
         self.import_name.as_deref()
     }
+    pub(crate) fn is_pristine_blank(&self) -> bool {
+        self.pristine_blank
+            .is_some_and(|version| version == self.session.version())
+    }
     pub fn modified(&self) -> bool {
-        (self.session.modified() && !self.pristine_blank) || self.pending_changed()
+        (self.session.modified() && !self.is_pristine_blank()) || self.pending_changed()
     }
     pub fn history_lengths(&self) -> (usize, usize) {
         self.session.history_lengths()
@@ -345,7 +423,7 @@ impl Document {
         }
     }
 
-    pub(crate) fn model(&self) -> &zipzi_core::Document {
+    pub(crate) fn model(&self) -> crate::runtime_host::ModelRead<'_> {
         self.pending
             .as_ref()
             .map_or_else(|| self.session.document(), |p| p.edit.candidate_document())
@@ -414,7 +492,8 @@ impl Document {
 
     /// Static source-art crop and UV footprint; never evaluates posed geometry.
     pub fn mesh_texture_region(&self, id: &str) -> Option<crate::MeshTextureRegion> {
-        let mesh = self.session.document().get_mesh(id)?;
+        let model_read_guard_55 = self.session.document();
+        let mesh = model_read_guard_55.get_mesh(id)?;
         let texture = self.textures.get(&mesh.texture_asset_id)?;
         crate::MeshTextureRegion::new(texture, mesh)
     }
@@ -443,7 +522,7 @@ impl Document {
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             *cache = Some((
                 self.projection_revision,
-                Arc::new(crate::ObjectIndex::build(model)),
+                Arc::new(crate::ObjectIndex::build(&model)),
             ));
         }
         cache.as_ref().unwrap().1.clone()
@@ -594,7 +673,7 @@ impl Document {
             .lock()
             .unwrap()
             .get_or_insert_with(|| {
-                Arc::new(crate::canvas_topology::CanvasTopology::new(self.model()))
+                Arc::new(crate::canvas_topology::CanvasTopology::new(&self.model()))
             })
             .clone()
     }
@@ -609,14 +688,14 @@ impl Document {
             pending
                 .preview
                 .replace(
-                    pending.edit.candidate_document(),
+                    &pending.edit.candidate_document(),
                     0,
                     self.session.preview_values().clone(),
                 )
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
             pending
                 .preview
-                .frame(pending.edit.candidate_document(), 0)
+                .frame(&pending.edit.candidate_document(), 0)
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?
         } else {
             self.session.preview_frame()?

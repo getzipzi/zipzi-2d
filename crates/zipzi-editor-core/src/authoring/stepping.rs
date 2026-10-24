@@ -252,7 +252,7 @@ impl Document {
         let mut candidate = model.clone();
         let mut edits = Vec::new();
         for (collection, sources) in groups {
-            let members = collection.members(model)?;
+            let members = collection.members(&model)?;
             let selected: HashSet<_> = sources.iter().map(String::as_str).collect();
             let mut blocks = Vec::new();
             let mut start = 0;
@@ -322,7 +322,7 @@ impl Document {
                     Ok(())
                 })?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             self.consume_authoring_receipt(&receipt, plan.scene);
             self.reconcile_parameter_preview()?;
             self.context.reconcile(&self.object_index());

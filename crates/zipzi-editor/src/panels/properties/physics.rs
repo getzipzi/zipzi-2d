@@ -74,7 +74,7 @@ impl PropertiesPanel {
             .editor
             .document()?
             .physics_definition()
-            .cloned()
+            .map(|asset| asset.as_ref().clone())
     }
     fn physics_cancel(&mut self, cx: &mut Context<Self>) {
         self.cancel_preview(cx);
@@ -259,7 +259,7 @@ impl PropertiesPanel {
             return body.child(t!("editor.welcome")).into_any_element();
         };
         let parameters = document.parameters();
-        let Some(asset) = document.physics_definition().cloned() else {
+        let Some(asset) = document.physics_definition() else {
             return compact::scroll_frame(body, &self.physics.scroll).into_any_element();
         };
         let selected = self.target.as_ref().map(|target| target.object.clone());

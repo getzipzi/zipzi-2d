@@ -261,44 +261,45 @@ impl AnimationCatalog {
 impl Document {
     /// Borrow resource definitions for read-only inspection without exposing the
     /// authoring model or copying motion curves on each preview frame.
-    pub fn motion_groups(&self) -> &[zipzi_core::document::MotionGroup] {
-        self.model().motion_groups()
+    pub fn motion_groups(&self) -> Vec<zipzi_core::document::MotionGroup> {
+        self.model().motion_groups().to_vec()
     }
     pub fn motion_registration(
         &self,
         id: &str,
     ) -> Option<(
         zipzi_core::document::MotionContainer,
-        &zipzi_core::document::MotionRegistration,
+        zipzi_core::document::MotionRegistration,
     )> {
-        self.model().get_motion_registration(id)
+        self.model()
+            .get_motion_registration(id)
+            .map(|(owner, value)| (owner, value.clone()))
     }
     pub fn expression_entry(
         &self,
         id: &str,
     ) -> Option<(
-        &zipzi_core::document::ExpressionAsset,
-        &zipzi_core::document::ExpressionEntry,
+        zipzi_core::document::ExpressionAsset,
+        zipzi_core::document::ExpressionEntry,
     )> {
-        self.model().get_expression_entry(id)
+        self.model()
+            .get_expression_entry(id)
+            .map(|(asset, value)| (asset.clone(), value.clone()))
     }
-    pub fn motion_definition(&self, id: &str) -> Option<&zipzi_core::document::MotionClip> {
-        self.model().get_motion(id)
-    }
-
-    pub fn expression_definition(
-        &self,
-        id: &str,
-    ) -> Option<&zipzi_core::document::ExpressionAsset> {
-        self.model().get_expression(id)
+    pub fn motion_definition(&self, id: &str) -> Option<Arc<zipzi_core::document::MotionClip>> {
+        self.model().shared_motion(id)
     }
 
-    pub fn physics_definition(&self) -> Option<&zipzi_core::document::PhysicsAsset> {
-        self.model().physics()
+    pub fn expression_definition(&self, id: &str) -> Option<zipzi_core::document::ExpressionAsset> {
+        self.model().get_expression(id).cloned()
     }
 
-    pub fn pose_definition(&self) -> Option<&zipzi_core::document::PoseAsset> {
-        self.model().pose()
+    pub fn physics_definition(&self) -> Option<Arc<zipzi_core::document::PhysicsAsset>> {
+        self.model().shared_physics()
+    }
+
+    pub fn pose_definition(&self) -> Option<Arc<zipzi_core::document::PoseAsset>> {
+        self.model().shared_pose()
     }
 
     pub fn animation_catalog(&self) -> Arc<AnimationCatalog> {
@@ -309,7 +310,7 @@ impl Document {
                 return catalog.clone();
             }
         }
-        let mut catalog = AnimationCatalog::from_model(self.model());
+        let mut catalog = AnimationCatalog::from_model(&self.model());
         catalog.motions = self.motion_resources();
         catalog.expressions = self.expression_resources();
         let catalog = Arc::new(catalog);

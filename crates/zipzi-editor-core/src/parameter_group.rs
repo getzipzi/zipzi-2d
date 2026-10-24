@@ -10,8 +10,8 @@ pub struct ParameterGroupDraft {
 }
 impl Document {
     pub fn parameter_group_draft(&self, id: &str) -> Result<ParameterGroupDraft> {
-        let g = self
-            .model()
+        let model_read_guard_41 = self.model();
+        let g = model_read_guard_41
             .get_parameter_group(id)
             .ok_or(E::MissingGroup)?;
         Ok(ParameterGroupDraft {

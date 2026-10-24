@@ -89,3 +89,13 @@ pub use deformer::*;
 mod warp_bezier;
 
 mod mesh_generation_scene;
+
+mod hosted_document;
+pub use hosted_document::HostedDocument;
+
+mod runtime_host;
+pub use runtime_host::RuntimeHost;
+
+pub use zipzi_runtime::SessionState as RuntimeSessionState;
+
+pub use zipzi_runtime::JobInfo as RuntimeJobInfo;

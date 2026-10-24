@@ -41,6 +41,16 @@ no history stack. Interactive edits preview an isolated candidate and commit one
 history step. Cancellation, unchanged edits and failures preserve the redo branch.
 The SDK coordinates history resource paths and the saved baseline when saving.
 
+`AuthoringSession::candidate_snapshot` captures an owned edit with its base
+Version and referenced memory image content, without changing formal state or
+history. It rejects another SDK session/replacement generation; stale revisions
+remain readable for diagnostics. Hosts must attach edit identity/sequence and
+capture desired diagnostics before consuming an edit in `commit_to`. Disk bytes
+are not pinned. `EditSession::is_aborted` reports ordinary transaction failure;
+`estimated_bytes` and `EditReceipt::estimated_bytes` support bounded host metadata.
+[`zipzi-runtime`](../zipzi-runtime/README.md) hosts these contracts without adding
+a second history or changing standalone SDK ownership.
+
 ## Tests
 
 From the workspace root, `./tools/test-sdk.sh fast` runs SDK unit and ordinary CPU

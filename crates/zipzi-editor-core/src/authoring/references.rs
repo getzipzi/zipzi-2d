@@ -88,7 +88,7 @@ impl Document {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_reference_plan(p)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             self.consume_authoring_receipt(&receipt, false);
             self.context.reconcile(&self.object_index());
         }

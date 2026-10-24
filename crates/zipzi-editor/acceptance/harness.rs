@@ -73,7 +73,7 @@ impl Harness {
             );
             view.update(cx, |view, cx| {
                 view.dev_session = None;
-                view.editor = Editor::from_document(document);
+                view.replace_editor(Editor::from_document(document), cx);
                 view.editor
                     .execute(zipzi_editor_core::EditorCommand::SelectObjects(Vec::new()))
                     .unwrap();

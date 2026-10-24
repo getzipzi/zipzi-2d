@@ -99,3 +99,6 @@ mod business_authoring;
 
 #[path = "cases/ordinary_binding.rs"]
 mod ordinary_binding;
+
+#[path = "cases/runtime.rs"]
+mod runtime;

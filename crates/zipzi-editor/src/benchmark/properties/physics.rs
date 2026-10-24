@@ -123,12 +123,8 @@ pub(super) async fn run(
     for &(index, case) in cases {
         eprintln!("Physics workload {index}: {case}");
         let (key, low, high) = view.update_in(cx, |v, _, _| -> anyhow::Result<_> {
-            let rig = v
-                .editor
-                .document()
-                .unwrap()
-                .physics_definition()
-                .unwrap()
+            let model_read_guard_101 = v.editor.document().unwrap().physics_definition().unwrap();
+            let rig = model_read_guard_101
                 .data
                 .settings
                 .iter()

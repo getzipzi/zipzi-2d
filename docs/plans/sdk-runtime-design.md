@@ -1,9 +1,9 @@
 # SDK Runtime 与 Editor 同进程详细设计
 
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
-日期：2026 年 10 月 23 日。状态：**配对工作树中已交付 R0 准备；Runtime/连接能力尚未实现**。
+日期：2026 年 10 月 24 日。状态：**R0–R2 已交付：Runtime 核心、Editor 托管与窗口生命周期解耦；本机 IPC/Python 连接能力尚未实现**。
 
-实际进展与证据见 [R0 实施记录](sdk-runtime/r0-preparation.md)，不以本文的目标能力代替实施结果。
+实际进展与证据见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)与 [R2 实施记录](sdk-runtime/r2-editor.md)，不以本文的目标能力代替实施结果。
 
 实施顺序、跨仓交付物和验收编号见[分阶段实施计划](sdk-runtime-implementation-plan.md)。两份文档以本文件定义行为契约，以实施计划定义交付门槛；实施结果另行记录，不能把本文中的目标能力表述为现有能力。
 

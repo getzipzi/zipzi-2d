@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Index every session/publication/IO/lifecycle reference before R2 migration.
+"""Index every session/publication/IO/lifecycle reference after R2 migration.
 
 This deliberately includes reads, comments and test code so a source search
 cannot silently omit a write. The domain checklist explains the actual boundary.
@@ -18,13 +18,18 @@ OUTPUT = ROOT / "docs/plans/sdk-runtime/editor-migration.json"
 REFERENCE = re.compile(
     r"\bsession\b|session_mut\s*\(|AuthoringSession|drain_events|commit_to|begin_owned_edit|"
     r"(?:prepare|finish)_(?:load|save)|project_identity|ensure_available_path|find_path\s*\(|"
-    r"on_window_closed|on_window_should_close|\bcx\.quit\s*\("
+    r"on_window_closed|on_window_should_close|RuntimeHost|DesktopHost|sync_runtime|"
+    r"attach_resident_sessions|detach_document|close_window|--no-window|\bcx\.quit\s*\("
 )
 
 
 def classify(path: str) -> tuple[str, str]:
     if "/headless_tests/" in path or "/tests/" in path or path.endswith("/test_scene.rs"):
-        return "test-fixture", "retain baseline; add Runtime-backed fixtures in R1/R2"
+        return "test-fixture", "Runtime-backed fixtures retain existing UI assertions"
+    if path.endswith(("/runtime_host.rs", "/runtime_host_forward.rs")):
+        return "runtime-view-adapter", "typed Runtime admission/publication; immutable SDK guards and bounded candidate leases"
+    if path.endswith("/host.rs"):
+        return "application-host", "application owns Runtime, parked workspace and bounded task outcomes independently of windows"
     if path.endswith("/dev_session.rs") or path.endswith("/benchmark.rs"):
         return "host-adapter", "use common Runtime/host entrypoints; retain dev and benchmark behavior"
     if path == "crates/zipzi-editor/src/project.rs":
@@ -52,7 +57,7 @@ def collect(root: Path = ROOT) -> list[dict]:
                     function = found[1]
                 if REFERENCE.search(text):
                     rows.append(dict(file=relative, line=line, enclosing_function_hint=function,
-                        text=text.strip(), area=area, destination=destination, stage="R2", status="not-migrated"))
+                        text=text.strip(), area=area, destination=destination, stage="R2", status="reviewed-r2"))
     return rows
 
 

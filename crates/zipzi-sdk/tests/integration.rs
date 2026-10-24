@@ -64,3 +64,6 @@ mod resource_authoring;
 
 #[path = "authoring_collections.rs"]
 mod authoring_collections;
+
+#[path = "candidate_snapshot.rs"]
+mod candidate_snapshot;

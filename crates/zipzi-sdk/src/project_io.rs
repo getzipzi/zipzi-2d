@@ -257,6 +257,8 @@ impl AuthoringSession {
                 }
             }
         }
+        // Recompute after any storage relocation or saved-baseline update.
+        *self.content_bytes_cache.lock().unwrap() = None;
         let result = self.project.save(path);
         if !result.status.is_ok() {
             return Err(SdkError::from_status(
@@ -283,7 +285,11 @@ impl AuthoringSession {
         }
         let mut history_warnings: Vec<_> = unverified_history_ids
             .into_iter()
-            .map(|id| format!("Historical resource {id} has no prior SHA-256; its old bytes were not verified"))
+            .map(|id| {
+                format!(
+                    "Historical resource {id} has no prior SHA-256; its old bytes were not verified"
+                )
+            })
             .collect();
         history_warnings.sort();
         Ok(SaveReceipt {

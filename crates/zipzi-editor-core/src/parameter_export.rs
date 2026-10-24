@@ -75,7 +75,7 @@ impl Document {
         if !status.is_ok() {
             return Vec::new();
         }
-        let before = export_diagnostics(self.model());
+        let before = export_diagnostics(&self.model());
         export_diagnostics(&candidate)
             .into_iter()
             .map(|(resource, code, message)| {

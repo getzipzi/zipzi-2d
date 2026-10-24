@@ -1,8 +1,8 @@
 use super::EditSession;
 use crate::types::SdkError;
-use zipzi_core::document::PoseAsset;
 use zipzi_core::ChangeKind;
-use zipzi_project::{import_pose3, PoseDiagnostic, PoseProjectError};
+use zipzi_core::document::PoseAsset;
+use zipzi_project::{PoseDiagnostic, PoseProjectError, import_pose3};
 
 fn project_error(error: PoseProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);
@@ -21,6 +21,7 @@ impl EditSession<'_> {
         let imported = import_pose3(self.candidate_document(), id, text)
             .map_err(|error| self.abort_with(project_error(error, "import_pose3")))?;
         let before = crate::session::keys_in(self.candidate_document());
+        self.candidate_content_bytes.take();
         self.candidate = Some(imported.candidate);
         self.track_removed_objects(before);
         self.kind = super::merge_kind(self.kind, ChangeKind::Metadata);

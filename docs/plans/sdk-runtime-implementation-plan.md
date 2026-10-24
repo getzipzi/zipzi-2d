@@ -1,9 +1,9 @@
 # SDK Runtime 分阶段实施计划
 
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
-日期：2026 年 10 月 23 日。状态：**R0 实施准备进行中，R1–R7 尚未开始**。
+日期：2026 年 10 月 24 日。状态：**R0–R2 已交付，R3–R7 尚未开始**。
 
-架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。当前不存在 `zipzi-runtime` 或连接后端；后续新增模块、测试名称和命令模板仍为待实现目标，不能作为已经通过的证据。R0 已落地产物与未完成项见 [实施记录](sdk-runtime/r0-preparation.md)。
+架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。`zipzi-runtime` 的进程内核心和 Editor 托管已实现；R2 性能门槛已通过，连接后端尚不存在。后续阶段的模块、测试名称和命令模板仍为目标，不能作为已通过的证据。实际结果见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)与 [R2 实施记录](sdk-runtime/r2-editor.md)。
 
 ## 1. 执行规则与阶段总览
 
@@ -16,9 +16,9 @@
 
 | 阶段 | 交付目标 | 前置依赖 | 状态 |
 | --- | --- | --- | --- |
-| R0 | 接口清单、配对基线、预算与性能门槛 | 无 | 进行中，见实施记录 |
-| R1 | 无 UI 的 Runtime 核心与 SDK 补强 | R0 | 未开始 |
-| R2 | Editor 使用托管会话，窗口生命周期解耦 | R1 | 未开始 |
+| R0 | 接口清单、配对基线、预算与性能门槛 | 无 | 已交付，见 R0 记录与基线证据 |
+| R1 | 无 UI 的 Runtime 核心与 SDK 补强 | R0 | 已交付进程内/CPU 核心，见 R1 记录 |
+| R2 | Editor 使用托管会话，窗口生命周期解耦 | R1 | 已交付，见 [R2 记录](sdk-runtime/r2-editor.md) |
 | R3 | 本机协议和 Python 最小完整闭环 | R2 | 未开始 |
 | R4 | Modeling、资源、Plan 与工程 IO 完整连接 | R3 | 未开始 |
 | R5 | Animation、独立 Preview、Observer 和长任务 | R4 | 未开始 |

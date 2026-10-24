@@ -3,7 +3,7 @@ impl Document {
     pub(crate) fn export_canvas(&self) -> Result<crate::ExportCanvas> {
         let mut frame = zipzi_core::DrawableFrame::default();
         let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
-            self.model(),
+            &self.model(),
             &Default::default(),
             &mut frame,
         );
@@ -30,8 +30,8 @@ impl Document {
         let mut edit = self.session.begin_owned_edit("Export settings", None)?;
         edit.replace_export_settings(settings)?;
         edit.commit_to(&mut self.session)?;
-        self.session.drain_events();
-        self.pristine_blank = false;
+        self.session.acknowledge_receipts();
+        self.pristine_blank = None;
         self.invalidate_projection(false);
         Ok(())
     }

@@ -2,9 +2,9 @@
 //! before publication, so a failed edit cannot leave partial memberships.
 use super::EditSession;
 use crate::types::SdkError;
-use zipzi_core::document::{CdiCombinedSet, CdiParameterGroup, DisplayInfo};
 use zipzi_core::ChangeKind;
-use zipzi_project::{import_cdi3, CdiProjectDiagnostic, CdiProjectError};
+use zipzi_core::document::{CdiCombinedSet, CdiParameterGroup, DisplayInfo};
+use zipzi_project::{CdiProjectDiagnostic, CdiProjectError, import_cdi3};
 
 fn project_error(error: CdiProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);
@@ -122,6 +122,7 @@ impl EditSession<'_> {
             .map_err(|error| self.abort_with(project_error(error, "import_cdi3")))?;
         let id = imported.candidate.id().to_owned();
         let before = crate::session::keys_in(self.candidate_document());
+        self.candidate_content_bytes.take();
         self.candidate = Some(imported.candidate);
         self.track_removed_objects(before);
         self.kind = super::merge_kind(self.kind, ChangeKind::Metadata);

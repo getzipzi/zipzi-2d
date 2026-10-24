@@ -902,8 +902,9 @@ fn playback_speed_select_changes_clock_without_retiming_motion(cx: &mut TestAppC
         assert_eq!(
             document
                 .motion_definition(&animation.motion.as_ref().unwrap().clip_id)
-                .unwrap(),
-            &original
+                .unwrap()
+                .as_ref(),
+            original.as_ref()
         );
         assert_eq!(document.history_lengths(), (0, 0));
         assert!(!document.modified());

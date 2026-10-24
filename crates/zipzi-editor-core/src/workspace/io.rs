@@ -1,64 +1,96 @@
-//! Load/save ownership envelopes, path identity and deferred close decisions.
+//! Runtime-owned IO; the view keeps frozen presentation state only.
 use super::*;
+use zipzi_runtime::{Completion, JobId, JobValue, Work};
 
-/// Non-cloneable ownership envelopes prevent duplicate completion delivery.
 pub struct LoadTask {
     id: DocumentId,
     operation: OperationId,
-    request: LoadRequest,
+    job: JobId,
+    work: Work,
 }
 pub struct LoadCompletion {
     id: DocumentId,
     operation: OperationId,
-    result: Result<(Document, Vec<String>)>,
+    job: JobId,
+    returned: Option<Completion>,
+    prepared: Option<Result<crate::document::PreparedDocument>>,
 }
 impl LoadTask {
     pub fn run(self) -> LoadCompletion {
         let Self {
             id,
             operation,
-            request,
+            job,
+            work,
         } = self;
-        // GPUI's background executor uses libdispatch workers with small stacks.
-        // MOC3 validation and decoding can exceed that stack for real models.
-        // Keep the whole load off the executor worker to avoid the observed
-        // stack overflow during import.
-        let result = std::thread::Builder::new()
-            .name("zipzi-document-load".into())
-            .stack_size(8 * 1024 * 1024)
-            .spawn(move || request.load())
-            .map_err(anyhow::Error::from)
-            .and_then(|worker| {
-                worker
-                    .join()
-                    .map_err(|_| anyhow!("Document load worker panicked"))?
-            });
+        // Real model decoders need an explicit stack, independent of GPUI's pool.
+        let returned = work.run_on_thread("zipzi-document-load", 8 * 1024 * 1024);
+        let prepared = returned.returned_session().map(|session| {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                Document::prepare_runtime_view(session)
+            }))
+            .unwrap_or_else(|_| Err(anyhow!("Document view preparation panicked")))
+        });
         LoadCompletion {
             id,
             operation,
-            result,
+            job,
+            returned: Some(returned),
+            prepared,
+        }
+    }
+}
+impl LoadCompletion {
+    pub fn job_id(&self) -> JobId {
+        self.job
+    }
+    /// Application host calls this before touching any weak view/window handle.
+    pub fn publish(&mut self, host: &crate::RuntimeHost) {
+        if let Some(returned) = self.returned.take() {
+            let session = host
+                .read()
+                .job_info(host.client_id(), self.job)
+                .ok()
+                .map(|job| job.session);
+            let accepted = host.write().complete(returned);
+            if accepted {
+                if let (Some(session), Some(prepared)) = (session, self.prepared.take()) {
+                    host.prepare_view(session, prepared);
+                }
+            }
         }
     }
 }
 pub struct SaveTask {
     id: DocumentId,
     operation: OperationId,
-    session: DocumentSession,
-    path: PathBuf,
+    job: JobId,
+    work: Work,
 }
 pub struct SaveCompletion {
     id: DocumentId,
     operation: OperationId,
-    returned: Option<(DocumentSession, Result<SaveReceipt>)>,
+    job: JobId,
+    returned: Option<Completion>,
 }
 impl SaveTask {
-    /// Both success and SDK errors return the same session, including its history.
-    pub fn run(mut self) -> SaveCompletion {
-        let result = self.session.save(&self.path);
+    pub fn run(self) -> SaveCompletion {
         SaveCompletion {
             id: self.id,
             operation: self.operation,
-            returned: Some((self.session, result)),
+            job: self.job,
+            returned: Some(self.work.run()),
+        }
+    }
+}
+impl SaveCompletion {
+    pub fn job_id(&self) -> JobId {
+        self.job
+    }
+    /// Returning SDK ownership and storing the outcome never depend on a view.
+    pub fn publish(&mut self, host: &crate::RuntimeHost) {
+        if let Some(returned) = self.returned.take() {
+            host.write().complete(returned);
         }
     }
 }
@@ -66,91 +98,95 @@ impl SaveTask {
 impl Editor {
     pub fn prepare_load(&mut self, request: LoadRequest) -> Result<Option<LoadTask>> {
         ensure!(!self.exiting, "Workspace is closing");
-        let identity = match &request {
-            LoadRequest::Open(path) => Some(project_identity(path)?),
-            _ => None,
-        };
-        if matches!(request, LoadRequest::Open(_)) {
-            if let Some(identity) = &identity {
-                if let Some(id) = self.find_path(identity, None)? {
-                    self.activate(id)?;
-                    return Ok(None);
-                }
-            }
-        }
-        if let Some(identity) = &identity {
-            ensure!(
-                !self
-                    .loads
-                    .values()
-                    .any(|(_, p)| p.as_ref() == Some(identity)),
-                "Project is already loading"
-            );
-        }
         if let Some(id) = self.active.filter(|_| !self.is_busy()) {
             self.end_editing(id, EditingLifecycle::ContextChange)?;
         }
+        let host = self.runtime.clone();
+        let job = match request {
+            LoadRequest::Open(path) => {
+                let opened = host.write().request_open(host.client_id(), &path)?;
+                match opened {
+                    zipzi_runtime::OpenRequest::Existing(session) => {
+                        if let Some(id) = self
+                            .documents
+                            .iter()
+                            .find(|e| e.hosted_session_id() == session)
+                            .map(|e| e.id)
+                        {
+                            self.activate(id)?;
+                        } else {
+                            let document = Document::attach_runtime(host.clone(), session)?;
+                            self.insert(document)?;
+                        }
+                        return Ok(None);
+                    }
+                    zipzi_runtime::OpenRequest::Pending(job) => job,
+                }
+            }
+            LoadRequest::Model3(path) => host
+                .write()
+                .request_import(host.client_id(), zipzi_runtime::ImportSource::Model3(path))?,
+            LoadRequest::Psd(path) => host
+                .write()
+                .request_import(host.client_id(), zipzi_runtime::ImportSource::Psd(path))?,
+            LoadRequest::Cubism(path) => host
+                .write()
+                .request_import(host.client_id(), zipzi_runtime::ImportSource::Cubism(path))?,
+        };
+        let work = host.dispatch_job(job)?;
         let id = DocumentId(Uuid::new_v4());
         let operation = OperationId(Uuid::new_v4());
-        self.loads.insert(operation, (id, identity));
+        self.loads.insert(operation, (id, job));
         Ok(Some(LoadTask {
             id,
             operation,
-            request,
+            job,
+            work,
         }))
     }
-    pub fn finish_load(&mut self, completion: LoadCompletion) -> Result<Vec<String>> {
+    pub fn finish_load(&mut self, mut completion: LoadCompletion) -> Result<Vec<String>> {
         ensure!(
             self.loads
                 .get(&completion.operation)
-                .is_some_and(|(id, _)| *id == completion.id),
+                .is_some_and(|(id, job)| *id == completion.id && *job == completion.job),
             "Unknown load completion"
         );
-        self.loads.remove(&completion.operation);
-        let (document, notices) = completion.result?;
-        if let Some(path) = document.path() {
-            if let Some(id) = self.find_path(&project_identity(path)?, None)? {
-                self.activate(id)?;
-                return Ok(notices);
-            }
+        completion.publish(&self.runtime);
+        self.finish_load_job(completion.operation, completion.id, completion.job)
+    }
+    fn finish_load_job(
+        &mut self,
+        operation: OperationId,
+        id: DocumentId,
+        job: JobId,
+    ) -> Result<Vec<String>> {
+        let info = self
+            .runtime
+            .read()
+            .job_info(self.runtime.client_id(), job)?;
+        let result = info
+            .result
+            .ok_or_else(|| anyhow!("Load is still running"))?;
+        self.loads.remove(&operation);
+        self.runtime
+            .write()
+            .release_job(self.runtime.client_id(), job)?;
+        let (session, notices, name) = match result? {
+            JobValue::Opened(session) => (session, vec![], None),
+            JobValue::Imported {
+                session,
+                notices,
+                name,
+            } => (session, notices, name),
+            _ => return Err(anyhow!("Unexpected load result")),
+        };
+        let mut document = Document::attach_runtime(self.runtime.clone(), session)?;
+        document.set_import_name(name);
+        if let Some(previous) = self.active.filter(|_| !self.is_busy()) {
+            self.end_editing(previous, EditingLifecycle::ContextChange)?;
         }
-        // A user may have edited the old tab while loading.
-        if let Some(id) = self.active.filter(|_| !self.is_busy()) {
-            self.end_editing(id, EditingLifecycle::ContextChange)?;
-        }
-        self.insert_with_id(completion.id, document);
+        self.insert_with_id(id, document)?;
         Ok(notices)
-    }
-    fn find_path(&self, identity: &Path, except: Option<DocumentId>) -> Result<Option<DocumentId>> {
-        for entry in &self.documents {
-            if Some(entry.id) == except {
-                continue;
-            }
-            if entry.saving().is_some_and(|saving| saving.path == identity) {
-                return Ok(Some(entry.id));
-            }
-            if let Some(path) = entry.summary().path {
-                if project_identity(&path)? == identity {
-                    return Ok(Some(entry.id));
-                }
-            }
-        }
-        Ok(None)
-    }
-    fn ensure_available_path(&self, id: Option<DocumentId>, path: &Path) -> Result<PathBuf> {
-        let identity = project_identity(path)?;
-        ensure!(
-            self.find_path(&identity, id)?.is_none(),
-            "Project belongs to another open document"
-        );
-        ensure!(
-            !self
-                .loads
-                .values()
-                .any(|(_, p)| p.as_ref() == Some(&identity)),
-            "Project is loading"
-        );
-        Ok(identity)
     }
     pub fn prepare_save(
         &mut self,
@@ -158,7 +194,6 @@ impl Editor {
         path: &Path,
         close_after: bool,
     ) -> Result<SaveTask> {
-        let identity = self.ensure_available_path(Some(id), path)?;
         self.end_editing(id, EditingLifecycle::Save)?;
         let operation = OperationId(Uuid::new_v4());
         let close_reason = if self.exiting {
@@ -166,8 +201,22 @@ impl Editor {
         } else {
             DeferredClose::Document
         };
-        let entry = self.entry_mut(id)?;
-        let session = entry.begin_save(operation, identity, close_after.then_some(close_reason))?;
+        let session = self.entry(id)?.hosted_session_id();
+        self.entry_mut(id)?
+            .begin_save(operation, close_after.then_some(close_reason))?;
+        let host = self.runtime.clone();
+        let prepared = (|| -> Result<(JobId, Work)> {
+            let job = host.write().request_save(host.client_id(), session, path)?;
+            Ok((job, host.dispatch_job(job)?))
+        })();
+        let (job, work) = match prepared {
+            Ok(value) => value,
+            Err(error) => {
+                self.entry_mut(id)?.restore_session();
+                return Err(error);
+            }
+        };
+        self.entry_mut(id)?.saving_mut().unwrap().job = Some(job);
         if self.active == Some(id) {
             self.advance_editing_context();
         }
@@ -175,45 +224,260 @@ impl Editor {
         Ok(SaveTask {
             id,
             operation,
-            session,
-            path: path.to_owned(),
+            job,
+            work,
         })
     }
-    /// Rejected delivery leaves the envelope intact so its owner can recover it.
     pub fn finish_save(&mut self, completion: &mut SaveCompletion) -> Result<SaveReceipt> {
-        let entry = self.entry_mut(completion.id)?;
         ensure!(
-            entry
+            self.entry(completion.id)?
                 .saving()
-                .is_some_and(|saving| saving.operation == completion.operation),
+                .is_some_and(
+                    |s| s.operation == completion.operation && s.job == Some(completion.job)
+                ),
             "Unknown save completion"
         );
-        let (mut session, result) = completion
-            .returned
-            .take()
-            .ok_or_else(|| anyhow!("Save completion was already delivered"))?;
-        // Metrics/device state may change on the UI while the session is saving.
-        // Also replace any pending preview rejected while it was on the worker.
-        for state in session.views.values_mut() {
-            state.revision += 1;
+        completion.publish(&self.runtime);
+        self.finish_save_job(completion.id, completion.job)
+    }
+    fn finish_save_job(&mut self, id: DocumentId, job: JobId) -> Result<SaveReceipt> {
+        let info = self
+            .runtime
+            .read()
+            .job_info(self.runtime.client_id(), job)?;
+        let result = info
+            .result
+            .ok_or_else(|| anyhow!("Save is still running"))?;
+        let session_id = self.entry(id)?.hosted_session_id();
+        let faulted = matches!(
+            self.runtime.read().session_info(session_id)?.state,
+            zipzi_runtime::SessionState::Faulted(_)
+        );
+        if faulted {
+            self.entry_mut(id)?.mark_faulted();
+            self.runtime
+                .write()
+                .release_job(self.runtime.client_id(), job)?;
+            self.cancel_exit();
+            return Err(result
+                .err()
+                .map(anyhow::Error::from)
+                .unwrap_or_else(|| anyhow!("Session faulted")));
         }
-        let close = entry.restore_session(session);
-        if self.active == Some(completion.id) {
+        let close = self.entry_mut(id)?.restore_session();
+        self.runtime
+            .write()
+            .release_job(self.runtime.client_id(), job)?;
+        if let Some(session) = self.entry_mut(id)?.session_mut() {
+            session.document.session.refresh_metadata()?;
+            if result.is_ok() {
+                session.document.saved_by_runtime();
+            }
+        }
+        if self.active == Some(id) {
             self.advance_editing_context();
         }
         self.refresh_viewport_bindings();
         match result {
-            Ok(receipt) => {
+            Ok(JobValue::Saved(receipt)) => {
                 if close.is_some() {
-                    self.close_document(completion.id, false)?;
+                    self.close_document(id, false)?;
                 }
                 Ok(receipt)
             }
             Err(error) => {
                 self.cancel_exit();
-                Err(error)
+                Err(error.into())
+            }
+            _ => Err(anyhow!("Unexpected save result")),
+        }
+    }
+    /// Reconcile IO completed while no window owned this workspace.
+    pub fn pending_io_count(&self) -> usize {
+        self.loads.len()
+            + self
+                .documents
+                .iter()
+                .filter(|entry| entry.saving().is_some_and(|s| !s.external))
+                .count()
+    }
+    pub fn sync_runtime_jobs(&mut self) -> Vec<String> {
+        let saves: Vec<_> = self
+            .documents
+            .iter()
+            .filter_map(|entry| {
+                entry
+                    .saving()
+                    .filter(|s| !s.external)
+                    .and_then(|s| s.job)
+                    .map(|job| (entry.id, job))
+            })
+            .collect();
+        let loads: Vec<_> = self
+            .loads
+            .iter()
+            .map(|(operation, (id, job))| (*operation, *id, *job))
+            .collect();
+        let mut notices = vec![];
+        for (id, job) in saves {
+            if self
+                .runtime
+                .read()
+                .job_info(self.runtime.client_id(), job)
+                .is_ok_and(|j| j.state.is_terminal())
+            {
+                if let Err(error) = self.finish_save_job(id, job) {
+                    notices.push(error.to_string());
+                }
             }
         }
+        for (operation, id, job) in loads {
+            if self
+                .runtime
+                .read()
+                .job_info(self.runtime.client_id(), job)
+                .is_ok_and(|j| j.state.is_terminal())
+            {
+                match self.finish_load_job(operation, id, job) {
+                    Ok(warnings) => notices.extend(warnings),
+                    Err(error) => notices.push(error.to_string()),
+                }
+            }
+        }
+        let pending: std::collections::HashSet<_> = self
+            .documents
+            .iter()
+            .filter_map(|entry| entry.saving().filter(|s| !s.external).and_then(|s| s.job))
+            .chain(self.loads.values().map(|(_, job)| *job))
+            .collect();
+        let jobs = self.runtime.read().list_jobs(self.runtime.client_id());
+        if let Ok(jobs) = jobs {
+            for job in jobs {
+                if job.state.is_terminal() && !pending.contains(&job.id) {
+                    if let Some(Err(error)) = job.result {
+                        notices.push(error.to_string());
+                    }
+                    let _ = self
+                        .runtime
+                        .write()
+                        .release_job(self.runtime.client_id(), job.id);
+                }
+            }
+        }
+        notices
+    }
+    /// Closing a tab detaches its view. Formal session/history remain discoverable.
+    pub fn detach_document(&mut self, id: DocumentId) -> Result<()> {
+        self.end_editing(id, EditingLifecycle::Close)?;
+        let session = self.entry(id)?.hosted_session_id();
+        self.runtime
+            .write()
+            .detach_session(self.runtime.client_id(), session)?;
+        let index = self.documents.iter().position(|e| e.id == id).unwrap();
+        self.documents.remove(index);
+        if self.active == Some(id) {
+            self.active = self
+                .documents
+                .get(index.min(self.documents.len().saturating_sub(1)))
+                .map(|e| e.id);
+            self.inspection_generation += 1;
+            self.advance_editing_context();
+            self.restore_active_workspace();
+            self.refresh_viewport_bindings();
+            self.invalidate_animation();
+        }
+        Ok(())
+    }
+    pub fn suspend_window(&mut self) -> Result<()> {
+        let ids: Vec<_> = self.documents.iter().map(|e| e.id).collect();
+        for id in ids {
+            self.end_editing(id, EditingLifecycle::Close)?;
+            if let Some(session) = self.entry_mut(id)?.session_mut() {
+                session.animation.playback.pause();
+            }
+        }
+        self.viewport_interaction = None;
+        self.timeline_scrub_owner = None;
+        self.viewports = Default::default();
+        self.timeline_panels = Default::default();
+        for entry in &mut self.documents {
+            if let Some(session) = entry.session_mut() {
+                session.views.clear();
+            }
+        }
+        Ok(())
+    }
+    /// Reopen a window from current resident state; never replay an unbounded log.
+    pub fn attach_resident_sessions(&mut self) -> Result<Vec<String>> {
+        let notices = self.sync_runtime_jobs();
+        self.sync_runtime()?;
+        let sessions = self.runtime.read().list_sessions();
+        for info in sessions {
+            if !self
+                .documents
+                .iter()
+                .any(|e| e.hosted_session_id() == info.id)
+                && info.state == zipzi_runtime::SessionState::Ready
+            {
+                self.runtime
+                    .write()
+                    .attach_session(self.runtime.client_id(), info.id)?;
+                let document = Document::attach_runtime(self.runtime.clone(), info.id)?;
+                self.insert(document)?;
+            }
+        }
+        Ok(notices)
+    }
+    pub fn sync_runtime(&mut self) -> Result<bool> {
+        let mut changed = false;
+        let mut fault = None;
+        for entry in &mut self.documents {
+            let info = self
+                .runtime
+                .read()
+                .session_info(entry.hosted_session_id())?;
+            if matches!(info.state, zipzi_runtime::SessionState::Faulted(_)) {
+                if entry.session().is_some() {
+                    entry.begin_save(OperationId(Uuid::new_v4()), None)?;
+                }
+                if entry.saving().is_some() {
+                    entry.mark_faulted();
+                    fault = info.fault.clone();
+                    changed = true;
+                }
+                continue;
+            }
+            if let zipzi_runtime::SessionState::Busy(job) = info.state {
+                if entry.session().is_some() {
+                    entry.begin_save(OperationId(Uuid::new_v4()), None)?;
+                    let saving = entry.saving_mut().unwrap();
+                    saving.job = Some(job);
+                    saving.external = true;
+                    changed = true;
+                }
+                continue;
+            }
+            if entry.saving().is_some_and(|s| s.external) {
+                entry.restore_session();
+                changed = true;
+            }
+            if let Some(session) = entry.session_mut() {
+                if session.document.sync_runtime_events()? {
+                    session.invalidate_scene();
+                    session.reconcile_animation();
+                    changed = true;
+                }
+            }
+        }
+        if changed {
+            self.inspection_generation += 1;
+            self.refresh_viewport_bindings();
+        }
+        if let Some(error) = fault {
+            self.cancel_exit();
+            return Err(error.into());
+        }
+        Ok(changed)
     }
     pub fn close_disposition(&self, id: DocumentId) -> Result<CloseDisposition> {
         let entry = self.entry(id)?;
@@ -249,6 +513,16 @@ impl Editor {
             discard || disposition == CloseDisposition::Ready,
             "Document needs a save decision"
         );
+        let entry = self.entry(id)?;
+        let pristine = entry
+            .session()
+            .is_some_and(|s| s.document.is_pristine_blank());
+        let session = entry.hosted_session_id();
+        self.runtime.write().close_session(
+            self.runtime.client_id(),
+            session,
+            discard || pristine,
+        )?;
         let index = self.documents.iter().position(|e| e.id == id).unwrap();
         self.documents.remove(index);
         if self.active == Some(id) {
@@ -265,7 +539,27 @@ impl Editor {
         Ok(true)
     }
     pub fn request_exit(&mut self) -> Result<()> {
+        self.attach_resident_sessions()?;
         ensure!(self.loads.is_empty(), "Wait for project loading to finish");
+        // Visible local saves already have a completion path that resumes exit.
+        // Detached and foreign jobs (including provisional loads) do not.
+        ensure!(
+            self.runtime.read().pending_jobs().iter().all(|job| {
+                self.documents.iter().any(|entry| {
+                    entry
+                        .saving()
+                        .is_some_and(|s| !s.external && s.job == Some(job.id))
+                })
+            }),
+            "Wait for background Runtime operations to finish"
+        );
+        ensure!(
+            self.runtime.read().list_sessions().iter().all(|info| self
+                .documents
+                .iter()
+                .any(|entry| entry.hosted_session_id() == info.id)),
+            "Resolve detached Runtime sessions before quitting"
+        );
         if let Some(document) = self.active {
             self.end_editing(document, EditingLifecycle::Close)?;
         }
@@ -295,33 +589,4 @@ impl Editor {
     pub fn next_close(&self) -> Option<DocumentId> {
         self.documents.first().map(|e| e.id)
     }
-}
-
-/// SDK directory/manifest aliases share an identity. Resolve existing ancestors so
-/// new Save As paths and symlinked parent directories are normalized as well.
-fn project_identity(path: &Path) -> Result<PathBuf> {
-    let manifest = zipzi_project::project_manifest(path);
-    let absolute = if manifest.is_absolute() {
-        manifest
-    } else {
-        std::env::current_dir()?.join(manifest)
-    };
-    let mut resolved = PathBuf::new();
-    for component in absolute.components() {
-        match component {
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                resolved.pop();
-            }
-            other => {
-                resolved.push(other.as_os_str());
-                match std::fs::symlink_metadata(&resolved) {
-                    Ok(_) => resolved = resolved.canonicalize()?,
-                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-                    Err(error) => return Err(error.into()),
-                }
-            }
-        }
-    }
-    Ok(resolved)
 }

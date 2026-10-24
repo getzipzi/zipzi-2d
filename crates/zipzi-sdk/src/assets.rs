@@ -54,6 +54,7 @@ pub(crate) fn relocate_history_assets(
     new_assets: &HashMap<String, ImageAsset>,
     is_memory_asset: impl Fn(&ImageAsset) -> bool,
 ) {
+    entry.estimated_bytes_cache.take();
     for asset in entry.checkpoint.assets() {
         if asset.content.is_none() {
             continue;

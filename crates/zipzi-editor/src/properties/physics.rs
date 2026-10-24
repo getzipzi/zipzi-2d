@@ -123,7 +123,7 @@ fn mapping_specs(asset: &PhysicsAsset, object: &ObjectRef) -> Vec<FieldSpec> {
 }
 fn choices(document: &Document, object: &ObjectRef, key: PropertyKey) -> Option<Vec<Choice>> {
     let asset = document.physics_definition()?;
-    let group = resolve(asset, object).ok()?;
+    let group = resolve(&asset, object).ok()?;
     let rig = asset.data.settings.iter().find(|r| r.id == group)?;
     let pairs: Vec<(String, String)> = if key.name().ends_with("parameter") {
         document
@@ -189,13 +189,13 @@ pub(super) fn definition(editor: &Editor, object: &ObjectRef) -> FormDefinition 
     };
     let mut definition = FormDefinition::new(&[(NAME, "properties.name", FieldEditor::Text)]);
     definition.fields.extend(
-        fields(asset, object)
+        fields(&asset, object)
             .unwrap_or_default()
             .into_iter()
             .map(|field| {
                 let mut spec = FieldSpec::new(
                     field
-                        .spec(zipzi_editor_core::property::physics::group(asset, object).unwrap())
+                        .spec(zipzi_editor_core::property::physics::group(&asset, object).unwrap())
                         .unwrap(),
                     field.label(),
                     FieldEditor::Number,
@@ -204,6 +204,6 @@ pub(super) fn definition(editor: &Editor, object: &ObjectRef) -> FormDefinition 
                 spec
             }),
     );
-    definition.fields.extend(mapping_specs(asset, object));
+    definition.fields.extend(mapping_specs(&asset, object));
     definition
 }

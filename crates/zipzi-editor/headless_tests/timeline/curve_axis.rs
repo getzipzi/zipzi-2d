@@ -131,6 +131,7 @@ fn parameter_ranges_normalize_independently_and_axis_ticks_pan_with_curves(
                 document
                     .motion_definition(&projection.clip_id)
                     .unwrap()
+                    .as_ref()
                     .clone(),
                 document.history_lengths(),
             )
@@ -419,7 +420,8 @@ fn parameter_ranges_normalize_independently_and_axis_ticks_pan_with_curves(
                 .document()
                 .unwrap()
                 .motion_definition(&original.id)
-                .unwrap(),
+                .unwrap()
+                .as_ref(),
             &original
         );
     })

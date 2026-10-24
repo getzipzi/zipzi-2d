@@ -180,7 +180,7 @@ fn deleting_group_reports_actual_last_registration_migration_and_undo_restores_o
     let (container, registration) = d.motion_registration(&plan.migrated_to_root[0].id).unwrap();
     assert_eq!(container, C::Root);
     assert_eq!(
-        registration,
+        &registration,
         group
             .entries
             .iter()
@@ -211,7 +211,7 @@ fn dissolve_keeps_every_registration_and_last_root_removal_is_protected_noop() -
     for entry in &group.entries {
         let (owner, actual) = d.motion_registration(&entry.id).unwrap();
         assert_eq!(owner, C::Root);
-        assert_eq!(actual, entry);
+        assert_eq!(&actual, entry);
     }
     let root = d
         .motion_resources()

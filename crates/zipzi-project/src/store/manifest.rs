@@ -19,6 +19,21 @@ pub fn project_manifest(path: &Path) -> PathBuf {
     }
 }
 
+/// Canonical runtime identity for directory/manifest aliases and not-yet-created
+/// save targets. Existing ancestors are resolved before lexical parent traversal.
+/// This coordinates one host's registry; it is not an external writer lock.
+pub fn project_identity(path: &Path) -> Result<PathBuf, Status> {
+    let manifest = project_manifest(path);
+    let absolute = if manifest.is_absolute() {
+        manifest
+    } else {
+        std::env::current_dir()
+            .map_err(io::io_error)?
+            .join(manifest)
+    };
+    io::local_path(&absolute)
+}
+
 #[derive(Clone, Copy)]
 enum ProjectEncoding {
     Json,
@@ -88,7 +103,7 @@ impl DocumentStore {
                 return (
                     ProjectResult::failed("PROJECT_IO", &format!("{}: {}", manifest.display(), e)),
                     None,
-                )
+                );
             }
         };
 
@@ -230,7 +245,7 @@ impl DocumentStore {
                         break (name.clone(), assets_dir.join(name), false);
                     }
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                        break (name, target, false)
+                        break (name, target, false);
                     }
                     Err(e) => return Err(io::io_error(e)),
                 }

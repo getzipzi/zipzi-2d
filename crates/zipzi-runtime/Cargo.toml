@@ -1,0 +1,18 @@
+[package]
+name = "zipzi-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "UI-independent host for Zipzi authoring sessions"
+
+[dependencies]
+zipzi-core.workspace = true
+zipzi-sdk.workspace = true
+zipzi-project.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+serde_json.workspace = true

@@ -3,8 +3,7 @@ use crate::{
     ViewportMetrics, ViewportState,
 };
 use anyhow::{Result, ensure};
-use std::{collections::HashMap, path::Path, sync::Arc};
-use zipzi_sdk::SaveReceipt;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::editing_context::{AnimationContext, ModelingContext};
 
@@ -362,7 +361,8 @@ impl DocumentSession {
         // Editor lock edits are standalone transactions. Other metadata history
         // (for example names) must refresh labels captured in canvas topology.
         let lock_history = history_state.is_some_and(|before| {
-            let after = self.document.model().editor_state();
+            let model_read_guard_56 = self.document.model();
+            let after = model_read_guard_56.editor_state();
             before != *after && before.hidden_objects().eq(after.hidden_objects())
         });
         if invalidate
@@ -378,9 +378,6 @@ impl DocumentSession {
         }
         self.reconcile_animation();
         result
-    }
-    pub fn save(&mut self, path: &Path) -> Result<SaveReceipt> {
-        self.document.save(path)
     }
     pub fn scene(&mut self) -> Result<(SceneSnapshot, Arc<CanvasScene>)> {
         #[cfg(feature = "bench-instrumentation")]

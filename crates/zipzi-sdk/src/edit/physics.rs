@@ -1,8 +1,8 @@
 use super::EditSession;
 use crate::types::SdkError;
-use zipzi_core::document::{PhysicsAsset, PhysicsPatch};
 use zipzi_core::ChangeKind;
-use zipzi_project::{import_physics3, PhysicsDiagnostic, PhysicsProjectError};
+use zipzi_core::document::{PhysicsAsset, PhysicsPatch};
+use zipzi_project::{PhysicsDiagnostic, PhysicsProjectError, import_physics3};
 
 fn project_error(error: PhysicsProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);
@@ -49,6 +49,7 @@ impl EditSession<'_> {
         let imported = import_physics3(self.candidate_document(), id, text)
             .map_err(|error| self.abort_with(project_error(error, "import_physics3")))?;
         let before = crate::session::keys_in(self.candidate_document());
+        self.candidate_content_bytes.take();
         self.candidate = Some(imported.candidate);
         self.track_removed_objects(before);
         self.kind = super::merge_kind(self.kind, ChangeKind::Metadata);

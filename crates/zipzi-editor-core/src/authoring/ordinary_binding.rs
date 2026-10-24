@@ -102,8 +102,8 @@ impl Document {
     }
 
     fn ordinary_part_keyform(&self, binding: &ObjectRef) -> Result<zipzi_core::PartKeyform> {
-        let b = self
-            .model()
+        let model_read_guard_46 = self.model();
+        let b = model_read_guard_46
             .get_scene_binding(&binding.id)
             .ok_or_else(|| anyhow::anyhow!("Expected Part binding"))?;
         let zipzi_core::SceneTrack::Part { keyforms, .. } = &b.track else {
@@ -125,7 +125,8 @@ impl Document {
                             if p.id != a.parameter_id {
                                 return false;
                             }
-                            let parameter = self.model().get_parameter(&p.id).unwrap();
+                            let model_read_guard_47 = self.model();
+                            let parameter = model_read_guard_47.get_parameter(&p.id).unwrap();
                             let value = if parameter.repeat {
                                 let range = p.maximum - p.minimum;
                                 p.minimum + (p.value - p.minimum).rem_euclid(range)
@@ -290,8 +291,8 @@ impl Document {
                         let keys = if parameter.is_empty() {
                             vec![0., 1.]
                         } else {
-                            let p = self
-                                .model()
+                            let model = self.model();
+                            let p = model
                                 .get_parameter(parameter)
                                 .ok_or_else(|| anyhow::anyhow!("Parameter no longer exists"))?;
                             let mut keys = vec![p.minimum, p.default_value, p.maximum];
@@ -415,7 +416,7 @@ impl Document {
             }
         };
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             self.consume_authoring_receipt(&receipt, true);
             self.context.reconcile(&self.object_index());
         }

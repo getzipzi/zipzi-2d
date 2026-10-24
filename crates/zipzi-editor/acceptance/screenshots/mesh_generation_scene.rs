@@ -12,7 +12,7 @@ pub(crate) fn mesh_generation_screenshots(
     let (document, assets) = fixture::rectangle_document(false)?;
     harness.cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.redraw(cx);
         });
         window.render_frame(cx);
@@ -103,7 +103,7 @@ pub(crate) fn mesh_generation_screenshots(
     harness.cx.update_window(harness.window, |_, window, cx| {
         i18n::activate(Some("zh-CN"));
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.redraw(cx);
         });
         window.render_frame(cx);

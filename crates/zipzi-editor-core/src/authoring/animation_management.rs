@@ -83,11 +83,10 @@ impl Document {
                 let (owner, _) = self
                     .motion_registration(&o.id)
                     .ok_or_else(|| anyhow::anyhow!("Missing registration"))?;
+                let model = self.model();
                 let entries = match &owner {
-                    MotionContainer::Root => self.model().motion_roots(),
-                    MotionContainer::Group(id) => {
-                        &self.model().get_motion_group(id).unwrap().entries
-                    }
+                    MotionContainer::Root => model.motion_roots(),
+                    MotionContainer::Group(id) => &model.get_motion_group(id).unwrap().entries,
                 };
                 let before = entries
                     .iter()
@@ -253,6 +252,7 @@ impl Document {
             }
         };
         let native = self.plan_motion_authoring(intent)?;
+        drop(model);
         let mut candidate = self
             .session
             .begin_owned_edit("Copy motion", Some(native.version()))?;
@@ -277,7 +277,7 @@ impl Document {
         }
         let receipt = edit.commit_to(&mut self.session)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         // This plan only adds identities and orders the library; existing Clip
         // content and registration overrides are unchanged. Native receipts may
@@ -338,7 +338,7 @@ impl Document {
         let mut candidate = self
             .session
             .begin_owned_edit("Review animation deletion", None)?;
-        native.apply(&mut candidate)?;
+        candidate.apply(|sdk| native.apply(sdk))?;
         let after = candidate.candidate_document();
         let before = self.model();
         let mut removed = vec![];
@@ -477,10 +477,10 @@ impl Document {
         let mut edit = self
             .session
             .begin_owned_edit("Delete animation resource", Some(plan.version))?;
-        plan.native.apply(&mut edit)?;
+        edit.apply(|sdk| plan.native.apply(sdk))?;
         let receipt = edit.commit_to(&mut self.session)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
         Ok(self.authoring_result(receipt))

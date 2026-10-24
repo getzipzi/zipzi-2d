@@ -16,9 +16,9 @@ use zipzi_core::{Document, Status};
 
 pub(crate) use assets::asset_path;
 pub use assets::{
-    prepare_image_content, read_project_asset, read_project_asset_if_changed, PreparedImageContent,
+    PreparedImageContent, prepare_image_content, read_project_asset, read_project_asset_if_changed,
 };
-pub use manifest::project_manifest;
+pub use manifest::{project_identity, project_manifest};
 pub use session::DocumentSession;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

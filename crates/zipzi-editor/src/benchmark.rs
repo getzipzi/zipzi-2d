@@ -329,10 +329,16 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
             return;
         }
     };
+    let runtime = view.editor.runtime_host();
+    let host = view.host.clone();
     cx.spawn_in(window, async move |view, cx| {
         let result: anyhow::Result<()> = async {
             let executor = cx.background_executor().clone();
-            let completion = executor.spawn(async move { task.run() }).await;
+            let mut completion = executor.spawn(async move { task.run() }).await;
+            completion.publish(&runtime);
+            if let Some(host) = &host {
+                host.completed();
+            }
             view.update_in(cx, |view, window, cx| -> anyhow::Result<()> {
                 view.editor.finish_load(completion)?;
                 if let Some(layer) = view

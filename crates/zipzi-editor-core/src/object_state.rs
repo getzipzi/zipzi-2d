@@ -153,7 +153,7 @@ impl Document {
         if cache.as_ref().is_none_or(|(r, _)| *r != revision) {
             *cache = Some((
                 revision,
-                Arc::new(ObjectStateIndex::build(self.session.document())),
+                Arc::new(ObjectStateIndex::build(&self.session.document())),
             ));
         }
         cache.as_ref().unwrap().1.clone()
@@ -231,10 +231,10 @@ impl Document {
         let (_, receipt) = self
             .session
             .edit(label, None, |edit| edit.replace_editor_state(state))?;
-        self.session.drain_events();
+        self.session.acknowledge_receipts();
         if receipt.changed {
             self.invalidate_projection(false);
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         Ok(())
     }

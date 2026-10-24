@@ -91,6 +91,11 @@ impl PoseAsset {
 }
 
 impl Document {
+    /// Share an immutable pose asset without copying its authored content.
+    pub fn shared_pose(&self) -> Option<std::sync::Arc<PoseAsset>> {
+        self.content.pose.clone()
+    }
+
     pub fn pose(&self) -> Option<&PoseAsset> {
         self.content.pose.as_deref()
     }

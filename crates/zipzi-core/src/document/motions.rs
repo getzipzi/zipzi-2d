@@ -368,6 +368,11 @@ impl Document {
         &self.content.motion_order
     }
 
+    /// Share an immutable clip across host reads without retaining a session borrow.
+    pub fn shared_motion(&self, id: &str) -> Option<std::sync::Arc<MotionClip>> {
+        self.content.motions.get(id).cloned()
+    }
+
     pub fn get_motion(&self, id: &str) -> Option<&MotionClip> {
         self.content.motions.get(id).map(std::sync::Arc::as_ref)
     }

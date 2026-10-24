@@ -610,8 +610,26 @@ fn physics_resource_commits_reuse_controls_but_keep_revision_and_structure_guard
         assert_ne!(input, name);
         input
     });
+    // The Physics resource list owns copy through its current context menu.
     cx.update_window(h.window, |_, window, cx| {
-        window.click("physics-copy-group", cx);
+        window.click_with_options(
+            ("physics-group-row", 0usize),
+            gpui_kit::test::ClickOptions::new().with_button(gpui_kit::MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        let duplicate = (0..16usize)
+            .find(|index| {
+                window
+                    .within("popup-menu")
+                    .try_find(*index)
+                    .is_some_and(|item| item.label() == Some("Duplicate"))
+            })
+            .expect("Physics Duplicate command");
+        window.within("popup-menu").click(duplicate, cx);
         window.render_frame(cx);
     })
     .unwrap();

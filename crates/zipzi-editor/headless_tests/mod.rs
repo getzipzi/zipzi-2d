@@ -29,6 +29,7 @@ mod physics;
 mod project_import;
 mod properties;
 mod recent_files;
+mod runtime_host;
 mod scene_creation;
 mod scene_creation_commands;
 mod scrollbars;
@@ -100,7 +101,7 @@ pub(crate) fn setup_with_document(
     });
     cx.update_window(window, |_, window, cx| {
         view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             cx.notify();
         });
         gpui_kit::test::TestWindowExt::render_frame(window, cx);

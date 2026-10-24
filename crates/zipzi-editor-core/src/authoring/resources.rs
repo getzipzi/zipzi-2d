@@ -188,7 +188,7 @@ impl Document {
     }
     fn resource_operation_result(&mut self, receipt: zipzi_sdk::EditReceipt) -> OperationResult {
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             self.consume_authoring_receipt(&receipt, false);
         }
         self.authoring_result(receipt)
@@ -196,11 +196,11 @@ impl Document {
 
     fn commit_resource_edit(
         &mut self,
-        edit: zipzi_sdk::EditSession<'static>,
+        edit: crate::runtime_host::HostedEdit,
     ) -> Result<OperationResult> {
         let textures = self
             .textures
-            .prepare_refresh(&self.session, edit.candidate_document())?;
+            .prepare_refresh(&self.session.read(), &edit.candidate_document())?;
         let receipt = edit.commit_to(&mut self.session)?;
         if let Some(textures) = textures {
             self.textures = textures;

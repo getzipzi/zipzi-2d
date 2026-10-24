@@ -67,7 +67,7 @@ impl Document {
                     part_id: parent.clone(),
                 };
                 let before =
-                    placement_after(self.model(), &collection, &source.id, &target.id, position)?;
+                    placement_after(&self.model(), &collection, &source.id, &target.id, position)?;
                 (parent, before)
             }
         };
@@ -100,8 +100,8 @@ impl Document {
         if source == target {
             return Ok(());
         }
-        let parent = self
-            .model()
+        let model_read_guard_37 = self.model();
+        let parent = model_read_guard_37
             .scene_deformer_parent(&target.id)
             .ok_or_else(|| anyhow!("Target has no deformation collection"))?;
         let collection = zipzi_sdk::SceneCollection::Deformation {
@@ -127,6 +127,7 @@ impl Document {
                 .ok_or_else(|| anyhow!("Target no longer exists"))?;
             members.get(at + 1).cloned()
         };
+        drop(model_read_guard_37);
         self.finish_edit()?;
         let plan = self.session.plan_scene_edit(zipzi_sdk::SceneEdit::Move {
             ids: vec![source.id.clone()],
@@ -155,7 +156,7 @@ impl Document {
                 let collection = C::Parameters {
                     group_id: group.clone(),
                 };
-                let before = placement_after(self.model(), &collection, source, &id, position)?;
+                let before = placement_after(&self.model(), &collection, source, &id, position)?;
                 (group, before)
             }
         };
@@ -177,14 +178,15 @@ impl Document {
         if source == target {
             return Ok(());
         }
-        let group = self
-            .model()
+        let model_read_guard_38 = self.model();
+        let group = model_read_guard_38
             .get_parameter_group(target)
             .ok_or_else(|| anyhow!("Target group no longer exists"))?;
         let collection = C::ParameterGroups {
             parent_id: group.parent_id.clone(),
         };
-        let before = placement_after(self.model(), &collection, source, target, position)?;
+        let before = placement_after(&self.model(), &collection, source, target, position)?;
+        drop(model_read_guard_38);
         self.finish_edit()?;
         let plan = self.session.plan_organization_edit(E::Move {
             ids: vec![source.into()],

@@ -27,7 +27,7 @@ impl Document {
         edit.set_physics(asset)?;
         let receipt = edit.commit_to(&mut self.session)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
         Ok(())

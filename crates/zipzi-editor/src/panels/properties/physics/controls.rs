@@ -395,8 +395,9 @@ impl PropertiesPanel {
         };
         let owner = self.owner.upgrade();
         let doc = owner.as_ref().and_then(|o| o.read(cx).editor.document());
-        let rig = doc
-            .and_then(|d| d.physics_definition())
+        let physics_asset = doc.and_then(|d| d.physics_definition());
+        let rig = physics_asset
+            .as_ref()
             .and_then(|a| a.data.settings.iter().find(|g| g.id == self.physics.group));
         let selected = rig.and_then(|g| {
             if output {

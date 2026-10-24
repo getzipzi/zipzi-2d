@@ -67,7 +67,7 @@ impl Document {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_physics_plan(plan)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
         Ok(self.authoring_result(receipt))
@@ -147,8 +147,8 @@ impl Document {
         group: &str,
         action: &PhysicsChannelAction,
     ) -> Result<Option<PhysicsEdit>> {
-        let rig = self
-            .model()
+        let model_read_guard_50 = self.model();
+        let rig = model_read_guard_50
             .get_physics_group(group)
             .ok_or_else(|| anyhow::anyhow!("Physics group no longer exists"))?;
         Ok(Some(match action {
@@ -217,8 +217,8 @@ impl Document {
         }))
     }
     pub fn physics_append_node(&self, group: &str) -> Result<PhysicsEdit> {
-        let rig = self
-            .model()
+        let model_read_guard_51 = self.model();
+        let rig = model_read_guard_51
             .get_physics_group(group)
             .ok_or_else(|| anyhow::anyhow!("Physics group no longer exists"))?;
         let mut node = rig.vertices.last().unwrap().clone();

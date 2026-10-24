@@ -164,6 +164,18 @@ impl AuthoringSession {
         rows: usize,
         expected: Option<Version>,
     ) -> Result<EditReceipt, SdkError> {
+        self.begin_remesh_rectangle_grid(mesh_id, columns, rows, expected)?
+            .commit_to(self)
+    }
+
+    /// Stage the same topology operation for a host-controlled publication.
+    pub fn begin_remesh_rectangle_grid(
+        &self,
+        mesh_id: &str,
+        columns: usize,
+        rows: usize,
+        expected: Option<Version>,
+    ) -> Result<crate::EditSession<'static>, SdkError> {
         let source = self.geometry(mesh_id).ok_or_else(|| {
             SdkError::new("NOT_FOUND", "unknown mesh ID", "remesh_rectangle_grid")
         })?;
@@ -223,9 +235,8 @@ impl AuthoringSession {
             glues,
             vertex_mapping: source.vertex_ids.iter().map(|&id| (id, Some(id))).collect(),
         };
-        let (_, receipt) = self.edit("remesh rectangle grid", expected, |edit| {
-            edit.replace_topology(&source, replacement)
-        })?;
-        Ok(receipt)
+        let mut edit = self.begin_owned_edit("remesh rectangle grid", expected)?;
+        edit.replace_topology(&source, replacement)?;
+        Ok(edit)
     }
 }

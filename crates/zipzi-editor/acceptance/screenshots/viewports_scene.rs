@@ -98,7 +98,7 @@ pub(super) fn viewport_screenshots(directory: &Path) -> anyhow::Result<()> {
             h._assets = assets;
             h.cx.update_window(h.window, |_, window, cx| {
                 h.view.update(cx, |view, cx| {
-                    view.editor = zipzi_editor_core::Editor::from_document(document);
+                    view.replace_editor(zipzi_editor_core::Editor::from_document(document), cx);
                     view.editor.set_workspace(WorkspaceKind::Animation).unwrap();
                     let selection = view.editor.document().unwrap().motion_resources()[0]
                         .selection
@@ -402,7 +402,7 @@ fn isolation_screenshots(directory: &Path) -> anyhow::Result<()> {
     h._assets = assets;
     h.cx.update_window(h.window, |_, window, cx| {
         h.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.editor
                 .execute(EditorCommand::SelectCanvasObjects(vec![ObjectRef::new(
                     ObjectKind::Mesh,

@@ -157,7 +157,7 @@ pub(crate) fn titlebar_screenshots(directory: &std::path::Path) -> anyhow::Resul
         harness.cx.update_window(harness.window, |_, window, cx| {
             window.press("escape", cx);
             harness.view.update(cx, |view, cx| {
-                view.editor = Editor::empty();
+                view.replace_editor(Editor::empty(), cx);
                 view.refresh_document(window, cx);
             });
         })?;
@@ -207,7 +207,7 @@ pub(crate) fn compact_screenshots(directory: &std::path::Path) -> anyhow::Result
     }
     harness._assets = assets;
     harness.view.update(&mut harness.cx, |view, cx| {
-        view.editor = Editor::from_document(document);
+        view.replace_editor(Editor::from_document(document), cx);
         view.redraw(cx);
     });
     let mut metrics = Vec::new();

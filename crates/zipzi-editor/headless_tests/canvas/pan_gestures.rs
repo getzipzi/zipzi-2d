@@ -381,7 +381,7 @@ fn origin_crosshair_toggle_requires_a_ready_modeling_viewport(cx: &mut TestAppCo
         );
 
         harness.view.update(cx, |view, cx| {
-            view.editor = zipzi_editor_core::Editor::empty();
+            view.replace_editor(zipzi_editor_core::Editor::empty(), cx);
             cx.notify();
         });
         window.render_frame(cx);
@@ -400,7 +400,7 @@ fn welcome_text_centered_when_no_active_document(cx: &mut TestAppContext) {
 
         // Switch to empty editor (active is None)
         harness.view.update(cx, |view, cx| {
-            view.editor = zipzi_editor_core::Editor::empty();
+            view.replace_editor(zipzi_editor_core::Editor::empty(), cx);
             cx.notify();
         });
         window.render_frame(cx);
@@ -701,7 +701,7 @@ fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {
     let from = cx
         .update_window(harness.window, |_, window, cx| {
             harness.view.update(cx, |view, cx| {
-                view.editor = editor;
+                view.replace_editor(editor, cx);
                 cx.notify();
             });
             window.render_frame(cx);

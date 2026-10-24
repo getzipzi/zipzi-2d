@@ -252,7 +252,7 @@ fn deletion_review_defaults_to_cancel_and_executes_the_reported_migration(cx: &m
         assert_eq!(remaining.len(), 1);
         assert_eq!(
             doc.motion_registration(&remaining[0].id).unwrap().1,
-            remaining[0]
+            remaining[0].clone()
         );
         assert!(doc.motion_definition(&remaining[0].clip_id).is_some());
         // The surviving last registration may differ from the previewed one. Never auto-activate it.
@@ -481,7 +481,7 @@ fn group_menu_dissolve_preserves_all_registrations_and_preview(cx: &mut TestAppC
         let doc = v.editor.document().unwrap();
         assert!(doc.motion_groups().is_empty());
         for entry in &group.entries {
-            assert_eq!(doc.motion_registration(&entry.id).unwrap().1, entry);
+            assert_eq!(&doc.motion_registration(&entry.id).unwrap().1, entry);
         }
         assert_eq!(
             v.editor.animation().unwrap().motion.as_ref(),

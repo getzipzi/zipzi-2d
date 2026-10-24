@@ -71,3 +71,9 @@ required-features = ["test-support"]
 name = "native_render"
 path = "tests/native_render.rs"
 required-features = ["test-support"]
+
+[[test]]
+name = "runtime_interaction_acceptance"
+path = "tests/runtime_interaction_acceptance.rs"
+harness = false
+required-features = ["test-support"]

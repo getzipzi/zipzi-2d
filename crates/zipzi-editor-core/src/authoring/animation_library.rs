@@ -65,11 +65,12 @@ impl Document {
             .session
             .begin_owned_edit("Edit animation library", None)?;
         for intent in &edits {
-            intent.apply(&mut candidate)?;
+            candidate.apply(|sdk| intent.apply(sdk))?;
         }
+        let noop = candidate.candidate_document().revision() == self.model().revision();
         Ok(AnimationLibraryPlan {
             version: self.session.version(),
-            noop: candidate.candidate_document().revision() == self.model().revision(),
+            noop,
             edits,
         })
     }
@@ -283,6 +284,7 @@ impl Document {
             }
             _ => anyhow::bail!("Unsupported animation resource"),
         }
+        drop(model);
         self.plan_library_edits(edits)
     }
     pub fn animation_resource_destinations(
@@ -328,6 +330,7 @@ impl Document {
             "Resource context expired"
         );
         if target == Some(source) {
+            drop(model);
             return self.plan_library_edits(vec![]);
         }
         let edits = match source.kind {
@@ -446,6 +449,7 @@ impl Document {
             }
             _ => anyhow::bail!("Unsupported resource movement"),
         };
+        drop(model);
         self.plan_library_edits(edits)
     }
     pub fn plan_animation_resource_step(
@@ -499,6 +503,7 @@ impl Document {
                 at.saturating_sub(1)
             })
             .unwrap();
+        drop(model);
         self.plan_animation_resource_move(
             source,
             Some(target),
@@ -518,11 +523,11 @@ impl Document {
             .session
             .begin_owned_edit("Edit animation library", Some(plan.version))?;
         for intent in &plan.edits {
-            intent.apply(&mut edit)?;
+            edit.apply(|sdk| intent.apply(sdk))?;
         }
         let receipt = edit.commit_to(&mut self.session)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
         Ok(self.authoring_result(receipt))

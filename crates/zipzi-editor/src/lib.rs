@@ -15,6 +15,7 @@ mod editing;
 #[cfg(test)]
 #[path = "../headless_tests/mod.rs"]
 mod headless_tests;
+mod host;
 mod i18n;
 mod input_routing;
 mod keybindings;
@@ -44,6 +45,8 @@ use rust_i18n::t;
 use zipzi_editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
 
 struct EditorView {
+    host: Option<host::DesktopHost>,
+    _runtime_events: Option<Task<()>>,
     input_router: input_routing::InputRouter,
     focus: FocusHandle,
     modal: bool,
@@ -85,13 +88,19 @@ impl EditorView {
         std::time::Duration::from_secs(4);
 
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let mut editor = Editor::empty();
+        let host = cx.try_global::<host::DesktopHost>().cloned();
+        let (mut editor, runtime_notices) = host
+            .as_ref()
+            .map(|host| host.take_editor())
+            .unwrap_or_else(|| (Editor::empty(), vec![]));
         editor
             .set_workspace(cx.global::<settings::Settings>().workspace)
             .unwrap();
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut editor = Self {
+            host,
+            _runtime_events: None,
             input_router: Default::default(),
             focus,
             modal: false,
@@ -131,26 +140,75 @@ impl EditorView {
         let entity = cx.weak_entity();
         window.on_window_should_close(cx, move |window, cx| {
             entity
-                .update(cx, |this, cx| {
-                    this.close(window, cx);
-                    false
-                })
+                .update(cx, |this, cx| this.detach_window(window, cx))
                 .unwrap_or(true)
         });
         editor.connect_panel_lifecycle(window, cx);
         editor.sync_viewports();
         editor.init_dock(window, cx);
-        if let Some(session) = &mut editor.dev_session {
-            if let Err(error) = session.restore(&mut editor.editor) {
-                editor.edit_error = Some(error.to_string());
+        if editor.editor.document_count() == 0 {
+            if let Some(session) = &mut editor.dev_session {
+                if let Err(error) = session.restore(&mut editor.editor) {
+                    editor.edit_error = Some(error.to_string());
+                }
             }
         }
+        if !runtime_notices.is_empty() {
+            editor.edit_error = Some(runtime_notices.join("; "));
+        }
+        editor.connect_runtime_events(cx);
         editor.schedule_status_clear(cx);
         editor.connect_preview(window, cx);
         benchmark::start(&mut editor, window, cx);
+        if editor
+            .host
+            .as_ref()
+            .is_some_and(|host| host.pending_quit.replace(false))
+        {
+            editor.close(window, cx);
+        }
         editor
     }
 
+    fn connect_runtime_events(&mut self, cx: &mut Context<Self>) {
+        let changes = self.editor.runtime_host().subscribe_changes();
+        // Catch publications between taking the parked workspace and subscribing.
+        match self.editor.sync_runtime() {
+            Ok(true) => self.redraw(cx),
+            Ok(false) => {}
+            Err(error) => self.set_edit_error(error.to_string(), cx),
+        }
+        self._runtime_events = Some(cx.spawn(async move |this, cx| {
+            while changes.recv().await.is_ok() {
+                if this
+                    .update(cx, |this, cx| {
+                        let pending = this.editor.pending_io_count();
+                        let notices = this.editor.sync_runtime_jobs();
+                        let io_changed = pending != this.editor.pending_io_count();
+                        if !notices.is_empty() {
+                            this.set_edit_error(notices.join("; "), cx);
+                        }
+                        match this.editor.sync_runtime() {
+                            Ok(changed) if changed || io_changed => this.redraw(cx),
+                            Ok(_) => {}
+                            Err(error) => this.set_edit_error(error.to_string(), cx),
+                        }
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        }));
+    }
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) fn replace_editor(&mut self, mut editor: Editor, cx: &mut Context<Self>) {
+        if let Some(host) = &self.host {
+            editor.rehost(host.runtime.clone()).expect("fixture host");
+        }
+        self.editor = editor;
+        self.connect_runtime_events(cx);
+    }
     pub(crate) fn set_edit_error(&mut self, error: impl Into<String>, cx: &mut Context<Self>) {
         self.edit_error = Some(error.into());
         self.schedule_status_clear(cx);
@@ -334,43 +392,30 @@ pub fn run() {
     benchmark::init().expect("initialize benchmark trace");
     i18n::activate(None);
     let background_launch = std::env::var_os("ZIPZI_DEV_BACKGROUND").is_some();
-    gpui_kit::application()
-        .with_assets(gpui_kit::assets::AllAssets)
-        .run(move |cx| {
-            gpui_kit::init(cx);
-            cx.on_app_quit(|_| async {
-                benchmark::finish();
-            })
-            .detach();
-            let settings = settings::Settings::load(cx);
-            i18n::activate(settings.language.as_deref());
-            cx.set_global(settings);
-            actions::init(cx);
-            theme::init(cx);
-            cx.on_window_closed(|cx, _| {
-                if cx.windows().is_empty() {
-                    cx.quit();
-                }
-            })
-            .detach();
-            gpui_kit::open_window(
-                WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
-                        None,
-                        size(px(1100.), px(740.)),
-                        cx,
-                    ))),
-                    window_min_size: Some(size(px(800.), px(480.))),
-                    ..workspace::title_bar::window_options()
-                },
-                cx,
-                |window, cx| cx.new(|cx| EditorView::new(window, cx)),
-            )
-            .expect("open kit editor");
-            if !background_launch {
-                cx.activate(true);
-            }
-        });
+    let no_window = std::env::args().any(|arg| arg == "--no-window");
+    let application = gpui_kit::application().with_assets(gpui_kit::assets::AllAssets);
+    application.on_reopen(|cx| {
+        host::open_window(cx, true);
+    });
+    application.run(move |cx| {
+        gpui_kit::init(cx);
+        cx.on_app_quit(|_| async {
+            benchmark::finish();
+        })
+        .detach();
+        let settings = settings::Settings::load(cx);
+        i18n::activate(settings.language.as_deref());
+        cx.set_global(settings);
+        actions::init(cx);
+        theme::init(cx);
+        cx.set_global(host::DesktopHost::new());
+        if !no_window {
+            host::open_window(cx, !background_launch);
+        }
+        if !background_launch && !no_window {
+            cx.activate(true);
+        }
+    });
     benchmark::finish();
 }
 

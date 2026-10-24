@@ -9,7 +9,7 @@ pub(crate) fn animation_replacement_keeps_canvas(harness: &mut Harness) -> anyho
     let (document, assets) = fixture::animation_document()?;
     harness.cx.update_window(harness.window, |_, _, cx| {
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.editor
                 .set_workspace(zipzi_editor_core::WorkspaceKind::Animation)
                 .unwrap();
@@ -125,7 +125,7 @@ pub(crate) fn animation_scrubbing_presents_frames_before_release() -> anyhow::Re
     let (document, assets) = fixture::animation_document()?;
     harness.cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.redraw(cx);
         });
         window.render_frame(cx);
@@ -237,7 +237,7 @@ pub(crate) fn animation_playback_screenshots(
     harness.cx.update_window(harness.window, |_, window, cx| {
         i18n::activate(Some("en"));
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.edit_error = None;
             view.redraw(cx);
         });
@@ -385,7 +385,7 @@ pub(crate) fn animation_playback_screenshots(
     i18n::activate(Some("zh-CN"));
     harness.cx.update_window(harness.window, |_, _, cx| {
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.editor
                 .set_workspace(zipzi_editor_core::WorkspaceKind::Animation)
                 .unwrap();

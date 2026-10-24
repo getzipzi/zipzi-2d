@@ -145,7 +145,7 @@ def rust_contract(row: dict, path: Path) -> dict:
     if owner == "EditSession":
         source, effect = "edit + candidate sequence", "candidate only; ordinary error poisons edit"
         lifecycle = "client/session owned Edit; commit consumes; cancel drops; no-op preserves redo"
-        if name in {"base_version", "candidate_document"}:
+        if name in {"base_version", "candidate_document", "is_aborted", "estimated_bytes"}:
             effect = "read-only candidate"
         elif name in {"commit", "commit_to"}:
             effect, stage = "one history step iff changed; SDK validates complete Version", "R3"
@@ -161,9 +161,14 @@ def rust_contract(row: dict, path: Path) -> dict:
             if name != "new":
                 classification = "host-only"
                 lifecycle = "Rust host configuration; not a callable client filesystem or closure"
-        elif name in {"begin_edit", "begin_owned_edit", "edit", "begin_expression_entry_edit", "begin_image_content_edit"}:
+        elif name in {"begin_edit", "begin_owned_edit", "edit", "begin_expression_entry_edit", "begin_image_content_edit",
+                      "begin_import_prepared_image", "begin_prepared_image_content_edit",
+                      "begin_attachment_content_edit", "begin_remesh_rectangle_grid"}:
             effect = "begin candidate; edit convenience commits once iff changed"
             stage = "R3"
+        elif name == "candidate_snapshot":
+            source, effect = "edit + candidate sequence", "immutable candidate capture; never formal publication"
+            lifecycle = "same SDK session/generation; retains memory images; disk bytes not pinned until R4"
         elif name == "drain_events":
             classification, effect = "host-only", "consumes SDK events exactly once in Runtime; clients subscribe instead"
         elif name in {"undo", "redo"} or name.startswith("execute_") or "EditReceipt" in row["signature"]:
@@ -196,7 +201,7 @@ def rust_contract(row: dict, path: Path) -> dict:
     if name.startswith("plan_") or owner.endswith("Plan"):
         lifecycle = "Plan owned by client/session/source; base Version checked at execute; explicit release"
     expensive = (name.startswith(("import_", "export_", "plan_", "execute_", "prepare_"))
-                 or name in {"save_project", "open_project", "commit", "commit_to", "read_snapshot", "remesh_rectangle_grid"})
+                 or name in {"save_project", "open_project", "commit", "commit_to", "read_snapshot", "candidate_snapshot", "remesh_rectangle_grid"})
     return dict(domain=domain, classification=classification, stage=stage,
                 source_ref=source, effect=effect, lifecycle=lifecycle,
                 bulk="preserve SDK collection/array arguments; add explicit batch queries in R4",

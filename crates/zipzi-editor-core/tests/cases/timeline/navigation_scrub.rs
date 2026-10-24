@@ -234,6 +234,7 @@ fn camera_navigation_preserves_candidate_identity_and_history_boundary() -> anyh
         .unwrap()
         .motion_definition(&id(4))
         .unwrap()
+        .as_ref()
         .clone();
     let token = editor.begin_timeline_edit(document, "Drag motion key")?;
     editor.update_timeline_edit(
@@ -251,7 +252,11 @@ fn camera_navigation_preserves_candidate_identity_and_history_boundary() -> anyh
     assert_eq!(editor.timeline_edit().unwrap().identity, identity);
     assert_eq!(editor.timeline_edit().unwrap().candidate.clip(), &candidate);
     assert_eq!(
-        editor.document().unwrap().motion_definition(&id(4)),
+        editor
+            .document()
+            .unwrap()
+            .motion_definition(&id(4))
+            .as_deref(),
         Some(&original)
     );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
@@ -265,7 +270,11 @@ fn camera_navigation_preserves_candidate_identity_and_history_boundary() -> anyh
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.execute(EditorCommand::Undo)?;
     assert_eq!(
-        editor.document().unwrap().motion_definition(&id(4)),
+        editor
+            .document()
+            .unwrap()
+            .motion_definition(&id(4))
+            .as_deref(),
         Some(&original)
     );
     Ok(())

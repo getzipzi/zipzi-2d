@@ -87,7 +87,7 @@ fn committed(editor: &Editor, object: &ObjectRef, spec: PropertySpec) -> Result<
 fn visible(editor: &Editor, object: &ObjectRef, spec: PropertySpec) -> Result<PropertyValue> {
     if object.kind == ObjectKind::PhysicsGroup {
         let asset = editor.document().unwrap().physics_definition().unwrap();
-        let group = schema::physics::group(asset, object)?;
+        let group = schema::physics::group(&asset, object)?;
         let id = spec
             .key
             .entity_id()
@@ -782,7 +782,7 @@ fn main() -> Result<()> {
     if let Some(target) = physics {
         let mut spec = schema::physics::MOBILITY;
         let asset = editor.document().unwrap().physics_definition().unwrap();
-        let node = &schema::physics::group(asset, &target)?.vertices[1];
+        let node = &schema::physics::group(&asset, &target)?.vertices[1];
         spec.key = spec.key.for_entity(&node.id);
         run!(
             "physics_mobility_commit",

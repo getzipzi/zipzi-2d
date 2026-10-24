@@ -18,7 +18,7 @@ impl Document {
             if *revision == previous_revision
                 && owners
                     .iter()
-                    .all(|id| Arc::make_mut(index).refresh_expression(self.model(), id))
+                    .all(|id| Arc::make_mut(index).refresh_expression(&self.model(), id))
             {
                 *revision = self.projection_revision;
             }
@@ -35,12 +35,12 @@ impl Document {
         self.invalidate_projection(false);
         let mut cache = self.object_index.lock().unwrap();
         if let Some((revision, index)) = cache.as_mut() {
-            if *revision == previous && refresh(Arc::make_mut(index), self.model()) {
+            if *revision == previous && refresh(Arc::make_mut(index), &self.model()) {
                 *revision = self.projection_revision;
             }
         }
         drop(cache);
-        self.session.drain_events();
+        self.session.acknowledge_receipts();
     }
 
     pub(in crate::document) fn consume_authoring_receipt(
@@ -564,7 +564,7 @@ impl Document {
                 previous_revision,
                 &owners.into_iter().collect::<Vec<_>>(),
             );
-            self.session.drain_events();
+            self.session.acknowledge_receipts();
         } else {
             // Other slices retain their existing invalidation policy. Expression
             // structural edits rebuild relations, but never canvas topology.
@@ -628,7 +628,7 @@ mod tests {
         document.redo()?;
         assert_eq!(document.canvas_topology().index.name(&object), "After");
         assert!(before.same_geometry(&document.canvas_topology()));
-        assert!(document.session.drain_events().is_empty());
+        assert!(document.session.acknowledge_receipts().is_empty());
         Ok(())
     }
 

@@ -1,7 +1,7 @@
 //! Candidate-document edits and atomic publication.
 use std::collections::HashSet;
 
-use crate::session::{keys_in, object_exists_in, AuthoringSession};
+use crate::session::{AuthoringSession, keys_in, object_exists_in};
 use crate::types::*;
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::{
@@ -14,7 +14,9 @@ use zipzi_core::{
 pub struct EditSession<'a> {
     pub(crate) session: Option<&'a mut AuthoringSession>,
     pub(crate) base_keys: std::sync::Arc<HashSet<ObjectKey>>,
+    pub(crate) base_key_bytes: usize,
     pub(crate) candidate: Option<Document>,
+    pub(crate) candidate_content_bytes: std::sync::OnceLock<usize>,
     pub(crate) label: String,
     pub(crate) before: Version,
     pub(crate) aborted: bool,
@@ -25,6 +27,7 @@ pub struct EditSession<'a> {
     pub(crate) authoring_limits: zipzi_core::document::AuthoringLimits,
     pub(crate) resource_load_controls: Vec<std::sync::Arc<std::sync::atomic::AtomicBool>>,
     pub(crate) binding_controls: Vec<zipzi_core::document::ConversionControl>,
+    pub(crate) prepared_images: Vec<crate::PreparedImageContent>,
     pub(crate) binding_cost: Option<zipzi_core::document::ConversionCost>,
 }
 
@@ -39,6 +42,49 @@ impl EditSession<'_> {
     /// Read the current candidate when composing multiple operations in one edit.
     pub fn candidate_document(&self) -> &Document {
         self.candidate.as_ref().expect("edit candidate exists")
+    }
+
+    /// Whether an ordinary editing failure has made this transaction uncommittable.
+    pub fn is_aborted(&self) -> bool {
+        self.aborted
+    }
+
+    /// Conservative candidate estimate; shared document payloads may be counted
+    /// more than once by hosts. Image backing allocations need separate accounting.
+    pub fn estimated_bytes(&self) -> usize {
+        self.estimated_content_bytes()
+            .saturating_add(std::mem::size_of::<Self>())
+            .saturating_add(self.base_key_bytes)
+            .saturating_add(object_key_bytes(&self.erased_keys))
+            .saturating_add(
+                self.prepared_images
+                    .capacity()
+                    .saturating_mul(std::mem::size_of::<crate::PreparedImageContent>()),
+            )
+            .saturating_add(self.resource_load_controls.capacity().saturating_mul(
+                std::mem::size_of::<std::sync::Arc<std::sync::atomic::AtomicBool>>(),
+            ))
+            .saturating_add(
+                self.binding_controls
+                    .capacity()
+                    .saturating_mul(std::mem::size_of::<zipzi_core::document::ConversionControl>()),
+            )
+            .saturating_add(self.categories.len().saturating_mul(
+                std::mem::size_of::<crate::ChangeCategory>() + 3 * std::mem::size_of::<usize>(),
+            ))
+            .saturating_add(self.label.capacity())
+            .saturating_add(
+                self.object_ids
+                    .iter()
+                    .map(|id| id.capacity() + std::mem::size_of::<String>())
+                    .sum::<usize>(),
+            )
+    }
+
+    fn estimated_content_bytes(&self) -> usize {
+        *self
+            .candidate_content_bytes
+            .get_or_init(|| self.candidate_document().estimated_content_bytes())
     }
 
     pub fn base_version(&self) -> Version {
@@ -75,6 +121,7 @@ impl EditSession<'_> {
     }
 
     pub(crate) fn document(&mut self) -> &mut Document {
+        self.candidate_content_bytes.take();
         self.candidate.as_mut().expect("edit candidate exists")
     }
     pub(crate) fn record(
@@ -712,6 +759,7 @@ impl EditSession<'_> {
                 .check()
                 .map_err(|s| SdkError::from_status(s, "commit", vec![]))?;
         }
+        let cached_candidate_bytes = self.candidate_content_bytes.get().copied();
         let candidate = self.candidate.take().expect("edit candidate exists");
         if let Some(issue) = candidate
             .validate_structure_since(session.document())
@@ -778,10 +826,15 @@ impl EditSession<'_> {
         }
         let previous = changed.then(|| session.project.document().checkpoint());
         let mut evict_count = 0usize;
+        let mut published_bytes = None;
+        let mut checkpoint_bytes = 0;
         if let Some(checkpoint) = &previous {
             let limits = session.history_limits;
-            let candidate_bytes = candidate.estimated_content_bytes();
-            let entry_bytes = checkpoint.estimated_bytes()
+            let candidate_bytes =
+                cached_candidate_bytes.unwrap_or_else(|| candidate.estimated_content_bytes());
+            published_bytes = Some(candidate_bytes);
+            checkpoint_bytes = checkpoint.estimated_bytes();
+            let entry_bytes = checkpoint_bytes
                 + changes.estimated_bytes()
                 + self
                     .object_ids
@@ -844,6 +897,9 @@ impl EditSession<'_> {
             .project
             .publish_authoring_candidate(candidate, self.kind, identity_changed)
             .map_err(|s| SdkError::from_status(s, "commit", self.object_ids.clone()))?;
+        for image in &self.prepared_images {
+            session.project.retain_prepared_image(image);
+        }
         // A successfully accepted load consumes its request even for a no-op.
         // Rejected/dropped candidates leave requests available for retry.
         for control in &self.resource_load_controls {
@@ -856,14 +912,23 @@ impl EditSession<'_> {
         }
         if let (Some(keys), Some(after_keys)) = (&before_keys, &after_keys) {
             session.refresh_incarnations_from_keys(keys, after_keys, &identity_keys);
+            let bytes = if std::sync::Arc::ptr_eq(after_keys, &self.base_keys) {
+                self.base_key_bytes
+            } else {
+                object_key_bytes(after_keys)
+            };
             *session.object_key_cache.lock().unwrap() =
-                Some((session.version(), after_keys.clone()));
+                Some((session.version(), after_keys.clone(), bytes));
+        }
+        if let Some(bytes) = published_bytes {
+            *session.content_bytes_cache.lock().unwrap() = Some((session.version(), bytes));
         }
         if let Some(checkpoint) = previous {
             for _ in 0..evict_count {
                 session.done.pop_front();
             }
-            session.done.push_back(HistoryEntry {
+            let entry = HistoryEntry {
+                estimated_bytes_cache: Default::default(),
                 label: self.label.clone(),
                 changes: changes.clone(),
                 kind: self.kind,
@@ -871,7 +936,11 @@ impl EditSession<'_> {
                 checkpoint,
                 identity_keys,
                 root: session.project.root(),
-            });
+            };
+            let _ = entry
+                .estimated_bytes_cache
+                .set(checkpoint_bytes + entry.metadata_bytes());
+            session.done.push_back(entry);
             session.redo.clear();
         }
         let receipt = EditReceipt {

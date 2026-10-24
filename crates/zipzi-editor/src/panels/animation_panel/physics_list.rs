@@ -70,7 +70,7 @@ impl AnimationPanel {
         let context = AuthoringContext::capture(&state.editor);
         let group = doc
             .physics_definition()
-            .and_then(|a| selected(&state.editor, a).map(|i| reference(&a.data.settings[i].id)));
+            .and_then(|a| selected(&state.editor, &a).map(|i| reference(&a.data.settings[i].id)));
         let action = A::Create(ObjectKind::PhysicsGroup, group);
         let available = business::availability(&state.editor, &action);
         let off = state.modal || dialog || available.as_ref().is_none_or(|a| !a.enabled);
@@ -170,7 +170,7 @@ impl AnimationPanel {
                 )
                 .into_any_element();
         };
-        let index = selected(&state.editor, asset);
+        let index = selected(&state.editor, &asset);
         root = sorting::scroll_div(root, &self.sorting, &self.resources.view.scroll);
         let choices: Vec<_> = asset
             .data
@@ -203,14 +203,14 @@ impl AnimationPanel {
                     cx,
                 )
                 .test_support()
-                .aria_label(group_name(asset, &rig.id).to_owned())
+                .aria_label(group_name(&asset, &rig.id).to_owned())
                 .aria_selected(index == Some(i))
                 .child(
                     div()
                         .flex_1()
                         .min_w_0()
                         .overflow_hidden()
-                        .child(group_name(asset, &rig.id).to_owned()),
+                        .child(group_name(&asset, &rig.id).to_owned()),
                 )
                 .child(
                     div()
@@ -235,7 +235,7 @@ impl AnimationPanel {
                     &self.sorting,
                     document,
                     item,
-                    group_name(asset, &rig.id).to_owned(),
+                    group_name(&asset, &rig.id).to_owned(),
                     !disabled,
                 )
                 .context_menu(business::menu(self.owner.clone(), reference(&rig.id))),

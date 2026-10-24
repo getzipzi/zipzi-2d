@@ -270,7 +270,7 @@ impl Document {
                         })?;
                 if receipt.changed {
                     self.refresh_textures()?;
-                    self.pristine_blank = false;
+                    self.pristine_blank = None;
                     self.after_history(true);
                 }
                 Ok(())
@@ -403,7 +403,7 @@ impl Document {
             Some(expected),
         )?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             self.after_history(true);
         }
         Ok(())

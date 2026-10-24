@@ -127,6 +127,7 @@ fn first_write_creates_only_current_key_and_candidates_are_detached_cancelable()
         .unwrap()
         .motion_definition(&id(4))
         .unwrap()
+        .as_ref()
         .clone();
     e.seek_timeline(d, 0.7137)?;
     let mut evaluator = AnimationEvaluator::default();
@@ -151,7 +152,7 @@ fn first_write_creates_only_current_key_and_candidates_are_detached_cancelable()
             .contains(&TimelineRowId::Channel(TimelineChannelId::Parameter(id(3))))
     );
     assert_eq!(
-        e.document().unwrap().motion_definition(&id(4)),
+        e.document().unwrap().motion_definition(&id(4)).as_deref(),
         Some(&original)
     );
     assert_eq!(e.document().unwrap().history_lengths(), (0, 0));
@@ -304,7 +305,8 @@ fn explicitly_selected_subframe_key_keeps_exact_time_with_snap_enabled() -> anyh
         .unwrap()
         .tracks
         .last()
-        .unwrap();
+        .unwrap()
+        .clone();
     assert_eq!(track.initial.time, 0.1);
     assert_eq!(track.initial.value, 0.3);
     Ok(())
@@ -328,6 +330,7 @@ fn inspector_value_and_event_text_edits_preserve_subframe_times() -> anyhow::Res
         .unwrap()
         .motion_definition(&id(4))
         .unwrap()
+        .as_ref()
         .clone();
     let initial = &original.tracks[0].initial;
     e.execute_timeline(

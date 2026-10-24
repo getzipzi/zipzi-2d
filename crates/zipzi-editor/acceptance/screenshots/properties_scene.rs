@@ -10,7 +10,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         let (document, _assets) = fixture::sample_document()?;
         harness.cx.update_window(harness.window, |_, window, cx| {
             harness.view.update(cx, |view, cx| {
-                view.editor = Editor::from_document(document);
+                view.replace_editor(Editor::from_document(document), cx);
                 view.refresh_document(window, cx);
             });
             window.render_frame(cx);
@@ -112,7 +112,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         document.navigate(fixture::object(ObjectKind::Part, 101))?;
         harness.cx.update_window(harness.window, |_, window, cx| {
             harness.view.update(cx, |view, cx| {
-                view.editor = Editor::from_document(document);
+                view.replace_editor(Editor::from_document(document), cx);
                 view.refresh_document(window, cx);
             });
             window.render_frame(cx);
@@ -126,7 +126,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         let (document, _assets) = fixture::sample_document_with_parameter_groups()?;
         harness.cx.update_window(harness.window, |_, window, cx| {
             harness.view.update(cx, |view, cx| {
-                view.editor = Editor::from_document(document);
+                view.replace_editor(Editor::from_document(document), cx);
                 view.refresh_document(window, cx);
             });
             window.render_frame(cx);
@@ -144,7 +144,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         ))?;
         harness.cx.update_window(harness.window, |_, window, cx| {
             harness.view.update(cx, |view, cx| {
-                view.editor = Editor::from_document(document);
+                view.replace_editor(Editor::from_document(document), cx);
                 view.refresh_document(window, cx);
             });
         })?;

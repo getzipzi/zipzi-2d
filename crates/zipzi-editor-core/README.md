@@ -20,6 +20,11 @@ and viewport transforms provide the rendering boundary consumed by
 - `src/lib.rs`: public types and exports.
 
 Keep native widgets, GPU resources and window lifecycle in the consuming crates.
+R1 adds `HostedDocument`, a typed SessionId reference that borrows Runtime's
+original SDK session without owning a second authoring instance. The integration
+fixture verifies shared publication/history. Existing `Document` ownership and
+native window lifecycle migrate in R2; this bridge does not claim that migration.
+
 Reusable model semantics belong in the SDK; this crate supplies Editor policy
 and coordination around them.
 
@@ -46,3 +51,23 @@ assets can skip. See [test gates](../../tools/README.md#test-coverage) and
 
 Licensed **GPL-3.0-only**; not published to crates.io. See
 [component licensing](../../LICENSING.md).
+
+## Runtime ownership
+
+`RuntimeHost` owns the sole formal SDK/history. `Document` holds a SessionId
+adapter, view projections, selection and preview state; formal writes and event
+consumption pass through Runtime. `Editor::with_runtime` attaches a workspace to
+an application host. `detach_document` retains resident content/history, while
+explicit close releases it after save/discard coordination.
+
+Background load/save tasks carry Runtime Work, never Editor view state. Publish
+a Completion into Runtime before attempting a weak view callback.
+`sync_runtime_jobs` restores pending view state and reports failures even after
+window detachment; `attach_resident_sessions` rebuilds views on reopen. Decoder
+workers prepare textures/object indexes before returning to the UI.
+
+Focused lifecycle regressions:
+
+```sh
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration runtime::
+```

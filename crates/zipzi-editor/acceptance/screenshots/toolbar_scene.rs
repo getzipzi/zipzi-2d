@@ -44,7 +44,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         let (document, assets) = toolbar_document()?;
         harness.cx.update_window(harness.window, |_, window, cx| {
             harness.view.update(cx, |view, cx| {
-                view.editor = Editor::from_document(document);
+                view.replace_editor(Editor::from_document(document), cx);
                 view.editor
                     .execute(EditorCommand::SelectObject(ObjectRef::new(
                         ObjectKind::Deformer,

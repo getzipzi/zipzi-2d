@@ -1,6 +1,6 @@
 # Repository structure
 
-The root Cargo workspace owns 18 crates: 15 SDK packages and 3 Editor packages.
+The root Cargo workspace owns 19 crates: 16 SDK packages and 3 Editor packages.
 `Cargo.toml` defines membership; [`tools/workspace/package-domains.json`](tools/workspace/package-domains.json)
 assigns test domains. Validate both with `python3 tools/workspace/cargo_domain.py --check`
 after adding or removing a member. All owned crates live directly under `crates/`.
@@ -21,6 +21,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | `zipzi-render-wgpu` | WGPU rendering |
 | `zipzi-render-metal` | Native Metal rendering |
 | `zipzi-sdk` | Transactional Rust authoring API |
+| [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
 | `zipzi-sdk-observe` | Immutable inspection and GPU capture |
 | `zipzi-python` | Python bindings and independently built wheel |
 | `cubism-matrix-zipzi` | SDK comparison benchmark runner |

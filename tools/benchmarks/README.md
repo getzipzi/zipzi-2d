@@ -312,3 +312,53 @@ wait "$chain_profile_pid"
 ### Refactor comparison
 
 The runner preserves plain binaries and fingerprints. See the [refactor comparison](../../docs/archive/benchmarks/2026-10-21-property-chain-refactor.md) for historical before/after measurements across property policies and index snapshot changes.
+
+## Runtime Editor pairs
+
+R2 uses copied Release executables so compilation never overlaps measurements.
+`tools/runtime/editor_benchmark_pairs.py` expects both `baseline-` and `candidate-`
+prefixes for `property-chain` (the `property_chain_benchmark` example), `window`
+(the `zipzi-editor` binary with `test-support`), `timeline` (`timeline_acceptance`)
+and `interaction` (`runtime_interaction_acceptance`). Build each isolated source
+version before timing and record source, binary and model hashes. When sharing a
+Cargo target directory across source roots, clear the owned package artifacts
+between version builds to avoid stale relative dep-info; retain copied binaries.
+
+```sh
+python3 tools/runtime/editor_benchmark_pairs.py \
+  --binaries target/runtime-r2 --output target/runtime-r2/paired \
+  --model models/local/mao/runtime/mao_pro.model3.json \
+  --warp 5101be9b-3d35-45a7-8764-b8d62616ada4 --pairs 10 \
+  cpu properties color deformations animation timeline interaction
+python3 tools/runtime/editor_benchmark_report.py target/runtime-r2/paired \
+  --output target/runtime-r2/comparison.json --pairs 10
+```
+
+The runner defaults to five alternating fresh process pairs per scene; the R2
+record uses ten (`--pairs 10`) and retains all ten pairs. CPU runs have 60
+interactions, 10 warmups and 12 updates per gesture; native Properties runs its
+Mesh opacity numeric drag and a separate RGB continuous color drag with 30 samples and 10 warmups; deformation uses 120 samples
+and playback runs for 5 seconds. Timeline and dual viewport/background-client
+probes use 60 measured samples. It checks existing reporter completeness gates,
+records `/usr/bin/time -l`, and fingerprints executables/models for safe resume.
+It needs macOS, an unlocked native desktop, Metal and the local model. It does not
+relax existing timing limits or accept incomplete native traces.
+
+The interaction driver alternates native pointer gestures between two Metal
+surfaces, verifies actual panning and current displayed frames, then repeats while
+a different Runtime client publishes another model on a worker. The R1 control
+adapter runs identical SDK rename/commit work on a separately owned SDK session;
+R2 uses the same Runtime as the visible views. It checks visible history remains
+unchanged. These headless input-to-current-draw figures exclude OS input delivery,
+screenshot readback and compositor presentation; real-window reporters retain
+their separate correlated presentation boundary.
+
+The report keeps each operation separate, including per-process P50/P95 values,
+their medians and ranges. Allowed increases are the larger of P50 10% / P95 15%
+and 0.2 ms CPU / 1 ms input-to-display. A case or timing boundary missing from one
+side fails comparison. No pooled average can mask a slow case.
+
+For Mao, the explicit Warp matches the audited editable target in the R0/native
+baselines. The default largest Warp has a singular parent deformation and rejects
+the gesture even in R1. Preserve a rejected trace separately; never report it as a
+low-latency pass. Choose an audited editable target when using a different model.

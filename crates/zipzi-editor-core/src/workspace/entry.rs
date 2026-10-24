@@ -13,7 +13,10 @@ enum EntryState {
 }
 pub(super) struct SavingState {
     pub(super) operation: OperationId,
-    pub(super) path: PathBuf,
+    pub(super) job: Option<zipzi_runtime::JobId>,
+    pub(super) external: bool,
+    session: Option<DocumentSession>,
+    faulted: bool,
     pub(super) close_after_save: Option<DeferredClose>,
     frozen: FrozenDocument,
 }
@@ -39,20 +42,34 @@ impl Entry {
             state: EntryState::Ready(session),
         }
     }
-    pub(super) fn restore_session(
-        &mut self,
-        mut session: DocumentSession,
-    ) -> Option<DeferredClose> {
-        let close = self.saving().and_then(|saving| saving.close_after_save);
-        if let Some(saving) = self.saving() {
-            for (&id, &state) in &saving.frozen.views {
-                session.views.entry(id).or_insert(state);
-            }
+    pub(super) fn restore_session(&mut self) -> Option<DeferredClose> {
+        let saving = match &mut self.state {
+            EntryState::Saving(saving) => saving,
+            _ => return None,
+        };
+        let close = saving.close_after_save;
+        let mut session = saving.session.take().unwrap();
+        for (&id, &state) in &saving.frozen.views {
+            session.views.entry(id).or_insert(state);
+        }
+        for state in session.views.values_mut() {
+            state.revision += 1;
         }
         self.state = EntryState::Ready(session);
         close
     }
-
+    pub(super) fn hosted_session_id(&self) -> zipzi_runtime::SessionId {
+        match &self.state {
+            EntryState::Ready(s) => s.document.session.id,
+            EntryState::Saving(s) => s.session.as_ref().unwrap().document.session.id,
+        }
+    }
+    pub(super) fn mark_faulted(&mut self) {
+        if let EntryState::Saving(saving) = &mut self.state {
+            saving.faulted = true;
+            saving.job = None;
+        }
+    }
     pub(super) fn session(&self) -> Option<&DocumentSession> {
         match &self.state {
             EntryState::Ready(session) => Some(session),
@@ -67,22 +84,23 @@ impl Entry {
     }
     pub(super) fn saving(&self) -> Option<&SavingState> {
         match &self.state {
-            EntryState::Saving(saving) => Some(saving),
+            EntryState::Saving(saving) if !saving.faulted => Some(saving),
+            EntryState::Saving(_) => None,
             EntryState::Ready(_) => None,
         }
     }
     pub(super) fn saving_mut(&mut self) -> Option<&mut SavingState> {
         match &mut self.state {
-            EntryState::Saving(saving) => Some(saving),
+            EntryState::Saving(saving) if !saving.faulted => Some(saving),
+            EntryState::Saving(_) => None,
             EntryState::Ready(_) => None,
         }
     }
     pub(super) fn begin_save(
         &mut self,
         operation: OperationId,
-        path: PathBuf,
         close_after_save: Option<DeferredClose>,
-    ) -> Result<DocumentSession> {
+    ) -> Result<()> {
         let session = self
             .session()
             .ok_or_else(|| anyhow!("Document is saving"))?;
@@ -98,7 +116,10 @@ impl Entry {
             &mut self.state,
             EntryState::Saving(SavingState {
                 operation,
-                path,
+                job: None,
+                external: false,
+                session: None,
+                faulted: false,
                 close_after_save,
                 frozen,
             }),
@@ -106,7 +127,8 @@ impl Entry {
         let EntryState::Ready(session) = state else {
             unreachable!("session checked before save transition")
         };
-        Ok(session)
+        self.saving_mut().unwrap().session = Some(session);
+        Ok(())
     }
     pub(super) fn summary(&self) -> DocumentSummary {
         match &self.state {

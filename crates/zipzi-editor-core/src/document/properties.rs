@@ -33,7 +33,7 @@ impl Document {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.property_values");
         Self::property_values_in(
-            self.session.document(),
+            &self.session.document(),
             object,
             &self.property_scope(object),
         )
@@ -251,7 +251,7 @@ impl Document {
         let specs = crate::property_specs(object.kind);
         if object.kind == ObjectKind::PhysicsGroup {
             return crate::property::physics::patch(
-                self.session.document(),
+                &self.session.document(),
                 object,
                 &patch.changes,
             )
@@ -260,17 +260,17 @@ impl Document {
         let mut payload = if object.kind == ObjectKind::Mesh {
             if patch.mesh_presentation_only(object.kind) || patch.uses_scalar_patch(object.kind) {
                 crate::property::mesh::inspector_payload(
-                    self.session.document(),
+                    &self.session.document(),
                     &object.id,
                     &patch.scope,
                 )?
             } else {
-                crate::property::mesh::payload(self.session.document(), &object.id, &patch.scope)?
+                crate::property::mesh::payload(&self.session.document(), &object.id, &patch.scope)?
             }
         } else if patch.uses_scalar_patch(object.kind) {
-            crate::property::inspector_payload(self.session.document(), object)?
+            crate::property::inspector_payload(&self.session.document(), object)?
         } else {
-            crate::property::object_payload(self.session.document(), object)?
+            crate::property::object_payload(&self.session.document(), object)?
         };
         for (id, value) in &patch.changes {
             let spec = specs
@@ -282,14 +282,14 @@ impl Document {
         match object.kind {
             ObjectKind::MotionGroup | ObjectKind::MotionRegistration => {
                 crate::property::animation_entry::motion_patch(
-                    self.session.document(),
+                    &self.session.document(),
                     object,
                     payload,
                 )
                 .map(PropertyPayload::Motion)
             }
             ObjectKind::ExpressionEntry => crate::property::animation_entry::expression_patch(
-                self.session.document(),
+                &self.session.document(),
                 object,
                 payload,
             )
@@ -298,7 +298,7 @@ impl Document {
             | ObjectKind::PoseGroup
             | ObjectKind::PoseEntry
             | ObjectKind::PoseLink => {
-                crate::property::business::pose_patch(self.session.document(), object, payload)
+                crate::property::business::pose_patch(&self.session.document(), object, payload)
                     .map(PropertyPayload::Pose)
             }
             ObjectKind::Physics => crate::property::business::physics_patch(object, payload)
@@ -385,9 +385,8 @@ impl Document {
             return replace(edit, object.kind, payload);
         }
         use crate::property::mesh;
-        let original = self
-            .session
-            .document()
+        let model_read_guard_111 = self.session.document();
+        let original = model_read_guard_111
             .get_mesh(&object.id)
             .ok_or_else(|| anyhow!("Mesh no longer exists"))?;
         let mut next: zipzi_core::Mesh = if patch.mesh_presentation_only(object.kind) {
@@ -412,7 +411,7 @@ impl Document {
                 .any(|spec| spec.key == *key && spec.keyframed)
         });
         if let Some((binding, form)) =
-            mesh::keyform(self.session.document(), &object.id, &patch.scope)?
+            mesh::keyform(&self.session.document(), &object.id, &patch.scope)?
         {
             if pose_changed {
                 let mut form = form.clone();
@@ -459,7 +458,7 @@ impl Document {
             ObjectKind::Mesh => P::Mesh {
                 id,
                 keyform: crate::property::mesh::keyform(
-                    self.session.document(),
+                    &self.session.document(),
                     &object.id,
                     &patch.scope,
                 )?
@@ -555,7 +554,7 @@ impl Document {
         &self,
         object: &ObjectRef,
         patch: &PropertyPatch,
-    ) -> Result<Option<EditSession<'static>>> {
+    ) -> Result<Option<crate::runtime_host::HostedEdit>> {
         let payload = self.checked_payload(object, patch)?;
         if object.kind == ObjectKind::Parameter {
             let draft = self.parameter_from_payload(object, payload.json()?)?;
@@ -571,7 +570,7 @@ impl Document {
         let mut edit = self
             .session
             .begin_owned_edit("Edit object properties", None)?;
-        self.apply_properties(&mut edit, object, patch, payload)?;
+        edit.apply(|sdk| self.apply_properties(sdk, object, patch, payload))?;
         Ok(Some(edit))
     }
 
@@ -588,7 +587,7 @@ impl Document {
         &mut self,
         object: &ObjectRef,
         patch: &PropertyPatch,
-        prepared: Option<EditSession<'static>>,
+        prepared: Option<crate::runtime_host::HostedEdit>,
     ) -> Result<()> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.set_properties");
@@ -618,8 +617,17 @@ impl Document {
         };
         let preserves_structure = patch.preserves_structure()
             && (object.kind != ObjectKind::Parameter || {
-                let old = self.session.document().get_parameter(&object.id).unwrap();
-                let next = edit.candidate_document().get_parameter(&object.id).unwrap();
+                let old = self
+                    .session
+                    .document()
+                    .get_parameter(&object.id)
+                    .unwrap()
+                    .clone();
+                let next = edit
+                    .candidate_document()
+                    .get_parameter(&object.id)
+                    .unwrap()
+                    .clone();
                 old.name == next.name && old.runtime_id == next.runtime_id
             });
         let previous_revision = self.projection_revision;
@@ -645,21 +653,27 @@ impl Document {
                 .all(|f| f.field == zipzi_sdk::SceneField::Label))
         {
             if receipt.changed {
-                self.pristine_blank = false;
+                self.pristine_blank = None;
             }
             self.consume_authoring_receipt(&receipt, false);
             return Ok(());
         }
-        self.session.drain_events();
+        self.session.acknowledge_receipts();
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             let presentation_only = patch.mesh_presentation_only(object.kind);
             use crate::property::mesh;
             self.invalidate_projection(!preserves_structure);
             if object.kind == ObjectKind::Mesh && patch.changes.contains_key(&mesh::NAME.key) {
                 if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
-                    let name = &self.session.document().get_mesh(&object.id).unwrap().name;
-                    Arc::make_mut(topology).rename(object, name);
+                    let name = self
+                        .session
+                        .document()
+                        .get_mesh(&object.id)
+                        .unwrap()
+                        .name
+                        .clone();
+                    Arc::make_mut(topology).rename(object, &name);
                 }
             }
             if presentation_only {
@@ -675,7 +689,7 @@ impl Document {
                             });
                         Arc::make_mut(index)
                     }
-                    .refresh_mesh_presentation(self.session.document(), object)
+                    .refresh_mesh_presentation(&self.session.document(), object)
                     {
                         *revision = self.projection_revision;
                     }
@@ -709,7 +723,7 @@ impl Document {
                     "editor.object_index_unique"
                 });
                 Arc::make_mut(index).refresh_property_preview(
-                    self.model(),
+                    &self.model(),
                     object,
                     draw_groups_changed,
                 )
@@ -774,7 +788,7 @@ impl Document {
         let _benchmark_span = zipzi_core::benchmark::span("editor.begin_property_candidate");
         self.validate_property_preview(object, patch)?;
         self.finish_edit()?;
-        let original = Self::property_values_in(self.session.document(), object, &patch.scope)?;
+        let original = Self::property_values_in(&self.session.document(), object, &patch.scope)?;
         self.next_property_edit += 1;
         let serial = self.next_property_edit;
         self.pending = Some(PendingEdit {
@@ -782,7 +796,8 @@ impl Document {
             original: PendingOriginal::Properties(object.clone(), original, patch.scope.clone()),
             edit: self
                 .session
-                .begin_owned_edit("Edit object property", None)?,
+                .begin_owned_edit("Edit object property", None)?
+                .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
             topology_changed: !patch.preserves_structure(),
@@ -866,7 +881,7 @@ impl Document {
                     Arc::make_mut(index)
                 }
                 .refresh_property_preview(
-                    pending.edit.candidate_document(),
+                    &pending.edit.candidate_document(),
                     object,
                     false,
                 ) {
@@ -894,17 +909,18 @@ impl Document {
             let mut edit = self
                 .session
                 .begin_owned_edit("Edit object property", None)?;
-            self.apply_properties(&mut edit, object, patch, payload)?;
+            edit.apply(|sdk| self.apply_properties(sdk, object, patch, payload))?;
             let mut preview = PreviewState::default();
             preview
                 .replace(
-                    edit.candidate_document(),
+                    &edit.candidate_document(),
                     0,
                     self.session.preview_values().clone(),
                 )
                 .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
             let pending = self.pending.as_mut().unwrap();
             pending.edit = edit;
+            pending.edit.claim_interaction()?;
             pending.preview = preview;
         }
         let pending = self.pending.as_mut().unwrap();
@@ -1005,7 +1021,7 @@ mod tests {
             {
                 assert!(std::ptr::eq(info, index.get(&info.reference).unwrap()));
             }
-            let rebuilt = crate::ObjectIndex::build(doc.model());
+            let rebuilt = crate::ObjectIndex::build(&doc.model());
             assert_eq!(
                 index.get(&object).unwrap().properties,
                 rebuilt.get(&object).unwrap().properties
@@ -1031,7 +1047,7 @@ mod tests {
                 doc.cancel_edit();
             }
             let index = doc.object_index();
-            let rebuilt = crate::ObjectIndex::build(doc.model());
+            let rebuilt = crate::ObjectIndex::build(&doc.model());
             for target in [
                 &object,
                 &other,
@@ -1180,7 +1196,7 @@ mod tests {
             assert_eq!(old.get(&object).unwrap().properties, old_payload);
             let index = doc.object_index();
             assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
-            let rebuilt = crate::ObjectIndex::build(doc.model());
+            let rebuilt = crate::ObjectIndex::build(&doc.model());
             assert_eq!(
                 index.get(&object).unwrap().properties,
                 rebuilt.get(&object).unwrap().properties
@@ -1272,7 +1288,7 @@ mod tests {
             for (before, after) in old.relations.iter().zip(&index.relations) {
                 assert!(std::ptr::eq(before, after));
             }
-            let rebuilt = crate::ObjectIndex::build(doc.model());
+            let rebuilt = crate::ObjectIndex::build(&doc.model());
             let actual = index.get(&object).unwrap();
             let expected = rebuilt.get(&object).unwrap();
             assert_eq!(actual.name, expected.name);
@@ -1324,7 +1340,7 @@ mod tests {
             .into(),
         };
         doc.set_object_properties(&object, &patch)?;
-        let rebuilt = crate::ObjectIndex::build(doc.model());
+        let rebuilt = crate::ObjectIndex::build(&doc.model());
         let index = doc.object_index();
         let actual = index.get(&object).unwrap();
         let expected = rebuilt.get(&object).unwrap();
@@ -1387,7 +1403,7 @@ mod tests {
                 assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
                 assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
                 assert_eq!(old.get(&object).unwrap().properties, old_payload);
-                let rebuilt = crate::ObjectIndex::build(doc.model());
+                let rebuilt = crate::ObjectIndex::build(&doc.model());
                 assert_eq!(
                     index.get(&object).unwrap().properties,
                     rebuilt.get(&object).unwrap().properties
@@ -1416,7 +1432,7 @@ mod tests {
             let serial = doc.begin_property_edit(&object, &patch)?;
             doc.update_property_edit(&object, serial, &patch)?;
             doc.finish_edit()?;
-            let rebuilt = crate::ObjectIndex::build(doc.model());
+            let rebuilt = crate::ObjectIndex::build(&doc.model());
             assert_eq!(
                 doc.object_index().get(&object).unwrap().properties,
                 rebuilt.get(&object).unwrap().properties

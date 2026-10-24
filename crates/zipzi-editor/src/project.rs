@@ -140,7 +140,7 @@ impl EditorView {
         })
         .detach();
     }
-    fn save_to(
+    pub(super) fn save_to(
         &mut self,
         id: DocumentId,
         path: PathBuf,
@@ -160,13 +160,33 @@ impl EditorView {
             self.frozen_frames.insert(id, self.viewport_frames.clone());
         }
         cx.notify();
+        let runtime = self.editor.runtime_host();
+        let host = self.host.clone();
         cx.spawn_in(window, async move |this, cx| {
             let mut completion = cx
                 .background_executor()
                 .spawn(async move { task.run() })
                 .await;
+            completion.publish(&runtime);
+            if let Some(host) = &host {
+                host.completed();
+            }
             let _ = this.update_in(cx, |this, window, cx| {
                 this.frozen_frames.remove(&id);
+                if !this
+                    .editor
+                    .documents()
+                    .iter()
+                    .any(|document| document.id == id)
+                {
+                    let notices = this.editor.sync_runtime_jobs();
+                    if !notices.is_empty() {
+                        this.set_edit_error(notices.join("; "), cx);
+                    }
+                    this.continue_exit(window, cx);
+                    cx.notify();
+                    return;
+                }
                 let active_before = this.editor.active_id();
                 match this.editor.finish_save(&mut completion) {
                     Ok(receipt) => {
@@ -351,11 +371,17 @@ impl EditorView {
                 return;
             }
         };
+        let runtime = self.editor.runtime_host();
+        let host = self.host.clone();
         cx.spawn_in(window, async move |this, cx| {
-            let completion = cx
+            let mut completion = cx
                 .background_executor()
                 .spawn(async move { task.run() })
                 .await;
+            completion.publish(&runtime);
+            if let Some(host) = &host {
+                host.completed();
+            }
             let _ = this.update_in(cx, |this, window, cx| {
                 match this.editor.finish_load(completion) {
                     Ok(warnings) => {
@@ -392,12 +418,39 @@ impl EditorView {
         })
         .detach();
     }
+    pub(super) fn detach_window(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        if self.modal {
+            return false;
+        }
+        if let Some(id) = self.editor.active_id() {
+            if !self.prepare_property_inputs(id, window, cx) {
+                return false;
+            }
+        }
+        if let Err(error) = self.editor.suspend_window() {
+            self.set_edit_error(error.to_string(), cx);
+            return false;
+        }
+        true
+    }
+    pub(super) fn close_window(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.detach_window(window, cx) {
+            window.remove_window();
+        }
+    }
     pub(super) fn close_active(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.modal {
             return;
         }
         if let Some(id) = self.editor.active_id() {
-            self.close_document(id, window, cx);
+            if !self.prepare_property_inputs(id, window, cx) {
+                return;
+            }
+            if let Err(error) = self.editor.detach_document(id) {
+                self.set_edit_error(error.to_string(), cx);
+                return;
+            }
+            self.refresh_document(window, cx);
         }
     }
     pub(super) fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -423,7 +476,7 @@ impl EditorView {
         if let Some(id) = self.editor.next_close() {
             self.close_document(id, window, cx);
         } else {
-            window.remove_window();
+            cx.quit();
         }
     }
     pub(super) fn close_document(
@@ -438,11 +491,22 @@ impl EditorView {
         let disposition = self.editor.prepare_close(id);
         match disposition {
             Ok(CloseDisposition::Busy) => {
-                let _ = self.editor.close_document(id, false);
+                if let Err(error) = self.editor.close_document(id, false) {
+                    self.set_edit_error(error.to_string(), cx);
+                    self.editor.cancel_exit();
+                }
             }
             Ok(CloseDisposition::Ready) => {
                 let was_active = self.editor.active_id() == Some(id);
-                let _ = self.editor.close_document(id, false);
+                match self.editor.close_document(id, false) {
+                    Ok(true) => {}
+                    Ok(false) => return,
+                    Err(error) => {
+                        self.set_edit_error(error.to_string(), cx);
+                        self.editor.cancel_exit();
+                        return;
+                    }
+                }
                 if was_active {
                     self.refresh_document(window, cx);
                 }

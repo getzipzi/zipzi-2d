@@ -151,7 +151,7 @@ impl TimelineProjection {
         let clip = document
             .motion_definition(clip_id)
             .ok_or_else(|| anyhow::anyhow!("Motion no longer exists"))?;
-        Self::from_clip(document, clip)
+        Self::from_clip(document, &clip)
     }
     pub(crate) fn from_clip(document: &crate::Document, clip: &MotionClip) -> Result<Self> {
         #[cfg(feature = "bench-instrumentation")]

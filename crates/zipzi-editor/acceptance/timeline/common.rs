@@ -97,6 +97,7 @@ pub(crate) fn clip(h: &Harness) -> MotionClip {
             .unwrap()
             .motion_definition(&view.editor.timeline_projection().unwrap().clip_id)
             .unwrap()
+            .as_ref()
             .clone()
     })
 }

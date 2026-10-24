@@ -73,6 +73,20 @@ pub struct EditReceipt {
     pub changes: crate::ChangeSet,
 }
 
+impl EditReceipt {
+    /// Conservative owned payload estimate for bounded host event streams.
+    pub fn estimated_bytes(&self) -> usize {
+        std::mem::size_of::<Self>()
+            + self.label.capacity()
+            + self.changes.estimated_bytes()
+            + self
+                .object_ids
+                .iter()
+                .map(|id| std::mem::size_of::<String>() + id.capacity())
+                .sum::<usize>()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SaveReceipt {
     pub before: Version,
@@ -188,6 +202,14 @@ pub(crate) struct ObjectKey {
     pub(crate) id: String,
 }
 
+pub(crate) fn object_key_bytes(keys: &HashSet<ObjectKey>) -> usize {
+    keys.iter().map(|key| key.id.capacity()).fold(
+        keys.capacity()
+            .saturating_mul(std::mem::size_of::<ObjectKey>() + 1),
+        usize::saturating_add,
+    )
+}
+
 /// Editable display and drawing fields. Geometry, persistent ID and runtime ID
 /// are preserved by `update_mesh_properties`.
 #[derive(Debug, Clone, PartialEq)]
@@ -229,6 +251,9 @@ pub struct TopologyReplacement {
 }
 
 pub(crate) struct HistoryEntry {
+    // Checkpoints are immutable between exchange/relocation boundaries. Runtime
+    // may query budgets after every publication without rescanning old models.
+    pub(crate) estimated_bytes_cache: std::sync::OnceLock<usize>,
     pub(crate) label: String,
     pub(crate) changes: crate::ChangeSet,
     pub(crate) kind: ChangeKind,
@@ -240,8 +265,16 @@ pub(crate) struct HistoryEntry {
 
 impl HistoryEntry {
     pub(crate) fn estimated_bytes(&self) -> usize {
-        self.checkpoint.estimated_bytes()
-            + self.changes.estimated_bytes()
+        *self
+            .estimated_bytes_cache
+            .get_or_init(|| self.measure_bytes())
+    }
+
+    fn measure_bytes(&self) -> usize {
+        self.checkpoint.estimated_bytes() + self.metadata_bytes()
+    }
+    pub(crate) fn metadata_bytes(&self) -> usize {
+        self.changes.estimated_bytes()
             + self
                 .object_ids
                 .iter()

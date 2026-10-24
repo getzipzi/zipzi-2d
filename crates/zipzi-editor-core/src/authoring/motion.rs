@@ -32,7 +32,7 @@ impl Document {
     }
     fn motion_operation_result(&mut self, receipt: zipzi_sdk::EditReceipt) -> OperationResult {
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
         self.authoring_result(receipt)

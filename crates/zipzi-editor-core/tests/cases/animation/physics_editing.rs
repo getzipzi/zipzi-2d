@@ -92,6 +92,7 @@ fn physics_candidates_cancel_commit_and_undo_as_one_edit() -> anyhow::Result<()>
         .unwrap()
         .physics_definition()
         .unwrap()
+        .as_ref()
         .clone();
     let spec = indexed(&editor, schema::MOBILITY, 1);
     let initial = patch(&editor, &object, spec, 0.2);
@@ -127,7 +128,7 @@ fn physics_candidates_cancel_commit_and_undo_as_one_edit() -> anyhow::Result<()>
     );
     editor.cancel_property_edit(&token);
     assert_eq!(
-        editor.document().unwrap().physics_definition(),
+        editor.document().unwrap().physics_definition().as_deref(),
         Some(&original)
     );
     let spec = indexed(&editor, schema::RADIUS, 1);
@@ -141,17 +142,18 @@ fn physics_candidates_cancel_commit_and_undo_as_one_edit() -> anyhow::Result<()>
         .unwrap()
         .physics_definition()
         .unwrap()
+        .as_ref()
         .clone();
     assert_eq!(committed.data.settings[0].vertices[1].radius, 8.);
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.execute(EditorCommand::Undo)?;
     assert_eq!(
-        editor.document().unwrap().physics_definition(),
+        editor.document().unwrap().physics_definition().as_deref(),
         Some(&original)
     );
     editor.execute(EditorCommand::Redo)?;
     assert_eq!(
-        editor.document().unwrap().physics_definition(),
+        editor.document().unwrap().physics_definition().as_deref(),
         Some(&committed)
     );
     Ok(())
@@ -167,6 +169,7 @@ fn rejected_physics_write_preserves_candidate_and_context_switch_cancels_it() ->
         .unwrap()
         .physics_definition()
         .unwrap()
+        .as_ref()
         .clone();
     let valid = patch(&editor, &object, schema::FPS, 60.);
     let token = editor.begin_property_edit(
@@ -192,7 +195,7 @@ fn rejected_physics_write_preserves_candidate_and_context_switch_cancels_it() ->
     editor.set_workspace(WorkspaceKind::Modeling)?;
     assert!(!editor.property_edit_owned(&token));
     assert_eq!(
-        editor.document().unwrap().physics_definition(),
+        editor.document().unwrap().physics_definition().as_deref(),
         Some(&original)
     );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
@@ -208,6 +211,7 @@ fn manual_physics_and_bypass_replay_without_document_or_timeline_writes() -> any
         .unwrap()
         .physics_definition()
         .unwrap()
+        .as_ref()
         .clone();
     let input = original.data.settings[0].inputs[0]
         .source
@@ -255,7 +259,7 @@ fn manual_physics_and_bypass_replay_without_document_or_timeline_writes() -> any
     assert_eq!(editor.animation().unwrap().time, 0.);
     assert_eq!(editor.animation().unwrap().edit_time, 0.);
     assert_eq!(
-        editor.document().unwrap().physics_definition(),
+        editor.document().unwrap().physics_definition().as_deref(),
         Some(&original)
     );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
@@ -458,6 +462,7 @@ fn physics_projection_slots_repair_in_place_without_misidentifying_observation()
         .unwrap()
         .physics_definition()
         .unwrap()
+        .as_ref()
         .clone();
     let g = &asset.data.settings[0];
     let active = g.inputs[0].id.clone();
@@ -507,7 +512,7 @@ fn physics_asset_fps_refreshes_every_cached_group_through_history() -> anyhow::R
     use zipzi_core::document::{PhysicsAssetProperty, PhysicsEdit, PhysicsPatch};
     let (document, _assets) = support::combined_animation_document()?;
     let mut document = document;
-    let asset = document.physics_definition().unwrap().clone();
+    let asset = document.physics_definition().unwrap().as_ref().clone();
     let old_fps = asset.data.meta.fps.unwrap_or(30.);
     let second = uuid::Uuid::new_v4().to_string();
     let plan = document.plan_physics_authoring(PhysicsEdit::CreateGroup {
@@ -528,7 +533,7 @@ fn physics_asset_fps_refreshes_every_cached_group_through_history() -> anyhow::R
     let retained = document.object_index();
     let plan = document.plan_physics_authoring(PhysicsEdit::Patch {
         patch: PhysicsPatch {
-            asset_id: asset.id,
+            asset_id: asset.id.clone(),
             asset_changes: vec![PhysicsAssetProperty::Fps(Some(75.))],
             rig: None,
         },
@@ -563,7 +568,7 @@ fn physics_axis_patch_refreshes_channel_labels_through_history() -> anyhow::Resu
     use zipzi_core::document::{PhysicsEdit, PhysicsPatch, PhysicsProperty, PhysicsRigPatch};
     use zipzi_core::physics::PhysicsAxis;
     let (mut document, _assets) = support::combined_animation_document()?;
-    let asset = document.physics_definition().unwrap().clone();
+    let asset = document.physics_definition().unwrap().as_ref().clone();
     let rig = &asset.data.settings[0];
     let input = ObjectRef::new(ObjectKind::PhysicsInput, &rig.inputs[0].id);
     let output = ObjectRef::new(ObjectKind::PhysicsOutput, &rig.outputs[0].id);

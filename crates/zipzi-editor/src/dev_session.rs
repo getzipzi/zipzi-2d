@@ -22,9 +22,12 @@ impl OpenDocuments {
                 .iter()
                 .find(|document| Some(document.id) == active_id)
                 .and_then(|document| document.path.clone()),
-            paths: documents
+            paths: editor
+                .runtime_host()
+                .read()
+                .list_sessions()
                 .into_iter()
-                .filter_map(|document| document.path)
+                .filter_map(|session| session.path)
                 .collect(),
         }
     }

@@ -23,3 +23,8 @@ pub fn animation(models: Vec<std::path::PathBuf>) -> anyhow::Result<()> {
 pub fn timeline() -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| timeline::run())
 }
+
+mod runtime_interaction;
+pub fn runtime_interaction() -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| runtime_interaction::run())
+}

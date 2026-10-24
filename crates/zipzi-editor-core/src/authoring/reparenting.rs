@@ -189,7 +189,7 @@ impl Document {
         // Match the review's default edit-state guarantee. Full-domain proof
         // remains an explicit choice in the review, never a hover conversion.
         let edit = reparent_edit(
-            self.model(),
+            &self.model(),
             request,
             self.preservation_context(),
             PalettePreservation::EditState,

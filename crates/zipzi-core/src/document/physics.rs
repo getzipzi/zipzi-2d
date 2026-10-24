@@ -25,6 +25,11 @@ pub struct PhysicsAsset {
 }
 
 impl Document {
+    /// Share an immutable physics asset without copying its authored content.
+    pub fn shared_physics(&self) -> Option<std::sync::Arc<PhysicsAsset>> {
+        self.content.physics.clone()
+    }
+
     pub fn physics(&self) -> Option<&PhysicsAsset> {
         self.content.physics.as_deref()
     }

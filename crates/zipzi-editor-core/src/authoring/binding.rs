@@ -39,7 +39,7 @@ impl Document {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_binding_plan(plan)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, true);
         Ok(self.authoring_result(receipt))

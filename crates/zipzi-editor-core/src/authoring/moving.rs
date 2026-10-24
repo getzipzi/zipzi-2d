@@ -137,7 +137,7 @@ impl Document {
             .collect();
         if request.projection == PaletteProjection::Deformation {
             let (collection, before) =
-                super::reparenting::deformation_destination(self.model(), &request)?;
+                super::reparenting::deformation_destination(&self.model(), &request)?;
             let SceneCollection::Deformation { ref parent_id } = collection else {
                 unreachable!()
             };

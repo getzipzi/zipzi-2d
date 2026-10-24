@@ -1,10 +1,15 @@
-# Runtime implementation preparation (R0)
+# Runtime implementation evidence
 
 This directory records implementation evidence for the paired
 [Editor Runtime design](../plans/sdk-runtime-design.md) and
 [implementation plan](../plans/sdk-runtime-implementation-plan.md).
-It does **not** introduce a Runtime, transport or ConnectedBackend. The current
-public Python package still imports `_native` and targets CPython 3.14.
+R0 records the baseline. R1 now provides the CPU-only
+[`zipzi-runtime`](../../crates/zipzi-runtime/README.md) core; see
+[R1 implementation and checks](../plans/sdk-runtime/r1-core.md).
+R2 migrates Editor ownership and window lifetime; see
+[R2 implementation and checks](../plans/sdk-runtime/r2-editor.md). Its interaction
+performance gates passed ten alternating process pairs across 145 measurements. Transport and ConnectedBackend remain later stages.
+The current public Python package still imports `_native` and targets CPython 3.14.
 
 ## Source inventory
 

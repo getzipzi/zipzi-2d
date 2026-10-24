@@ -6,11 +6,11 @@ use crate::types::SdkError;
 use crate::{
     MotionBezierHandle, MotionClipCandidate, MotionInterpolation, MotionKeyMove, MotionKeyRef,
 };
+use zipzi_core::ChangeKind;
 use zipzi_core::document::{
     MotionClip, MotionEvent, MotionGroup, MotionPoint, MotionSegment, MotionTrack,
 };
-use zipzi_core::ChangeKind;
-use zipzi_project::{import_motion3, MotionDiagnostic, MotionProjectError};
+use zipzi_project::{MotionDiagnostic, MotionProjectError, import_motion3};
 
 fn project_error(error: MotionProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);
@@ -425,6 +425,7 @@ impl EditSession<'_> {
         self.ensure_active("import_motion3")?;
         let imported = import_motion3(self.candidate_document(), id, name, text)
             .map_err(|error| self.abort_with(project_error(error, "import_motion3")))?;
+        self.candidate_content_bytes.take();
         self.candidate = Some(imported.candidate);
         self.kind = super::merge_kind(self.kind, ChangeKind::Metadata);
         if !self.object_ids.iter().any(|item| item == id) {

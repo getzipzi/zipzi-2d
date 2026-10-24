@@ -54,6 +54,7 @@ commands from the repository root; inspect available modes with
 | Changed area | Starting command |
 | --- | --- |
 | One Rust crate/module | `cargo test --locked -p <crate> --lib <filter>`; add its integration target when relevant |
+| Runtime ownership/jobs/events | `./tools/test-sdk.sh runtime` |
 | SDK authoring behavior | `./tools/test-sdk.sh fast <filter>` |
 | Alpha mesh generation | `./tools/test-sdk.sh mesh` |
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |

@@ -193,7 +193,9 @@ fn project_select_creates_and_opens_from_an_empty_window(cx: &mut TestAppContext
 }
 
 #[gpui_kit::test]
-fn modified_project_keeps_its_indicator_and_close_confirmation(cx: &mut TestAppContext) {
+fn detached_modified_project_retains_state_and_quit_still_requires_confirmation(
+    cx: &mut TestAppContext,
+) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
@@ -221,6 +223,12 @@ fn modified_project_keeps_its_indicator_and_close_confirmation(cx: &mut TestAppC
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
+        assert!(!harness.view.read(cx).modal);
+        assert_eq!(harness.view.read(cx).editor.document_count(), 0);
+        let runtime = harness.view.read(cx).editor.runtime_host();
+        assert_eq!(runtime.read().list_sessions().len(), 1);
+        assert!(runtime.read().list_sessions()[0].modified);
+        harness.view.update(cx, |view, cx| view.close(window, cx));
         assert!(harness.view.read(cx).modal);
         window.click("project-select", cx);
         assert!(window.try_find("popup-menu").is_none());

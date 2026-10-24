@@ -40,7 +40,7 @@ impl Document {
         self.pending = Some(PendingEdit {
             kind,
             original: PendingOriginal::Controls(crate::control_edit::EditOriginal::Mesh(original)),
-            edit: self.session.begin_owned_edit(label, None)?,
+            edit: self.session.begin_owned_edit(label, None)?.interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
             topology_changed: false,
@@ -64,7 +64,8 @@ impl Document {
             )),
             edit: self
                 .session
-                .begin_owned_edit("Edit canvas controls", None)?,
+                .begin_owned_edit("Edit canvas controls", None)?
+                .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
             topology_changed: false,
@@ -103,7 +104,9 @@ impl Document {
                     .map(|w| (w.rows, w.columns))
             };
             let before = shape();
-            target.preview(&mut pending.edit, &ids, change)?;
+            pending
+                .edit
+                .apply(|sdk| target.preview(sdk, &ids, change))?;
             let after = pending
                 .edit
                 .candidate_document()
@@ -120,7 +123,7 @@ impl Document {
                 for target in targets {
                     if target.object.kind == crate::ObjectKind::Deformer {
                         Arc::make_mut(index)
-                            .refresh_deformer(pending.edit.candidate_document(), &target.object);
+                            .refresh_deformer(&pending.edit.candidate_document(), &target.object);
                     }
                 }
                 // Mesh positions and keyform poses are not index properties;
@@ -170,7 +173,7 @@ impl Document {
             *pending.changed.get_or_init(|| {
                 !pending
                     .original
-                    .unchanged(pending.edit.candidate_document())
+                    .unchanged(&pending.edit.candidate_document())
             })
         })
     }
@@ -208,7 +211,7 @@ impl Document {
                     }
                 };
                 if receipt.changed {
-                    self.pristine_blank = false;
+                    self.pristine_blank = None;
                 }
                 self.consume_authoring_receipt(&receipt, false);
                 return Ok(());
@@ -244,8 +247,8 @@ impl Document {
                 if parameter {
                     self.reconcile_parameter_preview()?;
                 }
-                self.session.drain_events();
-                self.pristine_blank = false;
+                self.session.acknowledge_receipts();
+                self.pristine_blank = None;
             }
             if let Some(object) = property {
                 self.refresh_property_index(
@@ -295,21 +298,22 @@ impl Document {
     }
 
     pub fn undo(&mut self) -> Result<()> {
-        self.apply_history(AuthoringSession::undo)
+        self.apply_history(false)
     }
 
     pub fn redo(&mut self) -> Result<()> {
-        self.apply_history(AuthoringSession::redo)
+        self.apply_history(true)
     }
 
-    fn apply_history(
-        &mut self,
-        change: fn(&mut AuthoringSession) -> Result<EditReceipt, SdkError>,
-    ) -> Result<()> {
+    fn apply_history(&mut self, redo: bool) -> Result<()> {
         self.finish_edit()?;
         let before = self.evaluation_revision();
         let state = self.model().editor_state().clone();
-        let receipt = change(&mut self.session)?;
+        let receipt = if redo {
+            self.session.redo()?
+        } else {
+            self.session.undo()?
+        };
         self.refresh_textures()?;
         self.reconcile_parameter_preview()?;
         self.consume_authoring_receipt(
@@ -329,7 +333,7 @@ impl Document {
 
     pub(super) fn after_history(&mut self, topology_changed: bool) {
         self.invalidate_projection(topology_changed);
-        self.session.drain_events();
+        self.session.acknowledge_receipts();
         let index = self.object_index();
         self.context.reconcile(&index);
         self.selected = self
@@ -401,7 +405,7 @@ mod tests {
                 assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
                 assert_eq!(
                     index.get(&mesh).unwrap().properties,
-                    crate::ObjectIndex::build(doc.model())
+                    crate::ObjectIndex::build(&doc.model())
                         .get(&mesh)
                         .unwrap()
                         .properties
@@ -445,7 +449,7 @@ mod tests {
             );
             assert_eq!(
                 restored.get(&mesh).unwrap().properties,
-                crate::ObjectIndex::build(doc.model())
+                crate::ObjectIndex::build(&doc.model())
                     .get(&mesh)
                     .unwrap()
                     .properties

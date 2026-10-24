@@ -2,8 +2,8 @@
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::edit::EditSession;
 use crate::types::*;
@@ -15,14 +15,14 @@ use zipzi_core::document::{
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::preview::PreviewState;
 use zipzi_core::{
-    evaluate_frame, BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas,
-    ChangeKind, Document, DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter,
-    Part, PreviewValues, SceneBinding, Transform,
+    BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas, ChangeKind, Document,
+    DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter, Part, PreviewValues,
+    SceneBinding, Transform, evaluate_frame,
 };
 use zipzi_project::{
-    export_cdi3, export_expression3, export_motion3, export_physics3, export_pose3,
     CdiProjectError, ExpressionProjectError, MotionProjectError, PhysicsProjectError,
-    PoseProjectError,
+    PoseProjectError, export_cdi3, export_expression3, export_motion3, export_physics3,
+    export_pose3,
 };
 use zipzi_project::{DocumentSession, FileSystem, NativeFileSystem};
 
@@ -31,7 +31,9 @@ static NEXT_SESSION_ID: AtomicU64 = AtomicU64::new(1);
 pub struct AuthoringSession {
     // Version includes session/generation, so imports and checkpoint exchanges
     // cannot reuse another publication's key set even when revisions coincide.
-    pub(crate) object_key_cache: std::sync::Mutex<Option<(Version, Arc<HashSet<ObjectKey>>)>>,
+    pub(crate) object_key_cache:
+        std::sync::Mutex<Option<(Version, Arc<HashSet<ObjectKey>>, usize)>>,
+    pub(crate) content_bytes_cache: std::sync::Mutex<Option<(Version, usize)>>,
     pub(crate) project: DocumentSession,
     pub(crate) preview: PreviewState,
     pub(crate) session_id: u64,
@@ -139,7 +141,34 @@ impl AuthoringSession {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("sdk.read_snapshot");
         let started = std::time::Instant::now();
-        let document = self.project.document().clone();
+        self.snapshot_document(self.project.document().clone(), self.version(), started)
+    }
+
+    /// Capture an owned candidate, including referenced in-memory image content.
+    /// Stale revisions remain readable for diagnostics; another session or
+    /// replacement generation cannot supply its resources. Disk bytes are not pinned.
+    pub fn candidate_snapshot(
+        &self,
+        edit: &EditSession<'_>,
+    ) -> Result<AuthoringSnapshot, SdkError> {
+        let base = edit.base_version();
+        if base.session_id != self.session_id || base.generation != self.generation {
+            return Err(SdkError::new(
+                "STALE_VERSION",
+                "Candidate source was replaced",
+                "candidate_snapshot",
+            ));
+        }
+        let started = std::time::Instant::now();
+        Ok(self.snapshot_document(edit.candidate_document().clone(), base, started))
+    }
+
+    fn snapshot_document(
+        &self,
+        document: Document,
+        version: Version,
+        started: std::time::Instant,
+    ) -> AuthoringSnapshot {
         let memory_images = document
             .asset_order()
             .iter()
@@ -152,7 +181,7 @@ impl AuthoringSession {
         AuthoringSnapshot {
             memory_images,
             document,
-            version: self.version(),
+            version,
             project_path: self.project_path().map(std::path::Path::to_path_buf),
             clone_elapsed_ns: started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
         }
@@ -210,6 +239,7 @@ impl AuthoringSession {
         let next_incarnation = incarnations.len() as u64 + 1;
         Ok(Self {
             object_key_cache: Default::default(),
+            content_bytes_cache: Default::default(),
             project: DocumentSession::from_authoring_document_with_filesystem(document, filesystem),
             preview: PreviewState::default(),
             session_id: NEXT_SESSION_ID.fetch_add(1, Ordering::Relaxed),
@@ -589,7 +619,16 @@ impl AuthoringSession {
         }
     }
     pub fn estimated_content_bytes(&self) -> usize {
-        self.project.document().estimated_content_bytes()
+        let version = self.version();
+        let mut cache = self.content_bytes_cache.lock().unwrap();
+        if let Some((cached, bytes)) = *cache {
+            if cached == version {
+                return bytes;
+            }
+        }
+        let bytes = self.project.document().estimated_content_bytes();
+        *cache = Some((version, bytes));
+        bytes
     }
     pub fn drain_events(&mut self) -> Vec<EditReceipt> {
         std::mem::take(&mut self.events)
@@ -623,17 +662,21 @@ impl AuthoringSession {
             return Err(error);
         }
         let candidate = self.project.document().fork_tracked_candidate();
-        if candidate.estimated_content_bytes() > self.history_limits.max_bytes {
+        let candidate_bytes = candidate.estimated_content_bytes();
+        if candidate_bytes > self.history_limits.max_bytes {
             return Err(SdkError::new(
                 "HISTORY_LIMIT_EXCEEDED",
                 "Candidate exceeds the history memory budget",
                 "begin_edit",
             ));
         }
+        let (base_keys, base_key_bytes) = self.object_keys_with_bytes();
         Ok(EditSession {
             session: None,
-            base_keys: self.object_keys(),
+            base_keys,
+            base_key_bytes,
             candidate: Some(candidate),
+            candidate_content_bytes: std::sync::OnceLock::from(candidate_bytes),
             label: label.into(),
             before: version,
             aborted: false,
@@ -643,6 +686,7 @@ impl AuthoringSession {
             erased_keys: HashSet::new(),
             authoring_limits: self.authoring_limits,
             resource_load_controls: vec![],
+            prepared_images: vec![],
             binding_controls: vec![],
             binding_cost: None,
         })
@@ -668,6 +712,7 @@ impl AuthoringSession {
             .back_mut()
             .ok_or_else(|| SdkError::new("NOTHING_TO_UNDO", "History is empty", "undo"))?;
         let evaluation_before = self.project.document().evaluation_revision();
+        entry.estimated_bytes_cache.take();
         self.project
             .swap_authoring_checkpoint(&mut entry.checkpoint)
             .map_err(|status| SdkError::from_status(status, "undo", Vec::new()))?;
@@ -699,6 +744,7 @@ impl AuthoringSession {
             .last_mut()
             .ok_or_else(|| SdkError::new("NOTHING_TO_REDO", "History is empty", "redo"))?;
         let evaluation_before = self.project.document().evaluation_revision();
+        entry.estimated_bytes_cache.take();
         self.project
             .swap_authoring_checkpoint(&mut entry.checkpoint)
             .map_err(|status| SdkError::from_status(status, "redo", Vec::new()))?;
@@ -766,12 +812,18 @@ impl AuthoringSession {
     }
 
     pub(crate) fn object_keys(&self) -> Arc<HashSet<ObjectKey>> {
+        self.object_keys_with_bytes().0
+    }
+    fn object_keys_with_bytes(&self) -> (Arc<HashSet<ObjectKey>>, usize) {
         let version = self.version();
         let mut cache = self.object_key_cache.lock().unwrap();
-        if cache.as_ref().is_none_or(|(v, _)| *v != version) {
-            *cache = Some((version, Arc::new(keys_in(self.document()))));
+        if cache.as_ref().is_none_or(|(v, _, _)| *v != version) {
+            let keys = Arc::new(keys_in(self.document()));
+            let bytes = object_key_bytes(&keys);
+            *cache = Some((version, keys, bytes));
         }
-        cache.as_ref().unwrap().1.clone()
+        let (_, keys, bytes) = cache.as_ref().unwrap();
+        (keys.clone(), *bytes)
     }
 
     fn object_exists(&self, kind: ObjectKind, id: &str) -> bool {
@@ -1289,4 +1341,139 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
         id: i.id.clone(),
     }));
     keys
+}
+
+#[cfg(test)]
+mod history_estimates {
+    use super::*;
+    use zipzi_core::ModelSetup;
+
+    fn verify_recount(session: &mut AuthoringSession) {
+        assert_eq!(
+            session.estimated_content_bytes(),
+            session.document().estimated_content_bytes()
+        );
+        if let Some((_, keys, bytes)) = session.object_key_cache.lock().unwrap().as_ref() {
+            assert_eq!(*bytes, object_key_bytes(keys));
+        }
+        let cached = session.history_state().estimated_bytes;
+        for entry in session.done.iter_mut().chain(&mut session.redo) {
+            entry.estimated_bytes_cache.take();
+        }
+        assert_eq!(cached, session.history_state().estimated_bytes);
+    }
+
+    #[test]
+    fn candidate_and_formal_size_caches_match_fresh_counts_after_growth_and_save() {
+        let mut session = AuthoringSession::new(
+            "62000000-0000-4000-8000-000000000010",
+            ModelSetup::default(),
+        )
+        .unwrap();
+        let mut edit = session.begin_owned_edit("grow", None).unwrap();
+        for length in [32, 4096, 16384] {
+            let parameter = Parameter {
+                id: "62000000-0000-4000-8000-000000000011".into(),
+                name: "x".repeat(length),
+                runtime_id: "ParamSize".into(),
+                ..Default::default()
+            };
+            if length == 32 {
+                edit.create_parameter(parameter).unwrap();
+            } else {
+                edit.replace_parameter(parameter).unwrap();
+            }
+            let _ = edit.estimated_bytes();
+            assert_eq!(edit.base_key_bytes, object_key_bytes(&edit.base_keys));
+            assert_eq!(
+                edit.candidate_content_bytes.get().copied(),
+                Some(edit.candidate_document().estimated_content_bytes())
+            );
+        }
+        let png = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/asymmetric-2x2.png");
+        edit.create_asset(
+            crate::prepare_png_asset("62000000-0000-4000-8000-000000000012", "fixture", &png)
+                .unwrap(),
+        )
+        .unwrap();
+        let _ = edit.estimated_bytes();
+        edit.commit_to(&mut session).unwrap();
+        verify_recount(&mut session);
+        session.undo().unwrap();
+        verify_recount(&mut session);
+        session.redo().unwrap();
+        verify_recount(&mut session);
+        let directory = std::env::temp_dir().join(format!(
+            "zipzi-candidate-estimate-{}-{}",
+            std::process::id(),
+            session.session_id
+        ));
+        let before = session.version();
+        let path = directory.join("saved/project.zipzi.json");
+        session.save_project(&path, None).unwrap();
+        assert_eq!(session.version().session_id, before.session_id);
+        verify_recount(&mut session);
+        session.open_project(&path, None).unwrap();
+        verify_recount(&mut session);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn history_size_cache_tracks_exchange_eviction_save_and_reset() {
+        let mut session = AuthoringSession::with_history_limits(
+            "62000000-0000-4000-8000-000000000001",
+            Canvas::new(100., 100., Default::default(), 1.),
+            HistoryLimits {
+                max_steps: 3,
+                max_bytes: 64 * 1024 * 1024,
+            },
+        )
+        .unwrap();
+        for width in [150., 200., 250., 300.] {
+            session
+                .edit("resize", None, |edit| {
+                    edit.replace_model_setup(Canvas::new(width, 100., Default::default(), 1.))
+                })
+                .unwrap();
+            verify_recount(&mut session);
+        }
+        assert_eq!(session.history_lengths(), (3, 0));
+        for _ in 0..3 {
+            session.undo().unwrap();
+            verify_recount(&mut session);
+        }
+        for _ in 0..2 {
+            session.redo().unwrap();
+            verify_recount(&mut session);
+        }
+        let directory = std::env::temp_dir().join(format!(
+            "zipzi-history-estimate-{}-{}",
+            std::process::id(),
+            session.session_id
+        ));
+        session
+            .save_project(&directory.join("history/project.zipzi.json"), None)
+            .unwrap();
+        verify_recount(&mut session);
+        session.redo().unwrap();
+        verify_recount(&mut session);
+        session.undo().unwrap();
+        session
+            .edit("branch", None, |edit| {
+                edit.replace_model_setup(Canvas::new(400., 100., Default::default(), 1.))
+            })
+            .unwrap();
+        assert_eq!(session.history_lengths(), (3, 0));
+        verify_recount(&mut session);
+        session
+            .new_project(
+                "62000000-0000-4000-8000-000000000002",
+                Canvas::new(100., 100., Default::default(), 1.),
+                None,
+            )
+            .unwrap();
+        assert_eq!(session.history_state().estimated_bytes, 0);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 }

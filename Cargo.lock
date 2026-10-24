@@ -1273,15 +1273,15 @@ dependencies = [
 name = "cubism-matrix-zipzi"
 version = "0.1.0"
 dependencies = [
+ "png 0.17.16",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
  "zipzi-core",
  "zipzi-render",
  "zipzi-render-metal",
  "zipzi-sdk",
  "zipzi-sdk-observe",
- "png 0.17.16",
- "serde",
- "serde_json",
- "sha2 0.11.0",
 ]
 
 [[package]]
@@ -1457,33 +1457,6 @@ name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
-
-[[package]]
-name = "zipzi-editor-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "zipzi-cmo3",
- "zipzi-core",
- "zipzi-project",
- "zipzi-sdk",
- "serde",
- "serde_json",
- "tempfile",
- "uuid",
-]
-
-[[package]]
-name = "zipzi-editor-render"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "zipzi-editor-core",
- "zipzi-core",
- "zipzi-render",
- "zipzi-render-metal",
- "objc2 0.6.4",
-]
 
 [[package]]
 name = "either"
@@ -3886,216 +3859,6 @@ dependencies = [
  "cfg-if",
  "futures-util",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "zipzi-animation"
-version = "0.1.0"
-dependencies = [
- "zipzi-core",
- "zipzi-project",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "uuid",
-]
-
-[[package]]
-name = "zipzi-cmo3"
-version = "0.1.0"
-dependencies = [
- "crc32fast",
- "flate2",
- "zipzi-animation",
- "zipzi-core",
- "zipzi-live2d",
- "png 0.17.16",
- "roxmltree 0.20.0",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "uuid",
- "zip",
-]
-
-[[package]]
-name = "zipzi-core"
-version = "0.1.0"
-dependencies = [
- "png 0.17.16",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "uuid",
-]
-
-[[package]]
-name = "zipzi-editor"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-channel",
- "zipzi-editor-core",
- "zipzi-editor-render",
- "gpui-fast-apple",
- "gpui-fps",
- "gpui-kit",
- "image",
- "zipzi-core",
- "zipzi-sdk",
- "zipzi-sdk-observe",
- "libc",
- "metal",
- "objc2 0.6.4",
- "rust-i18n",
- "serde",
- "serde_json",
- "sys-locale",
- "tempfile",
- "toml 0.8.23",
- "uuid",
-]
-
-[[package]]
-name = "zipzi-live2d"
-version = "0.1.0"
-dependencies = [
- "zipzi-core",
- "serde",
- "serde_json",
- "serde_path_to_error",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "zipzi-moc3"
-version = "0.1.0"
-dependencies = [
- "cc",
- "zipzi-core",
- "zipzi-project",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "zipzi-moc3-psd"
-version = "0.1.0"
-dependencies = [
- "ag-psd",
- "zipzi-core",
- "zipzi-moc3",
-]
-
-[[package]]
-name = "zipzi-project"
-version = "0.1.0"
-dependencies = [
- "ciborium",
- "zipzi-cmo3",
- "zipzi-core",
- "zipzi-live2d",
- "zipzi-moc3",
- "zipzi-psd",
- "png 0.17.16",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "thiserror 2.0.20",
- "uuid",
-]
-
-[[package]]
-name = "zipzi-psd"
-version = "0.1.0"
-dependencies = [
- "ag-psd",
- "zipzi-core",
- "zipzi-moc3-psd",
- "zipzi-render",
- "zipzi-render-metal",
- "png 0.17.16",
- "sha2 0.11.0",
-]
-
-[[package]]
-name = "zipzi-python"
-version = "0.1.0"
-dependencies = [
- "zipzi-core",
- "zipzi-moc3",
- "zipzi-sdk",
- "zipzi-sdk-observe",
- "pyo3",
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
-name = "zipzi-render"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "zipzi-core",
-]
-
-[[package]]
-name = "zipzi-render-metal"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "zipzi-core",
- "zipzi-render",
- "metal",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "zipzi-render-wgpu"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "zipzi-core",
- "zipzi-render",
- "png 0.17.16",
- "wgpu",
-]
-
-[[package]]
-name = "zipzi-sdk"
-version = "0.1.0"
-dependencies = [
- "geo",
- "zipzi-animation",
- "zipzi-core",
- "zipzi-project",
- "png 0.17.16",
- "rstar",
- "serde",
- "serde_json",
- "spade",
-]
-
-[[package]]
-name = "zipzi-sdk-observe"
-version = "0.1.0"
-dependencies = [
- "zipzi-animation",
- "zipzi-core",
- "zipzi-project",
- "zipzi-render",
- "zipzi-render-metal",
- "zipzi-render-wgpu",
- "zipzi-sdk",
- "png 0.17.16",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "uuid",
- "wgpu",
 ]
 
 [[package]]
@@ -9373,6 +9136,258 @@ dependencies = [
  "nix",
  "typed-path",
  "zopfli",
+]
+
+[[package]]
+name = "zipzi-animation"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+ "uuid",
+ "zipzi-core",
+ "zipzi-project",
+]
+
+[[package]]
+name = "zipzi-cmo3"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "png 0.17.16",
+ "roxmltree 0.20.0",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+ "uuid",
+ "zip",
+ "zipzi-animation",
+ "zipzi-core",
+ "zipzi-live2d",
+]
+
+[[package]]
+name = "zipzi-core"
+version = "0.1.0"
+dependencies = [
+ "png 0.17.16",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+ "uuid",
+]
+
+[[package]]
+name = "zipzi-editor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "gpui-fast-apple",
+ "gpui-fps",
+ "gpui-kit",
+ "image",
+ "libc",
+ "metal",
+ "objc2 0.6.4",
+ "rust-i18n",
+ "serde",
+ "serde_json",
+ "sys-locale",
+ "tempfile",
+ "toml 0.8.23",
+ "uuid",
+ "zipzi-core",
+ "zipzi-editor-core",
+ "zipzi-editor-render",
+ "zipzi-sdk",
+ "zipzi-sdk-observe",
+]
+
+[[package]]
+name = "zipzi-editor-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "uuid",
+ "zipzi-cmo3",
+ "zipzi-core",
+ "zipzi-project",
+ "zipzi-runtime",
+ "zipzi-sdk",
+]
+
+[[package]]
+name = "zipzi-editor-render"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "objc2 0.6.4",
+ "zipzi-core",
+ "zipzi-editor-core",
+ "zipzi-render",
+ "zipzi-render-metal",
+]
+
+[[package]]
+name = "zipzi-live2d"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "thiserror 2.0.20",
+ "zipzi-core",
+]
+
+[[package]]
+name = "zipzi-moc3"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "thiserror 2.0.20",
+ "zipzi-core",
+ "zipzi-project",
+]
+
+[[package]]
+name = "zipzi-moc3-psd"
+version = "0.1.0"
+dependencies = [
+ "ag-psd",
+ "zipzi-core",
+ "zipzi-moc3",
+]
+
+[[package]]
+name = "zipzi-project"
+version = "0.1.0"
+dependencies = [
+ "ciborium",
+ "png 0.17.16",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "thiserror 2.0.20",
+ "uuid",
+ "zipzi-cmo3",
+ "zipzi-core",
+ "zipzi-live2d",
+ "zipzi-moc3",
+ "zipzi-psd",
+]
+
+[[package]]
+name = "zipzi-psd"
+version = "0.1.0"
+dependencies = [
+ "ag-psd",
+ "png 0.17.16",
+ "sha2 0.11.0",
+ "zipzi-core",
+ "zipzi-moc3-psd",
+ "zipzi-render",
+ "zipzi-render-metal",
+]
+
+[[package]]
+name = "zipzi-python"
+version = "0.1.0"
+dependencies = [
+ "pyo3",
+ "serde",
+ "serde_json",
+ "uuid",
+ "zipzi-core",
+ "zipzi-moc3",
+ "zipzi-sdk",
+ "zipzi-sdk-observe",
+]
+
+[[package]]
+name = "zipzi-render"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "zipzi-core",
+]
+
+[[package]]
+name = "zipzi-render-metal"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "metal",
+ "thiserror 2.0.20",
+ "zipzi-core",
+ "zipzi-render",
+]
+
+[[package]]
+name = "zipzi-render-wgpu"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "png 0.17.16",
+ "wgpu",
+ "zipzi-core",
+ "zipzi-render",
+]
+
+[[package]]
+name = "zipzi-runtime"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.20",
+ "uuid",
+ "zipzi-core",
+ "zipzi-project",
+ "zipzi-sdk",
+]
+
+[[package]]
+name = "zipzi-sdk"
+version = "0.1.0"
+dependencies = [
+ "geo",
+ "png 0.17.16",
+ "rstar",
+ "serde",
+ "serde_json",
+ "spade",
+ "zipzi-animation",
+ "zipzi-core",
+ "zipzi-project",
+]
+
+[[package]]
+name = "zipzi-sdk-observe"
+version = "0.1.0"
+dependencies = [
+ "png 0.17.16",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "uuid",
+ "wgpu",
+ "zipzi-animation",
+ "zipzi-core",
+ "zipzi-project",
+ "zipzi-render",
+ "zipzi-render-metal",
+ "zipzi-render-wgpu",
+ "zipzi-sdk",
 ]
 
 [[package]]

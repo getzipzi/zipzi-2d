@@ -390,6 +390,16 @@ impl AuthoringSession {
         token: &AttachmentLoadToken,
         bytes: Option<std::sync::Arc<Vec<u8>>>,
     ) -> Result<EditReceipt, SdkError> {
+        self.begin_attachment_content_edit(token, bytes)?
+            .commit_to(self)
+    }
+
+    /// Stage a token-checked attachment load without publishing it.
+    pub fn begin_attachment_content_edit(
+        &self,
+        token: &AttachmentLoadToken,
+        bytes: Option<std::sync::Arc<Vec<u8>>>,
+    ) -> Result<crate::EditSession<'static>, SdkError> {
         self.resolve_handle(&token.handle)?;
         if token.cancelled.load(std::sync::atomic::Ordering::Acquire) {
             return Err(SdkError::new(
@@ -423,12 +433,10 @@ impl AuthoringSession {
             attachment,
         })?;
         let flag = token.cancelled.clone();
-        let (_, receipt) = self.edit("Load attachment content", Some(plan.version), |edit| {
-            edit.resource_load_controls.push(flag);
-            edit.apply_attachment_plan(&plan)
-        })?;
-        token.cancel();
-        Ok(receipt)
+        let mut edit = self.begin_owned_edit("Load attachment content", Some(plan.version))?;
+        edit.resource_load_controls.push(flag);
+        edit.apply_attachment_plan(&plan)?;
+        Ok(edit)
     }
 }
 

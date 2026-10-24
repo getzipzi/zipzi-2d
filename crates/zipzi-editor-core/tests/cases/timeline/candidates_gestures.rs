@@ -180,7 +180,8 @@ fn paste_collision_on_second_track_rolls_back_the_entire_batch() -> anyhow::Resu
         .unwrap()
         .tracks
         .last()
-        .unwrap();
+        .unwrap()
+        .clone();
     let other = TimelineKeyRef {
         clip_id: id(4),
         track_id: first.id.clone(),
@@ -195,11 +196,12 @@ fn paste_collision_on_second_track_rolls_back_the_entire_batch() -> anyhow::Resu
         .unwrap()
         .motion_definition(&id(4))
         .unwrap()
+        .as_ref()
         .clone();
     let history = e.document().unwrap().history_lengths();
     assert!(e.paste_timeline(d, None).is_err());
     assert_eq!(
-        e.document().unwrap().motion_definition(&id(4)),
+        e.document().unwrap().motion_definition(&id(4)).as_deref(),
         Some(&before)
     );
     assert_eq!(e.document().unwrap().history_lengths(), history);
@@ -560,7 +562,8 @@ fn model_and_part_channels_create_valid_tracks_and_pose_diagnostics_remain_visib
             .unwrap()
             .tracks
             .last()
-            .unwrap();
+            .unwrap()
+            .clone();
         assert_eq!(track.initial.time, 0.7);
         assert_eq!(track.keys().count(), 1);
     }

@@ -57,7 +57,7 @@ pub(super) fn run() -> anyhow::Result<()> {
     let (document, notices) = Document::import_model3(&path)?;
     let mut h = Harness::new()?;
     update(&mut h, |view, window, cx| {
-        view.editor = Editor::from_document(document);
+        view.replace_editor(Editor::from_document(document), cx);
         view.animation_clock_running = true;
         view.refresh_document(window, cx);
     })?;

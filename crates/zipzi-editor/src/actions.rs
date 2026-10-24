@@ -69,6 +69,21 @@ actions!(
 
 pub(super) fn init(cx: &mut App) {
     keybindings::init(cx);
+    cx.on_action(|action: &RunCommand, cx| {
+        if cx.windows().is_empty() {
+            if action.id == CommandId::Quit {
+                if let Some(host) = cx.try_global::<host::DesktopHost>() {
+                    host.pending_quit.set(true);
+                }
+                host::open_window(cx, true);
+            } else if action.id == CommandId::New {
+                if let Some(host) = cx.try_global::<host::DesktopHost>() {
+                    host.new_document();
+                }
+                host::open_window(cx, true);
+            }
+        }
+    });
     cx.on_action(|_: &Hide, cx| cx.hide());
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());
     cx.on_action(|_: &ShowAll, cx| cx.unhide_other_apps());
@@ -99,7 +114,9 @@ impl EditorView {
                 .on_action(
                     cx.listener(|this, _: &ClearRecent, window, cx| this.clear_recent(window, cx)),
                 )
-                .on_action(cx.listener(|this, _: &CloseWindow, window, cx| this.close(window, cx)))
+                .on_action(
+                    cx.listener(|this, _: &CloseWindow, window, cx| this.close_window(window, cx)),
+                )
                 .on_action(cx.listener(|this, action: &SetLanguage, window, cx| {
                     let mut settings = cx.global::<settings::Settings>().clone();
                     if settings.language == action.language {

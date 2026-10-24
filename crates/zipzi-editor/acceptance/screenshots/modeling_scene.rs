@@ -157,7 +157,7 @@ pub(crate) fn modeling_and_parameters_screenshots(
     harness._assets = assets;
     harness.cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             let dock = view.dock.as_ref().unwrap();
             // Give the grouped list a full-height, standard-width panel for visual QA.
             use gpui_kit::component::dock::{DockLayout, panel_handle};

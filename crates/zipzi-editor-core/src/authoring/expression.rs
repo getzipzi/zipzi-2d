@@ -52,7 +52,8 @@ impl Document {
             original: PendingOriginal::ExpressionEntry(address.clone()),
             edit: self
                 .session
-                .begin_owned_edit("Edit expression entry", None)?,
+                .begin_owned_edit("Edit expression entry", None)?
+                .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
             topology_changed: false,
@@ -164,7 +165,7 @@ impl Document {
         receipt: zipzi_sdk::EditReceipt,
     ) -> Result<OperationResult> {
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             self.consume_authoring_receipt(&receipt, false);
         }
         Ok(self.authoring_result(receipt))

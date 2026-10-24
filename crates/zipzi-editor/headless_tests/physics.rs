@@ -6,7 +6,7 @@ use zipzi_editor_core::{CommandId, PanelKind};
 fn adding_physics_channels_preserves_bindings_after_runtime_id_reuse(cx: &mut TestAppContext) {
     use zipzi_editor_core::{ObjectKind, ObjectRef};
     let (mut document, assets) = document_fixture::combined_animation_document().unwrap();
-    let original = document.physics_definition().unwrap().clone();
+    let original = document.physics_definition().unwrap().as_ref().clone();
     let input = original.data.settings[0].inputs[0]
         .source
         .parameter_id()
@@ -482,6 +482,7 @@ fn rejected_physics_node_deletion_keeps_the_selected_node(cx: &mut TestAppContex
                 .unwrap()
                 .physics_definition()
                 .unwrap()
+                .as_ref()
                 .clone();
             let rig = &asset.data.settings[0];
             let selected = rig.vertices.len() - 1;

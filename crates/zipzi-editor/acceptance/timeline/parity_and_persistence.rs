@@ -102,6 +102,7 @@ pub(crate) fn persistence(h: &mut Harness) -> anyhow::Result<()> {
                     .unwrap()
                     .motion_definition(&m.selection.clip_id)
                     .unwrap()
+                    .as_ref()
                     .clone()
             })
             .collect::<Vec<_>>()
@@ -117,7 +118,7 @@ pub(crate) fn persistence(h: &mut Harness) -> anyhow::Result<()> {
     let reopened = Document::open(&path.join("project.zipzi.json"))?;
     for c in original {
         ensure!(
-            reopened.motion_definition(&c.id) == Some(&c),
+            reopened.motion_definition(&c.id).as_deref() == Some(&c),
             "save/reopen changed imported keys, UUIDs, tails or extensions"
         );
     }

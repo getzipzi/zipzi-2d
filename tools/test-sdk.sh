@@ -4,9 +4,10 @@ cd "$(dirname "$0")/.."
 
 usage() {
     cat <<'EOF'
-Usage: ./tools/test-sdk.sh [fast|mesh|regression|stress|python|wheel|full] [arguments...]
+Usage: ./tools/test-sdk.sh [fast|runtime|mesh|regression|stress|python|wheel|full] [arguments...]
 
   fast        SDK unit and ordinary CPU integration tests; optional Cargo filter
+  runtime     CPU Runtime ownership, transactions, jobs and event contracts
   mesh        alpha mesh daily cases, including vertex-budget boundaries
   regression  SDK libraries/integration, excluding the random stress remainder
   stress      complete alpha mesh suite, including the entire fixed-seed matrix
@@ -43,6 +44,9 @@ if [ "$#" -gt 0 ]; then shift; fi
 case "$mode" in
     fast)
         exec cargo test --locked -p zipzi-sdk --lib --test integration "$@"
+        ;;
+    runtime)
+        exec cargo test --locked -p zipzi-runtime "$@"
         ;;
     regression)
         daily_rust_tests python3 tools/workspace/cargo_domain.py sdk test --locked --lib --tests "$@"

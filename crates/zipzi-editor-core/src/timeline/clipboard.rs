@@ -92,8 +92,12 @@ impl TimelineClipboard {
             target.is_none() || self.tracks.len() == 1,
             "Multiple copied tracks paste to their original targets"
         );
-        let mut clip = document.motion_definition(&self.clip_id).unwrap().clone();
-        MotionClipCandidate::new(document.model(), clip.clone())?;
+        let mut clip = document
+            .motion_definition(&self.clip_id)
+            .unwrap()
+            .as_ref()
+            .clone();
+        MotionClipCandidate::new(&document.model(), clip.clone())?;
         let anchor = f64::from(timeline_time(time, projection.fps, snap)?);
         let mut selected = Vec::new();
         for copied in &self.tracks {
@@ -237,7 +241,7 @@ impl TimelineClipboard {
                 clip.tracks.push(track);
             }
         }
-        Ok((MotionClipCandidate::new(document.model(), clip)?, selected))
+        Ok((MotionClipCandidate::new(&document.model(), clip)?, selected))
     }
 }
 
@@ -278,7 +282,7 @@ impl crate::Editor {
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
         let clipboard = TimelineClipboard::capture(
             document,
-            session
+            &session
                 .document
                 .motion_definition(&state.projection.clip_id)
                 .unwrap(),

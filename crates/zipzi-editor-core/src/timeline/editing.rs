@@ -91,6 +91,7 @@ impl TimelineCommand {
 }
 
 pub struct TimelineEdit {
+    _interaction: crate::runtime_host::HostedInteraction,
     pub owner: Option<crate::TimelineBinding>,
     pub identity: TimelineCandidateIdentity,
     pub base_version: Version,
@@ -224,7 +225,7 @@ impl TimelineEdit {
                         }
                     })
                     .collect::<Vec<_>>();
-                candidate.move_keys(model, &moves)?;
+                candidate.move_keys(&model, &moves)?;
             }
             TimelineCommand::SetKey { key, time, value } => {
                 validate_key(key)?;
@@ -236,7 +237,7 @@ impl TimelineEdit {
                     timeline_time(*time, projection.fps, snap)?
                 };
                 candidate.move_keys(
-                    model,
+                    &model,
                     &[MotionKeyMove {
                         key: key.sdk(),
                         point: MotionPoint {
@@ -251,7 +252,7 @@ impl TimelineEdit {
                     validate_key(key)?;
                 }
                 candidate.delete_keys(
-                    model,
+                    &model,
                     &keys.iter().map(TimelineKeyRef::sdk).collect::<Vec<_>>(),
                 )?;
                 let mut clip = candidate.into_clip();
@@ -262,14 +263,14 @@ impl TimelineEdit {
                     );
                 }
                 clip.events.retain(|event| !events.contains(&event.id));
-                candidate = MotionClipCandidate::new(model, clip)?;
+                candidate = MotionClipCandidate::new(&model, clip)?;
             }
             TimelineCommand::Interpolation { keys, kind } => {
                 for key in keys {
                     validate_key(key)?;
                 }
                 candidate.set_interpolation(
-                    model,
+                    &model,
                     &keys.iter().map(TimelineKeyRef::sdk).collect::<Vec<_>>(),
                     *kind,
                 )?;
@@ -289,7 +290,7 @@ impl TimelineEdit {
                 );
                 ensure!(time.is_finite(), "Invalid handle time");
                 candidate.set_handle(
-                    model,
+                    &model,
                     &end.sdk(),
                     *handle,
                     MotionPoint {
@@ -318,11 +319,11 @@ impl TimelineEdit {
                         extensions: Default::default(),
                     });
                 }
-                candidate = MotionClipCandidate::new(model, clip)?;
+                candidate = MotionClipCandidate::new(&model, clip)?;
             }
             TimelineCommand::ScaleTime(duration) => {
                 ensure!(duration.is_finite(), "Invalid duration");
-                candidate.scale_time(model, *duration as f32)?;
+                candidate.scale_time(&model, *duration as f32)?;
             }
             TimelineCommand::Timing {
                 duration,
@@ -337,7 +338,7 @@ impl TimelineEdit {
                 clip.looping = *looping;
                 clip.fade_in = *fade_in;
                 clip.fade_out = *fade_out;
-                candidate = MotionClipCandidate::new(model, clip)?;
+                candidate = MotionClipCandidate::new(&model, clip)?;
             }
         }
         Ok(candidate)
@@ -404,7 +405,7 @@ impl TimelineEdit {
             {
                 if let Some(value) = value {
                     candidate.move_keys(
-                        document.model(),
+                        &document.model(),
                         &[MotionKeyMove {
                             key: key.reference.sdk(),
                             point: MotionPoint { time, value },
@@ -412,7 +413,7 @@ impl TimelineEdit {
                     )?;
                 }
             } else {
-                candidate.insert_key(document.model(), track_id, &self.key_id, time, value)?;
+                candidate.insert_key(&document.model(), track_id, &self.key_id, time, value)?;
             }
         } else {
             let mut clip = candidate.clone().into_clip();
@@ -433,7 +434,7 @@ impl TimelineEdit {
                 time >= 0. && time <= clip.duration,
                 "New key is outside motion duration"
             );
-            *candidate = MotionClipCandidate::new(document.model(), clip)?;
+            *candidate = MotionClipCandidate::new(&document.model(), clip)?;
         }
         Ok(())
     }
@@ -709,8 +710,13 @@ impl Editor {
             .active
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
-        let original = session.document.motion_definition(clip_id).unwrap().clone();
-        let candidate = MotionClipCandidate::new(session.document.model(), original.clone())?;
+        let original = session
+            .document
+            .motion_definition(clip_id)
+            .unwrap()
+            .as_ref()
+            .clone();
+        let candidate = MotionClipCandidate::new(&session.document.model(), original.clone())?;
         let original_projection = session
             .animation
             .timeline
@@ -729,7 +735,12 @@ impl Editor {
             .iter()
             .flat_map(|track| track.keys().map(|key| key.id.clone()))
             .collect();
+        let interaction = session
+            .document
+            .runtime_host()
+            .interaction(session.document.runtime_session_id())?;
         session.animation.timeline.edit = Some(TimelineEdit {
+            _interaction: interaction,
             owner: None,
             identity,
             base_version: source.snapshot.version(),

@@ -13,9 +13,9 @@ impl Document {
         let (_, receipt) = self.session.edit(label, Some(version), |edit| {
             edit.replace_motion_candidate(candidate)
         })?;
-        self.session.drain_events();
+        self.session.acknowledge_receipts();
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             self.invalidate_projection(false);
         }
         Ok(())

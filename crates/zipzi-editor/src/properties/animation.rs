@@ -312,7 +312,7 @@ pub(super) fn values(target: &PropertyTarget, editor: &Editor) -> anyhow::Result
         document
             .expression_definition(&target.object.id)
             .into_iter()
-            .flat_map(|e| e.entries.iter())
+            .flat_map(|e| e.entries.into_iter())
             .map(|e| ObjectRef::new(ObjectKind::ExpressionEntry, &e.id))
             .collect()
     } else {

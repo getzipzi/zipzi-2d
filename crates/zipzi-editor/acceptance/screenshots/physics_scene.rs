@@ -21,7 +21,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             crate::i18n::activate(Some(locale));
             harness.cx.update_window(harness.window, |_, window, cx| {
                 harness.view.update(cx, |view, cx| {
-                    view.editor = Editor::from_document(document);
+                    view.replace_editor(Editor::from_document(document), cx);
                     view.refresh_document(window, cx);
                     view.run_command(CommandId::AnimationWorkspace, window, cx);
                     view.run_command(CommandId::ResetLayout, window, cx);

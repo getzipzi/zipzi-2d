@@ -51,7 +51,7 @@ pub(crate) fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Resul
     harness._assets = assets;
     harness.cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.redraw(cx);
         });
         window.click("workspace-animation", cx);
@@ -263,7 +263,7 @@ fn curve_axis_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
     harness._assets = assets;
     harness.cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.editor = Editor::from_document(document);
+            view.replace_editor(Editor::from_document(document), cx);
             view.redraw(cx);
         });
         window.click("workspace-animation", cx);

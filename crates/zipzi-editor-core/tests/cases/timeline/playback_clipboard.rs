@@ -204,12 +204,16 @@ fn context_changes_and_play_cancel_candidate_and_save_command_commits() -> anyho
         .unwrap()
         .motion_definition(&id(4))
         .unwrap()
+        .as_ref()
         .clone();
     assert_eq!(e.document().unwrap().history_lengths(), (1, 0));
     let task = e.prepare_save(d, &temp.path().join("saved.zipzi"), false)?;
     e.finish_save(&mut task.run())?;
     let reopened = Document::open(e.document().unwrap().path().unwrap())?;
-    assert_eq!(reopened.motion_definition(&id(4)), Some(&receipt));
+    assert_eq!(
+        reopened.motion_definition(&id(4)).as_deref(),
+        Some(&receipt)
+    );
     Ok(())
 }
 
@@ -295,6 +299,7 @@ fn clipboard_regenerates_ids_preserves_internal_segments_and_paste_is_one_atomic
         .unwrap()
         .motion_definition(&id(4))
         .unwrap()
+        .as_ref()
         .clone();
     let pasted = clip.tracks.last().unwrap();
     assert_eq!(pasted.initial.time, 0.7);
@@ -324,11 +329,17 @@ fn clipboard_regenerates_ids_preserves_internal_segments_and_paste_is_one_atomic
         2
     );
     e.execute(EditorCommand::Redo)?;
-    assert_eq!(e.document().unwrap().motion_definition(&id(4)), Some(&clip));
+    assert_eq!(
+        e.document().unwrap().motion_definition(&id(4)).as_deref(),
+        Some(&clip)
+    );
     e.seek_timeline(d, 0.1137)?;
     let history = e.document().unwrap().history_lengths();
     assert!(e.paste_timeline(d, None).is_err());
-    assert_eq!(e.document().unwrap().motion_definition(&id(4)), Some(&clip));
+    assert_eq!(
+        e.document().unwrap().motion_definition(&id(4)).as_deref(),
+        Some(&clip)
+    );
     assert_eq!(e.document().unwrap().history_lengths(), history);
     let other = e.create_timeline_motion(d)?;
     let history = e.document().unwrap().history_lengths();

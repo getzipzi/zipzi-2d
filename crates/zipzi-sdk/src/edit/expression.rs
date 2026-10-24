@@ -1,8 +1,8 @@
 use super::EditSession;
 use crate::types::SdkError;
-use zipzi_core::document::ExpressionAsset;
 use zipzi_core::ChangeKind;
-use zipzi_project::{import_expression3, ExpressionDiagnostic, ExpressionProjectError};
+use zipzi_core::document::ExpressionAsset;
+use zipzi_project::{ExpressionDiagnostic, ExpressionProjectError, import_expression3};
 
 fn project_error(error: ExpressionProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);
@@ -51,6 +51,7 @@ impl EditSession<'_> {
             .flat_map(|e| &e.entries)
             .map(|e| e.id.clone())
             .collect();
+        self.candidate_content_bytes.take();
         self.candidate = Some(imported.candidate);
         self.track_expression_deletions(&previous);
         self.kind = super::merge_kind(self.kind, ChangeKind::Metadata);

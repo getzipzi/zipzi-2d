@@ -25,7 +25,7 @@ this guide are relative to `tools/` unless a command starts with `tools/`.
 | `validation/` | SDK acceptance, image comparisons, model/runtime probes and Purism checks |
 | `validation/probes/`, `validation/cmo3/` | C++ probe builds and Cubism Java inspection helper |
 | `fixtures/` | Shared model/animation fixture generators; generated inputs live in root `fixtures/` |
-| `runtime/` | Runtime API inventories and CPU baselines |
+| `runtime/` | Runtime inventories, ownership guards, CPU/native paired benchmarks |
 | `experiments/` | Agent experiment CLI and packet/worker support in `sdk_experiment/` |
 | `tests/` | Regression tests for all tooling groups |
 
@@ -57,7 +57,7 @@ from another directory. The Python tooling runner also resolves its own checkout
 ## Test coverage
 
 Run commands from the repository root. `tools/workspace/package-domains.json` assigns every
-owned workspace package to exactly one domain: 15 SDK packages (including Python
+owned workspace package to exactly one domain: 16 SDK packages (including Python
 and the Rust comparison runner) and 3 Editor packages. New workspace members must
 be explicitly assigned; missing, stale, duplicate or overlapping names fail the
 metadata coverage gate. Vendor packages are not workspace members.
@@ -78,10 +78,11 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | Entry | Coverage |
 | --- | --- |
 | SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
-| SDK `mesh` / `regression` | Daily alpha mesh / all 15 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
+| SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic and event contracts; optional filter |
+| SDK `mesh` / `regression` | Daily alpha mesh / all 16 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
 | SDK `python` / `wheel` | Rebuilt Debug extension / isolated Release wheel gates |
-| SDK `full` or no argument | SDK formatting, complete 15-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
+| SDK `full` or no argument | SDK formatting, complete 16-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
 | Editor `fast` | zipzi-editor-core library and synthetic integration |
 | Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
 | Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance |
@@ -208,6 +209,10 @@ ZIPZI_BENCH_ANIMATION=1 ZIPZI_BENCH_ANIMATION_DRAG=number ./tools/benchmarks/win
 
 `runtime/runtime_inventory.py`, `runtime/runtime_baseline.py` and `runtime/runtime-migration-inventory.py`
 support [Runtime preparation](../docs/runtime/README.md).
+`runtime/check_editor_boundary.py` checks the R2 Editor ownership boundary;
+`runtime/editor_benchmark_pairs.py` runs five alternating prebuilt Release pairs,
+and `runtime/editor_benchmark_report.py` applies the frozen per-operation gates.
+See [the benchmark guide](benchmarks/README.md#runtime-editor-pairs).
 `experiments/sdk_experiments.py` and `experiments/sdk_experiment/` implement the
 [SDK experiment protocol](../docs/archive/SDK-EXPERIMENTS.md).
 These research tools are separate from routine package tests; model-dependent

@@ -14,8 +14,10 @@ bench-instrumentation = ["zipzi-core/bench-instrumentation", "zipzi-sdk/bench-in
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
+async-channel.workspace = true
 zipzi-core.workspace = true
 zipzi-sdk.workspace = true
+zipzi-runtime.workspace = true
 zipzi-project.workspace = true
 uuid.workspace = true
 

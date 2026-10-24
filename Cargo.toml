@@ -13,6 +13,7 @@ members = [
     "crates/zipzi-psd",
     "crates/zipzi-project",
     "crates/zipzi-sdk",
+    "crates/zipzi-runtime",
     "crates/zipzi-sdk-observe",
     "crates/zipzi-python",
     "crates/cubism-matrix-zipzi",
@@ -49,6 +50,7 @@ gpui-fps = { git = "https://github.com/longbridge/gpui-kit", rev = "507e82b8115a
 async-channel = "2"
 zipzi-core = { path = "crates/zipzi-core" }
 zipzi-sdk = { path = "crates/zipzi-sdk" }
+zipzi-runtime = { path = "crates/zipzi-runtime" }
 zipzi-project = { path = "crates/zipzi-project" }
 zipzi-render = { path = "crates/zipzi-render" }
 zipzi-editor-core = { path = "crates/zipzi-editor-core" }

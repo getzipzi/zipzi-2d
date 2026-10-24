@@ -239,12 +239,10 @@ impl Document {
             if selection.len() == 1 && object.kind == ObjectKind::Deformer {
                 return Ok((owner, Some(object.id.clone()), false));
             }
-            let parent = self
-                .model()
-                .scene_deformer_parent(&object.id)
-                .ok_or_else(|| {
-                    anyhow::anyhow!(AuthoringPlanningError::new("EXPECTED_DEFORMATION_MEMBERS"))
-                })?;
+            let model = self.model();
+            let parent = model.scene_deformer_parent(&object.id).ok_or_else(|| {
+                anyhow::anyhow!(AuthoringPlanningError::new("EXPECTED_DEFORMATION_MEMBERS"))
+            })?;
             parents.push((!parent.is_empty()).then(|| parent.to_owned()));
             owners.push(owner);
         }

@@ -80,7 +80,7 @@ impl Document {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_organization_plan(plan)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
             let scene_changed = receipt
                 .changes
                 .created

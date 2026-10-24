@@ -4,11 +4,11 @@ use crate::{
     SdkError, Version,
 };
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 pub use zipzi_core::document::ResourceEdit;
-use zipzi_core::{document::ResourcePlan, ImageContent};
+use zipzi_core::{ImageContent, document::ResourcePlan};
 #[derive(Debug, Clone)]
 pub struct ResourceEditPlan {
     version: Version,
@@ -334,6 +334,17 @@ impl AuthoringSession {
         name: String,
         image: &PreparedImageContent,
     ) -> Result<EditReceipt, SdkError> {
+        self.begin_import_prepared_image(id, name, image)?
+            .commit_to(self)
+    }
+
+    /// Stage resource metadata and retain its payload only upon publication.
+    pub fn begin_import_prepared_image(
+        &self,
+        id: String,
+        name: String,
+        image: &PreparedImageContent,
+    ) -> Result<EditSession<'static>, SdkError> {
         let mut edit = self.begin_owned_edit("Import texture", None)?;
         edit.edit_resource(ResourceEdit::Create {
             id: id.clone(),
@@ -345,9 +356,8 @@ impl AuthoringSession {
             expected: None,
             content: Some(image.content().clone()),
         })?;
-        let receipt = edit.commit_to(self)?;
-        self.project.retain_prepared_image(image);
-        Ok(receipt)
+        edit.prepared_images.push(image.clone());
+        Ok(edit)
     }
 
     pub fn replace_prepared_image_content(
@@ -355,8 +365,17 @@ impl AuthoringSession {
         token: &ImageLoadToken,
         image: &PreparedImageContent,
     ) -> Result<EditReceipt, SdkError> {
-        let receipt = self.replace_image_content(token, Some(image.content().clone()))?;
-        self.project.retain_prepared_image(image);
-        Ok(receipt)
+        self.begin_prepared_image_content_edit(token, image)?
+            .commit_to(self)
+    }
+
+    pub fn begin_prepared_image_content_edit(
+        &self,
+        token: &ImageLoadToken,
+        image: &PreparedImageContent,
+    ) -> Result<EditSession<'static>, SdkError> {
+        let mut edit = self.begin_image_content_edit(token, Some(image.content().clone()))?;
+        edit.prepared_images.push(image.clone());
+        Ok(edit)
     }
 }

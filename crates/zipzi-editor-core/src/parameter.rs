@@ -99,17 +99,17 @@ impl Document {
             .collect()
     }
 
-    fn parameter_runtime_ids(&self, except: Option<&str>) -> HashSet<&str> {
+    fn parameter_runtime_ids(&self, except: Option<&str>) -> HashSet<String> {
         let model = self.model();
         let mut ids: HashSet<_> = model
             .parameter_order()
             .iter()
             .filter(|id| Some(id.as_str()) != except)
-            .filter_map(|id| model.get_parameter(id).map(|p| p.runtime_id.as_str()))
+            .filter_map(|id| model.get_parameter(id).map(|p| p.runtime_id.clone()))
             .collect();
         if let Some(entries) = &model.display_info().parameters {
             ids.extend(entries.iter().filter_map(|entry| match entry {
-                CdiParameterEntry::Unresolved { runtime_id, .. } => Some(runtime_id.as_str()),
+                CdiParameterEntry::Unresolved { runtime_id, .. } => Some(runtime_id.clone()),
                 _ => None,
             }));
         }
@@ -128,7 +128,8 @@ impl Document {
     }
 
     pub fn parameter_group_options(&self) -> Vec<ParameterGroupOption> {
-        let Some(groups) = &self.model().display_info().parameter_groups else {
+        let model_read_guard_39 = self.model();
+        let Some(groups) = &model_read_guard_39.display_info().parameter_groups else {
             return Vec::new();
         };
         let by_id: std::collections::HashMap<_, _> = groups
@@ -255,8 +256,8 @@ impl NewParameter {
 
 impl Document {
     pub fn parameter_draft(&self, id: &str) -> Result<ParameterDraft> {
-        let p = self
-            .model()
+        let model_read_guard_40 = self.model();
+        let p = model_read_guard_40
             .get_parameter(id)
             .ok_or_else(|| anyhow::Error::from(ParameterManagementError::MissingParameter))?;
         let group_id = self
@@ -305,13 +306,16 @@ impl Document {
         &self,
         id: &str,
         draft: &ParameterDraft,
-    ) -> Result<zipzi_sdk::EditSession<'static>> {
+    ) -> Result<crate::runtime_host::HostedEdit> {
         let old = self.parameter_draft(id)?;
         self.ensure_editable(&[ObjectRef::new(ObjectKind::Parameter, id)])?;
         self.validate_parameter_fields(draft, Some(id))?;
         let parameter = draft.parameter(id);
         let mut edit = self.session.begin_owned_edit("Edit parameter", None)?;
         if let Err(error) = edit.replace_parameter(parameter.clone()) {
+            let zipzi_runtime::RuntimeError::Sdk(error) = error else {
+                return Err(error.into());
+            };
             return Err(ParameterManagementError::Dependency {
                 code: error.code.into(),
                 message: error.message.into(),
@@ -336,7 +340,7 @@ impl Document {
         }
         if &values != self.session.preview_values() {
             zipzi_core::preview::PreviewState::default()
-                .replace(edit.candidate_document(), 0, values)
+                .replace(&edit.candidate_document(), 0, values)
                 .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
         }
         Ok(edit)
@@ -379,8 +383,8 @@ impl Document {
     }
 
     pub(super) fn parameter_management_changed(&mut self) -> Result<()> {
-        self.session.drain_events();
-        self.pristine_blank = false;
+        self.session.acknowledge_receipts();
+        self.pristine_blank = None;
         self.invalidate_projection(false);
         self.reconcile_parameter_preview()?;
         self.context.reconcile(&self.object_index());

@@ -3,8 +3,8 @@ use super::*;
 
 impl Document {
     pub fn parameters(&self) -> Vec<ParameterValue> {
-        let groups: HashMap<_, _> = self
-            .model()
+        let model_read_guard_52 = self.model();
+        let groups: HashMap<_, _> = model_read_guard_52
             .display_info()
             .parameters
             .iter()
@@ -18,10 +18,11 @@ impl Document {
                 _ => None,
             })
             .collect();
-        sorting::ordered_parameter_ids(self.model())
+        sorting::ordered_parameter_ids(&self.model())
             .iter()
             .filter_map(|id| {
-                let parameter = self.model().get_parameter(id)?;
+                let model_read_guard_53 = self.model();
+                let parameter = model_read_guard_53.get_parameter(id)?;
                 Some(ParameterValue {
                     id: id.clone(),
                     group_id: groups.get(id.as_str()).cloned().flatten(),
@@ -281,7 +282,8 @@ impl Document {
             &mut nodes,
         );
         let mut tree = nest_nodes(nodes, parents);
-        let order = self.model().hierarchy_order();
+        let model_read_guard_54 = self.model();
+        let order = model_read_guard_54.hierarchy_order();
         let ids = if deformer {
             &order.deformation
         } else {

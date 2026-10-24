@@ -49,6 +49,7 @@ impl DocumentSummary {
     }
 }
 pub struct Editor {
+    runtime: crate::RuntimeHost,
     workspace: WorkspaceKind,
     pub(crate) viewports: crate::ViewportRegistry,
     pub(crate) timeline_panels: crate::TimelinePanels,
@@ -61,10 +62,34 @@ pub struct Editor {
     pub(crate) inspection_generation: u64,
     documents: Vec<Entry>,
     active: Option<DocumentId>,
-    loads: HashMap<OperationId, (DocumentId, Option<PathBuf>)>,
+    loads: HashMap<OperationId, (DocumentId, zipzi_runtime::JobId)>,
     exiting: bool,
 }
 impl Editor {
+    pub fn rehost(&mut self, runtime: crate::RuntimeHost) -> Result<()> {
+        ensure!(
+            self.loads.is_empty() && self.documents.iter().all(|e| e.saving().is_none()),
+            "Wait for pending IO before transferring a workspace"
+        );
+        for entry in &mut self.documents {
+            if let Some(session) = entry.session_mut() {
+                session.document.finish_edit()?;
+                session.document.session.rehost(runtime.clone())?;
+            }
+        }
+        self.runtime = runtime;
+        Ok(())
+    }
+    pub fn runtime_host(&self) -> crate::RuntimeHost {
+        self.runtime.clone()
+    }
+    pub fn runtime_session_id(&self, id: DocumentId) -> Option<zipzi_runtime::SessionId> {
+        self.entry(id)
+            .ok()?
+            .session()
+            .map(|s| s.document.session.id)
+    }
+
     pub(crate) fn active_session(&self) -> Option<&DocumentSession> {
         self.active
             .and_then(|id| self.entry(id).ok())
@@ -78,7 +103,11 @@ impl Editor {
         Ok(Self::from_document(Document::new_blank()?))
     }
     pub fn empty() -> Self {
+        Self::with_runtime(crate::RuntimeHost::new())
+    }
+    pub fn with_runtime(runtime: crate::RuntimeHost) -> Self {
         Self {
+            runtime,
             workspace: WorkspaceKind::default(),
             viewports: Default::default(),
             timeline_panels: Default::default(),
@@ -100,17 +129,18 @@ impl Editor {
         if let Some(id) = self.active.filter(|_| !self.is_busy()) {
             self.end_editing(id, EditingLifecycle::ContextChange)?;
         }
-        Ok(self.insert(Document::new_blank()?))
+        self.insert(Document::new_blank()?)
     }
     pub fn from_document(document: Document) -> Self {
-        let mut editor = Self::empty();
-        editor.insert(document);
+        let mut editor = Self::with_runtime(document.session.host.clone());
+        editor.insert(document).expect("initial hosted view");
         editor
     }
-    fn insert(&mut self, document: Document) -> DocumentId {
+    fn insert(&mut self, document: Document) -> Result<DocumentId> {
         self.insert_with_id(DocumentId(Uuid::new_v4()), document)
     }
-    fn insert_with_id(&mut self, id: DocumentId, document: Document) -> DocumentId {
+    fn insert_with_id(&mut self, id: DocumentId, mut document: Document) -> Result<DocumentId> {
+        document.session.rehost(self.runtime.clone())?;
         self.pause_animation();
         let mut session = DocumentSession::from_document(document);
         for viewport in self.viewport_ids() {
@@ -121,7 +151,7 @@ impl Editor {
         self.active = Some(id);
         self.inspection_generation += 1;
         self.refresh_viewport_bindings();
-        id
+        Ok(id)
     }
     fn entry(&self, id: DocumentId) -> Result<&Entry> {
         self.documents
@@ -280,6 +310,7 @@ impl Editor {
         )
     }
     pub fn execute_for(&mut self, id: DocumentId, command: EditorCommand) -> Result<()> {
+        self.sync_runtime()?;
         ensure!(
             self.entry(id)?.context == crate::EditingContext::Modeling
                 || matches!(

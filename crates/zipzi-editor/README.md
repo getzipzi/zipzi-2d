@@ -109,3 +109,19 @@ tools; `bench-instrumentation` enables editing-chain instrumentation.
 
 Licensed **GPL-3.0-only**. This crate is not published to crates.io; distribute it
 with its assets, workspace patches and [required notices](../../LICENSING.md).
+
+## Resident application host
+
+Run `cargo run --locked -p zipzi-editor -- --no-window` to start the application
+without a window. Closing a window or document tab detaches its view and retains
+the Runtime session, unsaved content and history in this process. Reopening the
+application window attaches resident sessions. Use Quit to save/discard and exit.
+Load/import/save completion returns to the application host even without windows;
+errors remain available when a window is reopened.
+
+The focused native host gate is `./tools/test-editor.sh ui -- headless_tests::runtime_host`.
+The Release dual-viewport/background-client probe uses
+`runtime_interaction_acceptance` with `ZIPZI_TIMELINE_MODEL`,
+`ZIPZI_RUNTIME_INTERACTION_OUTPUT` and `ZIPZI_RUNTIME_INTERACTION_SAMPLES` (at
+least 30). It checks input reaches both current Metal surfaces while another
+session publishes Runtime jobs, and verifies visible history isolation.

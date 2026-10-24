@@ -145,8 +145,8 @@ impl Document {
                 .id
                 .clone(),
             (K::PoseEntry, Some(o)) if o.kind == K::PoseLink => {
-                let entry = self
-                    .model()
+                let model = self.model();
+                let entry = model
                     .get_pose_link(&o.id)
                     .ok_or_else(|| anyhow::anyhow!("Missing link"))?
                     .0;
@@ -575,12 +575,14 @@ impl Document {
             }
             _ => anyhow::bail!("Unsupported business action"),
         };
+        drop(model);
         let mut candidate = self
             .session
             .begin_owned_edit("Review Physics or Pose", None)?;
-        native.apply(&mut candidate)?;
-        let before = inventory(model);
-        let after: std::collections::HashSet<_> = inventory(candidate.candidate_document())
+        candidate.apply(|sdk| native.apply(sdk))?;
+        let model = self.model();
+        let before = inventory(&model);
+        let after: std::collections::HashSet<_> = inventory(&candidate.candidate_document())
             .into_iter()
             .collect();
         let removed = before.into_iter().filter(|o| !after.contains(o)).collect();
@@ -617,10 +619,10 @@ impl Document {
         let mut edit = self
             .session
             .begin_owned_edit("Edit Physics or Pose", Some(plan.version))?;
-        plan.native.apply(&mut edit)?;
+        edit.apply(|sdk| plan.native.apply(sdk))?;
         let receipt = edit.commit_to(&mut self.session)?;
         if receipt.changed {
-            self.pristine_blank = false;
+            self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
         Ok(self.authoring_result(receipt))

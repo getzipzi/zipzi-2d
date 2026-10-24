@@ -27,10 +27,14 @@ fn definitions_cover_domain_fields_once_without_submission_overrides() {
         if kind == Document {
             assert!(fields.is_empty());
         } else {
-            assert_eq!(
-                fields,
-                property_specs(kind).iter().map(|spec| spec.key).collect()
-            );
+            let mut expected: std::collections::HashSet<_> =
+                property_specs(kind).iter().map(|spec| spec.key).collect();
+            // Mesh texture assignment is exposed by the resource workflow, not
+            // a generic property form field. Its domain descriptor remains valid.
+            if kind == Mesh {
+                assert!(expected.remove(&schema::mesh::TEXTURE.key));
+            }
+            assert_eq!(fields, expected);
         }
     }
 }

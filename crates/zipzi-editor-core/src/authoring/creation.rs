@@ -86,7 +86,8 @@ impl Document {
                 ObjectKind::ParameterGroup => {
                     self.session
                         .handle(zipzi_sdk::ObjectKind::CdiParameterGroup, &object.id)?;
-                    let group = self.model().get_parameter_group(&object.id).unwrap();
+                    let model = self.model();
+                    let group = model.get_parameter_group(&object.id).unwrap();
                     if selection.len() == 1 {
                         return Ok(Some(group.id.clone()));
                     }
