@@ -2,6 +2,7 @@
 use crate::{AuthoringSession, EditReceipt, SdkError, TopologyReplacement, Version};
 use zipzi_core::{BlendShapeTargetKind, DeltaKeyforms, Vec2, VertexId};
 
+zipzi_core::api_record! {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MeshGeometry {
@@ -9,6 +10,7 @@ pub struct MeshGeometry {
     pub positions: Vec<Vec2>,
     pub uvs: Vec<Vec2>,
     pub triangles: Vec<[VertexId; 3]>,
+}
 }
 
 fn invalid(message: &str) -> SdkError {

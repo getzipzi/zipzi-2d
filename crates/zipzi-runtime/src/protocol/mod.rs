@@ -127,11 +127,7 @@ enum Operation {
         edit: Option<EditId>,
         intent: crate::authoring::PlanIntent,
     },
-    MeshSnapshot {
-        session: SessionId,
-        edit: Option<EditId>,
-        id: String,
-    },
+    MeshSnapshot(crate::authoring::MeshQuery),
     SampleModeling {
         session: SessionId,
         edit: Option<EditId>,
@@ -787,8 +783,8 @@ impl Protocol {
                 edit,
                 intent,
             } => json!(rt.plan_authoring(client, session, edit, intent)?),
-            Operation::MeshSnapshot { session, edit, id } => {
-                json!(rt.mesh_snapshot(client, session, edit, &id)?)
+            Operation::MeshSnapshot(input) => {
+                json!(crate::authoring::MESH_QUERY.call(rt, client, input)?)
             }
             Operation::SampleModeling {
                 session,

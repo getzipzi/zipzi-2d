@@ -12,6 +12,7 @@ import threading
 import time
 from typing import Literal
 from .. import ops, plans
+from .._generated.backends import ConnectedQueries
 from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import record, sequence
 from . import JobKind
@@ -43,7 +44,7 @@ def _exchange(stream: socket.socket, body: bytes) -> object:
         raise ValueError(f"Non-finite response number: {value}")
     return json.loads(_read(stream, length), parse_constant=invalid_constant)
 
-class ConnectedBackend:
+class ConnectedBackend(ConnectedQueries):
     def __init__(self, endpoint: Path, timeout: float = 10.) -> None:
         if not endpoint.is_absolute():
             raise ValueError("Endpoint must be absolute")
@@ -141,8 +142,6 @@ class ConnectedBackend:
         return self._request(dict(op="begin_edit", session=session, label=label), owner, "edit.begin")
     def apply(self, edit: object, operations: tuple[ops.Operation, ...], owner: object) -> object:
         return self._request(dict(op="apply_authoring", edit=edit, operations=[ops.wire(op) for op in operations]), owner, "edit.apply")
-    def mesh(self, session: object, id: str, edit: object | None, owner: object) -> object:
-        return self._request(dict(op="mesh_snapshot", session=session, edit=edit, id=id), owner, "meshes.get")
     def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
         return self._request(dict(op="prepare_image", width=width, height=height, rgba=list(rgba)), owner, "resources.prepare_image")
     def prepared_pixels(self, image: object, owner: object) -> object:

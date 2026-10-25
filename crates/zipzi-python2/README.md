@@ -16,7 +16,9 @@ no JSON transport conversion or direct SDK session owner.
 | `native/zipzi_native/` | Native import namespace |
 | `pyproject.toml` | Optional `zipzi-python2-native` distribution |
 | `tests/` | Shared Local/Connected recipe and positive/negative type examples |
-| `tools/test.py`, `tools/baseline.py` | P0/P1 source validation and measurements |
+| `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
+| `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract and the first mesh generator |
+| `client/python/zipzi/_generated/`, `src/generated/` | Checked-in mechanical mesh outputs |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
 From the repository root, using the workspace's CPython 3.14 tools:
@@ -39,6 +41,25 @@ from the importing interpreter. Tests never load Cargo's mutable output in place
 
 The package currently targets CPython `>=3.14,<3.15`; source acceptance is on
 macOS/Unix. Other platform/version claims require separate CI evidence.
+
+## Mesh code generation
+
+The first P2 slice derives mesh values/operations, codecs, query signatures and
+simple convenience methods from selected Rust declarations. Public imports stay
+`zipzi.meshes` / `zipzi.ops`; lifecycle, resource ownership and recovery stay
+handwritten. Local conversion remains direct PyO3, with no JSON roundtrip.
+
+```sh
+uv run --locked python crates/zipzi-python2/tools/generate.py --check
+uv run --locked python crates/zipzi-python2/tools/generate.py
+uv run --locked python tools/test_tools.py -p test_python2_codegen.py -v
+```
+
+The source runner checks generated drift before building. Generated files have
+explicit ownership markers; the generator cannot overwrite handwritten targets.
+Normal wheels consume checked-in outputs and do not run generation at import or
+installation. Resource/Plan generation and full source distribution acceptance
+remain pending. See the [P2 record](../../docs/plans/python-sdk-rewrite/p2-mesh-generator.md).
 
 ## First model
 

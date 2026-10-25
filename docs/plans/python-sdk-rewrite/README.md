@@ -14,7 +14,8 @@
 | --- | --- | --- |
 | P0 | 选定六项工作负载的 Local/Connected 计时和独立 Rust/Python 探针；冻结比较及负控制 | 后续领域工作负载；计数范围之外的隐式领域 Clone 和 allocator 内部复制不计入当前负载复制数字 |
 | P1 | 选定 API、两后端、来源/资源/历史/IO、36 项公共行为与生命周期矩阵、严格类型及独立正常 wheel 验收 | 当前选定试点门槛已满足；长任务、后续领域和发布平台矩阵另列 |
-| P2–P5/P7 | 未开始 | 按计划交付 |
+| P2 | [第一批网格生成链路](p2-mesh-generator.md)：Rust 单一声明、编译查询注册、10 个产物、确定性/漂移/保护/真实编译负例 | 资源/Plan、剩余有限类型子集和完整源分发证据 |
+| P3–P5/P7 | 未开始 | 按计划交付 |
 | P6 | 纯包/原生包分别构建；初步隔离安装 recipe | sdist、完整版本/平台配对、宿主发现、真实 Editor 和全部领域安装验收 |
 
 能力范围见 [`CAPABILITIES.md`](../../../crates/zipzi-python2/CAPABILITIES.md)。源码接线、独立验证和阶段验收分开记录；当前选定 P1 试点已满足退出门槛，P0 试点统计有明确范围，总体后续领域仍按阶段跟踪。
@@ -33,7 +34,7 @@
 
 ## 2026-10-25 资源与 Plan 切片
 
-提交 `ad868c8a` 保存独立新包基础，`7cf4bed` 保存本节资源与 Plan 切片。本节 19 项行为及初步测量是当时的验收事实；后续生命周期/P0 工作区结果见下节，尚未生成 P2 绑定。
+提交 `ad868c8a` 保存独立新包基础，`7cf4bed` 保存本节资源与 Plan 切片。本节 19 项行为及初步测量是当时的验收事实；后续生命周期/P0 结果见下节；P2 网格生成是随后开始的独立切片。
 
 - SDK 新增 `ImageCreateSpec`，身份/default 在 SDK；Runtime 增加按 client 持有的 PreparedImage 表，与文档和历史各自持有引用。独立准备失败不污染 Edit，创建/替换失败与其他写入共用候选失败作用域。
 - `EditOperation` 包含网格、接纳/替换图片及应用 Plan；两个后端共用 `Runtime::apply_authoring`。批次只推进一次序号；Plan 仅可位于批次开头，后续项可继续编辑。过期、错误 owner 或释放引用使候选不可提交，无正式部分发布。
@@ -73,7 +74,7 @@ Rust 聚焦门禁覆盖 SDK 网格编辑及 Runtime 会话/来源/预算/任务�
 
 ## P1 生命周期补齐与 P0 schema 2
 
-`7cf4bed` 之后新增 [P1 生命周期矩阵](p1-lifecycle-matrix.md)，当前源码行为测试共 36 项。排队取消、进入 IO 后取消、实际 IO 失败、executor 失败、worker panic、保留结果槽准入、无后续调用完成、明确 close 和最后 owner 释放均有对应断言；IPC 另验证请求/客户端过期、暂时离线、宿主重启、丢响应及同一 owner 的旧异常不能消费新请求。
+`f2ef33c` 已保存本节 P1/P0 验收；`7cf4bed` 之后新增 [P1 生命周期矩阵](p1-lifecycle-matrix.md)，当前源码行为测试共 36 项。排队取消、进入 IO 后取消、实际 IO 失败、executor 失败、worker panic、保留结果槽准入、无后续调用完成、明确 close 和最后 owner 释放均有对应断言；IPC 另验证请求/客户端过期、暂时离线、宿主重启、丢响应及同一 owner 的旧异常不能消费新请求。
 
 Job 共用 `_recovery.py` 的原请求持有原语，状态查询不释放结果，取消与 close 分开。成功/失败均缓存，Edit 跟随其提交 Job 的终态更新。Connected 的明确正常关闭调用 `release_client`，保留正式 Session；另一请求尚未确认时只断开并等待 grace expiry，不发新写 ID。关闭确认本身丢失仍有恢复 owner。原生契约为 `zipzi-python2-3`，IPC 要求 `typed_job_lifecycle`。
 
@@ -117,4 +118,4 @@ uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/py
 
 新包从零计数，不按其他 Python 实现的接口数量或行数设指标。当前全部为手写实现；尚无绑定生成器或生成绑定。分别检查 `client/python/zipzi` 的公共/生命周期和 backend/机械转换、`src/lib.rs` 的 PyO3、`tools/`、`tests/`、共享 Runtime/SDK 新增代码及构建元数据。许可副本与文档不计为生产逻辑。
 
-目前仍有 P1 手写字段/codec 的重复声明；P2 只能在这些行为测试保持独立的前提下提取生成，不先扩张 schema 来提高生成比例。
+P2 第一批已提取网格字段、操作、codec、查询和便利方法，生成与手写目录分开；资源/Plan 仍手写。基础设施（Core 中立形状、Runtime 注册、exporter/renderer）与生成产物分别计数，不把增加的共享 Rust 隐藏成“减少 Python”。独立行为预期不由生成器产生，详见 [P2 记录](p2-mesh-generator.md)。

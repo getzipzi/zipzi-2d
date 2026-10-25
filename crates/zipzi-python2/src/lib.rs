@@ -5,7 +5,8 @@ use pyo3::{
     types::{PyAny, PyBytes, PyDict, PyList, PyModule},
 };
 use std::{path::Path, sync::Arc};
-use zipzi_core::Vec2;
+mod generated;
+use generated::mesh::read_mesh_operation;
 use zipzi_runtime::authoring::{
     EditOperation, ImagePixels, MAX_IMAGE_BYTES, PlanIntent, PlanSnapshot,
 };
@@ -13,7 +14,7 @@ use zipzi_runtime::{
     host::{HostError, HostResult, LocalHost},
     *,
 };
-use zipzi_sdk::{ImageCreateSpec, MeshCreateSpec, MeshGeometry, MeshOperation, Version};
+use zipzi_sdk::{ImageCreateSpec, MeshOperation, Version};
 
 #[pyclass(frozen, name = "_SessionToken")]
 struct SessionToken {
@@ -157,29 +158,6 @@ fn reply<'py, T>(
     }
     Ok(d.unbind())
 }
-fn points(py: Python<'_>, values: Vec<Vec2>) -> PyResult<Bound<'_, PyList>> {
-    let result = PyList::empty(py);
-    for p in values {
-        let d = PyDict::new(py);
-        d.set_item("x", p.x)?;
-        d.set_item("y", p.y)?;
-        result.append(d)?;
-    }
-    Ok(result)
-}
-fn geometry(py: Python<'_>, value: MeshGeometry) -> PyResult<Bound<'_, PyDict>> {
-    let d = PyDict::new(py);
-    d.set_item("vertex_ids", value.vertex_ids)?;
-    d.set_item("positions", points(py, value.positions)?)?;
-    d.set_item("uvs", points(py, value.uvs)?)?;
-    d.set_item("triangles", value.triangles)?;
-    Ok(d)
-}
-fn read_points(value: Bound<'_, PyAny>) -> PyResult<Vec<Vec2>> {
-    let pairs = value.extract::<Vec<(f32, f32)>>()?;
-    zipzi_runtime::metrics::materialized_input(pairs.len() * std::mem::size_of::<(f32, f32)>());
-    Ok(pairs.into_iter().map(|(x, y)| Vec2::new(x, y)).collect())
-}
 fn read_ids(value: Bound<'_, PyAny>) -> PyResult<Vec<u32>> {
     let ids: Vec<u32> = value.extract()?;
     zipzi_runtime::metrics::materialized_input(ids.len() * std::mem::size_of::<u32>());
@@ -195,7 +173,8 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
         .try_iter()?
         .map(|value| {
             let op = value?;
-            let mesh = match op.getattr("kind")?.extract::<String>()?.as_str() {
+            let kind = op.getattr("kind")?.extract::<String>()?;
+            let mesh = match kind.as_str() {
                 "create_image" => {
                     let image = op.getattr("image")?.getattr("_token")?;
                     return Ok(EditOperation::CreateImage {
@@ -219,35 +198,7 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
                         plan: plan.extract::<PyRef<'_, PlanToken>>()?.id,
                     });
                 }
-                "create" => {
-                    let spec = op.getattr("spec")?;
-                    let g = spec.getattr("geometry")?;
-                    Ok(MeshOperation::Create {
-                        spec: MeshCreateSpec {
-                            id: spec.getattr("id")?.extract()?,
-                            name: spec.getattr("name")?.extract()?,
-                            texture_asset_id: spec.getattr("texture_asset_id")?.extract()?,
-                            geometry: MeshGeometry {
-                                vertex_ids: read_ids(g.getattr("vertex_ids")?)?,
-                                positions: read_points(g.getattr("positions")?)?,
-                                uvs: read_points(g.getattr("uvs")?)?,
-                                triangles: read_triangles(g.getattr("triangles")?)?,
-                            },
-                        },
-                    })
-                }
-                "rename" => Ok(MeshOperation::Rename {
-                    id: op.getattr("id")?.extract()?,
-                    name: op.getattr("name")?.extract()?,
-                }),
-                "set_positions" => Ok(MeshOperation::SetPositions {
-                    id: op.getattr("id")?.extract()?,
-                    vertex_ids: read_ids(op.getattr("vertex_ids")?)?,
-                    positions: read_points(op.getattr("positions")?)?,
-                }),
-                _ => Err(pyo3::exceptions::PyTypeError::new_err(
-                    "Unknown mesh operation",
-                )),
+                _ => read_mesh_operation(&kind, &op),
             }?;
             Ok(EditOperation::Mesh { operation: mesh })
         })
@@ -413,28 +364,6 @@ impl NativeRuntime {
             )?;
         }
         Ok(result)
-    }
-    #[pyo3(signature = (session, id, edit=None))]
-    fn mesh(
-        &self,
-        py: Python<'_>,
-        session: &SessionToken,
-        id: String,
-        edit: Option<&EditToken>,
-    ) -> PyResult<Py<PyDict>> {
-        let (client, session, edit) = (self.client, session.id, edit.map(|e| e.id));
-        let value = py.detach(|| {
-            self.host
-                .call(move |rt| rt.mesh_snapshot(client, session, edit, &id))
-        });
-        reply(py, value, "meshes.get", |r| {
-            let d = PyDict::new(py);
-            d.set_item("source", source(py, r.source)?)?;
-            d.set_item("id", r.id)?;
-            d.set_item("name", r.name)?;
-            d.set_item("geometry", geometry(py, r.geometry)?)?;
-            Ok(d.into_any())
-        })
     }
     fn prepare_image(
         &self,

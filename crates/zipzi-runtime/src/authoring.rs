@@ -3,12 +3,14 @@
 use crate::{ImageId, PlanId, SourceRef};
 use serde::{Deserialize, Serialize};
 
+zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeshSnapshot {
     pub source: SourceRef,
     pub id: String,
     pub name: String,
     pub geometry: zipzi_sdk::MeshGeometry,
+}
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WriteResult {
@@ -80,3 +82,41 @@ pub struct ImageSnapshot {
     pub name: String,
     pub pixels: ImagePixels,
 }
+
+zipzi_core::api_record! {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    pub struct MeshQuery {
+        pub session: crate::SessionId,
+        pub id: String,
+        pub edit: Option<crate::EditId>,
+    }
+}
+/// Typed registration is executable, not a list of strings naming a handler.
+pub struct Registered<I, O> {
+    pub name: &'static str,
+    handler: fn(&mut crate::Runtime, crate::ClientId, I) -> crate::Result<O>,
+}
+impl<I: zipzi_core::api_shape::ApiShape, O: zipzi_core::api_shape::ApiShape> Registered<I, O> {
+    pub const fn new(
+        name: &'static str,
+        handler: fn(&mut crate::Runtime, crate::ClientId, I) -> crate::Result<O>,
+    ) -> Self {
+        Self { name, handler }
+    }
+    pub fn call(
+        &self,
+        runtime: &mut crate::Runtime,
+        client: crate::ClientId,
+        input: I,
+    ) -> crate::Result<O> {
+        (self.handler)(runtime, client, input)
+    }
+    pub fn shapes(&self) -> (zipzi_core::api_shape::Shape, zipzi_core::api_shape::Shape) {
+        (I::api_shape(), O::api_shape())
+    }
+}
+pub const MESH_QUERY: Registered<MeshQuery, MeshSnapshot> =
+    Registered::new("mesh_snapshot", |rt, client, input| {
+        rt.mesh_snapshot(client, input.session, input.edit, &input.id)
+    });

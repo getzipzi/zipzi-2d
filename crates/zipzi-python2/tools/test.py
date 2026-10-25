@@ -33,6 +33,7 @@ def main() -> None:
     for name in ("PYTHONPATH", "PYTHONHOME", "ZIPZI_DEV_SESSION_DIR"):
         env.pop(name, None)
     with exclusive_run(common / "runner.lock"):
+        subprocess.run([sys.executable, str(ROOT / "crates/zipzi-python2/tools/generate.py"), "--check"], cwd=ROOT, check=True)
         command = ["cargo", "rustc", "--locked", "-p", "zipzi-python2", "--lib",
             "--message-format=json-render-diagnostics", "--features", "test-support,bench-instrumentation" if args.instrumented else "test-support"]
         if args.release:

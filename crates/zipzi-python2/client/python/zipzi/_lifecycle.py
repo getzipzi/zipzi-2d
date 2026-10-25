@@ -7,6 +7,7 @@ from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
 from ._values import Receipt, SaveReceipt, SessionInfo, WriteResult, record
 from .backends import Backend, JobKind
 from ._recovery import RecoveryOwner
+from ._generated.conveniences import EditableMeshes as MeshConveniences
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -242,16 +243,10 @@ class EditableImages(Images):
     def replace_image(self, id: str, image: resources.PreparedImage) -> WriteResult:
         return self._owner.apply(ops.ReplaceImage(id, image))
 
-class EditableMeshes(Meshes):
+class EditableMeshes(Meshes, MeshConveniences):
     def __init__(self, session: Session, edit: "Edit"):
         super().__init__(session, edit)
         self._owner = edit
-    def create(self, spec: meshes.MeshSpec) -> str:
-        return self._owner.apply(ops.Create(spec)).ids[0]
-    def rename(self, id: str, name: str) -> WriteResult:
-        return self._owner.apply(ops.Rename(id, name))
-    def set_positions(self, id: str, *, vertex_ids: Sequence[int], positions: Sequence[meshes.Point]) -> WriteResult:
-        return self._owner.apply(ops.SetPositions(id, tuple(vertex_ids), tuple(positions)))
 
 class Edit:
     def __init__(self, session: Session, label: str):

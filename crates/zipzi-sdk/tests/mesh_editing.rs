@@ -372,3 +372,30 @@ fn rectangle_grid_rejects_invalid_geometry_and_overflow() {
     assert!(rectangle_grid_geometry(&source, 2, 2).is_err());
     assert!(rectangle_grid_geometry(&source, 1, 1).is_ok());
 }
+
+#[test]
+fn selected_mesh_api_defaults_are_owned_by_rust_serde_and_exported_consistently() {
+    use zipzi_core::api_shape::{ApiShape, DefaultValue, Shape};
+    let spec: zipzi_sdk::MeshCreateSpec = serde_json::from_value(serde_json::json!({
+        "name":"Face", "geometry":{"vertex_ids":[42,7,99], "positions":[{"x":0.,"y":0.},{"x":1.,"y":0.},{"x":0.,"y":1.}],
+            "uvs":[{"x":0.,"y":0.},{"x":1.,"y":0.},{"x":0.,"y":1.}], "triangles":[[42,7,99]]}
+    })).unwrap();
+    assert_eq!(spec.texture_asset_id, "");
+    assert_eq!(spec.id, None);
+    assert_eq!(spec.geometry.vertex_ids, vec![42, 7, 99]);
+    let Shape::Record { fields, .. } = zipzi_sdk::MeshCreateSpec::api_shape() else {
+        panic!("record");
+    };
+    assert_eq!(
+        fields
+            .iter()
+            .find(|f| f.name == "texture_asset_id")
+            .unwrap()
+            .default,
+        Some(DefaultValue::EmptyString)
+    );
+    assert_eq!(
+        fields.iter().find(|f| f.name == "id").unwrap().default,
+        Some(DefaultValue::Null)
+    );
+}

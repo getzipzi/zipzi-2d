@@ -4,31 +4,27 @@ use crate::{EditSession, MeshGeometry, SdkError};
 use serde::{Deserialize, Serialize};
 use zipzi_core::{Mesh, Vec2};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct MeshCreateSpec {
-    pub id: Option<String>,
-    pub name: String,
-    pub texture_asset_id: String,
-    pub geometry: MeshGeometry,
+zipzi_core::api_record! {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    pub struct MeshCreateSpec {
+        pub name: String,
+        pub geometry: MeshGeometry,
+        #[serde(default)]
+        pub texture_asset_id: String,
+        pub id: Option<String>,
+    }
+}
+zipzi_core::api_union! {
+    tag = "op";
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub enum MeshOperation {
+        Create { spec: MeshCreateSpec },
+        Rename { id: String, name: String },
+        SetPositions { id: String, vertex_ids: Vec<u32>, positions: Vec<Vec2> },
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
-pub enum MeshOperation {
-    Create {
-        spec: MeshCreateSpec,
-    },
-    Rename {
-        id: String,
-        name: String,
-    },
-    SetPositions {
-        id: String,
-        vertex_ids: Vec<u32>,
-        positions: Vec<Vec2>,
-    },
-}
 impl MeshOperation {
     pub fn apply(self, edit: &mut EditSession<'_>) -> Result<String, SdkError> {
         match self {

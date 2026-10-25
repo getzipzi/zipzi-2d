@@ -20,6 +20,11 @@ macro_rules! ids {
             pub(crate) runtime: RuntimeInstanceId,
             pub(crate) serial: u64,
         }
+        impl zipzi_core::api_shape::ApiShape for $name {
+            fn api_shape() -> zipzi_core::api_shape::Shape {
+                zipzi_core::api_shape::Shape::Opaque { name: concat!(module_path!(), "::", stringify!($name)).into() }
+            }
+        }
         impl $name {
             pub fn runtime_instance(&self) -> RuntimeInstanceId { self.runtime }
             pub fn serial(&self) -> u64 { self.serial }
@@ -200,4 +205,12 @@ pub enum ImportSource {
     Model3(PathBuf),
     Psd(PathBuf),
     Cubism(PathBuf),
+}
+
+impl zipzi_core::api_shape::ApiShape for SourceRef {
+    fn api_shape() -> zipzi_core::api_shape::Shape {
+        zipzi_core::api_shape::Shape::Opaque {
+            name: concat!(module_path!(), "::SourceRef").into(),
+        }
+    }
 }

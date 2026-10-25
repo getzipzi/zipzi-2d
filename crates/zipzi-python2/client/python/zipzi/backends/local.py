@@ -3,12 +3,13 @@ from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 from .. import ops, plans
+from .._generated.backends import LocalQueries
 from .._errors import PendingRequest, SdkFailure, unwrap
 from . import JobKind
 if TYPE_CHECKING:
     from ._native_types import NativeModule
 
-class LocalBackend:
+class LocalBackend(LocalQueries):
     def __init__(self) -> None:
         try:
             module = cast("NativeModule", import_module("zipzi_native._native"))
@@ -31,8 +32,6 @@ class LocalBackend:
         return unwrap(self._native.begin_edit(session, label))
     def apply(self, edit: object, operations: tuple[ops.Operation, ...], owner: object) -> object:
         return unwrap(self._native.apply(edit, operations))
-    def mesh(self, session: object, id: str, edit: object | None, owner: object) -> object:
-        return unwrap(self._native.mesh(session, id, edit))
     def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
         return unwrap(self._native.prepare_image(width, height, rgba))
     def prepared_pixels(self, image: object, owner: object) -> object:

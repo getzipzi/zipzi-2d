@@ -26,10 +26,12 @@ impl Status {
     }
 }
 
+crate::api_record! {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
+}
 }
 
 impl Vec2 {
@@ -906,11 +908,7 @@ macro_rules! scene_id {
             }
             pub fn optional(id: impl Into<String>) -> Option<Self> {
                 let id = id.into();
-                if id.is_empty() {
-                    None
-                } else {
-                    Some(Self(id))
-                }
+                if id.is_empty() { None } else { Some(Self(id)) }
             }
         }
         impl From<String> for $name {

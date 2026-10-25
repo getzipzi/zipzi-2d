@@ -1,0 +1,646 @@
+{
+  "_contract_sha256": "821c863d40aecb9d6e744d3921e0c8c97e1a6d3463cf1221304d90e632773859",
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "bindings": [
+    {
+      "form": "point",
+      "module": "meshes",
+      "name": "Point",
+      "path": "zipzi_core::Vec2",
+      "rust": "zipzi_core::types::Vec2"
+    },
+    {
+      "form": "owned_record",
+      "module": "meshes",
+      "name": "Geometry",
+      "path": "zipzi_sdk::MeshGeometry",
+      "rust": "zipzi_sdk::geometry::MeshGeometry"
+    },
+    {
+      "form": "record",
+      "module": "meshes",
+      "name": "MeshSpec",
+      "path": "zipzi_sdk::MeshCreateSpec",
+      "rust": "zipzi_sdk::mesh_edit::MeshCreateSpec"
+    },
+    {
+      "form": "record",
+      "module": "meshes",
+      "name": "Snapshot",
+      "path": "zipzi_runtime::authoring::MeshSnapshot",
+      "rust": "zipzi_runtime::authoring::MeshSnapshot"
+    },
+    {
+      "form": "union",
+      "module": "ops",
+      "name": "MeshOperation",
+      "path": "zipzi_sdk::MeshOperation",
+      "rust": "zipzi_sdk::mesh_edit::MeshOperation"
+    },
+    {
+      "form": "query",
+      "module": "backend",
+      "name": "MeshQuery",
+      "path": "zipzi_runtime::authoring::MeshQuery",
+      "rust": "zipzi_runtime::authoring::MeshQuery"
+    },
+    {
+      "form": "token",
+      "module": "native",
+      "name": "SessionToken",
+      "path": "zipzi_runtime::SessionId",
+      "rust": "zipzi_runtime::types::SessionId"
+    },
+    {
+      "form": "token",
+      "module": "native",
+      "name": "EditToken",
+      "path": "zipzi_runtime::EditId",
+      "rust": "zipzi_runtime::types::EditId"
+    },
+    {
+      "form": "source",
+      "module": "_values",
+      "name": "Source",
+      "path": "zipzi_runtime::SourceRef",
+      "rust": "zipzi_runtime::types::SourceRef"
+    }
+  ],
+  "operations": [
+    {
+      "backend": "mesh",
+      "capability": "typed_meshes",
+      "category": "query",
+      "handler": "zipzi_runtime::authoring::MESH_QUERY",
+      "input": {
+        "fields": [
+          {
+            "default": null,
+            "name": "session",
+            "shape": {
+              "kind": "opaque",
+              "name": "zipzi_runtime::types::SessionId"
+            }
+          },
+          {
+            "default": null,
+            "name": "id",
+            "shape": {
+              "kind": "string"
+            }
+          },
+          {
+            "default": {
+              "kind": "null"
+            },
+            "name": "edit",
+            "shape": {
+              "item": {
+                "kind": "opaque",
+                "name": "zipzi_runtime::types::EditId"
+              },
+              "kind": "optional"
+            }
+          }
+        ],
+        "kind": "record",
+        "name": "zipzi_runtime::authoring::MeshQuery"
+      },
+      "name": "mesh_snapshot",
+      "output": {
+        "fields": [
+          {
+            "default": null,
+            "name": "source",
+            "shape": {
+              "kind": "opaque",
+              "name": "zipzi_runtime::types::SourceRef"
+            }
+          },
+          {
+            "default": null,
+            "name": "id",
+            "shape": {
+              "kind": "string"
+            }
+          },
+          {
+            "default": null,
+            "name": "name",
+            "shape": {
+              "kind": "string"
+            }
+          },
+          {
+            "default": null,
+            "name": "geometry",
+            "shape": {
+              "fields": [
+                {
+                  "default": null,
+                  "name": "vertex_ids",
+                  "shape": {
+                    "item": {
+                      "kind": "u32"
+                    },
+                    "kind": "sequence"
+                  }
+                },
+                {
+                  "default": null,
+                  "name": "positions",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "default": null,
+                          "name": "x",
+                          "shape": {
+                            "kind": "f32"
+                          }
+                        },
+                        {
+                          "default": null,
+                          "name": "y",
+                          "shape": {
+                            "kind": "f32"
+                          }
+                        }
+                      ],
+                      "kind": "record",
+                      "name": "zipzi_core::types::Vec2"
+                    },
+                    "kind": "sequence"
+                  }
+                },
+                {
+                  "default": null,
+                  "name": "uvs",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "default": null,
+                          "name": "x",
+                          "shape": {
+                            "kind": "f32"
+                          }
+                        },
+                        {
+                          "default": null,
+                          "name": "y",
+                          "shape": {
+                            "kind": "f32"
+                          }
+                        }
+                      ],
+                      "kind": "record",
+                      "name": "zipzi_core::types::Vec2"
+                    },
+                    "kind": "sequence"
+                  }
+                },
+                {
+                  "default": null,
+                  "name": "triangles",
+                  "shape": {
+                    "item": {
+                      "item": {
+                        "kind": "u32"
+                      },
+                      "kind": "array",
+                      "length": 3
+                    },
+                    "kind": "sequence"
+                  }
+                }
+              ],
+              "kind": "record",
+              "name": "zipzi_sdk::geometry::MeshGeometry"
+            }
+          }
+        ],
+        "kind": "record",
+        "name": "zipzi_runtime::authoring::MeshSnapshot"
+      }
+    }
+  ],
+  "roots": [
+    {
+      "fields": [
+        {
+          "default": null,
+          "name": "vertex_ids",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "sequence"
+          }
+        },
+        {
+          "default": null,
+          "name": "positions",
+          "shape": {
+            "item": {
+              "fields": [
+                {
+                  "default": null,
+                  "name": "x",
+                  "shape": {
+                    "kind": "f32"
+                  }
+                },
+                {
+                  "default": null,
+                  "name": "y",
+                  "shape": {
+                    "kind": "f32"
+                  }
+                }
+              ],
+              "kind": "record",
+              "name": "zipzi_core::types::Vec2"
+            },
+            "kind": "sequence"
+          }
+        },
+        {
+          "default": null,
+          "name": "uvs",
+          "shape": {
+            "item": {
+              "fields": [
+                {
+                  "default": null,
+                  "name": "x",
+                  "shape": {
+                    "kind": "f32"
+                  }
+                },
+                {
+                  "default": null,
+                  "name": "y",
+                  "shape": {
+                    "kind": "f32"
+                  }
+                }
+              ],
+              "kind": "record",
+              "name": "zipzi_core::types::Vec2"
+            },
+            "kind": "sequence"
+          }
+        },
+        {
+          "default": null,
+          "name": "triangles",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "u32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "sequence"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_sdk::geometry::MeshGeometry"
+    },
+    {
+      "fields": [
+        {
+          "default": null,
+          "name": "name",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": null,
+          "name": "geometry",
+          "shape": {
+            "fields": [
+              {
+                "default": null,
+                "name": "vertex_ids",
+                "shape": {
+                  "item": {
+                    "kind": "u32"
+                  },
+                  "kind": "sequence"
+                }
+              },
+              {
+                "default": null,
+                "name": "positions",
+                "shape": {
+                  "item": {
+                    "fields": [
+                      {
+                        "default": null,
+                        "name": "x",
+                        "shape": {
+                          "kind": "f32"
+                        }
+                      },
+                      {
+                        "default": null,
+                        "name": "y",
+                        "shape": {
+                          "kind": "f32"
+                        }
+                      }
+                    ],
+                    "kind": "record",
+                    "name": "zipzi_core::types::Vec2"
+                  },
+                  "kind": "sequence"
+                }
+              },
+              {
+                "default": null,
+                "name": "uvs",
+                "shape": {
+                  "item": {
+                    "fields": [
+                      {
+                        "default": null,
+                        "name": "x",
+                        "shape": {
+                          "kind": "f32"
+                        }
+                      },
+                      {
+                        "default": null,
+                        "name": "y",
+                        "shape": {
+                          "kind": "f32"
+                        }
+                      }
+                    ],
+                    "kind": "record",
+                    "name": "zipzi_core::types::Vec2"
+                  },
+                  "kind": "sequence"
+                }
+              },
+              {
+                "default": null,
+                "name": "triangles",
+                "shape": {
+                  "item": {
+                    "item": {
+                      "kind": "u32"
+                    },
+                    "kind": "array",
+                    "length": 3
+                  },
+                  "kind": "sequence"
+                }
+              }
+            ],
+            "kind": "record",
+            "name": "zipzi_sdk::geometry::MeshGeometry"
+          }
+        },
+        {
+          "default": {
+            "kind": "empty_string"
+          },
+          "name": "texture_asset_id",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "name": "id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_sdk::mesh_edit::MeshCreateSpec"
+    },
+    {
+      "kind": "union",
+      "name": "zipzi_sdk::mesh_edit::MeshOperation",
+      "tag": "op",
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "name": "spec",
+              "shape": {
+                "fields": [
+                  {
+                    "default": null,
+                    "name": "name",
+                    "shape": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "default": null,
+                    "name": "geometry",
+                    "shape": {
+                      "fields": [
+                        {
+                          "default": null,
+                          "name": "vertex_ids",
+                          "shape": {
+                            "item": {
+                              "kind": "u32"
+                            },
+                            "kind": "sequence"
+                          }
+                        },
+                        {
+                          "default": null,
+                          "name": "positions",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "default": null,
+                                  "name": "x",
+                                  "shape": {
+                                    "kind": "f32"
+                                  }
+                                },
+                                {
+                                  "default": null,
+                                  "name": "y",
+                                  "shape": {
+                                    "kind": "f32"
+                                  }
+                                }
+                              ],
+                              "kind": "record",
+                              "name": "zipzi_core::types::Vec2"
+                            },
+                            "kind": "sequence"
+                          }
+                        },
+                        {
+                          "default": null,
+                          "name": "uvs",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "default": null,
+                                  "name": "x",
+                                  "shape": {
+                                    "kind": "f32"
+                                  }
+                                },
+                                {
+                                  "default": null,
+                                  "name": "y",
+                                  "shape": {
+                                    "kind": "f32"
+                                  }
+                                }
+                              ],
+                              "kind": "record",
+                              "name": "zipzi_core::types::Vec2"
+                            },
+                            "kind": "sequence"
+                          }
+                        },
+                        {
+                          "default": null,
+                          "name": "triangles",
+                          "shape": {
+                            "item": {
+                              "item": {
+                                "kind": "u32"
+                              },
+                              "kind": "array",
+                              "length": 3
+                            },
+                            "kind": "sequence"
+                          }
+                        }
+                      ],
+                      "kind": "record",
+                      "name": "zipzi_sdk::geometry::MeshGeometry"
+                    }
+                  },
+                  {
+                    "default": {
+                      "kind": "empty_string"
+                    },
+                    "name": "texture_asset_id",
+                    "shape": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "default": {
+                      "kind": "null"
+                    },
+                    "name": "id",
+                    "shape": {
+                      "item": {
+                        "kind": "string"
+                      },
+                      "kind": "optional"
+                    }
+                  }
+                ],
+                "kind": "record",
+                "name": "zipzi_sdk::mesh_edit::MeshCreateSpec"
+              }
+            }
+          ],
+          "rust_name": "Create",
+          "wire_name": "create"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            }
+          ],
+          "rust_name": "Rename",
+          "wire_name": "rename"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "name": "vertex_ids",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": null,
+              "name": "positions",
+              "shape": {
+                "item": {
+                  "fields": [
+                    {
+                      "default": null,
+                      "name": "x",
+                      "shape": {
+                        "kind": "f32"
+                      }
+                    },
+                    {
+                      "default": null,
+                      "name": "y",
+                      "shape": {
+                        "kind": "f32"
+                      }
+                    }
+                  ],
+                  "kind": "record",
+                  "name": "zipzi_core::types::Vec2"
+                },
+                "kind": "sequence"
+              }
+            }
+          ],
+          "rust_name": "SetPositions",
+          "wire_name": "set_positions"
+        }
+      ]
+    }
+  ],
+  "version": 1
+}
