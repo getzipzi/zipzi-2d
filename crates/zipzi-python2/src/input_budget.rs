@@ -90,63 +90,27 @@ pub fn operations(values: &Bound<'_, PyAny>) -> PyResult<usize> {
                     .saturating_add(attr_text(&spec, "id")?)
                     .saturating_add(attr_text(&spec, "texture_asset_id")?)
             }
-            "rename" => attr_text(&op, "id")?.saturating_add(attr_text(&op, "name")?),
+            "rename" => attr_text(&op, "id")?
+                .saturating_add(attr_text(&op, "name")?)
+                .saturating_add(attr_text(&op, "expected_name")?),
             "set_positions" => attr_text(&op, "id")?
                 .saturating_add(op.getattr("vertex_ids")?.len()?.saturating_mul(8))
                 .saturating_add(op.getattr("positions")?.len()?.saturating_mul(32)),
             "create_parameter" | "patch_parameter" => {
-                let value = op.getattr(if kind == "create_parameter" {
-                    "spec"
-                } else {
-                    "patch"
-                })?;
-                attr_text(&value, "name")?
-                    .saturating_add(attr_text(&value, "runtime_id")?)
-                    .saturating_add(if kind == "create_parameter" {
-                        attr_text(&value, "id")?
-                    } else {
-                        attr_text(&op, "id")?
-                    })
-                    .saturating_add(1024)
+                generated::modeling::measure_parameteroperation(&op)?
             }
-            "create_mesh_binding" => {
-                let spec = op.getattr("spec")?;
-                let mut size = attr_text(&spec, "mesh_id")?.saturating_add(attr_text(&spec, "id")?);
-                for axis in spec.getattr("axes")?.try_iter()? {
-                    let axis = axis?;
-                    size = size
-                        .saturating_add(attr_text(&axis, "parameter_id")?)
-                        .saturating_add(axis.getattr("keys")?.len()?.saturating_mul(8))
-                        .saturating_add(256);
-                }
-                for key in spec.getattr("keyforms")?.try_iter()? {
-                    size = size.saturating_add(keyform(&key?)?);
-                }
-                size
+            "create_mesh_binding" | "set_mesh_keyform" => {
+                generated::modeling::measure_meshbindingoperation(&op)?
             }
-            "set_mesh_keyform" => {
-                attr_text(&op, "id")?.saturating_add(keyform(&op.getattr("keyform")?)?)
+            "create_image" | "replace_image" | "rename_image" | "apply_plan" => {
+                generated::resources::measure_resourceoperation(&op)?
             }
-            "create_image" => attr_text(&op, "name")?
-                .saturating_add(attr_text(&op, "id")?)
-                .saturating_add(256),
-            "replace_image" => attr_text(&op, "id")?.saturating_add(256),
-            "apply_plan" => 256,
             _ => return Err(pyo3::exceptions::PyTypeError::new_err("Unknown operation")),
         };
         bytes = bytes.saturating_add(size).saturating_add(256);
     }
     Ok(bytes)
 }
-fn keyform(value: &Bound<'_, PyAny>) -> PyResult<usize> {
-    Ok(value
-        .getattr("positions")?
-        .len()?
-        .saturating_mul(32)
-        .saturating_add(value.getattr("keys")?.len()?.saturating_mul(8))
-        .saturating_add(1024))
-}
-
 pub fn strings(value: Option<&Bound<'_, PyAny>>) -> PyResult<usize> {
     let Some(value) = value else { return Ok(0) };
     let mut bytes = 128usize;

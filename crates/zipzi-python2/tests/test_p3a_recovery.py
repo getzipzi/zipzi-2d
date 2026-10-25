@@ -32,7 +32,7 @@ class P3ARecovery(unittest.TestCase):
         edit.commit().wait()
         self.assertEqual(edit.state, zipzi.EditState.committed)
         self.assertTrue(edit.receipt.changed)
-        self.assertEqual(session.meshes.get(id).name, "Once")
+        self.assertEqual(session.meshes.get(id).value.name, "Once")
         self.assertEqual(session.info().history, (1, 0))
 
     def test_helper_rejects_business_functions_wrappers_and_unbound_methods_before_execution(self):
@@ -89,7 +89,7 @@ class P3ARecovery(unittest.TestCase):
         self.control(runtime, "resume_dispatch")
         receipt = job.wait()
         self.assertIs(edit.receipt, receipt)
-        self.assertEqual(session.meshes.get(id).name, "Face")
+        self.assertEqual(session.meshes.get(id).value.name, "Face")
         self.assertEqual(session.info().history, (1, 0))
 
     def test_caught_wait_or_cancel_unknown_cannot_leave_context_as_success(self):
@@ -212,7 +212,7 @@ class P3ARecovery(unittest.TestCase):
         self.assertEqual(edit.state, zipzi.EditState.editing)
         self.assertEqual(session.info().history, (0, 0))
         zipzi.recover_call(edit.commit).wait()
-        self.assertEqual(session.meshes.get(id).name, "Face")
+        self.assertEqual(session.meshes.get(id).value.name, "Face")
         failed = session.edit("ordinary failure")
         with self.assertRaises(zipzi.SdkFailure) as domain:
             zipzi.recover_call(failed.parameters.create, parameters.ParameterSpec("Bad", 1., -1., 0.))
@@ -251,7 +251,7 @@ class P3ARecovery(unittest.TestCase):
         id = edit.meshes.create(spec)
         del spec
         self.assertIsNone(reference())
-        self.assertEqual(edit.meshes.get(id).name, "Face")
+        self.assertEqual(edit.meshes.get(id).value.name, "Face")
         edit.commit().wait()
 
     def test_conversion_inside_generated_write_cannot_be_caught_and_committed(self):
@@ -290,8 +290,8 @@ class P3ARecovery(unittest.TestCase):
                 self.assertEqual(edit.state, zipzi.EditState.editing)
                 result = escaped.exception.recover()
                 if operation == "mesh_snapshot":
-                    self.assertIsInstance(result, meshes.Snapshot)
-                    self.assertEqual(result.name, "Face")
+                    self.assertIsInstance(result, zipzi.Snapshot)
+                    self.assertEqual(result.value.name, "Face")
                 else:
                     self.assertIsInstance(result, zipzi.PreparedImage)
                     self.assertEqual(result.pixels().rgba, b"rgba")

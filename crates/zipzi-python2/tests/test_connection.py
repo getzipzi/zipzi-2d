@@ -61,7 +61,7 @@ class InstalledConnection(unittest.TestCase):
                         id = zipzi.recover_call(edit.meshes.create, meshes.MeshSpec("Face", geometry))
                         self.assertIsInstance(id, str)
                         snapshot = zipzi.recover_call(edit.scene.get, id)
-                        self.assertIsInstance(snapshot, scene.Snapshot)
+                        self.assertIsInstance(snapshot, zipzi.Snapshot)
                         self.assertEqual(snapshot.value.name, "Face")
                         job = zipzi.recover_call(edit.commit)
                         self.assertIsInstance(job, zipzi.Job)
@@ -72,7 +72,7 @@ class InstalledConnection(unittest.TestCase):
                     self.assertIs(edit.receipt, receipt)
                     self.assertEqual(edit.state, zipzi.EditState.committed)
                     self.assertEqual(session.info().history, (1, 0))
-                    self.assertEqual(session.meshes.get(id).geometry.vertex_ids, (42, 7, 99))
+                    self.assertEqual(session.meshes.get(id).value.geometry.vertex_ids, (42, 7, 99))
 
     def test_two_process_cold_start_shares_one_unsaved_session_and_history(self):
         script = '''
@@ -121,9 +121,9 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
             self.assertEqual(info.state, "ready")
             session = runtime.sessions.attach(info.id)
             self.assertEqual(session.id, info.id)
-            self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000002").name, "Second")
+            self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000002").value.name, "Second")
             session.undo().wait()
-            self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000002").name, "First")
+            self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000002").value.name, "First")
 
     def test_timeout_preserves_slow_host_ownership_and_next_attempt_reuses_it(self):
         with patch.dict(os.environ, ZIPZI_TEST_START_DELAY_MS="500"):
@@ -302,9 +302,9 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                         stream = session.subscribe()
                     parameter = "79200000-0000-4000-8000-000000000031"
                     edit = session.edit("installed mixed parameter batch")
-                    operations = (ops.CreateParameter(parameters.ParameterSpec("First", -1., 1., 0., id=parameter,
+                    operations = (parameters.Create(parameters.ParameterSpec("First", -1., 1., 0., id=parameter,
                         runtime_id="ParamRecovery", decimal_places=4, repeat=True)),
-                        ops.PatchParameter(parameter, parameters.Patch(name="Final")))
+                        parameters.Patch(parameter, parameters.ParameterPatch(name="Final")))
                     if operation in {"apply_authoring", "commit", "job"}:
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                             with edit:
@@ -325,7 +325,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                         value = lost.exception.recover()
                     else:
                         value = session.parameters.get(parameter)
-                    self.assertEqual((value.name,value.runtime_id,value.decimal_places,value.repeat), ("Final","ParamRecovery",4,True))
+                    self.assertEqual((value.value.name,value.value.runtime_id,value.value.decimal_places,value.value.repeat), ("Final","ParamRecovery",4,True))
                     if operation == "events":
                         before = stream.cursor
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
@@ -350,9 +350,9 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
             binding = "79200000-0000-4000-8000-000000000043"
             geometry = meshes.Geometry((0,1,2), ((0.,0.),(1.,0.),(0.,1.)), ((0.,0.),(1.,0.),(0.,1.)), ((0,1,2),))
             with session.edit("installed binding") as edit:
-                edit.apply_many((ops.Create(meshes.MeshSpec("Face",geometry,id=face)),
-                    ops.CreateParameter(parameters.ParameterSpec("Angle",0.,1.,0.,id=angle)),
-                    ops.CreateMeshBinding(bindings.MeshBindingSpec(face,(bindings.Axis(angle,(0.,1.)),),(
+                edit.apply_many((meshes.Create(meshes.MeshSpec("Face",geometry,id=face)),
+                    parameters.Create(parameters.ParameterSpec("Angle",0.,1.,0.,id=angle)),
+                    bindings.Create(bindings.MeshBindingSpec(face,(bindings.Axis(angle,(0.,1.)),),(
                         bindings.Keyform((0.,),geometry.positions),
                         bindings.Keyform((1.,),tuple((x+10.,y) for x,y in geometry.positions))),id=binding))))
             before = session.info()
@@ -362,10 +362,10 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                 with peer.sessions.attach(session.id).edit("later") as edit:
                     edit.bindings.set_keyform(binding, bindings.Keyform((1.,),tuple((x+20.,y) for x,y in geometry.positions)))
             original = lost.exception.recover()
-            self.assertIsInstance(original,sampling.Batch)
-            self.assertEqual(original.version,before.version)
-            self.assertEqual(original.frames[0].drawables[0].positions[0][0],5.)
-            self.assertEqual(session.modeling.sample(({angle:.5},)).frames[0].drawables[0].positions[0][0],10.)
+            self.assertIsInstance(original,zipzi.Snapshot)
+            self.assertEqual(original.value.version,before.version)
+            self.assertEqual(original.value.frames[0].drawables[0].positions[0][0],5.)
+            self.assertEqual(session.modeling.sample(({angle:.5},)).value.frames[0].drawables[0].positions[0][0],10.)
             self.assertEqual(session.info().history,(2,0))
 
     def test_installed_lost_busy_response_allows_retry_and_cancel(self):
@@ -384,9 +384,9 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     self.assertIsNone(edit.pending_request)
                     self.assertEqual(edit.parameters.get(parameter).source, source)
                     if finish == "commit":
-                        edit.parameters.patch(parameter, parameters.Patch(name="Retried"))
+                        edit.parameters.patch(parameter, parameters.ParameterPatch(name="Retried"))
                         edit.commit().wait()
-                        self.assertEqual(session.parameters.get(parameter).name, "Retried")
+                        self.assertEqual(session.parameters.get(parameter).value.name, "Retried")
                         self.assertEqual(session.info().history, (1, 0))
                     else:
                         edit.cancel()
@@ -405,13 +405,13 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                 edit.commit().wait()
                 with self.assertRaises(zipzi.SdkFailure) as caught:
                     with session.edit("caught domain failure") as failed:
-                        failed.parameters.patch(parameter, parameters.Patch(name="Unpublished"))
+                        failed.parameters.patch(parameter, parameters.ParameterPatch(name="Unpublished"))
                         try:
-                            failed.parameters.patch(parameter, parameters.Patch(minimum=2.))
+                            failed.parameters.patch(parameter, parameters.ParameterPatch(minimum=2.))
                         except zipzi.SdkFailure:
                             pass
                 self.assertEqual(caught.exception.code, "EDIT_ABORTED")
-                self.assertEqual(session.parameters.get(parameter).name, "Base")
+                self.assertEqual(session.parameters.get(parameter).value.name, "Base")
                 self.assertEqual(session.info().history, (1, 0))
         with patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE="release_edit"):
             with zipzi.connect(endpoint=self.folder / "cleanup" / "test.sock", start=True, host=self.host) as runtime:

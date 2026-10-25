@@ -18,377 +18,376 @@ def _boolean(value: object) -> bool:
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateAsset:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_asset'
     kind: ClassVar[str] = "modeling"
     asset: ImageAsset
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'asset', self.asset)
+ModelingCommandCreateAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceAsset:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_asset'
     kind: ClassVar[str] = "modeling"
     asset: ImageAsset
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'asset', self.asset)
+ModelingCommandReplaceAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateMesh:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_mesh'
     kind: ClassVar[str] = "modeling"
     mesh: Mesh
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh', self.mesh)
+ModelingCommandCreateMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceMesh:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_mesh'
     kind: ClassVar[str] = "modeling"
     mesh: Mesh
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh', self.mesh)
+ModelingCommandReplaceMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_parameter'
     kind: ClassVar[str] = "modeling"
     parameter: Parameter
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter', self.parameter)
+ModelingCommandCreateParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_parameter'
     kind: ClassVar[str] = "modeling"
     parameter: Parameter
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter', self.parameter)
+ModelingCommandReplaceParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreatePart:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_part'
     kind: ClassVar[str] = "modeling"
     part: Part
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'part', self.part)
+ModelingCommandCreatePart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplacePart:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_part'
     kind: ClassVar[str] = "modeling"
     part: Part
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'part', self.part)
+ModelingCommandReplacePart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateTransform:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_transform'
     kind: ClassVar[str] = "modeling"
     transform: Transform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'transform', self.transform)
+ModelingCommandCreateTransform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceTransform:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_transform'
     kind: ClassVar[str] = "modeling"
     transform: Transform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'transform', self.transform)
+ModelingCommandReplaceTransform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_binding'
     kind: ClassVar[str] = "modeling"
     binding: MeshBinding
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding', self.binding)
+ModelingCommandCreateBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_binding'
     kind: ClassVar[str] = "modeling"
     binding: MeshBinding
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding', self.binding)
+ModelingCommandReplaceBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateSceneBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_scene_binding'
     kind: ClassVar[str] = "modeling"
     binding: SceneBinding
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding', self.binding)
+ModelingCommandCreateSceneBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceSceneBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_scene_binding'
     kind: ClassVar[str] = "modeling"
     binding: SceneBinding
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding', self.binding)
+ModelingCommandReplaceSceneBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateBlendKeyTable:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_blend_key_table'
     kind: ClassVar[str] = "modeling"
     table: BlendShapeKeyTable
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'table', self.table)
+ModelingCommandCreateBlendKeyTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceBlendKeyTable:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_blend_key_table'
     kind: ClassVar[str] = "modeling"
     table: BlendShapeKeyTable
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'table', self.table)
+ModelingCommandReplaceBlendKeyTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateBlendConstraint:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_blend_constraint'
     kind: ClassVar[str] = "modeling"
     constraint: BlendShapeConstraint
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'constraint', self.constraint)
+ModelingCommandCreateBlendConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceBlendConstraint:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_blend_constraint'
     kind: ClassVar[str] = "modeling"
     constraint: BlendShapeConstraint
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'constraint', self.constraint)
+ModelingCommandReplaceBlendConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateBlendBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_blend_binding'
     kind: ClassVar[str] = "modeling"
     binding: BlendShapeBinding
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding', self.binding)
+ModelingCommandCreateBlendBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceBlendBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_blend_binding'
     kind: ClassVar[str] = "modeling"
     binding: BlendShapeBinding
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding', self.binding)
+ModelingCommandReplaceBlendBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateGlue:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_glue'
     kind: ClassVar[str] = "modeling"
     glue: Glue
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'glue', self.glue)
+ModelingCommandCreateGlue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceGlue:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_glue'
     kind: ClassVar[str] = "modeling"
     glue: Glue
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'glue', self.glue)
+ModelingCommandReplaceGlue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandCreateOffscreen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_offscreen'
     kind: ClassVar[str] = "modeling"
     offscreen: Offscreen
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'offscreen', self.offscreen)
+ModelingCommandCreateOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceOffscreen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_offscreen'
     kind: ClassVar[str] = "modeling"
     offscreen: Offscreen
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'offscreen', self.offscreen)
+ModelingCommandReplaceOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandScene:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'scene'
     kind: ClassVar[str] = "modeling"
     intent: SceneEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+ModelingCommandScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandOrganization:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'organization'
     kind: ClassVar[str] = "modeling"
     intent: OrganizationEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+ModelingCommandOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'binding'
     kind: ClassVar[str] = "modeling"
     intent: BindingAuthoringEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+ModelingCommandBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandContent:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'content'
     kind: ClassVar[str] = "modeling"
     intent: SceneContentEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+ModelingCommandContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReferences:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'references'
     kind: ClassVar[str] = "modeling"
     intent: ReferenceEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+ModelingCommandReferences.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandResource:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resource'
     kind: ClassVar[str] = "modeling"
     intent: ResourceEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+ModelingCommandResource.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandDocument:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'document'
     kind: ClassVar[str] = "modeling"
     intent: DocumentAuthoringEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+ModelingCommandDocument.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandAttachment:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'attachment'
     kind: ClassVar[str] = "modeling"
     intent: AttachmentEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+ModelingCommandAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceModelSetup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_model_setup'
     kind: ClassVar[str] = "modeling"
     setup: ModelSetup
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'setup', self.setup)
+ModelingCommandReplaceModelSetup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceHierarchyOrder:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_hierarchy_order'
     kind: ClassVar[str] = "modeling"
     order: HierarchyOrder
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'order', self.order)
+ModelingCommandReplaceHierarchyOrder.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceEditorState:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_editor_state'
     kind: ClassVar[str] = "modeling"
     state: EditorState
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'state', self.state)
+ModelingCommandReplaceEditorState.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceDrawOrderGroups:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_draw_order_groups'
     kind: ClassVar[str] = "modeling"
     groups: tuple[DrawOrderGroup, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'groups', tuple(self.groups))
+ModelingCommandReplaceDrawOrderGroups.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandEraseObject:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'erase_object'
     kind: ClassVar[str] = "modeling"
     id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
+ModelingCommandEraseObject.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandRenameMesh:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'rename_mesh'
     kind: ClassVar[str] = "modeling"
     id: str
@@ -397,10 +396,10 @@ class ModelingCommandRenameMesh:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'name', self.name)
+ModelingCommandRenameMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandUpdatePositions:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'update_positions'
     kind: ClassVar[str] = "modeling"
     id: str
@@ -411,10 +410,10 @@ class ModelingCommandUpdatePositions:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'vertex_ids', tuple(self.vertex_ids))
         object.__setattr__(self, 'positions', tuple(self.positions))
+ModelingCommandUpdatePositions.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandSetMeshKeyform:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'set_mesh_keyform'
     kind: ClassVar[str] = "modeling"
     id: str
@@ -423,10 +422,10 @@ class ModelingCommandSetMeshKeyform:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'keyform', self.keyform)
+ModelingCommandSetMeshKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandSetSceneKeyform:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'set_scene_keyform'
     kind: ClassVar[str] = "modeling"
     id: str
@@ -435,10 +434,10 @@ class ModelingCommandSetSceneKeyform:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'keyform', self.keyform)
+ModelingCommandSetSceneKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandRemeshRectangleGrid:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'remesh_rectangle_grid'
     kind: ClassVar[str] = "modeling"
     id: str
@@ -449,10 +448,10 @@ class ModelingCommandRemeshRectangleGrid:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'columns', self.columns)
         object.__setattr__(self, 'rows', self.rows)
+ModelingCommandRemeshRectangleGrid.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingCommandReplaceTopology:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_topology'
     kind: ClassVar[str] = "modeling"
     source: GeometrySnapshot
@@ -461,26 +460,26 @@ class ModelingCommandReplaceTopology:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'source', self.source)
         object.__setattr__(self, 'replacement', self.replacement)
+ModelingCommandReplaceTopology.__module__ = "zipzi.modeling"
 
 ModelingCommand: TypeAlias = ModelingCommandCreateAsset | ModelingCommandReplaceAsset | ModelingCommandCreateMesh | ModelingCommandReplaceMesh | ModelingCommandCreateParameter | ModelingCommandReplaceParameter | ModelingCommandCreatePart | ModelingCommandReplacePart | ModelingCommandCreateTransform | ModelingCommandReplaceTransform | ModelingCommandCreateBinding | ModelingCommandReplaceBinding | ModelingCommandCreateSceneBinding | ModelingCommandReplaceSceneBinding | ModelingCommandCreateBlendKeyTable | ModelingCommandReplaceBlendKeyTable | ModelingCommandCreateBlendConstraint | ModelingCommandReplaceBlendConstraint | ModelingCommandCreateBlendBinding | ModelingCommandReplaceBlendBinding | ModelingCommandCreateGlue | ModelingCommandReplaceGlue | ModelingCommandCreateOffscreen | ModelingCommandReplaceOffscreen | ModelingCommandScene | ModelingCommandOrganization | ModelingCommandBinding | ModelingCommandContent | ModelingCommandReferences | ModelingCommandResource | ModelingCommandDocument | ModelingCommandAttachment | ModelingCommandReplaceModelSetup | ModelingCommandReplaceHierarchyOrder | ModelingCommandReplaceEditorState | ModelingCommandReplaceDrawOrderGroups | ModelingCommandEraseObject | ModelingCommandRenameMesh | ModelingCommandUpdatePositions | ModelingCommandSetMeshKeyform | ModelingCommandSetSceneKeyform | ModelingCommandRemeshRectangleGrid | ModelingCommandReplaceTopology
 
 @dataclass(frozen=True, kw_only=True)
 class ImageAsset:
-    __module__ = "zipzi.modeling"
-    unresolved_source: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    unresolved_source: (str | None) = None
     id: str
     name: str
-    content: (ImageContent | None) = field(default_factory=lambda: None if None is None else read_ImageContent(None))
+    content: (ImageContent | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'unresolved_source', None if self.unresolved_source is None else self.unresolved_source)
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'content', None if self.content is None else self.content)
+ImageAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ImageContent:
-    __module__ = "zipzi.modeling"
     source: str
     width: int
     height: int
@@ -491,10 +490,10 @@ class ImageContent:
         object.__setattr__(self, 'width', self.width)
         object.__setattr__(self, 'height', self.height)
         object.__setattr__(self, 'sha256', self.sha256)
+ImageContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class Mesh:
-    __module__ = "zipzi.modeling"
     id: str
     name: str
     texture_asset_id: SceneReference
@@ -506,13 +505,13 @@ class Mesh:
     part_id: str
     deformer_id: str
     appearance: Appearance
-    draw_order: (float | None) = field(default_factory=lambda: None if None is None else number(None))
+    draw_order: (float | None) = None
     blend_mode: BlendMode
     enabled: bool
     double_sided: bool
     inverted_mask: bool
     masks: tuple[str, ...]
-    raw_blend_mode: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    raw_blend_mode: (int | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
@@ -533,29 +532,30 @@ class Mesh:
         object.__setattr__(self, 'inverted_mask', self.inverted_mask)
         object.__setattr__(self, 'masks', tuple(self.masks))
         object.__setattr__(self, 'raw_blend_mode', None if self.raw_blend_mode is None else self.raw_blend_mode)
+Mesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneReferenceUnspecified:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unspecified'
+SceneReferenceUnspecified.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneReferenceResolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resolved'
     object_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'object_id', self.object_id)
+SceneReferenceResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneReferenceUnresolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unresolved'
     runtime_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'runtime_id', self.runtime_id)
+SceneReferenceUnresolved.__module__ = "zipzi.modeling"
 
 SceneReference: TypeAlias = SceneReferenceUnspecified | SceneReferenceResolved | SceneReferenceUnresolved
 
@@ -566,7 +566,6 @@ class Vec2(NamedTuple):
 
 @dataclass(frozen=True, kw_only=True)
 class Appearance:
-    __module__ = "zipzi.modeling"
     opacity: float
     multiply: tuple[float, float, float]
     screen: tuple[float, float, float]
@@ -575,6 +574,7 @@ class Appearance:
         object.__setattr__(self, 'opacity', self.opacity)
         object.__setattr__(self, 'multiply', tuple(self.multiply))
         object.__setattr__(self, 'screen', tuple(self.screen))
+Appearance.__module__ = "zipzi.modeling"
 
 class BlendMode(str, Enum):
     __module__ = "zipzi.modeling"
@@ -584,7 +584,6 @@ class BlendMode(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class Parameter:
-    __module__ = "zipzi.modeling"
     id: str
     runtime_id: str
     name: str
@@ -605,6 +604,7 @@ class Parameter:
         object.__setattr__(self, 'decimal_places', self.decimal_places)
         object.__setattr__(self, 'kind', self.kind)
         object.__setattr__(self, 'repeat', self.repeat)
+Parameter.__module__ = "zipzi.modeling"
 
 class ParameterKind(str, Enum):
     __module__ = "zipzi.modeling"
@@ -613,7 +613,6 @@ class ParameterKind(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class Part:
-    __module__ = "zipzi.modeling"
     id: str
     runtime_id: str
     name: str
@@ -628,15 +627,15 @@ class Part:
         object.__setattr__(self, 'parent_id', self.parent_id)
         object.__setattr__(self, 'enabled', self.enabled)
         object.__setattr__(self, 'draw_order', self.draw_order)
+Part.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class Transform:
-    __module__ = "zipzi.modeling"
     id: str
     runtime_id: str
     name: str
-    part_id: (PartId | None) = field(default_factory=lambda: None if None is None else read_PartId(None))
-    parent_id: (TransformId | None) = field(default_factory=lambda: None if None is None else read_TransformId(None))
+    part_id: (PartId | None) = None
+    parent_id: (TransformId | None) = None
     data: TransformData
     enabled: bool
     appearance: Appearance
@@ -650,47 +649,47 @@ class Transform:
         object.__setattr__(self, 'data', self.data)
         object.__setattr__(self, 'enabled', self.enabled)
         object.__setattr__(self, 'appearance', self.appearance)
+Transform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class PartId:
-    __module__ = "zipzi.modeling"
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+PartId.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class TransformId:
-    __module__ = "zipzi.modeling"
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+TransformId.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class TransformDataWarp:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Warp'
     value: WarpTransform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+TransformDataWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class TransformDataRotation:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Rotation'
     value: RotationTransform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+TransformDataRotation.__module__ = "zipzi.modeling"
 
 TransformData: TypeAlias = TransformDataWarp | TransformDataRotation
 
 @dataclass(frozen=True, kw_only=True)
 class WarpTransform:
-    __module__ = "zipzi.modeling"
-    bezier: (WarpBezier | None) = field(default_factory=lambda: None if None is None else read_WarpBezier(None))
+    bezier: (WarpBezier | None) = None
     rows: int
     columns: int
     quad: bool
@@ -702,10 +701,10 @@ class WarpTransform:
         object.__setattr__(self, 'columns', self.columns)
         object.__setattr__(self, 'quad', self.quad)
         object.__setattr__(self, 'points', tuple(self.points))
+WarpTransform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class WarpBezier:
-    __module__ = "zipzi.modeling"
     rows: int
     columns: int
     nodes: tuple[WarpBezierNode, ...]
@@ -714,30 +713,30 @@ class WarpBezier:
         object.__setattr__(self, 'rows', self.rows)
         object.__setattr__(self, 'columns', self.columns)
         object.__setattr__(self, 'nodes', tuple(self.nodes))
+WarpBezier.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class WarpBezierNode:
-    __module__ = "zipzi.modeling"
     position: Vec2
     handles: tuple[Vec2, Vec2, Vec2, Vec2]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'position', self.position)
         object.__setattr__(self, 'handles', tuple(self.handles))
+WarpBezierNode.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class RotationTransform:
-    __module__ = "zipzi.modeling"
     base_angle: float
     pose: RotationPose
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'base_angle', self.base_angle)
         object.__setattr__(self, 'pose', self.pose)
+RotationTransform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class RotationPose:
-    __module__ = "zipzi.modeling"
     origin: PreciseVec2
     angle: float
     scale: float
@@ -750,6 +749,7 @@ class RotationPose:
         object.__setattr__(self, 'scale', self.scale)
         object.__setattr__(self, 'reflect_x', self.reflect_x)
         object.__setattr__(self, 'reflect_y', self.reflect_y)
+RotationPose.__module__ = "zipzi.modeling"
 
 class PreciseVec2(NamedTuple):
     __module__ = "zipzi.modeling"
@@ -758,7 +758,6 @@ class PreciseVec2(NamedTuple):
 
 @dataclass(frozen=True, kw_only=True)
 class MeshBinding:
-    __module__ = "zipzi.modeling"
     id: str
     mesh_id: str
     axes: tuple[BindingAxis, ...]
@@ -769,10 +768,10 @@ class MeshBinding:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'axes', tuple(self.axes))
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
+MeshBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingAxis:
-    __module__ = "zipzi.modeling"
     id: str = field(default_factory=lambda: string(''))
     samples: tuple[BindingSample, ...] = field(default_factory=lambda: tuple(read_BindingSample(v0) for v0 in sequence([])))
     parameter_id: str
@@ -781,34 +780,34 @@ class BindingAxis:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'parameter_id', self.parameter_id)
+BindingAxis.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingSample:
-    __module__ = "zipzi.modeling"
     id: str
     value: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'value', self.value)
+BindingSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class MeshKeyform:
-    __module__ = "zipzi.modeling"
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     positions: tuple[Vec2, ...]
     appearance: Appearance
-    draw_order: (float | None) = field(default_factory=lambda: None if None is None else number(None))
+    draw_order: (float | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'positions', tuple(self.positions))
         object.__setattr__(self, 'appearance', self.appearance)
         object.__setattr__(self, 'draw_order', None if self.draw_order is None else self.draw_order)
+MeshKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneBinding:
-    __module__ = "zipzi.modeling"
     id: str
     axes: tuple[BindingAxis, ...]
     track: SceneTrack
@@ -817,10 +816,10 @@ class SceneBinding:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'axes', tuple(self.axes))
         object.__setattr__(self, 'track', self.track)
+SceneBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneTrackWarp:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Warp'
     target_id: TransformId
     keyforms: tuple[WarpKeyform, ...]
@@ -828,10 +827,10 @@ class SceneTrackWarp:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'target_id', self.target_id)
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
+SceneTrackWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneTrackRotation:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Rotation'
     target_id: TransformId
     keyforms: tuple[RotationKeyform, ...]
@@ -839,10 +838,10 @@ class SceneTrackRotation:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'target_id', self.target_id)
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
+SceneTrackRotation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneTrackPart:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Part'
     target_id: PartId
     keyforms: tuple[PartKeyform, ...]
@@ -850,13 +849,13 @@ class SceneTrackPart:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'target_id', self.target_id)
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
+SceneTrackPart.__module__ = "zipzi.modeling"
 
 SceneTrack: TypeAlias = SceneTrackWarp | SceneTrackRotation | SceneTrackPart
 
 @dataclass(frozen=True, kw_only=True)
 class WarpKeyform:
-    __module__ = "zipzi.modeling"
-    bezier: (WarpBezier | None) = field(default_factory=lambda: None if None is None else read_WarpBezier(None))
+    bezier: (WarpBezier | None) = None
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     positions: tuple[Vec2, ...]
     appearance: Appearance
@@ -866,10 +865,10 @@ class WarpKeyform:
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'positions', tuple(self.positions))
         object.__setattr__(self, 'appearance', self.appearance)
+WarpKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class RotationKeyform:
-    __module__ = "zipzi.modeling"
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     rotation: RotationPose
     appearance: Appearance
@@ -878,20 +877,20 @@ class RotationKeyform:
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'rotation', self.rotation)
         object.__setattr__(self, 'appearance', self.appearance)
+RotationKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class PartKeyform:
-    __module__ = "zipzi.modeling"
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     draw_order: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'draw_order', self.draw_order)
+PartKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendShapeKeyTable:
-    __module__ = "zipzi.modeling"
     samples: tuple[BindingSample, ...] = field(default_factory=lambda: tuple(read_BindingSample(v0) for v0 in sequence([])))
     base_sample_id: str = field(default_factory=lambda: string(''))
     id: str
@@ -902,10 +901,10 @@ class BlendShapeKeyTable:
         object.__setattr__(self, 'base_sample_id', self.base_sample_id)
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'parameter_id', self.parameter_id)
+BlendShapeKeyTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendShapeConstraint:
-    __module__ = "zipzi.modeling"
     samples: tuple[ConstraintSample, ...] = field(default_factory=lambda: tuple(read_ConstraintSample(v0) for v0 in sequence([])))
     id: str
     parameter_id: str
@@ -914,10 +913,10 @@ class BlendShapeConstraint:
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'parameter_id', self.parameter_id)
+BlendShapeConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ConstraintSample:
-    __module__ = "zipzi.modeling"
     id: str
     value: float
     weight: float
@@ -926,10 +925,10 @@ class ConstraintSample:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'value', self.value)
         object.__setattr__(self, 'weight', self.weight)
+ConstraintSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendShapeBinding:
-    __module__ = "zipzi.modeling"
     id: str
     target_id: str
     target_kind: BlendShapeTargetKind
@@ -944,6 +943,7 @@ class BlendShapeBinding:
         object.__setattr__(self, 'key_table_id', self.key_table_id)
         object.__setattr__(self, 'constraint_ids', tuple(self.constraint_ids))
         object.__setattr__(self, 'keyforms', self.keyforms)
+BlendShapeBinding.__module__ = "zipzi.modeling"
 
 class BlendShapeTargetKind(str, Enum):
     __module__ = "zipzi.modeling"
@@ -956,69 +956,68 @@ class BlendShapeTargetKind(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaKeyformsMesh:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'mesh'
     value: tuple[DeltaMeshKeyform, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', tuple(self.value))
+DeltaKeyformsMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaKeyformsWarp:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'warp'
     value: tuple[DeltaWarpKeyform, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', tuple(self.value))
+DeltaKeyformsWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaKeyformsRotation:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'rotation'
     value: tuple[DeltaRotationKeyform, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', tuple(self.value))
+DeltaKeyformsRotation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaKeyformsPart:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'part'
     value: tuple[DeltaPartKeyform, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', tuple(self.value))
+DeltaKeyformsPart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaKeyformsGlue:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'glue'
     value: tuple[DeltaGlueKeyform, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', tuple(self.value))
+DeltaKeyformsGlue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaKeyformsOffscreen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'offscreen'
     value: tuple[DeltaOffscreenKeyform, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', tuple(self.value))
+DeltaKeyformsOffscreen.__module__ = "zipzi.modeling"
 
 DeltaKeyforms: TypeAlias = DeltaKeyformsMesh | DeltaKeyformsWarp | DeltaKeyformsRotation | DeltaKeyformsPart | DeltaKeyformsGlue | DeltaKeyformsOffscreen
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaMeshKeyform:
-    __module__ = "zipzi.modeling"
     sample_id: str = field(default_factory=lambda: string(''))
     positions: tuple[Vec2, ...]
-    opacity: (float | None) = field(default_factory=lambda: None if None is None else number(None))
-    draw_order: (float | None) = field(default_factory=lambda: None if None is None else number(None))
-    multiply: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
-    screen: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
+    opacity: (float | None) = None
+    draw_order: (float | None) = None
+    multiply: (tuple[float, float, float] | None) = None
+    screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
@@ -1027,15 +1026,15 @@ class DeltaMeshKeyform:
         object.__setattr__(self, 'draw_order', None if self.draw_order is None else self.draw_order)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
+DeltaMeshKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaWarpKeyform:
-    __module__ = "zipzi.modeling"
     sample_id: str = field(default_factory=lambda: string(''))
     points: tuple[Vec2, ...]
-    opacity: (float | None) = field(default_factory=lambda: None if None is None else number(None))
-    multiply: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
-    screen: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
+    opacity: (float | None) = None
+    multiply: (tuple[float, float, float] | None) = None
+    screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
@@ -1043,17 +1042,17 @@ class DeltaWarpKeyform:
         object.__setattr__(self, 'opacity', None if self.opacity is None else self.opacity)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
+DeltaWarpKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaRotationKeyform:
-    __module__ = "zipzi.modeling"
     sample_id: str = field(default_factory=lambda: string(''))
-    origin: (Vec2 | None) = field(default_factory=lambda: None if None is None else read_Vec2(None))
-    angle: (float | None) = field(default_factory=lambda: None if None is None else number(None))
-    scale: (float | None) = field(default_factory=lambda: None if None is None else number(None))
-    opacity: (float | None) = field(default_factory=lambda: None if None is None else number(None))
-    multiply: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
-    screen: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
+    origin: (Vec2 | None) = None
+    angle: (float | None) = None
+    scale: (float | None) = None
+    opacity: (float | None) = None
+    multiply: (tuple[float, float, float] | None) = None
+    screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
@@ -1063,44 +1062,44 @@ class DeltaRotationKeyform:
         object.__setattr__(self, 'opacity', None if self.opacity is None else self.opacity)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
+DeltaRotationKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaPartKeyform:
-    __module__ = "zipzi.modeling"
     sample_id: str = field(default_factory=lambda: string(''))
     draw_order: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
         object.__setattr__(self, 'draw_order', self.draw_order)
+DeltaPartKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaGlueKeyform:
-    __module__ = "zipzi.modeling"
     sample_id: str = field(default_factory=lambda: string(''))
     intensity: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
         object.__setattr__(self, 'intensity', self.intensity)
+DeltaGlueKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DeltaOffscreenKeyform:
-    __module__ = "zipzi.modeling"
     sample_id: str = field(default_factory=lambda: string(''))
     opacity: float
-    multiply: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
-    screen: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
+    multiply: (tuple[float, float, float] | None) = None
+    screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
         object.__setattr__(self, 'opacity', self.opacity)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
+DeltaOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class Glue:
-    __module__ = "zipzi.modeling"
     id: str
     runtime_id: str
     name: str
@@ -1108,7 +1107,7 @@ class Glue:
     mesh_b_id: SceneReference
     pairs: tuple[GlueVertexPair, ...]
     intensity: float
-    binding: (GlueBinding | None) = field(default_factory=lambda: None if None is None else read_GlueBinding(None))
+    binding: (GlueBinding | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
@@ -1119,13 +1118,13 @@ class Glue:
         object.__setattr__(self, 'pairs', tuple(self.pairs))
         object.__setattr__(self, 'intensity', self.intensity)
         object.__setattr__(self, 'binding', None if self.binding is None else self.binding)
+Glue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GlueVertexPair:
-    __module__ = "zipzi.modeling"
     id: str
-    vertex_a: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
-    vertex_b: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    vertex_a: (int | None) = None
+    vertex_b: (int | None) = None
     weight_a: float
     weight_b: float
 
@@ -1135,30 +1134,30 @@ class GlueVertexPair:
         object.__setattr__(self, 'vertex_b', None if self.vertex_b is None else self.vertex_b)
         object.__setattr__(self, 'weight_a', self.weight_a)
         object.__setattr__(self, 'weight_b', self.weight_b)
+GlueVertexPair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GlueBinding:
-    __module__ = "zipzi.modeling"
     axes: tuple[BindingAxis, ...]
     keyforms: tuple[GlueKeyform, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'axes', tuple(self.axes))
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
+GlueBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GlueKeyform:
-    __module__ = "zipzi.modeling"
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     intensity: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'intensity', self.intensity)
+GlueKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class Offscreen:
-    __module__ = "zipzi.modeling"
     id: str
     runtime_id: str
     name: str
@@ -1181,30 +1180,30 @@ class Offscreen:
         object.__setattr__(self, 'masks', tuple(self.masks))
         object.__setattr__(self, 'part_keyform_indices', tuple(self.part_keyform_indices))
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
+Offscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OffscreenKeyform:
-    __module__ = "zipzi.modeling"
     opacity: float
-    multiply: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
-    screen: (tuple[float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(None))))
+    multiply: (tuple[float, float, float] | None) = None
+    screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'opacity', self.opacity)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
+OffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditCreate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create'
     id: str
     name: str
     object: SceneCreate
-    part_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
-    parent_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
-    deformation_before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    part_id: (str | None) = None
+    parent_id: (str | None) = None
+    before: (str | None) = None
+    deformation_before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
@@ -1214,10 +1213,10 @@ class SceneEditCreate:
         object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
         object.__setattr__(self, 'deformation_before', None if self.deformation_before is None else self.deformation_before)
+SceneEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditPatch:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'patch'
     id: str
     expected: SceneFieldValue
@@ -1229,47 +1228,47 @@ class SceneEditPatch:
         object.__setattr__(self, 'expected', self.expected)
         object.__setattr__(self, 'value', self.value)
         object.__setattr__(self, 'clear_glue_pairs', self.clear_glue_pairs)
+SceneEditPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditMove:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'move'
     ids: tuple[str, ...]
     destination: SceneCollection
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneEditMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditReparent:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'reparent'
     edit: ReparentEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'edit', self.edit)
+SceneEditReparent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditDuplicate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     scope: SceneCopyScope = field(default_factory=lambda: read_SceneCopyScope('selected'))
-    destination: (OrganizationCollection | None) = field(default_factory=lambda: None if None is None else read_OrganizationCollection(None))
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    destination: (OrganizationCollection | None) = None
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'scope', self.scope)
         object.__setattr__(self, 'destination', None if self.destination is None else self.destination)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditDelete:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete'
     ids: tuple[str, ...]
     scope: SceneCopyScope = field(default_factory=lambda: read_SceneCopyScope('selected'))
@@ -1277,10 +1276,10 @@ class SceneEditDelete:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'scope', self.scope)
+SceneEditDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditTransferOffscreen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'transfer_offscreen'
     id: str
     part_id: str
@@ -1290,23 +1289,23 @@ class SceneEditTransferOffscreen:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'part_id', self.part_id)
         object.__setattr__(self, 'part_keyform_indices', tuple(self.part_keyform_indices))
+SceneEditTransferOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditEnsureDrawingGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'ensure_drawing_group'
     owner: str
     parent: str
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'owner', self.owner)
         object.__setattr__(self, 'parent', self.parent)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneEditEnsureDrawingGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditSetDrawingRange:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'set_drawing_range'
     owner: str
     expected: tuple[int, int]
@@ -1316,19 +1315,19 @@ class SceneEditSetDrawingRange:
         object.__setattr__(self, 'owner', self.owner)
         object.__setattr__(self, 'expected', tuple(self.expected))
         object.__setattr__(self, 'range', tuple(self.range))
+SceneEditSetDrawingRange.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditDissolveDrawingGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'dissolve_drawing_group'
     owner: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'owner', self.owner)
+SceneEditDissolveDrawingGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneEditDuplicateDrawingGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'duplicate_drawing_group'
     source: str
     target: str
@@ -1336,40 +1335,40 @@ class SceneEditDuplicateDrawingGroup:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'source', self.source)
         object.__setattr__(self, 'target', self.target)
+SceneEditDuplicateDrawingGroup.__module__ = "zipzi.modeling"
 
 SceneEdit: TypeAlias = SceneEditCreate | SceneEditPatch | SceneEditMove | SceneEditReparent | SceneEditDuplicate | SceneEditDelete | SceneEditTransferOffscreen | SceneEditEnsureDrawingGroup | SceneEditSetDrawingRange | SceneEditDissolveDrawingGroup | SceneEditDuplicateDrawingGroup
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCreateMesh:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'mesh'
     texture: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'texture', self.texture)
+SceneCreateMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCreateWarp:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'warp'
-    bounds: (tuple[float, float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(None))))
+    bounds: (tuple[float, float, float, float] | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'bounds', None if self.bounds is None else tuple(self.bounds))
+SceneCreateWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCreateRotation:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'rotation'
+SceneCreateRotation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCreateOffscreen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'offscreen'
+SceneCreateOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCreateGlue:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'glue'
     a: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
     b: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
@@ -1377,70 +1376,70 @@ class SceneCreateGlue:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'a', self.a)
         object.__setattr__(self, 'b', self.b)
+SceneCreateGlue.__module__ = "zipzi.modeling"
 
 SceneCreate: TypeAlias = SceneCreateMesh | SceneCreateWarp | SceneCreateRotation | SceneCreateOffscreen | SceneCreateGlue
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueLabel:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'label'
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneFieldValueLabel.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueRuntimeId:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'runtime_id'
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneFieldValueRuntimeId.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueEnabled:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'enabled'
     value: bool
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneFieldValueEnabled.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueAppearance:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'appearance'
     value: Appearance
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneFieldValueAppearance.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueTexture:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'texture'
     value: SceneReference
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneFieldValueTexture.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueMasks:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'masks'
     value: tuple[str, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', tuple(self.value))
+SceneFieldValueMasks.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueMeshDrawing:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'mesh_drawing'
-    draw_order: (float | None) = field(default_factory=lambda: None if None is None else number(None))
+    draw_order: (float | None) = None
     blend_mode: BlendMode
-    raw_blend_mode: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    raw_blend_mode: (int | None) = None
     double_sided: bool
     inverted_mask: bool
 
@@ -1450,28 +1449,28 @@ class SceneFieldValueMeshDrawing:
         object.__setattr__(self, 'raw_blend_mode', None if self.raw_blend_mode is None else self.raw_blend_mode)
         object.__setattr__(self, 'double_sided', self.double_sided)
         object.__setattr__(self, 'inverted_mask', self.inverted_mask)
+SceneFieldValueMeshDrawing.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueWarp:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'warp'
     value: WarpTransform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneFieldValueWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueRotation:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'rotation'
     value: RotationTransform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneFieldValueRotation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueGlueEndpoints:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'glue_endpoints'
     a: SceneReference
     b: SceneReference
@@ -1479,19 +1478,19 @@ class SceneFieldValueGlueEndpoints:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'a', self.a)
         object.__setattr__(self, 'b', self.b)
+SceneFieldValueGlueEndpoints.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueGlueIntensity:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'glue_intensity'
     value: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneFieldValueGlueIntensity.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueOffscreen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'offscreen'
     blend_mode: int
     flags: int
@@ -1503,69 +1502,69 @@ class SceneFieldValueOffscreen:
         object.__setattr__(self, 'flags', self.flags)
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
         object.__setattr__(self, 'part_keyform_indices', tuple(self.part_keyform_indices))
+SceneFieldValueOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneFieldValueContext:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'context'
-    part_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
-    parent_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    part_id: (str | None) = None
+    parent_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
         object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
+SceneFieldValueContext.__module__ = "zipzi.modeling"
 
 SceneFieldValue: TypeAlias = SceneFieldValueLabel | SceneFieldValueRuntimeId | SceneFieldValueEnabled | SceneFieldValueAppearance | SceneFieldValueTexture | SceneFieldValueMasks | SceneFieldValueMeshDrawing | SceneFieldValueWarp | SceneFieldValueRotation | SceneFieldValueGlueEndpoints | SceneFieldValueGlueIntensity | SceneFieldValueOffscreen | SceneFieldValueContext
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCollectionOrganization:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'organization'
-    part_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    part_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
+SceneCollectionOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCollectionDeformation:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'deformation'
-    parent_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    parent_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
+SceneCollectionDeformation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCollectionGlues:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'glues'
+SceneCollectionGlues.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCollectionDrawingGroups:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'drawing_groups'
+SceneCollectionDrawingGroups.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCollectionDrawing:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'drawing'
     owner: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'owner', self.owner)
+SceneCollectionDrawing.__module__ = "zipzi.modeling"
 
 SceneCollection: TypeAlias = SceneCollectionOrganization | SceneCollectionDeformation | SceneCollectionGlues | SceneCollectionDrawingGroups | SceneCollectionDrawing
 
 @dataclass(frozen=True, kw_only=True)
 class ReparentEdit:
-    __module__ = "zipzi.modeling"
     sources: tuple[str, ...]
     parent_id: str
     strategy: ReparentStrategy
-    placement: (ReparentPlacement | None) = field(default_factory=lambda: None if None is None else read_ReparentPlacement(None))
+    placement: (ReparentPlacement | None) = None
     tolerance: float
     relative_tolerance: float = field(default_factory=lambda: number(1e-06))
-    context: (ReparentContext | None) = field(default_factory=lambda: None if None is None else read_ReparentContext(None))
+    context: (ReparentContext | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sources', tuple(self.sources))
@@ -1575,6 +1574,7 @@ class ReparentEdit:
         object.__setattr__(self, 'tolerance', self.tolerance)
         object.__setattr__(self, 'relative_tolerance', self.relative_tolerance)
         object.__setattr__(self, 'context', None if self.context is None else self.context)
+ReparentEdit.__module__ = "zipzi.modeling"
 
 class ReparentStrategy(str, Enum):
     __module__ = "zipzi.modeling"
@@ -1584,15 +1584,14 @@ class ReparentStrategy(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class ReparentPlacement:
-    __module__ = "zipzi.modeling"
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ReparentPlacement.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReparentContext:
-    __module__ = "zipzi.modeling"
     parameter_values: Mapping[str, float]
     parameter_domain: tuple[ConversionDomain, ...]
     edit_time_seconds: float
@@ -1601,10 +1600,10 @@ class ReparentContext:
         object.__setattr__(self, 'parameter_values', MappingProxyType({key0: v0 for key0, v0 in self.parameter_values.items()}))
         object.__setattr__(self, 'parameter_domain', tuple(self.parameter_domain))
         object.__setattr__(self, 'edit_time_seconds', self.edit_time_seconds)
+ReparentContext.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ConversionDomain:
-    __module__ = "zipzi.modeling"
     parameter_id: str
     minimum: float
     maximum: float
@@ -1613,6 +1612,7 @@ class ConversionDomain:
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'minimum', self.minimum)
         object.__setattr__(self, 'maximum', self.maximum)
+ConversionDomain.__module__ = "zipzi.modeling"
 
 class SceneCopyScope(str, Enum):
     __module__ = "zipzi.modeling"
@@ -1621,82 +1621,81 @@ class SceneCopyScope(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationCollectionParameters:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'parameters'
-    group_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    group_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
+OrganizationCollectionParameters.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationCollectionParameterGroups:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'parameter_groups'
-    parent_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    parent_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
+OrganizationCollectionParameterGroups.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationCollectionPartMembers:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'part_members'
-    part_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    part_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
+OrganizationCollectionPartMembers.__module__ = "zipzi.modeling"
 
 OrganizationCollection: TypeAlias = OrganizationCollectionParameters | OrganizationCollectionParameterGroups | OrganizationCollectionPartMembers
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationEditCreateParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_parameter'
     parameter: Parameter
-    group_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    group_id: (str | None) = None
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter', self.parameter)
         object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+OrganizationEditCreateParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationEditCreateGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_group'
     group: CdiParameterGroup
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'group', self.group)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+OrganizationEditCreateGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationEditCreatePart:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_part'
     part: Part
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'part', self.part)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+OrganizationEditCreatePart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationEditSetParameterGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'set_parameter_group'
     parameter_id: str
-    group_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    group_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
+OrganizationEditSetParameterGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationEditPatchGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'patch_group'
     expected: CdiParameterGroup
     group: CdiParameterGroup
@@ -1704,36 +1703,36 @@ class OrganizationEditPatchGroup:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'expected', self.expected)
         object.__setattr__(self, 'group', self.group)
+OrganizationEditPatchGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationEditMove:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'move'
     ids: tuple[str, ...]
     destination: OrganizationCollection
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+OrganizationEditMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationEditDuplicate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     destination: OrganizationCollection
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+OrganizationEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationEditDelete:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete'
     ids: tuple[str, ...]
     policy: OrganizationDeletePolicy
@@ -1741,16 +1740,16 @@ class OrganizationEditDelete:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'policy', self.policy)
+OrganizationEditDelete.__module__ = "zipzi.modeling"
 
 OrganizationEdit: TypeAlias = OrganizationEditCreateParameter | OrganizationEditCreateGroup | OrganizationEditCreatePart | OrganizationEditSetParameterGroup | OrganizationEditPatchGroup | OrganizationEditMove | OrganizationEditDuplicate | OrganizationEditDelete
 
 @dataclass(frozen=True, kw_only=True)
 class CdiParameterGroup:
-    __module__ = "zipzi.modeling"
     id: str
     runtime_id: str
     name: str
-    parent_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    parent_id: (str | None) = None
     extensions: Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
@@ -1759,6 +1758,7 @@ class CdiParameterGroup:
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+CdiParameterGroup.__module__ = "zipzi.modeling"
 
 class OrganizationDeletePolicy(str, Enum):
     __module__ = "zipzi.modeling"
@@ -1767,63 +1767,62 @@ class OrganizationDeletePolicy(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class BindingAuthoringEditGrid:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Grid'
     value: BindingGridEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingAuthoringEditGrid.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingAuthoringEditBlend:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Blend'
     value: BlendAuthoringEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingAuthoringEditBlend.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingAuthoringEditMeshGrid:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'MeshGrid'
     value: MeshGridEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingAuthoringEditMeshGrid.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingAuthoringEditParameterRange:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'ParameterRange'
     value: ParameterRangeEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingAuthoringEditParameterRange.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingAuthoringEditReparent:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Reparent'
     value: ReparentEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingAuthoringEditReparent.__module__ = "zipzi.modeling"
 
 BindingAuthoringEdit: TypeAlias = BindingAuthoringEditGrid | BindingAuthoringEditBlend | BindingAuthoringEditMeshGrid | BindingAuthoringEditParameterRange | BindingAuthoringEditReparent
 
 @dataclass(frozen=True, kw_only=True)
 class BindingGridEditDelete:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Delete'
     owner: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'owner', self.owner)
+BindingGridEditDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingGridEditCreate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Create'
     id: str
     target: BindingGridTarget
@@ -1831,10 +1830,10 @@ class BindingGridEditCreate:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'target', self.target)
+BindingGridEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingGridEditEdit:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Edit'
     owner: str
     operation: GridOperation
@@ -1842,50 +1841,50 @@ class BindingGridEditEdit:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'owner', self.owner)
         object.__setattr__(self, 'operation', self.operation)
+BindingGridEditEdit.__module__ = "zipzi.modeling"
 
 BindingGridEdit: TypeAlias = BindingGridEditDelete | BindingGridEditCreate | BindingGridEditEdit
 
 @dataclass(frozen=True, kw_only=True)
 class BindingGridTargetMesh:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Mesh'
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingGridTargetMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingGridTargetScene:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Scene'
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingGridTargetScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingGridTargetGlue:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Glue'
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingGridTargetGlue.__module__ = "zipzi.modeling"
 
 BindingGridTarget: TypeAlias = BindingGridTargetMesh | BindingGridTargetScene | BindingGridTargetGlue
 
 @dataclass(frozen=True, kw_only=True)
 class GridOperationAddAxis:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'AddAxis'
     axis: BindingAxis
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'axis', self.axis)
+GridOperationAddAxis.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GridOperationRemapParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'RemapParameter'
     axis_id: str
     parameter_id: str
@@ -1895,32 +1894,32 @@ class GridOperationRemapParameter:
         object.__setattr__(self, 'axis_id', self.axis_id)
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'policy', self.policy)
+GridOperationRemapParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GridOperationSetParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'SetParameter'
     axis_id: str
     parameter_id: str
-    reduction: (AxisReduction | None) = field(default_factory=lambda: None if None is None else read_AxisReduction(None))
+    reduction: (AxisReduction | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'axis_id', self.axis_id)
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'reduction', None if self.reduction is None else self.reduction)
+GridOperationSetParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GridOperationReorderAxes:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'ReorderAxes'
     axis_ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'axis_ids', tuple(self.axis_ids))
+GridOperationReorderAxes.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GridOperationInsertSample:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'InsertSample'
     axis_id: str
     id: str
@@ -1930,10 +1929,10 @@ class GridOperationInsertSample:
         object.__setattr__(self, 'axis_id', self.axis_id)
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'value', self.value)
+GridOperationInsertSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GridOperationMoveSample:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'MoveSample'
     sample_id: str
     value: float
@@ -1941,28 +1940,29 @@ class GridOperationMoveSample:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
         object.__setattr__(self, 'value', self.value)
+GridOperationMoveSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GridOperationDeleteSample:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'DeleteSample'
     sample_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
+GridOperationDeleteSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GridOperationRemoveAxis:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'RemoveAxis'
     axis_id: str
-    reduction: (AxisReduction | None) = field(default_factory=lambda: None if None is None else read_AxisReduction(None))
+    reduction: (AxisReduction | None) = None
     keep_pending: bool
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'axis_id', self.axis_id)
         object.__setattr__(self, 'reduction', None if self.reduction is None else self.reduction)
         object.__setattr__(self, 'keep_pending', self.keep_pending)
+GridOperationRemoveAxis.__module__ = "zipzi.modeling"
 
 GridOperation: TypeAlias = GridOperationAddAxis | GridOperationRemapParameter | GridOperationSetParameter | GridOperationReorderAxes | GridOperationInsertSample | GridOperationMoveSample | GridOperationDeleteSample | GridOperationRemoveAxis
 
@@ -1973,45 +1973,44 @@ class ParameterRangePolicy(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class AxisReductionSlice:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Slice'
     value: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+AxisReductionSlice.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AxisReductionResample:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Resample'
     value: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+AxisReductionResample.__module__ = "zipzi.modeling"
 
 AxisReduction: TypeAlias = AxisReductionSlice | AxisReductionResample
 
 @dataclass(frozen=True, kw_only=True)
 class BlendAuthoringEditCreateTable:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'CreateTable'
     table: BlendShapeKeyTable
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'table', self.table)
+BlendAuthoringEditCreateTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendAuthoringEditCreateConstraint:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'CreateConstraint'
     constraint: BlendShapeConstraint
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'constraint', self.constraint)
+BlendAuthoringEditCreateConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendAuthoringEditCreateBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'CreateBinding'
     id: str
     target_id: str
@@ -2023,10 +2022,10 @@ class BlendAuthoringEditCreateBinding:
         object.__setattr__(self, 'target_id', self.target_id)
         object.__setattr__(self, 'target_kind', self.target_kind)
         object.__setattr__(self, 'key_table_id', self.key_table_id)
+BlendAuthoringEditCreateBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendAuthoringEditTable:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Table'
     id: str
     operation: BlendTableOperation
@@ -2034,10 +2033,10 @@ class BlendAuthoringEditTable:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'operation', self.operation)
+BlendAuthoringEditTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendAuthoringEditConstraint:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Constraint'
     id: str
     parameter_id: str
@@ -2047,10 +2046,10 @@ class BlendAuthoringEditConstraint:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'samples', tuple(self.samples))
+BlendAuthoringEditConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendAuthoringEditSetBindingTable:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'SetBindingTable'
     id: str
     key_table_id: str
@@ -2060,21 +2059,21 @@ class BlendAuthoringEditSetBindingTable:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'key_table_id', self.key_table_id)
         object.__setattr__(self, 'reset', self.reset)
+BlendAuthoringEditSetBindingTable.__module__ = "zipzi.modeling"
 
 BlendAuthoringEdit: TypeAlias = BlendAuthoringEditCreateTable | BlendAuthoringEditCreateConstraint | BlendAuthoringEditCreateBinding | BlendAuthoringEditTable | BlendAuthoringEditConstraint | BlendAuthoringEditSetBindingTable
 
 @dataclass(frozen=True, kw_only=True)
 class BlendTableOperationInsert:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Insert'
     sample: BindingSample
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample', self.sample)
+BlendTableOperationInsert.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendTableOperationMove:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Move'
     sample_id: str
     value: float
@@ -2082,39 +2081,39 @@ class BlendTableOperationMove:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
         object.__setattr__(self, 'value', self.value)
+BlendTableOperationMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendTableOperationDelete:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Delete'
     sample_id: str
-    replacement_base: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    replacement_base: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
         object.__setattr__(self, 'replacement_base', None if self.replacement_base is None else self.replacement_base)
+BlendTableOperationDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendTableOperationSetBase:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'SetBase'
     sample_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sample_id', self.sample_id)
+BlendTableOperationSetBase.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendTableOperationSetParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'SetParameter'
     parameter_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter_id', self.parameter_id)
+BlendTableOperationSetParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BlendTableOperationRemapParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'RemapParameter'
     parameter_id: str
     policy: ParameterRangePolicy
@@ -2122,12 +2121,12 @@ class BlendTableOperationRemapParameter:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'policy', self.policy)
+BlendTableOperationRemapParameter.__module__ = "zipzi.modeling"
 
 BlendTableOperation: TypeAlias = BlendTableOperationInsert | BlendTableOperationMove | BlendTableOperationDelete | BlendTableOperationSetBase | BlendTableOperationSetParameter | BlendTableOperationRemapParameter
 
 @dataclass(frozen=True, kw_only=True)
 class MeshGridEditCreate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Create'
     id: str
     mesh_id: str
@@ -2135,10 +2134,10 @@ class MeshGridEditCreate:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'mesh_id', self.mesh_id)
+MeshGridEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class MeshGridEditAddAxis:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'AddAxis'
     binding_id: str
     axis: BindingAxis
@@ -2146,10 +2145,10 @@ class MeshGridEditAddAxis:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'axis', self.axis)
+MeshGridEditAddAxis.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class MeshGridEditReorderAxes:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'ReorderAxes'
     binding_id: str
     parameter_ids: tuple[str, ...]
@@ -2157,10 +2156,10 @@ class MeshGridEditReorderAxes:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'parameter_ids', tuple(self.parameter_ids))
+MeshGridEditReorderAxes.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class MeshGridEditInsertSample:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'InsertSample'
     binding_id: str
     parameter_id: str
@@ -2170,10 +2169,10 @@ class MeshGridEditInsertSample:
         object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'value', self.value)
+MeshGridEditInsertSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class MeshGridEditMoveSample:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'MoveSample'
     binding_id: str
     parameter_id: str
@@ -2185,10 +2184,10 @@ class MeshGridEditMoveSample:
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'from_', self.from_)
         object.__setattr__(self, 'to', self.to)
+MeshGridEditMoveSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class MeshGridEditDeleteSample:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'DeleteSample'
     binding_id: str
     parameter_id: str
@@ -2198,10 +2197,10 @@ class MeshGridEditDeleteSample:
         object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'value', self.value)
+MeshGridEditDeleteSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class MeshGridEditRemoveAxis:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'RemoveAxis'
     binding_id: str
     parameter_id: str
@@ -2211,12 +2210,12 @@ class MeshGridEditRemoveAxis:
         object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'reduction', self.reduction)
+MeshGridEditRemoveAxis.__module__ = "zipzi.modeling"
 
 MeshGridEdit: TypeAlias = MeshGridEditCreate | MeshGridEditAddAxis | MeshGridEditReorderAxes | MeshGridEditInsertSample | MeshGridEditMoveSample | MeshGridEditDeleteSample | MeshGridEditRemoveAxis
 
 @dataclass(frozen=True, kw_only=True)
 class ParameterRangeEdit:
-    __module__ = "zipzi.modeling"
     parameter_id: str
     minimum: float
     maximum: float
@@ -2229,10 +2228,10 @@ class ParameterRangeEdit:
         object.__setattr__(self, 'maximum', self.maximum)
         object.__setattr__(self, 'default_value', self.default_value)
         object.__setattr__(self, 'policy', self.policy)
+ParameterRangeEdit.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditMeshVertices:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'mesh_vertices'
     mesh_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -2242,23 +2241,23 @@ class SceneContentEditMeshVertices:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'target', self.target)
         object.__setattr__(self, 'updates', tuple(self.updates))
+SceneContentEditMeshVertices.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditInsertMeshVertices:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'insert_mesh_vertices'
     mesh_id: str
     vertices: tuple[NewMeshVertex, ...]
-    before: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    before: (int | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'vertices', tuple(self.vertices))
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneContentEditInsertMeshVertices.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditDeleteMeshVertices:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete_mesh_vertices'
     mesh_id: str
     vertices: tuple[int, ...]
@@ -2268,10 +2267,10 @@ class SceneContentEditDeleteMeshVertices:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'vertices', tuple(self.vertices))
         object.__setattr__(self, 'policy', self.policy)
+SceneContentEditDeleteMeshVertices.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditReorderMeshVertices:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'reorder_mesh_vertices'
     mesh_id: str
     order: tuple[int, ...]
@@ -2279,23 +2278,23 @@ class SceneContentEditReorderMeshVertices:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'order', tuple(self.order))
+SceneContentEditReorderMeshVertices.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditInsertTriangle:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'insert_triangle'
     mesh_id: str
     vertices: tuple[int, int, int]
-    before: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    before: (int | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'vertices', tuple(self.vertices))
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneContentEditInsertTriangle.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditPatchTriangle:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'patch_triangle'
     mesh_id: str
     slot: int
@@ -2305,10 +2304,10 @@ class SceneContentEditPatchTriangle:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'slot', self.slot)
         object.__setattr__(self, 'vertices', tuple(self.vertices))
+SceneContentEditPatchTriangle.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditDeleteTriangles:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete_triangles'
     mesh_id: str
     slots: tuple[int, ...]
@@ -2316,10 +2315,10 @@ class SceneContentEditDeleteTriangles:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'slots', tuple(self.slots))
+SceneContentEditDeleteTriangles.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditReplaceTriangles:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_triangles'
     mesh_id: str
     triangles: tuple[tuple[int, int, int], ...]
@@ -2327,10 +2326,10 @@ class SceneContentEditReplaceTriangles:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'triangles', tuple(tuple(v0) for v0 in self.triangles))
+SceneContentEditReplaceTriangles.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditWarpPoints:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'warp_points'
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -2342,23 +2341,23 @@ class SceneContentEditWarpPoints:
         object.__setattr__(self, 'target', self.target)
         object.__setattr__(self, 'updates', tuple(self.updates))
         object.__setattr__(self, 'clear_bezier', self.clear_bezier)
+SceneContentEditWarpPoints.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditWarpBezier:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'warp_bezier'
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
-    controller: (WarpBezier | None) = field(default_factory=lambda: None if None is None else read_WarpBezier(None))
+    controller: (WarpBezier | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'transform_id', self.transform_id)
         object.__setattr__(self, 'target', self.target)
         object.__setattr__(self, 'controller', None if self.controller is None else self.controller)
+SceneContentEditWarpBezier.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditResizeWarp:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resize_warp'
     transform_id: str
     rows: int
@@ -2370,23 +2369,23 @@ class SceneContentEditResizeWarp:
         object.__setattr__(self, 'rows', self.rows)
         object.__setattr__(self, 'columns', self.columns)
         object.__setattr__(self, 'quad', self.quad)
+SceneContentEditResizeWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditInsertGluePair:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'insert_glue_pair'
     glue_id: str
     pair: GlueVertexPair
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'pair', self.pair)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneContentEditInsertGluePair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditPatchGluePair:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'patch_glue_pair'
     glue_id: str
     pair: GlueVertexPair
@@ -2394,51 +2393,51 @@ class SceneContentEditPatchGluePair:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'pair', self.pair)
+SceneContentEditPatchGluePair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditMoveGluePairs:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'move_glue_pairs'
     glue_id: str
     ids: tuple[str, ...]
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneContentEditMoveGluePairs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditTransferGluePairs:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'transfer_glue_pairs'
     glue_id: str
     destination: str
     pairs: tuple[GlueVertexPair, ...]
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'pairs', tuple(self.pairs))
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneContentEditTransferGluePairs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditDuplicateGluePairs:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'duplicate_glue_pairs'
     glue_id: str
     ids: tuple[str, ...]
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneContentEditDuplicateGluePairs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditDeleteGluePairs:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete_glue_pairs'
     glue_id: str
     ids: tuple[str, ...]
@@ -2446,23 +2445,23 @@ class SceneContentEditDeleteGluePairs:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'ids', tuple(self.ids))
+SceneContentEditDeleteGluePairs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditInsertOffscreenKeyform:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'insert_offscreen_keyform'
     offscreen_id: str
     value: OffscreenKeyform
-    before: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    before: (int | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'value', self.value)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneContentEditInsertOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditPatchOffscreenKeyform:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'patch_offscreen_keyform'
     offscreen_id: str
     slot: int
@@ -2472,23 +2471,23 @@ class SceneContentEditPatchOffscreenKeyform:
         object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'slot', self.slot)
         object.__setattr__(self, 'value', self.value)
+SceneContentEditPatchOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditDuplicateOffscreenKeyforms:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'duplicate_offscreen_keyforms'
     offscreen_id: str
     slots: tuple[int, ...]
-    before: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    before: (int | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'slots', tuple(self.slots))
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+SceneContentEditDuplicateOffscreenKeyforms.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditReorderOffscreenKeyforms:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'reorder_offscreen_keyforms'
     offscreen_id: str
     order: tuple[int, ...]
@@ -2496,10 +2495,10 @@ class SceneContentEditReorderOffscreenKeyforms:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'order', tuple(self.order))
+SceneContentEditReorderOffscreenKeyforms.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditDeleteOffscreenKeyforms:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete_offscreen_keyforms'
     offscreen_id: str
     slots: tuple[int, ...]
@@ -2509,10 +2508,10 @@ class SceneContentEditDeleteOffscreenKeyforms:
         object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'slots', tuple(self.slots))
         object.__setattr__(self, 'policy', self.policy)
+SceneContentEditDeleteOffscreenKeyforms.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentEditSetOffscreenMapping:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'set_offscreen_mapping'
     offscreen_id: str
     updates: tuple[OffscreenMappingPatch, ...]
@@ -2520,17 +2519,17 @@ class SceneContentEditSetOffscreenMapping:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'updates', tuple(self.updates))
+SceneContentEditSetOffscreenMapping.__module__ = "zipzi.modeling"
 
 SceneContentEdit: TypeAlias = SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
 
 @dataclass(frozen=True, kw_only=True)
 class ShapeTargetBase:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'base'
+ShapeTargetBase.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ShapeTargetOrdinary:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'ordinary'
     binding_id: str
     samples: tuple[str, ...]
@@ -2538,10 +2537,10 @@ class ShapeTargetOrdinary:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'samples', tuple(self.samples))
+ShapeTargetOrdinary.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ShapeTargetBlend:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'blend'
     binding_id: str
     sample_id: str
@@ -2549,24 +2548,24 @@ class ShapeTargetBlend:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'sample_id', self.sample_id)
+ShapeTargetBlend.__module__ = "zipzi.modeling"
 
 ShapeTarget: TypeAlias = ShapeTargetBase | ShapeTargetOrdinary | ShapeTargetBlend
 
 @dataclass(frozen=True, kw_only=True)
 class VertexContentPatch:
-    __module__ = "zipzi.modeling"
     vertex_id: int
-    position: (Vec2 | None) = field(default_factory=lambda: None if None is None else read_Vec2(None))
-    uv: (Vec2 | None) = field(default_factory=lambda: None if None is None else read_Vec2(None))
+    position: (Vec2 | None) = None
+    uv: (Vec2 | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'vertex_id', self.vertex_id)
         object.__setattr__(self, 'position', None if self.position is None else self.position)
         object.__setattr__(self, 'uv', None if self.uv is None else self.uv)
+VertexContentPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class NewMeshVertex:
-    __module__ = "zipzi.modeling"
     vertex_id: int
     position: Vec2
     uv: Vec2
@@ -2577,32 +2576,33 @@ class NewMeshVertex:
         object.__setattr__(self, 'position', self.position)
         object.__setattr__(self, 'uv', self.uv)
         object.__setattr__(self, 'seed', self.seed)
+NewMeshVertex.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class VertexSeedBase:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'base'
+VertexSeedBase.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class VertexSeedInterpolate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'interpolate'
     weights: tuple[VertexWeight, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'weights', tuple(self.weights))
+VertexSeedInterpolate.__module__ = "zipzi.modeling"
 
 VertexSeed: TypeAlias = VertexSeedBase | VertexSeedInterpolate
 
 @dataclass(frozen=True, kw_only=True)
 class VertexWeight:
-    __module__ = "zipzi.modeling"
     vertex_id: int
     weight: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'vertex_id', self.vertex_id)
         object.__setattr__(self, 'weight', self.weight)
+VertexWeight.__module__ = "zipzi.modeling"
 
 class VertexDeletePolicy(str, Enum):
     __module__ = "zipzi.modeling"
@@ -2611,7 +2611,6 @@ class VertexDeletePolicy(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class WarpPointPatch:
-    __module__ = "zipzi.modeling"
     row: int
     column: int
     point: Vec2
@@ -2620,107 +2619,107 @@ class WarpPointPatch:
         object.__setattr__(self, 'row', self.row)
         object.__setattr__(self, 'column', self.column)
         object.__setattr__(self, 'point', self.point)
+WarpPointPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OffscreenDeletePolicyRejectReferences:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'reject_references'
+OffscreenDeletePolicyRejectReferences.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OffscreenDeletePolicyNeutral:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'neutral'
+OffscreenDeletePolicyNeutral.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OffscreenDeletePolicyRemap:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'remap'
     replacements: Mapping[int, (int | None)]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'replacements', MappingProxyType({key0: None if v0 is None else v0 for key0, v0 in self.replacements.items()}))
+OffscreenDeletePolicyRemap.__module__ = "zipzi.modeling"
 
 OffscreenDeletePolicy: TypeAlias = OffscreenDeletePolicyRejectReferences | OffscreenDeletePolicyNeutral | OffscreenDeletePolicyRemap
 
 @dataclass(frozen=True, kw_only=True)
 class OffscreenMappingPatch:
-    __module__ = "zipzi.modeling"
     slot: PartKeyformSlot
     keyform: int
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'slot', self.slot)
         object.__setattr__(self, 'keyform', self.keyform)
+OffscreenMappingPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class PartKeyformSlotStatic:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'static'
+PartKeyformSlotStatic.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class PartKeyformSlotSamples:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'samples'
     samples: tuple[str, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
+PartKeyformSlotSamples.__module__ = "zipzi.modeling"
 
 PartKeyformSlot: TypeAlias = PartKeyformSlotStatic | PartKeyformSlotSamples
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditCreateModelParameterGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_model_parameter_group'
     id: str
     name: str
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ReferenceEditCreateModelParameterGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditCreateModelHitArea:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_model_hit_area'
     id: str
     name: str
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ReferenceEditCreateModelHitArea.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditCreateCdiCombinedSet:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_cdi_combined_set'
     id: str
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ReferenceEditCreateCdiCombinedSet.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditCreateMember:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create_member'
     id: str
     collection: ReferenceCollection
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'collection', self.collection)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ReferenceEditCreateMember.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditPatch:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'patch'
     id: str
     expected: ReferenceFields
@@ -2730,58 +2729,58 @@ class ReferenceEditPatch:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'expected', self.expected)
         object.__setattr__(self, 'fields', self.fields)
+ReferenceEditPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditMove:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'move'
     ids: tuple[str, ...]
     destination: ReferenceCollection
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ReferenceEditMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditDuplicate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     destination: ReferenceCollection
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ReferenceEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditDelete:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete'
     ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
+ReferenceEditDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditDissolve:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'dissolve'
     id: str
     destination: str
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ReferenceEditDissolve.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEditReplaceSelection:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace_selection'
     owner: str
     field: ReferenceSelectionField
@@ -2793,56 +2792,56 @@ class ReferenceEditReplaceSelection:
         object.__setattr__(self, 'field', self.field)
         object.__setattr__(self, 'expected', tuple(self.expected))
         object.__setattr__(self, 'targets', tuple(self.targets))
+ReferenceEditReplaceSelection.__module__ = "zipzi.modeling"
 
 ReferenceEdit: TypeAlias = ReferenceEditCreateModelParameterGroup | ReferenceEditCreateModelHitArea | ReferenceEditCreateCdiCombinedSet | ReferenceEditCreateMember | ReferenceEditPatch | ReferenceEditMove | ReferenceEditDuplicate | ReferenceEditDelete | ReferenceEditDissolve | ReferenceEditReplaceSelection
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceCollectionModelParameterGroups:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'model_parameter_groups'
+ReferenceCollectionModelParameterGroups.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceCollectionModelHitAreas:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'model_hit_areas'
+ReferenceCollectionModelHitAreas.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceCollectionCdiCombinedSets:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'cdi_combined_sets'
+ReferenceCollectionCdiCombinedSets.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceCollectionModelParameterMembers:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'model_parameter_members'
     group_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'group_id', self.group_id)
+ReferenceCollectionModelParameterMembers.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceCollectionCdiCombinedMembers:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'cdi_combined_members'
     set_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'set_id', self.set_id)
+ReferenceCollectionCdiCombinedMembers.__module__ = "zipzi.modeling"
 
 ReferenceCollection: TypeAlias = ReferenceCollectionModelParameterGroups | ReferenceCollectionModelHitAreas | ReferenceCollectionCdiCombinedSets | ReferenceCollectionModelParameterMembers | ReferenceCollectionCdiCombinedMembers
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceFieldsModelParameterGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'model_parameter_group'
     name: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'name', self.name)
+ReferenceFieldsModelParameterGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceFieldsModelHitArea:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'model_hit_area'
     name: str
     mesh: ModelTargetRef
@@ -2850,74 +2849,75 @@ class ReferenceFieldsModelHitArea:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'mesh', self.mesh)
+ReferenceFieldsModelHitArea.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceFieldsModelParameterMember:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'model_parameter_member'
     target: ModelTargetRef
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'target', self.target)
+ReferenceFieldsModelParameterMember.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceFieldsCdiCombinedMember:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'cdi_combined_member'
     target: CdiParameterRef
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'target', self.target)
+ReferenceFieldsCdiCombinedMember.__module__ = "zipzi.modeling"
 
 ReferenceFields: TypeAlias = ReferenceFieldsModelParameterGroup | ReferenceFieldsModelHitArea | ReferenceFieldsModelParameterMember | ReferenceFieldsCdiCombinedMember
 
 @dataclass(frozen=True, kw_only=True)
 class ModelTargetRefUnspecified:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unspecified'
+ModelTargetRefUnspecified.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelTargetRefResolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resolved'
     object_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'object_id', self.object_id)
+ModelTargetRefResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelTargetRefUnresolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unresolved'
     runtime_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'runtime_id', self.runtime_id)
+ModelTargetRefUnresolved.__module__ = "zipzi.modeling"
 
 ModelTargetRef: TypeAlias = ModelTargetRefUnspecified | ModelTargetRefResolved | ModelTargetRefUnresolved
 
 @dataclass(frozen=True, kw_only=True)
 class CdiParameterRefUnspecified:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unspecified'
+CdiParameterRefUnspecified.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CdiParameterRefResolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resolved'
     parameter_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter_id', self.parameter_id)
+CdiParameterRefResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CdiParameterRefUnresolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unresolved'
     runtime_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'runtime_id', self.runtime_id)
+CdiParameterRefUnresolved.__module__ = "zipzi.modeling"
 
 CdiParameterRef: TypeAlias = CdiParameterRefUnspecified | CdiParameterRefResolved | CdiParameterRefUnresolved
 
@@ -2929,20 +2929,19 @@ class ReferenceSelectionField(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class ResourceEditCreate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create'
     id: str
     name: str
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ResourceEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ResourceEditPatchName:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'patch_name'
     id: str
     expected: str
@@ -2952,62 +2951,62 @@ class ResourceEditPatchName:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'expected', self.expected)
         object.__setattr__(self, 'name', self.name)
+ResourceEditPatchName.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ResourceEditSetContent:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'set_content'
     id: str
-    expected: (ImageContent | None) = field(default_factory=lambda: None if None is None else read_ImageContent(None))
-    content: (ImageContent | None) = field(default_factory=lambda: None if None is None else read_ImageContent(None))
+    expected: (ImageContent | None) = None
+    content: (ImageContent | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'expected', None if self.expected is None else self.expected)
         object.__setattr__(self, 'content', None if self.content is None else self.content)
+ResourceEditSetContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ResourceEditReorder:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'reorder'
     ids: tuple[str, ...]
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ResourceEditReorder.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ResourceEditDuplicate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'duplicate'
     source: str
     id: str
     name: str
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'source', self.source)
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+ResourceEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ResourceEditDelete:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete'
     id: str
-    replacement: (SceneReference | None) = field(default_factory=lambda: None if None is None else read_SceneReference(None))
+    replacement: (SceneReference | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'replacement', None if self.replacement is None else self.replacement)
+ResourceEditDelete.__module__ = "zipzi.modeling"
 
 ResourceEdit: TypeAlias = ResourceEditCreate | ResourceEditPatchName | ResourceEditSetContent | ResourceEditReorder | ResourceEditDuplicate | ResourceEditDelete
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentAuthoringEditPatch:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'patch'
     expected: DocumentValue
     value: DocumentValue
@@ -3015,76 +3014,76 @@ class DocumentAuthoringEditPatch:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'expected', self.expected)
         object.__setattr__(self, 'value', self.value)
+DocumentAuthoringEditPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentAuthoringEditRepairMissingAttachment:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'repair_missing_attachment'
     path: str
-    attachment_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    attachment_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'path', self.path)
         object.__setattr__(self, 'attachment_id', None if self.attachment_id is None else self.attachment_id)
+DocumentAuthoringEditRepairMissingAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentAuthoringEditRepairCdiParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'repair_cdi_parameter'
     runtime_id: str
-    parameter_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    parameter_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'runtime_id', self.runtime_id)
         object.__setattr__(self, 'parameter_id', None if self.parameter_id is None else self.parameter_id)
+DocumentAuthoringEditRepairCdiParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentAuthoringEditRepairCdiPart:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'repair_cdi_part'
     runtime_id: str
-    part_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    part_id: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'runtime_id', self.runtime_id)
         object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
+DocumentAuthoringEditRepairCdiPart.__module__ = "zipzi.modeling"
 
 DocumentAuthoringEdit: TypeAlias = DocumentAuthoringEditPatch | DocumentAuthoringEditRepairMissingAttachment | DocumentAuthoringEditRepairCdiParameter | DocumentAuthoringEditRepairCdiPart
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentValueLayout:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'layout'
-    value: (Mapping[str, float] | None) = field(default_factory=lambda: None if None is None else {key0: number(v0) for key0, v0 in record(None).items()})
+    value: (Mapping[str, float] | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', None if self.value is None else MappingProxyType({key0: v0 for key0, v0 in self.value.items()}))
+DocumentValueLayout.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentValueExportSettings:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'export_settings'
     value: ExportSettings
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+DocumentValueExportSettings.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentValueSourceCanvas:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'source_canvas'
-    value: (Canvas | None) = field(default_factory=lambda: None if None is None else read_Canvas(None))
+    value: (Canvas | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', None if self.value is None else self.value)
+DocumentValueSourceCanvas.__module__ = "zipzi.modeling"
 
 DocumentValue: TypeAlias = DocumentValueLayout | DocumentValueExportSettings | DocumentValueSourceCanvas
 
 @dataclass(frozen=True, kw_only=True)
 class ExportSettings:
-    __module__ = "zipzi.modeling"
     pixels_per_unit: float
-    bounds: (tuple[float, float, float, float] | None) = field(default_factory=lambda: None if None is None else cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(None))))
+    bounds: (tuple[float, float, float, float] | None) = None
     padding_fraction: float
     padding_pixels: float
     minimum_extent: float
@@ -3095,10 +3094,10 @@ class ExportSettings:
         object.__setattr__(self, 'padding_fraction', self.padding_fraction)
         object.__setattr__(self, 'padding_pixels', self.padding_pixels)
         object.__setattr__(self, 'minimum_extent', self.minimum_extent)
+ExportSettings.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class Canvas:
-    __module__ = "zipzi.modeling"
     width: float
     height: float
     origin: Vec2
@@ -3111,10 +3110,10 @@ class Canvas:
         object.__setattr__(self, 'origin', self.origin)
         object.__setattr__(self, 'pixels_per_unit', self.pixels_per_unit)
         object.__setattr__(self, 'flag', self.flag)
+Canvas.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentEditCreate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'create'
     id: str
     path: str
@@ -3122,10 +3121,10 @@ class AttachmentEditCreate:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'path', self.path)
+AttachmentEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentEditReplace:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'replace'
     expected: PackageAttachment
     attachment: PackageAttachment
@@ -3133,10 +3132,10 @@ class AttachmentEditReplace:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'expected', self.expected)
         object.__setattr__(self, 'attachment', self.attachment)
+AttachmentEditReplace.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentEditDuplicate:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'duplicate'
     source: str
     id: str
@@ -3146,105 +3145,105 @@ class AttachmentEditDuplicate:
         object.__setattr__(self, 'source', self.source)
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'path', self.path)
+AttachmentEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentEditDelete:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete'
     id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
+AttachmentEditDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentEditDeleteWithReplacement:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'delete_with_replacement'
     id: str
-    replacement: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    replacement: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'replacement', None if self.replacement is None else self.replacement)
+AttachmentEditDeleteWithReplacement.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentEditReorder:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'reorder'
     ids: tuple[str, ...]
-    before: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    before: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'before', None if self.before is None else self.before)
+AttachmentEditReorder.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentEditSetSound:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'set_sound'
     registration: str
-    reference: (AttachmentRef | None) = field(default_factory=lambda: None if None is None else read_AttachmentRef(None))
+    reference: (AttachmentRef | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'registration', self.registration)
         object.__setattr__(self, 'reference', None if self.reference is None else self.reference)
+AttachmentEditSetSound.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentEditSetUserData:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'set_user_data'
-    reference: (AttachmentRef | None) = field(default_factory=lambda: None if None is None else read_AttachmentRef(None))
+    reference: (AttachmentRef | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'reference', None if self.reference is None else self.reference)
+AttachmentEditSetUserData.__module__ = "zipzi.modeling"
 
 AttachmentEdit: TypeAlias = AttachmentEditCreate | AttachmentEditReplace | AttachmentEditDuplicate | AttachmentEditDelete | AttachmentEditDeleteWithReplacement | AttachmentEditReorder | AttachmentEditSetSound | AttachmentEditSetUserData
 
 @dataclass(frozen=True, kw_only=True)
 class PackageAttachment:
-    __module__ = "zipzi.modeling"
     id: str
     path: str
-    bytes: (bytes | None) = field(default_factory=lambda: None if None is None else _bytes(None))
+    bytes: (bytes | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'path', self.path)
         object.__setattr__(self, 'bytes', None if self.bytes is None else self.bytes)
+PackageAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentRefResolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resolved'
     attachment_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'attachment_id', self.attachment_id)
+AttachmentRefResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentRefUnresolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unresolved'
     path: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'path', self.path)
+AttachmentRefUnresolved.__module__ = "zipzi.modeling"
 
 AttachmentRef: TypeAlias = AttachmentRefResolved | AttachmentRefUnresolved
 
 @dataclass(frozen=True, kw_only=True)
 class ModelSetup:
-    __module__ = "zipzi.modeling"
-    source_canvas: (Canvas | None) = field(default_factory=lambda: None if None is None else read_Canvas(None))
+    source_canvas: (Canvas | None) = None
     export: ExportSettings
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'source_canvas', None if self.source_canvas is None else self.source_canvas)
         object.__setattr__(self, 'export', self.export)
+ModelSetup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class HierarchyOrder:
-    __module__ = "zipzi.modeling"
     organization: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     deformation: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     glues: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
@@ -3253,28 +3252,28 @@ class HierarchyOrder:
         object.__setattr__(self, 'organization', tuple(self.organization))
         object.__setattr__(self, 'deformation', tuple(self.deformation))
         object.__setattr__(self, 'glues', tuple(self.glues))
+HierarchyOrder.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class EditorState:
-    __module__ = "zipzi.modeling"
     objects: Mapping[str, ObjectEditorState] = field(default_factory=lambda: {key0: read_ObjectEditorState(v0) for key0, v0 in record({}).items()})
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'objects', MappingProxyType({key0: v0 for key0, v0 in self.objects.items()}))
+EditorState.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ObjectEditorState:
-    __module__ = "zipzi.modeling"
     hidden_in_editor: bool = field(default_factory=lambda: _boolean(False))
     locked: bool = field(default_factory=lambda: _boolean(False))
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'hidden_in_editor', self.hidden_in_editor)
         object.__setattr__(self, 'locked', self.locked)
+ObjectEditorState.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DrawOrderGroup:
-    __module__ = "zipzi.modeling"
     owner: str
     items: tuple[str, ...]
     min_order: int
@@ -3285,39 +3284,39 @@ class DrawOrderGroup:
         object.__setattr__(self, 'items', tuple(self.items))
         object.__setattr__(self, 'min_order', self.min_order)
         object.__setattr__(self, 'max_order', self.max_order)
+DrawOrderGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneKeyformWarp:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Warp'
     value: WarpKeyform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneKeyformWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneKeyformRotation:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Rotation'
     value: RotationKeyform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneKeyformRotation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneKeyformPart:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Part'
     value: PartKeyform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneKeyformPart.__module__ = "zipzi.modeling"
 
 SceneKeyform: TypeAlias = SceneKeyformWarp | SceneKeyformRotation | SceneKeyformPart
 
 @dataclass(frozen=True, kw_only=True)
 class GeometrySnapshot:
-    __module__ = "zipzi.modeling"
     version: Version
     mesh_id: str
     vertex_ids: tuple[int, ...]
@@ -3334,37 +3333,37 @@ class GeometrySnapshot:
         object.__setattr__(self, 'uvs', tuple(self.uvs))
         object.__setattr__(self, 'triangles', tuple(tuple(v0) for v0 in self.triangles))
         object.__setattr__(self, 'space', self.space)
+GeometrySnapshot.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GeometrySpaceModel:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Model'
+GeometrySpaceModel.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GeometrySpaceRotationLocal:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'RotationLocal'
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+GeometrySpaceRotationLocal.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GeometrySpaceWarpParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'WarpParameter'
     value: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+GeometrySpaceWarpParameter.__module__ = "zipzi.modeling"
 
 GeometrySpace: TypeAlias = GeometrySpaceModel | GeometrySpaceRotationLocal | GeometrySpaceWarpParameter
 
 @dataclass(frozen=True, kw_only=True)
 class TopologyReplacement:
-    __module__ = "zipzi.modeling"
     mesh: Mesh
-    binding: (MeshBinding | None) = field(default_factory=lambda: None if None is None else read_MeshBinding(None))
+    binding: (MeshBinding | None) = None
     blend_bindings: tuple[BlendShapeBinding, ...]
     glues: tuple[Glue, ...]
     vertex_mapping: Mapping[int, (int | None)]
@@ -3375,84 +3374,10 @@ class TopologyReplacement:
         object.__setattr__(self, 'blend_bindings', tuple(self.blend_bindings))
         object.__setattr__(self, 'glues', tuple(self.glues))
         object.__setattr__(self, 'vertex_mapping', MappingProxyType({key0: None if v0 is None else v0 for key0, v0 in self.vertex_mapping.items()}))
-
-@dataclass(frozen=True, kw_only=True)
-class ModelingIntentScene:
-    __module__ = "zipzi.modeling"
-    _variant: ClassVar[str] = 'scene'
-    value: SceneEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-
-@dataclass(frozen=True, kw_only=True)
-class ModelingIntentOrganization:
-    __module__ = "zipzi.modeling"
-    _variant: ClassVar[str] = 'organization'
-    value: OrganizationEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-
-@dataclass(frozen=True, kw_only=True)
-class ModelingIntentBinding:
-    __module__ = "zipzi.modeling"
-    _variant: ClassVar[str] = 'binding'
-    value: BindingAuthoringEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-
-@dataclass(frozen=True, kw_only=True)
-class ModelingIntentContent:
-    __module__ = "zipzi.modeling"
-    _variant: ClassVar[str] = 'content'
-    value: SceneContentEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-
-@dataclass(frozen=True, kw_only=True)
-class ModelingIntentReferences:
-    __module__ = "zipzi.modeling"
-    _variant: ClassVar[str] = 'references'
-    value: ReferenceEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-
-@dataclass(frozen=True, kw_only=True)
-class ModelingIntentResource:
-    __module__ = "zipzi.modeling"
-    _variant: ClassVar[str] = 'resource'
-    value: ResourceEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-
-@dataclass(frozen=True, kw_only=True)
-class ModelingIntentDocument:
-    __module__ = "zipzi.modeling"
-    _variant: ClassVar[str] = 'document'
-    value: DocumentAuthoringEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-
-@dataclass(frozen=True, kw_only=True)
-class ModelingIntentAttachment:
-    __module__ = "zipzi.modeling"
-    _variant: ClassVar[str] = 'attachment'
-    value: AttachmentEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-
-ModelingIntent: TypeAlias = ModelingIntentScene | ModelingIntentOrganization | ModelingIntentBinding | ModelingIntentContent | ModelingIntentReferences | ModelingIntentResource | ModelingIntentDocument | ModelingIntentAttachment
+TopologyReplacement.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingQuery:
-    __module__ = "zipzi.modeling"
     assets: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     meshes: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     parameters: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
@@ -3483,17 +3408,17 @@ class ModelingQuery:
         object.__setattr__(self, 'offscreens', tuple(self.offscreens))
         object.__setattr__(self, 'parameter_groups', tuple(self.parameter_groups))
         object.__setattr__(self, 'attachments', tuple(self.attachments))
+ModelingQuery.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OwnedModelingRecords:
-    __module__ = "zipzi.modeling"
     document_id: str
     setup: ModelSetup
     hierarchy_order: HierarchyOrder
     editor_state: EditorState
     display_info: DisplayInfo
     model3_settings: Model3Settings
-    draw_order_groups: (tuple[DrawOrderGroup, ...] | None) = field(default_factory=lambda: None if None is None else tuple(read_DrawOrderGroup(v0) for v0 in sequence(None)))
+    draw_order_groups: (tuple[DrawOrderGroup, ...] | None) = None
     ids: Mapping[str, tuple[str, ...]]
     assets: tuple[(ImageAsset | None), ...]
     meshes: tuple[(Mesh | None), ...]
@@ -3533,17 +3458,17 @@ class OwnedModelingRecords:
         object.__setattr__(self, 'offscreens', tuple(None if v0 is None else v0 for v0 in self.offscreens))
         object.__setattr__(self, 'parameter_groups', tuple(None if v0 is None else v0 for v0 in self.parameter_groups))
         object.__setattr__(self, 'attachments', tuple(None if v0 is None else v0 for v0 in self.attachments))
+OwnedModelingRecords.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DisplayInfo:
-    __module__ = "zipzi.modeling"
     origin: DisplayInfoOrigin
-    parameters: (tuple[CdiParameterEntry, ...] | None) = field(default_factory=lambda: None if None is None else tuple(read_CdiParameterEntry(v0) for v0 in sequence(None)))
-    parameter_groups: (tuple[CdiParameterGroup, ...] | None) = field(default_factory=lambda: None if None is None else tuple(read_CdiParameterGroup(v0) for v0 in sequence(None)))
-    parts: (tuple[CdiPartEntry, ...] | None) = field(default_factory=lambda: None if None is None else tuple(read_CdiPartEntry(v0) for v0 in sequence(None)))
-    combined_parameters: (tuple[CdiCombinedSet, ...] | None) = field(default_factory=lambda: None if None is None else tuple(read_CdiCombinedSet(v0) for v0 in sequence(None)))
+    parameters: (tuple[CdiParameterEntry, ...] | None) = None
+    parameter_groups: (tuple[CdiParameterGroup, ...] | None) = None
+    parts: (tuple[CdiPartEntry, ...] | None) = None
+    combined_parameters: (tuple[CdiCombinedSet, ...] | None) = None
     extensions: Mapping[str, ExtensionValue]
-    opaque_source_ids: (CdiNamespaceIds | None) = field(default_factory=lambda: None if None is None else read_CdiNamespaceIds(None))
+    opaque_source_ids: (CdiNamespaceIds | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'origin', self.origin)
@@ -3553,6 +3478,7 @@ class DisplayInfo:
         object.__setattr__(self, 'combined_parameters', None if self.combined_parameters is None else tuple(self.combined_parameters))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
         object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else self.opaque_source_ids)
+DisplayInfo.__module__ = "zipzi.modeling"
 
 class DisplayInfoOrigin(str, Enum):
     __module__ = "zipzi.modeling"
@@ -3561,24 +3487,23 @@ class DisplayInfoOrigin(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class CdiParameterEntryResolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resolved'
     parameter_id: str
-    group_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    group_id: (str | None) = None
     extensions: Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+CdiParameterEntryResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CdiParameterEntryUnresolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unresolved'
     runtime_id: str
     name: str
-    group_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    group_id: (str | None) = None
     extensions: Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
@@ -3586,12 +3511,12 @@ class CdiParameterEntryUnresolved:
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+CdiParameterEntryUnresolved.__module__ = "zipzi.modeling"
 
 CdiParameterEntry: TypeAlias = CdiParameterEntryResolved | CdiParameterEntryUnresolved
 
 @dataclass(frozen=True, kw_only=True)
 class CdiPartEntryResolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resolved'
     part_id: str
     extensions: Mapping[str, ExtensionValue]
@@ -3599,10 +3524,10 @@ class CdiPartEntryResolved:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'part_id', self.part_id)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+CdiPartEntryResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CdiPartEntryUnresolved:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'unresolved'
     runtime_id: str
     name: str
@@ -3612,32 +3537,32 @@ class CdiPartEntryUnresolved:
         object.__setattr__(self, 'runtime_id', self.runtime_id)
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+CdiPartEntryUnresolved.__module__ = "zipzi.modeling"
 
 CdiPartEntry: TypeAlias = CdiPartEntryResolved | CdiPartEntryUnresolved
 
 @dataclass(frozen=True, kw_only=True)
 class CdiCombinedSet:
-    __module__ = "zipzi.modeling"
     id: str
     members: tuple[ReferenceEntryCdiParameterRef, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'members', tuple(self.members))
+CdiCombinedSet.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEntryCdiParameterRef:
-    __module__ = "zipzi.modeling"
     id: str
     target: CdiParameterRef
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'target', self.target)
+ReferenceEntryCdiParameterRef.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CdiNamespaceIds:
-    __module__ = "zipzi.modeling"
     parameters: Mapping[str, str]
     parts: Mapping[str, str]
     groups: Mapping[str, str]
@@ -3646,17 +3571,17 @@ class CdiNamespaceIds:
         object.__setattr__(self, 'parameters', MappingProxyType({key0: v0 for key0, v0 in self.parameters.items()}))
         object.__setattr__(self, 'parts', MappingProxyType({key0: v0 for key0, v0 in self.parts.items()}))
         object.__setattr__(self, 'groups', MappingProxyType({key0: v0 for key0, v0 in self.groups.items()}))
+CdiNamespaceIds.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class Model3Settings:
-    __module__ = "zipzi.modeling"
-    groups: (tuple[ModelParameterGroup, ...] | None) = field(default_factory=lambda: None if None is None else tuple(read_ModelParameterGroup(v0) for v0 in sequence(None)))
-    layout: (Mapping[str, float] | None) = field(default_factory=lambda: None if None is None else {key0: number(v0) for key0, v0 in record(None).items()})
-    hit_areas: (tuple[ModelHitArea, ...] | None) = field(default_factory=lambda: None if None is None else tuple(read_ModelHitArea(v0) for v0 in sequence(None)))
-    user_data: (AttachmentRef | None) = field(default_factory=lambda: None if None is None else read_AttachmentRef(None))
+    groups: (tuple[ModelParameterGroup, ...] | None) = None
+    layout: (Mapping[str, float] | None) = None
+    hit_areas: (tuple[ModelHitArea, ...] | None) = None
+    user_data: (AttachmentRef | None) = None
     extensions: Mapping[str, ExtensionValue]
-    source_runtime_ids: (Mapping[str, str] | None) = field(default_factory=lambda: None if None is None else {key0: string(v0) for key0, v0 in record(None).items()})
-    source_content: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    source_runtime_ids: (Mapping[str, str] | None) = None
+    source_content: (str | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'groups', None if self.groups is None else tuple(self.groups))
@@ -3666,10 +3591,10 @@ class Model3Settings:
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
         object.__setattr__(self, 'source_runtime_ids', None if self.source_runtime_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.source_runtime_ids.items()}))
         object.__setattr__(self, 'source_content', None if self.source_content is None else self.source_content)
+Model3Settings.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelParameterGroup:
-    __module__ = "zipzi.modeling"
     id: str
     name: str
     parameters: tuple[ReferenceEntryModelTargetRef, ...]
@@ -3680,20 +3605,20 @@ class ModelParameterGroup:
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'parameters', tuple(self.parameters))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+ModelParameterGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceEntryModelTargetRef:
-    __module__ = "zipzi.modeling"
     id: str
     target: ModelTargetRef
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'target', self.target)
+ReferenceEntryModelTargetRef.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ModelHitArea:
-    __module__ = "zipzi.modeling"
     id: str
     name: str
     mesh: ModelTargetRef
@@ -3704,10 +3629,10 @@ class ModelHitArea:
         object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'mesh', self.mesh)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+ModelHitArea.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorScene:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'scene'
     id: str
     field: SceneField
@@ -3715,37 +3640,37 @@ class AddressSelectorScene:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'field', self.field)
+AddressSelectorScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorDrawingGroup:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'drawing_group'
     owner: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'owner', self.owner)
+AddressSelectorDrawingGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'binding'
     id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
+AddressSelectorBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorOrganization:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'organization'
     id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
+AddressSelectorOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorContent:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'content'
     id: str
     target: SceneContentTarget
@@ -3753,19 +3678,19 @@ class AddressSelectorContent:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'target', self.target)
+AddressSelectorContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorReference:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'reference'
     id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
+AddressSelectorReference.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorSelection:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'selection'
     owner: str
     field: ReferenceSelectionField
@@ -3773,33 +3698,34 @@ class AddressSelectorSelection:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'owner', self.owner)
         object.__setattr__(self, 'field', self.field)
+AddressSelectorSelection.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorResourceName:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resource_name'
     id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
+AddressSelectorResourceName.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorAttachmentPath:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'attachment_path'
     id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
+AddressSelectorAttachmentPath.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressSelectorDocument:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'document'
     field: DocumentField
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'field', self.field)
+AddressSelectorDocument.__module__ = "zipzi.modeling"
 
 AddressSelector: TypeAlias = AddressSelectorScene | AddressSelectorDrawingGroup | AddressSelectorBinding | AddressSelectorOrganization | AddressSelectorContent | AddressSelectorReference | AddressSelectorSelection | AddressSelectorResourceName | AddressSelectorAttachmentPath | AddressSelectorDocument
 
@@ -3821,7 +3747,6 @@ class SceneField(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentTargetVertexPosition:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'vertex_position'
     vertex_id: int
     shape: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -3829,28 +3754,28 @@ class SceneContentTargetVertexPosition:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'vertex_id', self.vertex_id)
         object.__setattr__(self, 'shape', self.shape)
+SceneContentTargetVertexPosition.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentTargetVertexUv:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'vertex_uv'
     vertex_id: int
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'vertex_id', self.vertex_id)
+SceneContentTargetVertexUv.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentTargetTriangle:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'triangle'
     slot: int
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'slot', self.slot)
+SceneContentTargetTriangle.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentTargetWarpPoint:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'warp_point'
     row: int
     column: int
@@ -3860,10 +3785,10 @@ class SceneContentTargetWarpPoint:
         object.__setattr__(self, 'row', self.row)
         object.__setattr__(self, 'column', self.column)
         object.__setattr__(self, 'shape', self.shape)
+SceneContentTargetWarpPoint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentTargetWarpBezierControl:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'warp_bezier_control'
     node: int
     component: int
@@ -3873,33 +3798,34 @@ class SceneContentTargetWarpBezierControl:
         object.__setattr__(self, 'node', self.node)
         object.__setattr__(self, 'component', self.component)
         object.__setattr__(self, 'shape', self.shape)
+SceneContentTargetWarpBezierControl.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentTargetGluePair:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'glue_pair'
     pair_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'pair_id', self.pair_id)
+SceneContentTargetGluePair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentTargetOffscreenKeyform:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'offscreen_keyform'
     slot: int
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'slot', self.slot)
+SceneContentTargetOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentTargetOffscreenMapping:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'offscreen_mapping'
     slot: PartKeyformSlot
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'slot', self.slot)
+SceneContentTargetOffscreenMapping.__module__ = "zipzi.modeling"
 
 SceneContentTarget: TypeAlias = SceneContentTargetVertexPosition | SceneContentTargetVertexUv | SceneContentTargetTriangle | SceneContentTargetWarpPoint | SceneContentTargetWarpBezierControl | SceneContentTargetGluePair | SceneContentTargetOffscreenKeyform | SceneContentTargetOffscreenMapping
 
@@ -3914,7 +3840,6 @@ class DocumentField(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchScene:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'scene'
     value: SceneFieldValue
     clear_glue_pairs: bool
@@ -3922,102 +3847,102 @@ class AddressPatchScene:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
         object.__setattr__(self, 'clear_glue_pairs', self.clear_glue_pairs)
+AddressPatchScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchDrawingRange:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'drawing_range'
     range: tuple[int, int]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'range', tuple(self.range))
+AddressPatchDrawingRange.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'binding'
     patch: BindingFieldPatch
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'patch', self.patch)
+AddressPatchBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchOrganization:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'organization'
     intent: OrganizationEdit
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'intent', self.intent)
+AddressPatchOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchContent:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'content'
     value: SceneContentValue
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+AddressPatchContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchReference:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'reference'
     fields: ReferenceFields
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'fields', self.fields)
+AddressPatchReference.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchSelection:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'selection'
     targets: tuple[str, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'targets', tuple(self.targets))
+AddressPatchSelection.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchResourceName:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resource_name'
     name: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'name', self.name)
+AddressPatchResourceName.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchAttachmentPath:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'attachment_path'
     path: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'path', self.path)
+AddressPatchAttachmentPath.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AddressPatchDocument:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'document'
     value: DocumentValue
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+AddressPatchDocument.__module__ = "zipzi.modeling"
 
 AddressPatch: TypeAlias = AddressPatchScene | AddressPatchDrawingRange | AddressPatchBinding | AddressPatchOrganization | AddressPatchContent | AddressPatchReference | AddressPatchSelection | AddressPatchResourceName | AddressPatchAttachmentPath | AddressPatchDocument
 
 @dataclass(frozen=True, kw_only=True)
 class BindingFieldPatchSampleValue:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'SampleValue'
     value: float
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+BindingFieldPatchSampleValue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingFieldPatchConstraintSample:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'ConstraintSample'
     value: float
     weight: float
@@ -4025,64 +3950,65 @@ class BindingFieldPatchConstraintSample:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
         object.__setattr__(self, 'weight', self.weight)
+BindingFieldPatchConstraintSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingFieldPatchAxisParameter:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'AxisParameter'
     parameter_id: str
-    reduction: (AxisReduction | None) = field(default_factory=lambda: None if None is None else read_AxisReduction(None))
+    reduction: (AxisReduction | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'reduction', None if self.reduction is None else self.reduction)
+BindingFieldPatchAxisParameter.__module__ = "zipzi.modeling"
 
 BindingFieldPatch: TypeAlias = BindingFieldPatchSampleValue | BindingFieldPatchConstraintSample | BindingFieldPatchAxisParameter
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentValuePoint:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'point'
     value: Vec2
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneContentValuePoint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentValueTriangle:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'triangle'
     value: tuple[int, int, int]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', tuple(self.value))
+SceneContentValueTriangle.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentValueGluePair:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'glue_pair'
     value: GlueVertexPair
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneContentValueGluePair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentValueOffscreenKeyform:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'offscreen_keyform'
     value: OffscreenKeyform
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneContentValueOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentValueMapping:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'mapping'
     value: int
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+SceneContentValueMapping.__module__ = "zipzi.modeling"
 
 SceneContentValue: TypeAlias = SceneContentValuePoint | SceneContentValueTriangle | SceneContentValueGluePair | SceneContentValueOffscreenKeyform | SceneContentValueMapping
 
@@ -4098,138 +4024,137 @@ class CapabilityDomain(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class CollectionQueryScene:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'scene'
     collection: SceneCollection
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'collection', self.collection)
+CollectionQueryScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CollectionQueryOrganization:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'organization'
     collection: OrganizationCollection
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'collection', self.collection)
+CollectionQueryOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CollectionQueryReferences:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'references'
     collection: ReferenceCollection
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'collection', self.collection)
+CollectionQueryReferences.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CollectionQueryResources:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resources'
+CollectionQueryResources.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CollectionQueryAttachments:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'attachments'
+CollectionQueryAttachments.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CollectionQueryDocument:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'document'
     field: DocumentField
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'field', self.field)
+CollectionQueryDocument.__module__ = "zipzi.modeling"
 
 CollectionQuery: TypeAlias = CollectionQueryScene | CollectionQueryOrganization | CollectionQueryReferences | CollectionQueryResources | CollectionQueryAttachments | CollectionQueryDocument
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesScene:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'scene'
     value: SceneCapabilities
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesOrganization:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'organization'
     value: OrganizationCapabilities
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesBinding:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'binding'
     value: BindingCapabilities
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesContent:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'content'
     value: SceneContentCapabilities
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesReferences:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'references'
     value: ReferenceCapabilities
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesReferences.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesResource:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'resource'
     value: ResourceCapabilities
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesResource.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesAttachment:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'attachment'
     value: AttachmentCapabilities
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesCollection:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'collection'
     value: CollectionCapabilities
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesCollection.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilitiesDocument:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'document'
     value: CapabilityState
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'value', self.value)
+CapabilitiesDocument.__module__ = "zipzi.modeling"
 
 Capabilities: TypeAlias = CapabilitiesScene | CapabilitiesOrganization | CapabilitiesBinding | CapabilitiesContent | CapabilitiesReferences | CapabilitiesResource | CapabilitiesAttachment | CapabilitiesCollection | CapabilitiesDocument
 
 @dataclass(frozen=True, kw_only=True)
 class SceneCapabilities:
-    __module__ = "zipzi.modeling"
     inspect: CapabilityState
     patch: CapabilityState
     move_object: CapabilityState
@@ -4248,35 +4173,35 @@ class SceneCapabilities:
         object.__setattr__(self, 'duplicate', self.duplicate)
         object.__setattr__(self, 'delete', self.delete)
         object.__setattr__(self, 'dissolve', self.dissolve)
+SceneCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilityStateAvailable:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Available'
+CapabilityStateAvailable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilityStateUnsupported:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Unsupported'
     code: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'code', self.code)
+CapabilityStateUnsupported.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CapabilityStateUnavailable:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'Unavailable'
     code: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'code', self.code)
+CapabilityStateUnavailable.__module__ = "zipzi.modeling"
 
 CapabilityState: TypeAlias = CapabilityStateAvailable | CapabilityStateUnsupported | CapabilityStateUnavailable
 
 @dataclass(frozen=True, kw_only=True)
 class OrganizationCapabilities:
-    __module__ = "zipzi.modeling"
     inspect: CapabilityState
     patch: CapabilityState
     create_child: CapabilityState
@@ -4295,10 +4220,10 @@ class OrganizationCapabilities:
         object.__setattr__(self, 'duplicate', self.duplicate)
         object.__setattr__(self, 'delete', self.delete)
         object.__setattr__(self, 'dissolve', self.dissolve)
+OrganizationCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class BindingCapabilities:
-    __module__ = "zipzi.modeling"
     inspect: CapabilityState
     patch: CapabilityState
     create_child: CapabilityState
@@ -4315,10 +4240,10 @@ class BindingCapabilities:
         object.__setattr__(self, 'delete', self.delete)
         object.__setattr__(self, 'repair', self.repair)
         object.__setattr__(self, 'preview', self.preview)
+BindingCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class SceneContentCapabilities:
-    __module__ = "zipzi.modeling"
     inspect: CapabilityState
     edit: CapabilityState
     topology: CapabilityState
@@ -4327,10 +4252,10 @@ class SceneContentCapabilities:
         object.__setattr__(self, 'inspect', self.inspect)
         object.__setattr__(self, 'edit', self.edit)
         object.__setattr__(self, 'topology', self.topology)
+SceneContentCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ReferenceCapabilities:
-    __module__ = "zipzi.modeling"
     inspect: CapabilityState
     patch: CapabilityState
     create_child: CapabilityState
@@ -4347,10 +4272,10 @@ class ReferenceCapabilities:
         object.__setattr__(self, 'duplicate', self.duplicate)
         object.__setattr__(self, 'delete', self.delete)
         object.__setattr__(self, 'dissolve', self.dissolve)
+ReferenceCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ResourceCapabilities:
-    __module__ = "zipzi.modeling"
     inspect: CapabilityState
     patch: CapabilityState
     load_content: CapabilityState
@@ -4365,10 +4290,10 @@ class ResourceCapabilities:
         object.__setattr__(self, 'duplicate', self.duplicate)
         object.__setattr__(self, 'delete', self.delete)
         object.__setattr__(self, 'reorder', self.reorder)
+ResourceCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class AttachmentCapabilities:
-    __module__ = "zipzi.modeling"
     inspect: CapabilityState
     patch: CapabilityState
     duplicate: CapabilityState
@@ -4381,10 +4306,10 @@ class AttachmentCapabilities:
         object.__setattr__(self, 'duplicate', self.duplicate)
         object.__setattr__(self, 'delete', self.delete)
         object.__setattr__(self, 'load_content', self.load_content)
+AttachmentCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class CollectionCapabilities:
-    __module__ = "zipzi.modeling"
     create: CapabilityState
     move_into: CapabilityState
     reorder: CapabilityState
@@ -4393,6 +4318,7 @@ class CollectionCapabilities:
         object.__setattr__(self, 'create', self.create)
         object.__setattr__(self, 'move_into', self.move_into)
         object.__setattr__(self, 'reorder', self.reorder)
+CollectionCapabilities.__module__ = "zipzi.modeling"
 
 class ObjectKind(str, Enum):
     __module__ = "zipzi.modeling"
@@ -4439,7 +4365,6 @@ class ObjectKind(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class ModelingSamples:
-    __module__ = "zipzi.modeling"
     version: Version
     parameters: tuple[Mapping[str, float], ...]
     frames: tuple[DrawableFrame, ...]
@@ -4450,10 +4375,10 @@ class ModelingSamples:
         object.__setattr__(self, 'parameters', tuple(MappingProxyType({key1: v1 for key1, v1 in v0.items()}) for v0 in self.parameters))
         object.__setattr__(self, 'frames', tuple(self.frames))
         object.__setattr__(self, 'diagnostics', tuple(self.diagnostics))
+ModelingSamples.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class DrawableFrame:
-    __module__ = "zipzi.modeling"
     source_revision: int
     parameters: tuple[EvaluatedParameter, ...]
     drawables: tuple[Drawable, ...]
@@ -4468,10 +4393,10 @@ class DrawableFrame:
         object.__setattr__(self, 'offscreens', tuple(self.offscreens))
         object.__setattr__(self, 'render_plan', tuple(self.render_plan))
         object.__setattr__(self, 'deformers', tuple(self.deformers))
+DrawableFrame.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class EvaluatedParameter:
-    __module__ = "zipzi.modeling"
     id: str
     requested: float
     value: float
@@ -4482,14 +4407,14 @@ class EvaluatedParameter:
         object.__setattr__(self, 'requested', self.requested)
         object.__setattr__(self, 'value', self.value)
         object.__setattr__(self, 'clamped', self.clamped)
+EvaluatedParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class Drawable:
-    __module__ = "zipzi.modeling"
     id: str
     runtime_id: str
     part_id: str
-    raw_blend_mode: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    raw_blend_mode: (int | None) = None
     texture_asset_id: str
     texture_slot: int
     renderable: bool = field(default_factory=lambda: _boolean(True))
@@ -4530,15 +4455,15 @@ class Drawable:
         object.__setattr__(self, 'double_sided', self.double_sided)
         object.__setattr__(self, 'inverted_mask', self.inverted_mask)
         object.__setattr__(self, 'masks', tuple(self.masks))
+Drawable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class OffscreenFrame:
-    __module__ = "zipzi.modeling"
     renderable: bool = field(default_factory=lambda: _boolean(True))
     id: str
     runtime_id: str
     owner_part_id: str
-    parent_offscreen_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    parent_offscreen_id: (str | None) = None
     render_order: int
     opacity: float
     enabled: bool
@@ -4562,61 +4487,62 @@ class OffscreenFrame:
         object.__setattr__(self, 'masks', tuple(self.masks))
         object.__setattr__(self, 'multiply_color', tuple(self.multiply_color))
         object.__setattr__(self, 'screen_color', tuple(self.screen_color))
+OffscreenFrame.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class RenderCommandBeginOffscreen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'BeginOffscreen'
     offscreen_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'offscreen_id', self.offscreen_id)
+RenderCommandBeginOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class RenderCommandDrawMesh:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'DrawMesh'
     mesh_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh_id', self.mesh_id)
+RenderCommandDrawMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class RenderCommandEndOffscreen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'EndOffscreen'
     offscreen_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'offscreen_id', self.offscreen_id)
+RenderCommandEndOffscreen.__module__ = "zipzi.modeling"
 
 RenderCommand: TypeAlias = RenderCommandBeginOffscreen | RenderCommandDrawMesh | RenderCommandEndOffscreen
 
 @dataclass(frozen=True, kw_only=True)
 class EvaluatedDeformer:
-    __module__ = "zipzi.modeling"
     id: str
     enabled: bool
     points: tuple[Vec2, ...]
-    rotation_axis: (Vec2 | None) = field(default_factory=lambda: None if None is None else read_Vec2(None))
+    rotation_axis: (Vec2 | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'enabled', self.enabled)
         object.__setattr__(self, 'points', tuple(self.points))
         object.__setattr__(self, 'rotation_axis', None if self.rotation_axis is None else self.rotation_axis)
+EvaluatedDeformer.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class GeometryDiagnostic:
-    __module__ = "zipzi.modeling"
     kind: GeometryDiagnosticKind
     mesh_id: str
-    triangle_index: (int | None) = field(default_factory=lambda: None if None is None else integer(None))
+    triangle_index: (int | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'kind', self.kind)
         object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'triangle_index', None if self.triangle_index is None else self.triangle_index)
+GeometryDiagnostic.__module__ = "zipzi.modeling"
 
 class GeometryDiagnosticKind(str, Enum):
     __module__ = "zipzi.modeling"
@@ -4626,12 +4552,11 @@ class GeometryDiagnosticKind(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectRequestDiagnose:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'diagnose'
+ProjectRequestDiagnose.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectRequestImport:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'import'
     path: str
     format: ImportFormat
@@ -4641,19 +4566,19 @@ class ProjectRequestImport:
         object.__setattr__(self, 'path', self.path)
         object.__setattr__(self, 'format', self.format)
         object.__setattr__(self, 'textures', tuple(self.textures))
+ProjectRequestImport.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectRequestOpen:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'open'
     path: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'path', self.path)
+ProjectRequestOpen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectRequestNew:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'new'
     document_id: str
     setup: ModelSetup
@@ -4661,15 +4586,15 @@ class ProjectRequestNew:
     def __post_init__(self) -> None:
         object.__setattr__(self, 'document_id', self.document_id)
         object.__setattr__(self, 'setup', self.setup)
+ProjectRequestNew.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectRequestExport:
-    __module__ = "zipzi.modeling"
     _variant: ClassVar[str] = 'export'
     path: str
     format: ExportFormat
     name: str
-    object_id: (str | None) = field(default_factory=lambda: None if None is None else string(None))
+    object_id: (str | None) = None
     allow_loss: bool
     bake_animation: bool
     auto_frame_rate: bool
@@ -4682,6 +4607,7 @@ class ProjectRequestExport:
         object.__setattr__(self, 'allow_loss', self.allow_loss)
         object.__setattr__(self, 'bake_animation', self.bake_animation)
         object.__setattr__(self, 'auto_frame_rate', self.auto_frame_rate)
+ProjectRequestExport.__module__ = "zipzi.modeling"
 
 ProjectRequest: TypeAlias = ProjectRequestDiagnose | ProjectRequestImport | ProjectRequestOpen | ProjectRequestNew | ProjectRequestExport
 
@@ -4694,13 +4620,13 @@ class ImportFormat(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class TextureSlot:
-    __module__ = "zipzi.modeling"
     slot: int
     path: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'slot', self.slot)
         object.__setattr__(self, 'path', self.path)
+TextureSlot.__module__ = "zipzi.modeling"
 
 class ExportFormat(str, Enum):
     __module__ = "zipzi.modeling"
@@ -4716,7 +4642,6 @@ class ExportFormat(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectReport:
-    __module__ = "zipzi.modeling"
     before: Version
     after: Version
     warnings: tuple[str, ...]
@@ -4733,10 +4658,10 @@ class ProjectReport:
         object.__setattr__(self, 'published', self.published)
         object.__setattr__(self, 'durable', self.durable)
         object.__setattr__(self, 'paths', tuple(self.paths))
+ProjectReport.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectDiagnostic:
-    __module__ = "zipzi.modeling"
     severity: str
     code: str
     object_id: str
@@ -4747,10 +4672,10 @@ class ProjectDiagnostic:
         object.__setattr__(self, 'code', self.code)
         object.__setattr__(self, 'object_id', self.object_id)
         object.__setattr__(self, 'message', self.message)
+ProjectDiagnostic.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True)
 class EditorContext:
-    __module__ = "zipzi.modeling"
     version: Version
     view_id: str
     selected_ids: tuple[str, ...]
@@ -4767,6 +4692,7 @@ class EditorContext:
         object.__setattr__(self, 'editing_context', self.editing_context)
         object.__setattr__(self, 'active_tool', self.active_tool)
         object.__setattr__(self, 'pending_interaction', self.pending_interaction)
+EditorContext.__module__ = "zipzi.modeling"
 
 def validate_ModelingCommand(value: ModelingCommand) -> None:
     if isinstance(value, ModelingCommandCreateAsset):
@@ -8969,67 +8895,6 @@ def read_TopologyReplacement(value: object) -> TopologyReplacement:
     if isinstance(value, TopologyReplacement): return value
     r = record(value)
     return TopologyReplacement(mesh=read_Mesh(r['mesh']), binding=None if r.get('binding', None) is None else read_MeshBinding(r.get('binding', None)), blend_bindings=tuple(read_BlendShapeBinding(v0) for v0 in sequence(r['blend_bindings'])), glues=tuple(read_Glue(v0) for v0 in sequence(r['glues'])), vertex_mapping={int(key0): None if v0 is None else integer(v0) for key0, v0 in record(r['vertex_mapping']).items()})
-
-def validate_ModelingIntent(value: ModelingIntent) -> None:
-    if isinstance(value, ModelingIntentScene):
-        validate_SceneEdit(value.value)
-    elif isinstance(value, ModelingIntentOrganization):
-        validate_OrganizationEdit(value.value)
-    elif isinstance(value, ModelingIntentBinding):
-        validate_BindingAuthoringEdit(value.value)
-    elif isinstance(value, ModelingIntentContent):
-        validate_SceneContentEdit(value.value)
-    elif isinstance(value, ModelingIntentReferences):
-        validate_ReferenceEdit(value.value)
-    elif isinstance(value, ModelingIntentResource):
-        validate_ResourceEdit(value.value)
-    elif isinstance(value, ModelingIntentDocument):
-        validate_DocumentAuthoringEdit(value.value)
-    elif isinstance(value, ModelingIntentAttachment):
-        validate_AttachmentEdit(value.value)
-    else:
-        raise TypeError("Expected ModelingIntent")
-
-def encode_ModelingIntent(value: ModelingIntent) -> object:
-    if isinstance(value, ModelingIntentScene):
-        return {'domain': 'scene', 'intent': encode_SceneEdit(value.value)}
-    elif isinstance(value, ModelingIntentOrganization):
-        return {'domain': 'organization', 'intent': encode_OrganizationEdit(value.value)}
-    elif isinstance(value, ModelingIntentBinding):
-        return {'domain': 'binding', 'intent': encode_BindingAuthoringEdit(value.value)}
-    elif isinstance(value, ModelingIntentContent):
-        return {'domain': 'content', 'intent': encode_SceneContentEdit(value.value)}
-    elif isinstance(value, ModelingIntentReferences):
-        return {'domain': 'references', 'intent': encode_ReferenceEdit(value.value)}
-    elif isinstance(value, ModelingIntentResource):
-        return {'domain': 'resource', 'intent': encode_ResourceEdit(value.value)}
-    elif isinstance(value, ModelingIntentDocument):
-        return {'domain': 'document', 'intent': encode_DocumentAuthoringEdit(value.value)}
-    elif isinstance(value, ModelingIntentAttachment):
-        return {'domain': 'attachment', 'intent': encode_AttachmentEdit(value.value)}
-    raise TypeError("Expected ModelingIntent")
-
-def read_ModelingIntent(value: object) -> ModelingIntent:
-    if isinstance(value, (ModelingIntentScene, ModelingIntentOrganization, ModelingIntentBinding, ModelingIntentContent, ModelingIntentReferences, ModelingIntentResource, ModelingIntentDocument, ModelingIntentAttachment,)): return value
-    r = record(value)
-    tag = string(r['domain'])
-    if tag == 'scene':
-        return ModelingIntentScene(value=read_SceneEdit(r['intent']))
-    elif tag == 'organization':
-        return ModelingIntentOrganization(value=read_OrganizationEdit(r['intent']))
-    elif tag == 'binding':
-        return ModelingIntentBinding(value=read_BindingAuthoringEdit(r['intent']))
-    elif tag == 'content':
-        return ModelingIntentContent(value=read_SceneContentEdit(r['intent']))
-    elif tag == 'references':
-        return ModelingIntentReferences(value=read_ReferenceEdit(r['intent']))
-    elif tag == 'resource':
-        return ModelingIntentResource(value=read_ResourceEdit(r['intent']))
-    elif tag == 'document':
-        return ModelingIntentDocument(value=read_DocumentAuthoringEdit(r['intent']))
-    elif tag == 'attachment':
-        return ModelingIntentAttachment(value=read_AttachmentEdit(r['intent']))
-    raise ValueError("Unknown ModelingIntent variant")
 
 def validate_ModelingQuery(value: ModelingQuery) -> None:
     if not isinstance(value, ModelingQuery):

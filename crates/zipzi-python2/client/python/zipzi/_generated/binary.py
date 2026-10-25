@@ -5,8 +5,9 @@ from typing import cast
 from uuid import UUID
 import math
 import struct
-from .. import ops, scene, meshes, modeling as m
+from .. import _operations as ops, scene, meshes, modeling as m
 from .._values import Source,Version
+from .._results import Snapshot
 from .._values import record, sequence, string, integer, number
 from .._extensions import ExtensionValue
 
@@ -115,7 +116,7 @@ class Reader:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
 
-INPUT_SIGNATURE = '1e7b02ba79fc51665344aceb6d99830a'
+INPUT_SIGNATURE = 'b0e6a81b763ab1aedf3e3ad23d41357a'
 MESH_SIGNATURE = 'cb015ab5a478573311b0ddac626078ea'
 BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
 SAMPLE_SIGNATURE = '33cfb73ff96616c25d9d5f06db944d7e'
@@ -3007,6 +3008,11 @@ def _write_meshoperation(value: object, w: Writer) -> None:
         w.u32(1)
         w.text(_field(value, 'id'))
         w.text(_field(value, 'name'))
+        if _field(value, 'expected_name') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'expected_name'))
     elif tag=='set_positions':
         w.u32(2)
         w.text(_field(value, 'id'))
@@ -3283,8 +3289,8 @@ def _read_geometrydiagnostickind(r: Reader) -> m.GeometryDiagnosticKind:
         return m.GeometryDiagnosticKind('OutsideModelBounds')
     raise ValueError("Unknown binary GeometryDiagnosticKind variant")
 
-def _read_meshsnapshot(r: Reader) -> meshes.Snapshot:
-    return meshes.Snapshot(source=_read_sourceref(r), id=r.text(), name=r.text(), geometry=_read_meshgeometry(r))
+def _read_meshsnapshot(r: Reader) -> Snapshot[meshes.Mesh]:
+    return Snapshot(_read_sourceref(r), meshes.Mesh(id=r.text(), name=r.text(), geometry=_read_meshgeometry(r)))
 
 def _read_sourceref(r: Reader) -> Source:
     tag=r.u32()
@@ -3298,7 +3304,7 @@ def _read_sourceref(r: Reader) -> Source:
     sequence=integer(r.scalar("Q")) if tag==1 else 0
     return Source(runtime,session,version,edit,sequence)
 
-def encode_operations(operations: tuple[ops.Operation, ...]) -> bytes:
+def encode_operations(operations: tuple[ops.WireOperation, ...]) -> bytes:
     if len(operations)>1024: raise ValueError("Too many authoring operations")
     w=Writer()
     w.raw(b"ZZA1"); w.raw(int(INPUT_SIGNATURE,16).to_bytes(16,"little")); w.u32(len(operations))
@@ -3331,8 +3337,17 @@ def encode_operations(operations: tuple[ops.Operation, ...]) -> bytes:
             w.u32(5); w.u32(1)
             w.text(operation.id)
             _write_imageid(operation.image._token, w)
-        elif isinstance(operation,ops.ApplyPlan):
+        elif isinstance(operation,ops.RenameImage):
             w.u32(5); w.u32(2)
+            w.text(operation.id)
+            w.text(operation.name)
+            if operation.expected_name is None:
+                w.raw(b"\0")
+            else:
+                w.raw(b"\1")
+                w.text(operation.expected_name)
+        elif isinstance(operation,ops.ApplyPlan):
+            w.u32(5); w.u32(3)
             _write_planid(operation.plan._token, w)
         else:
             raise TypeError("Expected typed authoring operation")
@@ -3352,7 +3367,7 @@ def decode_samples(value: bytes, signature: str) -> m.ModelingSamples:
     r.finish()
     return result
 
-def decode_meshes(value: bytes,signature:str)->tuple[meshes.Snapshot,...]:
+def decode_meshes(value: bytes,signature:str)->tuple[Snapshot[meshes.Mesh],...]:
     if signature!=MESH_SIGNATURE: raise ValueError("Binary mesh contract differs")
     r=Reader(value)
     result=tuple(_read_meshsnapshot(r) for _ in range(r.count()))

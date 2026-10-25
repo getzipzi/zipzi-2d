@@ -24,6 +24,8 @@ def render_modeling(contract, header, rust_header):
         elif k in {'string_map','index_map'}:visit(s['value'])
         elif k not in {'string','bool','u8','u16','u32','u64','usize','i32','i64','f32','f64','json','bytes'}:raise ValueError('Unsupported modeling shape '+k)
     for s in contract['roots']:visit(s)
+    public_shapes=set(shapes)
+    for s in contract.get('native_only_roots',[]):visit(s)
     input_names=set()
     def mark(s):
         if 'name' in s and s['kind'] in {'serde_record','serde_enum','record','union','opaque'}:input_names.add(s['name'])
@@ -35,6 +37,7 @@ def render_modeling(contract, header, rust_header):
         if 'item' in s:mark(s['item'])
         if 'value' in s and isinstance(s['value'],dict):mark(s['value'])
     for index in contract.get('input_roots',[0,1,2]):mark(contract['roots'][index])
+    for s in contract.get('native_only_roots',[]):mark(s)
     names={n:''.join(re.findall(r'(?:^|::)([A-Z][A-Za-z0-9_]*)', n)) if '<' in n else n.rsplit('::',1)[-1] for n in shapes}
     if len(set(names.values()))!=len(names):raise ValueError('Duplicate selected modeling name')
     def path(s):
@@ -45,6 +48,9 @@ def render_modeling(contract, header, rust_header):
         return n
     def nm(s):return names[s['name']]
     def pn(f):return f['name'] + ('_' if keyword.iskeyword(f['name']) else '')
+    def access(s,f):
+        if nm(s) in {'Vec2','PreciseVec2','GeometryBounds'}:return 'value.get_item('+str(fields(s).index(f))+')?'
+        return 'value.getattr("'+('intent' if nm(s)=='ModelingIntent' else pn(f))+'")?'
     def fields(s):return [f for f in s.get('fields',[]) if not f.get('skip')]
     def variants(s):
         return [dict(v, name=v.get('name',v.get('wire_name')),form=v.get('form','record')) for v in s['variants']]
@@ -134,12 +140,16 @@ def render_modeling(contract, header, rust_header):
         if n in {'Vec2','PreciseVec2'}:
             py.extend(['class '+n+'(NamedTuple):', '    __module__ = \"zipzi.modeling\"']+[ '    '+pn(f)+': '+typ(f['shape']) for f in fs]+[''])
             return
-        py.extend(['@dataclass(frozen=True, kw_only=True)','class '+n+':','    __module__ = "zipzi.modeling"'])
+        py.extend(['@dataclass(frozen=True, kw_only=True)','class '+n+':'])
         if tag is not None:py.append('    _variant: ClassVar[str] = '+repr(tag))
         if n.startswith('ModelingCommand'):py.append('    kind: ClassVar[str] = \"modeling\"')
         for f in fs:
             default=''
-            if 'rust_name' in f and 'default' in f and f['default'] not in ({'kind':'null'}, {'kind':'empty_string'}):
+            if f['shape']['kind']=='optional' and f.get('default') in (None, {'kind':'null'}):
+                default=' = None'
+            elif f.get('default')=={'kind':'empty_string'}:
+                default=' = ""'
+            elif f.get('default') is not None:
                 value=f['default']
                 default=' = field(default_factory=lambda: '+decode(f['shape'],repr(value))+')'
             py.append('    '+pn(f)+': '+typ(f['shape'])+default)
@@ -147,8 +157,9 @@ def render_modeling(contract, header, rust_header):
         if fs:
             py.extend(['','    def __post_init__(self) -> None:'])
             for f in fs:py.append('        object.__setattr__(self, '+repr(pn(f))+', '+freeze(f['shape'],'self.'+pn(f))+')')
-        py.append('')
+        py.extend([n+'.__module__ = "zipzi.modeling"', ''])
     for s in shapes.values():
+        if nm(s)=='ModelingIntent' or s['name'] not in public_shapes: continue
         if s['kind']=='opaque':
             if nm(s)!='Version':raise ValueError('Unselected opaque modeling type')
             continue
@@ -161,6 +172,7 @@ def render_modeling(contract, header, rust_header):
             py.extend([nm(s)+': TypeAlias = '+' | '.join(vn(s,v) for v in variants(s)),''])
         else:record_class(nm(s),fields(s))
     for s in shapes.values():
+        if nm(s)=='ModelingIntent' or s['name'] not in public_shapes: continue
         n=nm(s);fs=fields(s)
         if s['kind']=='opaque':
             py+=['def validate_Version(value: Version) -> None:', '    if not isinstance(value, Version): raise TypeError(\"Expected Version\")', '', 'def encode_Version(value: Version) -> object:', '    return dict(session_id=value.session_id, generation=value.generation, revision=value.revision)', '', 'def read_Version(value: object) -> Version:', '    return Version.read(value)', '']
@@ -261,7 +273,7 @@ def render_modeling(contract, header, rust_header):
         elif enum(s):
             rust+=['    match value.getattr("_variant")?.extract::<String>()?.as_str() {']
             for v in variants(s):
-                vs=fields(v);args=[nr(f['shape'],'value.getattr("'+pn(f)+'")?') for f in vs]
+                vs=fields(v);args=[nr(f['shape'],'value.getattr("'+('intent' if nm(s)=='ModelingIntent' else pn(f))+'")?') for f in vs]
                 val=n+'::'+v['rust_name']
                 if v['form']=='record':val+=' { '+', '.join(f.get('rust_name',f['name'])+': '+arg for f,arg in zip(vs,args))+' }'
                 elif v['form'] in {'tuple','newtype'}:val+='('+', '.join(args)+')'
@@ -270,10 +282,11 @@ def render_modeling(contract, header, rust_header):
         elif s.get('transparent'):
             rust+=['    Ok(value.getattr("'+fs[0]['name']+'")?.extract::<String>()?.into())']
         else:
-            entries=[f.get('rust_name',f['name'])+': '+('Default::default()' if f.get('skip') else nr(f['shape'],'value.getattr("'+pn(f)+'")?')) for f in s['fields']]
+            entries=[f.get('rust_name',f['name'])+': '+('Default::default()' if f.get('skip') else nr(f['shape'],access(s,f))) for f in s['fields']]
             rust+=['    Ok('+n.replace('<', '::<', 1)+' { '+', '.join(entries)+' })']
         rust+=['}', '']
         if s['name'] not in input_names:del rust[read_start:]
+        if nm(s)=='ModelingIntent' or s['name'] not in public_shapes:continue
         rust+=['pub fn '+wn(s)+"(py: Python<'_>, value: &"+n+') -> PyResult<Py<PyAny>> {', '    let classes=PyModule::import(py, \"zipzi._generated.modeling\")?;', '    '+wn(s)+'_in(py,value,&classes)', '}', 'fn '+wn(s)+"_in(py: Python<'_>, value: &"+n+", classes:&Bound<'_,PyModule>) -> PyResult<Py<PyAny>> {"]
         if unit(s):
             rust+=['    let name=match value {']
@@ -335,12 +348,12 @@ def render_modeling(contract, header, rust_header):
             rust += ['    match value.getattr("_variant")?.extract::<String>()?.as_str() {']
             for v in variants(s):
                 expr='256usize'
-                for f in fields(v):expr+='.saturating_add('+measure(f['shape'],'value.getattr("'+pn(f)+'")?')+')'
+                for f in fields(v):expr+='.saturating_add('+measure(f['shape'],access(s,f))+')'
                 rust += ['        "'+v['name']+'"=>Ok('+expr+'),']
             rust += ['        _=>Err(pyo3::exceptions::PyTypeError::new_err("Unexpected modeling variant")),','    }']
         else:
             expr='256usize'
-            for f in fields(s):expr+='.saturating_add('+measure(f['shape'],'value.getattr("'+pn(f)+'")?')+')'
+            for f in fields(s):expr+='.saturating_add('+measure(f['shape'],access(s,f))+')'
             rust += ['    Ok('+expr+')']
         rust += ['}','']
     object_kind=next((s for s in shapes.values() if nm(s)=='ObjectKind'),None)

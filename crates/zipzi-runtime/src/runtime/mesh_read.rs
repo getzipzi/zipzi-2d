@@ -134,14 +134,14 @@ impl Runtime {
             reservation
                 .commit(&data, zipzi_project::ImageBufferKind::Blob)
                 .map_err(|_| RuntimeError::Budget("binary mesh registration"))?;
-            Ok(Some((data, length)))
+            Ok(Some((data, length, source)))
         })?;
         match output {
             None => Ok(None),
-            Some((data, length)) => {
+            Some((data, length, source)) => {
                 let blob = self.retain_blob(client, data)?;
                 Ok(Some(
-                    serde_json::json!({"blob":blob,"length":length,"signature":format!("{:032x}",Vec::<MeshSnapshot>::SIGNATURE),"single":single}),
+                    serde_json::json!({"blob":blob,"length":length,"signature":format!("{:032x}",Vec::<MeshSnapshot>::SIGNATURE),"single":single,"source":source}),
                 ))
             }
         }

@@ -16,7 +16,7 @@ fixed geometry/history and the independent Rust SDK tests.
 | Typed events | `session.subscribe`, `sessions.subscribe`, `runtime.events_since`, `poll/resync` | Same Runtime metadata subscription and bounded event pages | Independent readers, exact cursor, explicit resync, lost creation/poll, native UI Undo on another client | R3 minimum implemented |
 | Mesh batch reads | `session/edit.meshes.get_many` | Whole-selection Runtime admission and selected shared mesh conversion | Source/order/duplicates, total-byte refusal before copies, same-ID recovery, installed recipe | R3 minimum implemented |
 | Session creation/info | `runtime.sessions.create`, `session.info` | `Runtime::create_session/session_info` | Shared recipe, response-loss tests | Implemented |
-| Create | `edit.meshes.create` / `ops.Create` | `Runtime::apply_authoring` → SDK `MeshCreateSpec` | SDK `mesh_create_spec_allocates_identity_and_keeps_defaults_in_sdk`; shared recipe | Implemented |
+| Create | `edit.meshes.create` / `meshes.Create` | `Runtime::apply_authoring` → SDK `MeshCreateSpec` | SDK `mesh_create_spec_allocates_identity_and_keeps_defaults_in_sdk`; shared recipe | Implemented |
 | Rename/positions | Convenience methods / typed operation values | `Runtime::apply_authoring` → SDK `MeshOperation` | Candidate read-after-write, independent vertex IDs/positions | Implemented |
 | Ordered batch | `edit.apply_many` | Same `Runtime::apply_authoring` | Create with explicit ID then rename; middle failure and admission rejection | Implemented |
 | Immutable query | `session/edit.meshes.get` | `Runtime::mesh_snapshot` | Source relationship, fixed geometry, frozen values; Runtime budget/session tests | Implemented |
@@ -30,7 +30,7 @@ fixed geometry/history and the independent Rust SDK tests.
 | Import without native | Values, errors, Connected backend | Pure Python | Isolated process without extension | Implemented |
 | PreparedImage | `runtime.resources.prepare_image`, `pixels`, `close`/context | Client-owned Runtime image table + SDK preparation | A/B independence; 100 cancelled sources reclaim actual Rust bytes; response-loss recovery; both installed wheels | Implemented; direct bytes or reusable Buffer, aggregate admission |
 | Image create/replace/query | `edit.resources.create_image/replace_image`, `session/edit.resources.get`, typed ops | `Runtime::apply_authoring/image_snapshot` → SDK image methods | Fixed pixels, immutable snapshots, mixed mesh/resource batch, Undo/Redo, save/reopen | Selected P1 implemented |
-| Formal/candidate Plan | Typed rename intents, cached report, `edit.apply_plan` / `ops.ApplyPlan` | Source-bound Runtime plans through `apply_authoring` | Exact source, stale/foreign/closed refusal, batch rollback, report after close, same-ID recovery | Selected P1 implemented; P3 expands |
+| Formal/candidate Plan | Domain operations, cached report, `session.plan` / `edit.plan` / `edit.apply(plan)` | Source-bound Runtime plans through `apply_authoring` | Exact source, stale/foreign/closed refusal, batch rollback, report after close, same-ID recovery | Selected P1 implemented; P3 expands |
 | Binary buffers/large images | `prepare_buffer`, `prepare_image`, Buffer reads | Binary chunks, SHA256, immutable blobs and leases | Every transfer-phase loss, seal peak, owner/hash negatives, installed large grid and images | Implemented R4 |
 | Mesh binding/keyforms | `bindings.MeshBindingSpec/Keyform`, `session/edit.bindings`, typed ops | SDK spec/core canonical identities; unified Runtime candidate batch | Numerical interpolation/clamp, identity retention, failures/no-op/redo, installed recovery/save/reopen and real Editor | Selected Runtime R4 slice implemented |
 | Selected scene/organization | `scene` typed ops, `session/edit.scene.get/get_many/plan` | SDK `SceneOperation` → existing scene/organization/content/binding intentions → unified Runtime batch | Local/Connected scene/group/Glue/Offscreen recipe, plans, save/reopen; installed wheels and Editor Part/group projections | P3 started; selected slice implemented |
@@ -63,4 +63,10 @@ Python [P3A-0](../../docs/plans/python-sdk-rewrite/p3a-0.md) has passed its free
 cached state and JobTimeout with source/type/installed evidence. P3A-1 is accepted;
 the user waived this round's final performance noise blocker. Raw failed measurements
 and the original P0 policy remain unchanged.
-P3A-2–6 and the overall API/agent contract remain unaccepted.
+P3A-3–6 and the overall API/agent contract remain unaccepted.
+
+[P3A-2](../../docs/plans/python-sdk-rewrite/p3a-2.md) is accepted. Existing reads
+use root `Snapshot[T]`/`Batch[T]` with pure payloads and exact empty-batch sources.
+Domain operations, the common plan/apply path, generated parameter/binding/sampling/
+event/reference DTOs and root `PlanCost`/`PlanReport` are implemented.
+`Page`/`PageCursor` are value shapes; collection pagination remains P3A-4.

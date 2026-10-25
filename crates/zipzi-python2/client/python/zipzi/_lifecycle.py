@@ -1,13 +1,17 @@
 """Handwritten ownership/known-state wrappers. Runtime remains authoritative."""
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Generic, Literal, TypeVar
-from . import bindings, sampling, events, meshes, ops, parameters, plans, resources, scene, references, modeling
+from typing import Generic, Literal, TypeVar, overload
+from . import bindings, sampling, events, meshes, ops, parameters, _plans as plans, resources, scene, references, modeling
 from ._errors import Busy, JobTimeout, OutcomeUnknown, SdkFailure
 from ._values import ConnectionInfo, Receipt, SaveReceipt, Source, SessionId, SessionInfo, WriteResult, record, sequence
 from .backends import Backend, JobKind
 from ._recovery import RecoveryOwner
 from ._calls import Call, known, project, single_id
+from . import _operations as operations
+from ._generated.planning import ModelingPlanOperation, MODELING_PLAN_TYPES
+from ._results import Batch, Snapshot
+from . import _queries as queries
 from enum import Enum
 import math
 import time
@@ -224,21 +228,27 @@ class Session:
     @property
     def id(self) -> SessionId:
         return self._id
+    def plan(self, operation: ops.PlannableOperation) -> plans.Plan:
+        return plans.Plan.create(self._backend, self._token, None, operation)
+
+    def plan_async(self, operation: ModelingPlanOperation) -> Job[plans.Plan]:
+        return _plan_job(self._backend, self._token, None, operation)
+
     def address(self, selector: modeling.AddressSelector) -> references.FieldAddress:
         return references.FieldAddress.create(self._backend, self._token, selector)
 
-    def capabilities(self, query: modeling.CollectionQuery) -> modeling.CapabilitySnapshot:
+    def capabilities(self, query: modeling.CollectionQuery) -> Snapshot[modeling.Capabilities]:
         modeling.validate_CollectionQuery(query)
-        return known(lambda: modeling.CapabilitySnapshot.read(self._backend.collection_capabilities(self._token, query, self)),
-            lambda: modeling.CapabilitySnapshot.read(self._backend.recover(self)))
+        return known(lambda: queries.capabilities(self._backend.collection_capabilities(self._token, query, self)),
+            lambda: queries.capabilities(self._backend.recover(self)))
 
     def reference(self, kind: references.ObjectKind, id: str) -> references.ObjectRef:
         return references.ObjectRef.create(self._backend, self._token, kind, id)
     def info(self) -> SessionInfo:
         return known(lambda: SessionInfo.read(self._backend.info(self._token, self)),
             lambda: SessionInfo.read(self._backend.recover(self)))
-    def editor_context(self)->modeling.EditorSnapshot:
-        return known(lambda:modeling.EditorSnapshot.read(self._backend.editor_context(self._token,self)),lambda:modeling.EditorSnapshot.read(self._backend.recover(self)))
+    def editor_context(self)->Snapshot[modeling.EditorContext | None]:
+        return known(lambda:queries.editor_context(self._backend.editor_context(self._token,self)),lambda:queries.editor_context(self._backend.recover(self)))
     def show_window(self) -> None:
         """Display this resident session in its desktop host."""
         known(lambda: self._backend.show_window(self._token, self), lambda: self._backend.recover(self))
@@ -274,19 +284,23 @@ class Project:
 class Meshes:
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
-    def get(self,id:str)->meshes.Snapshot:
-        s=self._session
-        return known(lambda:meshes.Snapshot.read(s._backend.mesh(s._token,id,None if self._edit is None else self._edit._token,self)),lambda:meshes.Snapshot.read(s._backend.recover(self)))
-    def get_many(self,ids:Sequence[str])->tuple[meshes.Snapshot,...]:
-        owned=tuple(ids)
-        if any(not isinstance(id,str) for id in owned):raise TypeError("Expected mesh ID text")
-        s=self._session
-        def decode(raw:object)->tuple[meshes.Snapshot,...]:return tuple(meshes.Snapshot.read(v) for v in sequence(raw))
-        return known(lambda:decode(s._backend.meshes(s._token,None if self._edit is None else self._edit._token,owned,self)),lambda:decode(s._backend.recover(self)))
-
-    def plan(self, intent: meshes.RenameIntent) -> plans.Plan:
+    def get(self, id: str) -> Snapshot[meshes.Mesh]:
         s = self._session
-        return plans.Plan.create(s._backend, s._token, None if self._edit is None else self._edit._token, intent)
+        def decode(raw: object) -> Snapshot[meshes.Mesh]:
+            return queries.snapshot(raw, meshes.Mesh.read)
+        return known(lambda: decode(s._backend.mesh(s._token, id,
+            None if self._edit is None else self._edit._token, self)), lambda: decode(s._backend.recover(self)))
+
+    def get_many(self, ids: Sequence[str]) -> Batch[meshes.Mesh]:
+        owned = tuple(ids)
+        if any(not isinstance(id, str) for id in owned):
+            raise TypeError("Expected mesh ID text")
+        s = self._session
+        def decode(raw: object) -> Batch[meshes.Mesh]:
+            return queries.batch(raw, "items", meshes.Mesh.read)
+        return known(lambda: decode(s._backend.meshes(s._token,
+            None if self._edit is None else self._edit._token, owned, self)), lambda: decode(s._backend.recover(self)))
+
 
 class Images:
     def snapshot(self,id:str)->resources.ImageLease:
@@ -294,13 +308,12 @@ class Images:
         return resources.ImageLease.capture(s._backend,s._token,None if self._edit is None else self._edit._token,id)
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
-    def get(self, id: str) -> resources.Snapshot:
+    def get(self, id: str) -> Snapshot[resources.Image]:
         s = self._session
-        return known(lambda: resources.Snapshot.read(s._backend.image(s._token, id, None if self._edit is None else self._edit._token, self)),
-            lambda: resources.Snapshot.read(s._backend.recover(self)))
-    def plan(self, intent: resources.RenameIntent) -> plans.Plan:
-        s = self._session
-        return plans.Plan.create(s._backend, s._token, None if self._edit is None else self._edit._token, intent)
+        def decode(raw: object) -> Snapshot[resources.Image]:
+            return queries.snapshot(raw, resources.Image.read)
+        return known(lambda: decode(s._backend.image(s._token, id,
+            None if self._edit is None else self._edit._token, self)), lambda: decode(s._backend.recover(self)))
 
 class EditableImages(Images, ImageConveniences):
     def __init__(self, session: Session, edit: "Edit"):
@@ -315,23 +328,23 @@ class EditableMeshes(Meshes, MeshConveniences):
 class Parameters:
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
-    def _read(self, ids: tuple[str, ...] | None) -> parameters.Batch:
+    def _read(self, ids: tuple[str, ...] | None) -> Batch[parameters.Parameter]:
         s = self._session
-        return known(lambda: parameters.Batch.read(s._backend.parameters(s._token,
-            None if self._edit is None else self._edit._token, ids, self)),
-            lambda: parameters.Batch.read(s._backend.recover(self)))
-    def get(self, id: str) -> parameters.Snapshot:
-        s = self._session
-        def decode(raw: object) -> parameters.Snapshot:
-            return parameters.Batch.read(raw).items[0]
+        def decode(raw: object) -> Batch[parameters.Parameter]:
+            return queries.batch(raw, "parameters", parameters.Parameter.read)
         return known(lambda: decode(s._backend.parameters(s._token,
-            None if self._edit is None else self._edit._token, (id,), self)), lambda: decode(s._backend.recover(self)))
-    def get_many(self, ids: Sequence[str]) -> parameters.Batch:
+            None if self._edit is None else self._edit._token, ids, self)), lambda: decode(s._backend.recover(self)))
+
+    def get(self, id: str) -> Snapshot[parameters.Parameter]:
+        return project(lambda: self._read((id,)), queries.single, operation="parameters.get", inputs=(id,))
+
+    def get_many(self, ids: Sequence[str]) -> Batch[parameters.Parameter]:
         owned = tuple(ids)
         if any(not isinstance(id, str) for id in owned):
-            raise TypeError("Expected parameter ID text")
+            raise TypeError("Expected parameters ID text")
         return self._read(owned)
-    def list(self) -> parameters.Batch:
+
+    def list(self) -> Batch[parameters.Parameter]:
         return self._read(None)
 
 class EditableParameters(Parameters):
@@ -339,30 +352,31 @@ class EditableParameters(Parameters):
         super().__init__(session, edit)
         self._owner = edit
     def create(self, spec: parameters.ParameterSpec) -> str:
-        return project(lambda: self._owner._construct_and_apply(lambda: ops.CreateParameter(spec)),
+        return project(lambda: self._owner._construct_and_apply(lambda: parameters.Create(spec)),
                        single_id, operation="parameters.create", inputs=(spec,))
-    def patch(self, id: str, patch: parameters.Patch) -> WriteResult:
-        return self._owner._construct_and_apply(lambda: ops.PatchParameter(id, patch))
+    def patch(self, id: str, patch: parameters.ParameterPatch) -> WriteResult:
+        return self._owner._construct_and_apply(lambda: parameters.Patch(id, patch))
 
 class Bindings:
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
-    def _read(self, ids: tuple[str, ...] | None) -> bindings.Batch:
+    def _read(self, ids: tuple[str, ...] | None) -> Batch[bindings.MeshBinding]:
         s = self._session
-        return known(lambda: bindings.Batch.read(s._backend.bindings(s._token,
-            None if self._edit is None else self._edit._token, ids, self)), lambda: bindings.Batch.read(s._backend.recover(self)))
-    def get(self, id: str) -> bindings.Snapshot:
-        s = self._session
-        def decode(raw: object) -> bindings.Snapshot:
-            return bindings.Batch.read(raw).items[0]
+        def decode(raw: object) -> Batch[bindings.MeshBinding]:
+            return queries.batch(raw, "bindings", bindings.MeshBinding.read)
         return known(lambda: decode(s._backend.bindings(s._token,
-            None if self._edit is None else self._edit._token, (id,), self)), lambda: decode(s._backend.recover(self)))
-    def get_many(self, ids: Sequence[str]) -> bindings.Batch:
+            None if self._edit is None else self._edit._token, ids, self)), lambda: decode(s._backend.recover(self)))
+
+    def get(self, id: str) -> Snapshot[bindings.MeshBinding]:
+        return project(lambda: self._read((id,)), queries.single, operation="bindings.get", inputs=(id,))
+
+    def get_many(self, ids: Sequence[str]) -> Batch[bindings.MeshBinding]:
         owned = tuple(ids)
         if any(not isinstance(id, str) for id in owned):
-            raise TypeError("Expected binding ID text")
+            raise TypeError("Expected bindings ID text")
         return self._read(owned)
-    def list(self) -> bindings.Batch:
+
+    def list(self) -> Batch[bindings.MeshBinding]:
         return self._read(None)
 
 class EditableBindings(Bindings):
@@ -370,75 +384,60 @@ class EditableBindings(Bindings):
         super().__init__(session, edit)
         self._owner = edit
     def create(self, spec: bindings.MeshBindingSpec) -> str:
-        return project(lambda: self._owner._construct_and_apply(lambda: ops.CreateMeshBinding(spec)),
+        return project(lambda: self._owner._construct_and_apply(lambda: bindings.Create(spec)),
                        single_id, operation="bindings.create", inputs=(spec,))
     def set_keyform(self, id: str, keyform: bindings.Keyform) -> WriteResult:
-        return self._owner._construct_and_apply(lambda: ops.SetMeshKeyform(id, keyform))
+        return self._owner._construct_and_apply(lambda: bindings.SetKeyform(id, keyform))
 
 class Scene:
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
 
-    def get_many(self, ids: Sequence[str]) -> scene.Batch:
+    def get_many(self, ids: Sequence[str]) -> Batch[scene.Summary]:
         owned = tuple(ids)
         if any(not isinstance(id, str) for id in owned):
             raise TypeError("Expected scene IDs")
         s = self._session
-        return known(lambda: scene.Batch.read(s._backend.scene(s._token,
-            None if self._edit is None else self._edit._token, owned, self)),
-            lambda: scene.Batch.read(s._backend.recover(self)))
+        def decode(raw: object) -> Batch[scene.Summary]:
+            return queries.batch(raw, "items", scene.Summary.read)
+        return known(lambda: decode(s._backend.scene(s._token,
+            None if self._edit is None else self._edit._token, owned, self)), lambda: decode(s._backend.recover(self)))
 
-    def get(self, id: str) -> scene.Snapshot:
-        return project(lambda: self.get_many((id,)), lambda batch: scene.Snapshot(batch.source, batch.items[0]),
+    def get(self, id: str) -> Snapshot[scene.Summary]:
+        return project(lambda: self.get_many((id,)), queries.single,
                        operation="scene.get", inputs=(id,))
 
-    def plan(self, operation: scene.Operation) -> plans.Plan:
-        s = self._session
-        return plans.Plan.create_scene(s._backend, s._token,
-            None if self._edit is None else self._edit._token, operation)
 
 class Modeling:
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
-    def records(self, query: modeling.ModelingQuery) -> modeling.Records:
+    def records(self, query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]:
         modeling.validate_ModelingQuery(query)
         s = self._session
-        return known(lambda: modeling.Records.read(s._backend.modeling_records(s._token,
+        return known(lambda: queries.records(s._backend.modeling_records(s._token,
             None if self._edit is None else self._edit._token, query, self)),
-            lambda: modeling.Records.read(s._backend.recover(self)))
-
-    def plan(self, intent: modeling.ModelingIntent) -> plans.Plan:
-        s = self._session
-        return plans.Plan.create_modeling(s._backend, s._token,
-            None if self._edit is None else self._edit._token, intent)
-
-    def plan_async(self, intent: modeling.ModelingIntent) -> Job[plans.Plan]:
-        modeling.validate_ModelingIntent(intent)
-        s = self._session
-        return Job[plans.Plan].start(s._backend, lambda owner: s._backend.modeling_plan_job(s._token,
-            None if self._edit is None else self._edit._token, intent, owner), "planned",
-            lambda value: plans.Plan(s._backend)._load(value))
+            lambda: queries.records(s._backend.recover(self)))
 
     def sample_async(self, poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks = sampling.Checks(),
-        expected: Source | None = None) -> Job[sampling.Batch]:
+        expected: Source | None = None) -> Job[Snapshot[sampling.Result]]:
         owned = sampling.inputs(poses)
         if not isinstance(checks, sampling.Checks) or (expected is not None and not isinstance(expected, Source)):
             raise TypeError("Expected Checks and optional Source")
         checks.wire()
         s = self._session
-        return Job[sampling.Batch].start(s._backend, lambda owner: s._backend.sample_job(s._token,
-            None if self._edit is None else self._edit._token, owned, checks, expected, owner), "sampled", sampling.Batch.read)
+        return Job[Snapshot[sampling.Result]].start(s._backend, lambda owner: s._backend.sample_job(s._token,
+            None if self._edit is None else self._edit._token, owned, checks, expected, owner), "sampled", sampling.read)
 
     def sample(self, poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks = sampling.Checks(),
-        expected: Source | None = None) -> sampling.Batch:
+        expected: Source | None = None) -> Snapshot[sampling.Result]:
         owned = sampling.inputs(poses)
         if not isinstance(checks, sampling.Checks) or (expected is not None and not isinstance(expected, Source)):
             raise TypeError("Expected Checks and optional Source")
         checks.wire()
         s = self._session
-        return known(lambda: sampling.Batch.read(s._backend.sample(s._token,
+        return known(lambda: sampling.read(s._backend.sample(s._token,
             None if self._edit is None else self._edit._token, owned, checks, expected, self)),
-            lambda: sampling.Batch.read(s._backend.recover(self)))
+            lambda: sampling.read(s._backend.recover(self)))
 
 class EditState(str, Enum):
     editing = "editing"
@@ -541,7 +540,19 @@ class Edit(RecoveryOwner):
                 self._state = EditState.cancelled
         self._run("release", lambda: self._backend.release(self._token, self), released)
 
-    def apply(self, operation: ops.Operation) -> WriteResult:
+    def plan(self, operation: ops.PlannableOperation) -> plans.Plan:
+        self._ensure_editing()
+        return plans.Plan.create(self._backend, self._session._token, self._token, operation)
+
+    def plan_async(self, operation: ModelingPlanOperation) -> Job[plans.Plan]:
+        self._ensure_editing()
+        return _plan_job(self._backend, self._session._token, self._token, operation)
+
+    @overload
+    def apply(self, operation: ops.Operation) -> WriteResult: ...
+    @overload
+    def apply(self, operation: plans.Plan) -> WriteResult: ...
+    def apply(self, operation: ops.Operation | plans.Plan) -> WriteResult:
         return self.apply_many((operation,))
 
     def _construct_and_apply(self, construct: Callable[[], ops.Operation]) -> WriteResult:
@@ -553,26 +564,24 @@ class Edit(RecoveryOwner):
             raise
         return self.apply(operation)
 
-    def apply_plan(self, plan: plans.Plan) -> WriteResult:
-        return self.apply(ops.ApplyPlan(plan))
-
-    def apply_many(self, operations: Sequence[ops.Operation]) -> WriteResult:
+    def apply_many(self, values: Sequence[ops.Operation | plans.Plan]) -> WriteResult:
         self._ensure_editing()
         try:
-            owned = tuple(operations)
+            owned = tuple(values)
         except (TypeError, ValueError, OverflowError, AttributeError) as error:
             self._poison(error)
             raise
         def execute() -> object:
-            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan, ops.CreateParameter, ops.PatchParameter, ops.CreateMeshBinding, ops.SetMeshKeyform, *ops.scene.OPERATION_TYPES, *modeling.OPERATION_TYPES)) for op in owned):
-                raise TypeError("Expected typed authoring operations")
-            for op in owned:
-                ops.validate(op)
-                if isinstance(op, (ops.CreateImage, ops.ReplaceImage)):
+            if any(isinstance(op, plans.Plan) for op in owned[1:]):
+                raise ValueError("A batch accepts at most one Plan, in its first position")
+            wire = tuple(operations.ApplyPlan(op) if isinstance(op, plans.Plan) else op for op in owned)
+            for op in wire:
+                operations.validate(op)
+                if isinstance(op, (resources.CreateImage, resources.ReplaceImage)):
                     op.image._check(self._backend)
-                elif isinstance(op, ops.ApplyPlan):
+                elif isinstance(op, operations.ApplyPlan):
                     op.plan._check(self._backend)
-            return self._backend.apply(self._token, owned, self)
+            return self._backend.apply(self._token, wire, self)
         def applied(raw: object) -> WriteResult:
             value = WriteResult.read(raw)
             self._state, self._unknown = EditState.editing, None
@@ -649,3 +658,12 @@ class Edit(RecoveryOwner):
             if self._failure is not None:
                 raise self._failure
             raise SdkFailure("EDIT_CLOSED", "Edit did not reach a confirmed terminal state", edit_state=self._state.value)
+
+
+def _plan_job(backend: Backend, session: object, edit: object | None,
+              operation: ModelingPlanOperation) -> Job[plans.Plan]:
+    if not isinstance(operation, MODELING_PLAN_TYPES):
+        raise TypeError("This operation is not registered for asynchronous planning")
+    modeling.validate_ModelingCommand(operation)
+    return Job[plans.Plan].start(backend, lambda owner: backend.modeling_plan_job(session, edit, operation, owner),
+        "planned", lambda raw: plans.Plan(backend)._load(raw))

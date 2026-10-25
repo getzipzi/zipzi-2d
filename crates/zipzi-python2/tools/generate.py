@@ -30,11 +30,15 @@ _MODELING_SPEC = importlib.util.spec_from_file_location('zipzi_modeling_codegen'
 _modeling_codegen = importlib.util.module_from_spec(_MODELING_SPEC)
 _MODELING_SPEC.loader.exec_module(_modeling_codegen)
 
+_DTO_SPEC = importlib.util.spec_from_file_location('zipzi_dto_codegen', PACKAGE / 'tools/generate_dtos.py')
+_dto_codegen = importlib.util.module_from_spec(_DTO_SPEC)
+_DTO_SPEC.loader.exec_module(_dto_codegen)
+
 _BINARY_SPEC = importlib.util.spec_from_file_location('zipzi_binary_codegen', PACKAGE / 'tools/generate_binary.py')
 _binary_codegen = importlib.util.module_from_spec(_BINARY_SPEC)
 _BINARY_SPEC.loader.exec_module(_binary_codegen)
 
-TARGETS = _binary_codegen.TARGETS | _modeling_codegen.TARGETS | RESOURCE_TARGETS | _scene_codegen.TARGETS | frozenset({
+TARGETS = _dto_codegen.TARGETS | _binary_codegen.TARGETS | _modeling_codegen.TARGETS | RESOURCE_TARGETS | _scene_codegen.TARGETS | frozenset({
     'schema/mesh.json',
     'client/python/zipzi/_generated/__init__.py',
     'client/python/zipzi/_generated/meshes.py',
@@ -68,7 +72,7 @@ class Model:
                 raise ValueError('Unsupported public module')
             if binding["rust"] in self.bindings:
                 raise ValueError("Duplicate type binding")
-            if binding["form"] not in {"point", "record", "owned_record", "union", "query", "token", "source", "handle", "version"}:
+            if binding["form"] not in {"point", "record", "owned_record", "snapshot", "union", "query", "token", "source", "handle", "version"}:
                 raise ValueError("Unsupported public projection")
             self.bindings[binding["rust"]] = binding
         self.types = {}
@@ -86,7 +90,7 @@ class Model:
         if not resources and len(contract["operations"]) != 1:
             raise ValueError("Expected exactly the selected query registration")
         self.operation = contract["operations"][0]
-        self.records = [self.types[b["rust"]] for b in contract["bindings"] if b["form"] in {"record", "owned_record"}]
+        self.records = [self.types[b["rust"]] for b in contract["bindings"] if b["form"] in {"record", "owned_record", "snapshot"}]
         self.union = next(self.types[b["rust"]] for b in contract["bindings"] if b["form"] == "union")
         # Convenience return policies are reviewed API decisions, not fields.
         if not resources and [v["rust_name"] for v in self.union["variants"]] != ["Create", "Rename", "SetPositions"]:
@@ -251,20 +255,30 @@ def render_mesh(contract):
     if len(fields) != 2 or any(f["shape"]["kind"] != "f32" for f in fields):
         raise ValueError("Point adapter requires exactly two f32 fields")
     mesh = [HEADER.rstrip(), '"""Selected immutable mesh values, derived from Rust declarations."""',
-        'from dataclasses import dataclass', 'from .._values import Source, integer, number, record, sequence, string', '',
+        'from dataclasses import dataclass', 'from collections.abc import Sequence', 'from .._values import integer, number, record, sequence, string', '',
         'Point = tuple[float, float]', '', 'def _point(value: object) -> Point:', '    r = record(value)',
         '    return (' + ', '.join(m.read(f["shape"], f'r["{f["name"]}"]') for f in fields) + ')', '',
         'def _array3(value: object) -> tuple[int, int, int]:', '    raw = sequence(value)', '    if len(raw) != 3:',
         '        raise ValueError("Invalid triangle")', '    return integer(raw[0]), integer(raw[1]), integer(raw[2])', '']
     for shape in m.records:
         b = m.binding(shape)
-        mesh += ['@dataclass(frozen=True)', f'class {b["name"]}:', f'    __module__ = "zipzi.{b["module"]}"']
-        for f in shape["fields"]:
+        mesh += ['@dataclass(frozen=True'+(', init=False' if b['form']=='owned_record' else '')+')', f'class {b["name"]}:', f'    __module__ = "zipzi.{b["module"]}"']
+        value_fields = [f for f in shape["fields"] if b["form"] != "snapshot" or f["name"] != "source"]
+        for f in value_fields:
             default = f.get("default")
             suffix = '' if default is None else ' = ' + ('None' if default['kind'] == 'null' else '""')
             mesh.append(f'    {f["name"]}: {m.pytype(f["shape"])}{suffix}')
         if b["form"] == "owned_record":
-            mesh += ['', '    def __post_init__(self) -> None:']
+            def input_type(shape):
+                if shape['kind'] in {'sequence','array'}:return 'Sequence['+input_type(shape['item'])+']'
+                if shape['kind']=='record' and m.binding(shape)['form']=='point':return 'Sequence[float]'
+                return m.pytype(shape)
+            mesh += ['', '    def __init__(self, '+', '.join(f['name']+': '+input_type(f['shape']) for f in value_fields)+') -> None:']
+            for f in value_fields:
+                expr=f['name'];item=f['shape'].get('item',{})
+                expr='tuple(tuple(item) for item in '+expr+')' if item.get('kind') in {'record','array'} else 'tuple('+expr+')'
+                mesh += ['        object.__setattr__(self, '+repr(f['name'])+', '+expr+')']
+            mesh += ['        self.__post_init__()', '', '    def __post_init__(self) -> None:']
             # Constructor checks only ownership/shape; finite/range validation
             # belongs to the common write conversion, not geometry algorithms.
             for f in shape["fields"]:
@@ -277,13 +291,25 @@ def render_mesh(contract):
                 if size:
                     mesh += [f'        if any(not isinstance(item, tuple) or len(item) != {size} for item in {expr}):', '            raise TypeError("Invalid geometry array shape")']
         mesh += ['', '    @classmethod', f'    def read(cls, value: object) -> "{b["name"]}":', '        if isinstance(value,cls): return value', '        r = record(value)',
-            '        return cls(' + ', '.join(m.read(f['shape'], ('r.get("' + f['name'] + '", ' + ('None' if f['default']['kind'] == 'null' else '""') + ')') if f['default'] else f'r["{f["name"]}"]') for f in shape['fields']) + ')', '']
-    ops = [HEADER.rstrip(), 'from dataclasses import dataclass, field', 'from typing import Literal', 'import math',
+            '        return cls(' + ', '.join(m.read(f['shape'], ('r.get("' + f['name'] + '", ' + ('None' if f['default']['kind'] == 'null' else '""') + ')') if f['default'] else f'r["{f["name"]}"]') for f in value_fields) + ')', '']
+    ops = [HEADER.rstrip(), 'from collections.abc import Sequence', 'from dataclasses import dataclass, field', 'from typing import Literal', 'import math',
         'from .meshes import Geometry, MeshSpec, Point', '']
     for v in m.union['variants']:
-        ops += ['@dataclass(frozen=True)', f'class {v["rust_name"]}:', '    __module__ = "zipzi.ops"']
-        ops += [f'    {f["name"]}: {m.pytype(f["shape"])}' for f in v['fields']]
-        ops += [f'    kind: Literal["{v["wire_name"]}"] = field(default="{v["wire_name"]}", init=False)', '']
+        owns = any(f['shape']['kind']=='sequence' for f in v['fields'])
+        ops += ['@dataclass(frozen=True'+(', init=False' if owns else '')+')', f'class {v["rust_name"]}:', '    __module__ = "zipzi.meshes"']
+        for f in v['fields']:
+            default = ' = field(default=None, kw_only=True)' if f['shape']['kind']=='optional' else ''
+            ops += [f'    {f["name"]}: {m.pytype(f["shape"])}'+default]
+        ops += [f'    kind: Literal["{v["wire_name"]}"] = field(default="{v["wire_name"]}", init=False)']
+        if owns:
+            args=[f['name']+': '+('Sequence['+m.pytype(f['shape']['item'])+']' if f['shape']['kind']=='sequence' else m.pytype(f['shape'])) for f in v['fields']]
+            ops += ['', '    def __init__(self, '+', '.join(args)+') -> None:']
+            for f in v['fields']:
+                expr=f['name']
+                if f['shape']['kind']=='sequence':
+                    item=f['shape']['item'];expr=('tuple(tuple(item) for item in '+expr+')' if item['kind']=='record' else 'tuple('+expr+')')
+                ops += ['        object.__setattr__(self, '+repr(f['name'])+', '+expr+')']
+        ops += ['']
     union = ' | '.join(v['rust_name'] for v in m.union['variants'])
     ops += [f'MeshOperation = {union}', '', 'def validate(op: MeshOperation) -> None:', '    match op:']
     for v in m.union['variants']:
@@ -297,7 +323,7 @@ def render_mesh(contract):
     ops += ['    raise TypeError("Unknown mesh operation")', '']
     # Do not publish unused imports merely to make a template convenient.
     ops.remove('from .meshes import Geometry, MeshSpec, Point')
-    ops.insert(4, 'from .meshes import MeshSpec, Point')
+    ops.insert(5, 'from .meshes import MeshSpec, Point')
     query = m.operation['input']
     fields = query['fields']
     def parameter_type(shape, native=False):
@@ -345,12 +371,13 @@ def render_mesh(contract):
         for f in variant['fields']:
             shape, name = f['shape'], f['name']
             sequence = shape['kind'] == 'sequence'
-            if sequence and not keywords:
+            optional = shape['kind']=='optional'
+            if (sequence or optional) and not keywords:
                 arguments.append('*')
                 keywords = True
             annotation = f'Sequence[{m.pytype(shape["item"])}]' if sequence else m.pytype(shape)
-            arguments.append(f'{name}: {annotation}')
-            inputs.append(f'tuple({name})' if sequence else name)
+            arguments.append(f'{name}: {annotation}'+(' = None' if optional else ''))
+            inputs.append(name+'='+name if optional else f'tuple({name})' if sequence else name)
         returns_id = variant['rust_name'] == 'Create'
         conveniences += [f'    def {variant["wire_name"]}(self, ' + ', '.join(arguments) + f') -> {"str" if returns_id else "WriteResult"}:']
         operation = f'ops.{variant["rust_name"]}(' + ', '.join(inputs) + ')'
@@ -429,7 +456,7 @@ def render_mesh(contract):
 
 def render(contract):
     render_resources = _resource_codegen.render_resources
-    mesh_contract = {k: v for k, v in contract.items() if k not in {'resources', 'scene', 'modeling', 'binary'}}
+    mesh_contract = {k: v for k, v in contract.items() if k not in {'resources', 'scene', 'modeling', 'binary', 'dtos'}}
     output = render_mesh(mesh_contract)
     # The root intermediate is the complete executable contract.
     output['schema/mesh.json'] = json.dumps(dict(contract, _generated_by=OWNER), indent=2, sort_keys=True) + '\n'
@@ -437,6 +464,7 @@ def render(contract):
     output.update(_scene_codegen.render_scene(contract['scene'], HEADER, RUST_HEADER, identifier, rust_path))
     output.update(_modeling_codegen.render_modeling(contract['modeling'], HEADER, RUST_HEADER))
     output.update(_binary_codegen.render_binary(contract['binary'], HEADER))
+    output.update(_dto_codegen.render_dtos(contract['dtos'], HEADER))
     output['src/generated/mod.rs'] += 'pub mod scene;\npub mod modeling;\n'
     # rustfmt only sees generated scratch files, never handwritten sources.
     import tempfile

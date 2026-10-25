@@ -7,7 +7,7 @@ from .._calls import project, single_id
 from .. import resources
 
 class ResourceWriter(Protocol):
-    def _construct_and_apply(self, construct: Callable[[], ops.ResourceOperation]) -> WriteResult: ...
+    def _construct_and_apply(self, construct: Callable[[], ops.CreateImage | ops.ReplaceImage]) -> WriteResult: ...
 
 class EditableImages:
     _owner: ResourceWriter

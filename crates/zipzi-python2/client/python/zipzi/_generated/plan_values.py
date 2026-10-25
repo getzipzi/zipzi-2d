@@ -8,30 +8,30 @@ def _boolean(value: object) -> bool:
     return value
 
 @dataclass(frozen=True)
-class Cost:
-    __module__ = "zipzi.plans"
+class PlanCost:
+    __module__ = "zipzi"
     sample_combinations: int
     payload_bytes: int
     temporary_bytes: int
     history_bytes: int
 
     @classmethod
-    def read(cls, value: object) -> "Cost":
+    def read(cls, value: object) -> "PlanCost":
         r = record(value)
         return cls(integer(r["sample_combinations"]), integer(r["payload_bytes"]), integer(r["temporary_bytes"]), integer(r["history_bytes"]))
 
 @dataclass(frozen=True)
-class Report:
-    __module__ = "zipzi.plans"
+class PlanReport:
+    __module__ = "zipzi"
     source: Source
     version: Version
     affected_ids: tuple[str, ...]
     copied_ids: tuple[tuple[str, str], ...]
-    cost: Cost | None
+    cost: PlanCost | None
     losses: tuple[str, ...]
     no_op: bool | None
 
     @classmethod
-    def read(cls, source: object, value: object) -> "Report":
+    def read(cls, source: object, value: object) -> "PlanReport":
         r = record(value)
-        return cls(Source.read(source), Version.read(r["version"]), tuple(string(item) for item in sequence(r["affected_ids"])), tuple((key, string(item)) for key, item in sorted(record(r["copied_ids"]).items())), None if r["cost"] is None else Cost.read(r["cost"]), tuple(string(item) for item in sequence(r["losses"])), None if r["no_op"] is None else _boolean(r["no_op"]))
+        return cls(Source.read(source), Version.read(r["version"]), tuple(string(item) for item in sequence(r["affected_ids"])), tuple((key, string(item)) for key, item in sorted(record(r["copied_ids"]).items())), None if r["cost"] is None else PlanCost.read(r["cost"]), tuple(string(item) for item in sequence(r["losses"])), None if r["no_op"] is None else _boolean(r["no_op"]))

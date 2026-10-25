@@ -515,7 +515,7 @@ fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
         None,
         authoring::PlanIntent::ImageRename {
             id: asset.clone(),
-            expected_name: "A".into(),
+            expected_name: Some("A".into()),
             name: "Planned".into(),
         },
     )

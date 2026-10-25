@@ -119,6 +119,64 @@ fn fields(
     }).collect::<syn::Result<Vec<_>>>()?;
     Ok(quote!(vec![#(#values),*]))
 }
+/// Select field names and concrete Rust type identities without recursively
+/// exporting private lifecycle state. DTO exporters bind these finite leaves.
+#[proc_macro_derive(ApiFields)]
+pub fn api_fields(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let name = &input.ident;
+    let field_rows = |fields: &Fields| {
+        fields.iter().enumerate().map(|(index, field)| {
+            let key = field.ident.as_ref().map(ToString::to_string)
+                .unwrap_or_else(|| if fields.len() == 1 { "value".into() } else { format!("value{index}") });
+            let ty = &field.ty;
+            quote!(zipzi_core::api_shape::SerdeField {
+                rust_name: #key.into(), name: #key.into(),
+                shape: zipzi_core::api_shape::Shape::Opaque { name: std::any::type_name::<#ty>().into() },
+                skip: false, default: None,
+            })
+        }).collect::<Vec<_>>()
+    };
+    let shape = match &input.data {
+        syn::Data::Struct(data) => {
+            let rows = field_rows(&data.fields);
+            quote!(zipzi_core::api_shape::Shape::SerdeRecord {
+                name: std::any::type_name::<Self>().into(),
+                fields: vec![#(#rows),*],
+                transparent: false,
+                tuple: false,
+            })
+        }
+        syn::Data::Enum(data) => {
+            let rows = data.variants.iter().map(|variant| {
+                let rust_name = variant.ident.to_string();
+                let rows = field_rows(&variant.fields);
+                let form = match &variant.fields {
+                    Fields::Named(_) => "record", Fields::Unit => "unit", Fields::Unnamed(_) => "newtype",
+                };
+                quote!(zipzi_core::api_shape::SerdeVariant {
+                    rust_name: #rust_name.into(), name: #rust_name.into(), form: #form.into(), fields: vec![#(#rows),*],
+                })
+            });
+            quote!(zipzi_core::api_shape::Shape::SerdeEnum {
+                name: std::any::type_name::<Self>().into(),
+                tag: None,
+                content: None,
+                variants: vec![#(#rows),*],
+            })
+        }
+        _ => {
+            return syn::Error::new_spanned(name, "ApiFields requires a struct or enum")
+                .to_compile_error()
+                .into();
+        }
+    };
+    quote!(impl #name {
+        pub fn api_fields() -> zipzi_core::api_shape::Shape { #shape }
+    })
+    .into()
+}
+
 #[proc_macro_derive(ApiShape, attributes(serde))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

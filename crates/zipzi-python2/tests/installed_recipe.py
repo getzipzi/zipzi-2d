@@ -17,7 +17,7 @@ def main():
     mode = sys.argv[1]
     assert version("zipzi-python2") == "0.1.0"
     assert "/site-packages/zipzi/" in zipzi.__file__, zipzi.__file__
-    assert get_type_hints(ops.CreateImage)["image"] is resources.PreparedImage
+    assert get_type_hints(resources.CreateImage)["image"] is resources.PreparedImage
     assert get_type_hints(zipzi.OutcomeUnknown.recover)["return"] is object
     assert get_type_hints(zipzi.recover_call)
     assert "zipzi_native._native" not in sys.modules
@@ -53,24 +53,24 @@ def main():
                     with session.edit("installed") as edit:
                         asset = zipzi.recover_call(edit.resources.create_image, "Draft", image)
                         face = zipzi.recover_call(edit.meshes.create, meshes.MeshSpec("Face", geometry, texture_asset_id=asset))
-                        with edit.resources.plan(resources.RenameIntent(asset, "Draft", "Texture")) as plan:
+                        with edit.plan(resources.RenameImage(asset, "Texture", expected_name="Draft")) as plan:
                             assert plan.report.source.sequence == 2
-                            edit.apply_many((ops.ApplyPlan(plan), ops.Rename(face, "Installed")))
+                            edit.apply_many((plan, meshes.Rename(face, "Installed")))
                         with runtime.resources.prepare_image(1, 1, bytes((21, 43, 65, 255))) as replacement:
                             edit.resources.replace_image(asset, replacement)
                         snapshot = edit.meshes.get(face)
                         assert snapshot.source.sequence == 4
-                        assert edit.resources.get(asset).pixels.rgba == bytes((21, 43, 65, 255))
+                        assert edit.resources.get(asset).value.pixels.rgba == bytes((21, 43, 65, 255))
                         parameter = "79300000-0000-4000-8000-000000000002"
-                        result = edit.apply_many((ops.CreateParameter(parameters.ParameterSpec("Draft", -1., 1., 0.,
+                        result = edit.apply_many((parameters.Create(parameters.ParameterSpec("Draft", -1., 1., 0.,
                             id=parameter, runtime_id="ParamInstalled", kind=parameters.Kind.BLEND_SHAPE, decimal_places=3, repeat=True)),
-                            ops.PatchParameter(parameter, parameters.Patch(name="Installed parameter", default_value=.5, repeat=False))))
+                            parameters.Patch(parameter, parameters.ParameterPatch(name="Installed parameter", default_value=.5, repeat=False))))
                         assert result.source.sequence == 5
                         assert edit.parameters.get_many((parameter,)).items[0].name == "Installed parameter"
-                        assert edit.meshes.get_many((face,))[0].name == "Installed"
+                        assert edit.meshes.get_many((face,)).items[0].name == "Installed"
                         angle = "79300000-0000-4000-8000-000000000003"
-                        result = edit.apply_many((ops.CreateParameter(parameters.ParameterSpec("Pose", 0., 1., 0., id=angle)),
-                            ops.CreateMeshBinding(bindings.MeshBindingSpec(face, (bindings.Axis(angle, (0., 1.)),), (
+                        result = edit.apply_many((parameters.Create(parameters.ParameterSpec("Pose", 0., 1., 0., id=angle)),
+                            bindings.Create(bindings.MeshBindingSpec(face, (bindings.Axis(angle, (0., 1.)),), (
                                 bindings.Keyform((0.,), geometry.positions),
                                 bindings.Keyform((1.,), tuple((x+10., y) for x,y in geometry.positions)))))))
                         binding = result.ids[-1]
@@ -78,8 +78,8 @@ def main():
                         canonical = edit.bindings.get(binding)
                         edit.bindings.set_keyform(binding, bindings.Keyform((1.,), tuple((x+20.,y) for x,y in geometry.positions)))
                         cpu = edit.modeling.sample(({angle:.5},))
-                        assert cpu.frames[0].drawables[0].positions[0][0] == 10.
-                        assert cpu.frames[0].render_plan == (sampling.RenderCommand(sampling.RenderKind.DRAW_MESH,face),)
+                        assert cpu.value.frames[0].drawables[0].positions[0][0] == 10.
+                        assert cpu.value.frames[0].render_plan == (sampling.RenderCommand(sampling.RenderKind.DRAW_MESH,face),)
                         part = "79300000-0000-4000-8000-000000000010"
                         parent = "79300000-0000-4000-8000-000000000011"
                         blend_parameter = "79300000-0000-4000-8000-000000000012"
@@ -91,18 +91,18 @@ def main():
                             scene.CreatePart(scene.PartSpec("Installed folder", id=part)),
                             scene.CreateRotation("Parent", scene.Placement(part_id=part), id=parent),
                             scene.MoveToPart((face,), part_id=part),
-                            ops.CreateParameter(parameters.ParameterSpec("Blend", 0., 1., 0., id=blend_parameter, kind=parameters.Kind.BLEND_SHAPE)),
+                            parameters.Create(parameters.ParameterSpec("Blend", 0., 1., 0., id=blend_parameter, kind=parameters.Kind.BLEND_SHAPE)),
                             scene.CreateBlendTable(blend_parameter, (scene.Sample(base_sample,0.),scene.Sample(active_sample,1.)), base_sample, id=table),
                             scene.CreateMeshBlend(face, table, id=blend),
                             scene.SetMeshBlendVertices(face, blend, active_sample, tuple(scene.VertexPatch(v,position=(2.,0.)) for v in geometry.vertex_ids)),
                             scene.InsertMeshVertex(face, 50, (.5,0.), (.5,0.), (scene.VertexWeight(42,.5),scene.VertexWeight(7,.5))),
                             scene.ReplaceTriangles(face, ((42,50,99),(50,7,99))),
                         ))
-                        with edit.scene.plan(scene.ReparentLocal((face,),parent_id=parent)) as plan:
+                        with edit.plan(scene.ReparentLocal((face,),parent_id=parent)) as plan:
                             assert plan.report.cost is not None
-                            edit.apply_plan(plan)
+                            edit.apply(plan)
                         assert edit.scene.get(face).value.parent_id == parent
-                        assert edit.modeling.sample(({angle:.5,blend_parameter:.5},)).frames[0].drawables[0].positions[0][0] == 11.
+                        assert edit.modeling.sample(({angle:.5,blend_parameter:.5},)).value.frames[0].drawables[0].positions[0][0] == 11.
                     assert image.pixels().rgba == bytes((12, 34, 56, 255))
                 assert runtime.resources.usage().prepared_images == 0
                 assert runtime.resources.usage().plans == 0
@@ -114,8 +114,8 @@ def main():
                         assert address.expected == "Installed"
                         with address.plan("Installed") as plan:
                             assert plan.report.no_op
-                assert session.meshes.get(face).name == "Installed"
-                assert session.modeling.sample(({angle:.5},)).frames[0].drawables[0].positions[0][0] == 10.
+                assert session.meshes.get(face).value.name == "Installed"
+                assert session.modeling.sample(({angle:.5},)).value.frames[0].drawables[0].positions[0][0] == 10.
                 published = [e for e in stream.poll() if isinstance(e, events.Published)]
                 assert len(published) == 1 and parameter in published[0].receipt.object_ids
                 assert session.undo().wait().changed
@@ -127,7 +127,7 @@ def main():
                 else:
                     raise AssertionError("Undo retained a newly created mesh")
                 assert session.redo().wait().changed
-                assert session.resources.get(asset).pixels.rgba == bytes((21, 43, 65, 255))
+                assert session.resources.get(asset).value.pixels.rgba == bytes((21, 43, 65, 255))
                 assert session.info().history == (1, 0)
                 save_job = session.project.save(folder / "project")
                 deadline = time.monotonic() + 10
@@ -166,20 +166,20 @@ def main():
                 fresh = zipzi.local()
             with fresh:
                 reopened = fresh.sessions.open(saved.manifest).wait()
-                assert reopened.resources.get(asset).name == "Texture"
-                assert reopened.resources.get(asset).pixels.rgba == bytes((21, 43, 65, 255))
-                assert reopened.meshes.get(face).name == "Installed"
+                assert reopened.resources.get(asset).value.name == "Texture"
+                assert reopened.resources.get(asset).value.pixels.rgba == bytes((21, 43, 65, 255))
+                assert reopened.meshes.get(face).value.name == "Installed"
                 assert reopened.scene.get(face).value.parent_id == parent
                 assert reopened.scene.get(part).value.name == "Installed folder"
-                assert reopened.meshes.get(face).geometry.vertex_ids == (42,7,99,50)
-                assert reopened.modeling.sample(({angle:.5,blend_parameter:.5},)).frames[0].drawables[0].positions[0][0] == 11.
+                assert reopened.meshes.get(face).value.geometry.vertex_ids == (42,7,99,50)
+                assert reopened.modeling.sample(({angle:.5,blend_parameter:.5},)).value.frames[0].drawables[0].positions[0][0] == 11.
                 value = reopened.parameters.get(parameter)
-                assert (value.name,value.runtime_id,value.kind,value.decimal_places,value.repeat,value.default_value) == (
+                assert (value.value.name,value.value.runtime_id,value.value.kind,value.value.decimal_places,value.value.repeat,value.value.default_value) == (
                     "Installed parameter","ParamInstalled",parameters.Kind.BLEND_SHAPE,3,False,.5)
-                assert reopened.bindings.get(binding).axes == canonical.axes
-                assert reopened.modeling.sample(({angle:.5},)).frames[0].drawables[0].positions[0][0] == 10.
+                assert reopened.bindings.get(binding).value.axes == canonical.value.axes
+                assert reopened.modeling.sample(({angle:.5},)).value.frames[0].drawables[0].positions[0][0] == 10.
                 assert reopened.info().history == (0, 0)
-            print(json.dumps(dict(mode=mode, name=snapshot.name, vertices=snapshot.geometry.vertex_ids, history=(1, 0))))
+            print(json.dumps(dict(mode=mode, name=snapshot.value.name, vertices=snapshot.value.geometry.vertex_ids, history=(1, 0))))
         finally:
             if child is not None:
                 child.terminate()

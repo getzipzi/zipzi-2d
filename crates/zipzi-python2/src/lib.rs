@@ -236,15 +236,15 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
             let mesh = match kind.as_str() {
                 "create_mesh_binding" | "set_mesh_keyform" => {
                     return Ok(EditOperation::MeshBinding {
-                        operation: modeling_bridge::read(&kind, &op)?,
+                        operation: generated::modeling::read_meshbindingoperation(&op)?,
                     });
                 }
                 "create_parameter" | "patch_parameter" => {
                     return Ok(EditOperation::Parameter {
-                        operation: parameter_bridge::read(&kind, &op)?,
+                        operation: generated::modeling::read_parameteroperation(&op)?,
                     });
                 }
-                "create_image" | "replace_image" | "apply_plan" => {
+                "create_image" | "replace_image" | "rename_image" | "apply_plan" => {
                     return Ok(EditOperation::Resource(
                         generated::resources::read_resourceoperation(&op)?,
                     ));
@@ -304,7 +304,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-11"
+        "zipzi-python2-13"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {

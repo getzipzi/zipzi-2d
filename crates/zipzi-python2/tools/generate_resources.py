@@ -22,7 +22,7 @@ def render_resources(contract, Model, header, rust_header):
             ('image_snapshot', 'image', 'query'), ('prepared_pixels', 'prepared_pixels', 'query'),
             ('plan_authoring', 'plan', 'planning')]:
         raise ValueError('Unreviewed resource registration')
-    if [v['rust_name'] for v in resource_union['variants']] != ['CreateImage', 'ReplaceImage', 'ApplyPlan']:
+    if [v['rust_name'] for v in resource_union['variants']] != ['CreateImage', 'ReplaceImage', 'RenameImage', 'ApplyPlan']:
         raise ValueError('New resource variant requires a convenience policy')
     if [v['rust_name'] for v in intent_union['variants']] != ['MeshRename', 'ImageRename']:
         raise ValueError('New plan intent requires public naming review')
@@ -60,25 +60,25 @@ def render_resources(contract, Model, header, rust_header):
             if b['module']!=module: continue
             # ImageSpec is internal construction metadata; no new public stub.
             if b['name']=='ImageSpec': continue
-            fields=s['fields'];context=b['name']=='Report'
-            lines+=['@dataclass(frozen=True)',f'class {b["name"]}:',f'    __module__ = "zipzi.{module}"']
+            fields=[f for f in s['fields'] if b['form']!='snapshot' or f['name']!='source'];context=b['name']=='PlanReport'
+            lines+=['@dataclass(frozen=True)',f'class {b["name"]}:','    __module__ = "zipzi'+('.resources' if module=='resources' else '')+'"']
             if context:lines+=['    source: Source']
             lines += ['    '+f['name']+': '+typ(f['shape']) for f in fields]
-            lines += ['', '    @classmethod', f'    def read(cls, {"source: object, " if context else ""}value: object) -> "{b["name"]}":', '        r = record(value)']
+            lines += ['', '    @classmethod', f'    def read(cls, {"source: object, " if context else ""}value: object) -> "{b["name"]}":']
+            if b['form']=='snapshot': lines += ['        if isinstance(value, cls): return value']
+            lines += ['        r = record(value)']
             args=['Source.read(source)'] if context else []
             args += [read(f['shape'],f'r["{f["name"]}"]') for f in fields]
             lines+=['        return cls('+', '.join(args)+')','']
         # Avoid unused imports in each strictly typed generated module.
-        if module=='resources':lines[2]='from .._values import Source, integer, record, sequence, string'
+        if module=='resources':lines[2]='from .._values import integer, record, sequence, string'
         output['client/python/zipzi/_generated/'+path+'.py']='\n'.join(lines)
 
     intents=[header.rstrip(),'from dataclasses import dataclass, field','from typing import Literal','']
     for v in intent_union['variants']:
-        intents += ['@dataclass(frozen=True)',f'class {v["rust_name"]}:', f'    __module__ = "zipzi.{"meshes" if v["rust_name"]=="MeshRename" else "resources"}"']
+        intents += ['@dataclass(frozen=True)',f'class {v["rust_name"]}:', '    __module__ = "zipzi._generated.plan_intents"']
         intents += ['    '+f['name']+': '+typ(f['shape']) for f in v['fields']]
         intents += [f'    kind: Literal["{v["wire_name"]}"] = field(default="{v["wire_name"]}", init=False)','']
-    for v in intent_union['variants']:
-        intents += [f'{v["rust_name"]}.__name__ = "RenameIntent"', f'{v["rust_name"]}.__qualname__ = "RenameIntent"']
     intents += ['']
     intents+=['Intent = '+' | '.join(v['rust_name'] for v in intent_union['variants']),'','def validate(intent: Intent) -> None:','    match intent:']
     for v in intent_union['variants']:
@@ -99,14 +99,15 @@ def render_resources(contract, Model, header, rust_header):
             else:flat.append(f)
         return sorted(flat,key=lambda f:f['default'] is not None)
     def default_suffix(field):
+        if field['name']=='expected_name': return ' = field(default=None, kw_only=True)'
         default = field['default']
         if default is None:
             return ''
         return ' = ' + {'null': 'None', 'empty_string': '""'}[default['kind']]
-    ops=[header.rstrip(),'from dataclasses import dataclass, field','from typing import Literal',
-         'from .. import resources, plans','']
+    ops=[header.rstrip(),'from __future__ import annotations','from dataclasses import dataclass, field','from typing import Literal',
+         'from .. import resources', 'from .. import _plans as plans','']
     for v in resource_union['variants']:
-        ops+=['@dataclass(frozen=True)',f'class {v["rust_name"]}:','    __module__ = "zipzi.ops"']
+        ops+=['@dataclass(frozen=True)',f'class {v["rust_name"]}:','    __module__ = "zipzi.'+('_generated.resource_ops' if v['rust_name']=='ApplyPlan' else 'resources')+'"']
         ops+=['    '+f['name']+': '+typ(f['shape'])+default_suffix(f) for f in projected_fields(v)]
         ops+=[f'    kind: Literal["{v["wire_name"]}"] = field(default="{v["wire_name"]}", init=False)','']
     ops+=['ResourceOperation = '+' | '.join(v['rust_name'] for v in resource_union['variants']),'',
@@ -242,7 +243,7 @@ def render_resources(contract, Model, header, rust_header):
     output['client/python/zipzi/_generated/resource_backends.py']='\n'.join(back)
     output['src/generated/resource_queries.rs']='\n'.join(queries)
     conveniences=[header.rstrip(),'from collections.abc import Callable','from typing import Protocol','from . import resource_ops as ops','from .._values import WriteResult','from .._calls import project, single_id','from .. import resources','',
-                  'class ResourceWriter(Protocol):','    def _construct_and_apply(self, construct: Callable[[], ops.ResourceOperation]) -> WriteResult: ...','','class EditableImages:','    _owner: ResourceWriter']
+                  'class ResourceWriter(Protocol):','    def _construct_and_apply(self, construct: Callable[[], ops.CreateImage | ops.ReplaceImage]) -> WriteResult: ...','','class EditableImages:','    _owner: ResourceWriter']
     for v in resource_union['variants'][:2]:
         params=[]
         for f in projected_fields(v):

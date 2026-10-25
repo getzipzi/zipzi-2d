@@ -68,7 +68,7 @@ fn prepared_a_b_candidate_plan_and_history_hold_exact_pixels_until_last_owner() 
             Some(edit),
             PlanIntent::ImageRename {
                 id: id(2),
-                expected_name: "A".into(),
+                expected_name: Some("A".into()),
                 name: "Texture".into(),
             },
         )
@@ -184,7 +184,7 @@ fn preparation_failure_is_independent_and_hundred_cancelled_sources_reclaim_leas
                 Some(edit),
                 PlanIntent::ImageRename {
                     id: id(2),
-                    expected_name: "draft".into(),
+                    expected_name: Some("draft".into()),
                     name: "planned".into(),
                 },
             )
@@ -241,7 +241,7 @@ fn plan_from_exact_source_is_stale_after_a_prior_batch_operation() {
             None,
             PlanIntent::MeshRename {
                 id: id(3),
-                expected_name: "Face".into(),
+                expected_name: Some("Face".into()),
                 name: "Planned".into(),
             },
         )
@@ -254,6 +254,7 @@ fn plan_from_exact_source_is_stale_after_a_prior_batch_operation() {
             vec![
                 EditOperation::Mesh {
                     operation: MeshOperation::Rename {
+                        expected_name: None,
                         id: id(3),
                         name: "Partial".into(),
                     },

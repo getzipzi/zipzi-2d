@@ -27,6 +27,145 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_domain_operations_and_unified_plans_preserve_content_and_history(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with runtime.resources.prepare_image(1, 1, b"rgba") as image:
+                    with session.edit("unified operations") as edit:
+                        spec = bindings.MeshBindingSpec(uid(2), [bindings.Axis(uid(3), [0., 1.])], [
+                            bindings.Keyform([0.], GEOMETRY.positions),
+                            bindings.Keyform([1.], [(x+10., y) for x,y in GEOMETRY.positions])], id=uid(4))
+                        result = edit.apply_many((meshes.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2))),
+                            parameters.Create(parameters.ParameterSpec("Angle", 0., 1., 0., id=uid(3))),
+                            bindings.Create(spec), resources.CreateImage("Texture", image, id=uid(5))))
+                        self.assertEqual(result.source.sequence, 1)
+                        self.assertEqual(result.ids, (uid(2), uid(3), uid(4), uid(5)))
+                        self.assertEqual(edit.modeling.sample(({uid(3): .5},)).value.frames[0].drawables[0].positions[0], (5., 0.))
+                        edit.apply(meshes.Rename(uid(2), "Ready", expected_name="Face"))
+                        with edit.plan(meshes.Rename(uid(2), "Final", expected_name="Ready")) as plan:
+                            cached = plan.report
+                            result = edit.apply_many((plan, parameters.Patch(uid(3), parameters.ParameterPatch(default_value=.5))))
+                            self.assertEqual(result.source.sequence, 3)
+                        self.assertEqual(plan.report, cached)
+                        with edit.plan(resources.RenameImage(uid(5), "Planned texture")) as plan:
+                            edit.apply(plan)
+                        edit.apply(resources.RenameImage(uid(5), "Final texture", expected_name="Planned texture"))
+                self.assertEqual(session.meshes.get(uid(2)).value.name, "Final")
+                self.assertEqual(session.resources.get(uid(5)).value.name, "Final texture")
+                self.assertEqual(session.resources.get(uid(5)).value.pixels.rgba, b"rgba")
+                self.assertEqual(session.parameters.get(uid(3)).value.default_value, .5)
+                self.assertEqual(session.info().history, (1, 0))
+                before = session.info()
+                for operation in (meshes.Rename(uid(2), "Wrong", expected_name="stale"),
+                                  resources.RenameImage(uid(5), "Wrong", expected_name="stale")):
+                    with self.assertRaises(zipzi.SdkFailure):
+                        with session.edit("wrong precondition") as edit:
+                            edit.apply(operation)
+                    self.assertEqual(session.info(), before)
+
+    def test_unified_plan_batch_order_and_recovery_do_not_repeat_writes(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("initial") as edit:
+                    id = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                before = session.info()
+                with session.plan(meshes.Rename(id, "Planned")) as plan:
+                    for values in ((meshes.Rename(id, "First"), plan), (plan, plan)):
+                        with self.assertRaises(ValueError):
+                            with session.edit("invalid order") as edit:
+                                edit.apply_many(values)
+                        self.assertEqual(session.info(), before)
+                    with session.edit("apply formal plan") as edit:
+                        result = edit.apply(plan)
+                        self.assertEqual(result.source.sequence, 1)
+                self.assertEqual(session.meshes.get(id).value.name, "Planned")
+                self.assertEqual(session.info().history, (2, 0))
+        for operation in ("plan_authoring", "apply_authoring"):
+            with self.subTest(lost=operation), self.runtime("connected", drop=operation,
+                    drop_after=1 if operation=="apply_authoring" else 0) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("initial") as edit:
+                    id = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                with zipzi.recover_call(session.plan, meshes.Rename(id, "Recovered")) as plan:
+                    with session.edit("recover plan apply") as edit:
+                        result = zipzi.recover_call(edit.apply, plan)
+                        self.assertEqual(result.source.sequence, 1)
+                self.assertEqual(session.meshes.get(id).value.name, "Recovered")
+                self.assertEqual(session.info().history, (2, 0))
+
+    def test_generated_dtos_own_inputs_and_remove_parallel_public_intents(self):
+        import dataclasses, inspect, pickle, typing
+        vertices, positions = [42, 7, 99], [[0.,0.],[1.,0.],[0.,1.]]
+        geometry = meshes.Geometry(vertices, positions, positions, [[42,7,99]])
+        operation = meshes.SetPositions(uid(2), vertices, positions)
+        axis_keys = [0., 1.]
+        axis = bindings.Axis(uid(3), axis_keys)
+        vertices.clear(); positions[0][0]=100.; axis_keys.clear()
+        self.assertEqual(geometry.vertex_ids, (42,7,99))
+        self.assertEqual(operation.positions[0], (0.,0.))
+        self.assertEqual(axis.keys, (0.,1.))
+        for cls in (parameters.Create, parameters.ParameterSpec, parameters.ParameterPatch,
+                    bindings.Keyform, sampling.Checks, sampling.Frame, events.Published,
+                    m.ModelingCommandScene, m.ModelingCommandResource):
+            typing.get_type_hints(cls)
+            self.assertNotIn("_variant", inspect.signature(cls).parameters)
+            if typing.get_origin(typing.get_type_hints(cls).get("kind")) is typing.ClassVar:
+                self.assertNotIn("kind", inspect.signature(cls).parameters)
+            self.assertFalse(any(field.name.startswith("_") for field in dataclasses.fields(cls)))
+        self.assertEqual(pickle.loads(pickle.dumps((geometry, operation, axis))), (geometry, operation, axis))
+        self.assertEqual(set(ops.__all__), {"Operation", "PlannableOperation"})
+        self.assertFalse(any(hasattr(ops, name) for name in ("Create", "Rename", "ApplyPlan")))
+        self.assertFalse(hasattr(meshes, "RenameIntent"))
+        self.assertFalse(hasattr(resources, "RenameIntent"))
+        self.assertFalse(hasattr(m, "ModelingIntentScene"))
+        self.assertFalse(hasattr(zipzi.Edit, "apply_plan"))
+
+    def test_uniform_results_own_values_and_preserve_empty_batch_sources(self):
+        import pickle
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("uniform reads") as edit:
+                    initial = edit.meshes.get_many(())
+                    self.assertIsInstance(initial, zipzi.Batch)
+                    self.assertEqual(initial.items, ())
+                    self.assertEqual(initial.source.sequence, 0)
+                    self.assertIsNotNone(initial.source.edit)
+                    a = edit.meshes.create(meshes.MeshSpec("A", GEOMETRY))
+                    b = edit.meshes.create(meshes.MeshSpec("B", GEOMETRY))
+                    value = edit.meshes.get(a)
+                    self.assertIsInstance(value, zipzi.Snapshot)
+                    self.assertIsInstance(value.value, meshes.Mesh)
+                    self.assertFalse(hasattr(value.value, "source"))
+                    batch = edit.meshes.get_many((b, a, b))
+                    self.assertEqual(tuple(item.id for item in batch.items), (b, a, b))
+                    self.assertEqual(batch.source, value.source)
+                    for domain in (edit.meshes, edit.parameters, edit.bindings, edit.scene):
+                        empty = domain.get_many(())
+                        self.assertIsInstance(empty, zipzi.Batch)
+                        self.assertEqual(empty.items, ())
+                        self.assertEqual(empty.source, value.source)
+                    with self.assertRaises(zipzi.SdkFailure):
+                        edit.meshes.get_many((a, uid(999)))
+                    self.assertEqual(edit.meshes.get(a), value)
+                formal = session.meshes.get_many(())
+                self.assertIsNone(formal.source.edit)
+                self.assertEqual(formal.source.version, session.info().version)
+                items = [value.value]
+                owned = zipzi.Batch(value.source, items)
+                page = zipzi.Page(value.source, items)
+                items.clear()
+                self.assertEqual(owned.items, (value.value,))
+                self.assertEqual(page.items, owned.items)
+                self.assertIsNone(page.next_cursor)
+                with self.assertRaises(FrozenInstanceError):
+                    value.value.name = "mutated"
+                with self.assertRaises(FrozenInstanceError):
+                    value.source = formal.source
+            self.assertEqual(pickle.loads(pickle.dumps((value, owned, page))), (value, owned, page))
+
     def test_native_plan_admission_precedes_string_conversion_and_keeps_edit_usable(self):
         class OverBudgetText(str):
             def __len__(self):return 1<<30
@@ -36,12 +175,12 @@ class PythonSdk(unittest.TestCase):
                 mesh=edit.meshes.create(meshes.MeshSpec("Mesh",GEOMETRY,id=uid(2)))
                 source=edit.meshes.get(mesh).source
                 with self.assertRaises(zipzi.SdkFailure) as rejected:
-                    edit.meshes.plan(meshes.RenameIntent(mesh,"Mesh",OverBudgetText("Renamed")))
+                    edit.plan(meshes.Rename(mesh, OverBudgetText("Renamed"), expected_name="Mesh"))
                 self.assertEqual(rejected.exception.code,"BUDGET_EXCEEDED")
                 self.assertEqual(runtime.resources.usage().plans,0)
                 self.assertEqual(edit.meshes.get(mesh).source,source)
                 edit.meshes.rename(mesh,"Usable")
-            self.assertEqual(session.meshes.get(mesh).name,"Usable")
+            self.assertEqual(session.meshes.get(mesh).value.name,"Usable")
             self.assertEqual(session.info().history,(1,0))
 
     def test_sdk_rectangle_generation_migrates_current_candidate_and_refuses_over_limit(self):
@@ -55,9 +194,9 @@ class PythonSdk(unittest.TestCase):
                     parameter=edit.parameters.create(parameters.ParameterSpec("P",0.,1.,0.,id=uid(3)))
                     binding=edit.bindings.create(bindings.MeshBindingSpec(mesh,(bindings.Axis(parameter,(0.,1.)),),(bindings.Keyform((0.,),corners),bindings.Keyform((1.,),tuple((x+2.,y) for x,y in corners))),id=uid(4)))
                     edit.apply(m.ModelingCommandRemeshRectangleGrid(id=mesh,columns=3,rows=3))
-                    self.assertEqual(len(edit.meshes.get(mesh).geometry.vertex_ids),16)
-                    self.assertEqual(len(edit.bindings.get(binding).keyforms[0].positions),16)
-                    self.assertEqual(edit.modeling.sample(({parameter:.5},)).frames[0].drawables[0].positions[-1],(4.,3.))
+                    self.assertEqual(len(edit.meshes.get(mesh).value.geometry.vertex_ids),16)
+                    self.assertEqual(len(edit.bindings.get(binding).value.keyforms[0].positions),16)
+                    self.assertEqual(edit.modeling.sample(({parameter:.5},)).value.frames[0].drawables[0].positions[-1],(4.,3.))
                 before=session.info()
                 with self.assertRaises(zipzi.SdkFailure) as rejected:
                     with session.edit("outside limit") as edit:edit.apply(m.ModelingCommandRemeshRectangleGrid(id=mesh,columns=256,rows=256))
@@ -74,13 +213,13 @@ class PythonSdk(unittest.TestCase):
                 session=runtime.sessions.create(uid(1))
                 with session.edit("binary attachment") as edit:
                     edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditCreate(id=uid(2),path="extras/data.bin")))
-                    old=edit.modeling.records(m.ModelingQuery(attachments=(uid(2),))).values.attachments[0]
+                    old=edit.modeling.records(m.ModelingQuery(attachments=(uid(2),))).value.attachments[0]
                     with self.assertRaises(zipzi.OutcomeUnknown) as unknown:
                         edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditReplace(expected=old,attachment=replace(old,bytes=content))))
                     result=unknown.exception.recover()
                     self.assertIsInstance(result,zipzi.WriteResult)
                     self.assertEqual(result.source.sequence,2)
-                    self.assertEqual(edit.modeling.records(m.ModelingQuery(attachments=(uid(2),))).values.attachments[0].bytes,content)
+                    self.assertEqual(edit.modeling.records(m.ModelingQuery(attachments=(uid(2),))).value.attachments[0].bytes,content)
                 self.assertEqual(session.info().history,(1,0))
 
     def test_failed_attached_binary_cleanup_recovers_original_error_and_reclaims_edit(self):
@@ -130,7 +269,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertLessEqual(usage.allocations,52)
                 self.assertEqual(session.info().history,(50,0))
                 session.undo().wait()
-                self.assertEqual(session.resources.get(uid(2)).pixels.rgba,bytes((99,1,2,255)))
+                self.assertEqual(session.resources.get(uid(2)).value.pixels.rgba,bytes((99,1,2,255)))
                 session.redo().wait()
                 before=runtime.resources.usage().rgba_bytes
                 pinned.close()
@@ -171,9 +310,9 @@ class PythonSdk(unittest.TestCase):
                 session=runtime.sessions.import_(ROOT/"crates/zipzi-psd/tests/fixtures/layered.psd",m.ImportFormat.PSD).wait()
                 info=session.info()
                 records=session.modeling.records(m.ModelingQuery())
-                self.assertTrue(records.values.ids["assets"])
-                asset=records.values.ids["assets"][0]
-                pixels=session.resources.get(asset).pixels.rgba
+                self.assertTrue(records.value.ids["assets"])
+                asset=records.value.ids["assets"][0]
+                pixels=session.resources.get(asset).value.pixels.rgba
                 self.assertTrue(pixels)
                 with session.edit("headless build") as edit:
                     mesh=edit.meshes.create(meshes.MeshSpec("Constructed",GEOMETRY,texture_asset_id=asset,id=uid(2)))
@@ -190,14 +329,14 @@ class PythonSdk(unittest.TestCase):
                     report=session.project.open(saved.manifest).wait()
                     self.assertGreater(report.after.generation,report.before.generation)
                     with self.assertRaises(zipzi.SdkFailure):reference.resolve()
-                self.assertEqual(session.resources.get(asset).pixels.rgba,pixels)
+                self.assertEqual(session.resources.get(asset).value.pixels.rgba,pixels)
                 self.assertEqual(session.info().history,(0,0))
-                self.assertEqual(session.meshes.get(mesh).name,"Constructed")
+                self.assertEqual(session.meshes.get(mesh).value.name,"Constructed")
                 failed=session.project.replace(folder/"missing.psd",m.ImportFormat.PSD)
                 before=session.info()
                 with self.assertRaises(zipzi.SdkFailure):failed.wait()
                 self.assertEqual(session.info().version,before.version)
-                self.assertEqual(session.meshes.get(mesh).name,"Constructed")
+                self.assertEqual(session.meshes.get(mesh).value.name,"Constructed")
                 session.project.export(folder/"package",m.ExportFormat.PACKAGE).wait()
                 self.assertTrue((folder/"package").is_dir())
 
@@ -218,17 +357,17 @@ class PythonSdk(unittest.TestCase):
                     mesh=edit.meshes.create(meshes.MeshSpec("Large",geometry,id=uid(2)))
                     parameter=edit.parameters.create(parameters.ParameterSpec("P",0.,1.,0.,id=uid(3)))
                     binding=edit.bindings.create(bindings.MeshBindingSpec(mesh,(bindings.Axis(parameter,(0.,1.)),),(bindings.Keyform((0.,),positions),bindings.Keyform((1.,),tuple((x+2.,y) for x,y in positions))),id=uid(4)))
-                    self.assertEqual(edit.meshes.get(mesh).geometry.positions,geometry.positions)
+                    self.assertEqual(edit.meshes.get(mesh).value.geometry.positions,geometry.positions)
                     value=edit.modeling.records(m.ModelingQuery(meshes=(mesh,),bindings=(binding,)))
-                    self.assertEqual(len(value.values.meshes[0].base_positions),65536)
+                    self.assertEqual(len(value.value.meshes[0].base_positions),65536)
                     sample=edit.modeling.sample(({parameter:.5},))
-                    self.assertEqual(sample.frames[0].drawables[0].positions[-1],(256.,255.))
+                    self.assertEqual(sample.value.frames[0].drawables[0].positions[-1],(256.,255.))
                 before=session.info()
                 sampled=session.modeling.sample_async(({parameter:0.},{parameter:1.})).wait()
-                self.assertEqual(sampled.frames[0].drawables[0].positions[-1],(255.,255.))
-                self.assertEqual(sampled.frames[1].drawables[0].positions[-1],(257.,255.))
+                self.assertEqual(sampled.value.frames[0].drawables[0].positions[-1],(255.,255.))
+                self.assertEqual(sampled.value.frames[1].drawables[0].positions[-1],(257.,255.))
                 self.assertEqual(session.info(),before)
-                results.append(sampled.frames)
+                results.append(sampled.value.frames)
                 self.assertLessEqual(runtime.resources.usage().blob_bytes,512<<20)
         self.assertEqual(results[0],results[1])
 
@@ -243,7 +382,7 @@ class PythonSdk(unittest.TestCase):
                 self.control(runtime,"pause_dispatch")
                 try:
                     sample_job = session.modeling.sample_async(({}, {}, {}))
-                    plan_job = session.modeling.plan_async(m.ModelingIntentScene(value=m.SceneEditPatch(id=mesh,
+                    plan_job = session.plan_async(m.ModelingCommandScene(intent=m.SceneEditPatch(id=mesh,
                         expected=m.SceneFieldValueLabel(value="Mesh"),value=m.SceneFieldValueLabel(value="Planned"),clear_glue_pairs=False)))
                     cancelled = session.modeling.sample_async(({},))
                     cancelled.cancel()
@@ -253,7 +392,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(stopped.exception.code,"CANCELLED")
                     self.assertEqual(session.info(),before)
                     edit = session.edit("Publish while read jobs are queued")
-                    edit.apply(ops.SetPositions(mesh, GEOMETRY.vertex_ids, tuple((x+5.,y) for x,y in GEOMETRY.positions)))
+                    edit.apply(meshes.SetPositions(mesh, GEOMETRY.vertex_ids, tuple((x+5.,y) for x,y in GEOMETRY.positions)))
                     receipts, failures = [], []
                     def publish():
                         try: receipts.append(edit.commit())
@@ -273,13 +412,13 @@ class PythonSdk(unittest.TestCase):
                 receipts[0].wait()
                 sampled = sample_job.wait()
                 self.assertEqual(sampled.source.version,before.version)
-                self.assertEqual(sampled.frames[0].drawables[0].positions[0],(0.,0.))
-                self.assertEqual(session.meshes.get(mesh).geometry.positions[0],(5.,0.))
+                self.assertEqual(sampled.value.frames[0].drawables[0].positions[0],(0.,0.))
+                self.assertEqual(session.meshes.get(mesh).value.geometry.positions[0],(5.,0.))
                 with plan_job.wait() as plan:
                     self.assertEqual(plan.report.source.version,before.version)
                     with self.assertRaises(zipzi.SdkFailure) as stale:
                         with session.edit("Old plan") as edit:
-                            edit.apply_plan(plan)
+                            edit.apply(plan)
                     self.assertEqual(stale.exception.code,"STALE_PLAN")
                 self.assertEqual(session.info().history,(2,0))
                 self.control(runtime,"panic_next")
@@ -288,7 +427,7 @@ class PythonSdk(unittest.TestCase):
                     failed.wait()
                 self.assertEqual(panicked.exception.code,"WORKER_PANIC")
                 self.assertEqual(session.info().state,"ready")
-                self.assertEqual(session.modeling.sample(({},)).frames[0].drawables[0].positions[0],(5.,0.))
+                self.assertEqual(session.modeling.sample(({},)).value.frames[0].drawables[0].positions[0],(5.,0.))
 
     def test_pending_sample_poll_recovery_continues_waiting(self):
         runtime = self.runtime("connected", drop="job")
@@ -334,7 +473,7 @@ class PythonSdk(unittest.TestCase):
                 session = runtime.sessions.create(uid(1))
                 if operation == "request_modeling_plan":
                     with self.assertRaises(zipzi.OutcomeUnknown) as unknown:
-                        session.modeling.plan_async(m.ModelingIntentDocument(value=m.DocumentAuthoringEditPatch(
+                        session.plan_async(m.ModelingCommandDocument(intent=m.DocumentAuthoringEditPatch(
                             expected=m.DocumentValueLayout(value=None),value=m.DocumentValueLayout(value={"CenterX":2.}))))
                     job = unknown.exception.recover()
                     with job.wait() as plan:
@@ -370,7 +509,7 @@ class PythonSdk(unittest.TestCase):
                             bindings.Keyform((-1.,),GEOMETRY.positions),bindings.Keyform((1.,),GEOMETRY.positions)),id=uid(30)))
                         edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditCreate(id=uid(70),path="extras/a.txt")))
                         edit.apply(m.ModelingCommandReferences(intent=m.ReferenceEditCreateModelHitArea(id=uid(80),name="Hit",before=None)))
-                sample = session.bindings.get(binding).axes[0].samples[0].id
+                sample = session.bindings.get(binding).value.axes[0].samples[0].id
                 cases = (
                     (m.AddressSelectorScene(id=uid(2),field=m.SceneField.ENABLED), m.AddressPatchScene(value=m.SceneFieldValueEnabled(value=False),clear_glue_pairs=False)),
                     (m.AddressSelectorDrawingGroup(owner=""),m.AddressPatchDrawingRange(range=(-100,100))),
@@ -391,7 +530,7 @@ class PythonSdk(unittest.TestCase):
                             with address.plan(patch_value) as plan:
                                 self.assertEqual(session.info(),before)
                                 with session.edit("Patch through SDK address") as edit:
-                                    edit.apply_plan(plan)
+                                    edit.apply(plan)
                             session.undo().wait()
                             with self.assertRaises(zipzi.SdkFailure) as stale:
                                 address.plan(patch_value)
@@ -399,10 +538,10 @@ class PythonSdk(unittest.TestCase):
                 with session.reference("mesh",uid(2)) as reference:
                     caps = reference.capabilities(m.CapabilityDomain.CONTENT)
                     self.assertEqual(caps.source.version,session.info().version)
-                    self.assertIsInstance(caps.values,m.CapabilitiesContent)
-                    self.assertIsInstance(caps.values.value.topology,m.CapabilityStateAvailable)
+                    self.assertIsInstance(caps.value,m.CapabilitiesContent)
+                    self.assertIsInstance(caps.value.value.topology,m.CapabilityStateAvailable)
                 collection = session.capabilities(m.CollectionQueryResources())
-                self.assertIsInstance(collection.values.value.create,m.CapabilityStateAvailable)
+                self.assertIsInstance(collection.value.value.create,m.CapabilityStateAvailable)
 
     def test_canonical_modeling_records_plans_and_bound_topology_recipe(self):
         results = []
@@ -418,11 +557,11 @@ class PythonSdk(unittest.TestCase):
                         bindings.Keyform((-1.,), GEOMETRY.positions),
                         bindings.Keyform((1.,), tuple((x+10., y) for x,y in GEOMETRY.positions))), id=uid(30)))
                     batch = edit.modeling.records(m.ModelingQuery(meshes=(mesh,), bindings=(binding,), parts=(uid(10),), parameters=(parameter,)))
-                    self.assertEqual(batch.values.meshes[0].vertex_ids, (42, 7, 99))
-                    self.assertEqual(batch.values.bindings[0].mesh_id, mesh)
-                    self.assertEqual(batch.values.meshes[0].raw_blend_mode, None)
+                    self.assertEqual(batch.value.meshes[0].vertex_ids, (42, 7, 99))
+                    self.assertEqual(batch.value.bindings[0].mesh_id, mesh)
+                    self.assertEqual(batch.value.meshes[0].raw_blend_mode, None)
                     self.assertEqual(batch.source.sequence, 4)
-                    bound = batch.values.bindings[0]
+                    bound = batch.value.bindings[0]
                     form = replace(bound.keyforms[1], positions=tuple(m.Vec2(x=x+20., y=y) for x,y in GEOMETRY.positions))
                     edit.apply(m.ModelingCommandSetMeshKeyform(id=binding, keyform=form))
                     first, second = uid(61), uid(62)
@@ -430,20 +569,20 @@ class PythonSdk(unittest.TestCase):
                     scene_binding = m.SceneBinding(id=uid(63), axes=(axis,), track=m.SceneTrackPart(target_id=m.PartId(value=uid(10)), keyforms=(
                         m.PartKeyform(samples=(first,), draw_order=-2.), m.PartKeyform(samples=(second,), draw_order=2.))))
                     edit.apply(m.ModelingCommandCreateSceneBinding(binding=scene_binding))
-                    with edit.modeling.plan(m.ModelingIntentDocument(value=m.DocumentAuthoringEditPatch(
+                    with edit.plan(m.ModelingCommandDocument(intent=m.DocumentAuthoringEditPatch(
                         expected=m.DocumentValueLayout(value=None), value=m.DocumentValueLayout(value={"CenterX": 1.5})))) as plan:
-                        edit.apply_plan(plan)
+                        edit.apply(plan)
                     edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditCreate(id=uid(70), path="extras/note.txt")))
-                    old = edit.modeling.records(m.ModelingQuery(attachments=(uid(70),))).values.attachments[0]
+                    old = edit.modeling.records(m.ModelingQuery(attachments=(uid(70),))).value.attachments[0]
                     edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditReplace(expected=old, attachment=replace(old, bytes=b"model attachment"))))
                     swept = edit.modeling.sample(({parameter:-1.}, {parameter:0.}, {parameter:1.}))
-                    self.assertEqual([f.drawables[0].positions[0][0] for f in swept.frames], [0.,10.,20.])
+                    self.assertEqual([f.drawables[0].positions[0][0] for f in swept.value.frames], [0.,10.,20.])
                     final = edit.modeling.records(m.ModelingQuery(meshes=(mesh,), bindings=(binding,), scene_bindings=(uid(63),), attachments=(uid(70),)))
-                    self.assertEqual(final.values.attachments[0].bytes, b"model attachment")
-                    self.assertEqual(final.values.scene_bindings[0].track, scene_binding.track)
+                    self.assertEqual(final.value.attachments[0].bytes, b"model attachment")
+                    self.assertEqual(final.value.scene_bindings[0].track, scene_binding.track)
                 self.assertEqual(session.info().history, (1,0))
                 base = session.modeling.records(m.ModelingQuery(meshes=(mesh,),bindings=(binding,)))
-                mesh_value, binding_value = base.values.meshes[0], base.values.bindings[0]
+                mesh_value, binding_value = base.value.meshes[0], base.value.bindings[0]
                 # An explicit stable vertex map and all existing dependencies are
                 # required by the SDK, even when only triangle winding changes.
                 source = m.GeometrySnapshot(version=base.source.version, mesh_id=mesh, vertex_ids=mesh_value.vertex_ids,
@@ -452,11 +591,11 @@ class PythonSdk(unittest.TestCase):
                     blend_bindings=(), glues=(), vertex_mapping={42:42,7:7,99:99})
                 with session.edit("Bound topology") as edit:
                     edit.apply(m.ModelingCommandReplaceTopology(source=source,replacement=replacement))
-                self.assertEqual(session.meshes.get(mesh).geometry.triangles, ((99,7,42),))
+                self.assertEqual(session.meshes.get(mesh).value.geometry.triangles, ((99,7,42),))
                 self.assertEqual(session.info().history, (2,0))
-                results.append((final.values, swept.frames))
+                results.append((final.value, swept.value.frames))
                 session.undo().wait()
-                self.assertEqual(session.meshes.get(mesh).geometry.triangles, ((42,7,99),))
+                self.assertEqual(session.meshes.get(mesh).value.geometry.triangles, ((42,7,99),))
         # SDK-created sample IDs are intentionally independent per Runtime.
         self.assertEqual(results[0][0].meshes, results[1][0].meshes)
         self.assertEqual(results[0][1], results[1][1])
@@ -475,10 +614,10 @@ class PythonSdk(unittest.TestCase):
                         with session.edit("binary pixels") as edit:
                             asset = edit.resources.create_image("Large", image)
                             snapshot = edit.resources.get(asset)
-                            self.assertEqual(snapshot.pixels.rgba, data)
+                            self.assertEqual(snapshot.value.pixels.rgba, data)
                         self.assertEqual(image.pixels().rgba, data)
-                self.assertEqual(snapshot.pixels.rgba, data)
-                self.assertEqual(session.resources.get(asset).pixels.rgba, data)
+                self.assertEqual(snapshot.value.pixels.rgba, data)
+                self.assertEqual(session.resources.get(asset).value.pixels.rgba, data)
                 self.assertEqual(session.info().history, (1, 0))
                 with self.assertRaises(zipzi.SdkFailure):
                     buffer.read()
@@ -516,11 +655,11 @@ class PythonSdk(unittest.TestCase):
                         with shared.edit("Replace during interrupted read") as edit:
                             edit.resources.replace_image(asset, replacement)
                 snapshot = unknown.exception.recover()
-                self.assertEqual(snapshot.pixels.rgba, data)
-                self.assertEqual(snapshot.name, "Old")
+                self.assertEqual(snapshot.value.pixels.rgba, data)
+                self.assertEqual(snapshot.value.name, "Old")
                 self.assertEqual(snapshot.source.version, old_version)
                 self.assertNotEqual(snapshot.source.version, session.info().version)
-                self.assertEqual(session.resources.get(asset).pixels.rgba, b"new!")
+                self.assertEqual(session.resources.get(asset).value.pixels.rgba, b"new!")
 
     def test_failed_binary_preparation_retains_cleanup_recovery(self):
         runtime = self.runtime("connected", drop="release_blob")
@@ -562,11 +701,11 @@ class PythonSdk(unittest.TestCase):
                         scene.CreatePart(scene.PartSpec("Root", id=uid(10))),
                         scene.CreatePart(scene.PartSpec("Child", id=uid(11), parent_id=uid(10))),
                         scene.CreateParameterGroup(scene.ParameterGroupSpec("Controls", id=uid(12))),
-                        ops.CreateParameter(parameters.ParameterSpec("X", 0., 1., 0., id=uid(4))),
-                        ops.CreateParameter(parameters.ParameterSpec("Y", 0., 1., 0., id=uid(5))),
+                        parameters.Create(parameters.ParameterSpec("X", 0., 1., 0., id=uid(4))),
+                        parameters.Create(parameters.ParameterSpec("Y", 0., 1., 0., id=uid(5))),
                         scene.MoveParameters((uid(5), uid(4)), group_id=uid(12)),
-                        ops.Create(meshes.MeshSpec("A", GEOMETRY, id=uid(2))),
-                        ops.Create(meshes.MeshSpec("B", GEOMETRY, id=uid(3))),
+                        meshes.Create(meshes.MeshSpec("A", GEOMETRY, id=uid(2))),
+                        meshes.Create(meshes.MeshSpec("B", GEOMETRY, id=uid(3))),
                         scene.MoveToPart((uid(2), uid(3)), part_id=uid(10)),
                         scene.CreateWarp("Warp", scene.Placement(part_id=uid(10)), (-1., -1., 2., 2.), id=uid(20)),
                         scene.CreateRotation("Rotation", scene.Placement(part_id=uid(10), parent_id=uid(20)), id=uid(21)),
@@ -583,17 +722,17 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(batch.items[2].parent_id, uid(10))
                     self.assertEqual(batch.items[5].parent_id, uid(20))
                     self.assertEqual(tuple(v.object_kind for v in batch.items[4:]), ("transform", "transform", "glue", "offscreen"))
-                    with edit.scene.plan(scene.SetSceneLabel(uid(21), "Rotation", "Turn")) as plan:
-                        edit.apply_plan(plan)
+                    with edit.plan(scene.SetSceneLabel(uid(21), "Rotation", "Turn")) as plan:
+                        edit.apply(plan)
                         self.assertIn(uid(21), plan.report.affected_ids)
                     self.assertEqual(edit.scene.get(uid(21)).value.name, "Turn")
                 self.assertEqual(session.info().history, (1, 0))
-                self.assertAlmostEqual(session.modeling.sample(({},)).frames[0].offscreens[0].opacity, .4)
-                with session.scene.plan(scene.DuplicateScene((uid(2),), False, part_id=uid(10))) as plan:
+                self.assertAlmostEqual(session.modeling.sample(({},)).value.frames[0].offscreens[0].opacity, .4)
+                with session.plan(scene.DuplicateScene((uid(2),), False, part_id=uid(10))) as plan:
                     copies = dict(plan.report.copied_ids)
                     self.assertIn(uid(2), copies)
                     with session.edit("Copy") as edit:
-                        edit.apply_plan(plan)
+                        edit.apply(plan)
                 self.assertEqual(session.scene.get(copies[uid(2)]).value.part_id, uid(10))
                 session.undo().wait()
                 with self.assertRaises(zipzi.SdkFailure):
@@ -614,9 +753,9 @@ class PythonSdk(unittest.TestCase):
                 session = runtime.sessions.create(uid(1))
                 with session.edit("Bound topology") as edit:
                     edit.apply_many((
-                        ops.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2))),
-                        ops.CreateParameter(parameters.ParameterSpec("X", 0., 1., 0., id=uid(3))),
-                        ops.CreateParameter(parameters.ParameterSpec("Blend", 0., 1., 0., id=uid(4), kind=parameters.Kind.BLEND_SHAPE)),
+                        meshes.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2))),
+                        parameters.Create(parameters.ParameterSpec("X", 0., 1., 0., id=uid(3))),
+                        parameters.Create(parameters.ParameterSpec("Blend", 0., 1., 0., id=uid(4), kind=parameters.Kind.BLEND_SHAPE)),
                         scene.CreateRotation("Parent", scene.Placement(), id=uid(20)),
                     ))
                     edit.bindings.create(bindings.MeshBindingSpec(uid(2), (bindings.Axis(uid(3), (0., 1.)),), (
@@ -631,24 +770,24 @@ class PythonSdk(unittest.TestCase):
                         scene.ReplaceTriangles(uid(2), ((42, 50, 99), (50, 7, 99))),
                         scene.ReorderMeshVertices(uid(2), (50, 99, 42, 7)),
                     ))
-                    with edit.scene.plan(scene.ReparentLocal((uid(2),), parent_id=uid(20))) as plan:
+                    with edit.plan(scene.ReparentLocal((uid(2),), parent_id=uid(20))) as plan:
                         self.assertIsNotNone(plan.report.cost)
-                        edit.apply_plan(plan)
+                        edit.apply(plan)
                     geometry = edit.meshes.get(uid(2))
-                    self.assertEqual(geometry.geometry.vertex_ids, (50, 99, 42, 7))
-                    self.assertEqual(geometry.geometry.triangles, ((42, 50, 99), (50, 7, 99)))
+                    self.assertEqual(geometry.value.geometry.vertex_ids, (50, 99, 42, 7))
+                    self.assertEqual(geometry.value.geometry.triangles, ((42, 50, 99), (50, 7, 99)))
                     poses = tuple({uid(3): x, uid(4): x} for x in (0., .5, 1.))
                     batch = edit.modeling.sample(poses, expected=geometry.source)
-                    xs = tuple(frame.drawables[0].positions[0][0] for frame in batch.frames)
+                    xs = tuple(frame.drawables[0].positions[0][0] for frame in batch.value.frames)
                     self.assertEqual(xs, (.5, 6.5, 12.5))
                     self.assertEqual(edit.meshes.get(uid(2)).source, geometry.source)
                     self.assertEqual(session.info().history, (0, 0))
                 before = session.info()
                 formal = session.modeling.sample(poses)
-                self.assertEqual(tuple(f.drawables[0].positions[0][0] for f in formal.frames), xs)
+                self.assertEqual(tuple(f.drawables[0].positions[0][0] for f in formal.value.frames), xs)
                 self.assertEqual(session.info(), before)
                 self.assertEqual(before.history, (1, 0))
-                results.append((xs, geometry.geometry, tuple(d.kind for d in formal.diagnostics)))
+                results.append((xs, geometry.value.geometry, tuple(d.kind for d in formal.value.diagnostics)))
                 with self.assertRaises(zipzi.SdkFailure):
                     with session.edit("Invalid triangle") as edit:
                         edit.apply(scene.ReplaceTriangles(uid(2), ((42, 7, 1000),)))
@@ -693,7 +832,7 @@ class PythonSdk(unittest.TestCase):
                         self.assertEqual(address.expected, "A")
                         with address.plan("Named") as plan:
                             with session.edit("Name") as edit:
-                                edit.apply_plan(plan)
+                                edit.apply(plan)
                         self.assertEqual(session.scene.get(uid(2)).value.name, "Named")
                         with self.assertRaises(zipzi.SdkFailure) as stale:
                             address.plan("Again")
@@ -745,7 +884,7 @@ class PythonSdk(unittest.TestCase):
                     plan = address.plan("B")
                 with plan:
                     with session.edit("Rename") as edit:
-                        edit.apply_plan(plan)
+                        edit.apply(plan)
                 self.assertEqual(session.info().history, (2, 0))
                 self.assertEqual(session.scene.get(uid(2)).value.name, "B")
                 address.close()
@@ -805,18 +944,18 @@ class PythonSdk(unittest.TestCase):
             snapshot = edit.meshes.get(face)
             self.assertEqual(snapshot.source.sequence, 1)
             self.assertIsNotNone(snapshot.source.edit)
-            self.assertEqual(snapshot.geometry.vertex_ids, (42, 7, 99))
+            self.assertEqual(snapshot.value.geometry.vertex_ids, (42, 7, 99))
             with self.assertRaises(zipzi.SdkFailure) as error:
                 session.meshes.get(face)
             self.assertEqual(error.exception.code, "MISSING_MESH")
             positions = ((2., 3.), (3., 3.), (2., 4.))
-            result = edit.meshes.set_positions(face, vertex_ids=snapshot.geometry.vertex_ids, positions=positions)
+            result = edit.meshes.set_positions(face, vertex_ids=snapshot.value.geometry.vertex_ids, positions=positions)
             self.assertEqual(result.source.sequence, 2)
             self.assertEqual(result.source.edit, snapshot.source.edit)
-            self.assertEqual(edit.meshes.get(face).geometry.positions, positions)
+            self.assertEqual(edit.meshes.get(face).value.geometry.positions, positions)
             self.assertEqual(session.info().history, (0, 0))
             with self.assertRaises(FrozenInstanceError):
-                snapshot.name = "mutated"
+                snapshot.value.name = "mutated"
         formal = session.meshes.get(face)
         self.assertEqual(formal.source.version, session.info().version)
         self.assertIsNone(formal.source.edit)
@@ -824,14 +963,14 @@ class PythonSdk(unittest.TestCase):
         self.assertEqual(formal.source.session, snapshot.source.session)
         self.assertEqual(session.info().history, (1, 0))
         with session.edit("batch") as edit:
-            result = edit.apply_many((ops.Create(meshes.MeshSpec("New", GEOMETRY, id=uid(2))),
-                ops.Rename(uid(2), "Batch"), ops.Rename(face, "Final")))
+            result = edit.apply_many((meshes.Create(meshes.MeshSpec("New", GEOMETRY, id=uid(2))),
+                meshes.Rename(uid(2), "Batch"), meshes.Rename(face, "Final")))
             self.assertEqual(result.ids, (uid(2), uid(2), face))
             self.assertEqual(result.source.sequence, 1)
-            self.assertEqual(edit.meshes.get(uid(2)).name, "Batch")
+            self.assertEqual(edit.meshes.get(uid(2)).value.name, "Batch")
         self.assertEqual(session.info().history, (2, 0))
         self.assertTrue(session.undo().wait().changed)
-        self.assertEqual(session.meshes.get(face).name, "Face")
+        self.assertEqual(session.meshes.get(face).value.name, "Face")
         self.assertEqual(session.info().history, (1, 1))
         with session.edit("no op"):
             pass
@@ -843,7 +982,7 @@ class PythonSdk(unittest.TestCase):
         saved = session.project.save(destination).wait()
         self.assertTrue(saved.manifest.is_file())
         self.assertFalse(session.info().modified)
-        return face, saved.manifest, (session.meshes.get(face).name, formal.geometry.positions, session.info().history)
+        return face, saved.manifest, (session.meshes.get(face).value.name, formal.value.geometry.positions, session.info().history)
 
     def test_session_listing_identity_and_attach_use_the_same_runtime(self):
         for mode in ("local", "connected"):
@@ -857,7 +996,7 @@ class PythonSdk(unittest.TestCase):
                 attached = runtime.sessions.attach(info.id)
                 with attached.edit("same session") as edit:
                     face = edit.meshes.create(meshes.MeshSpec("Resident", GEOMETRY))
-                self.assertEqual(session.meshes.get(face).name, "Resident")
+                self.assertEqual(session.meshes.get(face).value.name, "Resident")
                 self.assertEqual(session.info().history, (1, 0))
                 self.assertEqual(session.info().id, info.id)
                 self.assertEqual(session.meshes.get(face).source.runtime, info.id.runtime)
@@ -876,9 +1015,9 @@ class PythonSdk(unittest.TestCase):
             bindings.Keyform((1.,), tuple((x+shift, y) for x, y in GEOMETRY.positions))), id=uid(4))
 
     def create_bound_mesh(self, edit):
-        return edit.apply_many((ops.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2))),
-            ops.CreateParameter(parameters.ParameterSpec("Open", 0., 1., 0., id=uid(3))),
-            ops.CreateMeshBinding(self.binding_spec())))
+        return edit.apply_many((meshes.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2))),
+            parameters.Create(parameters.ParameterSpec("Open", 0., 1., 0., id=uid(3))),
+            bindings.Create(self.binding_spec())))
 
     def test_mesh_binding_cpu_sweep_uses_exact_candidate_and_formal_sources(self):
         for mode in ("local", "connected"):
@@ -891,70 +1030,70 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(result.source.sequence, 1)
                     binding = edit.bindings.get(uid(4))
                     self.assertEqual(binding.source, result.source)
-                    self.assertEqual(binding.axes[0].parameter_id, uid(3))
-                    self.assertEqual(tuple(s.value for s in binding.axes[0].samples), (0., 1.))
-                    for identity in (binding.axes[0].id, *(s.id for s in binding.axes[0].samples)):
+                    self.assertEqual(binding.value.axes[0].parameter_id, uid(3))
+                    self.assertEqual(tuple(s.value for s in binding.value.axes[0].samples), (0., 1.))
+                    for identity in (binding.value.axes[0].id, *(s.id for s in binding.value.axes[0].samples)):
                         self.assertEqual(UUID(identity).version, 4)
-                    self.assertEqual(binding.keyforms[1].samples, (binding.axes[0].samples[1].id,))
-                    self.assertEqual(binding.keyforms[1].appearance, bindings.Appearance(1., (1., 1., 1.), (0., 0., 0.)))
+                    self.assertEqual(binding.value.keyforms[1].samples, (binding.value.axes[0].samples[1].id,))
+                    self.assertEqual(binding.value.keyforms[1].appearance, bindings.Appearance(1., (1., 1., 1.), (0., 0., 0.)))
                     queried = edit.bindings.get_many((uid(4), uid(4)))
-                    self.assertEqual(queried.items, (binding, binding))
-                    self.assertEqual(edit.bindings.list(), bindings.Batch(binding.source, (binding,)))
+                    self.assertEqual(queried.items, (binding.value, binding.value))
+                    self.assertEqual(edit.bindings.list(), zipzi.Batch(binding.source, (binding.value,)))
                     poses = [{uid(3): x} for x in (0., .5, 1., 2.)]
                     sampled = edit.modeling.sample(poses, expected=result.source, checks=sampling.Checks(.75))
                     poses[0][uid(3)] = 1.
                     self.assertEqual(sampled.source, result.source)
-                    self.assertEqual(sampled.version, result.source.version)
-                    self.assertEqual(sampled.state, "ready")
-                    self.assertEqual([f.drawables[0].positions[0][0] for f in sampled.frames], [0., 5., 10., 10.])
-                    self.assertEqual(sampled.parameters[0].values, ((uid(3), 0.),))
-                    self.assertTrue(sampled.frames[-1].parameters[0].clamped)
-                    self.assertEqual(sampled.frames[-1].parameters[0].value, 1.)
-                    self.assertEqual(sampled.diagnostics, (sampling.Diagnostic(sampling.DiagnosticKind.SMALL_TRIANGLE, uid(2), 0),))
-                    self.assertEqual(sampled.frames[0].drawables[0].indices, (0, 1, 2))
-                    self.assertEqual(sampled.frames[0].drawables[0].uvs, GEOMETRY.uvs)
-                    self.assertEqual(sampled.frames[0].render_plan, ())
-                    self.assertFalse(sampled.frames[0].drawables[0].renderable)
-                    self.assertEqual(sampled.frames[0].deformers, ())
-                    self.assertEqual(sampled.frames[0].offscreens, ())
+                    self.assertEqual(sampled.value.version, result.source.version)
+                    self.assertEqual(sampled.value.state, "ready")
+                    self.assertEqual([f.drawables[0].positions[0][0] for f in sampled.value.frames], [0., 5., 10., 10.])
+                    self.assertEqual(sampled.value.parameters[0].values, ((uid(3), 0.),))
+                    self.assertTrue(sampled.value.frames[-1].parameters[0].clamped)
+                    self.assertEqual(sampled.value.frames[-1].parameters[0].value, 1.)
+                    self.assertEqual(sampled.value.diagnostics, (sampling.Diagnostic(sampling.DiagnosticKind.SMALL_TRIANGLE, uid(2), 0),))
+                    self.assertEqual(sampled.value.frames[0].drawables[0].indices, (0, 1, 2))
+                    self.assertEqual(sampled.value.frames[0].drawables[0].uvs, GEOMETRY.uvs)
+                    self.assertEqual(sampled.value.frames[0].render_plan, ())
+                    self.assertFalse(sampled.value.frames[0].drawables[0].renderable)
+                    self.assertEqual(sampled.value.frames[0].deformers, ())
+                    self.assertEqual(sampled.value.frames[0].offscreens, ())
                     with self.assertRaises(FrozenInstanceError):
-                        sampled.frames[0].drawables[0].opacity = .5
+                        sampled.value.frames[0].drawables[0].opacity = .5
                     self.assertEqual(session.info().history, (0, 0))
-                    self.assertEqual(session.modeling.sample(({},)).frames[0].drawables, ())
+                    self.assertEqual(session.modeling.sample(({},)).value.frames[0].drawables, ())
                     colored = replace(self.binding_spec(20.).keyforms[1], opacity=.5,
                         multiply=(.25,.5,1.), screen=(.5,.25,.75), draw_order=12.)
                     changed = edit.bindings.set_keyform(uid(4), colored)
-                    self.assertEqual(edit.bindings.get(uid(4)).keyforms[1].appearance,
+                    self.assertEqual(edit.bindings.get(uid(4)).value.keyforms[1].appearance,
                         bindings.Appearance(.5,(.25,.5,1.),(.5,.25,.75)))
-                    posed = edit.modeling.sample(({uid(3):1.},)).frames[0].drawables[0]
+                    posed = edit.modeling.sample(({uid(3):1.},)).value.frames[0].drawables[0]
                     self.assertEqual(posed.opacity,.5)
                     self.assertEqual(posed.multiply_color[:3],(.25,.5,1.))
                     self.assertEqual(posed.screen_color[:3],(.5,.25,.75))
                     self.assertEqual(posed.draw_order,12)
                     self.assertEqual(changed.source.sequence, 2)
-                    self.assertEqual(edit.bindings.get(uid(4)).axes, binding.axes)
+                    self.assertEqual(edit.bindings.get(uid(4)).value.axes, binding.value.axes)
                     with self.assertRaises(zipzi.SdkFailure) as stale:
                         edit.modeling.sample(({uid(3): .5},), expected=result.source)
                     self.assertEqual(stale.exception.code, "INVALID_REFERENCE")
-                    self.assertEqual(edit.modeling.sample(({uid(3): .5},)).frames[0].drawables[0].positions[0][0], 10.)
+                    self.assertEqual(edit.modeling.sample(({uid(3): .5},)).value.frames[0].drawables[0].positions[0][0], 10.)
                 self.assertEqual(session.info().history, (1, 0))
                 self.assertEqual(len([e for e in stream.poll() if isinstance(e, events.Published)]), 1)
                 before = session.info()
                 formal = session.modeling.sample(({uid(3): .25},))
                 self.assertIsNone(formal.source.edit)
-                self.assertEqual(formal.frames[0].drawables[0].positions[0][0], 5.)
+                self.assertEqual(formal.value.frames[0].drawables[0].positions[0][0], 5.)
                 self.assertEqual(session.info(), before)
                 self.assertEqual(stream.poll(), ())
                 session.undo().wait()
-                self.assertEqual(session.modeling.sample(({},)).frames[0].drawables, ())
+                self.assertEqual(session.modeling.sample(({},)).value.frames[0].drawables, ())
                 self.assertEqual(session.bindings.list().items, ())
                 session.redo().wait()
-                self.assertEqual(session.bindings.get(uid(4)).axes, binding.axes)
+                self.assertEqual(session.bindings.get(uid(4)).value.axes, binding.value.axes)
                 saved = session.project.save(self.folder / (mode+"-binding")).wait()
                 with self.runtime(mode) as fresh:
                     reopened = fresh.sessions.open(saved.manifest).wait()
-                    self.assertEqual(reopened.bindings.get(uid(4)).axes, binding.axes)
-                    self.assertEqual(reopened.modeling.sample(({uid(3): .5},)).frames[0].drawables[0].positions[0][0], 10.)
+                    self.assertEqual(reopened.bindings.get(uid(4)).value.axes, binding.value.axes)
+                    self.assertEqual(reopened.modeling.sample(({uid(3): .5},)).value.frames[0].drawables[0].positions[0][0], 10.)
 
     def test_binding_failure_aborts_mixed_batch_and_noop_preserves_redo(self):
         for mode in ("local", "connected"):
@@ -975,7 +1114,7 @@ class PythonSdk(unittest.TestCase):
                         edit.meshes.rename(uid(2), "Never publish")
                         with self.assertRaises(zipzi.SdkFailure):
                             edit.bindings.set_keyform(uid(4), bindings.Keyform((1.,), ((0., 0.),)))
-                self.assertEqual(session.meshes.get(uid(2)).name, "Face")
+                self.assertEqual(session.meshes.get(uid(2)).value.name, "Face")
                 self.assertEqual(session.info().history, (1, 1))
                 with self.assertRaises(zipzi.SdkFailure):
                     with session.edit("invalid grid") as edit:
@@ -1005,7 +1144,7 @@ class PythonSdk(unittest.TestCase):
                         self.assertEqual(rejected.exception.code, code)
                     self.assertEqual(len(edit.bindings.get_many((uid(4),)*256).items),256)
                     self.assertEqual(edit.bindings.get(uid(4)).source, result.source)
-                    self.assertEqual(edit.modeling.sample(()).frames, ())
+                    self.assertEqual(edit.modeling.sample(()).value.frames, ())
                     self.assertEqual(edit.modeling.sample(({},)).source, result.source)
                 self.assertEqual(session.info().history, (1, 0))
 
@@ -1026,16 +1165,16 @@ class PythonSdk(unittest.TestCase):
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                             edit.bindings.get(uid(4))
                         binding = lost.exception.recover()
-                        self.assertIsInstance(binding, bindings.Snapshot)
+                        self.assertIsInstance(binding, zipzi.Snapshot)
                         self.assertEqual(binding.source.sequence, 1)
                     if dropped == "sample_modeling":
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                             edit.modeling.sample(({uid(3): .5},))
                         sampled = lost.exception.recover()
-                        self.assertIsInstance(sampled, sampling.Batch)
-                        self.assertEqual(sampled.frames[0].drawables[0].positions[0][0], 5.)
+                        self.assertIsInstance(sampled, zipzi.Snapshot)
+                        self.assertEqual(sampled.value.frames[0].drawables[0].positions[0][0], 5.)
                 self.assertEqual(session.info().history, (1, 0))
-                self.assertEqual(session.modeling.sample(({uid(3): .5},)).frames[0].drawables[0].positions[0][0], 5.)
+                self.assertEqual(session.modeling.sample(({uid(3): .5},)).value.frames[0].drawables[0].positions[0][0], 5.)
 
     def test_lost_cpu_sample_retains_old_frame_after_peer_publication(self):
         with self.runtime("connected", drop="sample_modeling") as runtime:
@@ -1050,10 +1189,10 @@ class PythonSdk(unittest.TestCase):
                 with attached.edit("later") as edit:
                     edit.bindings.set_keyform(uid(4), self.binding_spec(20.).keyforms[1])
             restored = lost.exception.recover()
-            self.assertIsInstance(restored, sampling.Batch)
-            self.assertEqual(restored.version, old)
-            self.assertEqual(restored.frames[0].drawables[0].positions[0][0], 5.)
-            self.assertEqual(session.modeling.sample(({uid(3): .5},)).frames[0].drawables[0].positions[0][0], 10.)
+            self.assertIsInstance(restored, zipzi.Snapshot)
+            self.assertEqual(restored.value.version, old)
+            self.assertEqual(restored.value.frames[0].drawables[0].positions[0][0], 5.)
+            self.assertEqual(session.modeling.sample(({uid(3): .5},)).value.frames[0].drawables[0].positions[0][0], 10.)
             self.assertEqual(session.info().history, (2, 0))
 
     def test_typed_parameters_share_a_mixed_batch_and_preserve_unspecified_fields(self):
@@ -1064,25 +1203,25 @@ class PythonSdk(unittest.TestCase):
                 spec = parameters.ParameterSpec("Angle", -30., 30., 0., id=uid(802), runtime_id="ParamAngle",
                     kind=parameters.Kind.BLEND_SHAPE, decimal_places=2, repeat=True)
                 with session.edit("mesh and parameters") as edit:
-                    result = edit.apply_many((ops.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(803))),
-                        ops.CreateParameter(spec), ops.PatchParameter(uid(802), parameters.Patch(name="Final")), ops.Rename(uid(803), "Mixed")))
+                    result = edit.apply_many((meshes.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(803))),
+                        parameters.Create(spec), parameters.Patch(uid(802), parameters.ParameterPatch(name="Final")), meshes.Rename(uid(803), "Mixed")))
                     self.assertEqual(result.ids, (uid(803), uid(802), uid(802), uid(803)))
                     batch = edit.parameters.get_many((uid(802), uid(802)))
                     old = batch.items[0]
                     self.assertEqual(batch.source, result.source)
                     self.assertEqual(batch.source.sequence, 1)
-                    self.assertIs(batch.items[0].source, batch.items[1].source)
+                    self.assertTrue(all(isinstance(item, parameters.Parameter) and not hasattr(item, "source") for item in batch.items))
                     self.assertEqual((old.name, old.runtime_id, old.kind, old.decimal_places, old.repeat),
                         ("Final", "ParamAngle", parameters.Kind.BLEND_SHAPE, 2, True))
-                    edit.parameters.patch(uid(802), parameters.Patch(default_value=5., repeat=False, decimal_places=0))
+                    edit.parameters.patch(uid(802), parameters.ParameterPatch(default_value=5., repeat=False, decimal_places=0))
                     changed = edit.parameters.get(uid(802))
-                    self.assertEqual((changed.runtime_id, changed.kind, changed.decimal_places, changed.repeat, changed.default_value),
+                    self.assertEqual((changed.value.runtime_id, changed.value.kind, changed.value.decimal_places, changed.value.repeat, changed.value.default_value),
                         ("ParamAngle", parameters.Kind.BLEND_SHAPE, 0, False, 5.))
                     self.assertEqual(changed.source.sequence, 2)
                     normal = edit.parameters.create(parameters.ParameterSpec("Normal", -1., 1., 0.))
                     self.assertEqual(UUID(normal).version, 4)
                     value = edit.parameters.get(normal)
-                    self.assertEqual((value.runtime_id, value.kind, value.decimal_places, value.repeat),
+                    self.assertEqual((value.value.runtime_id, value.value.kind, value.value.decimal_places, value.value.repeat),
                         (normal, parameters.Kind.NORMAL, 6, False))
                     self.assertEqual(tuple(p.id for p in edit.parameters.list().items), (uid(802), normal))
                     self.assertEqual(edit.parameters.get_many(()).items, ())
@@ -1093,8 +1232,8 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(old.default_value, 0.)
                 self.assertTrue(old.repeat)
                 with self.assertRaises(FrozenInstanceError):
-                    formal.name = "mutable"
-                self.assertEqual(session.meshes.get(uid(803)).name, "Mixed")
+                    formal.value.name = "mutable"
+                self.assertEqual(session.meshes.get(uid(803)).value.name, "Mixed")
 
     def test_parameter_query_admission_and_missing_records_do_not_poison_candidate(self):
         for mode in ("local", "connected"):
@@ -1111,15 +1250,15 @@ class PythonSdk(unittest.TestCase):
                         edit.parameters.get_many((id,) * 257)
                     self.assertEqual(refused.exception.code, "BUDGET_EXCEEDED")
                     self.assertEqual(edit.parameters.get(id).source, source)
-                    edit.parameters.patch(id, parameters.Patch(name="Still editable"))
-                self.assertEqual(session.parameters.get(id).name, "Still editable")
+                    edit.parameters.patch(id, parameters.ParameterPatch(name="Still editable"))
+                self.assertEqual(session.parameters.get(id).value.name, "Still editable")
                 self.assertEqual(session.info().history, (1, 0))
 
     def test_parameter_errors_abort_and_noop_cancel_keep_redo(self):
         for mode in ("local", "connected"):
             session = self.runtime(mode).sessions.create(uid(821))
-            for bad in (parameters.Patch(minimum=2.), parameters.Patch(decimal_places=10),
-                parameters.Patch(default_value=float("nan")), parameters.Patch(repeat=1)):
+            for bad in (parameters.ParameterPatch(minimum=2.), parameters.ParameterPatch(decimal_places=10),
+                parameters.ParameterPatch(default_value=float("nan")), parameters.ParameterPatch(repeat=1)):
                 with self.subTest(mode=mode, bad=bad):
                     with self.assertRaises(zipzi.SdkFailure) as error:
                         with session.edit("caught parameter error") as edit:
@@ -1134,17 +1273,17 @@ class PythonSdk(unittest.TestCase):
             with session.edit("base") as edit:
                 id = edit.parameters.create(parameters.ParameterSpec("Base", -1., 1., 0.))
             with session.edit("change") as edit:
-                edit.parameters.patch(id, parameters.Patch(name="Changed"))
+                edit.parameters.patch(id, parameters.ParameterPatch(name="Changed"))
             session.undo().wait()
             with session.edit("no-op") as edit:
-                edit.parameters.patch(id, parameters.Patch(name="Base"))
+                edit.parameters.patch(id, parameters.ParameterPatch(name="Base"))
             self.assertEqual(session.info().history, (1, 1))
             with session.edit("cancel") as edit:
-                edit.parameters.patch(id, parameters.Patch(name="Cancelled"))
+                edit.parameters.patch(id, parameters.ParameterPatch(name="Cancelled"))
                 edit.cancel()
             self.assertEqual(session.info().history, (1, 1))
             session.redo().wait()
-            self.assertEqual(session.parameters.get(id).name, "Changed")
+            self.assertEqual(session.parameters.get(id).value.name, "Changed")
 
     def test_event_subscriptions_are_paged_immutable_independent_and_source_exact(self):
         for mode in ("local", "connected"):
@@ -1236,7 +1375,7 @@ class PythonSdk(unittest.TestCase):
         with zipzi.connect(endpoint=self.folder / str(self.counter) / "python2.sock") as peer:
             same = peer.sessions.attach(session.id)
             with same.edit("second") as edit:
-                edit.parameters.patch(id, parameters.Patch(name="Second"))
+                edit.parameters.patch(id, parameters.ParameterPatch(name="Second"))
         recovered = lost.exception.recover()
         first_receipts = [e.receipt for e in recovered if isinstance(e, events.Published)]
         self.assertEqual([r.after.revision for r in first_receipts], [1])
@@ -1253,20 +1392,20 @@ class PythonSdk(unittest.TestCase):
             with self.assertRaises(zipzi.OutcomeUnknown) as error:
                 session.parameters.get_many((id,)) if many else session.parameters.get(id)
             result = error.exception.recover()
-            self.assertEqual(result.items[0].name if many else result.name, "Read")
+            self.assertEqual(result.items[0].name if many else result.value.name, "Read")
 
     def test_parameter_batch_response_loss_commits_once(self):
         runtime = self.runtime("connected", drop="apply_authoring")
         session = runtime.sessions.create(uid(861))
         edit = session.edit("parameter recovery")
         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
-            edit.apply_many((ops.CreateParameter(parameters.ParameterSpec("Once", -1., 1., 0., id=uid(862))),
-                ops.PatchParameter(uid(862), parameters.Patch(name="Final"))))
+            edit.apply_many((parameters.Create(parameters.ParameterSpec("Once", -1., 1., 0., id=uid(862))),
+                parameters.Patch(uid(862), parameters.ParameterPatch(name="Final"))))
         result = lost.exception.recover()
         self.assertEqual(result.source.sequence, 1)
         self.assertEqual(result.ids, (uid(862), uid(862)))
         edit.commit().wait()
-        self.assertEqual(session.parameters.get(uid(862)).name, "Final")
+        self.assertEqual(session.parameters.get(uid(862)).value.name, "Final")
         self.assertEqual(session.info().history, (1, 0))
 
     def test_mesh_batch_admits_the_whole_selection_and_keeps_source_and_order(self):
@@ -1278,25 +1417,25 @@ class PythonSdk(unittest.TestCase):
                     a = edit.meshes.create(meshes.MeshSpec("A", GEOMETRY))
                     b = edit.meshes.create(meshes.MeshSpec("B", GEOMETRY))
                     values = edit.meshes.get_many((b, a, b))
-                    self.assertEqual(tuple(v.name for v in values), ("B", "A", "B"))
-                    self.assertTrue(all(v.source == values[0].source for v in values))
-                    self.assertEqual(values[0].source.sequence, 2)
-                    self.assertEqual(edit.meshes.get_many(()), ())
-                    self.assertEqual(len(edit.meshes.get_many((a,)*256)),256)
+                    self.assertEqual(tuple(v.name for v in values.items), ("B", "A", "B"))
+                    self.assertTrue(all(isinstance(v, meshes.Mesh) and not hasattr(v, "source") for v in values.items))
+                    self.assertEqual(values.source.sequence, 2)
+                    self.assertEqual(edit.meshes.get_many(()).items, ())
+                    self.assertEqual(len(edit.meshes.get_many((a,)*256).items),256)
                     for ids in ((a,) * 257, (a, uid(999))):
                         with self.assertRaises(zipzi.SdkFailure):
                             edit.meshes.get_many(ids)
-                    self.assertEqual(edit.meshes.get(a).source, values[0].source)
+                    self.assertEqual(edit.meshes.get(a).source, values.source)
                     edit.meshes.rename(a, "After read refusal")
                 self.assertEqual(session.info().history, (1, 0))
-                self.assertEqual(session.meshes.get_many((a, b))[0].name, "After read refusal")
+                self.assertEqual(session.meshes.get_many((a, b)).items[0].name, "After read refusal")
         runtime = self.runtime("connected", drop="mesh_snapshots")
         session = runtime.sessions.create(uid(872))
         with session.edit("read recovery") as edit:
             id = edit.meshes.create(meshes.MeshSpec("Recovered", GEOMETRY))
         with self.assertRaises(zipzi.OutcomeUnknown) as error:
             session.meshes.get_many((id,))
-        self.assertEqual(error.exception.recover()[0].name, "Recovered")
+        self.assertEqual(error.exception.recover().items[0].name, "Recovered")
 
     def test_shared_recipe(self):
         outputs = []
@@ -1310,8 +1449,8 @@ class PythonSdk(unittest.TestCase):
                     # to release its project lock before a fresh disk open.
                     self.stop_host()
                 reopened = self.runtime(mode).sessions.open(manifest).wait()
-                self.assertEqual(reopened.meshes.get(face).name, "Final")
-                self.assertEqual(reopened.meshes.get(face).geometry.positions, ((2., 3.), (3., 3.), (2., 4.)))
+                self.assertEqual(reopened.meshes.get(face).value.name, "Final")
+                self.assertEqual(reopened.meshes.get(face).value.geometry.positions, ((2., 3.), (3., 3.), (2., 4.)))
                 self.assertEqual(reopened.info().history, (0, 0))
                 self.assertFalse(reopened.info().modified)
                 outputs.append(result)
@@ -1328,7 +1467,7 @@ class PythonSdk(unittest.TestCase):
                             edit.meshes.create(meshes.MeshSpec("Draft", GEOMETRY, id=uid(2)))
                             try:
                                 if failure == "domain":
-                                    edit.apply_many((ops.Rename(uid(2), "Partial"), ops.Rename(uid(999), "Missing")))
+                                    edit.apply_many((meshes.Rename(uid(2), "Partial"), meshes.Rename(uid(999), "Missing")))
                                 else:
                                     edit.meshes.set_positions(uid(2), vertex_ids=(2**40 if failure == "encoding" else 42,),
                                         positions=((float("nan") if failure == "nan" else 1., 0.),))
@@ -1347,11 +1486,11 @@ class PythonSdk(unittest.TestCase):
                     face = edit.meshes.create(meshes.MeshSpec("A", GEOMETRY))
                     before = edit.meshes.get(face).source
                     with self.assertRaises(zipzi.SdkFailure) as error:
-                        edit.apply_many((ops.Rename(face, "x"),) * 1025)
+                        edit.apply_many((meshes.Rename(face, "x"),) * 1025)
                     self.assertEqual(error.exception.code, "BUDGET_EXCEEDED")
                     self.assertEqual(edit.meshes.get(face).source, before)
                     edit.meshes.rename(face, "B")
-                self.assertEqual(session.meshes.get(face).name, "B")
+                self.assertEqual(session.meshes.get(face).value.name, "B")
 
     def test_connected_apply_and_commit_loss_recover_same_request_once(self):
         for lost in ("apply_authoring", "commit", "job"):
@@ -1360,7 +1499,7 @@ class PythonSdk(unittest.TestCase):
                 edit = session.edit("recover")
                 with self.assertRaises(zipzi.OutcomeUnknown) as error:
                     with edit:
-                        edit.apply(ops.Create(meshes.MeshSpec("Once", GEOMETRY, id=uid(2))))
+                        edit.apply(meshes.Create(meshes.MeshSpec("Once", GEOMETRY, id=uid(2))))
                 if lost != "job":
                     pending = edit.pending_request
                     self.assertIsNotNone(pending)
@@ -1374,7 +1513,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertIsInstance(result, zipzi.Job)
                     result.wait()
                 self.assertEqual(session.info().history, (1, 0))
-                self.assertEqual(session.meshes.get(uid(2)).name, "Once")
+                self.assertEqual(session.meshes.get(uid(2)).value.name, "Once")
 
     def test_prepared_images_plans_mixed_batch_history_save_and_reopen(self):
         outputs = []
@@ -1387,48 +1526,48 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual((a.width, a.height), (1, 1))
                 self.assertEqual(runtime.resources.usage().rgba_bytes, 8)
                 with session.edit("texture and mesh") as edit:
-                    result = edit.apply_many((ops.CreateImage("A", a, id=uid(2)),
-                        ops.Create(meshes.MeshSpec("Face", GEOMETRY, texture_asset_id=uid(2), id=uid(3)))))
+                    result = edit.apply_many((resources.CreateImage("A", a, id=uid(2)),
+                        meshes.Create(meshes.MeshSpec("Face", GEOMETRY, texture_asset_id=uid(2), id=uid(3)))))
                     self.assertEqual(result.ids, (uid(2), uid(3)))
                     self.assertEqual(result.source.sequence, 1)
                     snapshot = edit.resources.get(uid(2))
-                    self.assertEqual(snapshot.pixels.rgba, bytes((3, 5, 7, 255)))
+                    self.assertEqual(snapshot.value.pixels.rgba, bytes((3, 5, 7, 255)))
                     a.close()
                     a.close()
-                    plan = edit.resources.plan(resources.RenameIntent(uid(2), "A", "Texture"))
+                    plan = edit.plan(resources.RenameImage(uid(2), "Texture", expected_name="A"))
                     report = plan.report
                     self.assertEqual(report.source, snapshot.source)
                     self.assertEqual(report.affected_ids, (uid(2),))
                     self.assertFalse(report.no_op)
                     with self.assertRaises(FrozenInstanceError):
                         report.no_op = True
-                    result = edit.apply_plan(plan)
+                    result = edit.apply(plan)
                     self.assertEqual(result.source.sequence, 2)
                     plan.close()
                     self.assertIs(plan.report, report)
-                    self.assertEqual(edit.resources.get(uid(2)).name, "Texture")
+                    self.assertEqual(edit.resources.get(uid(2)).value.name, "Texture")
                 self.assertEqual(session.info().history, (1, 0))
                 self.assertEqual(b.pixels().rgba, bytes((11, 13, 17, 255)))
                 b.close()
                 self.assertEqual(runtime.resources.usage().rgba_bytes, 4)
-                with session.meshes.plan(meshes.RenameIntent(uid(3), "Face", "Final")) as plan:
+                with session.plan(meshes.Rename(uid(3), "Final", expected_name="Face")) as plan:
                     self.assertEqual(plan.report.source, session.meshes.get(uid(3)).source)
                     with session.edit("formal plan and trailing operation") as edit:
-                        result = edit.apply_many((ops.ApplyPlan(plan), ops.Rename(uid(3), "Final batch")))
+                        result = edit.apply_many((plan, meshes.Rename(uid(3), "Final batch")))
                         self.assertEqual(result.source.sequence, 1)
                 session.undo().wait()
-                self.assertEqual(session.meshes.get(uid(3)).name, "Face")
-                self.assertEqual(session.resources.get(uid(2)).pixels.rgba, snapshot.pixels.rgba)
+                self.assertEqual(session.meshes.get(uid(3)).value.name, "Face")
+                self.assertEqual(session.resources.get(uid(2)).value.pixels.rgba, snapshot.value.pixels.rgba)
                 session.redo().wait()
                 self.assertEqual(session.info().history, (2, 0))
                 saved = session.project.save(self.folder / mode).wait()
-                outputs.append((session.meshes.get(uid(3)).name, session.resources.get(uid(2)).pixels))
+                outputs.append((session.meshes.get(uid(3)).value.name, session.resources.get(uid(2)).value.pixels))
                 runtime.close()
                 if mode == "connected":
                     self.stop_host()
                 reopened = self.runtime(mode).sessions.open(saved.manifest).wait()
-                self.assertEqual(reopened.meshes.get(uid(3)).name, "Final batch")
-                self.assertEqual(reopened.resources.get(uid(2)).pixels.rgba, snapshot.pixels.rgba)
+                self.assertEqual(reopened.meshes.get(uid(3)).value.name, "Final batch")
+                self.assertEqual(reopened.resources.get(uid(2)).value.pixels.rgba, snapshot.value.pixels.rgba)
                 self.assertEqual(reopened.info().history, (0, 0))
         self.assertEqual(outputs[0], outputs[1])
 
@@ -1446,15 +1585,15 @@ class PythonSdk(unittest.TestCase):
                 with session.edit("B") as edit:
                     edit.resources.replace_image(asset, b)
                     b.close()
-                    self.assertEqual(edit.resources.get(asset).pixels.rgba, b"efgh")
-                    self.assertEqual(session.resources.get(asset).pixels.rgba, b"abcd")
-                self.assertEqual(session.resources.get(asset).name, "Texture")
-                self.assertEqual(session.resources.get(asset).pixels.rgba, b"efgh")
+                    self.assertEqual(edit.resources.get(asset).value.pixels.rgba, b"efgh")
+                    self.assertEqual(session.resources.get(asset).value.pixels.rgba, b"abcd")
+                self.assertEqual(session.resources.get(asset).value.name, "Texture")
+                self.assertEqual(session.resources.get(asset).value.pixels.rgba, b"efgh")
                 session.undo().wait()
-                self.assertEqual(session.resources.get(asset).pixels.rgba, b"abcd")
+                self.assertEqual(session.resources.get(asset).value.pixels.rgba, b"abcd")
                 session.redo().wait()
-                self.assertEqual(session.resources.get(asset).pixels.rgba, b"efgh")
-                self.assertEqual(old.pixels.rgba, b"abcd")
+                self.assertEqual(session.resources.get(asset).value.pixels.rgba, b"efgh")
+                self.assertEqual(old.value.pixels.rgba, b"abcd")
                 self.assertEqual(session.info().history, (2, 0))
 
     def test_stale_plans_keep_reports_and_abort_without_partial_publication(self):
@@ -1465,25 +1604,29 @@ class PythonSdk(unittest.TestCase):
                 face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
             for source in ("formal", "candidate", "other", "batch"):
                 with self.subTest(mode=mode, source=source):
-                    plan = session.meshes.plan(meshes.RenameIntent(face, "Face", "Planned")) if source in {"formal", "batch"} else None
+                    plan = session.plan(meshes.Rename(face, "Planned", expected_name="Face")) if source in {"formal", "batch"} else None
                     edit = session.edit("stale")
                     if source in {"candidate", "other"}:
-                        plan = edit.meshes.plan(meshes.RenameIntent(face, "Face", "Planned"))
+                        plan = edit.plan(meshes.Rename(face, "Planned", expected_name="Face"))
                     if source == "other":
                         edit.cancel()
                         edit = session.edit("another candidate")
                     elif source != "batch":
                         edit.meshes.rename(face, "Draft")
                     report = plan.report
-                    with self.assertRaises(zipzi.SdkFailure) as error:
-                        edit.apply_many((ops.Rename(face, "Partial"), ops.ApplyPlan(plan))) if source == "batch" else edit.apply_plan(plan)
-                    self.assertEqual(error.exception.code, "STALE_PLAN")
+                    if source == "batch":
+                        with self.assertRaises(ValueError):
+                            edit.apply_many((meshes.Rename(face, "Partial"), plan))
+                    else:
+                        with self.assertRaises(zipzi.SdkFailure) as error:
+                            edit.apply(plan)
+                        self.assertEqual(error.exception.code, "STALE_PLAN")
                     with self.assertRaises(zipzi.SdkFailure):
                         edit.commit()
                     self.assertIs(plan.report, report)
                     plan.close()
                     self.assertIs(plan.report, report)
-                    self.assertEqual(session.meshes.get(face).name, "Face")
+                    self.assertEqual(session.meshes.get(face).value.name, "Face")
                     self.assertEqual(session.info().history, (1, 0))
                     edit.cancel()
 
@@ -1516,8 +1659,8 @@ class PythonSdk(unittest.TestCase):
                         runtime.resources.prepare_image(1, 1, b"bad")
                     image = runtime.resources.prepare_image(1, 1, b"rgba")
                     asset = edit.resources.create_image("Draft", image)
-                    plan = edit.resources.plan(resources.RenameIntent(asset, "Draft", "Planned"))
-                    pixels = edit.resources.get(asset).pixels
+                    plan = edit.plan(resources.RenameImage(asset, "Planned", expected_name="Draft"))
+                    pixels = edit.resources.get(asset).value.pixels
                     image.close()
                     edit.cancel()
                     # A candidate Plan owns its source snapshot until release.
@@ -1554,18 +1697,18 @@ class PythonSdk(unittest.TestCase):
                 if lost == "image_snapshot":
                     with self.assertRaises(zipzi.OutcomeUnknown) as error:
                         edit.resources.get(asset)
-                    self.assertEqual(error.exception.recover().pixels.rgba, b"rgba")
+                    self.assertEqual(error.exception.recover().value.pixels.rgba, b"rgba")
                 if lost == "plan_authoring":
                     with self.assertRaises(zipzi.OutcomeUnknown) as error:
-                        edit.resources.plan(resources.RenameIntent(asset, "Draft", "Final"))
+                        edit.plan(resources.RenameImage(asset, "Final", expected_name="Draft"))
                     plan = error.exception.recover()
                     self.assertIsInstance(plan, zipzi.Plan)
                 else:
-                    plan = edit.resources.plan(resources.RenameIntent(asset, "Draft", "Final"))
+                    plan = edit.plan(resources.RenameImage(asset, "Final", expected_name="Draft"))
                 report = plan.report
                 with patch.object(runtime._backend, "plan", side_effect=AssertionError("Report made an RPC")):
                     self.assertIs(plan.report, report)
-                edit.apply_plan(plan)
+                edit.apply(plan)
                 edit.commit().wait()
                 for handle, target in ((image, "release_prepared_image"), (plan, "release_modeling_plan")):
                     if lost == target:
@@ -1584,7 +1727,7 @@ class PythonSdk(unittest.TestCase):
                 else:
                     usage = runtime.resources.usage()
                 self.assertEqual((usage.prepared_images, usage.plans), (0, 0))
-                self.assertEqual(session.resources.get(asset).name, "Final")
+                self.assertEqual(session.resources.get(asset).value.name, "Final")
                 self.assertEqual(session.info().history, (1, 0))
 
     def test_plan_apply_loss_and_foreign_closed_plan_references(self):
@@ -1592,14 +1735,14 @@ class PythonSdk(unittest.TestCase):
         session = runtime.sessions.create(uid(1))
         with session.edit("base") as edit:
             face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
-        with session.meshes.plan(meshes.RenameIntent(face, "Face", "Final")) as plan:
+        with session.plan(meshes.Rename(face, "Final", expected_name="Face")) as plan:
             edit = session.edit("lost plan apply")
             with self.assertRaises(zipzi.OutcomeUnknown) as error:
-                edit.apply_plan(plan)
+                edit.apply(plan)
             result = error.exception.recover()
             self.assertEqual(result.source.sequence, 1)
             edit.commit().wait()
-        self.assertEqual(session.meshes.get(face).name, "Final")
+        self.assertEqual(session.meshes.get(face).value.name, "Final")
         self.assertEqual(session.info().history, (2, 0))
         for mode in ("local", "connected"):
             with self.subTest(mode=mode):
@@ -1607,23 +1750,23 @@ class PythonSdk(unittest.TestCase):
                 session, other_session = runtime.sessions.create(uid(1)), other.sessions.create(uid(2))
                 with other_session.edit("other") as edit:
                     face = edit.meshes.create(meshes.MeshSpec("Other", GEOMETRY))
-                plan = other_session.meshes.plan(meshes.RenameIntent(face, "Other", "Planned"))
+                plan = other_session.plan(meshes.Rename(face, "Planned", expected_name="Other"))
                 with self.assertRaises(zipzi.SdkFailure) as error:
                     with session.edit("foreign") as edit:
-                        edit.apply_plan(plan)
+                        edit.apply(plan)
                 self.assertEqual(error.exception.code, "WRONG_OWNER")
                 plan.close()
                 with session.edit("base") as edit:
                     face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
-                plan = session.meshes.plan(meshes.RenameIntent(face, "Face", "Planned"))
+                plan = session.plan(meshes.Rename(face, "Planned", expected_name="Face"))
                 report = plan.report
                 plan.close()
                 with self.assertRaises(zipzi.SdkFailure) as error:
                     with session.edit("closed") as edit:
-                        edit.apply_plan(plan)
+                        edit.apply(plan)
                 self.assertEqual(error.exception.code, "INVALID_REFERENCE")
                 self.assertIs(plan.report, report)
-                self.assertEqual(session.meshes.get(face).name, "Face")
+                self.assertEqual(session.meshes.get(face).value.name, "Face")
                 self.assertEqual(session.info().history, (1, 0))
 
     def test_failed_read_or_plan_does_not_poison_candidate(self):
@@ -1636,10 +1779,10 @@ class PythonSdk(unittest.TestCase):
                     with self.assertRaises(zipzi.SdkFailure):
                         edit.resources.get(uid(999))
                     with self.assertRaises(zipzi.SdkFailure):
-                        edit.meshes.plan(meshes.RenameIntent(face, "Wrong expectation", "Planned"))
+                        edit.plan(meshes.Rename(face, "Planned", expected_name="Wrong expectation"))
                     self.assertEqual(edit.meshes.get(face).source, source)
                     edit.meshes.rename(face, "Final")
-                self.assertEqual(session.meshes.get(face).name, "Final")
+                self.assertEqual(session.meshes.get(face).value.name, "Final")
                 self.assertEqual(session.info().history, (1, 0))
 
     def test_mixed_resource_batch_response_loss_does_not_repeat_a_write(self):
@@ -1648,14 +1791,14 @@ class PythonSdk(unittest.TestCase):
         image = runtime.resources.prepare_image(1, 1, b"rgba")
         edit = session.edit("mixed lost reply")
         with self.assertRaises(zipzi.OutcomeUnknown) as error:
-            edit.apply_many((ops.CreateImage("Draft", image, uid(2)), ops.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(3)))))
+            edit.apply_many((resources.CreateImage("Draft", image, uid(2)), meshes.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(3)))))
         result = error.exception.recover()
         self.assertEqual(result.source.sequence, 1)
         self.assertEqual(result.ids, (uid(2), uid(3)))
         edit.commit().wait()
         image.close()
         self.assertEqual(session.info().history, (1, 0))
-        self.assertEqual(session.resources.get(uid(2)).pixels.rgba, b"rgba")
+        self.assertEqual(session.resources.get(uid(2)).value.pixels.rgba, b"rgba")
 
     def control(self, runtime, action):
         return runtime._backend._test_control(action)
@@ -1712,7 +1855,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertIs(job.wait(), saved)
                 self.assertEqual(session.info().history, (1, 0))
                 self.assertFalse(session.info().modified)
-                self.assertEqual(session.meshes.get(face).name, "Face")
+                self.assertEqual(session.meshes.get(face).value.name, "Face")
 
     def test_worker_failure_and_panic_have_distinct_recovery_scopes(self):
         for mode in ("local", "connected"):
@@ -1779,7 +1922,7 @@ class PythonSdk(unittest.TestCase):
                     elif lost == "prepare_image":
                         runtime.resources.prepare_image(1, 1, b"rgba")
                     elif lost == "plan_authoring":
-                        edit.meshes.plan(meshes.RenameIntent(face, "Face", "Planned"))
+                        edit.plan(meshes.Rename(face, "Planned", expected_name="Face"))
                     elif lost == "commit":
                         edit.commit()
                     else:
@@ -1805,7 +1948,7 @@ class PythonSdk(unittest.TestCase):
         asset = edit.resources.create_image("Draft", image)
         snapshot = edit.resources.get(asset)
         with self.assertRaises(zipzi.OutcomeUnknown) as error:
-            edit.resources.plan(resources.RenameIntent(asset, "Draft", "Planned"))
+            edit.plan(resources.RenameImage(asset, "Planned", expected_name="Draft"))
         old_client, old_id = runtime._backend._client, runtime._backend._next
         time.sleep(.1)
         with self.assertRaises(zipzi.SdkFailure) as expired:
@@ -1816,7 +1959,7 @@ class PythonSdk(unittest.TestCase):
         self.addCleanup(observer.close)
         usage = observer.resources.usage()
         self.assertEqual((usage.prepared_images, usage.plans, usage.rgba_bytes), (0, 0, 0))
-        self.assertEqual(snapshot.pixels.rgba, b"rgba")
+        self.assertEqual(snapshot.value.pixels.rgba, b"rgba")
         observer._backend._request(dict(op="attach_session", session=session._token), observer, "test.attach")
         self.assertEqual(zipzi.Session(observer, session._token).info().history, (0, 0))
 
@@ -1848,7 +1991,7 @@ class PythonSdk(unittest.TestCase):
             time.sleep(.08)
             self.assertEqual(job.state(), "succeeded")
             self.assertEqual(session.info().history, (1, 0))
-            self.assertEqual(session.meshes.get(face).name, "Face")
+            self.assertEqual(session.meshes.get(face).value.name, "Face")
             job.wait()
         runtime = self.runtime("local")
         session = runtime.sessions.create(uid(2))
@@ -1914,7 +2057,7 @@ class PythonSdk(unittest.TestCase):
                     self.fail(f"Expected admitted IO failure, got preflight: {error}")
                 self.assertEqual(invalid.read_bytes(), b"keep")
                 self.assertEqual(session.info(), before)
-                self.assertEqual(session.meshes.get(face).name, "Face")
+                self.assertEqual(session.meshes.get(face).value.name, "Face")
                 self.assertTrue(session.project.save(self.folder / f"{mode}-retry").wait().manifest.is_file())
 
     def test_last_native_owner_releases_project_lock_and_unsaved_memory(self):
@@ -1924,7 +2067,7 @@ class PythonSdk(unittest.TestCase):
             with session.edit("memory") as edit:
                 asset = edit.resources.create_image("Texture", image)
         saved = session.project.save(self.folder / "last-owner").wait()
-        pixels = session.resources.get(asset).pixels
+        pixels = session.resources.get(asset).value.pixels
         unused = runtime.resources.prepare_image(1, 1, b"abcd")
         edit = session.edit("never publish or autosave")
         draft = edit.resources.create_image("Unsaved", unused)
@@ -1932,13 +2075,13 @@ class PythonSdk(unittest.TestCase):
         # Saved-image caches may be evicted; the unsaved candidate must still
         # pin its own actual RGBA allocation until the host is dropped.
         self.assertGreaterEqual(runtime.resources.usage().rgba_bytes, 4)
-        self.assertEqual(edit.resources.get(draft).pixels.rgba, b"abcd")
+        self.assertEqual(edit.resources.get(draft).value.pixels.rgba, b"abcd")
         backend = weakref.ref(runtime._backend)
         del image, unused, edit, session, runtime
         gc.collect()
         self.assertIsNone(backend(), "A final Python owner still retains the native host")
         reopened = self.runtime("local").sessions.open(saved.manifest).wait()
-        self.assertEqual(reopened.resources.get(asset).pixels, pixels)
+        self.assertEqual(reopened.resources.get(asset).value.pixels, pixels)
         with self.assertRaises(zipzi.SdkFailure) as unsaved:
             reopened.resources.get(draft)
         self.assertEqual(unsaved.exception.code, "MISSING_IMAGE")
@@ -1953,7 +2096,7 @@ class PythonSdk(unittest.TestCase):
                 image = runtime.resources.prepare_image(1, 1, b"rgba")
                 edit = session.edit("discard")
                 asset = edit.resources.create_image("Draft", image)
-                plan = edit.resources.plan(resources.RenameIntent(asset, "Draft", "Planned"))
+                plan = edit.plan(resources.RenameImage(asset, "Planned", expected_name="Draft"))
                 observer = zipzi.connect(endpoint=runtime._backend._endpoint)
                 self.addCleanup(observer.close)
                 if lost:
@@ -1969,7 +2112,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual((usage.prepared_images, usage.plans, usage.rgba_bytes), (0, 0, 0))
                 observer._backend._request(dict(op="attach_session", session=session._token), observer, "test.attach")
                 retained = zipzi.Session(observer, session._token)
-                self.assertEqual(retained.meshes.get(face).name, "Face")
+                self.assertEqual(retained.meshes.get(face).value.name, "Face")
                 self.assertEqual(retained.info().history, (1, 0))
                 self.assertEqual(plan.report.source.sequence, 1)
 
@@ -2008,7 +2151,7 @@ class PythonSdk(unittest.TestCase):
             self.assertLess(time.monotonic(), deadline)
             time.sleep(.005)
         self.assertTrue((self.folder / "detached-save/project.zipzi.json").is_file())
-        self.assertEqual(retained.meshes.get(face).name, "Face")
+        self.assertEqual(retained.meshes.get(face).value.name, "Face")
         self.assertEqual(retained.info().history, (1, 0))
 
     def test_confirmed_host_busy_commit_keeps_candidate_retryable(self):
@@ -2041,7 +2184,7 @@ class PythonSdk(unittest.TestCase):
                     edit.meshes.rename(face, "Retried")
                     self.assertEqual(edit.meshes.get(face).source.sequence, source.sequence + 1)
                     edit.commit().wait()
-                    self.assertEqual(session.meshes.get(face).name, "Retried")
+                    self.assertEqual(session.meshes.get(face).value.name, "Retried")
                     self.assertEqual(session.info().history, (1, 0))
                 else:
                     edit.cancel()
@@ -2058,7 +2201,7 @@ class PythonSdk(unittest.TestCase):
                     session = runtime.sessions.create(uid(1))
                     with session.edit("base") as edit:
                         face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
-                    with session.meshes.plan(meshes.RenameIntent(face, "Face", "Planned")) as plan:
+                    with session.plan(meshes.Rename(face, "Planned", expected_name="Face")) as plan:
                         source = plan.report.source
                         target = runtime.sessions.create(uid(2)) if changed == "other_session" else session
                         if changed in {"undo", "redo"}:
@@ -2067,12 +2210,12 @@ class PythonSdk(unittest.TestCase):
                             session.redo().wait()
                         edit = target.edit("stale formal")
                         with self.assertRaises(zipzi.SdkFailure) as error:
-                            edit.apply_plan(plan)
+                            edit.apply(plan)
                         self.assertEqual(error.exception.code, "STALE_PLAN")
                         self.assertEqual(plan.report.source, source)
                         self.assertEqual(session.info().history, (0, 1) if changed == "undo" else (1, 0))
                         if changed != "undo":
-                            self.assertEqual(session.meshes.get(face).name, "Face")
+                            self.assertEqual(session.meshes.get(face).value.name, "Face")
 
     def test_old_exception_cannot_consume_a_later_request_from_the_same_owner(self):
         from zipzi.backends import connected
@@ -2107,7 +2250,7 @@ class PythonSdk(unittest.TestCase):
                 if edit is not None:
                     self.assertEqual(result.source.sequence, 3)
                     edit.commit().wait()
-                    self.assertEqual(session.meshes.get(face).name, "Name 3")
+                    self.assertEqual(session.meshes.get(face).value.name, "Name 3")
 
     def test_local_wait_releases_gil_and_close_is_idempotent(self):
         runtime = self.runtime("local")
@@ -2152,7 +2295,7 @@ class PythonSdk(unittest.TestCase):
                             edit.meshes.get(face)
                         snapshot = error.exception.recover()
                         self.assertEqual(snapshot.source.sequence, 1)
-                        self.assertEqual(snapshot.name, "Face")
+                        self.assertEqual(snapshot.value.name, "Face")
                         edit.meshes.rename(face, "After query")
                 if lost == "session_info":
                     with self.assertRaises(zipzi.OutcomeUnknown) as error:
@@ -2193,14 +2336,14 @@ class PythonSdk(unittest.TestCase):
         other = runtime.sessions.create(uid(3))
         edit, other_edit = session.edit("owner"), other.edit("other")
         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
-            edit.apply(ops.Create(meshes.MeshSpec("Once", GEOMETRY, id=uid(2))))
+            edit.apply(meshes.Create(meshes.MeshSpec("Once", GEOMETRY, id=uid(2))))
         with self.assertRaises(zipzi.Busy):
-            other_edit.apply(ops.Create(meshes.MeshSpec("Other", GEOMETRY, id=uid(4))))
+            other_edit.apply(meshes.Create(meshes.MeshSpec("Other", GEOMETRY, id=uid(4))))
         self.assertIsNone(other_edit.pending_request)
         self.assertFalse(hasattr(other_edit, "recover"))
         lost.exception.recover()
         edit.commit().wait()
-        other_edit.apply(ops.Create(meshes.MeshSpec("Other", GEOMETRY, id=uid(4))))
+        other_edit.apply(meshes.Create(meshes.MeshSpec("Other", GEOMETRY, id=uid(4))))
         other_edit.commit().wait()
         self.assertEqual(session.info().history, (1, 0))
         self.assertEqual(other.info().history, (1, 0))
@@ -2210,7 +2353,7 @@ class PythonSdk(unittest.TestCase):
         from typing import get_type_hints
         from zipzi import plans
         from zipzi._lifecycle import EditableImages
-        self.assertIs(get_type_hints(ops.CreateImage)["image"], resources.PreparedImage)
+        self.assertIs(get_type_hints(resources.CreateImage)["image"], resources.PreparedImage)
         self.assertIs(get_type_hints(EditableImages.create_image)["image"], resources.PreparedImage)
         runtime = self.runtime("local")
         session = runtime.sessions.create(uid(910))
@@ -2231,7 +2374,7 @@ class PythonSdk(unittest.TestCase):
             plans.Report.read(source.wire(), raw)
         self.assertEqual(resources.ImagePixels.read(dict(width=1, height=1, rgba=[0, 127, 255, 1])),
                          resources.ImagePixels(1, 1, bytes((0, 127, 255, 1))))
-        for value in (meshes.RenameIntent(face, "Face", "Next"), resources.RenameIntent(face, "A", "B"), report):
+        for value in (meshes.Rename(face, "Next", expected_name="Face"), resources.RenameImage(face, "B", expected_name="A"), report):
             self.assertEqual(pickle.loads(pickle.dumps(value)), value)
 
     def test_values_import_without_extension_or_host(self):
@@ -2253,24 +2396,24 @@ assert meshes.Geometry((0,), ((0., 0.),), ((0., 0.),), ()).vertex_ids == (0,)
             stream = session.subscribe()
             with session.edit("direct") as edit:
                 face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
-                edit.apply(ops.Rename(face, "Direct"))
-                self.assertEqual(edit.meshes.get(face).name, "Direct")
+                edit.apply(meshes.Rename(face, "Direct"))
+                self.assertEqual(edit.meshes.get(face).value.name, "Direct")
                 with runtime.resources.prepare_image(1, 1, b"rgba") as image:
                     asset = edit.resources.create_image("Draft", image)
                     self.assertEqual(image.pixels().rgba, b"rgba")
-                    with edit.resources.plan(resources.RenameIntent(asset, "Draft", "Image")) as plan:
-                        edit.apply_plan(plan)
+                    with edit.plan(resources.RenameImage(asset, "Image", expected_name="Draft")) as plan:
+                        edit.apply(plan)
                         self.assertEqual(plan.report.source.sequence, 3)
-                    self.assertEqual(edit.resources.get(asset).pixels.rgba, b"rgba")
+                    self.assertEqual(edit.resources.get(asset).value.pixels.rgba, b"rgba")
                 parameter = edit.parameters.create(parameters.ParameterSpec("Angle", -1., 1., 0.))
-                edit.parameters.patch(parameter, parameters.Patch(name="Direct parameter"))
+                edit.parameters.patch(parameter, parameters.ParameterPatch(name="Direct parameter"))
                 self.assertEqual(edit.parameters.get_many((parameter,)).items[0].name, "Direct parameter")
-                self.assertEqual(edit.meshes.get_many((face,))[0].name, "Direct")
+                self.assertEqual(edit.meshes.get_many((face,)).items[0].name, "Direct")
                 bound = edit.bindings.create(bindings.MeshBindingSpec(face, (bindings.Axis(parameter, (-1., 1.)),), (
                     bindings.Keyform((-1.,), GEOMETRY.positions),
                     bindings.Keyform((1.,), tuple((x+10., y) for x,y in GEOMETRY.positions)))))
-                self.assertEqual(edit.bindings.get(bound).mesh_id, face)
-                self.assertEqual(edit.modeling.sample(({parameter: 0.},)).frames[0].drawables[0].positions[0][0], 5.)
+                self.assertEqual(edit.bindings.get(bound).value.mesh_id, face)
+                self.assertEqual(edit.modeling.sample(({parameter: 0.},)).value.frames[0].drawables[0].positions[0][0], 5.)
             self.assertEqual(len([e for e in stream.poll() if isinstance(e, events.Published)]), 1)
             with session.project.save(self.folder / "direct-save") as job:
                 saved = job.wait()

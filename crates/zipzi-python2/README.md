@@ -19,7 +19,7 @@ no JSON transport conversion or direct SDK session owner.
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |
 | `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract and selected mesh/resource/Plan generation |
-| `client/python/zipzi/_generated/`, `src/generated/` | 23 checked-in mechanical mesh/resource/Plan/scene/modeling/binary outputs |
+| `client/python/zipzi/_generated/`, `src/generated/` | 29 checked-in mechanical values/operations/DTO/scene/modeling/binary outputs |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
 From the repository root, using the workspace's CPython 3.14 tools:
@@ -60,13 +60,15 @@ uv run --locked python tools/python/python2_contract.py baseline --output target
 This command preserves every failure and returns a nonzero status until the
 selected contracts pass. Use a new output path for every run. Inventory/freeze
 commands and their limits are documented in [tools](../../tools/README.md).
-The examples below continue to describe the current API, not the P3A target.
+P3A-2 has completed result unification, domain-owned operations, generated DTOs
+and common plan/apply. Pagination, generated facades and documentation/agent gates
+continue in P3A-3–6. The examples below describe the current API.
 
 ## Selected code generation
 
 P2 derives mesh, image and Plan values/operations, codecs, query signatures and
 simple convenience methods from selected Rust declarations. Public imports stay
-`zipzi.meshes`, `zipzi.resources`, `zipzi.plans` and `zipzi.ops`; lifecycle, resource ownership and recovery stay
+domain modules such as `zipzi.meshes`/`zipzi.parameters`, root `PlanCost`/`PlanReport` and the static `zipzi.ops` unions; lifecycle, resource ownership and recovery stay
 handwritten. Local conversion remains direct PyO3, with no JSON roundtrip.
 
 ```sh
@@ -109,16 +111,21 @@ with zipzi.local() as runtime:
     with session.edit("Face") as edit:
         face = edit.meshes.create(meshes.MeshSpec("Face", geometry))
         snapshot = edit.meshes.get(face)
-        edit.meshes.set_positions(face, vertex_ids=snapshot.geometry.vertex_ids,
+        edit.meshes.set_positions(face, vertex_ids=snapshot.value.geometry.vertex_ids,
                                  positions=((2., 3.), (3., 3.), (2., 4.)))
-        edit.apply(ops.Rename(face, "Final"))
+        edit.apply(meshes.Rename(face, "Final"))
     saved = session.project.save(Path("/absolute/output/project")).wait()
 ```
 
 For a running host, select `zipzi.connect(endpoint=absolute_socket_path)` instead.
 Without an endpoint, `connect()` discovers the environment's runtime directory/profile.
-Snapshots own immutable tuple
-data and exact formal/candidate sources; field access sends no requests. A failed
+All reads use `zipzi.Snapshot[T](source, value)` or `zipzi.Batch[T](source, items)`.
+Domain payloads (`meshes.Mesh`, `parameters.Parameter`, `bindings.MeshBinding`,
+`resources.Image`, `scene.Summary`) have no nested Source. Empty batches retain
+their exact source. CPU samples use `Snapshot[sampling.Result]`; canonical modeling
+records, capabilities and Editor context also use `Snapshot`. Field access sends
+no requests. `Page`/`PageCursor` define the result shape; collection pagination
+remains P3A-4 work. A failed
 write makes its candidate uncommittable even when caught. Admission refusal is
 distinct from execution failure.
 
@@ -146,10 +153,10 @@ from zipzi import resources
 with runtime.resources.prepare_image(1, 1, bytes((12, 34, 56, 255))) as image:
     with session.edit("Texture") as edit:
         asset = edit.resources.create_image("Draft", image)
-        with edit.resources.plan(resources.RenameIntent(asset, "Draft", "Texture")) as plan:
+        with edit.plan(resources.RenameImage(asset, "Texture", expected_name="Draft")) as plan:
             report = plan.report  # Immutable cached value; no request.
-            edit.apply_plan(plan)
-        pixels = edit.resources.get(asset).pixels
+            edit.apply(plan)
+        pixels = edit.resources.get(asset).value.pixels
 ```
 
 Preparation owns an independent lease. Closing it after creating or replacing an
@@ -159,12 +166,21 @@ and name while changing its pixels. Pixel snapshots own immutable `bytes`;
 `runtime.resources.usage()` reports Runtime-wide lease/plan counts and tracked
 Rust image buffers (not process RSS).
 
-`session/edit.meshes.plan(meshes.RenameIntent(...))` and
-`session/edit.resources.plan(resources.RenameIntent(...))` create selected typed
-Plans. Formal Plans require an initial candidate of the exact session/version;
-candidate Plans require the exact Edit and sequence. A Plan must be first in an
-explicit batch, followed by ordinary operations. An invalid/stale Plan aborts the
-whole candidate; its cached report remains readable, including after `close()`.
+`session.plan(operation)` and `edit.plan(operation)` accept the registered subset
+of the same domain operations used by `edit.apply`: mesh/image renames, scene
+operations and the eight SDK planning domains under `modeling.ModelingCommand*`.
+For example, `meshes.Rename(id, "Final", expected_name="Before")` works in both
+paths. The optional label precondition is checked by the SDK; omitted conditions
+still bind planning to the exact captured Source. `resources.RenameImage` has the
+same contract. `ops` exports only `Operation` and `PlannableOperation`.
+
+Apply a Plan with `edit.apply(plan)` or as the first item of
+`edit.apply_many((plan, operation, ...))`. A batch accepts at most one Plan;
+invalid ordering aborts the candidate before execution. Formal Plans require an
+initial candidate of the exact session/version; candidate Plans require the exact
+Edit and sequence. Stale/foreign/closed Plans cannot publish partial changes.
+The cached `PlanReport` remains readable after close. `plan_async` retains the
+registered modeling subset and returns `Job[Plan]`.
 
 Image preparation, reads, Plan creation and handle close also retain their
 original recovery owner after a lost response. Call `OutcomeUnknown.recover()`;
@@ -239,7 +255,7 @@ from zipzi import events, parameters
 stream = session.subscribe()
 with session.edit("Angle") as edit:
     angle = edit.parameters.create(parameters.ParameterSpec("Angle", -30., 30., 0.))
-    edit.parameters.patch(angle, parameters.Patch(name="Angle X"))
+    edit.parameters.patch(angle, parameters.ParameterPatch(name="Angle X"))
     values = edit.parameters.get_many((angle,))
     faces = edit.meshes.get_many((face,))
 for event in stream.poll():
@@ -314,8 +330,8 @@ with session.edit("Organize") as edit:
     folder = edit.apply(scene.CreatePart(scene.PartSpec("Face"))).ids[0]
     edit.apply(scene.MoveToPart((face,), part_id=folder))
     value = edit.scene.get(face).value
-    with edit.scene.plan(scene.SetSceneLabel(face, value.name, "Final")) as plan:
-        edit.apply_plan(plan)
+    with edit.plan(scene.SetSceneLabel(face, value.name, "Final")) as plan:
+        edit.apply(plan)
 
 with session.reference("mesh", face) as reference:
     source = reference.resolve()
@@ -323,7 +339,7 @@ with session.reference("mesh", face) as reference:
     with reference.label() as address:
         with address.plan("Reviewed") as plan:
             with session.edit("Review label") as edit:
-                edit.apply_plan(plan)
+                edit.apply(plan)
 ```
 
 Scene plans retain their exact formal/candidate source and immutable cost/loss/
@@ -337,7 +353,7 @@ release their tables. Every create/read/plan/close retains its own recovery owne
 
 ## Complete Runtime R4 routes
 
-The native pairing contract is `zipzi-python2-11`; IPC is `zipzi-runtime-p3a-1`.
+The native pairing contract is `zipzi-python2-13`; IPC is `zipzi-runtime-p3a-2-1`.
 Rebuild both adapters and hosts after contract changes. Compiled Rust serde
 shapes generate `zipzi.modeling`, native constructors/writers and the binary
 array codec. `edit.apply` accepts the full `ModelingCommand` family, including

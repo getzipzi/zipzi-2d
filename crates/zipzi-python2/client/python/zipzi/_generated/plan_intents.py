@@ -4,24 +4,20 @@ from typing import Literal
 
 @dataclass(frozen=True)
 class MeshRename:
-    __module__ = "zipzi.meshes"
+    __module__ = "zipzi._generated.plan_intents"
     id: str
-    expected_name: str
+    expected_name: str | None
     name: str
     kind: Literal["mesh_rename"] = field(default="mesh_rename", init=False)
 
 @dataclass(frozen=True)
 class ImageRename:
-    __module__ = "zipzi.resources"
+    __module__ = "zipzi._generated.plan_intents"
     id: str
-    expected_name: str
+    expected_name: str | None
     name: str
     kind: Literal["image_rename"] = field(default="image_rename", init=False)
 
-MeshRename.__name__ = "RenameIntent"
-MeshRename.__qualname__ = "RenameIntent"
-ImageRename.__name__ = "RenameIntent"
-ImageRename.__qualname__ = "RenameIntent"
 
 Intent = MeshRename | ImageRename
 
@@ -30,15 +26,17 @@ def validate(intent: Intent) -> None:
         case MeshRename():
             if not isinstance(intent.id, str):
                 raise TypeError("Expected text")
-            if not isinstance(intent.expected_name, str):
-                raise TypeError("Expected text")
+            if intent.expected_name is not None:
+                if not isinstance(intent.expected_name, str):
+                    raise TypeError("Expected text")
             if not isinstance(intent.name, str):
                 raise TypeError("Expected text")
         case ImageRename():
             if not isinstance(intent.id, str):
                 raise TypeError("Expected text")
-            if not isinstance(intent.expected_name, str):
-                raise TypeError("Expected text")
+            if intent.expected_name is not None:
+                if not isinstance(intent.expected_name, str):
+                    raise TypeError("Expected text")
             if not isinstance(intent.name, str):
                 raise TypeError("Expected text")
         case _:

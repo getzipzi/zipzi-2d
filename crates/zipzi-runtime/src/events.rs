@@ -5,6 +5,7 @@ use zipzi_sdk::{EditReceipt, SaveReceipt};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiFields)]
 pub struct EventCursor {
     pub runtime: RuntimeInstanceId,
     /// None is the registry stream; it has no cross-session ordering guarantee.
@@ -12,7 +13,7 @@ pub struct EventCursor {
     pub sequence: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, zipzi_api_derive::ApiFields)]
 pub enum EventKind {
     Published(Arc<EditReceipt>),
     Saved(SaveReceipt),
@@ -20,7 +21,7 @@ pub enum EventKind {
     Created(SessionInfo),
     Closed(SessionInfo),
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, zipzi_api_derive::ApiFields)]
 pub struct RuntimeEvent {
     pub cursor: EventCursor,
     pub client: Option<ClientId>,

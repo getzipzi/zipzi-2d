@@ -22,7 +22,7 @@ zipzi_core::api_union! {
 #[derive(zipzi_api_derive::BinaryWire)]
     pub enum MeshOperation {
         Create { spec: MeshCreateSpec },
-        Rename { id: String, name: String },
+        Rename { id: String, name: String, expected_name: Option<String> },
         SetPositions { id: String, vertex_ids: Vec<u32>, positions: Vec<Vec2> },
     }
 }
@@ -31,8 +31,23 @@ impl MeshOperation {
     pub fn apply(self, edit: &mut EditSession<'_>) -> Result<String, SdkError> {
         match self {
             Self::Create { spec } => edit.create_mesh_spec(spec),
-            Self::Rename { id, name } => {
-                edit.rename_mesh(&id, &name)?;
+            Self::Rename {
+                id,
+                name,
+                expected_name,
+            } => {
+                if let Some(expected) =
+                    expected_name.filter(|_| edit.candidate_document().get_mesh(&id).is_some())
+                {
+                    edit.edit_scene(crate::SceneEdit::Patch {
+                        id: id.clone(),
+                        expected: crate::SceneFieldValue::Label(expected),
+                        value: crate::SceneFieldValue::Label(name),
+                        clear_glue_pairs: false,
+                    })?;
+                } else {
+                    edit.rename_mesh(&id, &name)?;
+                }
                 Ok(id)
             }
             Self::SetPositions {

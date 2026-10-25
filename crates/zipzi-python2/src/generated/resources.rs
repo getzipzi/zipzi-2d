@@ -123,6 +123,17 @@ pub(crate) fn measure_resourceoperation(op: &Bound<'_, PyAny>) -> PyResult<usize
         "replace_image" => Ok(256usize
             .saturating_add(input_budget::text(&op.getattr("id")?)?)
             .saturating_add(64usize)),
+        "rename_image" => Ok(256usize
+            .saturating_add(input_budget::text(&op.getattr("id")?)?)
+            .saturating_add(input_budget::text(&op.getattr("name")?)?)
+            .saturating_add({
+                let v = op.getattr("expected_name")?;
+                if v.is_none() {
+                    0
+                } else {
+                    input_budget::text(&v)?
+                }
+            })),
         "apply_plan" => Ok(256usize.saturating_add(64usize)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unknown typed input",
@@ -153,6 +164,11 @@ pub(crate) fn read_resourceoperation(
                 .extract::<PyRef<'_, ImageToken>>()?
                 .id,
         }),
+        "rename_image" => Ok(zipzi_runtime::authoring::ResourceOperation::RenameImage {
+            id: op.getattr("id")?.extract()?,
+            name: op.getattr("name")?.extract()?,
+            expected_name: op.getattr("expected_name")?.extract()?,
+        }),
         "apply_plan" => Ok(zipzi_runtime::authoring::ResourceOperation::ApplyPlan {
             plan: op
                 .getattr("plan")?
@@ -171,11 +187,25 @@ pub(crate) fn measure_planintent(op: &Bound<'_, PyAny>) -> PyResult<usize> {
     match kind.extract::<&str>()? {
         "mesh_rename" => Ok(256usize
             .saturating_add(input_budget::text(&op.getattr("id")?)?)
-            .saturating_add(input_budget::text(&op.getattr("expected_name")?)?)
+            .saturating_add({
+                let v = op.getattr("expected_name")?;
+                if v.is_none() {
+                    0
+                } else {
+                    input_budget::text(&v)?
+                }
+            })
             .saturating_add(input_budget::text(&op.getattr("name")?)?)),
         "image_rename" => Ok(256usize
             .saturating_add(input_budget::text(&op.getattr("id")?)?)
-            .saturating_add(input_budget::text(&op.getattr("expected_name")?)?)
+            .saturating_add({
+                let v = op.getattr("expected_name")?;
+                if v.is_none() {
+                    0
+                } else {
+                    input_budget::text(&v)?
+                }
+            })
             .saturating_add(input_budget::text(&op.getattr("name")?)?)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unknown typed input",

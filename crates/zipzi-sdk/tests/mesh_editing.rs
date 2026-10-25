@@ -61,6 +61,7 @@ fn mesh_create_spec_allocates_identity_and_keeps_defaults_in_sdk() {
     .unwrap();
     assert_eq!(uuid::Uuid::parse_str(&id).unwrap().get_version_num(), 4);
     MeshOperation::Rename {
+        expected_name: None,
         id: id.clone(),
         name: "Final".into(),
     }

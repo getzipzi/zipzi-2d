@@ -15,6 +15,22 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_selected_dtos_follow_compiled_fields_and_reject_unknown_shapes(self):
+        contract = self.contract()["dtos"]
+        output = gen._dto_codegen.render_dtos(contract, gen.HEADER)
+        self.assertIn("class ParameterPatch:", output["client/python/zipzi/_generated/parameter_values.py"])
+        self.assertIn("keys: Sequence[float]", output["client/python/zipzi/_generated/binding_values.py"])
+        changed = deepcopy(contract)
+        spec = changed["parameters"][0]["variants"][0]["fields"][0]["shape"]
+        spec["fields"].append({"name":"future_flag", "shape":{"kind":"bool"}, "default":None})
+        generated = gen._dto_codegen.render_dtos(changed, gen.HEADER)["client/python/zipzi/_generated/parameter_values.py"]
+        self.assertIn("future_flag: bool", generated)
+        self.assertIn("_flag(_get(value, 'future_flag'))", generated)
+        self.assertIn("'future_flag': value.future_flag", generated)
+        spec["fields"][-1]["shape"] = {"kind":"any"}
+        with self.assertRaises(ValueError):
+            gen._dto_codegen.render_dtos(changed, gen.HEADER)
+
     def test_scene_contract_protects_shapes_and_generates_nested_ownership_and_typed_native_inputs(self):
         contract = self.contract()
         output = gen.render(contract)
@@ -42,7 +58,7 @@ class Python2Codegen(unittest.TestCase):
         binary=output['client/python/zipzi/_generated/binary.py']
         self.assertIn('def decode_meshes(',binary)
         self.assertIn('def decode_samples(',binary)
-        self.assertIn('meshes.Snapshot(source=_read_sourceref(r)',binary)
+        self.assertIn('Snapshot(_read_sourceref(r), meshes.Mesh(',binary)
         self.assertIn("r.numeric('III', r.count())",binary)
         self.assertIn('w.raw(b"ZZA1")',binary)
         self.assertIn('mesh_read_bytes',output['src/generated/queries.rs'])

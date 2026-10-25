@@ -15,7 +15,7 @@ again. `job.wait(timeout=None)` waits until terminal; a finite timeout raises
 `JobTimeout` while the accepted Job remains usable. Close an unresolved Runtime
 only after recovery or with explicit `abandon_pending=True`.
 
-The native/host pairing is `zipzi-python2-11` / `zipzi-runtime-p3a-1`; rebuild
+The native/host pairing is `zipzi-python2-13` / `zipzi-runtime-p3a-2-1`; rebuild
 adapters and hosts together after a contract change.
 
 See the [package source](https://github.com/getzipzi/zipzi-2d/tree/main/crates/zipzi-python2)
@@ -31,3 +31,14 @@ canonical binding queries and explicit formal/candidate CPU pose batches are
 available through `bindings` and `modeling.sample`. Sampling retains its exact
 source and leaves human Preview/history unchanged. Full R4 Modeling,
 handles/addresses, larger cancellable workloads and resource/IO coverage remain in progress.
+
+Read results use `zipzi.Snapshot[T]` (`source`, `value`) and `zipzi.Batch[T]`
+(`source`, `items`). Domain payloads have no Source field. Use
+`session.meshes.get(id).value.name` and `session.meshes.get_many(ids).items`.
+Recovery preserves the same container and captured source.
+
+Construct operations in `meshes`, `parameters`, `bindings`, `resources`, `scene`
+or `modeling`; `ops` contains only static unions. Use `ParameterPatch` for field
+values and `parameters.Patch` for the operation. `session.plan(operation)` and
+`edit.plan(operation)` use the same registered operations as direct apply. Apply
+Plan values with `edit.apply(plan)`; mixed batches allow one Plan in the first slot.

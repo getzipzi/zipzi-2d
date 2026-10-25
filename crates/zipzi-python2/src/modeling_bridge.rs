@@ -3,54 +3,6 @@ use crate::*;
 use zipzi_runtime::authoring::{
     MeshBindingBatch, MeshBindingQuery, ModelingSampleBatch, ModelingSampleQuery,
 };
-use zipzi_sdk::{
-    MeshBindingAxisSpec, MeshBindingCreateSpec, MeshBindingOperation, MeshKeyformSpec,
-};
-
-fn keyform(value: &Bound<'_, PyAny>) -> PyResult<MeshKeyformSpec> {
-    Ok(MeshKeyformSpec {
-        keys: value.getattr("keys")?.extract()?,
-        positions: generated::mesh::read_points(value.getattr("positions")?)?,
-        opacity: value.getattr("opacity")?.extract()?,
-        multiply: value.getattr("multiply")?.extract()?,
-        screen: value.getattr("screen")?.extract()?,
-        draw_order: value.getattr("draw_order")?.extract()?,
-    })
-}
-pub(crate) fn read(tag: &str, operation: &Bound<'_, PyAny>) -> PyResult<MeshBindingOperation> {
-    if tag == "create_mesh_binding" {
-        let value = operation.getattr("spec")?;
-        let axes = value
-            .getattr("axes")?
-            .try_iter()?
-            .map(|a| {
-                let a = a?;
-                Ok(MeshBindingAxisSpec {
-                    parameter_id: a.getattr("parameter_id")?.extract()?,
-                    keys: a.getattr("keys")?.extract()?,
-                })
-            })
-            .collect::<PyResult<Vec<_>>>()?;
-        let keyforms = value
-            .getattr("keyforms")?
-            .try_iter()?
-            .map(|k| keyform(&k?))
-            .collect::<PyResult<Vec<_>>>()?;
-        Ok(MeshBindingOperation::Create {
-            spec: MeshBindingCreateSpec {
-                mesh_id: value.getattr("mesh_id")?.extract()?,
-                id: value.getattr("id")?.extract()?,
-                axes,
-                keyforms,
-            },
-        })
-    } else {
-        Ok(MeshBindingOperation::SetKeyform {
-            id: operation.getattr("id")?.extract()?,
-            keyform: keyform(&operation.getattr("keyform")?)?,
-        })
-    }
-}
 fn binding_batch(py: Python<'_>, value: MeshBindingBatch) -> PyResult<Bound<'_, PyDict>> {
     let d = PyDict::new(py);
     d.set_item("source", source(py, value.source)?)?;
@@ -238,21 +190,11 @@ fn sample_input(
     checks: &Bound<'_, PyAny>,
     expected: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<ModelingSampleQuery> {
-    let bounds = checks
-        .getattr("model_bounds")?
-        .extract::<Option<((f32, f32), (f32, f32))>>()?
-        .map(|(min, max)| zipzi_sdk::GeometryBounds {
-            min: zipzi_core::Vec2::new(min.0, min.1),
-            max: zipzi_core::Vec2::new(max.0, max.1),
-        });
     Ok(ModelingSampleQuery {
         session,
         edit,
         parameters: poses,
-        checks: zipzi_sdk::GeometryChecks {
-            min_triangle_area: checks.getattr("min_triangle_area")?.extract()?,
-            model_bounds: bounds,
-        },
+        checks: generated::modeling::read_geometrychecks(checks)?,
         expected: expected.map(read_source).transpose()?,
     })
 }

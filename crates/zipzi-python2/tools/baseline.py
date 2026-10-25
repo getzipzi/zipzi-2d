@@ -51,31 +51,31 @@ def fixture(zipzi, case, runtime):
                     last_image[0] = edit.resources.create_image(f"Image {index}", image)
             return None
         if case == "plan":
-            with session.meshes.plan(meshes.RenameIntent(face, "Face" if index == 0 else f"Planned {index - 1}", f"Planned {index}")) as plan:
+            with session.plan(meshes.Rename(face, f"Planned {index}", expected_name="Face" if index == 0 else f"Planned {index - 1}")) as plan:
                 with session.edit(case) as edit:
-                    edit.apply_plan(plan)
+                    edit.apply(plan)
             return None
         with session.edit(case) as edit:
             if case == "single_edit":
                 edit.meshes.rename(face, f"Face {index}")
             elif case == "batch_100":
-                edit.apply_many(tuple(ops.Rename(face, f"Batch {index}-{n}") for n in range(100)))
+                edit.apply_many(tuple(meshes.Rename(face, f"Batch {index}-{n}") for n in range(100)))
             elif case == "large_array":
                 edit.meshes.set_positions(face, vertex_ids=ids, positions=shifted[index % 2])
         return None
     def validate(last):
         snapshot = session.meshes.get(face)
-        assert snapshot.geometry.vertex_ids == ids
-        assert snapshot.geometry.triangles == tuple(triangles)
-        assert snapshot.geometry.positions == (shifted[last % 2] if case == "large_array" else points)
+        assert snapshot.value.geometry.vertex_ids == ids
+        assert snapshot.value.geometry.triangles == tuple(triangles)
+        assert snapshot.value.geometry.positions == (shifted[last % 2] if case == "large_array" else points)
         expected_name = f"Face {last}" if case == "single_edit" else f"Batch {last}-99" if case == "batch_100" else "Face"
         if case == "plan":
             expected_name = f"Planned {last}"
-        assert snapshot.name == expected_name
+        assert snapshot.value.name == expected_name
         if case == "image":
-            pixels = session.resources.get(last_image[0]).pixels
+            pixels = session.resources.get(last_image[0]).value.pixels
             assert (pixels.width, pixels.height, pixels.rgba) == (image_size, image_size, payloads[last % 2])
-            assert session.resources.get(last_image[0]).name == f"Image {last}"
+            assert session.resources.get(last_image[0]).value.name == f"Image {last}"
         usage = runtime.resources.usage()
         assert (usage.prepared_images, usage.plans) == (0, 0)
         writes = last if case == "large_array" else last + 1

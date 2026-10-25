@@ -9,6 +9,7 @@ enum ReadyOperation {
     Mesh(zipzi_sdk::MeshOperation),
     Image(zipzi_sdk::ImageCreateSpec, zipzi_sdk::PreparedImageContent),
     ReplaceImage(String, zipzi_sdk::PreparedImageContent),
+    RenameImage(String, String, Option<String>),
     Plan(Arc<zipzi_sdk::ModelingPlan>, bool),
 }
 
@@ -147,6 +148,11 @@ impl Runtime {
                         id,
                         self.prepared_image(client, image)?.clone(),
                     ),
+                    EditOperation::Resource(crate::authoring::ResourceOperation::RenameImage {
+                        id,
+                        name,
+                        expected_name,
+                    }) => ReadyOperation::RenameImage(id, name, expected_name),
                     EditOperation::Resource(crate::authoring::ResourceOperation::ApplyPlan {
                         plan,
                     }) => {
@@ -184,6 +190,21 @@ impl Runtime {
                             candidate.replace_prepared_image(&id, &image)?;
                             ids.push(id);
                         }
+                        ReadyOperation::RenameImage(id, name, expected) => {
+                            let expected = expected.unwrap_or_else(|| {
+                                candidate
+                                    .candidate_document()
+                                    .get_asset(&id)
+                                    .map(|asset| asset.name.clone())
+                                    .unwrap_or_default()
+                            });
+                            candidate.edit_resource(zipzi_sdk::ResourceEdit::PatchName {
+                                id: id.clone(),
+                                expected,
+                                name,
+                            })?;
+                            ids.push(id);
+                        }
                         ReadyOperation::Plan(plan, valid) => {
                             super::modeling::apply_plan(&plan, valid, candidate)?;
                             ids.extend(plan.report().affected_ids);
@@ -214,27 +235,57 @@ impl Runtime {
         edit: Option<EditId>,
         intent: PlanIntent,
     ) -> Result<PlanSnapshot> {
-        let intent = match intent {
-            PlanIntent::MeshRename {
-                id,
-                expected_name,
-                name,
-            } => zipzi_sdk::ModelingIntent::Scene(zipzi_sdk::SceneEdit::Patch {
-                id,
-                expected: zipzi_sdk::SceneFieldValue::Label(expected_name),
-                value: zipzi_sdk::SceneFieldValue::Label(name),
-                clear_glue_pairs: false,
-            }),
-            PlanIntent::ImageRename {
-                id,
-                expected_name,
-                name,
-            } => zipzi_sdk::ModelingIntent::Resource(zipzi_sdk::ResourceEdit::PatchName {
-                id,
-                expected: expected_name,
-                name,
-            }),
-        };
+        let intent = self.with_authoring_source(client, session, edit, |doc, _| {
+            Ok(match intent {
+                PlanIntent::MeshRename {
+                    id,
+                    expected_name,
+                    name,
+                } => zipzi_sdk::ModelingIntent::Scene(zipzi_sdk::SceneEdit::Patch {
+                    id: id.clone(),
+                    expected: zipzi_sdk::SceneFieldValue::Label(match expected_name {
+                        Some(value) => value,
+                        None => {
+                            let value = doc
+                                .get_mesh(&id)
+                                .map(|mesh| mesh.name.as_str())
+                                .unwrap_or_default();
+                            self.check_bytes(
+                                value.len().saturating_mul(128).saturating_add(4096),
+                                0,
+                                0,
+                            )?;
+                            value.to_owned()
+                        }
+                    }),
+                    value: zipzi_sdk::SceneFieldValue::Label(name),
+                    clear_glue_pairs: false,
+                }),
+                PlanIntent::ImageRename {
+                    id,
+                    expected_name,
+                    name,
+                } => zipzi_sdk::ModelingIntent::Resource(zipzi_sdk::ResourceEdit::PatchName {
+                    id: id.clone(),
+                    expected: match expected_name {
+                        Some(value) => value,
+                        None => {
+                            let value = doc
+                                .get_asset(&id)
+                                .map(|asset| asset.name.as_str())
+                                .unwrap_or_default();
+                            self.check_bytes(
+                                value.len().saturating_mul(128).saturating_add(4096),
+                                0,
+                                0,
+                            )?;
+                            value.to_owned()
+                        }
+                    },
+                    name,
+                }),
+            })
+        })?;
         let (plan, source, report) = self.plan_modeling(client, session, edit, intent)?;
         Ok(PlanSnapshot {
             plan,
@@ -326,6 +377,20 @@ impl Runtime {
                     .iter()
                     .map(|id| doc.get_parameter(id).unwrap().clone())
                     .collect(),
+            })
+        })
+    }
+
+    /// Preserve the exact read source even when the selection is empty.
+    pub fn mesh_batch(
+        &self,
+        client: ClientId,
+        input: crate::authoring::MeshBatchQuery,
+    ) -> Result<crate::authoring::MeshBatch> {
+        self.with_authoring_source(client, input.session, input.edit, |_, source| {
+            Ok(crate::authoring::MeshBatch {
+                source,
+                items: self.mesh_snapshots(client, input)?,
             })
         })
     }

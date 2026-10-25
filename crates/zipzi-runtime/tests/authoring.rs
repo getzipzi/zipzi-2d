@@ -439,6 +439,7 @@ fn selected_mesh_batch_admits_total_expansion_before_any_snapshot_copy() {
         client,
         edit,
         vec![MeshOperation::Rename {
+            expected_name: None,
             id: id(5),
             name: "After refusal".into(),
         }],
@@ -521,6 +522,7 @@ fn selected_mesh_query_checks_exact_session_and_admits_before_copy_without_poiso
         client,
         edit,
         vec![MeshOperation::Rename {
+            expected_name: None,
             id: id(3),
             name: "Renamed".into(),
         }],

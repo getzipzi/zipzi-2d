@@ -8,8 +8,9 @@ from typing import cast
 from uuid import UUID
 import math
 import struct
-from .. import ops, scene, meshes, modeling as m
+from .. import _operations as ops, scene, meshes, modeling as m
 from .._values import Source,Version
+from .._results import Snapshot
 from .._values import record, sequence, string, integer, number
 from .._extensions import ExtensionValue
 
@@ -193,7 +194,7 @@ def render_binary(contract,header):
         if k=='sequence':return 'bytes' if s['item']['kind']=='u8' else 'tuple['+typ(s['item'])+', ...]'
         if k=='array':return 'tuple['+', '.join([typ(s['item'])]*s['length'])+']'
         if k in {'string_map','index_map'}:return 'Mapping['+('str' if k=='string_map' else 'int')+', '+typ(s['value'])+']'
-        return {'Version':'Version','SourceRef':'Source','MeshSnapshot':'meshes.Snapshot','MeshGeometry':'meshes.Geometry'}.get(name(s),'m.'+name(s))
+        return {'Version':'Version','SourceRef':'Source','MeshSnapshot':'Snapshot[meshes.Mesh]','MeshGeometry':'meshes.Geometry'}.get(name(s),'m.'+name(s))
     def read(s,d=0):
         k=s['kind']
         if k=='shared':return read(s['item'],d)
@@ -253,20 +254,23 @@ def render_binary(contract,header):
                     else:value='m.'+name(s)+v['rust_name']+'('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(v))+')'
                     out+=['        return '+value]
                 out+=['    raise ValueError("Unknown binary '+name(s)+' variant")']
+            elif name(s)=='MeshSnapshot':
+                if fields(s)[0]['name']!='source': raise ValueError('Mesh source must precede its payload')
+                out+=['    return Snapshot('+read(fields(s)[0]['shape'])+', meshes.Mesh('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(s)[1:])+'))']
             else:out+=['    return '+typ(s)+'('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(s))+')']
             out+=['']
     roots={name(s):s for s in contract['inputs']}
     def ordinal(root,variant):return next(i for i,v in enumerate(variants(roots[root])) if v['rust_name']==variant)
     tags={v:i for i,v in enumerate(contract['edit_variants'])}
-    out+=['def encode_operations(operations: tuple[ops.Operation, ...]) -> bytes:','    if len(operations)>1024: raise ValueError("Too many authoring operations")','    w=Writer()','    w.raw(b"ZZA1"); w.raw(int(INPUT_SIGNATURE,16).to_bytes(16,"little")); w.u32(len(operations))','    for operation in operations:']
+    out+=['def encode_operations(operations: tuple[ops.WireOperation, ...]) -> bytes:','    if len(operations)>1024: raise ValueError("Too many authoring operations")','    w=Writer()','    w.raw(b"ZZA1"); w.raw(int(INPUT_SIGNATURE,16).to_bytes(16,"little")); w.u32(len(operations))','    for operation in operations:']
     out+=['        if isinstance(operation,m.OPERATION_TYPES):','            w.u32('+str(tags['Modeling'])+'); _write_modelingcommand(operation,w)','        elif isinstance(operation,scene.OPERATION_TYPES):','            w.u32('+str(tags['Scene'])+'); _write_sceneoperation(operation,w)','        elif isinstance(operation,(ops.Create,ops.Rename,ops.SetPositions)):','            w.u32('+str(tags['Mesh'])+'); _write_meshoperation(operation,w)']
-    for cls,root,var,exprs in [('CreateParameter','ParameterOperation','Create',['operation.spec']),('PatchParameter','ParameterOperation','Patch',['operation.id','operation.patch']),('CreateMeshBinding','MeshBindingOperation','Create',['operation.spec']),('SetMeshKeyform','MeshBindingOperation','SetKeyform',['operation.id','operation.keyform']),('CreateImage','ResourceOperation','CreateImage',['operation','operation.image._token']),('ReplaceImage','ResourceOperation','ReplaceImage',['operation.id','operation.image._token']),('ApplyPlan','ResourceOperation','ApplyPlan',['operation.plan._token'])]:
+    for cls,root,var,exprs in [('CreateParameter','ParameterOperation','Create',['operation.spec']),('PatchParameter','ParameterOperation','Patch',['operation.id','operation.patch']),('CreateMeshBinding','MeshBindingOperation','Create',['operation.spec']),('SetMeshKeyform','MeshBindingOperation','SetKeyform',['operation.id','operation.keyform']),('CreateImage','ResourceOperation','CreateImage',['operation','operation.image._token']),('ReplaceImage','ResourceOperation','ReplaceImage',['operation.id','operation.image._token']),('RenameImage','ResourceOperation','RenameImage',['operation.id','operation.name','operation.expected_name']),('ApplyPlan','ResourceOperation','ApplyPlan',['operation.plan._token'])]:
         domain={'ParameterOperation':'Parameter','MeshBindingOperation':'MeshBinding','ResourceOperation':'Resource'}[root];i=ordinal(root,var);v=variants(roots[root])[i]
         out+=['        elif isinstance(operation,ops.'+cls+'):','            w.u32('+str(tags[domain])+'); w.u32('+str(i)+')']
         if len(fields(v))!=len(exprs):raise ValueError('Changed ownership projection')
         for f,e in zip(fields(v),exprs):out+=write(f['shape'],e,12)
     out+=['        else:','            raise TypeError("Expected typed authoring operation")','    return bytes(w.data)','','def decode_records(value: bytes, signature: str) -> m.OwnedModelingRecords:','    if signature!=OUTPUT_SIGNATURE: raise ValueError("Binary record contract differs")','    r=Reader(value)','    result=_read_ownedmodelingrecords(r)','    r.finish()','    return result','']
     out+=['def decode_samples(value: bytes, signature: str) -> m.ModelingSamples:', '    if signature!=SAMPLE_SIGNATURE: raise ValueError("Binary sample contract differs")', '    r=Reader(value)', '    result=_read_modelingsamples(r)', '    r.finish()', '    return result', '']
-    out+=['def decode_meshes(value: bytes,signature:str)->tuple[meshes.Snapshot,...]:','    if signature!=MESH_SIGNATURE: raise ValueError("Binary mesh contract differs")','    r=Reader(value)','    result=tuple(_read_meshsnapshot(r) for _ in range(r.count()))','    r.finish()','    return result','']
+    out+=['def decode_meshes(value: bytes,signature:str)->tuple[Snapshot[meshes.Mesh],...]:','    if signature!=MESH_SIGNATURE: raise ValueError("Binary mesh contract differs")','    r=Reader(value)','    result=tuple(_read_meshsnapshot(r) for _ in range(r.count()))','    r.finish()','    return result','']
     out+=['def decode_bindings(value:bytes,signature:str)->tuple[m.MeshBinding,...]:','    if signature!=BINDING_SIGNATURE: raise ValueError("Binary binding contract differs")','    r=Reader(value)','    result=tuple(_read_meshbinding(r) for _ in range(r.count()))','    r.finish()','    return result','']
     return {'client/python/zipzi/_generated/binary.py':'\n'.join(out)}

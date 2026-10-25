@@ -3,13 +3,12 @@ from __future__ import annotations
 import hashlib
 from typing import TYPE_CHECKING, Literal
 from .._errors import OutcomeUnknown, SdkFailure, unwrap
+from .._results import Batch
+from .._values import Source
 from .._values import integer, record, string
 from .._generated import binary as typed_binary
 if TYPE_CHECKING:
     from .connected import ConnectedBackend
-
-def _is_array(value: object)->bool:
-    return isinstance(value,(list,tuple))
 
 CHUNK = 1 << 20
 
@@ -81,7 +80,6 @@ class Transfer:
                         if result is None: return None
                         self.value=unwrap(result)
                     if self.value is None: return None
-                    if self.kind=="meshes" and _is_array(self.value):return self.value
                     value = record(self.value)
                     if "blob" not in value:
                         return self.value
@@ -107,7 +105,7 @@ class Transfer:
                                 self.value=dict(source=value["source"],bindings=typed_binary.decode_bindings(content,string(value["signature"])))
                             elif self.kind=="meshes":
                                 values=typed_binary.decode_meshes(content,string(value["signature"]))
-                                self.value=values[0] if value["single"] else values
+                                self.value=values[0] if value["single"] else Batch(Source.read(value["source"]), tuple(item.value for item in values))
                             else:
                                 self.value = (dict(source=value["source"], records=typed_binary.decode_records(content,string(value["signature"]))) if self.kind=="records" else dict(source=value["source"],state=value["state"],samples=typed_binary.decode_samples(content,string(value["signature"]))))
                             self.phase = "release"

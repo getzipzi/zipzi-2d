@@ -22,7 +22,7 @@ macro_rules! ids {
     ($($name:ident),*) => {$(
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
         #[serde(deny_unknown_fields)]
-        #[derive(zipzi_api_derive::BinaryWire)]
+        #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiFields)]
         pub struct $name {
             pub(crate) runtime: RuntimeInstanceId,
             pub(crate) serial: u64,

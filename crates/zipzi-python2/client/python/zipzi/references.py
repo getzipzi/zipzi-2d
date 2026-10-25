@@ -1,51 +1,19 @@
 """Runtime-scoped SDK handles and explicit scene label addresses."""
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 from ._owned import Owned
 from . import modeling
+from ._results import Snapshot
+from . import _queries as queries
 from ._values import Source, record, string
 if TYPE_CHECKING:
     from .backends import Backend
-    from .plans import Plan
+    from ._plans import Plan
 
-ObjectKind = Literal["asset", "mesh", "parameter", "mesh_binding", "part", "transform", "scene_binding",
-    "blend_key_table", "blend_constraint", "blend_binding", "glue", "offscreen", "cdi_parameter_group",
-    "binding_axis", "binding_sample", "glue_vertex_pair", "draw_order_group", "cdi_combined_set", "cdi_combined_member",
-    "model_parameter_group", "model_parameter_member", "model_hit_area", "attachment"] | modeling.ObjectKind
-OBJECT_KINDS = frozenset(member.value for member in modeling.ObjectKind)
-
-@dataclass(frozen=True)
-class Capability:
-    state: Literal["available", "unavailable", "unsupported"]
-    code: str | None = None
-
-    @classmethod
-    def read(cls, raw: object) -> Capability:
-        if raw == "Available":
-            return cls("available")
-        value = record(raw)
-        for tag, state in (("Unavailable", "unavailable"), ("Unsupported", "unsupported")):
-            if tag in value:
-                return cls("unavailable" if state == "unavailable" else "unsupported", string(record(value[tag])["code"]))
-        raise ValueError("Unknown capability state")
-
-@dataclass(frozen=True)
-class SceneCapabilities:
-    inspect: Capability
-    patch: Capability
-    move_object: Capability
-    reparent: Capability
-    reorder: Capability
-    duplicate: Capability
-    delete: Capability
-    dissolve: Capability
-
-    @classmethod
-    def read(cls, raw: object) -> SceneCapabilities:
-        value = record(raw)
-        return cls(*(Capability.read(value[key]) for key in
-            ("inspect", "patch", "move_object", "reparent", "reorder", "duplicate", "delete", "dissolve")))
+from ._generated.reference_values import (
+    ObjectKind as ObjectKind, OBJECT_KINDS as OBJECT_KINDS,
+    Capability as Capability, SceneCapabilities as SceneCapabilities,
+)
 
 class ObjectRef(Owned):
     def __init__(self, backend: Backend, kind: ObjectKind, id: str):
@@ -75,10 +43,10 @@ class ObjectRef(Owned):
         self._check(self._backend)
         return self._request("resolve", lambda: self._backend.resolve_ref(self._token, self), Source.read)
 
-    def capabilities(self, domain: modeling.CapabilityDomain) -> modeling.CapabilitySnapshot:
+    def capabilities(self, domain: modeling.CapabilityDomain) -> Snapshot[modeling.Capabilities]:
         self._check(self._backend)
         modeling.validate_CapabilityDomain(domain)
-        return self._request("capabilities", lambda: self._backend.modeling_capabilities(self._token, domain, self), modeling.CapabilitySnapshot.read)
+        return self._request("capabilities", lambda: self._backend.modeling_capabilities(self._token, domain, self), queries.capabilities)
 
     def scene_capabilities(self) -> SceneCapabilities:
         self._check(self._backend)
@@ -118,7 +86,7 @@ class LabelAddress(Owned):
         return address._request("capture", lambda: address._backend.label_address(reference._token, address), load)
 
     def plan(self, name: str) -> Plan:
-        from .plans import Plan
+        from ._plans import Plan
         self._check(self._backend)
         if not isinstance(name, str):
             raise TypeError("Expected label text")
@@ -141,7 +109,7 @@ class FieldAddress(Owned):
         return address._request("capture", lambda: backend.capture_address(session, selector, address), load)
 
     def plan(self, patch: modeling.AddressPatch) -> Plan:
-        from .plans import Plan
+        from ._plans import Plan
         self._check(self._backend)
         modeling.validate_AddressPatch(patch)
         plan = Plan(self._backend)

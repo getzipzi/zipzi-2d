@@ -86,9 +86,11 @@ def main() -> None:
         diagnostics = json.loads(invalid.stdout)
         actual = {(Path(d["file"]).name, d["range"]["start"]["line"], d.get("rule"))
             for d in diagnostics["generalDiagnostics"] if d["severity"] == "error"}
-        expected = {("type_invalid.py", line, "reportArgumentType") for line in (5, 6, 7, 8, 9, 12, 15, 16, 19, 20, 21, 26, 27, 28, 29)}
-        if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 16 or actual != expected:
-            raise RuntimeError(f"Expected sixteen real public typing failures: {invalid.stdout}\n{invalid.stderr}")
+        expected = {("type_invalid.py", line, rule.strip()) for line, value in
+            enumerate((ROOT / "crates/zipzi-python2/tests/type_invalid.py").read_text().splitlines()) if "# error: " in value
+            for rule in value.split("# error: ", 1)[1].split(",")}
+        if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 18 or actual != expected:
+            raise RuntimeError(f"Expected eighteen precise public typing diagnostics: {invalid.stdout}\n{invalid.stderr}")
         recovery_types = ROOT / "crates/zipzi-python2/tests/type_recovery_invalid.py"
         invalid = subprocess.run(["uv", "run", "--locked", "pyright", "--project",
             str(ROOT / "crates/zipzi-python2/pyrightconfig.json"), "--outputjson", str(recovery_types)],
@@ -98,8 +100,8 @@ def main() -> None:
             enumerate(recovery_types.read_text().splitlines()) if "# error: " in value}
         actual = {(d["range"]["start"]["line"], d.get("rule")) for d in diagnostics["generalDiagnostics"]
                   if d["severity"] == "error"}
-        if invalid.returncode != 1 or len(expected) != 4 or actual != expected or diagnostics["summary"]["errorCount"] != 4:
-            raise RuntimeError(f"Expected four precise recovery typing failures: {invalid.stdout}\n{invalid.stderr}")
+        if invalid.returncode != 1 or not expected or actual != expected or diagnostics["summary"]["errorCount"] != len(expected):
+            raise RuntimeError(f"Expected precise recovery/result typing failures: {invalid.stdout}\n{invalid.stderr}")
         print("zipzi-python2: Local/Connected behavior and positive/negative static types passed")
 
 if __name__ == "__main__":

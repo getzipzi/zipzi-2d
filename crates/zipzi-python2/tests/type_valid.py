@@ -10,8 +10,8 @@ def recipe(runtime: zipzi.Runtime) -> zipzi.SaveReceipt:
         ((0., 0.), (1., 0.), (0., 1.)), ((0, 1, 2),))
     with session.edit("face") as edit:
         face: str = edit.meshes.create(meshes.MeshSpec("Face", geometry))
-        snapshot: meshes.Snapshot = edit.meshes.get(face)
-        result: zipzi.WriteResult = edit.apply(ops.Rename(face, "Final"))
+        snapshot: zipzi.Snapshot[meshes.Mesh] = edit.meshes.get(face)
+        result: zipzi.WriteResult = edit.apply(meshes.Rename(face, "Final"))
         assert result.source.version == snapshot.source.version
     return session.project.save(Path("/tmp/zipzi-python2-typing")).wait()
 
@@ -21,12 +21,12 @@ def textured_recipe(runtime: zipzi.Runtime) -> resources.Usage:
         pixels: resources.ImagePixels = image.pixels()
         with session.edit("image") as edit:
             id: str = edit.resources.create_image("Draft", image)
-            snapshot: resources.Snapshot = edit.resources.get(id)
-            with edit.resources.plan(resources.RenameIntent(id, "Draft", "Final")) as plan:
-                report: zipzi.plans.Report = plan.report
-                result: zipzi.WriteResult = edit.apply_plan(plan)
+            snapshot: zipzi.Snapshot[resources.Image] = edit.resources.get(id)
+            with edit.plan(resources.RenameImage(id, "Final", expected_name="Draft")) as plan:
+                report: zipzi.PlanReport = plan.report
+                result: zipzi.WriteResult = edit.apply(plan)
                 assert result.source.sequence > report.source.sequence
-            assert snapshot.pixels == pixels
+            assert snapshot.value.pixels == pixels
             edit.resources.replace_image(id, image)
     return runtime.resources.usage()
 
@@ -47,15 +47,15 @@ def resident(runtime: zipzi.Runtime) -> zipzi.SessionId:
 def desktop(host: Path) -> zipzi.Runtime:
     return zipzi.connect(start=True, host=host, startup_timeout=15., sdk_build="explicit build identity")
 
-def parameter_and_events(runtime: zipzi.Runtime, session: zipzi.Session) -> parameters.Batch:
+def parameter_and_events(runtime: zipzi.Runtime, session: zipzi.Session) -> zipzi.Batch[parameters.Parameter]:
     stream: events.SessionSubscription = session.subscribe()
     cursor: events.Cursor = stream.cursor
     with session.edit("typed parameter") as edit:
         id = edit.parameters.create(parameters.ParameterSpec("Angle", -30., 30., 0.))
-        edit.parameters.patch(id, parameters.Patch(name="Final"))
-        batch: parameters.Batch = edit.parameters.get_many((id,))
-        snapshots: tuple[meshes.Snapshot, ...] = edit.meshes.get_many(())
-        assert snapshots == ()
+        edit.parameters.patch(id, parameters.ParameterPatch(name="Final"))
+        batch: zipzi.Batch[parameters.Parameter] = edit.parameters.get_many((id,))
+        snapshots: zipzi.Batch[meshes.Mesh] = edit.meshes.get_many(())
+        assert snapshots.items == ()
     for event in stream.poll():
         if event.kind == "published":
             receipt: zipzi.Receipt = event.receipt
@@ -65,14 +65,14 @@ def parameter_and_events(runtime: zipzi.Runtime, session: zipzi.Session) -> para
     return batch
 
 
-def bound_cpu(session: zipzi.Session, face: str, angle: str) -> sampling.Batch:
+def bound_cpu(session: zipzi.Session, face: str, angle: str) -> zipzi.Snapshot[sampling.Result]:
     with session.edit("binding") as edit:
         id: str = edit.bindings.create(bindings.MeshBindingSpec(face, (bindings.Axis(angle, (0., 1.)),), (
             bindings.Keyform((0.,), ((0., 0.), (1., 0.), (0., 1.))),
             bindings.Keyform((1.,), ((10., 0.), (11., 0.), (10., 1.))))))
-        snapshot: bindings.Snapshot = edit.bindings.get(id)
-        batch: sampling.Batch = edit.modeling.sample(({angle: .5},), expected=snapshot.source)
-        drawable: sampling.Drawable = batch.frames[0].drawables[0]
+        snapshot: zipzi.Snapshot[bindings.MeshBinding] = edit.bindings.get(id)
+        batch: zipzi.Snapshot[sampling.Result] = edit.modeling.sample(({angle: .5},), expected=snapshot.source)
+        drawable: sampling.Drawable = batch.value.frames[0].drawables[0]
         opacity: float = drawable.opacity
         assert opacity == 1.
         edit.bindings.set_keyform(id, bindings.Keyform((1.,), ((20., 0.), (21., 0.), (20., 1.))))
@@ -83,26 +83,51 @@ def scene_and_identity(session: zipzi.Session, face: str) -> references.SceneCap
         result: zipzi.WriteResult = edit.apply(scene.CreatePart(scene.PartSpec("Folder")))
         part: str = result.ids[0]
         edit.apply(scene.MoveToPart((face,), part_id=part))
-        view: scene.Snapshot = edit.scene.get(face)
+        view: zipzi.Snapshot[scene.Summary] = edit.scene.get(face)
         assert view.value.part_id == part
-        with edit.scene.plan(scene.SetSceneLabel(face, view.value.name, "Final")) as plan:
-            edit.apply_plan(plan)
+        with edit.plan(scene.SetSceneLabel(face, view.value.name, "Final")) as plan:
+            edit.apply(plan)
     with session.reference("mesh", face) as reference:
         source: zipzi.Source = reference.resolve()
         assert source.session == session.id.serial
         with reference.label() as address:
             with address.plan("Reviewed") as plan:
                 with session.edit("label") as edit:
-                    edit.apply_plan(plan)
+                    edit.apply(plan)
         return reference.scene_capabilities()
 
 
 def typed_recovery(edit: zipzi.Edit, spec: meshes.MeshSpec, id: str) -> zipzi.Receipt:
     assert_type(zipzi.recover_call(edit.meshes.create, spec), str)
-    assert_type(zipzi.recover_call(edit.scene.get, id), scene.Snapshot)
+    assert_type(zipzi.recover_call(edit.scene.get, id), zipzi.Snapshot[scene.Summary])
     assert_type(zipzi.recover_call(edit.commit), zipzi.Job[zipzi.Receipt])
     assert_type(edit.state, zipzi.EditState)
     assert_type(edit.receipt, zipzi.Receipt | None)
     job = zipzi.recover_call(edit.commit)
     assert_type(zipzi.recover_call(job.wait, timeout=1.), zipzi.Receipt)
     return zipzi.recover_call(job.wait)
+
+
+def uniform_results(session: zipzi.Session, id: str) -> zipzi.Batch[meshes.Mesh]:
+    assert_type(session.meshes.get(id), zipzi.Snapshot[meshes.Mesh])
+    assert_type(session.meshes.get_many((id,)), zipzi.Batch[meshes.Mesh])
+    assert_type(session.parameters.get(id), zipzi.Snapshot[parameters.Parameter])
+    assert_type(session.parameters.get_many((id,)), zipzi.Batch[parameters.Parameter])
+    assert_type(session.bindings.get(id), zipzi.Snapshot[bindings.MeshBinding])
+    assert_type(session.resources.get(id), zipzi.Snapshot[resources.Image])
+    assert_type(session.scene.get(id), zipzi.Snapshot[scene.Summary])
+    assert_type(session.modeling.sample(({},)), zipzi.Snapshot[sampling.Result])
+    assert_type(zipzi.recover_call(session.meshes.get_many, (id,)), zipzi.Batch[meshes.Mesh])
+    return session.meshes.get_many((id,))
+
+
+def unified_planning(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi.PlanReport:
+    operation: ops.PlannableOperation = meshes.Rename(id, "Final", expected_name="Before")
+    plan: zipzi.Plan = session.plan(operation)
+    patch: ops.Operation = parameters.Patch(id, parameters.ParameterPatch(name="Angle"))
+    assert_type(edit.apply(plan), zipzi.WriteResult)
+    assert_type(edit.apply_many((plan, patch)), zipzi.WriteResult)
+    assert_type(edit.plan(resources.RenameImage(id, "Texture")), zipzi.Plan)
+    assert_type(zipzi.recover_call(session.plan, operation), zipzi.Plan)
+    assert_type(zipzi.recover_call(edit.apply, meshes.Rename(id, "Again")), zipzi.WriteResult)
+    return plan.report

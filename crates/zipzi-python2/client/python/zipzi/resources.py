@@ -9,9 +9,7 @@ if TYPE_CHECKING:
     from .backends import Backend
     from ._lifecycle import Job
 
-from ._generated.resource_values import ImagePixels as ImagePixels, Snapshot as Snapshot, Usage as Usage
-from ._generated.plan_intents import ImageRename as _RenameIntent
-RenameIntent = _RenameIntent
+from ._generated.resource_values import ImagePixels as ImagePixels, Image as Image, Usage as Usage
 
 class PreparedImage(Owned):
     def __init__(self, backend: Backend):
@@ -102,3 +100,5 @@ class Resources:
         # A statistics query has its own recovery owner, just like other reads.
         from ._lifecycle import known
         return known(lambda: Usage.read(self._backend.statistics(self)), lambda: Usage.read(self._backend.recover(self)))
+
+from ._generated.resource_ops import CreateImage as CreateImage, ReplaceImage as ReplaceImage, RenameImage as RenameImage

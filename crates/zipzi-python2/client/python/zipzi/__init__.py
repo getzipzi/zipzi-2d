@@ -1,12 +1,14 @@
 """Typed Python authoring API backed by the Zipzi Runtime."""
 from pathlib import Path
-from . import modeling as modeling, bindings, sampling, events, meshes, ops, parameters, plans, resources, scene, references
-from .plans import Plan
+from . import modeling as modeling, bindings, sampling, events, meshes, ops, parameters, resources, scene, references
+from ._plans import Plan
+from ._generated.plan_values import PlanCost, PlanReport
 from .resources import PreparedImage
 from .buffers import Buffer
 from ._errors import Busy, JobTimeout, OutcomeUnknown, PendingRequest, RecoveryAction, SdkFailure
 from ._lifecycle import Edit, EditState, Job, JobState, Runtime, Session
 from ._calls import recover_call as recover_call
+from ._results import Batch, Page, PageCursor, Snapshot
 from ._values import ConnectionInfo, ConnectionLimits, Receipt, SaveReceipt, SessionId, SessionInfo, Source, Version, WriteResult
 
 def local() -> Runtime:
@@ -21,8 +23,12 @@ def connect(*, endpoint: Path | None = None, start: bool = False, host: Path | N
         startup_timeout=startup_timeout, sdk_build=sdk_build))
 
 __all__ = ["local", "connect", "Runtime", "Session", "Edit", "Job", "SdkFailure", "Busy", "OutcomeUnknown",
-    "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionId", "SessionInfo", "ConnectionInfo", "ConnectionLimits", "WriteResult", "modeling", "bindings", "sampling", "events", "meshes", "ops", "parameters", "plans", "resources", "scene", "references", "Plan", "PreparedImage", "Buffer"]
+    "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionId", "SessionInfo", "ConnectionInfo", "ConnectionLimits", "WriteResult", "modeling", "bindings", "sampling", "events", "meshes", "ops", "parameters", "resources", "scene", "references", "Plan", "PreparedImage", "Buffer"]
 __all__ += ["recover_call", "EditState", "JobState", "JobTimeout", "RecoveryAction"]
 
 from ._request_methods import register as _register_requests
 _register_requests()
+
+__all__ += ["Snapshot", "Batch", "Page", "PageCursor"]
+
+__all__ += ["PlanCost", "PlanReport"]

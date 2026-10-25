@@ -1053,8 +1053,8 @@ fn write_scenereference_in(
 
 pub fn read_vec2(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Vec2> {
     Ok(zipzi_core::types::Vec2 {
-        x: value.getattr("x")?.extract()?,
-        y: value.getattr("y")?.extract()?,
+        x: value.get_item(0)?.extract()?,
+        y: value.get_item(1)?.extract()?,
     })
 }
 
@@ -1834,8 +1834,8 @@ fn write_rotationpose_in(
 
 pub fn read_precisevec2(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::PreciseVec2> {
     Ok(zipzi_core::types::PreciseVec2 {
-        x: value.getattr("x")?.extract()?,
-        y: value.getattr("y")?.extract()?,
+        x: value.get_item(0)?.extract()?,
+        y: value.get_item(1)?.extract()?,
     })
 }
 
@@ -10505,118 +10505,32 @@ fn write_topologyreplacement_in(
 pub fn read_modelingintent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::ModelingIntent> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
         "scene" => Ok(zipzi_sdk::ModelingIntent::Scene(read_sceneedit(
-            &value.getattr("value")?,
+            &value.getattr("intent")?,
         )?)),
         "organization" => Ok(zipzi_sdk::ModelingIntent::Organization(
-            read_organizationedit(&value.getattr("value")?)?,
+            read_organizationedit(&value.getattr("intent")?)?,
         )),
         "binding" => Ok(zipzi_sdk::ModelingIntent::Binding(
-            read_bindingauthoringedit(&value.getattr("value")?)?,
+            read_bindingauthoringedit(&value.getattr("intent")?)?,
         )),
         "content" => Ok(zipzi_sdk::ModelingIntent::Content(read_scenecontentedit(
-            &value.getattr("value")?,
+            &value.getattr("intent")?,
         )?)),
         "references" => Ok(zipzi_sdk::ModelingIntent::References(read_referenceedit(
-            &value.getattr("value")?,
+            &value.getattr("intent")?,
         )?)),
         "resource" => Ok(zipzi_sdk::ModelingIntent::Resource(read_resourceedit(
-            &value.getattr("value")?,
+            &value.getattr("intent")?,
         )?)),
         "document" => Ok(zipzi_sdk::ModelingIntent::Document(
-            read_documentauthoringedit(&value.getattr("value")?)?,
+            read_documentauthoringedit(&value.getattr("intent")?)?,
         )),
         "attachment" => Ok(zipzi_sdk::ModelingIntent::Attachment(read_attachmentedit(
-            &value.getattr("value")?,
+            &value.getattr("intent")?,
         )?)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
-    }
-}
-
-pub fn write_modelingintent(
-    py: Python<'_>,
-    value: &zipzi_sdk::ModelingIntent,
-) -> PyResult<Py<PyAny>> {
-    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
-    write_modelingintent_in(py, value, &classes)
-}
-fn write_modelingintent_in(
-    py: Python<'_>,
-    value: &zipzi_sdk::ModelingIntent,
-    classes: &Bound<'_, PyModule>,
-) -> PyResult<Py<PyAny>> {
-    match value {
-        zipzi_sdk::ModelingIntent::Scene(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item("value", write_sceneedit_in(py, (field0), classes)?)?;
-            Ok(classes
-                .getattr("ModelingIntentScene")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
-        zipzi_sdk::ModelingIntent::Organization(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item("value", write_organizationedit_in(py, (field0), classes)?)?;
-            Ok(classes
-                .getattr("ModelingIntentOrganization")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
-        zipzi_sdk::ModelingIntent::Binding(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item(
-                "value",
-                write_bindingauthoringedit_in(py, (field0), classes)?,
-            )?;
-            Ok(classes
-                .getattr("ModelingIntentBinding")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
-        zipzi_sdk::ModelingIntent::Content(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item("value", write_scenecontentedit_in(py, (field0), classes)?)?;
-            Ok(classes
-                .getattr("ModelingIntentContent")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
-        zipzi_sdk::ModelingIntent::References(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item("value", write_referenceedit_in(py, (field0), classes)?)?;
-            Ok(classes
-                .getattr("ModelingIntentReferences")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
-        zipzi_sdk::ModelingIntent::Resource(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item("value", write_resourceedit_in(py, (field0), classes)?)?;
-            Ok(classes
-                .getattr("ModelingIntentResource")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
-        zipzi_sdk::ModelingIntent::Document(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item(
-                "value",
-                write_documentauthoringedit_in(py, (field0), classes)?,
-            )?;
-            Ok(classes
-                .getattr("ModelingIntentDocument")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
-        zipzi_sdk::ModelingIntent::Attachment(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item("value", write_attachmentedit_in(py, (field0), classes)?)?;
-            Ok(classes
-                .getattr("ModelingIntentAttachment")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
     }
 }
 
@@ -14268,6 +14182,251 @@ fn write_editorcontext_in(
         .getattr("EditorContext")?
         .call((), Some(&out))?
         .unbind())
+}
+
+pub fn read_parameteroperation(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::ParameterOperation> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => Ok(zipzi_sdk::ParameterOperation::Create {
+            spec: read_parametercreatespec(&value.getattr("spec")?)?,
+        }),
+        "patch" => Ok(zipzi_sdk::ParameterOperation::Patch {
+            id: value.getattr("id")?.extract()?,
+            patch: read_parameterpatch(&value.getattr("patch")?)?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn read_parametercreatespec(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::ParameterCreateSpec> {
+    Ok(zipzi_sdk::ParameterCreateSpec {
+        name: value.getattr("name")?.extract()?,
+        minimum: value.getattr("minimum")?.extract()?,
+        maximum: value.getattr("maximum")?.extract()?,
+        default_value: value.getattr("default_value")?.extract()?,
+        id: if value.getattr("id")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("id")?.extract()?)
+        },
+        runtime_id: if value.getattr("runtime_id")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("runtime_id")?.extract()?)
+        },
+        kind: if value.getattr("kind")?.is_none() {
+            None
+        } else {
+            Some(read_parameterkind(&value.getattr("kind")?)?)
+        },
+        decimal_places: if value.getattr("decimal_places")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("decimal_places")?.extract()?)
+        },
+        repeat: if value.getattr("repeat")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("repeat")?.extract()?)
+        },
+    })
+}
+
+pub fn read_parameterpatch(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::ParameterPatch> {
+    Ok(zipzi_sdk::ParameterPatch {
+        name: if value.getattr("name")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("name")?.extract()?)
+        },
+        minimum: if value.getattr("minimum")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("minimum")?.extract()?)
+        },
+        maximum: if value.getattr("maximum")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("maximum")?.extract()?)
+        },
+        default_value: if value.getattr("default_value")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("default_value")?.extract()?)
+        },
+        runtime_id: if value.getattr("runtime_id")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("runtime_id")?.extract()?)
+        },
+        kind: if value.getattr("kind")?.is_none() {
+            None
+        } else {
+            Some(read_parameterkind(&value.getattr("kind")?)?)
+        },
+        decimal_places: if value.getattr("decimal_places")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("decimal_places")?.extract()?)
+        },
+        repeat: if value.getattr("repeat")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("repeat")?.extract()?)
+        },
+    })
+}
+
+pub fn read_meshbindingoperation(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::MeshBindingOperation> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => Ok(zipzi_sdk::MeshBindingOperation::Create {
+            spec: read_meshbindingcreatespec(&value.getattr("spec")?)?,
+        }),
+        "set_keyform" => Ok(zipzi_sdk::MeshBindingOperation::SetKeyform {
+            id: value.getattr("id")?.extract()?,
+            keyform: read_meshkeyformspec(&value.getattr("keyform")?)?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn read_meshbindingcreatespec(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::MeshBindingCreateSpec> {
+    Ok(zipzi_sdk::MeshBindingCreateSpec {
+        mesh_id: value.getattr("mesh_id")?.extract()?,
+        axes: value
+            .getattr("axes")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_meshbindingaxisspec(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?,
+        keyforms: value
+            .getattr("keyforms")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_meshkeyformspec(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?,
+        id: if value.getattr("id")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("id")?.extract()?)
+        },
+    })
+}
+
+pub fn read_meshbindingaxisspec(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::MeshBindingAxisSpec> {
+    Ok(zipzi_sdk::MeshBindingAxisSpec {
+        parameter_id: value.getattr("parameter_id")?.extract()?,
+        keys: value
+            .getattr("keys")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?,
+    })
+}
+
+pub fn read_meshkeyformspec(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::MeshKeyformSpec> {
+    Ok(zipzi_sdk::MeshKeyformSpec {
+        keys: value
+            .getattr("keys")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?,
+        positions: value
+            .getattr("positions")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_vec2(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?,
+        opacity: if value.getattr("opacity")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("opacity")?.extract()?)
+        },
+        multiply: if value.getattr("multiply")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("multiply")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok(item0.extract()?)
+                    })
+                    .collect::<PyResult<Vec<_>>>()?
+                    .try_into()
+                    .map_err(|_| {
+                        pyo3::exceptions::PyValueError::new_err("Invalid fixed array length")
+                    })?,
+            )
+        },
+        screen: if value.getattr("screen")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("screen")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok(item0.extract()?)
+                    })
+                    .collect::<PyResult<Vec<_>>>()?
+                    .try_into()
+                    .map_err(|_| {
+                        pyo3::exceptions::PyValueError::new_err("Invalid fixed array length")
+                    })?,
+            )
+        },
+        draw_order: if value.getattr("draw_order")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("draw_order")?.extract()?)
+        },
+    })
+}
+
+pub fn read_geometrychecks(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::GeometryChecks> {
+    Ok(zipzi_sdk::GeometryChecks {
+        min_triangle_area: value.getattr("min_triangle_area")?.extract()?,
+        model_bounds: if value.getattr("model_bounds")?.is_none() {
+            None
+        } else {
+            Some(read_geometrybounds(&value.getattr("model_bounds")?)?)
+        },
+    })
+}
+
+pub fn read_geometrybounds(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::GeometryBounds> {
+    Ok(zipzi_sdk::GeometryBounds {
+        min: read_vec2(&value.get_item(0)?)?,
+        max: read_vec2(&value.get_item(1)?)?,
+    })
 }
 
 pub fn measure_modelingcommand(value: &Bound<'_, PyAny>) -> PyResult<usize> {
@@ -18108,27 +18267,27 @@ pub fn measure_topologyreplacement(value: &Bound<'_, PyAny>) -> PyResult<usize> 
 
 pub fn measure_modelingintent(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "scene" => Ok(256usize.saturating_add(measure_sceneedit(&(value.getattr("value")?))?)),
+        "scene" => Ok(256usize.saturating_add(measure_sceneedit(&(value.getattr("intent")?))?)),
         "organization" => {
-            Ok(256usize.saturating_add(measure_organizationedit(&(value.getattr("value")?))?))
+            Ok(256usize.saturating_add(measure_organizationedit(&(value.getattr("intent")?))?))
         }
         "binding" => {
-            Ok(256usize.saturating_add(measure_bindingauthoringedit(&(value.getattr("value")?))?))
+            Ok(256usize.saturating_add(measure_bindingauthoringedit(&(value.getattr("intent")?))?))
         }
         "content" => {
-            Ok(256usize.saturating_add(measure_scenecontentedit(&(value.getattr("value")?))?))
+            Ok(256usize.saturating_add(measure_scenecontentedit(&(value.getattr("intent")?))?))
         }
         "references" => {
-            Ok(256usize.saturating_add(measure_referenceedit(&(value.getattr("value")?))?))
+            Ok(256usize.saturating_add(measure_referenceedit(&(value.getattr("intent")?))?))
         }
         "resource" => {
-            Ok(256usize.saturating_add(measure_resourceedit(&(value.getattr("value")?))?))
+            Ok(256usize.saturating_add(measure_resourceedit(&(value.getattr("intent")?))?))
         }
-        "document" => {
-            Ok(256usize.saturating_add(measure_documentauthoringedit(&(value.getattr("value")?))?))
-        }
+        "document" => Ok(
+            256usize.saturating_add(measure_documentauthoringedit(&(value.getattr("intent")?))?)
+        ),
         "attachment" => {
-            Ok(256usize.saturating_add(measure_attachmentedit(&(value.getattr("value")?))?))
+            Ok(256usize.saturating_add(measure_attachmentedit(&(value.getattr("intent")?))?))
         }
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -18571,6 +18730,260 @@ pub fn measure_textureslot(value: &Bound<'_, PyAny>) -> PyResult<usize> {
 
 pub fn measure_exportformat(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(128usize)
+}
+
+pub fn measure_parameteroperation(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => {
+            Ok(256usize.saturating_add(measure_parametercreatespec(&(value.getattr("spec")?))?))
+        }
+        "patch" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_parameterpatch(&(value.getattr("patch")?))?)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_parametercreatespec(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("name")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(if (value.getattr("id")?).is_none() {
+            0usize
+        } else {
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32)
+        })
+        .saturating_add(if (value.getattr("runtime_id")?).is_none() {
+            0usize
+        } else {
+            (value.getattr("runtime_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32)
+        })
+        .saturating_add(if (value.getattr("kind")?).is_none() {
+            0usize
+        } else {
+            measure_parameterkind(&(value.getattr("kind")?))?
+        })
+        .saturating_add(if (value.getattr("decimal_places")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("repeat")?).is_none() {
+            0usize
+        } else {
+            16usize
+        }))
+}
+
+pub fn measure_parameterpatch(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(if (value.getattr("name")?).is_none() {
+            0usize
+        } else {
+            (value.getattr("name")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32)
+        })
+        .saturating_add(if (value.getattr("minimum")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("maximum")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("default_value")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("runtime_id")?).is_none() {
+            0usize
+        } else {
+            (value.getattr("runtime_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32)
+        })
+        .saturating_add(if (value.getattr("kind")?).is_none() {
+            0usize
+        } else {
+            measure_parameterkind(&(value.getattr("kind")?))?
+        })
+        .saturating_add(if (value.getattr("decimal_places")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("repeat")?).is_none() {
+            0usize
+        } else {
+            16usize
+        }))
+}
+
+pub fn measure_meshbindingoperation(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => {
+            Ok(256usize.saturating_add(measure_meshbindingcreatespec(&(value.getattr("spec")?))?))
+        }
+        "set_keyform" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_meshkeyformspec(&(value.getattr("keyform")?))?)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_meshbindingcreatespec(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("mesh_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("axes")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_meshbindingaxisspec(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("keyforms")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_meshkeyformspec(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("id")?).is_none() {
+            0usize
+        } else {
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32)
+        }))
+}
+
+pub fn measure_meshbindingaxisspec(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("parameter_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("keys")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(16usize);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_meshkeyformspec(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("keys")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(16usize);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("positions")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_vec2(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("opacity")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("multiply")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("multiply")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(16usize);
+                }
+                bytes
+            }
+        })
+        .saturating_add(if (value.getattr("screen")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("screen")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(16usize);
+                }
+                bytes
+            }
+        })
+        .saturating_add(if (value.getattr("draw_order")?).is_none() {
+            0usize
+        } else {
+            16usize
+        }))
+}
+
+pub fn measure_geometrychecks(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize.saturating_add(16usize).saturating_add(
+        if (value.getattr("model_bounds")?).is_none() {
+            0usize
+        } else {
+            measure_geometrybounds(&(value.getattr("model_bounds")?))?
+        },
+    ))
+}
+
+pub fn measure_geometrybounds(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(measure_vec2(&(value.get_item(0)?))?)
+        .saturating_add(measure_vec2(&(value.get_item(1)?))?))
 }
 
 pub fn read_objectkind_name(value: &str) -> PyResult<zipzi_sdk::ObjectKind> {

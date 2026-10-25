@@ -28,7 +28,7 @@ class DesktopConnection(unittest.TestCase):
                 script = '''
 import json,sys,time,zipzi
 from pathlib import Path
-from zipzi import bindings,events,meshes,ops,parameters
+from zipzi import bindings,events,meshes,parameters
 while not Path(sys.argv[4]).exists(): time.sleep(.005)
 with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
  assert r.connection is not None
@@ -51,10 +51,10 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
   s=r.sessions.attach(sessions[0].id)
   stream=s.subscribe()
   with s.edit('desktop client two') as e:
-   e.apply_many((ops.Rename('79200000-0000-4000-8000-000000000021','Second'),ops.PatchParameter('79200000-0000-4000-8000-000000000022',parameters.Patch(name='Second parameter',default_value=.5))))
+   e.apply_many((meshes.Rename('79200000-0000-4000-8000-000000000021','Second'),parameters.Patch('79200000-0000-4000-8000-000000000022',parameters.ParameterPatch(name='Second parameter',default_value=.5))))
   assert len([e for e in stream.poll() if isinstance(e,events.Published)])==1
   before=s.info()
-  assert s.modeling.sample(({'79200000-0000-4000-8000-000000000022':.5},)).frames[0].drawables[0].positions[0][0]==7.5
+  assert s.modeling.sample(({'79200000-0000-4000-8000-000000000022':.5},)).value.frames[0].drawables[0].positions[0][0]==7.5
   assert s.info()==before
  print(json.dumps(dict(serial=s.id.serial)),flush=True)
 '''
@@ -81,10 +81,10 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     session = runtime.sessions.attach(info.id)
                     self.assertEqual(session.info().history, (2, 0))
                     self.assertTrue(session.info().modified)
-                    self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").name, "Second")
-                    value = session.parameters.get("79200000-0000-4000-8000-000000000022")
-                    self.assertEqual(session.modeling.sample(({"79200000-0000-4000-8000-000000000022":.5},)).frames[0].drawables[0].positions[0][0],7.5)
-                    self.assertEqual(session.bindings.get("79200000-0000-4000-8000-000000000023").mesh_id,"79200000-0000-4000-8000-000000000021")
+                    self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").value.name, "Second")
+                    value = session.parameters.get("79200000-0000-4000-8000-000000000022").value
+                    self.assertEqual(session.modeling.sample(({"79200000-0000-4000-8000-000000000022":.5},)).value.frames[0].drawables[0].positions[0][0],7.5)
+                    self.assertEqual(session.bindings.get("79200000-0000-4000-8000-000000000023").value.mesh_id,"79200000-0000-4000-8000-000000000021")
                     self.assertEqual((value.name, value.default_value, value.runtime_id, value.decimal_places, value.repeat),
                         ("Second parameter", .5, "ParamDesktop", 4, True))
                     session.show_window()
@@ -106,7 +106,7 @@ from zipzi import parameters
 r=zipzi.connect(endpoint=Path(sys.argv[1]))
 s=r.sessions.attach(zipzi.SessionId(sys.argv[2],int(sys.argv[3])))
 with s.edit('abandoned client') as e:
- e.parameters.patch('79200000-0000-4000-8000-000000000022',parameters.Patch(name='Never published'))
+ e.parameters.patch('79200000-0000-4000-8000-000000000022',parameters.ParameterPatch(name='Never published'))
  print('candidate ready',flush=True)
  time.sleep(120)
 ''', str(endpoint), session.id.runtime, str(session.id.serial)], cwd="/tmp", env=environment,
@@ -115,7 +115,7 @@ with s.edit('abandoned client') as e:
                     self.assertEqual(abandoned.stdout.readline().strip(), "candidate ready")
                     abandoned.kill()
                     abandoned.communicate(timeout=5)
-                    self.assertEqual(session.parameters.get("79200000-0000-4000-8000-000000000022").name, "Second parameter")
+                    self.assertEqual(session.parameters.get("79200000-0000-4000-8000-000000000022").value.name, "Second parameter")
                     expiry_deadline = time.monotonic() + 40
                     while True:
                         try:
@@ -157,10 +157,10 @@ with s.edit('abandoned client') as e:
                     with self.assertRaises(zipzi.SdkFailure):
                         fresh.sessions.attach(old_id)
                     session = fresh.sessions.open(saved.manifest).wait()
-                    self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").name, "Second")
-                    value = session.parameters.get("79200000-0000-4000-8000-000000000022")
-                    self.assertEqual(session.modeling.sample(({"79200000-0000-4000-8000-000000000022":.5},)).frames[0].drawables[0].positions[0][0],7.5)
-                    self.assertEqual(session.bindings.get("79200000-0000-4000-8000-000000000023").mesh_id,"79200000-0000-4000-8000-000000000021")
+                    self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").value.name, "Second")
+                    value = session.parameters.get("79200000-0000-4000-8000-000000000022").value
+                    self.assertEqual(session.modeling.sample(({"79200000-0000-4000-8000-000000000022":.5},)).value.frames[0].drawables[0].positions[0][0],7.5)
+                    self.assertEqual(session.bindings.get("79200000-0000-4000-8000-000000000023").value.mesh_id,"79200000-0000-4000-8000-000000000021")
                     self.assertEqual((value.name, value.default_value, value.runtime_id, value.decimal_places, value.repeat),
                         ("Second parameter", .5, "ParamDesktop", 4, True))
                     self.assertEqual(session.info().history, (0, 0))

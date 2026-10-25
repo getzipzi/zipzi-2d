@@ -12,15 +12,17 @@ import struct
 import threading
 import time
 from typing import Literal
-from .. import ops, sampling, scene
+from .. import _operations as ops, sampling, scene
 from .._generated.backends import ConnectedQueries
+from .._generated.planning import encode_modeling
+from .._generated.planning import ModelingPlanOperation
 from .._errors import Busy, JobTimeout, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
 from ._transfers import Transfer
 from ..events import Cursor
 
-CONTRACT = "zipzi-runtime-p3a-1"
+CONTRACT = "zipzi-runtime-p3a-2-1"
 MAX_FRAME = 16 << 20
 MAX_BINARY_CHUNK = 1 << 20
 MAX_BINARY_HEADER = 16 << 10
@@ -231,12 +233,12 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         return self._request(dict(op="collection_capabilities", session=session, query=modeling.encode_CollectionQuery(query)), owner, "collection_capabilities")
     def sample_job(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object:
         return record(self._request(dict(op="request_modeling_samples", input=dict(session=session,edit=edit,parameters=poses,checks=checks.wire(),expected=None if expected is None else expected.wire())), owner, "sample_job"))["job"]
-    def modeling_plan_job(self, session: object, edit: object | None, intent: modeling.ModelingIntent, owner: object) -> object:
-        return record(self._request(dict(op="request_modeling_plan", session=session,edit=edit,intent=modeling.encode_ModelingIntent(intent)), owner, "modeling_plan_job"))["job"]
+    def modeling_plan_job(self, session: object, edit: object | None, intent: ModelingPlanOperation, owner: object) -> object:
+        return record(self._request(dict(op="request_modeling_plan", session=session,edit=edit,intent=encode_modeling(intent)), owner, "modeling_plan_job"))["job"]
     def modeling_records(self, session: object, edit: object | None, query: modeling.ModelingQuery, owner: object) -> object:
         return self._drive_transfer(Transfer(self,owner,"records",selector=dict(op="modeling_query",session=session,edit=edit,query=modeling.encode_ModelingQuery(query))))
-    def modeling_plan(self, session: object, edit: object | None, intent: modeling.ModelingIntent, owner: object) -> object:
-        return self._request(dict(op="plan_modeling", session=session, edit=edit, intent=modeling.encode_ModelingIntent(intent)), owner, "modeling.plan")
+    def modeling_plan(self, session: object, edit: object | None, intent: ModelingPlanOperation, owner: object) -> object:
+        return self._request(dict(op="plan_modeling", session=session, edit=edit, intent=encode_modeling(intent)), owner, "modeling.plan")
     def scene(self, session: object, edit: object | None, ids: tuple[str, ...], owner: object) -> object:
         return self._request(dict(op="scene_snapshot", session=session, edit=edit, ids=ids), owner, "scene.get")
     def scene_plan(self, session: object, edit: object | None, operation: scene.Operation, owner: object) -> object:
@@ -267,7 +269,7 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         return self._request(dict(op="session_info", session=session), owner, "session.info")
     def begin(self, session: object, label: str, owner: object) -> object:
         return self._request(dict(op="begin_edit", session=session, label=label), owner, "edit.begin")
-    def apply(self, edit: object, operations: tuple[ops.Operation, ...], owner: object) -> object:
+    def apply(self, edit: object, operations: tuple[ops.WireOperation, ...], owner: object) -> object:
         if len(operations)>1024:
             return self._request(dict(op="apply_authoring",edit=edit,operations=tuple(ops.wire(op) for op in operations)),owner,"edit.apply")
         payload = typed_binary.encode_operations(operations)

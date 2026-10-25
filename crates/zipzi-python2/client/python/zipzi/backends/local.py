@@ -5,8 +5,9 @@ from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 import time
-from .. import ops, sampling, scene
+from .. import _operations as ops, sampling, scene
 from .._generated.backends import LocalQueries
+from .._generated.planning import ModelingPlanOperation
 from .._errors import JobTimeout, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source
 from . import JobKind
@@ -46,7 +47,7 @@ class LocalBackend(LocalQueries, LocalResources):
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-11":
+        if self._native.contract != "zipzi-python2-13":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 
@@ -64,11 +65,11 @@ class LocalBackend(LocalQueries, LocalResources):
         return unwrap(self._native.collection_capabilities(session, query))
     def sample_job(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object:
         return unwrap(self._native.sample_job(session, edit, poses, checks, expected))
-    def modeling_plan_job(self, session: object, edit: object | None, intent: modeling.ModelingIntent, owner: object) -> object:
+    def modeling_plan_job(self, session: object, edit: object | None, intent: ModelingPlanOperation, owner: object) -> object:
         return unwrap(self._native.modeling_plan_job(session, edit, intent))
     def modeling_records(self, session: object, edit: object | None, query: modeling.ModelingQuery, owner: object) -> object:
         return unwrap(self._native.modeling_records(session, edit, query))
-    def modeling_plan(self, session: object, edit: object | None, intent: modeling.ModelingIntent, owner: object) -> object:
+    def modeling_plan(self, session: object, edit: object | None, intent: ModelingPlanOperation, owner: object) -> object:
         return unwrap(self._native.modeling_plan(session, edit, intent))
     def scene(self, session: object, edit: object | None, ids: tuple[str, ...], owner: object) -> object:
         return unwrap(self._native.scene(session, edit, ids))
@@ -97,7 +98,7 @@ class LocalBackend(LocalQueries, LocalResources):
         return unwrap(self._native.info(session))
     def begin(self, session: object, label: str, owner: object) -> object:
         return unwrap(self._native.begin_edit(session, label))
-    def apply(self, edit: object, operations: tuple[ops.Operation, ...], owner: object) -> object:
+    def apply(self, edit: object, operations: tuple[ops.WireOperation, ...], owner: object) -> object:
         return unwrap(self._native.apply(edit, operations))
     def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
         return unwrap(self._native.prepare_image(width, height, rgba))

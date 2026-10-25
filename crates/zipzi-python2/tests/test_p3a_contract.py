@@ -28,7 +28,7 @@ class P3AContract(unittest.TestCase):
         result = lost.exception.recover()
         self.assertIsInstance(result, str)
         self.assertEqual(edit.meshes.get(result).source.sequence, 1)
-        self.assertEqual(edit.meshes.get(result).name, "Face")
+        self.assertEqual(edit.meshes.get(result).value.name, "Face")
         edit.commit().wait()
         self.assertEqual(session.info().history, (1, 0))
         with self.assertRaises(zipzi.SdkFailure) as stale:
@@ -43,7 +43,7 @@ class P3AContract(unittest.TestCase):
             edit.parameters.create(parameters.ParameterSpec("Angle", -1., 1., 0.))
         result = lost.exception.recover()
         self.assertIsInstance(result, str)
-        self.assertEqual(edit.parameters.get(result).name, "Angle")
+        self.assertEqual(edit.parameters.get(result).value.name, "Angle")
         self.assertEqual(edit.parameters.get(result).source.sequence, 1)
         edit.commit().wait()
         self.assertEqual(session.info().history, (1, 0))
@@ -57,7 +57,7 @@ class P3AContract(unittest.TestCase):
                 edit.resources.create_image("Texture", image)
             result = lost.exception.recover()
             self.assertIsInstance(result, str)
-            self.assertEqual(edit.resources.get(result).pixels.rgba, b"rgba")
+            self.assertEqual(edit.resources.get(result).value.pixels.rgba, b"rgba")
             self.assertEqual(edit.resources.get(result).source.sequence, 1)
             edit.commit().wait()
         self.assertEqual(session.info().history, (1, 0))
@@ -116,7 +116,7 @@ class P3AContract(unittest.TestCase):
         with self.assertRaises(zipzi.OutcomeUnknown) as escaped:
             with session.edit("caught unknown") as edit:
                 try:
-                    edit.apply(support.ops.Create(meshes.MeshSpec("Face", support.GEOMETRY)))
+                    edit.apply(meshes.Create(meshes.MeshSpec("Face", support.GEOMETRY)))
                 except zipzi.OutcomeUnknown as error:
                     original = error
         self.assertIsNotNone(original)

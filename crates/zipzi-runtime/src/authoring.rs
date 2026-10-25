@@ -35,6 +35,12 @@ pub struct MeshBatchQuery {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct MeshBatch {
+    pub source: SourceRef,
+    pub items: Vec<MeshSnapshot>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ParameterBatch {
     pub source: SourceRef,
     pub parameters: Vec<zipzi_core::Parameter>,
@@ -96,7 +102,7 @@ pub struct ModelingSampleQuery {
     pub checks: zipzi_sdk::GeometryChecks,
     pub expected: Option<SourceRef>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, zipzi_api_derive::ApiFields)]
 pub struct ModelingSampleBatch {
     #[serde(skip)]
     pub lease: Option<std::sync::Arc<zipzi_project::TransferReservation>>,
@@ -111,12 +117,12 @@ tag = "kind";
 pub enum PlanIntent {
     MeshRename {
         id: String,
-        expected_name: String,
+        expected_name: Option<String>,
         name: String,
     },
     ImageRename {
         id: String,
-        expected_name: String,
+        expected_name: Option<String>,
         name: String,
     },
 }
@@ -211,6 +217,11 @@ pub enum ResourceOperation {
     ReplaceImage {
         id: String,
         image: ImageId,
+    },
+    RenameImage {
+        id: String,
+        name: String,
+        expected_name: Option<String>,
     },
     ApplyPlan {
         plan: PlanId,

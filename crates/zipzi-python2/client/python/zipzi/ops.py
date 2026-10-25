@@ -1,78 +1,13 @@
-"""Typed operations; resource/Plan ownership remains handwritten."""
-from dataclasses import dataclass, field
-from typing import Literal
-from . import bindings, parameters
-from ._generated import scene, modeling
-from ._generated.mesh_ops import Create as Create, Rename as Rename, SetPositions as SetPositions, validate as validate_mesh, wire as mesh_wire
+"""Static operation unions; construct operations in their owning domain."""
+from typing import TypeAlias as _TypeAlias
+from . import meshes as _meshes, parameters as _parameters, bindings as _bindings, resources as _resources
+from ._generated import scene as _scene, modeling as _modeling
+from ._generated.planning import ModelingPlanOperation as _ModelingPlanOperation
 
-from ._generated.resource_ops import CreateImage as CreateImage, ReplaceImage as ReplaceImage, ApplyPlan as ApplyPlan, validate as validate_resource, wire as resource_wire
+Operation: _TypeAlias = (_meshes.Create | _meshes.Rename | _meshes.SetPositions |
+    _parameters.Create | _parameters.Patch | _bindings.Create | _bindings.SetKeyform |
+    _resources.CreateImage | _resources.ReplaceImage | _resources.RenameImage |
+    _scene.Operation | _modeling.ModelingCommand)
+PlannableOperation: _TypeAlias = _meshes.Rename | _resources.RenameImage | _scene.Operation | _ModelingPlanOperation
 
-@dataclass(frozen=True)
-class CreateParameter:
-    spec: parameters.ParameterSpec
-    kind: Literal["create_parameter"] = field(default="create_parameter", init=False)
-
-@dataclass(frozen=True)
-class PatchParameter:
-    id: str
-    patch: parameters.Patch
-    kind: Literal["patch_parameter"] = field(default="patch_parameter", init=False)
-
-@dataclass(frozen=True)
-class CreateMeshBinding:
-    spec: bindings.MeshBindingSpec
-    kind: Literal["create_mesh_binding"] = field(default="create_mesh_binding", init=False)
-
-@dataclass(frozen=True)
-class SetMeshKeyform:
-    id: str
-    keyform: bindings.Keyform
-    kind: Literal["set_mesh_keyform"] = field(default="set_mesh_keyform", init=False)
-
-Operation = Create | Rename | SetPositions | CreateImage | ReplaceImage | ApplyPlan | CreateParameter | PatchParameter | CreateMeshBinding | SetMeshKeyform | scene.Operation | modeling.ModelingCommand
-
-def validate(op: Operation) -> None:
-    if isinstance(op, modeling.OPERATION_TYPES):
-        modeling.validate_ModelingCommand(op)
-        return
-    if isinstance(op, scene.OPERATION_TYPES):
-        scene.validate(op)
-        return
-    match op:
-        case CreateMeshBinding(spec):
-            bindings.validate(spec)
-        case SetMeshKeyform(id, keyform):
-            if not isinstance(id, str):
-                raise TypeError("Expected binding ID text")
-            bindings.validate_keyform(keyform)
-        case CreateParameter(spec):
-            if not isinstance(spec, parameters.ParameterSpec):
-                raise TypeError("Expected a ParameterSpec")
-            parameters.validate(spec)
-        case PatchParameter(id, patch):
-            if not isinstance(id, str) or not isinstance(patch, parameters.Patch):
-                raise TypeError("Expected parameter ID and Patch")
-            parameters.validate(patch)
-        case CreateImage() | ReplaceImage() | ApplyPlan():
-            validate_resource(op)
-        case _:
-            validate_mesh(op)
-
-def wire(op: Operation) -> dict[str, object]:
-    if isinstance(op, modeling.OPERATION_TYPES):
-        return dict(domain="modeling", operation=modeling.encode_ModelingCommand(op))
-    if isinstance(op, scene.OPERATION_TYPES):
-        return scene.wire(op)
-    match op:
-        case CreateMeshBinding(spec):
-            return dict(domain="mesh_binding", operation=dict(op="create", spec=bindings.wire(spec)))
-        case SetMeshKeyform(id, keyform):
-            return dict(domain="mesh_binding", operation=dict(op="set_keyform", id=id, keyform=bindings.keyform_wire(keyform)))
-        case CreateParameter(spec):
-            return dict(domain="parameter", operation=dict(op="create", spec=parameters.wire(spec)))
-        case PatchParameter(id, patch):
-            return dict(domain="parameter", operation=dict(op="patch", id=id, patch=parameters.wire(patch)))
-        case CreateImage() | ReplaceImage() | ApplyPlan():
-            return resource_wire(op)
-        case _:
-            return dict(domain="mesh", operation=mesh_wire(op))
+__all__ = ['Operation', 'PlannableOperation']

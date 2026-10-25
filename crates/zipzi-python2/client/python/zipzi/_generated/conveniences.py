@@ -13,7 +13,7 @@ class EditableMeshes:
     _owner: MeshWriter
     def create(self, spec: MeshSpec) -> str:
         return project(lambda: self._owner._construct_and_apply(lambda: ops.Create(spec)), single_id, operation="meshes.create", inputs=(spec,))
-    def rename(self, id: str, name: str) -> WriteResult:
-        return self._owner._construct_and_apply(lambda: ops.Rename(id, name))
+    def rename(self, id: str, name: str, *, expected_name: str | None = None) -> WriteResult:
+        return self._owner._construct_and_apply(lambda: ops.Rename(id, name, expected_name=expected_name))
     def set_positions(self, id: str, *, vertex_ids: Sequence[int], positions: Sequence[Point]) -> WriteResult:
         return self._owner._construct_and_apply(lambda: ops.SetPositions(id, tuple(vertex_ids), tuple(positions)))

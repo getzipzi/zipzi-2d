@@ -54,7 +54,7 @@ pub(crate) fn read_meshspec(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Mes
     })
 }
 
-pub(crate) fn write_snapshot(
+pub(crate) fn write_mesh(
     py: Python<'_>,
     value: zipzi_runtime::authoring::MeshSnapshot,
 ) -> PyResult<Bound<'_, PyDict>> {
@@ -74,6 +74,7 @@ pub(crate) fn read_mesh_operation(kind: &str, op: &Bound<'_, PyAny>) -> PyResult
         "rename" => Ok(MeshOperation::Rename {
             id: op.getattr("id")?.extract()?,
             name: op.getattr("name")?.extract()?,
+            expected_name: op.getattr("expected_name")?.extract()?,
         }),
         "set_positions" => Ok(MeshOperation::SetPositions {
             id: op.getattr("id")?.extract()?,

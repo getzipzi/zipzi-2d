@@ -1,6 +1,4 @@
 """Typed scene/organization intentions and immutable metadata projections."""
-from dataclasses import dataclass
-from ._values import Source, record, sequence
 from ._generated.scene import (
     PartSpec as PartSpec, ParameterGroupSpec as ParameterGroupSpec, Placement as Placement,
     Summary as Summary, Operation as Operation, OPERATION_TYPES as OPERATION_TYPES,
@@ -22,18 +20,3 @@ from ._generated.scene import (
     VertexPatch as VertexPatch, Sample as Sample, GluePair as GluePair, OffscreenForm as OffscreenForm,
     validate as validate, wire as wire,
 )
-
-@dataclass(frozen=True)
-class Batch:
-    source: Source
-    items: tuple[Summary, ...]
-
-    @classmethod
-    def read(cls, raw: object) -> "Batch":
-        value = record(raw)
-        return cls(Source.read(value["source"]), tuple(Summary.read(item) for item in sequence(value["items"])))
-
-@dataclass(frozen=True)
-class Snapshot:
-    source: Source
-    value: Summary

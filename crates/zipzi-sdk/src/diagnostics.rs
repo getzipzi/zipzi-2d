@@ -4,13 +4,18 @@ use zipzi_core::Vec2;
 
 use crate::{AuthoringSession, SdkError};
 
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape,
+)]
 pub struct GeometryBounds {
     pub min: Vec2,
     pub max: Vec2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape,
+)]
+#[serde(default)]
 pub struct GeometryChecks {
     /// Area in authored coordinates: model units squared at the root, or
     /// the appropriate rotation-local / Warp-parameter units under a parent.
