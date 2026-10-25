@@ -51,7 +51,7 @@ fn image_prepare_failure_aborts_on_host_even_if_client_never_sends_cleanup() {
         rt.apply_modeling(
             client,
             edit,
-            vec![zipzi_sdk::ModelingCommand::CreateParameter {
+            vec![zipzi_runtime::modeling::ModelingCommand::CreateParameter {
                 parameter: zipzi_core::Parameter {
                     id: parameter.clone(),
                     ..Default::default()

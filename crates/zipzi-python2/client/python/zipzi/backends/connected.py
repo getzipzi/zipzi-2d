@@ -10,10 +10,10 @@ import struct
 import threading
 import time
 from typing import Literal
-from .. import ops, plans
+from .. import ops, plans, sampling
 from .._generated.backends import ConnectedQueries
 from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
-from .._values import ConnectionInfo, SessionId, record, sequence
+from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
 from ..events import Cursor
 
@@ -81,7 +81,7 @@ class ConnectedBackend(ConnectedQueries):
                 raise SdkFailure("PROTOCOL_MISMATCH", "Host returned an incompatible protocol")
             if self._sdk_build is not None and metadata.sdk_build != self._sdk_build:
                 raise SdkFailure("BUILD_MISMATCH", "Host returned a different SDK build")
-            if not {"typed_meshes", "typed_resources_plans", "typed_job_lifecycle", "typed_parameters", "typed_event_pages", "typed_mesh_batch"}.issubset(sequence(hello["capabilities"])):
+            if not {"typed_meshes", "typed_resources_plans", "typed_job_lifecycle", "typed_parameters", "typed_event_pages", "typed_mesh_batch", "typed_mesh_bindings", "typed_modeling_samples"}.issubset(sequence(hello["capabilities"])):
                 raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed authoring operations")
         except BaseException:
             stream.close()
@@ -145,6 +145,11 @@ class ConnectedBackend(ConnectedQueries):
     def create(self, document_id: str, owner: object) -> object:
         # ModelSetup defaults are supplied by serde/SDK, not copied into Python.
         return self._request(dict(op="create_session", document_id=document_id), owner, "sessions.create")
+    def bindings(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object:
+        return self._request(dict(op="mesh_binding_snapshot", session=session, edit=edit, ids=ids), owner, "bindings.get")
+    def sample(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object:
+        return self._request(dict(op="sample_modeling", session=session, edit=edit, parameters=poses,
+            checks=checks.wire(), expected=None if expected is None else expected.wire()), owner, "modeling.sample")
     def subscribe(self, session: object, owner: object) -> object:
         return self._request(dict(op="subscribe", session=session), owner, "events.subscribe")
     def events(self, cursor: Cursor, limit: int, owner: object) -> object:

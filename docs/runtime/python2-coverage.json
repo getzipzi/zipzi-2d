@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "date": "2026-10-25",
-  "base_commit": "acc54907",
+  "base_commit": "c0e186b",
   "implementation": "crates/zipzi-python2",
-  "scope": "Runtime R0-R4 reconnection; public R3 minimum loop verified; full R4/method inventory pending",
+  "scope": "Runtime R0-R4 reconnection; public R3 minimum and selected R4 mesh-binding/CPU loop verified; full R4/method inventory pending",
   "status": "in_progress",
   "record": "docs/plans/sdk-runtime/python2-r0-r4.md",
   "ipc_contract": "zipzi-runtime-r4-1",
-  "native_contract": "zipzi-python2-5",
+  "native_contract": "zipzi-python2-6",
   "entries": [
     {
       "id": "r0_inventory",
@@ -64,7 +64,8 @@
       ],
       "evidence": [
         "crates/zipzi-editor/acceptance/runtime_ipc.rs",
-        "docs/plans/sdk-runtime/python2-r3-events.md"
+        "docs/plans/sdk-runtime/python2-r3-events.md",
+        "docs/plans/sdk-runtime/python2-r4-bindings.md"
       ],
       "remaining": [
         "All-domain UI selection/relation/texture/form updates",
@@ -199,20 +200,23 @@
         "A12",
         "A15"
       ],
-      "shared": "SDK domain intents/algorithms; Runtime modeling handlers",
+      "shared": "SDK domain intents/algorithms/specs; Runtime owns cross-domain modeling dispatch",
       "python": [
         "crates/zipzi-python2/client/python/zipzi/meshes.py",
-        "crates/zipzi-python2/client/python/zipzi/ops.py"
+        "crates/zipzi-python2/client/python/zipzi/ops.py",
+        "crates/zipzi-python2/client/python/zipzi/bindings.py",
+        "crates/zipzi-python2/src/modeling_bridge.rs"
       ],
       "evidence": [
-        "crates/zipzi-python2/tests/test_api.py"
+        "crates/zipzi-python2/tests/test_api.py",
+        "crates/zipzi-sdk/tests/mesh_binding_editing.rs",
+        "docs/plans/sdk-runtime/python2-r4-bindings.md"
       ],
       "remaining": [
         "Scene/organization/deformers",
         "Parameter groups/hierarchy/CDI presentation order",
-        "Bindings/keyforms/BlendShape",
+        "Scene bindings, BlendShape and full binding authoring/conversion",
         "Topology/Glue/Offscreen/references/document metadata",
-        "Move Modeling dispatch definition from SDK aggregate enum to adapter boundary",
         "Large bound topology and SDK limits; full same-recipe coverage"
       ]
     },
@@ -256,18 +260,26 @@
     {
       "id": "modeling_cpu",
       "stage": "R4",
-      "state": "pending",
+      "state": "partial",
       "acceptance": [
         "A14",
         "A15"
       ],
-      "shared": "Runtime sample_modeling; SDK stateless frozen-source evaluation",
-      "python": [],
-      "evidence": [],
+      "shared": "Runtime shared typed sample_modeling; SDK stateless frozen-source CPU evaluation",
+      "python": [
+        "crates/zipzi-python2/client/python/zipzi/sampling.py",
+        "crates/zipzi-python2/src/modeling_bridge.rs"
+      ],
+      "evidence": [
+        "crates/zipzi-python2/tests/test_api.py",
+        "crates/zipzi-python2/tests/test_connection.py",
+        "crates/zipzi-editor/acceptance/runtime_ipc.rs",
+        "docs/plans/sdk-runtime/python2-r4-bindings.md"
+      ],
       "remaining": [
-        "Typed explicit formal/candidate parameter batches and geometry diagnostics",
-        "Bindings/keyforms/BlendShape numerical recipe",
-        "Prove no Preview/formal/history mutation on production connection"
+        "Scene-binding/BlendShape numerical and isolation recipes",
+        "Large cancellable sample jobs, fairness and aggregate result budgets",
+        "Sampling-specific performance/copy/heap workloads and complete R2 performance pairing"
       ]
     },
     {
@@ -340,5 +352,5 @@
       ]
     }
   ],
-  "latest_record": "docs/plans/sdk-runtime/python2-r3-events.md"
+  "latest_record": "docs/plans/sdk-runtime/python2-r4-bindings.md"
 }

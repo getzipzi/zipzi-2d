@@ -11,8 +11,10 @@ if TYPE_CHECKING:
     from .plans import Plan
     from .resources import PreparedImage, ImagePixels, Snapshot as ImageSnapshot, Usage
     from .events import Event, SessionSubscription, RegistrySubscription
+    from .bindings import Snapshot as BindingSnapshot, Batch as BindingBatch
+    from .sampling import Batch as SampleBatch
     from .parameters import Snapshot as ParameterSnapshot, Batch as ParameterBatch
-    RecoveryResult = JobState | Plan | PreparedImage | ImagePixels | ImageSnapshot | Usage | Edit | Session | SessionInfo | Snapshot | WriteResult | Receipt | SaveReceipt | Job[Receipt] | Job[SaveReceipt] | Job[Session] | SessionSubscription | RegistrySubscription | tuple[SessionInfo, ...] | tuple[Event, ...] | tuple[Snapshot, ...] | ParameterSnapshot | ParameterBatch | None
+    RecoveryResult = JobState | Plan | PreparedImage | ImagePixels | ImageSnapshot | Usage | Edit | Session | SessionInfo | Snapshot | WriteResult | Receipt | SaveReceipt | Job[Receipt] | Job[SaveReceipt] | Job[Session] | SessionSubscription | RegistrySubscription | tuple[SessionInfo, ...] | tuple[Event, ...] | tuple[Snapshot, ...] | ParameterSnapshot | ParameterBatch | BindingSnapshot | BindingBatch | SampleBatch | None
 
 class SdkFailure(Exception):
     def __init__(self, code: str, message: str, *, operation: str = "", object_ids: tuple[str, ...] = (),

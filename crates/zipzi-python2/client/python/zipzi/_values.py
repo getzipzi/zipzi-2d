@@ -113,6 +113,15 @@ class Source:
         return cls(string(session["runtime"]), integer(session["serial"]), Version.read(r["base"]),
             integer(edit["serial"]), integer(r["sequence"]))
 
+    def wire(self) -> dict[str, object]:
+        version = dict(session_id=self.version.session_id, generation=self.version.generation, revision=self.version.revision)
+        result: dict[str, object] = dict(session=dict(runtime=self.runtime, serial=self.session))
+        if self.edit is None:
+            result.update(kind="formal", version=version)
+        else:
+            result.update(kind="edit", base=version, edit=dict(runtime=self.runtime, serial=self.edit), sequence=self.sequence)
+        return result
+
 @dataclass(frozen=True)
 class Receipt:
     before: Version

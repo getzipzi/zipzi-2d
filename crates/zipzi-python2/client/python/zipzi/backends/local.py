@@ -2,10 +2,10 @@
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
-from .. import ops, plans
+from .. import ops, plans, sampling
 from .._generated.backends import LocalQueries
 from .._errors import PendingRequest, SdkFailure, unwrap
-from .._values import ConnectionInfo, SessionId
+from .._values import ConnectionInfo, SessionId, Source
 from . import JobKind
 from ..events import Cursor
 if TYPE_CHECKING:
@@ -23,12 +23,16 @@ class LocalBackend(LocalQueries):
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-5":
+        if self._native.contract != "zipzi-python2-6":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 
     def create(self, document_id: str, owner: object) -> object:
         return unwrap(self._native.create_session(document_id))
+    def bindings(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object:
+        return unwrap(self._native.bindings(session, edit, ids))
+    def sample(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object:
+        return unwrap(self._native.sample(session, edit, poses, checks, expected))
     def subscribe(self, session: object, owner: object) -> object:
         return unwrap(self._native.subscribe(session))
     def events(self, cursor: Cursor, limit: int, owner: object) -> object:

@@ -4,11 +4,12 @@ use std::{
     time::Duration,
 };
 use zipzi_core::{ModelSetup, Vec2};
+use zipzi_runtime::modeling::ModelingCommand;
 use zipzi_runtime::{
     host::{HostError, LocalHost},
     *,
 };
-use zipzi_sdk::{ModelingCommand, ModelingIntent, ResourceEdit};
+use zipzi_sdk::{ModelingIntent, ResourceEdit};
 
 fn id(n: u32) -> String {
     format!("78000000-0000-4000-8000-{n:012x}")

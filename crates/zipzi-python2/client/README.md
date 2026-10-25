@@ -12,5 +12,8 @@ absolute `host=Path(...)` or `ZIPZI_EDITOR_HOST` to launch it under the same
 endpoint ownership rule. `runtime.sessions.list()` and `sessions.attach(info.id)`
 bind existing unsaved sessions; `session.show_window()` displays one in the
 desktop host. Typed parameter create/patch/batch reads, mesh batch reads and
-independent cursor subscriptions are implemented. Runtime R4 full Modeling,
-handles/addresses, CPU evaluation and resource/IO coverage remain in progress.
+independent cursor subscriptions are implemented. Mesh binding creation/keyforms,
+canonical binding queries and explicit formal/candidate CPU pose batches are
+available through `bindings` and `modeling.sample`. Sampling retains its exact
+source and leaves human Preview/history unchanged. Full R4 Modeling,
+handles/addresses, larger cancellable workloads and resource/IO coverage remain in progress.

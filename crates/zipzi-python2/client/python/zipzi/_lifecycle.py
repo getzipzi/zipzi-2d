@@ -1,10 +1,10 @@
 """Handwritten ownership/known-state wrappers. Runtime remains authoritative."""
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Generic, Literal, TypeVar
-from . import events, meshes, ops, parameters, plans, resources
+from . import bindings, sampling, events, meshes, ops, parameters, plans, resources
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
-from ._values import ConnectionInfo, Receipt, SaveReceipt, SessionId, SessionInfo, WriteResult, record, sequence
+from ._values import ConnectionInfo, Receipt, SaveReceipt, Source, SessionId, SessionInfo, WriteResult, record, sequence
 from .backends import Backend, JobKind
 from ._recovery import RecoveryOwner
 from ._generated.conveniences import EditableMeshes as MeshConveniences
@@ -217,6 +217,8 @@ class Session:
         self.project = Project(self)
         self.resources = Images(self)
         self.parameters = Parameters(self)
+        self.bindings = Bindings(self)
+        self.modeling = Modeling(self)
     @property
     def id(self) -> SessionId:
         return self._id
@@ -320,6 +322,50 @@ class EditableParameters(Parameters):
     def patch(self, id: str, patch: parameters.Patch) -> WriteResult:
         return self._owner.apply(ops.PatchParameter(id, patch))
 
+class Bindings:
+    def __init__(self, session: Session, edit: "Edit | None" = None):
+        self._session, self._edit = session, edit
+    def _read(self, ids: tuple[str, ...] | None) -> bindings.Batch:
+        s = self._session
+        return known(lambda: bindings.Batch.read(s._backend.bindings(s._token,
+            None if self._edit is None else self._edit._token, ids, self)), lambda: bindings.Batch.read(s._backend.recover(self)))
+    def get(self, id: str) -> bindings.Snapshot:
+        s = self._session
+        def decode(raw: object) -> bindings.Snapshot:
+            return bindings.Batch.read(raw).items[0]
+        return known(lambda: decode(s._backend.bindings(s._token,
+            None if self._edit is None else self._edit._token, (id,), self)), lambda: decode(s._backend.recover(self)))
+    def get_many(self, ids: Sequence[str]) -> bindings.Batch:
+        owned = tuple(ids)
+        if any(not isinstance(id, str) for id in owned):
+            raise TypeError("Expected binding ID text")
+        return self._read(owned)
+    def list(self) -> bindings.Batch:
+        return self._read(None)
+
+class EditableBindings(Bindings):
+    def __init__(self, session: Session, edit: "Edit"):
+        super().__init__(session, edit)
+        self._owner = edit
+    def create(self, spec: bindings.MeshBindingSpec) -> str:
+        return self._owner.apply(ops.CreateMeshBinding(spec)).ids[0]
+    def set_keyform(self, id: str, keyform: bindings.Keyform) -> WriteResult:
+        return self._owner.apply(ops.SetMeshKeyform(id, keyform))
+
+class Modeling:
+    def __init__(self, session: Session, edit: "Edit | None" = None):
+        self._session, self._edit = session, edit
+    def sample(self, poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks = sampling.Checks(),
+        expected: Source | None = None) -> sampling.Batch:
+        owned = sampling.inputs(poses)
+        if not isinstance(checks, sampling.Checks) or (expected is not None and not isinstance(expected, Source)):
+            raise TypeError("Expected Checks and optional Source")
+        checks.wire()
+        s = self._session
+        return known(lambda: sampling.Batch.read(s._backend.sample(s._token,
+            None if self._edit is None else self._edit._token, owned, checks, expected, self)),
+            lambda: sampling.Batch.read(s._backend.recover(self)))
+
 class Edit:
     def __init__(self, session: Session, label: str):
         self._session, self._backend = session, session._backend
@@ -330,6 +376,8 @@ class Edit:
         self.meshes = EditableMeshes(session, self)
         self.resources = EditableImages(session, self)
         self.parameters = EditableParameters(session, self)
+        self.bindings = EditableBindings(session, self)
+        self.modeling = Modeling(session, self)
         try:
             self._token = self._backend.begin(session._token, label, self)
         except OutcomeUnknown as e:
@@ -384,7 +432,7 @@ class Edit:
         self._action = "apply"
         try:
             owned = tuple(operations)
-            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan, ops.CreateParameter, ops.PatchParameter)) for op in owned):
+            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan, ops.CreateParameter, ops.PatchParameter, ops.CreateMeshBinding, ops.SetMeshKeyform)) for op in owned):
                 raise TypeError("Expected typed authoring operations")
             for op in owned:
                 ops.validate(op)

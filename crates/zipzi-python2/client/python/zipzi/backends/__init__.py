@@ -1,15 +1,17 @@
 """Backend interfaces contain no domain algorithms."""
 from pathlib import Path
 from typing import Literal, Protocol
-from .. import ops, plans
+from .. import ops, plans, sampling
 from .._errors import PendingRequest
-from .._values import ConnectionInfo, SessionId
+from .._values import ConnectionInfo, SessionId, Source
 from .._generated.protocols import MeshBackend
 from ..events import Cursor
 
 JobKind = Literal["published", "saved", "opened"]
 
 class Backend(MeshBackend, Protocol):
+    def bindings(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object: ...
+    def sample(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object: ...
     def subscribe(self, session: object, owner: object) -> object: ...
     def events(self, cursor: Cursor, limit: int, owner: object) -> object: ...
     def parameters(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object: ...

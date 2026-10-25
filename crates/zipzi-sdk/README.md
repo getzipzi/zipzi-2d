@@ -250,12 +250,20 @@ without registering an asset. Pass it to `create_prepared_image` or
 Unrelated commits cannot collect its pixels, and dropping an unused lease frees
 its storage. This replaces the descriptor-only `prepare_rgba_asset` API.
 
-`ModelingCommand` dispatches a batch through existing SDK candidate methods;
+`zipzi_runtime::modeling::ModelingCommand` owns cross-domain adapter dispatch;
+SDK exposes the underlying domain methods and contains no transport command enum.
 `modeling_records` borrows complete selected records without cloning the model.
 `AuthoringSnapshot::sample_modeling` evaluates explicit parameter maps and shares
 `diagnose_geometry` with formal sessions. `ModelingIntent`/`ModelingPlan` unify
 read-only domain plans and their cost/loss reports for native and hosted callers.
 No batch or plan creates a separate history; publication remains `commit_to`.
+
+`MeshBindingCreateSpec`/`MeshKeyformSpec` accept numeric axes, positions and
+optional appearance. SDK/core allocate canonical axis/sample identities and
+validate complete grids through the existing binding methods. The selected
+`MeshBindingOperation` composes with the same candidate and preserves identities
+when changing one keyform. Focused tests:
+`cargo test --locked -p zipzi-sdk --test integration mesh_binding_editing::`.
 
 Project's `ImageMemoryBudget` accounts shared RGBA/PNG buffers, temporary
 preparation reservations and blobs. `PreparedImageContent::from_rgba` accepts

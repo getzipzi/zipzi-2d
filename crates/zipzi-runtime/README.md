@@ -117,6 +117,17 @@ are admitted before copies. Focused gates are `--test authoring`, `--test protoc
 and SDK `--test integration parameter_editing::`; see the
 [R3 evidence](../../docs/plans/sdk-runtime/python2-r3-events.md).
 
+The next R4 slice adds mesh-binding operations to `apply_authoring`, canonical
+`mesh_binding_snapshot` reads and a shared typed `sample_modeling` route for
+Local/IPC. Sampling accepts explicit poses and an optional exact SourceRef,
+admitting output expansion and remaining CPU budget before the frozen clone.
+It cannot publish or modify an Editor Preview. Bounded calls accept at most 64
+poses/256 explicit parameters each, with an 8 MiB conservative response estimate;
+large cancellable sampling and complete R4 domain coverage remain pending.
+The cross-domain `modeling::ModelingCommand` now belongs to this adapter crate;
+SDK domain methods and wire operation names are unchanged. See
+[R4 mesh-binding/CPU evidence](../../docs/plans/sdk-runtime/python2-r4-bindings.md).
+
 R1 applies the enabled R0 defaults in `RuntimeLimits`: client/session/edit counts,
 candidate estimates, frozen document estimates, aggregate history reservations,
 accounted document CPU estimates, job slots/concurrency and event counts/bytes.

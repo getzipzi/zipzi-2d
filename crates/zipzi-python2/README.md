@@ -135,9 +135,9 @@ after a confirmed outcome. Runtime shutdown or client expiry releases remaining
 leases. This first control-transport slice limits RGBA payloads to **1 MiB**;
 binary buffers and larger images belong to P4.
 
-The native contract is `zipzi-python2-5`. Connected hosts must advertise
+The native contract is `zipzi-python2-6`. Connected hosts must advertise
 `typed_meshes`, `typed_resources_plans`, `typed_job_lifecycle`, `typed_parameters`,
-`typed_event_pages` and `typed_mesh_batch`; a mismatched host is rejected during
+`typed_event_pages`, `typed_mesh_batch`, `typed_mesh_bindings` and `typed_modeling_samples`; a mismatched host is rejected during
 connection.
 
 `job.state()` reads status without consuming the result. `job.cancel()` requests
@@ -222,6 +222,37 @@ poll must first recover its original response. Cursors and event values contain
 no native objects. Use `runtime.events_since(cursor)` to continue on another
 connection to the same host. Subscriptions do not drain SDK events or allocate a
 server lease. See [R3 evidence](../../docs/plans/sdk-runtime/python2-r3-events.md).
+
+## Mesh bindings and CPU samples
+
+```python
+from zipzi import bindings, sampling
+
+with session.edit("Bind face") as edit:
+    binding = edit.bindings.create(bindings.MeshBindingSpec(face,
+        (bindings.Axis(angle, (0., 1.)),), (
+            bindings.Keyform((0.,), geometry.positions),
+            bindings.Keyform((1.,), tuple((x + 10., y) for x, y in geometry.positions)))))
+    source = edit.bindings.get(binding).source
+    candidate = edit.modeling.sample(({angle: .5},), expected=source,
+        checks=sampling.Checks(min_triangle_area=.01))
+formal = session.modeling.sample(({angle: 0.}, {angle: .5}, {angle: 1.}))
+```
+
+Axis/sample identity allocation, complete-grid validation, interpolation and
+clamping remain in Rust core/SDK. Keyform appearance defaults come from SDK;
+`set_keyform` replaces one numeric grid point while preserving axis identities.
+Binding snapshots expose canonical sample IDs and immutable positions/appearance;
+`get/get_many/list` admit at most 256 records and a conservative 1 MiB result.
+Sampling returns exact Source/Version, requested/evaluated parameters, CPU
+frames (drawables/deformers/offscreens/render commands) and advisory geometry
+diagnostics. It creates no publication, history entry or Preview change.
+Up to 64 poses with 256 explicit parameters each are admitted before capturing a
+frozen source. An 8 MiB conservative output estimate and remaining host expansion
+budget can require smaller batches. These synchronous bounded CPU calls do not
+claim the later large-workload cancellation/fairness gates or full BlendShape
+and scene binding coverage. Both backends use the same Runtime entry; Local
+conversion uses direct owned PyO3 values. The existing mesh generator is unchanged.
 
 ## P0 measurements
 

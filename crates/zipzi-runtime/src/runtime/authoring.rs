@@ -2,6 +2,7 @@ use super::*;
 use crate::authoring::{EditOperation, MeshSnapshot, PlanIntent, PlanSnapshot, WriteResult};
 
 enum ReadyOperation {
+    MeshBinding(zipzi_sdk::MeshBindingOperation),
     Parameter(zipzi_sdk::ParameterOperation),
     Mesh(zipzi_sdk::MeshOperation),
     Image(zipzi_sdk::ImageCreateSpec, zipzi_sdk::PreparedImageContent),
@@ -53,6 +54,9 @@ impl Runtime {
             .enumerate()
             .map(|(index, operation)| {
                 Ok(match operation {
+                    EditOperation::MeshBinding { operation } => {
+                        ReadyOperation::MeshBinding(operation)
+                    }
                     EditOperation::Parameter { operation } => ReadyOperation::Parameter(operation),
                     EditOperation::Mesh { operation } => ReadyOperation::Mesh(operation),
                     EditOperation::CreateImage { spec, image } => {
@@ -82,6 +86,7 @@ impl Runtime {
             let mut ids = vec![];
             for operation in resolved {
                 match operation {
+                    ReadyOperation::MeshBinding(op) => ids.push(op.apply(candidate)?),
                     ReadyOperation::Parameter(op) => ids.push(op.apply(candidate)?),
                     ReadyOperation::Mesh(op) => ids.push(op.apply(candidate)?),
                     ReadyOperation::Image(spec, image) => {
@@ -147,7 +152,7 @@ impl Runtime {
         })
     }
 
-    fn with_authoring_source<T>(
+    pub(super) fn with_authoring_source<T>(
         &self,
         client: ClientId,
         session: SessionId,

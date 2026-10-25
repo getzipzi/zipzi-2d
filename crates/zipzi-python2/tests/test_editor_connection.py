@@ -28,7 +28,7 @@ class DesktopConnection(unittest.TestCase):
                 script = '''
 import json,sys,time,zipzi
 from pathlib import Path
-from zipzi import events,meshes,ops,parameters
+from zipzi import bindings,events,meshes,ops,parameters
 while not Path(sys.argv[4]).exists(): time.sleep(.005)
 with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
  assert r.connection is not None
@@ -40,6 +40,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
   with s.edit('desktop client one') as e:
    e.meshes.create(meshes.MeshSpec('First',g,id='79200000-0000-4000-8000-000000000021'))
    e.parameters.create(parameters.ParameterSpec('First parameter',-1.,1.,0.,id='79200000-0000-4000-8000-000000000022',runtime_id='ParamDesktop',decimal_places=4,repeat=True))
+   e.bindings.create(bindings.MeshBindingSpec('79200000-0000-4000-8000-000000000021',(bindings.Axis('79200000-0000-4000-8000-000000000022',(-1.,1.)),),(bindings.Keyform((-1.,),g.positions),bindings.Keyform((1.,),tuple((x+10.,y) for x,y in g.positions))),id='79200000-0000-4000-8000-000000000023'))
  else:
   end=time.monotonic()+10
   while True:
@@ -52,6 +53,9 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
   with s.edit('desktop client two') as e:
    e.apply_many((ops.Rename('79200000-0000-4000-8000-000000000021','Second'),ops.PatchParameter('79200000-0000-4000-8000-000000000022',parameters.Patch(name='Second parameter',default_value=.5))))
   assert len([e for e in stream.poll() if isinstance(e,events.Published)])==1
+  before=s.info()
+  assert s.modeling.sample(({'79200000-0000-4000-8000-000000000022':.5},)).frames[0].drawables[0].positions[0][0]==7.5
+  assert s.info()==before
  print(json.dumps(dict(serial=s.id.serial)),flush=True)
 '''
                 gate = folder / "go"
@@ -79,6 +83,8 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     self.assertTrue(session.info().modified)
                     self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").name, "Second")
                     value = session.parameters.get("79200000-0000-4000-8000-000000000022")
+                    self.assertEqual(session.modeling.sample(({"79200000-0000-4000-8000-000000000022":.5},)).frames[0].drawables[0].positions[0][0],7.5)
+                    self.assertEqual(session.bindings.get("79200000-0000-4000-8000-000000000023").mesh_id,"79200000-0000-4000-8000-000000000021")
                     self.assertEqual((value.name, value.default_value, value.runtime_id, value.decimal_places, value.repeat),
                         ("Second parameter", .5, "ParamDesktop", 4, True))
                     session.show_window()
@@ -153,10 +159,12 @@ with s.edit('abandoned client') as e:
                     session = fresh.sessions.open(saved.manifest).wait()
                     self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").name, "Second")
                     value = session.parameters.get("79200000-0000-4000-8000-000000000022")
+                    self.assertEqual(session.modeling.sample(({"79200000-0000-4000-8000-000000000022":.5},)).frames[0].drawables[0].positions[0][0],7.5)
+                    self.assertEqual(session.bindings.get("79200000-0000-4000-8000-000000000023").mesh_id,"79200000-0000-4000-8000-000000000021")
                     self.assertEqual((value.name, value.default_value, value.runtime_id, value.decimal_places, value.repeat),
                         ("Second parameter", .5, "ParamDesktop", 4, True))
                     self.assertEqual(session.info().history, (0, 0))
-                print("desktop: concurrent cold start, shared mesh/parameter history, window reuse, killed-client grace expiry, save/restart/open passed")
+                print("desktop: concurrent cold start, shared mesh/parameter/binding history and CPU poses, window reuse, killed-client grace expiry, save/restart/open passed")
             finally:
                 # This private endpoint belongs exclusively to this test.
                 try:

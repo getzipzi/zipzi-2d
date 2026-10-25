@@ -91,7 +91,7 @@ pub(super) fn run() -> anyhow::Result<()> {
         endpoint.path(),
         r#"
 import sys,zipzi
-from zipzi import events,ops,parameters
+from zipzi import bindings,events,ops,parameters
 from importlib.metadata import version
 from importlib.util import find_spec
 assert version('zipzi-python2')=='0.1.0'
@@ -101,10 +101,24 @@ with zipzi.connect() as c:
  s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
  assert s.id in {info.id for info in c.sessions.list()}
  stream=s.subscribe()
+ geometry=s.meshes.get(sys.argv[3]).geometry
+ parameter='79700000-0000-4000-8000-000000000001'
+ binding='79700000-0000-4000-8000-000000000002'
  with s.edit('external Python') as e:
   e.apply_many((ops.Rename(sys.argv[3],'Python changed this mesh'),
-   ops.CreateParameter(parameters.ParameterSpec('External Angle',-30.,30.,0.,id='79700000-0000-4000-8000-000000000001',runtime_id='ParamExternal',decimal_places=3))))
-  assert e.parameters.get_many(('79700000-0000-4000-8000-000000000001',)).items[0].source.sequence==1
+   ops.CreateParameter(parameters.ParameterSpec('External Angle',-30.,30.,0.,id='79700000-0000-4000-8000-000000000001',runtime_id='ParamExternal',decimal_places=3)),
+   ops.CreateMeshBinding(bindings.MeshBindingSpec(sys.argv[3],(bindings.Axis(parameter,(-30.,30.)),),(
+    bindings.Keyform((-30.,),geometry.positions),
+    bindings.Keyform((30.,),tuple((x+10.,y) for x,y in geometry.positions))),id=binding))))
+  candidate=e.bindings.get(binding)
+  assert candidate.source.sequence==1
+  sampled=e.modeling.sample(({parameter:15.},),expected=candidate.source)
+  assert abs(sampled.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-7.5)<1e-5
+  assert e.parameters.get_many((parameter,)).items[0].source.sequence==1
+ before=s.info()
+ formal=s.modeling.sample(({parameter:-30.},{parameter:0.},{parameter:30.}))
+ assert [round(f.drawables[0].positions[0][0]-geometry.positions[0][0],5) for f in formal.frames]==[0.,5.,10.]
+ assert s.info()==before
  assert s.meshes.get(sys.argv[3]).name=='Python changed this mesh'
  assert s.meshes.get_many((sys.argv[3],))[0].name=='Python changed this mesh'
  published=[e for e in stream.poll() if isinstance(e,events.Published)]
@@ -151,6 +165,75 @@ with zipzi.connect() as c:
         );
         Ok::<_, anyhow::Error>(())
     })?;
+    // A human preview remains selected while a second process samples formal
+    // and temporary candidate poses. Neither read may publish or move the UI.
+    update(&mut h, |view, _, cx| {
+        view.editor
+            .execute(EditorCommand::SetPreviewParameter {
+                parameter_id: "79700000-0000-4000-8000-000000000001".into(),
+                value: -15.,
+            })
+            .unwrap();
+        view.redraw(cx);
+    })?;
+    let preview_revision = h.view.read_with(&h.cx, |view, _| {
+        view.editor.document().unwrap().preview_revision()
+    });
+    let version = runtime.read().session_info(session)?.version;
+    client(
+        &mut h,
+        python,
+        endpoint.path(),
+        r#"
+import sys,zipzi
+from zipzi import bindings
+with zipzi.connect() as c:
+ s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
+ parameter='79700000-0000-4000-8000-000000000001'
+ binding='79700000-0000-4000-8000-000000000002'
+ geometry=s.meshes.get(sys.argv[3]).geometry
+ before=s.info()
+ stream=s.subscribe()
+ sampled=s.modeling.sample(({parameter:15.},))
+ assert abs(sampled.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-7.5)<1e-5
+ edit=s.edit('temporary CPU sample')
+ try:
+  edit.bindings.set_keyform(binding,bindings.Keyform((30.,),tuple((x+20.,y) for x,y in geometry.positions)))
+  candidate=edit.modeling.sample(({parameter:15.},))
+  assert abs(candidate.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-15.)<1e-5
+ finally: edit.cancel()
+ assert s.info()==before
+ assert stream.poll()==()
+"#,
+        &[
+            session.runtime_instance().to_string(),
+            session.serial().to_string(),
+            mesh.clone(),
+        ],
+    )?;
+    ensure!(
+        runtime.read().session_info(session)?.version == version,
+        "sampling changed formal version"
+    );
+    h.view.read_with(&h.cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        ensure!(
+            document.preview_revision() == preview_revision,
+            "external CPU sample advanced UI preview"
+        );
+        ensure!(
+            document
+                .parameters()
+                .iter()
+                .any(|p| p.id == "79700000-0000-4000-8000-000000000001" && p.value == -15.),
+            "external CPU sample replaced human preview pose"
+        );
+        ensure!(
+            document.history_lengths() == (before.0 + 1, 0),
+            "sampling changed shared history"
+        );
+        Ok::<_, anyhow::Error>(())
+    })?;
     // Human undo is immediately visible to another real Python process.
     update(&mut h, |view, _, cx| {
         view.editor.execute(EditorCommand::Undo).unwrap();
@@ -174,6 +257,9 @@ with zipzi.connect() as c:
  try: s.parameters.get('79700000-0000-4000-8000-000000000001')
  except zipzi.SdkFailure as error: assert error.code=='MISSING_PARAMETER'
  else: raise AssertionError('UI Undo retained the new parameter')
+ try: s.bindings.get('79700000-0000-4000-8000-000000000002')
+ except zipzi.SdkFailure as error: assert error.code=='MISSING_BINDING'
+ else: raise AssertionError('UI Undo retained the new binding')
 "#,
         &[
             session.runtime_instance().to_string(),
@@ -225,7 +311,7 @@ with zipzi.connect() as c:
         "native render missing"
     );
     println!(
-        "R3 native IPC: installed zipzi-python2 -> mixed mesh/parameter -> layer/properties/parameter projection -> cursor events/UI Undo -> path reservation -> Metal render passed"
+        "R4 native IPC: installed zipzi-python2 -> mixed mesh/parameter/binding -> candidate/formal CPU sweep -> human preview unchanged -> cursor events/UI Undo -> path reservation -> Metal render passed"
     );
     Ok(())
 }

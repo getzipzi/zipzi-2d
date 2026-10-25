@@ -13,13 +13,18 @@ impl Runtime {
         &mut self,
         client: ClientId,
         edit: EditId,
-        commands: Vec<zipzi_sdk::ModelingCommand>,
+        commands: Vec<crate::modeling::ModelingCommand>,
     ) -> Result<()> {
         self.edit(client, edit)?;
         if commands.len() > 1024 {
             return Err(RuntimeError::Budget("modeling commands"));
         }
-        self.apply_edit(client, edit, |candidate| candidate.apply_modeling(commands))
+        self.apply_edit(client, edit, |candidate| {
+            for command in commands {
+                command.apply(candidate)?;
+            }
+            Ok(())
+        })
     }
 
     /// Preparation is part of this write, so a preparation failure poisons the

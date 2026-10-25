@@ -27,7 +27,10 @@ the selected real Editor publication recipe have new installed-client evidence.
 Typed event subscriptions, parameter creation/patching and mesh/parameter batch
 reads now have [new-client R3 evidence](../plans/sdk-runtime/python2-r3-events.md),
 including installed response-loss cases, real Editor projection/Undo events and
-production killed-client expiry. Full R4 coverage remains pending.
+production killed-client expiry. The next [R4 mesh-binding/CPU slice](../plans/sdk-runtime/python2-r4-bindings.md)
+adds canonical binding authoring/reads and shared explicit formal/candidate CPU
+samples, including real Editor human Preview isolation. Cross-domain Modeling
+dispatch now belongs to Runtime. Full R4 coverage remains pending.
 The inventories and older client evidence below retain their historical scope;
 they do not establish acceptance for the new package.
 

@@ -23,7 +23,7 @@ fn image_preparation_failure_poisoning_is_shared_by_typed_and_blob_writes() {
         rt.apply_modeling(
             client,
             edit,
-            vec![zipzi_sdk::ModelingCommand::CreateParameter {
+            vec![zipzi_runtime::modeling::ModelingCommand::CreateParameter {
                 parameter: zipzi_core::Parameter {
                     id: parameter_id.clone(),
                     ..Default::default()
@@ -61,7 +61,7 @@ fn batch_admission_retains_source_but_mid_batch_sdk_failure_aborts_everything() 
     let (mut rt, client, session) = fixture(Default::default());
     let edit = rt.begin_edit(client, session, "batch", None).unwrap();
     let commands = vec![
-        zipzi_sdk::ModelingCommand::RenameMesh {
+        zipzi_runtime::modeling::ModelingCommand::RenameMesh {
             id: "missing".into(),
             name: "x".into()
         };
@@ -74,13 +74,13 @@ fn batch_admission_retains_source_but_mid_batch_sdk_failure_aborts_everything() 
     assert_eq!(rt.edit_sequence(client, edit).unwrap(), 0);
     let parameter_id = uuid::Uuid::new_v4().to_string();
     let commands = vec![
-        zipzi_sdk::ModelingCommand::CreateParameter {
+        zipzi_runtime::modeling::ModelingCommand::CreateParameter {
             parameter: zipzi_core::Parameter {
                 id: parameter_id.clone(),
                 ..Default::default()
             },
         },
-        zipzi_sdk::ModelingCommand::EraseObject {
+        zipzi_runtime::modeling::ModelingCommand::EraseObject {
             id: "missing".into(),
         },
     ];

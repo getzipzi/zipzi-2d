@@ -6,6 +6,7 @@ use pyo3::{
 };
 use std::{path::Path, sync::Arc};
 mod generated;
+mod modeling_bridge;
 mod parameter_bridge;
 mod streams;
 use generated::mesh::read_mesh_operation;
@@ -188,6 +189,11 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
             let op = value?;
             let kind = op.getattr("kind")?.extract::<String>()?;
             let mesh = match kind.as_str() {
+                "create_mesh_binding" | "set_mesh_keyform" => {
+                    return Ok(EditOperation::MeshBinding {
+                        operation: modeling_bridge::read(&kind, &op)?,
+                    });
+                }
                 "create_parameter" | "patch_parameter" => {
                     return Ok(EditOperation::Parameter {
                         operation: parameter_bridge::read(&kind, &op)?,
@@ -302,7 +308,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-5"
+        "zipzi-python2-6"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {

@@ -42,6 +42,9 @@ pub struct ParameterBatch {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "domain", rename_all = "snake_case", deny_unknown_fields)]
 pub enum EditOperation {
+    MeshBinding {
+        operation: zipzi_sdk::MeshBindingOperation,
+    },
     Parameter {
         operation: zipzi_sdk::ParameterOperation,
     },
@@ -59,6 +62,34 @@ pub enum EditOperation {
     ApplyPlan {
         plan: PlanId,
     },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MeshBindingQuery {
+    pub session: crate::SessionId,
+    pub edit: Option<crate::EditId>,
+    pub ids: Option<Vec<String>>,
+}
+#[derive(Debug, Clone, Serialize)]
+pub struct MeshBindingBatch {
+    pub source: SourceRef,
+    pub bindings: Vec<zipzi_core::MeshBinding>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModelingSampleQuery {
+    pub session: crate::SessionId,
+    pub edit: Option<crate::EditId>,
+    pub parameters: Vec<zipzi_core::PreviewValues>,
+    pub checks: zipzi_sdk::GeometryChecks,
+    pub expected: Option<SourceRef>,
+}
+#[derive(Debug, Serialize)]
+pub struct ModelingSampleBatch {
+    pub source: SourceRef,
+    pub state: &'static str,
+    pub samples: zipzi_sdk::ModelingSamples,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

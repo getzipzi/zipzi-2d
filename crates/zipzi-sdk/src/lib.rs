@@ -43,7 +43,11 @@ pub use zipzi_project::{
 
 mod geometry;
 pub use geometry::{MeshGeometry, rectangle_grid_geometry};
+mod mesh_binding_edit;
 mod mesh_edit;
+pub use mesh_binding_edit::{
+    MeshBindingAxisSpec, MeshBindingCreateSpec, MeshBindingOperation, MeshKeyformSpec,
+};
 pub use mesh_edit::{MeshCreateSpec, MeshOperation};
 mod parameter_edit;
 pub use parameter_edit::{ParameterCreateSpec, ParameterOperation, ParameterPatch};
@@ -111,6 +115,6 @@ pub use authoring_collections::*;
 
 mod modeling;
 pub use modeling::{
-    ModelingCommand, ModelingIntent, ModelingPlan, ModelingPlanReport, ModelingQuery,
-    ModelingRecords, ModelingSamples, modeling_records,
+    ModelingIntent, ModelingPlan, ModelingPlanReport, ModelingQuery, ModelingRecords,
+    ModelingSamples, modeling_records,
 };

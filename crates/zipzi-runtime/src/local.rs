@@ -133,6 +133,35 @@ pub struct Owner {
     endpoint: Endpoint,
     _file: File,
 }
+fn bind_private_listener(endpoint: &Path) -> io::Result<UnixListener> {
+    // Publish the pathname only once its inode has private permissions. Bind
+    // followed by chmod at the public path lets strict cold-start clients see
+    // the temporary umask-derived permissions and reject a legitimate host.
+    // Six bytes fit every pathname accepted by Endpoint::new ("a.sock").
+    for _ in 0..32 {
+        let name = uuid::Uuid::new_v4().simple().to_string();
+        let staging = endpoint.with_file_name(format!(".{}", &name[..5]));
+        let listener = match UnixListener::bind(&staging) {
+            Ok(listener) => listener,
+            Err(error) if error.kind() == io::ErrorKind::AddrInUse => continue,
+            Err(error) => return Err(error),
+        };
+        let publish = (|| {
+            fs::set_permissions(&staging, fs::Permissions::from_mode(0o600))?;
+            listener.set_nonblocking(true)?;
+            // A hard link atomically installs the same socket inode and fails
+            // if a file has appeared at the endpoint; never overwrite it.
+            fs::hard_link(&staging, endpoint)?;
+            Ok(listener)
+        })();
+        let _ = fs::remove_file(&staging);
+        return publish;
+    }
+    Err(io::Error::new(
+        io::ErrorKind::AddrInUse,
+        "Private socket staging names occupied",
+    ))
+}
 impl Owner {
     pub fn listen(self) -> io::Result<(Server, async_channel::Receiver<Inbound>)> {
         // The exclusive lock proves no cooperating host can own this socket.
@@ -144,9 +173,7 @@ impl Owner {
             Err(e) if e.kind() == io::ErrorKind::NotFound => (),
             Err(e) => return Err(e),
         }
-        let listener = UnixListener::bind(&self.endpoint.socket)?;
-        fs::set_permissions(&self.endpoint.socket, fs::Permissions::from_mode(0o600))?;
-        listener.set_nonblocking(true)?;
+        let listener = bind_private_listener(&self.endpoint.socket)?;
         let (sender, receiver) = async_channel::bounded(16);
         let stop = Arc::new(AtomicBool::new(false));
         let stopped = stop.clone();
@@ -301,6 +328,48 @@ pub fn read_frame(reader: &mut impl Read) -> io::Result<Value> {
 }
 fn partial(e: io::Error) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, format!("Incomplete frame: {e}"))
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn published_private_socket_accepts_connections_without_staging_remnants() {
+        let folder = tempfile::tempdir_in("/tmp").unwrap();
+        let endpoint = folder.path().join("test.sock");
+        let listener = bind_private_listener(&endpoint).unwrap();
+        let meta = fs::symlink_metadata(&endpoint).unwrap();
+        assert!(meta.file_type().is_socket());
+        assert_eq!(meta.mode() & 0o777, 0o600);
+        assert_eq!(fs::read_dir(folder.path()).unwrap().count(), 1);
+        let mut client = UnixStream::connect(&endpoint).unwrap();
+        let (mut peer, _) = listener.accept().unwrap();
+        client.write_all(b"private").unwrap();
+        let mut payload = [0; 7];
+        peer.read_exact(&mut payload).unwrap();
+        assert_eq!(&payload, b"private");
+    }
+
+    #[test]
+    fn failed_private_socket_publication_preserves_existing_file_and_cleans_staging() {
+        let folder = tempfile::tempdir_in("/tmp").unwrap();
+        let endpoint = folder.path().join("test.sock");
+        fs::write(&endpoint, b"owned content").unwrap();
+        assert!(bind_private_listener(&endpoint).is_err());
+        assert_eq!(fs::read(&endpoint).unwrap(), b"owned content");
+        assert_eq!(fs::read_dir(folder.path()).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn private_socket_staging_fits_the_longest_accepted_endpoint() {
+        let folder = tempfile::tempdir_in("/tmp").unwrap();
+        let extra = 103 - folder.path().as_os_str().len() - 1 - 1 - "a.sock".len();
+        let endpoint = Endpoint::new(&folder.path().join("x".repeat(extra)), "a").unwrap();
+        assert_eq!(endpoint.socket.as_os_str().len(), 103);
+        let listener = bind_private_listener(&endpoint.socket).unwrap();
+        let _client = UnixStream::connect(&endpoint.socket).unwrap();
+        listener.accept().unwrap();
+    }
 }
 pub fn write_frame(writer: &mut impl Write, value: &Value) -> io::Result<()> {
     let body = crate::metrics::encode(value)?;

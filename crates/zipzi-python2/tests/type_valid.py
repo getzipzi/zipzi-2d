@@ -1,7 +1,7 @@
 """These public calls must type-check; this file is not executed."""
 from pathlib import Path
 import zipzi
-from zipzi import events, meshes, ops, parameters, resources
+from zipzi import bindings, sampling, events, meshes, ops, parameters, resources
 
 def recipe(runtime: zipzi.Runtime) -> zipzi.SaveReceipt:
     session = runtime.sessions.create("79000000-0000-4000-8000-000000000001")
@@ -62,3 +62,17 @@ def parameter_and_events(runtime: zipzi.Runtime, session: zipzi.Session) -> para
     replay: tuple[events.Event, ...] = runtime.events_since(cursor)
     assert len(replay) >= 1
     return batch
+
+
+def bound_cpu(session: zipzi.Session, face: str, angle: str) -> sampling.Batch:
+    with session.edit("binding") as edit:
+        id: str = edit.bindings.create(bindings.MeshBindingSpec(face, (bindings.Axis(angle, (0., 1.)),), (
+            bindings.Keyform((0.,), ((0., 0.), (1., 0.), (0., 1.))),
+            bindings.Keyform((1.,), ((10., 0.), (11., 0.), (10., 1.))))))
+        snapshot: bindings.Snapshot = edit.bindings.get(id)
+        batch: sampling.Batch = edit.modeling.sample(({angle: .5},), expected=snapshot.source)
+        drawable: sampling.Drawable = batch.frames[0].drawables[0]
+        opacity: float = drawable.opacity
+        assert opacity == 1.
+        edit.bindings.set_keyform(id, bindings.Keyform((1.,), ((20., 0.), (21., 0.), (20., 1.))))
+    return session.modeling.sample(({angle: .5},), checks=sampling.Checks(.01))

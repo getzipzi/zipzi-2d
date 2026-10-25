@@ -15,7 +15,7 @@ import time
 import unittest
 from unittest.mock import patch
 import zipzi
-from zipzi import events, ops, parameters
+from zipzi import bindings, events, meshes, ops, parameters, sampling
 
 
 def stop(pid):
@@ -314,6 +314,32 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     self.assertEqual(published[0].receipt.after, session.info().version)
                     self.assertEqual(stream.poll(), ())
                     self.assertEqual(session.info().history, (1, 0))
+
+    def test_installed_cpu_sample_recovery_keeps_old_frame_after_peer_write(self):
+        with patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE="sample_modeling"), self.connect() as runtime:
+            session = runtime.sessions.create("79200000-0000-4000-8000-000000000040")
+            angle = "79200000-0000-4000-8000-000000000041"
+            face = "79200000-0000-4000-8000-000000000042"
+            binding = "79200000-0000-4000-8000-000000000043"
+            geometry = meshes.Geometry((0,1,2), ((0.,0.),(1.,0.),(0.,1.)), ((0.,0.),(1.,0.),(0.,1.)), ((0,1,2),))
+            with session.edit("installed binding") as edit:
+                edit.apply_many((ops.Create(meshes.MeshSpec("Face",geometry,id=face)),
+                    ops.CreateParameter(parameters.ParameterSpec("Angle",0.,1.,0.,id=angle)),
+                    ops.CreateMeshBinding(bindings.MeshBindingSpec(face,(bindings.Axis(angle,(0.,1.)),),(
+                        bindings.Keyform((0.,),geometry.positions),
+                        bindings.Keyform((1.,),tuple((x+10.,y) for x,y in geometry.positions))),id=binding))))
+            before = session.info()
+            with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                session.modeling.sample(({angle:.5},))
+            with zipzi.connect(endpoint=self.endpoint) as peer:
+                with peer.sessions.attach(session.id).edit("later") as edit:
+                    edit.bindings.set_keyform(binding, bindings.Keyform((1.,),tuple((x+20.,y) for x,y in geometry.positions)))
+            original = lost.exception.recover()
+            self.assertIsInstance(original,sampling.Batch)
+            self.assertEqual(original.version,before.version)
+            self.assertEqual(original.frames[0].drawables[0].positions[0][0],5.)
+            self.assertEqual(session.modeling.sample(({angle:.5},)).frames[0].drawables[0].positions[0][0],10.)
+            self.assertEqual(session.info().history,(2,0))
 
     def test_installed_busy_and_caught_errors_keep_the_public_edit_rules(self):
         with patch.dict(os.environ, ZIPZI_TEST_BUSY_COMMIT_ONCE="1"):

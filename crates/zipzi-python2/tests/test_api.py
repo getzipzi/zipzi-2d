@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SOURCE = ROOT / "crates/zipzi-python2/client/python"
 sys.path[:0] = [str(SOURCE), os.environ["ZIPZI_PYTHON2_NATIVE"]]
 import zipzi
-from zipzi import events, meshes, ops, parameters, resources
+from zipzi import bindings, sampling, events, meshes, ops, parameters, resources
 
 def uid(n: int) -> str:
     return f"79000000-0000-4000-8000-{n:012x}"
@@ -140,6 +140,192 @@ class PythonSdk(unittest.TestCase):
                     self.assertIsNone(runtime.connection)
                 else:
                     self.assertEqual(runtime.connection.runtime, info.id.runtime)
+
+    def binding_spec(self, shift=10.):
+        return bindings.MeshBindingSpec(uid(2), (bindings.Axis(uid(3), (0., 1.)),), (
+            bindings.Keyform((0.,), GEOMETRY.positions),
+            bindings.Keyform((1.,), tuple((x+shift, y) for x, y in GEOMETRY.positions))), id=uid(4))
+
+    def create_bound_mesh(self, edit):
+        return edit.apply_many((ops.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2))),
+            ops.CreateParameter(parameters.ParameterSpec("Open", 0., 1., 0., id=uid(3))),
+            ops.CreateMeshBinding(self.binding_spec())))
+
+    def test_mesh_binding_cpu_sweep_uses_exact_candidate_and_formal_sources(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                stream = session.subscribe()
+                with session.edit("Bound face") as edit:
+                    result = self.create_bound_mesh(edit)
+                    self.assertEqual(result.ids, (uid(2), uid(3), uid(4)))
+                    self.assertEqual(result.source.sequence, 1)
+                    binding = edit.bindings.get(uid(4))
+                    self.assertEqual(binding.source, result.source)
+                    self.assertEqual(binding.axes[0].parameter_id, uid(3))
+                    self.assertEqual(tuple(s.value for s in binding.axes[0].samples), (0., 1.))
+                    for identity in (binding.axes[0].id, *(s.id for s in binding.axes[0].samples)):
+                        self.assertEqual(UUID(identity).version, 4)
+                    self.assertEqual(binding.keyforms[1].samples, (binding.axes[0].samples[1].id,))
+                    self.assertEqual(binding.keyforms[1].appearance, bindings.Appearance(1., (1., 1., 1.), (0., 0., 0.)))
+                    queried = edit.bindings.get_many((uid(4), uid(4)))
+                    self.assertEqual(queried.items, (binding, binding))
+                    self.assertEqual(edit.bindings.list(), bindings.Batch(binding.source, (binding,)))
+                    poses = [{uid(3): x} for x in (0., .5, 1., 2.)]
+                    sampled = edit.modeling.sample(poses, expected=result.source, checks=sampling.Checks(.75))
+                    poses[0][uid(3)] = 1.
+                    self.assertEqual(sampled.source, result.source)
+                    self.assertEqual(sampled.version, result.source.version)
+                    self.assertEqual(sampled.state, "ready")
+                    self.assertEqual([f.drawables[0].positions[0][0] for f in sampled.frames], [0., 5., 10., 10.])
+                    self.assertEqual(sampled.parameters[0].values, ((uid(3), 0.),))
+                    self.assertTrue(sampled.frames[-1].parameters[0].clamped)
+                    self.assertEqual(sampled.frames[-1].parameters[0].value, 1.)
+                    self.assertEqual(sampled.diagnostics, (sampling.Diagnostic(sampling.DiagnosticKind.SMALL_TRIANGLE, uid(2), 0),))
+                    self.assertEqual(sampled.frames[0].drawables[0].indices, (0, 1, 2))
+                    self.assertEqual(sampled.frames[0].drawables[0].uvs, GEOMETRY.uvs)
+                    self.assertEqual(sampled.frames[0].render_plan, ())
+                    self.assertFalse(sampled.frames[0].drawables[0].renderable)
+                    self.assertEqual(sampled.frames[0].deformers, ())
+                    self.assertEqual(sampled.frames[0].offscreens, ())
+                    with self.assertRaises(FrozenInstanceError):
+                        sampled.frames[0].drawables[0].opacity = .5
+                    self.assertEqual(session.info().history, (0, 0))
+                    self.assertEqual(session.modeling.sample(({},)).frames[0].drawables, ())
+                    colored = replace(self.binding_spec(20.).keyforms[1], opacity=.5,
+                        multiply=(.25,.5,1.), screen=(.5,.25,.75), draw_order=12.)
+                    changed = edit.bindings.set_keyform(uid(4), colored)
+                    self.assertEqual(edit.bindings.get(uid(4)).keyforms[1].appearance,
+                        bindings.Appearance(.5,(.25,.5,1.),(.5,.25,.75)))
+                    posed = edit.modeling.sample(({uid(3):1.},)).frames[0].drawables[0]
+                    self.assertEqual(posed.opacity,.5)
+                    self.assertEqual(posed.multiply_color[:3],(.25,.5,1.))
+                    self.assertEqual(posed.screen_color[:3],(.5,.25,.75))
+                    self.assertEqual(posed.draw_order,12)
+                    self.assertEqual(changed.source.sequence, 2)
+                    self.assertEqual(edit.bindings.get(uid(4)).axes, binding.axes)
+                    with self.assertRaises(zipzi.SdkFailure) as stale:
+                        edit.modeling.sample(({uid(3): .5},), expected=result.source)
+                    self.assertEqual(stale.exception.code, "INVALID_REFERENCE")
+                    self.assertEqual(edit.modeling.sample(({uid(3): .5},)).frames[0].drawables[0].positions[0][0], 10.)
+                self.assertEqual(session.info().history, (1, 0))
+                self.assertEqual(len([e for e in stream.poll() if isinstance(e, events.Published)]), 1)
+                before = session.info()
+                formal = session.modeling.sample(({uid(3): .25},))
+                self.assertIsNone(formal.source.edit)
+                self.assertEqual(formal.frames[0].drawables[0].positions[0][0], 5.)
+                self.assertEqual(session.info(), before)
+                self.assertEqual(stream.poll(), ())
+                session.undo().wait()
+                self.assertEqual(session.modeling.sample(({},)).frames[0].drawables, ())
+                self.assertEqual(session.bindings.list().items, ())
+                session.redo().wait()
+                self.assertEqual(session.bindings.get(uid(4)).axes, binding.axes)
+                saved = session.project.save(self.folder / (mode+"-binding")).wait()
+                with self.runtime(mode) as fresh:
+                    reopened = fresh.sessions.open(saved.manifest).wait()
+                    self.assertEqual(reopened.bindings.get(uid(4)).axes, binding.axes)
+                    self.assertEqual(reopened.modeling.sample(({uid(3): .5},)).frames[0].drawables[0].positions[0][0], 10.)
+
+    def test_binding_failure_aborts_mixed_batch_and_noop_preserves_redo(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("base") as edit:
+                    self.create_bound_mesh(edit)
+                with session.edit("shift") as edit:
+                    edit.bindings.set_keyform(uid(4), self.binding_spec(20.).keyforms[1])
+                session.undo().wait()
+                version = session.info().version
+                with session.edit("noop") as edit:
+                    edit.bindings.set_keyform(uid(4), self.binding_spec().keyforms[1])
+                self.assertEqual(session.info().history, (1, 1))
+                self.assertEqual(session.info().version, version)
+                with self.assertRaises(zipzi.SdkFailure):
+                    with session.edit("caught") as edit:
+                        edit.meshes.rename(uid(2), "Never publish")
+                        with self.assertRaises(zipzi.SdkFailure):
+                            edit.bindings.set_keyform(uid(4), bindings.Keyform((1.,), ((0., 0.),)))
+                self.assertEqual(session.meshes.get(uid(2)).name, "Face")
+                self.assertEqual(session.info().history, (1, 1))
+                with self.assertRaises(zipzi.SdkFailure):
+                    with session.edit("invalid grid") as edit:
+                        spec = replace(self.binding_spec(), id=uid(5), axes=(bindings.Axis(uid(3), (0., 0.)),))
+                        edit.bindings.create(spec)
+                self.assertEqual(len(session.bindings.list().items), 1)
+                with self.assertRaises(zipzi.SdkFailure):
+                    with session.edit("caught encoding") as edit:
+                        with self.assertRaises(ValueError):
+                            edit.bindings.set_keyform(uid(4), bindings.Keyform((1.,), ((float("inf"), 0.),)))
+                self.assertEqual(session.info().version, version)
+
+    def test_modeling_read_limits_and_invalid_checks_do_not_poison_candidate(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("bounded") as edit:
+                    result = self.create_bound_mesh(edit)
+                    for call, code in (
+                        (lambda: edit.modeling.sample(({},)*65), "BUDGET_EXCEEDED"),
+                        (lambda: edit.modeling.sample(({uid(i): 0. for i in range(257)},)), "BUDGET_EXCEEDED"),
+                        (lambda: edit.bindings.get_many((uid(4),)*257), "BUDGET_EXCEEDED"),
+                        (lambda: edit.bindings.get_many((uid(4),)*256), "BUDGET_EXCEEDED"),
+                        (lambda: edit.bindings.get(uid(99)), "MISSING_BINDING"),
+                        (lambda: edit.modeling.sample(({},), checks=sampling.Checks(-1.)), "INVALID_DIAGNOSTIC_OPTIONS")):
+                        with self.assertRaises(zipzi.SdkFailure) as rejected:
+                            call()
+                        self.assertEqual(rejected.exception.code, code)
+                    self.assertEqual(edit.bindings.get(uid(4)).source, result.source)
+                    self.assertEqual(edit.modeling.sample(()).frames, ())
+                    self.assertEqual(edit.modeling.sample(({},)).source, result.source)
+                self.assertEqual(session.info().history, (1, 0))
+
+    def test_binding_apply_and_read_response_losses_keep_original_owners(self):
+        for dropped in ("apply_authoring", "mesh_binding_snapshot", "sample_modeling"):
+            with self.subTest(dropped=dropped), self.runtime("connected", drop=dropped) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("recover binding") as edit:
+                    if dropped == "apply_authoring":
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            self.create_bound_mesh(edit)
+                        result = lost.exception.recover()
+                        self.assertIsInstance(result, zipzi.WriteResult)
+                        self.assertEqual(result.source.sequence, 1)
+                    else:
+                        self.create_bound_mesh(edit)
+                    if dropped == "mesh_binding_snapshot":
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            edit.bindings.get(uid(4))
+                        binding = lost.exception.recover()
+                        self.assertIsInstance(binding, bindings.Snapshot)
+                        self.assertEqual(binding.source.sequence, 1)
+                    if dropped == "sample_modeling":
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            edit.modeling.sample(({uid(3): .5},))
+                        sampled = lost.exception.recover()
+                        self.assertIsInstance(sampled, sampling.Batch)
+                        self.assertEqual(sampled.frames[0].drawables[0].positions[0][0], 5.)
+                self.assertEqual(session.info().history, (1, 0))
+                self.assertEqual(session.modeling.sample(({uid(3): .5},)).frames[0].drawables[0].positions[0][0], 5.)
+
+    def test_lost_cpu_sample_retains_old_frame_after_peer_publication(self):
+        with self.runtime("connected", drop="sample_modeling") as runtime:
+            session = runtime.sessions.create(uid(1))
+            with session.edit("first") as edit:
+                self.create_bound_mesh(edit)
+            old = session.info().version
+            with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                session.modeling.sample(({uid(3): .5},))
+            with zipzi.connect(endpoint=runtime._backend._endpoint) as peer:
+                attached = peer.sessions.attach(session.id)
+                with attached.edit("later") as edit:
+                    edit.bindings.set_keyform(uid(4), self.binding_spec(20.).keyforms[1])
+            restored = lost.exception.recover()
+            self.assertIsInstance(restored, sampling.Batch)
+            self.assertEqual(restored.version, old)
+            self.assertEqual(restored.frames[0].drawables[0].positions[0][0], 5.)
+            self.assertEqual(session.modeling.sample(({uid(3): .5},)).frames[0].drawables[0].positions[0][0], 10.)
+            self.assertEqual(session.info().history, (2, 0))
 
     def test_typed_parameters_share_a_mixed_batch_and_preserve_unspecified_fields(self):
         for mode in ("local", "connected"):
@@ -1287,6 +1473,11 @@ assert meshes.Geometry((0,), ((0., 0.),), ((0., 0.),), ()).vertex_ids == (0,)
                 edit.parameters.patch(parameter, parameters.Patch(name="Direct parameter"))
                 self.assertEqual(edit.parameters.get_many((parameter,)).items[0].name, "Direct parameter")
                 self.assertEqual(edit.meshes.get_many((face,))[0].name, "Direct")
+                bound = edit.bindings.create(bindings.MeshBindingSpec(face, (bindings.Axis(parameter, (-1., 1.)),), (
+                    bindings.Keyform((-1.,), GEOMETRY.positions),
+                    bindings.Keyform((1.,), tuple((x+10., y) for x,y in GEOMETRY.positions)))))
+                self.assertEqual(edit.bindings.get(bound).mesh_id, face)
+                self.assertEqual(edit.modeling.sample(({parameter: 0.},)).frames[0].drawables[0].positions[0][0], 5.)
             self.assertEqual(len([e for e in stream.poll() if isinstance(e, events.Published)]), 1)
             with session.project.save(self.folder / "direct-save") as job:
                 saved = job.wait()

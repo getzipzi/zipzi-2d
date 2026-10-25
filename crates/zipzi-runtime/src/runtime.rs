@@ -4,6 +4,7 @@ mod authoring;
 mod blobs;
 mod modeling;
 mod resources;
+mod sampling;
 mod typed;
 use crate::events::EventLog;
 use crate::jobs::Task;

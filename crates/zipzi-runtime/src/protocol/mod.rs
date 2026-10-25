@@ -100,7 +100,7 @@ enum Operation {
     },
     ApplyModeling {
         edit: EditId,
-        commands: Vec<zipzi_sdk::ModelingCommand>,
+        commands: Vec<crate::modeling::ModelingCommand>,
     },
     ApplyAuthoring {
         edit: EditId,
@@ -130,6 +130,7 @@ enum Operation {
     MeshSnapshot(crate::authoring::MeshQuery),
     MeshSnapshots(crate::authoring::MeshBatchQuery),
     ParameterSnapshot(crate::authoring::ParameterQuery),
+    MeshBindingSnapshot(crate::authoring::MeshBindingQuery),
     SampleModeling {
         session: SessionId,
         edit: Option<EditId>,
@@ -388,6 +389,8 @@ impl Protocol {
         remote.connection = self.next_connection;
         let mut capabilities = vec![
             "typed_mesh_batch",
+            "typed_mesh_bindings",
+            "typed_modeling_samples",
             "typed_event_pages",
             "typed_parameters",
             "typed_meshes",
@@ -689,7 +692,7 @@ impl Protocol {
             }
             Operation::ApplyModelingBlob { edit, blob } => {
                 let bytes = rt.blob(client, blob)?;
-                let commands: Vec<zipzi_sdk::ModelingCommand> =
+                let commands: Vec<crate::modeling::ModelingCommand> =
                     crate::metrics::decode(&bytes).map_err(|_| RuntimeError::InvalidReference)?;
                 rt.apply_modeling(client, edit, commands)?;
                 Value::Null
@@ -794,6 +797,9 @@ impl Protocol {
             }
             Operation::MeshSnapshots(input) => json!(rt.mesh_snapshots(client, input)?),
             Operation::ParameterSnapshot(input) => json!(rt.parameter_snapshot(client, input)?),
+            Operation::MeshBindingSnapshot(input) => {
+                json!(rt.mesh_binding_snapshot(client, input)?)
+            }
             Operation::SampleModeling {
                 session,
                 edit,
@@ -801,53 +807,16 @@ impl Protocol {
                 checks,
                 expected,
             } => {
-                if parameters.len() > 64 {
-                    return Err(RuntimeError::Budget("modeling samples"));
-                }
-                let session_info = rt.session_info(session)?;
-                let doc_bytes = if let Some(edit) = edit {
-                    if rt.candidate(client, edit)?.base_version().session_id
-                        != session_info.version.session_id
-                    {
-                        return Err(RuntimeError::InvalidReference);
+                json!(rt.sample_modeling(
+                    client,
+                    crate::authoring::ModelingSampleQuery {
+                        session,
+                        edit,
+                        parameters,
+                        checks,
+                        expected,
                     }
-                    rt.edit_document(client, edit)?.estimated_content_bytes()
-                } else if matches!(session_info.state, SessionState::Ready) {
-                    rt.document(session)?.estimated_content_bytes()
-                } else {
-                    rt.source_snapshot(session)?
-                        .snapshot
-                        .document()
-                        .estimated_content_bytes()
-                };
-                let size = doc_bytes
-                    .saturating_mul(parameters.len().max(1))
-                    .saturating_mul(4)
-                    .saturating_add(
-                        crate::runtime::serialized_bytes(&parameters)?.saturating_mul(2),
-                    )
-                    .saturating_add(1024);
-                if size > MAX_FRAME / 2
-                    || rt
-                        .accounted_bytes()
-                        .saturating_add(size)
-                        .saturating_add(doc_bytes)
-                        > rt.limits().accounted_bytes
-                {
-                    return Err(RuntimeError::Budget(
-                        "modeling sample batch; split the batch",
-                    ));
-                }
-                let source = if let Some(edit) = edit {
-                    rt.edit_snapshot(client, edit)?
-                } else {
-                    rt.source_snapshot(session)?
-                };
-                if expected.is_some_and(|expected| expected != source.source) {
-                    return Err(RuntimeError::InvalidReference);
-                }
-                let samples = source.snapshot.sample_modeling(parameters, checks)?;
-                json!({"source": source.source, "state": info(&session_info)["state"], "samples": samples})
+                )?)
             }
             Operation::ApplyRgba {
                 edit,

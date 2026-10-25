@@ -2,6 +2,9 @@
 
 日期：2026-10-24。状态：**实施中，首批底座已落地，尚未达到 R4 退出门槛**。
 本记录不代表完整 Modeling、资源与工程操作已经交付。
+2026-10-25：当前 Python 实现以独立 `zipzi-python2` 为准；其
+[网格绑定/CPU 采样切片](python2-r4-bindings.md)已将跨领域 `ModelingCommand`
+从 SDK 移至 Runtime。下文首批实现与结果保留原始历史范围。
 逐能力状态见 [r4-coverage.json](../../runtime/r4-coverage.json)，测试结果见
 [r4-results.json](r4-results.json)。
 

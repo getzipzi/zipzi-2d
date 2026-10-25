@@ -1,8 +1,132 @@
 use zipzi_core::{ModelSetup, Vec2};
 use zipzi_runtime::authoring::{EditOperation, ParameterQuery};
+use zipzi_runtime::authoring::{MeshBindingQuery, ModelingSampleQuery};
 use zipzi_runtime::*;
 use zipzi_sdk::{MeshCreateSpec, MeshGeometry, MeshOperation};
 use zipzi_sdk::{ParameterCreateSpec, ParameterOperation, ParameterPatch};
+
+#[test]
+fn modeling_sample_admission_checks_exact_source_before_snapshot_and_keeps_edit_usable() {
+    let mut rt = Runtime::default();
+    let client = rt.register_client().unwrap();
+    let session = rt
+        .create_session(client, &id(1), ModelSetup::default())
+        .unwrap();
+    let other = rt
+        .create_session(client, &id(2), ModelSetup::default())
+        .unwrap();
+    let edit = rt.begin_edit(client, session, "sample", None).unwrap();
+    let write = rt
+        .apply_authoring(
+            client,
+            edit,
+            vec![EditOperation::Parameter {
+                operation: ParameterOperation::Create { spec: parameter() },
+            }],
+        )
+        .unwrap();
+    let query = |session, expected, count| ModelingSampleQuery {
+        session,
+        edit: Some(edit),
+        parameters: vec![Default::default(); count],
+        checks: Default::default(),
+        expected,
+    };
+    let sampled = rt
+        .sample_modeling(client, query(session, Some(write.source), 2))
+        .unwrap();
+    assert_eq!(sampled.source, write.source);
+    assert_eq!(sampled.samples.frames.len(), 2);
+    assert!(matches!(
+        rt.sample_modeling(client, query(other, None, 1)),
+        Err(RuntimeError::InvalidReference)
+    ));
+    assert!(matches!(
+        rt.sample_modeling(client, query(session, None, 65)),
+        Err(RuntimeError::Budget(_))
+    ));
+    let mut oversized = query(session, None, 1);
+    oversized.parameters[0] = (0..257).map(|n| (id(n), 0.)).collect();
+    assert!(matches!(
+        rt.sample_modeling(client, oversized),
+        Err(RuntimeError::Budget(_))
+    ));
+    rt.apply_authoring(client, edit, vec![]).unwrap();
+    assert!(matches!(
+        rt.sample_modeling(client, query(session, Some(write.source), 1)),
+        Err(RuntimeError::InvalidReference)
+    ));
+    let mut invalid_checks = query(session, None, 1);
+    invalid_checks.checks.min_triangle_area = -1.;
+    assert!(matches!(
+        rt.sample_modeling(client, invalid_checks),
+        Err(RuntimeError::Sdk(_))
+    ));
+    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 2);
+    rt.commit_edit(client, edit).unwrap();
+    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
+}
+
+#[test]
+fn binding_and_sample_response_expansion_refused_without_poisoning_candidate() {
+    let mut rt = Runtime::new(RuntimeLimits {
+        accounted_bytes: 1 << 20,
+        ..Default::default()
+    });
+    let client = rt.register_client().unwrap();
+    let session = rt
+        .create_session(client, &id(1), ModelSetup::default())
+        .unwrap();
+    let edit = rt.begin_edit(client, session, "admission", None).unwrap();
+    let mut spec = parameter();
+    spec.name = "large".repeat(10000);
+    rt.apply_authoring(
+        client,
+        edit,
+        vec![EditOperation::Parameter {
+            operation: ParameterOperation::Create { spec },
+        }],
+    )
+    .unwrap();
+    assert!(matches!(
+        rt.sample_modeling(
+            client,
+            ModelingSampleQuery {
+                session,
+                edit: Some(edit),
+                parameters: vec![Default::default()],
+                checks: Default::default(),
+                expected: None
+            }
+        ),
+        Err(RuntimeError::Budget(_))
+    ));
+    assert!(matches!(
+        rt.mesh_binding_snapshot(
+            client,
+            MeshBindingQuery {
+                session,
+                edit: Some(edit),
+                ids: Some(vec![id(99); 257])
+            }
+        ),
+        Err(RuntimeError::Budget(_))
+    ));
+    assert!(matches!(
+        rt.mesh_binding_snapshot(
+            client,
+            MeshBindingQuery {
+                session,
+                edit: Some(edit),
+                ids: Some(vec![id(99)])
+            }
+        ),
+        Err(RuntimeError::Sdk(_))
+    ));
+    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 1);
+    rt.commit_edit(client, edit).unwrap();
+    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
+}
 
 fn id(n: u32) -> String {
     format!("79100000-0000-4000-8000-{n:012x}")

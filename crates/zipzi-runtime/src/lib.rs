@@ -9,6 +9,7 @@ mod jobs;
 #[cfg(unix)]
 pub mod local;
 pub mod metrics;
+pub mod modeling;
 pub mod protocol;
 mod runtime;
 mod types;

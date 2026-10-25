@@ -10,7 +10,7 @@ import tempfile
 import time
 
 import zipzi
-from zipzi import events, meshes, ops, parameters, resources
+from zipzi import bindings, sampling, events, meshes, ops, parameters, resources
 
 def main():
     mode = sys.argv[1]
@@ -64,11 +64,24 @@ def main():
                         assert result.source.sequence == 5
                         assert edit.parameters.get_many((parameter,)).items[0].name == "Installed parameter"
                         assert edit.meshes.get_many((face,))[0].name == "Installed"
+                        angle = "79300000-0000-4000-8000-000000000003"
+                        result = edit.apply_many((ops.CreateParameter(parameters.ParameterSpec("Pose", 0., 1., 0., id=angle)),
+                            ops.CreateMeshBinding(bindings.MeshBindingSpec(face, (bindings.Axis(angle, (0., 1.)),), (
+                                bindings.Keyform((0.,), geometry.positions),
+                                bindings.Keyform((1.,), tuple((x+10., y) for x,y in geometry.positions)))))))
+                        binding = result.ids[-1]
+                        assert result.source.sequence == 6
+                        canonical = edit.bindings.get(binding)
+                        edit.bindings.set_keyform(binding, bindings.Keyform((1.,), tuple((x+20.,y) for x,y in geometry.positions)))
+                        cpu = edit.modeling.sample(({angle:.5},))
+                        assert cpu.frames[0].drawables[0].positions[0][0] == 10.
+                        assert cpu.frames[0].render_plan == (sampling.RenderCommand(sampling.RenderKind.DRAW_MESH,face),)
                     assert image.pixels().rgba == bytes((12, 34, 56, 255))
                 assert runtime.resources.usage().prepared_images == 0
                 assert runtime.resources.usage().plans == 0
                 assert session.info().history == (1, 0)
                 assert session.meshes.get(face).name == "Installed"
+                assert session.modeling.sample(({angle:.5},)).frames[0].drawables[0].positions[0][0] == 10.
                 published = [e for e in stream.poll() if isinstance(e, events.Published)]
                 assert len(published) == 1 and parameter in published[0].receipt.object_ids
                 assert session.undo().wait().changed
@@ -122,6 +135,8 @@ def main():
                 value = reopened.parameters.get(parameter)
                 assert (value.name,value.runtime_id,value.kind,value.decimal_places,value.repeat,value.default_value) == (
                     "Installed parameter","ParamInstalled",parameters.Kind.BLEND_SHAPE,3,False,.5)
+                assert reopened.bindings.get(binding).axes == canonical.axes
+                assert reopened.modeling.sample(({angle:.5},)).frames[0].drawables[0].positions[0][0] == 10.
                 assert reopened.info().history == (0, 0)
             print(json.dumps(dict(mode=mode, name=snapshot.name, vertices=snapshot.geometry.vertex_ids, history=(1, 0))))
         finally:
