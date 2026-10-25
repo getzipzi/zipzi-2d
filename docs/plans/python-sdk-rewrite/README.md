@@ -2,7 +2,7 @@
 
 日期：2026-10-25。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../crates/zipzi-python2/README.md)。
 
-**下一阶段调整：**[P3A：统一 API 与 agent 契约重构](p3a-api-agent-contract.md)已拆为独立方案，当前仅完成方案，尚未实施/验收。先统一公开返回与恢复、生成/手写边界、分页/Session 关闭及随包文档和 agent 门禁，再进入 P3B 剩余 Modeling 和 P4 剩余资源工作。现有 Buffer/二进制工作保留并单独记录证据；下文历史通过记录不自动覆盖新接口，当前包使用方式仍见包 README。
+**当前阶段：**[P3A：统一 API 与 agent 契约重构](p3a-api-agent-contract.md)已通过 [P3A-0 冻结门禁](p3a-0.md)，并通过 [P3A-1 完整调用恢复](p3a-1.md)验收（本轮性能噪声由用户豁免）；P3A-2–6 和整体阶段尚未验收。后续继续统一值/操作/生成 facade、分页/Session 关闭及文档和 agent 门禁，再进入 P3B/P4。原始[启动记录](p3a-start.md)与既有 Buffer/二进制证据保留；历史通过记录不自动覆盖新接口，当前用法见包 README。
 
 当前执行主线接回 [Runtime R0–R4](../sdk-runtime/python2-r0-r4.md)。`1e0043f`
 已保存 P2 网格切片；其后的工作区补齐宿主发现/唯一启动、会话身份/列表/绑定，
@@ -18,6 +18,11 @@
 修复了丢失 Busy 响应后的 Edit 状态恢复及 Runtime 源接口清单分类。
 后续按用户要求补齐[P2 资源/Plan 生成和源码分发](p2-resources-generator.md)，并复测 Runtime、安装客户端、真实 Editor 及两组冻结性能门禁。整体复验已通过；Editor 首轮越线、对照及扩样数据也完整保留在记录中。
 
+## 验收记录约定
+
+本目录只保留 Markdown 中的验收结果、范围及必要说明。历史 JSON 产物已按用户要求清理；
+后续临时日志、测量数据和报告仅在需要时写入 `target/`，不作为继续实施的重复验收前置。
+
 ## 项目边界
 
 本项目从新包 `crates/zipzi-python2` 开始，Python 导入名为 `zipzi`。P0/P1 的公共类型、生命周期、两后端、薄 PyO3、包级测试、构建和测量工具均已移入新目录。旧 crate 中的临时特性接线和源码改动已撤回；旧接口去向清单和旧包性能采集工具不再属于本项目。
@@ -32,7 +37,7 @@
 | P1 | 选定 API、两后端、来源/资源/历史/IO、36 项公共行为与生命周期矩阵、严格类型及独立正常 wheel 验收 | 当前选定试点门槛已满足；长任务、后续领域和发布平台矩阵另列 |
 | P2 | [网格历史切片](p2-mesh-generator.md)及[资源/Plan 补齐](p2-resources-generator.md)：Rust 单一声明、编译查询注册、18 个产物、有限形状和配对源码发行验证 | 当前范围退出证据见整体复验；未实施领域按 P3–P5 扩展 |
 | P3 | [已开始：场景/身份切片](../sdk-runtime/python2-p3-scene-identity.md)，含生成的场景操作、网格 BlendShape/带绑定拓扑、SDK Ref/标签地址 | 完整场景绑定/转换/集合及剩余字段/内容地址；R4 全量资源/IO/任务预算 |
-| P3A | 下一阶段；仅有[独立重构方案](p3a-api-agent-contract.md)，未实施 | 最终 API、完整调用恢复、统一生成 facade、分页/关闭、文档自省与 agent 任务门禁，全部按独立方案重新验收 |
+| P3A | [P3A-0](p3a-0.md) 冻结验收；[P3A-1](p3a-1.md) 已验收：完整调用恢复、Edit 状态、JobTimeout、类型/安装，本轮性能噪声由用户豁免 | P3A-2–6：统一值/操作/规划、全生成 facade、发现/关闭、文档和独立 agent 任务；整体阶段未验收 |
 | P3B | P3 剩余领域，待 P3A | 按统一契约补完整 Modeling/地址；已有数值与身份预期保留 |
 | P4 | 工作区已有 Buffer/二进制资源实现与测试；完整阶段未验收 | 已公开包装纳入 P3A；完整 IO/格式、昂贵任务、资源峰值及正式发行证据继续按计划交付 |
 | P5/P7 | 未开始 | 按调整后的计划交付；已有 CPU 建模求值归 Runtime R4，不代表 P5 动画已实现 |
@@ -101,7 +106,7 @@ Job 共用 `_recovery.py` 的原请求持有原语，状态查询不释放结果
 
 Fault 控制与计数分配器分别位于 `test-support` / `bench-instrumentation`，正常 wheel 不包含控制或探针入口。Runtime CPU fixture 现在真正异步运行 work 并在 idle 时消费 completion，不把 worker 放在请求线程内执行。正常 wheel 的两种独立环境重跑图片、Plan、替换、Undo/Redo、Job 状态/终态取消、保存重开。
 
-最新证据为 [`p0-p1-baseline.json`](p0-p1-baseline.json) 和独立 [`p0-p1-check.json`](p0-p1-check.json)。每个后端 5 个计时进程 + 5 个探针进程，6 项工作负载，每项 4 次预热、32 个计时样本。两种产物和 CPU 宿主均 Release、复制到独立路径并冻结哈希；探针不进入计时二进制。详细统计范围和阈值见计划第 2.2 节及 JSON，后续比较拒绝工作负载脚本/平台/Python 的漂移。
+本批功能与 P0 比较已通过。每个后端 5 个计时进程 + 5 个探针进程，6 项工作负载，每项 4 次预热、32 个计时样本。两种产物和 CPU 宿主均 Release、复制到独立路径并冻结哈希；探针不进入计时二进制。详细统计范围和阈值见计划第 2.2 节，后续比较拒绝工作负载脚本/平台/Python 的漂移。
 
 当前冻结基线摘要（CPU fixture，非 Editor）：
 
@@ -131,7 +136,7 @@ uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/py
 
 已测小查询、单项编辑、100 项批次、位置数组、256×256 RGBA 准备/创建/提交/释放，以及正式 Plan 创建/应用/提交/释放。CPU 采样留待 P5；Connected 性能仍待补测。每次 4 次预热、32 个计时样本，默认 5 次独立进程。计时与 Python profile/tracemalloc 探针分开；校验 Release 构建元数据与实际加载扩展哈希。
 
-2026-10-25 补测记录为 [`p0-resources-baseline.json`](p0-resources-baseline.json)，对应 `ad868c8a` 之后的资源/Plan 工作区及文件内的 Release 扩展、客户端源码及测量脚本哈希；仍为 `partial`。在相同采样规则下，图片工作负载 P50/P95 约 266/385 μs，Plan 约 71/82 μs；单项编辑的进程间 P50 相对范围约 26%，未冻结阈值。新记录补充首次四项基线，不覆盖其历史证据。
+2026-10-25 资源/Plan 补测对应 `ad868c8a` 之后的工作区，结果仍为 `partial`。在相同采样规则下，图片工作负载 P50/P95 约 266/385 μs，Plan 约 71/82 μs；单项编辑的进程间 P50 相对范围约 26%，未冻结阈值。新记录补充首次四项基线，不覆盖其历史证据。
 
 探针报告 Python JSON 和原生边界调用，以及 Python 堆存活/峰值。Rust 编码次数、真实复制字节和 Rust 堆指标缺失时为 `null`，不能用逻辑输入大小或 Python 堆指标替代。阈值尚未冻结，结果只能标 `partial`。
 

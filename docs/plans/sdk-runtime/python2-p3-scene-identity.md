@@ -72,7 +72,7 @@ Python 索引值，更新共享 Rust 方法/意图/值类型；独立测试禁�
 - `tools/distribution.py --output target/python2/p3-final-source --cargo-target target/python2/source-cargo-target`：
   配对 source/wheel 与两种隔离安装 recipe；命令、产物哈希及结果在对应目录。
 
-机器可读结果见 [python2-p3-scene-identity-results.json](python2-p3-scene-identity-results.json)。
+验收结果保留在本节。
 初轮 Offscreen 测试遗漏显式静态映射，曾读到中性 opacity；修正为插入、修改关键形并
 显式设置 Part 静态映射后通过。初轮 Rust 测试的 Box 字符串比较及 Python Kind 表达
 已修复。上述失败日志保留，不将其混入最终通过计数。

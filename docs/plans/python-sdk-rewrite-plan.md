@@ -1,6 +1,6 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25。状态：**P1/P2 选定范围已有验收，P0 有试点比较门禁，P3 已交付选定建模/身份切片；下一阶段为 P3A「统一 API 与 agent 契约重构」，尚未实施。P3 剩余工作归 P3B；P4–P7 按本文调整后的依赖推进。** 既有证据见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+日期：2026-10-25。状态：**P1/P2 选定范围已有验收，P0 有试点比较门禁，P3 已交付选定建模/身份切片；P3A-0/P3A-1 已通过，P3A-1 本轮性能噪声由用户豁免，整体 P3A 尚未验收。P3 剩余工作归 P3B；P4–P7 按本文调整后的依赖推进。** 既有证据见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
 本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）、`f2ef33c`（生命周期与 P0 门禁）、`1e0043f`（P2 网格生成）、`acc54907`（宿主/会话接回）、`c0e186b`（R3 事件/参数/批量）和 2026-10-25 工作区为依据。当前主线按 [Runtime R0–R4](sdk-runtime/python2-r0-r4.md) 推进；已提交的[事件、参数及批量读取](sdk-runtime/python2-r3-events.md)贯通新包 R3 最小链路；工作区中的[网格绑定和显式 CPU 采样](sdk-runtime/python2-r4-bindings.md)接回首批 R4 数值链路，生成器随能力推进。本文区分已提交基础、已有验证记录、工作区实现和后续目标，不改写此前验收结果。
 
@@ -8,7 +8,7 @@
 
 本计划独立于 [SDK Runtime 设计](sdk-runtime-design.md)和[实施计划](sdk-runtime-implementation-plan.md)，不重写其 R0–R7 阶段。可复用的是共享 Rust SDK/core/project/animation、Runtime 和它们独立的领域测试。为新 Python 能力补强这些共享层，也必须计入本项目的实现与复杂度。
 
-**下一阶段为 [P3A「统一 API 与 agent 契约重构」](python-sdk-rewrite/p3a-api-agent-contract.md)，尚未实施。** 包的主要调用者是 agent。P3A 的最终 API、生成/手写边界、执行规则、任务和文档/agent 验收集中维护在独立方案；本文保留整体架构、阶段摘要、历史证据和后续依赖。P3 剩余建模工作归 P3B，后续阶段按第 9 节重新排序。目标接口尚未交付，不可当作当前版本使用说明。
+**当前阶段为 [P3A「统一 API 与 agent 契约重构」](python-sdk-rewrite/p3a-api-agent-contract.md)，[P3A-0](python-sdk-rewrite/p3a-0.md) 已通过，[P3A-1](python-sdk-rewrite/p3a-1.md) 已通过完整调用恢复验收（本轮性能噪声由用户豁免）。** 包的主要调用者是 agent。P3A 的最终 API、生成/手写边界、执行规则、任务和文档/agent 验收集中维护在独立方案；本文保留整体架构、阶段摘要、历史证据和后续依赖。P3 剩余建模工作归 P3B，后续阶段按第 9 节重新排序。完整目标接口尚未全部交付，不可整体当作当前版本使用说明。
 
 当前 `zipzi-python2` 也没有兼容包袱：允许删除、重命名及改变返回类型，不保留旧别名、双入口、弃用期或迁移层；共享领域语义、资源正确性和独立行为预期继续保留。历史验收只证明当时的接口，不自动证明新契约通过。
 
@@ -49,9 +49,9 @@
 
 ### 2.2 P0 试点测量与统计范围
 
-保留 [首次四项 Local 记录](python-sdk-rewrite/p0-baseline.json)和 [资源/Plan 补测](python-sdk-rewrite/p0-resources-baseline.json)作为历史证据；其中缺失项仍是 `null`，不改写成后来获得的结果。
+首次四项 Local 测量和资源/Plan 补测的结论保留在[实施记录](python-sdk-rewrite/README.md)；历史缺失项不计为已通过。
 
-当前 [schema-2 基线](python-sdk-rewrite/p0-p1-baseline.json)覆盖 Local/Connected 的小查询、单项编辑、100 项批次、位置数组、256×256 RGBA 准备/创建/提交/释放和正式 Plan 创建/应用/提交/释放。每个后端分别使用 5 个独立计时进程、5 个独立探针进程；每项 4 次预热和 32 个计时样本。延迟使用无计数分配器的 Release 产物；Rust 探针使用独立 instrumented Release 产物，CPU 宿主也分别复制并校验哈希。
+当前 schema-2 基线的验收范围覆盖 Local/Connected 的小查询、单项编辑、100 项批次、位置数组、256×256 RGBA 准备/创建/提交/释放和正式 Plan 创建/应用/提交/释放。每个后端分别使用 5 个独立计时进程、5 个独立探针进程；每项 4 次预热和 32 个计时样本。延迟使用无计数分配器的 Release 产物；Rust 探针使用独立 instrumented Release 产物，CPU 宿主也分别复制并校验哈希。
 
 已记录 Python JSON/native 调用、Python 堆存活/峰值、实际 Runtime JSON 编解码、Plan 准入的计数式序列化、Rust 分配次数/请求分配字节及存活/峰值、原生数值数组输入物化、显式负载复制和实际图片资源存活字节。Connected 探针保留空控制窗口，不隐式扣减控制消息或使用逻辑输入大小补复制量。
 
@@ -158,7 +158,7 @@ zipzi-python2/
 | **P1 手写完整链路** | 选定生命周期矩阵已验收 | 历史记录保留；P3A 按新接口复用独立预期并补遗漏故障 |
 | **P2 提取生成器** | 网格、资源/Plan 及配对源码发行已验收 | 历史记录保留；P3A 扩展到统一领域 facade、返回投影和文档 |
 | **P3 已有 Modeling 切片** | 场景/组织、选定 BlendShape/拓扑与 SDK Ref/标签地址已有证据 | 纳入 P3A，保持数值、身份和资源行为；完整领域不标完成 |
-| **P3A API 与 agent 契约重构** | **下一阶段，未实施** | [独立方案](python-sdk-rewrite/p3a-api-agent-contract.md)的全部任务与门禁通过，并满足本计划的通用验收 |
+| **P3A API 与 agent 契约重构** | **P3A-0/P3A-1 已通过（P3A-1 本轮性能噪声由用户豁免）** | [P3A-0](python-sdk-rewrite/p3a-0.md)、[P3A-1](python-sdk-rewrite/p3a-1.md) 保留证据；推进 P3A-2–6 与全部阶段门禁 |
 | **P3B Modeling 剩余能力** | 待 P3A | 完整场景绑定/网格转换/剩余字段与内容地址，按新 API 补齐两后端 recipe |
 | **P4 资源与工程** | 工作区已有 Buffer/二进制资源代码与测试，完整阶段未验收 | 已有公开能力纳入 P3A；后续完整格式/IO、昂贵工作取消、公平调度、总预算/峰值及安装证据独立交付 |
 | **P5 动画与观察** | 未开始 | Motion/Expression/Physics/Pose、独立 Preview、空间/观察和 inspection；已有 CPU 建模采样归 P3A/P3B，不重复延期 |
@@ -215,11 +215,11 @@ P3A 的范围与排除项见[独立方案第 1 节](python-sdk-rewrite/p3a-api-a
 
 退出门槛：声明与处理器静态配对；生成确定且只检查模式不写入；手写文件受保护；正反类型用例、结构转换、实际两后端行为和安装 recipe 通过；本地没有新增 JSON 往返；生成前后的调用次数、复制/资源峰值及耗时按试点基线比较。该阶段的历史退出证据保持；接下来先执行 P3A，再按 P3B–P5 扩充可生成的类型子集。
 
-### 9.6 下一阶段：P3A 统一 API 与 agent 契约重构
+### 9.6 当前阶段：P3A 统一 API 与 agent 契约重构
 
 P3A 的详细设计、7 个子任务及退出条件已拆到[独立方案](python-sdk-rewrite/p3a-api-agent-contract.md)。实施顺序为冻结契约/失败基线 → 完整调用恢复 → 统一值/操作/规划 → 生成包装与发现/生命周期 → agent 文档 → 综合验收；依赖和交付物见[任务表](python-sdk-rewrite/p3a-api-agent-contract.md#5-实施任务与交付物)。
 
-当前状态仍为未实施。P3A 必须验证全部已有公开能力、正常安装包、当前 Editor 和独立 agent 任务，完成后才进入 P3B/P4 的剩余公共能力；本次文档拆分不改变阶段范围或门槛。
+当前 [P3A-0](python-sdk-rewrite/p3a-0.md) 已补齐逐符号目标映射、完整签名、agent 配置和 P0 冻结并通过门禁，随后完成 [P3A-1](python-sdk-rewrite/p3a-1.md) 的完整调用恢复与生命周期状态验收。P3A-2–6 和整体阶段仍待验收。P3A 必须验证全部已有公开能力、正常安装包、当前 Editor 和独立 agent 任务，完成后才进入 P3B/P4；本轮仅按用户决定豁免 P3A-1 的性能噪声阻塞，后续完整范围和门槛保持不变。
 
 ### 9.7 P3A 之后的任务调整
 
@@ -269,7 +269,6 @@ uv run --locked python crates/zipzi-python2/tools/test.py --help
 ./tools/test-sdk.sh python2 --release
 ./tools/test-sdk.sh python2 --release --instrumented
 uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/python2/baseline-first
-# 后续采集可加 --compare docs/plans/python-sdk-rewrite/p0-p1-baseline.json
 cargo test --locked -p zipzi-runtime --test authoring --test resources --test modeling --test protocol
 cargo test --locked -p zipzi-sdk --test integration image_edit::
 cargo test --locked -p zipzi-runtime --test host
@@ -294,4 +293,4 @@ C01–C08 确定性回归、G01–G08 安装包 agent 任务、42 次运行的�
 
 **当前下一步是 P3A，不是直接继续增加一批新 Python 方法。** P3A 退出要求[独立方案的全部任务与验收门槛](python-sdk-rewrite/p3a-api-agent-contract.md#8-阶段退出与后续交接)；再按 P3B/P4/P5 扩领域。Runtime R0–R7 编号与已交付事实保持，P3A 为其 Python 公共契约补充验收，不宣称完成 Runtime R4。P0/P6 持续跟随，P7 汇总完整发布范围。
 
-每完成一个切片，更新能力清单和实施记录，登记提交/工作区身份、两后端状态、源码与安装证据、尚未满足的门槛。重构前验收和原始基线保留历史身份，新接口另建结果记录；不因删除旧 API 而删除独立行为预期。详细事实留在[实施记录](python-sdk-rewrite/README.md)，计划只据此调整状态与下一步，不把目标改写为完成结果。
+每完成一个切片，更新能力清单和实施记录，只保留简明验收结果：改动范围、必要检查及结果、未满足项和用户明确豁免项。临时日志、JSON 清单、哈希和测量报告不写入计划目录；不为重建已删除的历史产物反复验收。不因删除旧 API 而删除独立行为预期。阶段结论留在[实施记录](python-sdk-rewrite/README.md)，计划据此调整状态与下一步，不把目标改写为完成结果。

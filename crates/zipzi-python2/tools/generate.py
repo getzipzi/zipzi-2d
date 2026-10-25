@@ -334,9 +334,10 @@ def render_mesh(contract):
         f'    def {method}(self, {params}, owner: object) -> object:',
         f'        return self._request(dict(op="{m.operation["name"]}", ' + ', '.join(f'{f["name"]}={f["name"]}' for f in fields) + '), owner, "meshes.get")', '',
     ])
-    conveniences = [HEADER.rstrip(), 'from collections.abc import Sequence', 'from typing import Protocol',
-        'from . import mesh_ops as ops', 'from .meshes import MeshSpec, Point', 'from .._values import WriteResult', '',
-        'class MeshWriter(Protocol):', '    def apply(self, operation: ops.MeshOperation) -> WriteResult: ...', '',
+    conveniences = [HEADER.rstrip(), 'from collections.abc import Callable, Sequence', 'from typing import Protocol',
+        'from . import mesh_ops as ops', 'from .meshes import MeshSpec, Point', 'from .._values import WriteResult',
+        'from .._calls import project, single_id', '',
+        'class MeshWriter(Protocol):', '    def _construct_and_apply(self, construct: Callable[[], ops.MeshOperation]) -> WriteResult: ...', '',
         'class EditableMeshes:', '    _owner: MeshWriter']
     for variant in m.union['variants']:
         arguments, inputs = [], []
@@ -351,8 +352,12 @@ def render_mesh(contract):
             arguments.append(f'{name}: {annotation}')
             inputs.append(f'tuple({name})' if sequence else name)
         returns_id = variant['rust_name'] == 'Create'
-        conveniences += [f'    def {variant["wire_name"]}(self, ' + ', '.join(arguments) + f') -> {"str" if returns_id else "WriteResult"}:',
-            f'        return self._owner.apply(ops.{variant["rust_name"]}(' + ', '.join(inputs) + '))' + ('.ids[0]' if returns_id else '')]
+        conveniences += [f'    def {variant["wire_name"]}(self, ' + ', '.join(arguments) + f') -> {"str" if returns_id else "WriteResult"}:']
+        operation = f'ops.{variant["rust_name"]}(' + ', '.join(inputs) + ')'
+        if returns_id:
+            conveniences += [f'        return project(lambda: self._owner._construct_and_apply(lambda: {operation}), single_id, operation="meshes.create", inputs=(spec,))']
+        else:
+            conveniences += [f'        return self._owner._construct_and_apply(lambda: {operation})']
     conveniences = '\n'.join(conveniences) + '\n'
     def record_names(shape):
         kind = shape['kind']

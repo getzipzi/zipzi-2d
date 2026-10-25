@@ -3,36 +3,19 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Generic, Literal, TypeVar
 from . import bindings, sampling, events, meshes, ops, parameters, plans, resources, scene, references, modeling
-from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
+from ._errors import Busy, JobTimeout, OutcomeUnknown, SdkFailure
 from ._values import ConnectionInfo, Receipt, SaveReceipt, Source, SessionId, SessionInfo, WriteResult, record, sequence
 from .backends import Backend, JobKind
 from ._recovery import RecoveryOwner
+from ._calls import Call, known, project, single_id
+from enum import Enum
+import math
+import time
 from ._generated.conveniences import EditableMeshes as MeshConveniences
 from ._generated.resource_conveniences import EditableImages as ImageConveniences
 
 T = TypeVar("T")
 U = TypeVar("U")
-
-def known(call: Callable[[], T], resume: Callable[[], T]) -> T:
-    """One recovery closure remains bound to its original outcome."""
-    resolved = False
-    def invoke(action: Callable[[], T]) -> T:
-        nonlocal resolved
-        if resolved:
-            raise SdkFailure("NO_PENDING_REQUEST", "This request has already been resolved")
-        try:
-            result = action()
-        except OutcomeUnknown as e:
-            e._resume = lambda: invoke(resume)
-            raise
-        except Busy:
-            raise
-        except BaseException:
-            resolved = True
-            raise
-        resolved = True
-        return result
-    return invoke(call)
 
 def absolute(path: Path) -> Path:
     if not path.is_absolute():
@@ -50,6 +33,7 @@ class Job(RecoveryOwner, Generic[T]):
         self._failure: SdkFailure | None = None
         self._on_terminal = on_terminal
         self._terminal_failure = False
+        self._deadline: float | None = None
 
     @classmethod
     def start(cls, backend: Backend, begin: Callable[[object], object], kind: JobKind,
@@ -63,34 +47,32 @@ class Job(RecoveryOwner, Generic[T]):
             return job
         return known(start, resume)
 
-    def _request(self, action: str, call: Callable[[], object], decode: Callable[[object], U]) -> U:
-        try:
-            return super()._request(action, call, decode)
-        except OutcomeUnknown as e:
-            if action == "wait" and self.pending_request is None:
-                e._resume = self.wait
-            raise
-        except Busy:
-            raise
-        except SdkFailure as e:
-            if action == "wait":
-                self._failure = e
-                self._terminal_failure = e.code not in {"REQUEST_EXPIRED", "CLIENT_EXPIRED", "HOST_RESTARTED",
-                    "HOST_CLOSED", "HOST_PANICKED", "INVALID_REFERENCE", "NO_PENDING_REQUEST", "RESYNC_REQUIRED"}
-                if self._on_terminal is not None:
-                    self._on_terminal(False if self._terminal_failure else None)
-            raise
+    def _request_unknown(self, action: str, error: OutcomeUnknown) -> None:
+        super()._request_unknown(action, error)
+        if action == "wait" and self._on_terminal is not None:
+            self._on_terminal(None)
+
+    def _request_failed(self, action: str, error: BaseException) -> None:
+        if action == "wait" and isinstance(error, SdkFailure) and not isinstance(error, (Busy, JobTimeout)):
+            self._failure = error
+            self._terminal_failure = error.code not in {"REQUEST_EXPIRED", "CLIENT_EXPIRED", "HOST_RESTARTED",
+                "HOST_CLOSED", "HOST_PANICKED", "INVALID_REFERENCE", "NO_PENDING_REQUEST", "RESYNC_REQUIRED"}
+            if self._on_terminal is not None:
+                self._on_terminal(False if self._terminal_failure else None)
+
+    def _remaining(self) -> float | None:
+        return None if self._deadline is None else max(0., self._deadline - time.monotonic())
 
     def _wait_value(self, raw: object) -> T:
         # A recovered sampled transfer can be a poll taken before completion.
         # Its empty result is not a sample; continue polling the accepted job.
         if raw is None and self._kind == "sampled":
-            raw = self._backend.wait(self._token, self._kind, self)
+            raw = self._backend.wait(self._token, self._kind, self, timeout=self._remaining())
         if "result" in record(raw):
             from ._errors import unwrap
             info = record(raw)
             if info["result"] is None:
-                return self._wait_value(self._backend.wait(self._token, self._kind, self))
+                return self._wait_value(self._backend.wait(self._token, self._kind, self, timeout=self._remaining()))
             try:
                 raw = unwrap(info["result"])
             except SdkFailure as e:
@@ -102,24 +84,25 @@ class Job(RecoveryOwner, Generic[T]):
             self._on_terminal(True)
         return result
 
-    def wait(self) -> T:
+    def wait(self, *, timeout: float | None = None) -> T:
+        """Wait for and cache the actual terminal result, releasing its slot.
+
+        None waits indefinitely. A finite nonnegative timeout raises JobTimeout
+        while preserving the accepted Job. Transport loss raises OutcomeUnknown
+        for the complete original wait, which can be recovered without replay.
+        A pending cancel/status request must be recovered before waiting.
+        """
+        if timeout is not None and (isinstance(timeout, bool) or not isinstance(timeout, (int, float))
+                or not math.isfinite(timeout) or timeout < 0):
+            raise ValueError("timeout must be None or a finite nonnegative number")
         if self._failure is not None:
             raise self._failure
         if self._result is not None:
             return self._result[0]
-        try:
-            return self._request("wait", lambda: self._backend.wait(self._token, self._kind, self), self._wait_value)
-        except OutcomeUnknown as e:
-            # A wait timeout has no pending wire request; the accepted Job is
-            # still queryable by its stable identity.
-            if self.pending_request is None:
-                e._resume = self.wait
-            raise
-        except Busy:
-            raise
-        except SdkFailure as e:
-            self._failure = e
-            raise
+        if self.pending_request is None:
+            self._deadline = None if timeout is None else time.monotonic() + timeout
+        return self._request("wait", lambda: self._backend.wait(self._token, self._kind, self,
+                            timeout=self._remaining()), self._wait_value)
 
     def cancel(self) -> None:
         """Request cancellation. Wait still reports the actual entered-IO result."""
@@ -143,7 +126,7 @@ class Job(RecoveryOwner, Generic[T]):
 
     def close(self) -> None:
         """Wait for the actual outcome and release its Runtime result slot."""
-        self.wait()
+        project(self.wait, lambda _: None, operation="job.close")
 
     def __enter__(self) -> "Job[T]":
         return self
@@ -174,8 +157,18 @@ class Runtime:
             if exception is None:
                 raise
             exception.add_note(f"Runtime cleanup failed: {cleanup}")
-    def close(self) -> None:
-        self._backend.close()
+    def close(self, *, abandon_pending: bool = False) -> None:
+        """Release this client/Local Runtime; pending recovery defaults to Busy.
+
+        Explicit abandon_pending disconnects and forfeits pending recovery.
+        It never changes identity to replay an unknown write. Connected sessions
+        remain resident; entered host Jobs retain their actual outcome.
+        """
+        def resume() -> None:
+            if self._backend.pending(self._backend) is None:
+                raise SdkFailure("NO_PENDING_REQUEST", "Runtime close has already been resolved")
+            self._backend.close(abandon_pending=abandon_pending)
+        known(lambda: self._backend.close(abandon_pending=abandon_pending), resume)
     def events_since(self, cursor: events.Cursor, *, limit: int = 128) -> tuple[events.Event, ...]:
         events.check_limit(limit)
         return known(lambda: events.batch(self._backend.events(cursor, limit, self), cursor),
@@ -346,9 +339,10 @@ class EditableParameters(Parameters):
         super().__init__(session, edit)
         self._owner = edit
     def create(self, spec: parameters.ParameterSpec) -> str:
-        return self._owner.apply(ops.CreateParameter(spec)).ids[0]
+        return project(lambda: self._owner._construct_and_apply(lambda: ops.CreateParameter(spec)),
+                       single_id, operation="parameters.create", inputs=(spec,))
     def patch(self, id: str, patch: parameters.Patch) -> WriteResult:
-        return self._owner.apply(ops.PatchParameter(id, patch))
+        return self._owner._construct_and_apply(lambda: ops.PatchParameter(id, patch))
 
 class Bindings:
     def __init__(self, session: Session, edit: "Edit | None" = None):
@@ -376,9 +370,10 @@ class EditableBindings(Bindings):
         super().__init__(session, edit)
         self._owner = edit
     def create(self, spec: bindings.MeshBindingSpec) -> str:
-        return self._owner.apply(ops.CreateMeshBinding(spec)).ids[0]
+        return project(lambda: self._owner._construct_and_apply(lambda: ops.CreateMeshBinding(spec)),
+                       single_id, operation="bindings.create", inputs=(spec,))
     def set_keyform(self, id: str, keyform: bindings.Keyform) -> WriteResult:
-        return self._owner.apply(ops.SetMeshKeyform(id, keyform))
+        return self._owner._construct_and_apply(lambda: ops.SetMeshKeyform(id, keyform))
 
 class Scene:
     def __init__(self, session: Session, edit: "Edit | None" = None):
@@ -394,8 +389,8 @@ class Scene:
             lambda: scene.Batch.read(s._backend.recover(self)))
 
     def get(self, id: str) -> scene.Snapshot:
-        batch = self.get_many((id,))
-        return scene.Snapshot(batch.source, batch.items[0])
+        return project(lambda: self.get_many((id,)), lambda batch: scene.Snapshot(batch.source, batch.items[0]),
+                       operation="scene.get", inputs=(id,))
 
     def plan(self, operation: scene.Operation) -> plans.Plan:
         s = self._session
@@ -445,12 +440,26 @@ class Modeling:
             None if self._edit is None else self._edit._token, owned, checks, expected, self)),
             lambda: sampling.Batch.read(s._backend.recover(self)))
 
-class Edit:
+class EditState(str, Enum):
+    editing = "editing"
+    committing = "committing"
+    committed = "committed"
+    cancelled = "cancelled"
+    aborted = "aborted"
+    failed = "failed"
+    unknown = "unknown"
+
+
+class Edit(RecoveryOwner):
     def __init__(self, session: Session, label: str):
-        self._session, self._backend = session, session._backend
+        super().__init__(session._backend)
+        self._session = session
         self._token: object = None
-        self._state = "starting"
-        self._action = "begin"
+        self._state = EditState.editing
+        self._receipt: Receipt | None = None
+        self._unknown: OutcomeUnknown | None = None
+        self._failure: BaseException | None = None
+        self._released = False
         self._job: Job[Receipt] | None = None
         self.meshes = EditableMeshes(session, self)
         self.resources = EditableImages(session, self)
@@ -458,60 +467,103 @@ class Edit:
         self.bindings = EditableBindings(session, self)
         self.modeling = Modeling(session, self)
         self.scene = Scene(session, self)
-        try:
-            self._token = self._backend.begin(session._token, label, self)
-        except OutcomeUnknown as e:
-            self._state = "unknown"
-            self._bind_unknown(e)
-            raise
-        self._state = "editing"
+        def begun(raw: object) -> "Edit":
+            self._token, self._state = raw, EditState.editing
+            self._unknown = None
+            return self
+        self._run("begin", lambda: self._backend.begin(session._token, label, self), begun, (label,))
 
-    def _bind_unknown(self, error: OutcomeUnknown) -> None:
-        expected, action = error.pending, self._action
-        def resume() -> "Edit | WriteResult | Receipt | None":
-            pending = self._job.pending_request if action == "wait" and self._job is not None else self.pending_request
-            if self._action != action or (pending is not None and pending != expected):
-                raise SdkFailure("NO_PENDING_REQUEST", "This Edit request has already been resolved")
-            return self.recover()
-        error._resume = resume
+    @property
+    def state(self) -> EditState:
+        """Cached confirmed or unknown client state; no request is sent."""
+        return self._state
+
+    @property
+    def receipt(self) -> Receipt | None:
+        """Cached confirmed commit receipt, or None before success/after cancel."""
+        return self._receipt
+
+    def _run(self, action: str, execute: Callable[[], object], decode: Callable[[object], T],
+             inputs: tuple[object, ...] = ()) -> T:
+        def unknown(error: OutcomeUnknown) -> None:
+            self._unknown = error
+            if self._state != EditState.aborted:
+                self._state = EditState.unknown
+        request = Call("edit." + action, execute, decode, resume=lambda: self._backend.recover(self),
+                       inputs=inputs, on_unknown=unknown, on_error=lambda error: self._write_error(action, error))
+        self._call = request
+        return request.run()
+
+    def _write_error(self, action: str, error: BaseException) -> None:
+        self._unknown = None
+        if isinstance(error, Busy) or (isinstance(error, SdkFailure)
+                and error.code in {"BUDGET_EXCEEDED", "RESOURCE_BUDGET_EXCEEDED"} and error.edit_state == "editing"):
+            self._state = EditState.editing
+            return
+        if action == "release" or (isinstance(error, SdkFailure) and error.code in {
+                "REQUEST_EXPIRED", "CLIENT_EXPIRED", "HOST_RESTARTED", "HOST_CLOSED", "HOST_PANICKED", "NO_PENDING_REQUEST"}):
+            if self._state != EditState.aborted:
+                self._state = EditState.failed
+            self._failure = error
+            return
+        if action in {"apply", "commit"}:
+            self._poison(error)
 
     def __enter__(self) -> "Edit":
         self._ensure_editing()
         return self
 
     def _ensure_editing(self) -> None:
-        if self._state != "editing":
-            raise SdkFailure("EDIT_ABORTED" if self._state == "aborted" else "EDIT_CLOSED",
-                f"Edit is {self._state}")
+        if self._state != EditState.editing:
+            raise SdkFailure("EDIT_ABORTED" if self._state == EditState.aborted else
+                "OUTCOME_UNKNOWN" if self._state == EditState.unknown else "EDIT_CLOSED",
+                f"Edit is {self._state.value}", edit_state=self._state.value)
 
     def _poison(self, original: BaseException) -> None:
-        self._state = "aborted"
+        self._state, self._failure = EditState.aborted, original
+        if isinstance(original, SdkFailure):
+            original.edit_state, original.recovery_action = "aborted", "restart_edit"
         try:
             self._release()
         except BaseException as cleanup:
+            if isinstance(original, SdkFailure) and isinstance(cleanup, OutcomeUnknown):
+                original.cleanup = cleanup
+            else:
+                original.__context__ = cleanup
             original.add_note(f"Candidate cleanup failed: {cleanup}")
 
     def _release(self) -> None:
-        self._action = "release"
-        try:
-            self._backend.release(self._token, self)
-        except OutcomeUnknown as e:
-            if self._state != "aborted":
-                self._state = "unknown"
-            self._bind_unknown(e)
-            raise
+        if self._released:
+            return
+        def released(_: object) -> None:
+            self._released, self._unknown = True, None
+            if self._state != EditState.aborted:
+                self._state = EditState.cancelled
+        self._run("release", lambda: self._backend.release(self._token, self), released)
 
     def apply(self, operation: ops.Operation) -> WriteResult:
         return self.apply_many((operation,))
+
+    def _construct_and_apply(self, construct: Callable[[], ops.Operation]) -> WriteResult:
+        self._ensure_editing()
+        try:
+            operation = construct()
+        except Exception as error:
+            self._poison(error)
+            raise
+        return self.apply(operation)
 
     def apply_plan(self, plan: plans.Plan) -> WriteResult:
         return self.apply(ops.ApplyPlan(plan))
 
     def apply_many(self, operations: Sequence[ops.Operation]) -> WriteResult:
         self._ensure_editing()
-        self._action = "apply"
         try:
             owned = tuple(operations)
+        except (TypeError, ValueError, OverflowError, AttributeError) as error:
+            self._poison(error)
+            raise
+        def execute() -> object:
             if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan, ops.CreateParameter, ops.PatchParameter, ops.CreateMeshBinding, ops.SetMeshKeyform, *ops.scene.OPERATION_TYPES, *modeling.OPERATION_TYPES)) for op in owned):
                 raise TypeError("Expected typed authoring operations")
             for op in owned:
@@ -520,125 +572,80 @@ class Edit:
                     op.image._check(self._backend)
                 elif isinstance(op, ops.ApplyPlan):
                     op.plan._check(self._backend)
-            return WriteResult.read(self._backend.apply(self._token, owned, self))
-        except OutcomeUnknown as e:
-            self._state = "unknown"
-            self._bind_unknown(e)
-            raise
-        except Busy:
-            raise
-        except SdkFailure as e:
-            if e.code not in {"BUDGET_EXCEEDED", "RESOURCE_BUDGET_EXCEEDED"} or e.edit_state != "editing":
-                self._poison(e)
-            raise
-        except (TypeError, ValueError, OverflowError, AttributeError) as e:
-            self._poison(e)
-            raise
+            return self._backend.apply(self._token, owned, self)
+        def applied(raw: object) -> WriteResult:
+            value = WriteResult.read(raw)
+            self._state, self._unknown = EditState.editing, None
+            return value
+        return self._run("apply", execute, applied, owned)
 
     def _finished(self, success: bool | None) -> None:
         if success is None:
-            self._state, self._action = "unknown", "wait"
+            if self._job is not None and self._job._failure is not None:
+                self._state, self._failure = EditState.failed, self._job._failure
+                self._unknown = None
+            else:
+                self._state = EditState.unknown
+                self._unknown = None if self._job is None else self._job._unknown_error
         else:
-            self._state = "committed" if success else "failed"
+            self._state = EditState.committed if success else EditState.failed
+            self._unknown = None
+            if success and self._job is not None and self._job._result is not None:
+                self._receipt = self._job._result[0]
+            elif self._job is not None:
+                self._failure = self._job._failure
 
     def commit(self) -> Job[Receipt]:
         self._ensure_editing()
-        self._action = "commit"
-        try:
-            token = self._backend.commit(self._token, self)
-        except OutcomeUnknown as e:
-            self._state = "unknown"
-            self._bind_unknown(e)
-            raise
-        self._state = "committing"
-        self._job = Job(self._backend, token, "published", Receipt.read, self._finished)
-        return self._job
+        def accepted(raw: object) -> Job[Receipt]:
+            self._job = Job(self._backend, record(raw)["job"], "published", Receipt.read, self._finished)
+            self._state, self._unknown = EditState.committing, None
+            return self._job
+        return self._run("commit", lambda: dict(job=self._backend.commit(self._token, self)), accepted)
 
     def cancel(self) -> None:
-        if self._state == "unknown":
-            raise SdkFailure("OUTCOME_UNKNOWN", "Recover this Edit before cleanup")
-        if self._state in {"cancelled", "committed", "failed"}:
+        if self._state == EditState.unknown or self.pending_request is not None:
+            raise Busy("BUSY", "Recover the original Edit call before cleanup", edit_state=self._state.value,
+                       recovery_action="recover_original")
+        if self._state in {EditState.cancelled, EditState.committed, EditState.failed}:
             return
-        if self._state == "committing":
-            raise Busy("BUSY", "Accepted commit must complete before its outcome is known")
+        if self._state == EditState.committing:
+            raise Busy("BUSY", "Accepted commit must complete before cleanup")
         self._release()
-        self._state = "cancelled"
-
-    @property
-    def pending_request(self) -> PendingRequest | None:
-        return self._backend.pending(self)
-
-    def recover(self) -> "Edit | WriteResult | Receipt | None":
-        if self._state != "unknown" and not (self._state == "aborted" and self._action == "release" and self.pending_request is not None):
-            raise SdkFailure("NO_PENDING_REQUEST", "Edit has no unknown result")
-        if self._action == "wait" and self._job is not None:
-            result = self._job.wait()
-            self._state = "committed"
-            return result
-        try:
-            raw = self._backend.recover(self)
-        except OutcomeUnknown as e:
-            self._bind_unknown(e)
-            raise
-        except Busy:
-            # A recovered admission refusal resolves the wire request without
-            # consuming the candidate. It has the same retry semantics as a
-            # Busy response received by the original apply/commit call.
-            if self.pending_request is None and self._action in {"apply", "commit"}:
-                self._state = "editing"
-            raise
-        except SdkFailure as e:
-            if e.code not in {"REQUEST_EXPIRED", "HOST_RESTARTED", "CLIENT_EXPIRED", "NO_PENDING_REQUEST"}:
-                if e.code == "BUDGET_EXCEEDED" and e.edit_state == "editing":
-                    self._state = "editing"
-                else:
-                    self._poison(e)
-            raise
-        if self._action == "apply":
-            self._state = "editing"
-            return WriteResult.read(raw)
-        if self._action == "begin":
-            self._token = raw
-            self._state = "editing"
-            return self
-        if self._action == "release":
-            self._state = "cancelled"
-            return None
-        if self._action == "commit":
-            self._job = Job(self._backend, record(raw)["job"], "published", Receipt.read, self._finished)
-            self._state = "committing"
-            result = self._job.wait()
-            self._state = "committed"
-            return result
-        raise SdkFailure("INVALID_RECOVERY", "Unknown edit recovery action")
 
     def __exit__(self, kind: object, exception: BaseException | None, traceback: object) -> None:
-        if self._state == "unknown":
-            return
-        if isinstance(exception, OutcomeUnknown):
-            if self._job is not None:
-                self._state, self._action = "unknown", "wait"
-            return
         if exception is not None:
+            if self._state == EditState.unknown or isinstance(exception, (OutcomeUnknown, JobTimeout)) or self.pending_request is not None:
+                exception.add_note("Edit outcome/cleanup remains owned by the original call or accepted Job")
+                return
             try:
-                self.cancel()
+                if self._state == EditState.committing and self._job is not None:
+                    self._job.wait()
+                else:
+                    self.cancel()
             except BaseException as cleanup:
                 exception.add_note(f"Candidate cleanup failed: {cleanup}")
             return
-        if self._state == "aborted":
-            failure = SdkFailure("EDIT_ABORTED", "Caught failure made this candidate uncommittable")
-            try:
-                self.cancel()
-            except BaseException as cleanup:
-                failure.add_note(f"Candidate cleanup failed: {cleanup}")
+        if self._state == EditState.aborted:
+            failure = SdkFailure("EDIT_ABORTED", "Caught failure made this candidate uncommittable", edit_state="aborted")
+            if self._unknown is not None:
+                failure.cleanup = self._unknown
+                failure.add_note("Candidate cleanup retains a recoverable original request")
             raise failure
-        if self._state == "editing":
+        if self._state == EditState.unknown and self._unknown is not None:
+            raise self._unknown
+        pending = self._backend.pending_error()
+        if pending is not None:
+            # A read or independent preparation has its own complete return
+            # contract. Keep that owner and leave this candidate editable.
+            raise pending
+        if self._job is not None and self._job.pending_request is not None and self._job._unknown_error is not None:
+            raise self._job._unknown_error
+        if self._state == EditState.editing:
             self.commit()
-        if self._state == "committing" and self._job is not None:
-            try:
-                self._job.wait()
-            except OutcomeUnknown as e:
-                self._state, self._action = "unknown", "wait"
-                self._bind_unknown(e)
-                raise
-            self._state = "committed"
+        if self._state == EditState.committing and self._job is not None:
+            self._job.wait()
+        if self._state not in {EditState.committed, EditState.cancelled}:
+            if self._failure is not None:
+                raise self._failure
+            raise SdkFailure("EDIT_CLOSED", "Edit did not reach a confirmed terminal state", edit_state=self._state.value)

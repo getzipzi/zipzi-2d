@@ -43,6 +43,8 @@ arguments and output paths.
 | `test-sdk.sh` | SDK fast, mesh, regression, stress, Python, wheel and full gates |
 | `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
 | `python/test_python.py` | Refresh Debug Python extension or build/validate an isolated Release wheel |
+| `python/python2_contract.py` | P3A inventory, source/artifact freeze, complete target map/signatures, agent configuration and P3A-0 exit gate |
+| `python/python2_pairs.py` | Counterbalanced comparisons of frozen Python2 clients/Release binaries with the unchanged P0 workload and thresholds |
 | `../crates/zipzi-python2/tools/connected.py` | Build/install the independent pure client; real subprocess startup/session acceptance; `--install-only` supplies Editor's interpreter |
 | `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
 | `dev-editor.sh` | Editor development watcher and process lifecycle |
@@ -223,6 +225,47 @@ P0/P1 tools under `crates/zipzi-python2/tools/`. `test.py` builds its native ada
 and validates Local/Connected behavior and public static types; `baseline.py`
 measures this package's selected workloads. `./tools/test-sdk.sh python2` is the
 repository entrypoint.
+
+Generated JSON inventories and reports belong under `target/`; plan directories
+retain Markdown acceptance results only.
+
+P3A starts with an explicit failure baseline, separate from the current API's
+passing behavior suite. The following commands already exist; use a new output
+filename for each run. `baseline` exits nonzero for failures, errors, skips or
+changed inputs and still records the results. It does not rebuild fixtures or
+claim installed-package, agent, performance or Editor acceptance.
+
+```sh
+uv run --locked python tools/python/python2_contract.py inventory --output target/python2/p3a-inventory.json
+uv run --locked python tools/python/python2_contract.py freeze --output target/python2/p3a-freeze.json
+./tools/test-sdk.sh python2 PythonSdk.test_shared_recipe
+uv run --locked python tools/python/python2_contract.py baseline --output target/python2/p3a-baseline.json
+uv run --locked python tools/test_tools.py -p test_python2_contract.py -v
+```
+
+`freeze --wheel /absolute/path/to/package.whl` records exact wheel identities;
+repeat for both distributions. `--native`, `--host` and `--editor` select explicit
+artifacts. Missing artifacts are recorded as missing, never as verified. The
+inventory includes incidental exports for later removal review; `needs_review`
+entries are not an approved final API catalogue.
+
+`targets` writes the reviewed destination and full signature for every original
+public path; `configure` freezes the G01–G08 experiment inputs without starting
+agents. `check-freeze` validates both, the original failure evidence and copied
+Release P0 binaries. See the [P3A-0 record](../docs/plans/python-sdk-rewrite/p3a-0.md)
+for the completed acceptance result. Historical JSON artifacts have been removed
+from the plan directories. These one-off historical checks require their original
+inputs under `target/python2/p3a-reports/`; they are not prerequisites for later
+implementation. Do not recreate removed reports merely to repeat an accepted stage.
+
+`./tools/test-sdk.sh python2 --recovery` runs the focused P3A-1 module and strict
+positive/negative types. The ordinary `python2` gate includes that module.
+`python/python2_pairs.py --help` describes the layout for two copied client/Release
+trees. Pairing uses the original workload and policy, alternates AB/BA, measures
+latency before separate probes, records every run and rejects noise. Preserve
+historical failures when diagnosing environment drift; paired evidence does not
+overwrite them.
+
 `runtime/check_editor_boundary.py` checks the R2 Editor ownership boundary;
 `runtime/editor_benchmark_pairs.py` runs five alternating prebuilt Release pairs,
 and `runtime/editor_benchmark_report.py` applies the frozen per-operation gates.

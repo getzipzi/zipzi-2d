@@ -4,6 +4,20 @@ Pure Python authoring client. Import as `zipzi`. The optional
 `zipzi-python2-native` distribution supplies `zipzi_native._native` for
 `zipzi.local()`; connected clients can import and run without it.
 
+Recovery resumes one complete public call with its original request identity:
+creation returns an ID and `edit.commit()` returns a `Job`, including after a
+lost response. `zipzi.recover_call(bound_sdk_method, ...)` preserves the method's
+static type, invokes it once and recovers once. Otherwise retain the owning
+`OutcomeUnknown` and call its `recover()`; there is no `Edit.recover` method.
+`edit.state` and `edit.receipt` are cached observations. Context exit requires
+confirmed commit or explicit cancellation and raises a caught unknown result
+again. `job.wait(timeout=None)` waits until terminal; a finite timeout raises
+`JobTimeout` while the accepted Job remains usable. Close an unresolved Runtime
+only after recovery or with explicit `abandon_pending=True`.
+
+The native/host pairing is `zipzi-python2-11` / `zipzi-runtime-p3a-1`; rebuild
+adapters and hosts together after a contract change.
+
 See the [package source](https://github.com/getzipzi/zipzi-2d/tree/main/crates/zipzi-python2)
 for the currently implemented scope and validation commands.
 

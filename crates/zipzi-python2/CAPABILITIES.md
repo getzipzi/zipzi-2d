@@ -22,7 +22,8 @@ fixed geometry/history and the independent Rust SDK tests.
 | Immutable query | `session/edit.meshes.get` | `Runtime::mesh_snapshot` | Source relationship, fixed geometry, frozen values; Runtime budget/session tests | Implemented |
 | Commit/Undo/Redo | Edit context, explicit Jobs | Runtime request/completion routes | One publication, no-op/cancel preserves redo | Implemented |
 | Save/open | Project/Sessions Jobs | `request_save/request_open` | Save, close host, reopen and compare geometry/history | Implemented |
-| Error/recovery ownership | Pure Python errors, `recover()` | Protocol request retention before shared handler | Apply/commit/Job/read/start/cleanup loss; foreign recovery owner refused | Implemented |
+| Complete-call recovery | `OutcomeUnknown.recover`, typed `recover_call`, cached Edit state/receipt | Protocol retains original request; common Python Call applies the complete return projection | Four create IDs, scene get, commit Job, wait/close, repeated loss, old-exception guard and independent owner tests | P3A-1 accepted; final performance noise waived by user |
+| Known Job timeout | `job.wait(timeout=...)`, `JobTimeout` | Native/Connected nonterminal observation; real wire loss stays unknown | Both backends, no fake request 0, no implicit cancellation, cached result/receipt | P3A-1 accepted |
 | Job lifecycle | `state/cancel/wait/close` | Runtime Job table + owner completion | Queued/entered IO cancellation, real IO and worker failures, retained-slot budget, exact recovery owner | Selected P1 implemented |
 | Explicit client close | Runtime close, same-ID acknowledgment recovery | `release_client` / LocalHost shutdown | Immediate client lease cleanup, formal preservation, entered IO finishes; last native owner releases lock | Selected P1 implemented |
 | Native blocking/lifetime | Job wait, close, destruction | Local owner + CPU workers | Native waits, idempotent close, Rust completion/last-owner tests | Implemented |
@@ -56,4 +57,10 @@ CPU/GPU and platform work remains in its own phases. Implemented source APIs and
 separately. New capabilities require explicit handlers and independent evidence;
 there are no generated unsupported-operation placeholders.
 
-Current R4 implementation and acceptance: [complete record](../../docs/plans/sdk-runtime/python2-r4-complete.md). Python P3A remains a separate upcoming API/agent-contract refactor.
+Current R4 implementation and acceptance: [complete record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
+Python [P3A-0](../../docs/plans/python-sdk-rewrite/p3a-0.md) has passed its freeze gate.
+[P3A-1](../../docs/plans/python-sdk-rewrite/p3a-1.md) implements complete-call recovery,
+cached state and JobTimeout with source/type/installed evidence. P3A-1 is accepted;
+the user waived this round's final performance noise blocker. Raw failed measurements
+and the original P0 policy remain unchanged.
+P3A-2–6 and the overall API/agent contract remain unaccepted.

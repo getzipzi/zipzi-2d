@@ -28,7 +28,7 @@ Native 合约为 `zipzi-python2-10`，IPC 为 `zipzi-runtime-r4-3`。二进制 f
 
 ## 可复现命令与产物
 
-从仓库根运行，原生 Editor 命令清除 `ZIPZI_DEV_SESSION_DIR`。机器可读结果保存在同目录的 [python2-r4-complete-results.json](python2-r4-complete-results.json)；日志、原始每样本数据和二进制保存在 `target/python2/`，结果记录它们的 SHA256 和命令。
+从仓库根运行，原生 Editor 命令清除 `ZIPZI_DEV_SESSION_DIR`。本页保留验收结果；临时日志、样本及二进制位于 `target/python2/`，历史 JSON 产物已清理。
 
 ```sh
 cargo test --locked -p zipzi-runtime
@@ -54,7 +54,7 @@ P0 六项脚本保持原测量方法，额外重采正常 Release 与独立探�
 
 ## 本轮收尾结论
 
-主体连接能力、73 项两后端行为与严格类型、15 项隔离连接、配对源码包/wheel、真实 Editor/Metal 均已有通过记录。真实模型 UI 的完整十对控制通过全部 145 项；65,536 顶点数组的五对测量也已完成。以上 Release/安装记录均对应最后布局修复之前的冻结产物，产物及哈希见机器可读结果。
+主体连接能力、73 项两后端行为与严格类型、15 项隔离连接、配对源码包/wheel、真实 Editor/Metal 均已有通过记录。真实模型 UI 的完整十对控制通过全部 145 项；65,536 顶点数组的五对测量也已完成。以上 Release/安装记录均对应最后布局修复之前的冻结产物，本页保留其验收范围和结果。
 
 P0 额外发现 Native `batch_100` 的 P50/堆峰值和 `plan` 堆峰值回归。修复将完整 Modeling 命令放到 Box 中，避免每个普通操作占用 688 字节；LocalHost 邮箱也改为持有 Box<Completion>，避免普通调用槽内联整个正式 Session。透明 Box 的二进制布局/签名和成本预检有独立回归，最新 Runtime 回归已通过。**这些修复尚未重建 Release 并复验 P0，也未再次产出最终安装包；不能据此宣称回归已消除。**
 

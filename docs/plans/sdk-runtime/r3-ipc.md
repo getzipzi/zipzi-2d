@@ -1,7 +1,7 @@
 # R3：本机 IPC 与 Python 最小闭环
 
 日期：2026-10-24。状态：**R3 最小切片已交付**。R4–R7 尚未开始。
-机器可读结果见 [r3-results.json](r3-results.json)，逐入口覆盖见
+验收结果见本页，逐入口覆盖见
 [r3-coverage.json](../../runtime/r3-coverage.json)。本阶段不声明完整 modeling、
 animation、Preview、资源或 Proposal 覆盖。
 

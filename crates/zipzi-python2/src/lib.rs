@@ -172,7 +172,10 @@ fn error<'py>(
         HostError::Closed => "HOST_CLOSED",
         HostError::Panicked => "HOST_PANICKED",
         HostError::Runtime(e) => match e {
-            RuntimeError::Budget(_) => "BUDGET_EXCEEDED",
+            RuntimeError::Budget(name) => {
+                d.set_item("limit_name", name)?;
+                "BUDGET_EXCEEDED"
+            }
             RuntimeError::Aborted => "EDIT_ABORTED",
             RuntimeError::InvalidReference => "INVALID_REFERENCE",
             RuntimeError::WrongOwner => "WRONG_OWNER",
@@ -301,7 +304,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-10"
+        "zipzi-python2-11"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
@@ -579,10 +582,31 @@ impl NativeRuntime {
     }
     fn commit(&self, py: Python<'_>, edit: &EditToken) -> PyResult<Py<PyDict>> {
         let (client, edit) = (self.client, edit.id);
-        let value = py.detach(|| self.host.call(move |rt| rt.request_commit(client, edit)));
-        reply(py, value, "edit.commit", |id| {
+        let (value, state) = py
+            .detach(|| {
+                self.host.call(move |rt| {
+                    let result = rt.request_commit(client, edit);
+                    let state = rt.edit_state(client, edit).ok();
+                    Ok((result, state))
+                })
+            })
+            .map(|(value, state)| (value.map_err(HostError::Runtime), state))
+            .unwrap_or_else(|error| (Err(error), None));
+        let result = reply(py, value, "edit.commit", |id| {
             Ok(Py::new(py, JobToken { id })?.into_bound(py).into_any())
-        })
+        })?;
+        if let Some(error) = result.bind(py).get_item("error")? {
+            error.set_item(
+                "edit_state",
+                match state {
+                    Some(EditState::Editing) => "editing",
+                    Some(EditState::Prepared) => "prepared",
+                    Some(EditState::Aborted) => "aborted",
+                    None => "consumed",
+                },
+            )?;
+        }
+        Ok(result)
     }
     fn save(&self, py: Python<'_>, session: &SessionToken, path: &str) -> PyResult<Py<PyDict>> {
         let _input = input_lease!(

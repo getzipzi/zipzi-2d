@@ -43,6 +43,25 @@ from the importing interpreter. Tests never load Cargo's mutable output in place
 The package currently targets CPython `>=3.14,<3.15`; source acceptance is on
 macOS/Unix. Other platform/version claims require separate CI evidence.
 
+## P3A target-contract baseline
+
+P3A-0 has a frozen symbol map, signatures, experiment configuration and Release
+baseline. P3A-1 is accepted with complete-call recovery, cached Edit state/receipt
+and known Job timeouts; this round's final performance noise blocker was waived by
+the user. See the [acceptance record](../../docs/plans/python-sdk-rewrite/p3a-1.md). Remaining target regressions in `tests/test_p3a_contract.py`
+continue separately while later P3A tasks are implemented. After refreshing fixtures
+with `./tools/test-sdk.sh python2`, run from the repository root:
+
+```sh
+uv run --locked python tools/python/python2_contract.py baseline --output target/python2/p3a-baseline.json
+./tools/test-sdk.sh python2 --recovery
+```
+
+This command preserves every failure and returns a nonzero status until the
+selected contracts pass. Use a new output path for every run. Inventory/freeze
+commands and their limits are documented in [tools](../../tools/README.md).
+The examples below continue to describe the current API, not the P3A target.
+
 ## Selected code generation
 
 P2 derives mesh, image and Plan values/operations, codecs, query signatures and
@@ -104,11 +123,20 @@ write makes its candidate uncommittable even when caught. Admission refusal is
 distinct from execution failure.
 
 Jobs must be waited or closed to release their bounded result slots. Their actual
-result is cached locally. `close()`/context exit waits; it does not claim to cancel
-already entered work. Keep an Edit and call `edit.recover()` after a lost write
-response, or call `OutcomeUnknown.recover()` on creation, reads and Job startup.
-Lost terminal Job queries recover through `job.wait()` or the owning exception.
-Recovery uses the original immutable request bytes and request ID.
+result is cached locally. `close()`/context exit waits for entered work. A lost
+response raises `OutcomeUnknown`; its `recover()` returns the complete original
+method's runtime result: creation returns an ID and commit returns `Job[Receipt]`.
+For exact static types use `zipzi.recover_call(edit.meshes.create, spec)` (or another
+registered bound SDK request method). It invokes the method once and recovers
+once; business functions/lambdas are rejected before execution. Recovery uses
+the original immutable request bytes and request ID. There is no `Edit.recover`.
+
+`edit.state: EditState` and `edit.receipt: Receipt | None` read cached confirmed
+state without IO. A caught unknown outcome is raised again on normal context
+exit; normal exit requires confirmed commit or explicit cancellation. Ordinary
+write/conversion errors still abort the candidate. `job.wait(timeout=None)` waits
+until terminal; a finite nonnegative timeout raises `JobTimeout`, retains the
+known accepted Job and does not cancel it. Transport loss remains OutcomeUnknown.
 
 ## Images and source-bound plans
 
@@ -145,7 +173,8 @@ after a confirmed outcome. Runtime shutdown or client expiry releases remaining
 leases. This first control-transport slice limits RGBA payloads to **1 MiB**;
 binary buffers and larger images belong to P4.
 
-The native contract is `zipzi-python2-7`. Connected hosts must advertise
+The current native/IPC pairing is listed under Complete Runtime R4 routes below.
+Connected hosts must advertise
 `typed_meshes`, `typed_resources_plans`, `typed_resource_values`, `typed_job_lifecycle`, `typed_parameters`,
 `typed_event_pages`, `typed_mesh_batch`, `typed_mesh_bindings` and `typed_modeling_samples`; a mismatched host is rejected during
 connection.
@@ -157,8 +186,9 @@ Recover a lost cancel/status response before waiting or taking another action.
 
 Explicit Connected shutdown releases unsubmitted candidates, prepared images and
 Plans while retaining formal sessions. Entered Jobs finish on the host. Closing
-with another unresolved request disconnects and leaves cleanup to grace expiry;
-it does not send a new write ID or guess the unknown outcome. A lost close
+with another unresolved request raises Busy. Explicit
+`runtime.close(abandon_pending=True)` disconnects and forfeits recovery; cleanup
+follows host expiry without a new write ID. A lost close
 acknowledgment has its own recovery owner.
 
 The lifecycle matrix is recorded in the
@@ -307,7 +337,7 @@ release their tables. Every create/read/plan/close retains its own recovery owne
 
 ## Complete Runtime R4 routes
 
-The native pairing contract is `zipzi-python2-10`; IPC is `zipzi-runtime-r4-3`.
+The native pairing contract is `zipzi-python2-11`; IPC is `zipzi-runtime-p3a-1`.
 Rebuild both adapters and hosts after contract changes. Compiled Rust serde
 shapes generate `zipzi.modeling`, native constructors/writers and the binary
 array codec. `edit.apply` accepts the full `ModelingCommand` family, including
@@ -358,7 +388,6 @@ remains a separate stage.
 ./tools/test-sdk.sh python2 --release --instrumented
 uv run --locked python crates/zipzi-python2/tools/baseline.py \
   --output target/python2/baseline-first
-# Later runs can add --compare docs/plans/python-sdk-rewrite/p0-p1-baseline.json
 ```
 
 The first measurements cover selected queries, single writes, 100-operation

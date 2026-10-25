@@ -49,7 +49,7 @@ cargo test --locked -p zipzi-runtime --test authoring --test protocol
 
 源码 runner 已自动执行生成漂移检查。6 项仓库工具用例独立验证确定性、只检查不写入、先检查再写入、保护手写文件、拒绝文件及父目录 symlink、拒绝非法声明、同一字段变化传播到 Python/wire/原生，以及真实 Rust 正/反编译（含结构/字段/枚举 serde 改名拒绝）；没有生成行为预期。原有 36 项两后端行为与故障用例、严格正例和三条精确类型反例继续通过。SDK 8 项网格聚焦测试及 Runtime authoring/protocol 11 项通过。
 
-[P0 独立比较](p0-p2-mesh-check.json)使用原冻结基线与原工作负载脚本，5 个计时和 5 个探针进程分别覆盖两后端；`comparison` 为空，噪声未超阈值。Rust JSON 文本编解码/Value 构造在 Local 路径仍为零。复制、物化和堆指标继续沿用 P0 的明确统计范围，不以代码行数或逻辑输入字节代替。
+P0 独立比较使用原冻结基线与原工作负载脚本，5 个计时和 5 个探针进程分别覆盖两后端；`comparison` 为空，噪声未超阈值。Rust JSON 文本编解码/Value 构造在 Local 路径仍为零。复制、物化和堆指标继续沿用 P0 的明确统计范围，不以代码行数或逻辑输入字节代替。
 
 正常 wheel 在纯包连接和纯包+原生的隔离环境运行同一安装 recipe；生成的 Python 模块直接打入纯 wheel，原生 wheel 编入生成 Rust。发布平台、完整 sdist/源归档与真实 Editor 安装矩阵仍归 P6，不以源码验证冒充发布验收。
 

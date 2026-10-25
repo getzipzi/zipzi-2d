@@ -60,10 +60,9 @@ IPC 保持 `zipzi-runtime-r4-1`，新增并检查 `typed_parameters`、`typed_ev
 
 ## 验收与范围
 
-[构建、测试与产物摘要](python2-r3-events-results.json)记录本批基线、契约、哈希及
-实际运行命令；前一批宿主/会话结果仍保留在原记录中。
+本页保留本批构建、测试与验收结论；前一批宿主/会话结果仍保留在对应 Markdown 记录中。
 
-[P0 独立比较](python2-r3-events-p0-check.json)沿用冻结脚本与原六项 CPU fixture
+P0 独立比较沿用冻结脚本与原六项 CPU fixture
 工作负载，计时/探针分开构建，两个后端各 5 个计时与 5 个探针进程。
 `comparison`、`noise_rejections` 均为空；Local 的 JSON 编解码/Value 构造仍为零。
 新参数/事件专项负载、真实 Editor 延迟及完整 R4 预算仍须独立扩展，不将它们填零。

@@ -18,6 +18,8 @@ def main():
     assert version("zipzi-python2") == "0.1.0"
     assert "/site-packages/zipzi/" in zipzi.__file__, zipzi.__file__
     assert get_type_hints(ops.CreateImage)["image"] is resources.PreparedImage
+    assert get_type_hints(zipzi.OutcomeUnknown.recover)["return"] is object
+    assert get_type_hints(zipzi.recover_call)
     assert "zipzi_native._native" not in sys.modules
     assert (importlib.util.find_spec("zipzi_native") is not None) == (mode == "local")
     with tempfile.TemporaryDirectory(prefix="zzpy2-", dir="/tmp") as folder:
@@ -49,8 +51,8 @@ def main():
                     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
                 with runtime.resources.prepare_image(1, 1, bytes((12, 34, 56, 255))) as image:
                     with session.edit("installed") as edit:
-                        asset = edit.resources.create_image("Draft", image)
-                        face = edit.meshes.create(meshes.MeshSpec("Face", geometry, texture_asset_id=asset))
+                        asset = zipzi.recover_call(edit.resources.create_image, "Draft", image)
+                        face = zipzi.recover_call(edit.meshes.create, meshes.MeshSpec("Face", geometry, texture_asset_id=asset))
                         with edit.resources.plan(resources.RenameIntent(asset, "Draft", "Texture")) as plan:
                             assert plan.report.source.sequence == 2
                             edit.apply_many((ops.ApplyPlan(plan), ops.Rename(face, "Installed")))

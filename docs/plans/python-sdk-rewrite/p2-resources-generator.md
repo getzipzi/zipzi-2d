@@ -80,9 +80,8 @@ Pyright 正例无错误，反例精确检查 12 条实参类型诊断。
 ./tools/test-sdk.sh python2 --release --instrumented
 uv run --locked python tools/test_tools.py -p 'test_python2*.py' -v
 uv run --locked python crates/zipzi-python2/tools/distribution.py --output target/python2/source-acceptance
-uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/python2/p2-baseline --compare docs/plans/python-sdk-rewrite/p0-p1-baseline.json
 ```
 
-复杂度按责任记录在整体验收的机器可读结果中：手写公共/生命周期、手写适配、生成产物、
+复杂度按责任在整体验收时统计：手写公共/生命周期、手写适配、生成产物、
 生成器/工具/测试以及共享 SDK/Runtime 分列。增加生成器和 Rust 声明的成本没有隐藏；
 本阶段不承诺某个删行比例或把后续领域算入生成完成量。

@@ -22,7 +22,7 @@ class Owned(RecoveryOwner):
         if self._closed:
             raise SdkFailure("INVALID_REFERENCE", "Handle is closed")
         if self.pending_request is not None:
-            raise Busy("BUSY", "Recover this handle's pending request first")
+            raise Busy("BUSY", "Recover this handle's pending request first", recovery_action="recover_original")
 
     def _request(self, action: str, call: Callable[[], object], decode: Callable[[object], T]) -> T:
         if self._closed:

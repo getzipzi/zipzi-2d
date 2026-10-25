@@ -1,6 +1,6 @@
 # zipzi-python2 P3A：统一 API 与 agent 契约重构
 
-日期：2026-10-25。状态：**下一阶段，方案已制定，尚未实施/验收。** 本文从[Python SDK 建设总计划](../python-sdk-rewrite-plan.md)拆出，集中维护 P3A 的最终 API、生成/手写边界、执行规则、任务和验收；总计划保留整体阶段、历史证据与后续依赖。目标接口尚未交付，不可当作当前版本使用说明；当前用法见[包 README](../../../crates/zipzi-python2/README.md)，已有证据见[实施记录](README.md)。
+日期：2026-10-25。状态：**P3A-0/P3A-1 已通过，P3A-1 本轮性能噪声由用户豁免；整体 P3A 尚未验收。** 详见 [P3A-0](p3a-0.md)、[P3A-1](p3a-1.md) 和原始[启动记录](p3a-start.md)。本文从[Python SDK 建设总计划](../python-sdk-rewrite-plan.md)拆出，集中维护 P3A 的最终 API、生成/手写边界、执行规则、任务和验收；总计划保留整体阶段、历史证据与后续依赖。下文定义完整实现目标，不可整体当作当前版本使用说明；当前用法见[包 README](../../../crates/zipzi-python2/README.md)，已有证据见[实施记录](README.md)。
 
 ## 1. 目标与范围
 
@@ -19,7 +19,7 @@ P3A 接管现有公开能力的契约、发现和生命周期，新增必要的�
 ### 2.1 模块、命名和类型
 
 - 入口仍为 `zipzi.local()` / `zipzi.connect(...)`。不改变执行位置，不自动从 Connected 退回 Local；安装原生包不改变公共类型身份。
-- 根模块导出 Runtime、Session、Edit、Job、Plan、PreparedImage、Buffer、通用结果容器、身份/来源/回执及异常。领域类型与操作只在 `meshes`、`parameters`、`bindings`、`resources`、`scene`、`sampling`、`events`、`references` 的公共模块导出。
+- 根模块导出 Runtime、Session、Edit、Job、Plan、PreparedImage、Buffer、通用结果容器、身份/来源/回执及异常。领域类型与操作只在 `meshes`、`parameters`、`bindings`、`resources`、`scene`、`sampling`、`events`、`references`、`modeling` 的公共模块导出；`modeling` 承接 P3A-0 冻结清单中已交付的 canonical R4 DTO，遵守相同调用、容器和文档规则。
 - `ops.Operation` 只作为所有已实现领域操作的静态联合；操作构造器归所属领域：例如 `meshes.Create/Rename/SetPositions`、`parameters.Create/Patch`、`bindings.Create/SetKeyform`、`resources.CreateImage/ReplaceImage`。现有场景操作名称和字段保留在 `scene`，遵守下文统一调用规则。参数修改的字段值对象命名为 `ParameterPatch`，与操作 `parameters.Patch` 区分。
 - 删除旧的 `ops.Create/Rename/CreateParameter/...` 平行导出、领域 `RenameIntent`、公开 `ApplyPlan` 操作及 `apply_plan` 别名。Plan 直接由 `edit.apply(plan)` 接纳；后端仍可使用内部 ApplyPlan DTO。
 - 创建输入、修改输入与查询结果分开。领域查询数据使用 `meshes.Mesh`、`parameters.Parameter`、`bindings.MeshBinding`、`resources.Image`、`scene.Summary` 等不可变纯值；不继续发布各领域形状不同的 Snapshot/Batch 包装。

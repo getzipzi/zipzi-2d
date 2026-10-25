@@ -15,7 +15,7 @@ import time
 import unittest
 from unittest.mock import patch
 import zipzi
-from zipzi import bindings, events, meshes, ops, parameters, sampling
+from zipzi import bindings, events, meshes, ops, parameters, sampling, scene
 
 
 def stop(pid):
@@ -49,6 +49,30 @@ class InstalledConnection(unittest.TestCase):
 
     def connect(self, **options):
         return zipzi.connect(endpoint=self.endpoint, start=True, host=self.host, **options)
+
+    def test_installed_complete_calls_keep_projection_job_and_cached_edit_state(self):
+        geometry = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
+                                   ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
+        for operation in ("apply_authoring", "scene_snapshot", "commit", "job"):
+            with self.subTest(operation=operation), patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE=operation):
+                with zipzi.connect(endpoint=self.folder / operation / "test.sock", start=True, host=self.host) as runtime:
+                    session = runtime.sessions.create("79200000-0000-4000-8000-000000000050")
+                    with session.edit("installed complete call") as edit:
+                        id = zipzi.recover_call(edit.meshes.create, meshes.MeshSpec("Face", geometry))
+                        self.assertIsInstance(id, str)
+                        snapshot = zipzi.recover_call(edit.scene.get, id)
+                        self.assertIsInstance(snapshot, scene.Snapshot)
+                        self.assertEqual(snapshot.value.name, "Face")
+                        job = zipzi.recover_call(edit.commit)
+                        self.assertIsInstance(job, zipzi.Job)
+                        self.assertEqual(edit.state, zipzi.EditState.committing)
+                        self.assertIsNone(edit.receipt)
+                        receipt = zipzi.recover_call(job.wait)
+                        self.assertIsInstance(receipt, zipzi.Receipt)
+                    self.assertIs(edit.receipt, receipt)
+                    self.assertEqual(edit.state, zipzi.EditState.committed)
+                    self.assertEqual(session.info().history, (1, 0))
+                    self.assertEqual(session.meshes.get(id).geometry.vertex_ids, (42, 7, 99))
 
     def test_two_process_cold_start_shares_one_unsaved_session_and_history(self):
         script = '''
@@ -282,13 +306,16 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                         runtime_id="ParamRecovery", decimal_places=4, repeat=True)),
                         ops.PatchParameter(parameter, parameters.Patch(name="Final")))
                     if operation in {"apply_authoring", "commit", "job"}:
-                        with self.assertRaises(zipzi.OutcomeUnknown):
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                             with edit:
                                 edit.apply_many(operations)
-                        recovered = edit.recover()
+                        recovered = lost.exception.recover()
                         if operation == "apply_authoring":
                             self.assertEqual(recovered.source.sequence, 1)
                             edit.commit().wait()
+                        elif operation == "commit":
+                            self.assertIsInstance(recovered, zipzi.Job)
+                            recovered.wait()
                     else:
                         with edit:
                             edit.apply_many(operations)
@@ -395,7 +422,8 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                         edit.parameters.create(parameters.ParameterSpec("Invalid", 1., -1., 0.))
                 self.assertEqual(original.exception.code, "INVALID_PARAMETER")
                 self.assertTrue(any("cleanup failed" in note.lower() for note in original.exception.__notes__))
-                edit.recover()
+                self.assertIsInstance(original.exception.cleanup, zipzi.OutcomeUnknown)
+                original.exception.cleanup.recover()
                 self.assertEqual(session.parameters.list().items, ())
                 self.assertEqual(session.info().history, (0, 0))
 

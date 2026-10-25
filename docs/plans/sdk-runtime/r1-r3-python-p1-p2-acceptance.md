@@ -9,7 +9,7 @@ P2 已覆盖已交付的网格、图片资源、Plan 的机械生成、有限形
 本轮重新运行功能、安装、真实 Editor、P0 和 R2 性能门禁，不沿用历史通过结果替代当前测量。
 完整 R4 Modeling、后续 Python P3–P7、跨平台和发行 app 安装位置仍属于后续阶段。
 
-源码、命令、日志及产物 SHA-256 见[机器可读记录](r1-r3-python-p1-p2-results.json)。
+本页保留实际运行范围和验收结果；历史 JSON 产物已清理。
 详细实现与生成/手写边界见 [P2 补齐记录](../python-sdk-rewrite/p2-resources-generator.md)。
 本地原始日志和配对样本位于 `target/p2-complete/`；此前缺陷复现保留在
 `target/integrated-acceptance/`。这些 target 目录不作为源码分发内容。
@@ -65,24 +65,22 @@ P2 已覆盖已交付的网格、图片资源、Plan 的机械生成、有限形
 
 ## 性能与资源
 
-[P0 当前完整结果](r1-r3-python-p1-p2-p0.json)对比冻结的
-[P1 schema 2 基线](../python-sdk-rewrite/p0-p1-baseline.json)：
+P0 当前完整结果对比冻结的
+P1 schema 2 基线：
 六类负载 × Local/Connected，每个后端分别运行五个计时进程和五个探针进程，
 每项 4 次预热、32 次采样。延迟、调用次数、显式负载复制、输入物化、Rust 请求峰值、
 JSON 计数与进程噪声按原阈值比较，回归列表为空。Local 传输编解码及 Value tree 计数仍为零；
 独立的预算估算编码保持原基线（最大 1 次），不计作传输往返。
 探针范围仍排除隐式领域 Clone、allocator 内部复制及 Python/C 堆，不能解释为全进程 memcpy/RSS。
 
-[R2 当前配对结果](r1-r3-python-p1-p2-editor-performance.json)使用经历史 SHA-256
+R2 当前配对结果使用经历史 SHA-256
 核验的 baseline 二进制及本工作区 Release 二进制，选择同一 Mao 模型和已审计 Warp。
 CPU 属性链、属性/颜色/变形输入、动画、时间线和并发交互七组首先各运行十对进程。
 首轮 145 项中 8 项越线；属性和时间线按预定方案各追加十对，保留全部数据。
 时间线二十对通过，属性仍越线；同一当前二进制的 A/A 对照显示明显时段/相位波动，
 且工具原来始终 baseline 先运行。修复为逐对 AB/BA 交替后，再按固定方案采集二十对属性数据，
 与此前二十对合并：最终属性四十对、时间线二十对、其余各十对，全部 145 项通过。
-[首轮报告](r1-r3-python-p1-p2-editor-initial-performance.json)、
-[首次扩样报告](r1-r3-python-p1-p2-editor-expanded-performance.json)和
-[A/A 对照](r1-r3-python-p1-p2-editor-control.json)均保留，不用后续快样本替换失败数据。
+首轮与首次扩样越线、A/A 对照及最终通过结论均按实际结果记录。
 CPU 与显示边界沿用原门槛：P50 +10%、P95 +15%，
 容差取相对值与 CPU 0.2 ms / 显示 1 ms 的较大值。全部指标通过。
 首个 UI candidate 因复用已有宿主退出且没有 trace；不完整配对保留在

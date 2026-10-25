@@ -241,15 +241,19 @@ def render_resources(contract, Model, header, rust_header):
     queries+=['}',''];back+=['']
     output['client/python/zipzi/_generated/resource_backends.py']='\n'.join(back)
     output['src/generated/resource_queries.rs']='\n'.join(queries)
-    conveniences=[header.rstrip(),'from typing import Protocol','from . import resource_ops as ops','from .._values import WriteResult','from .. import resources','',
-                  'class ResourceWriter(Protocol):','    def apply(self, operation: ops.ResourceOperation) -> WriteResult: ...','','class EditableImages:','    _owner: ResourceWriter']
+    conveniences=[header.rstrip(),'from collections.abc import Callable','from typing import Protocol','from . import resource_ops as ops','from .._values import WriteResult','from .._calls import project, single_id','from .. import resources','',
+                  'class ResourceWriter(Protocol):','    def _construct_and_apply(self, construct: Callable[[], ops.ResourceOperation]) -> WriteResult: ...','','class EditableImages:','    _owner: ResourceWriter']
     for v in resource_union['variants'][:2]:
         params=[]
         for f in projected_fields(v):
             if f['default'] and '*' not in params:params.append('*')
             params.append(f['name']+': '+typ(f['shape'])+default_suffix(f))
         create=v['rust_name']=='CreateImage'
-        conveniences += [f'    def {v["wire_name"]}(self, '+', '.join(params)+') -> '+('str' if create else 'WriteResult')+':',
-                         '        return self._owner.apply(ops.'+v['rust_name']+'('+', '.join(f['name'] for f in projected_fields(v))+'))'+('.ids[0]' if create else '')]
+        conveniences += [f'    def {v["wire_name"]}(self, '+', '.join(params)+') -> '+('str' if create else 'WriteResult')+':']
+        operation = 'ops.'+v['rust_name']+'('+', '.join(f['name'] for f in projected_fields(v))+')'
+        if create:
+            conveniences += ['        return project(lambda: self._owner._construct_and_apply(lambda: '+operation+'), single_id, operation="resources.create_image", inputs=(name, image, id))']
+        else:
+            conveniences += ['        return self._owner._construct_and_apply(lambda: '+operation+')']
     output['client/python/zipzi/_generated/resource_conveniences.py']='\n'.join(conveniences)+'\n'
     return output

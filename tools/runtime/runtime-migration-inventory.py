@@ -14,7 +14,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT = ROOT / "docs/plans/sdk-runtime/editor-migration.json"
+OUTPUT = ROOT / "target/runtime/editor-migration.json"
 REFERENCE = re.compile(
     r"\bsession\b|session_mut\s*\(|AuthoringSession|drain_events|commit_to|begin_owned_edit|"
     r"(?:prepare|finish)_(?:load|save)|project_identity|ensure_available_path|find_path\s*\(|"

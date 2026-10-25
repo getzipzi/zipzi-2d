@@ -16,7 +16,7 @@ mod binary;
 pub use binary::{BinaryReply, BinarySlice, MAX_BINARY_CHUNK, MAX_BINARY_HEADER};
 mod values;
 use values::*;
-pub const CONTRACT: &str = "zipzi-runtime-r4-3";
+pub const CONTRACT: &str = "zipzi-runtime-p3a-1";
 pub const SDK_BUILD: &str = env!("ZIPZI_RUNTIME_SDK_BUILD");
 pub const MAX_FRAME: usize = 16 << 20;
 

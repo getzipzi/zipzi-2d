@@ -23,6 +23,7 @@ def main() -> None:
     parser.add_argument("tests", nargs="*", help="Optional unittest names, e.g. PythonSdk.test_shared_recipe")
     parser.add_argument("--release", action="store_true", help="Build the native adapter in Release for P0 measurements")
     parser.add_argument("--instrumented", action="store_true", help="Build separate P0 allocator/codec/copy probes; never use for latency")
+    parser.add_argument("--recovery", action="store_true", help="Run focused P3A-1 complete-call/Edit/Job recovery tests; optional P3ARecovery.test_name selectors")
     args = parser.parse_args()
     if sys.version_info[:2] != (3, 14):
         parser.error("Run with uv run --locked python (CPython 3.14)")
@@ -72,7 +73,10 @@ def main() -> None:
             host_sha256=hashlib.sha256(host.read_bytes()).hexdigest(),
             python=sys.version, artifact_sha256=hashlib.sha256(extension.read_bytes()).hexdigest()), indent=2) + "\n")
         env.update(ZIPZI_PYTHON2_NATIVE=str(native.parent), ZIPZI_PYTHON2_HOST=str(host))
-        subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_api.py"), "-v", *args.tests], cwd="/tmp", env=env, check=True)
+        module = "test_p3a_recovery.py" if args.recovery else "test_api.py"
+        subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests" / module), "-v", *args.tests], cwd="/tmp", env=env, check=True)
+        if not args.tests and not args.recovery:
+            subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_p3a_recovery.py"), "-v"], cwd="/tmp", env=env, check=True)
         subprocess.run(["uv", "run", "--locked", "pyright", "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json")], cwd=ROOT, check=True)
         invalid = subprocess.run(["uv", "run", "--locked", "--project", str(ROOT), "pyright",
             "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json"), "--outputjson", "--pythonpath", sys.executable,
@@ -85,6 +89,17 @@ def main() -> None:
         expected = {("type_invalid.py", line, "reportArgumentType") for line in (5, 6, 7, 8, 9, 12, 15, 16, 19, 20, 21, 26, 27, 28, 29)}
         if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 16 or actual != expected:
             raise RuntimeError(f"Expected sixteen real public typing failures: {invalid.stdout}\n{invalid.stderr}")
+        recovery_types = ROOT / "crates/zipzi-python2/tests/type_recovery_invalid.py"
+        invalid = subprocess.run(["uv", "run", "--locked", "pyright", "--project",
+            str(ROOT / "crates/zipzi-python2/pyrightconfig.json"), "--outputjson", str(recovery_types)],
+            cwd=ROOT, capture_output=True, text=True)
+        diagnostics = json.loads(invalid.stdout)
+        expected = {(line, value.split("# error: ", 1)[1].strip()) for line, value in
+            enumerate(recovery_types.read_text().splitlines()) if "# error: " in value}
+        actual = {(d["range"]["start"]["line"], d.get("rule")) for d in diagnostics["generalDiagnostics"]
+                  if d["severity"] == "error"}
+        if invalid.returncode != 1 or len(expected) != 4 or actual != expected or diagnostics["summary"]["errorCount"] != 4:
+            raise RuntimeError(f"Expected four precise recovery typing failures: {invalid.stdout}\n{invalid.stderr}")
         print("zipzi-python2: Local/Connected behavior and positive/negative static types passed")
 
 if __name__ == "__main__":

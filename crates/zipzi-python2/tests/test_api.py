@@ -793,7 +793,7 @@ class PythonSdk(unittest.TestCase):
                     if time.monotonic() >= deadline:
                         self.fail("Host startup timed out")
                     time.sleep(.01)
-        self.addCleanup(runtime.close)
+        self.addCleanup(lambda: runtime.close(abandon_pending=True))
         return runtime
 
     def recipe(self, runtime, destination):
@@ -1259,10 +1259,10 @@ class PythonSdk(unittest.TestCase):
         runtime = self.runtime("connected", drop="apply_authoring")
         session = runtime.sessions.create(uid(861))
         edit = session.edit("parameter recovery")
-        with self.assertRaises(zipzi.OutcomeUnknown):
+        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
             edit.apply_many((ops.CreateParameter(parameters.ParameterSpec("Once", -1., 1., 0., id=uid(862))),
                 ops.PatchParameter(uid(862), parameters.Patch(name="Final"))))
-        result = edit.recover()
+        result = lost.exception.recover()
         self.assertEqual(result.source.sequence, 1)
         self.assertEqual(result.ids, (uid(862), uid(862)))
         edit.commit().wait()
@@ -1365,11 +1365,14 @@ class PythonSdk(unittest.TestCase):
                     pending = edit.pending_request
                     self.assertIsNotNone(pending)
                     self.assertEqual(error.exception.pending, pending)
-                result = edit.recover()
+                result = error.exception.recover()
                 self.assertIsNone(edit.pending_request)
                 if lost == "apply_authoring":
                     self.assertEqual(result.source.sequence, 1)
                     edit.commit().wait()
+                elif lost == "commit":
+                    self.assertIsInstance(result, zipzi.Job)
+                    result.wait()
                 self.assertEqual(session.info().history, (1, 0))
                 self.assertEqual(session.meshes.get(uid(2)).name, "Once")
 
@@ -1876,6 +1879,10 @@ class PythonSdk(unittest.TestCase):
                 with self.assertRaises(zipzi.SdkFailure) as error:
                     edit.commit()
                 self.assertEqual(error.exception.code, "BUDGET_EXCEEDED")
+                self.assertEqual(error.exception.limit_name, "jobs and retained results")
+                self.assertEqual(error.exception.recovery_action, "release_resources")
+                self.assertIsNone(error.exception.requested)
+                self.assertIsNone(error.exception.allowed)
                 self.assertEqual(edit.meshes.get(face).source, source)
                 jobs[0].wait()
                 edit.commit().wait()
@@ -2174,7 +2181,8 @@ class PythonSdk(unittest.TestCase):
                 edit.meshes.set_positions(uid(2), vertex_ids=(2**40,), positions=((0., 0.),))
         self.assertTrue(error.exception.__notes__)
         self.assertIsNotNone(edit.pending_request)
-        self.assertIsNone(edit.recover())
+        self.assertIsInstance(error.exception.__context__, zipzi.OutcomeUnknown)
+        self.assertIsNone(error.exception.__context__.recover())
         self.assertEqual(session.info().history, (0, 0))
         with self.assertRaises(zipzi.SdkFailure):
             session.meshes.get(uid(2))
@@ -2184,15 +2192,13 @@ class PythonSdk(unittest.TestCase):
         session = runtime.sessions.create(uid(1))
         other = runtime.sessions.create(uid(3))
         edit, other_edit = session.edit("owner"), other.edit("other")
-        with self.assertRaises(zipzi.OutcomeUnknown):
+        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
             edit.apply(ops.Create(meshes.MeshSpec("Once", GEOMETRY, id=uid(2))))
         with self.assertRaises(zipzi.Busy):
             other_edit.apply(ops.Create(meshes.MeshSpec("Other", GEOMETRY, id=uid(4))))
         self.assertIsNone(other_edit.pending_request)
-        with self.assertRaises(zipzi.SdkFailure) as error:
-            other_edit.recover()
-        self.assertEqual(error.exception.code, "NO_PENDING_REQUEST")
-        edit.recover()
+        self.assertFalse(hasattr(other_edit, "recover"))
+        lost.exception.recover()
         edit.commit().wait()
         other_edit.apply(ops.Create(meshes.MeshSpec("Other", GEOMETRY, id=uid(4))))
         other_edit.commit().wait()

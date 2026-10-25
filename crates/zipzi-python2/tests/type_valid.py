@@ -1,5 +1,6 @@
 """These public calls must type-check; this file is not executed."""
 from pathlib import Path
+from typing import assert_type
 import zipzi
 from zipzi import bindings, sampling, events, meshes, ops, parameters, resources, scene, references
 
@@ -94,3 +95,14 @@ def scene_and_identity(session: zipzi.Session, face: str) -> references.SceneCap
                 with session.edit("label") as edit:
                     edit.apply_plan(plan)
         return reference.scene_capabilities()
+
+
+def typed_recovery(edit: zipzi.Edit, spec: meshes.MeshSpec, id: str) -> zipzi.Receipt:
+    assert_type(zipzi.recover_call(edit.meshes.create, spec), str)
+    assert_type(zipzi.recover_call(edit.scene.get, id), scene.Snapshot)
+    assert_type(zipzi.recover_call(edit.commit), zipzi.Job[zipzi.Receipt])
+    assert_type(edit.state, zipzi.EditState)
+    assert_type(edit.receipt, zipzi.Receipt | None)
+    job = zipzi.recover_call(edit.commit)
+    assert_type(zipzi.recover_call(job.wait, timeout=1.), zipzi.Receipt)
+    return zipzi.recover_call(job.wait)

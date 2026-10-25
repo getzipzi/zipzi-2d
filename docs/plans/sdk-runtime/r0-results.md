@@ -5,9 +5,9 @@
 
 ## SDK Release CPU 基线
 
-完整摘要与来源哈希见 [`r0-cpu-baseline.json`](r0-cpu-baseline.json)。原始 JSONL、
+本节保留 CPU 基线验收结果。临时 JSONL、
 构建输出、环境、模型哈希及逐进程 `/usr/bin/time -l` 在 SDK 工作树
-`target/runtime-r0-clean/`，其文件摘要已登记。首次受其他编译干扰的探索数据仍保留在
+`target/runtime-r0-clean/`。首次受其他编译干扰的探索数据仍保留在
 `target/runtime-r0-baseline/`，不计入下表。
 
 命令：
@@ -91,7 +91,7 @@ uv run --locked python modules/zipzi-python/tools/check_coverage.py --require-co
 
 ## 原生窗口、Timeline 与双视口
 
-详细报告、来源与 trace 摘要见 [`r0-native-baseline.json`](r0-native-baseline.json)。
+本节保留原生 Editor 的验收结果与统计范围。
 Editor 工作树 `target/runtime-r0-native/` 保留构建 JSONL、冻结的可执行文件、
 场景参数/编译干扰采样器 `run.py`、逐场景 trace、现有 report 输出和截图。
 二进制 SHA-256 为 `3af330bc4d4fe142181e9f7446ca5a3f208381cf1958568dc6018e10cb0d8d5a`。
@@ -131,7 +131,7 @@ report 断言没有修改。源为 SDK `examples/runtime_native_fixture.rs`，�
 求值对照和保存重开。自然场景 134 tracks / 779 keys，密集场景 134 tracks / 34,438
 keys。drag→当前 Metal draw P50/P95 分别为 36.895/46.546 ms 与 115.224/165.723 ms；
 该 harness 不测 compositor presentation，不与上表混用。完整结果位于
-`target/runtime-r0-native/timeline/results.json` 并收录于 JSON 证据。
+`target/runtime-r0-native/timeline/results.json` ，本页保留验收结论。
 
 Release `headless_screenshot` 的 `viewports` 场景通过，输出
 `target/runtime-r0-native/viewports/`：Modeling/Animation 两个同时存在的视口分别

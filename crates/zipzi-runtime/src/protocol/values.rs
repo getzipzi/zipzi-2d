@@ -29,7 +29,11 @@ pub(super) fn error(e: RuntimeError) -> Value {
         RuntimeError::Path(_) => "INVALID_PATH",
         RuntimeError::Sdk(_) | RuntimeError::Export { .. } => unreachable!(),
     };
-    failure(code, &e.to_string())
+    let mut result = failure(code, &e.to_string());
+    if let RuntimeError::Budget(name) = &e {
+        result["error"]["limit_name"] = json!(name);
+    }
+    result
 }
 pub(super) fn receipt(r: &zipzi_sdk::EditReceipt) -> Value {
     json!({"before": r.before, "after": r.after, "changed": r.changed,

@@ -14,13 +14,13 @@ import time
 from typing import Literal
 from .. import ops, sampling, scene
 from .._generated.backends import ConnectedQueries
-from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
+from .._errors import Busy, JobTimeout, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
 from ._transfers import Transfer
 from ..events import Cursor
 
-CONTRACT = "zipzi-runtime-r4-3"
+CONTRACT = "zipzi-runtime-p3a-1"
 MAX_FRAME = 16 << 20
 MAX_BINARY_CHUNK = 1 << 20
 MAX_BINARY_HEADER = 16 << 10
@@ -92,6 +92,7 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         self._closed = False
         self._next = 0
         self._pending: tuple[PendingRequest, bytes, object] | None = None
+        self._unknown_error: OutcomeUnknown | None = None
         self._flows: dict[int, Transfer] = {}
         self._lock = threading.RLock()
         self._connect(handshake_timeout)
@@ -137,8 +138,10 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         except (OSError, EOFError, ValueError, TypeError) as e:
             self._disconnect()
             self._pending = pending, body, owner
-            raise OutcomeUnknown(pending, str(e)) from e
+            self._unknown_error = OutcomeUnknown(pending, str(e))
+            raise self._unknown_error from e
         self._pending = None
+        self._unknown_error = None
         if "error" in response:
             fields = dict(record(response["error"]))
             fields.setdefault("operation", pending.operation)
@@ -158,7 +161,8 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
             if self._closed:
                 raise SdkFailure("HOST_CLOSED", "Connection is closed", operation=operation)
             if self._pending is not None:
-                raise Busy("BUSY", "Recover the owning pending request first", operation=operation)
+                raise Busy("BUSY", "Recover the owning pending request first", operation=operation,
+                           recovery_action="recover_original")
             operation_bytes = _body(value)
             request_id = self._next + 1
             body = _body(dict(protocol=CONTRACT, runtime=self._runtime, client=self._client,
@@ -174,6 +178,10 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
     def pending(self, owner: object) -> PendingRequest | None:
         with self._lock:
             return self._pending[0] if self._pending is not None and self._pending[2] is owner else None
+
+    def pending_error(self) -> OutcomeUnknown | None:
+        with self._lock:
+            return self._unknown_error if self._pending is not None else None
 
     def recover(self, owner: object) -> object:
         if id(owner) in self._flows:
@@ -204,7 +212,8 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
                 self._connect()
             except (OSError, EOFError, ValueError, TypeError) as e:
                 self._disconnect()
-                raise OutcomeUnknown(pending, str(e)) from e
+                self._unknown_error = OutcomeUnknown(pending, str(e))
+                raise self._unknown_error from e
             return self._send(pending, body, owner)
 
     def create(self, document_id: str, owner: object) -> object:
@@ -322,14 +331,15 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         return self._request(dict(op="job_status", job=job), owner, "job.state")
     def _test_control(self, action: str) -> object:
         return self._request(dict(op="test_control", action=action), self, "test.control")
-    def wait(self, job: object, kind: JobKind, owner: object) -> object:
-        deadline = time.monotonic() + self._timeout
+    def wait(self, job: object, kind: JobKind, owner: object, *, timeout: float | None = None) -> object:
+        deadline = None if timeout is None else time.monotonic() + timeout
         while True:
             if kind=="sampled":
                 selector=dict(op="job",job=job)
                 raw=self._drive_transfer(Transfer(self,owner,"samples",selector=selector))
                 if raw is not None: return raw
-                if time.monotonic()>=deadline: raise OutcomeUnknown(PendingRequest(0,"","job.wait"),"Accepted Job is still pending; wait again")
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise JobTimeout()
                 time.sleep(.005)
                 continue
             info = record(self._request(dict(op="job", job=job), owner, "job.wait"))
@@ -337,20 +347,23 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
                 result = dict(record(unwrap(info["result"])))
                 result["kind"] = kind
                 return result
-            if time.monotonic() >= deadline:
-                raise OutcomeUnknown(PendingRequest(0, "", "job.wait"), "Accepted Job is still pending; wait again")
+            if deadline is not None and time.monotonic() >= deadline:
+                raise JobTimeout()
             time.sleep(.005)
 
-    def close(self) -> None:
+    def close(self, *, abandon_pending: bool = False) -> None:
         with self._lock:
             if self._closed:
                 return
-            # An explicit shutdown with another unresolved owner abandons its
-            # connection; grace expiry reclaims it without a new write ID.
-            if self._pending is not None and self._pending[2] is not self:
+            if self._pending is not None and (abandon_pending or self._pending[2] is not self):
+                if not abandon_pending:
+                    raise Busy("BUSY", "Recover the original pending call before closing, or explicitly abandon it",
+                               operation="runtime.close", recovery_action="recover_original")
                 self._closed = True
                 self._disconnect()
                 self._flows.clear()
+                self._pending = None
+                self._unknown_error = None
                 return
             try:
                 if self.pending(self) is not None:

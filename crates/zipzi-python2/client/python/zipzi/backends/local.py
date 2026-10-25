@@ -4,9 +4,10 @@ from .._generated.resource_backends import LocalResources
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
+import time
 from .. import ops, sampling, scene
 from .._generated.backends import LocalQueries
-from .._errors import PendingRequest, SdkFailure, unwrap
+from .._errors import JobTimeout, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source
 from . import JobKind
 from ..events import Cursor
@@ -45,7 +46,7 @@ class LocalBackend(LocalQueries, LocalResources):
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-10":
+        if self._native.contract != "zipzi-python2-11":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 
@@ -128,11 +129,19 @@ class LocalBackend(LocalQueries, LocalResources):
         return unwrap(self._native.job_state(job))
     def _test_control(self, action: str) -> object:
         return unwrap(self._native._test_control(action))
-    def wait(self, job: object, kind: JobKind, owner: object) -> object:
+    def wait(self, job: object, kind: JobKind, owner: object, *, timeout: float | None = None) -> object:
+        if timeout is not None:
+            deadline = time.monotonic() + timeout
+            while unwrap(self._native.job_state(job)) not in {"succeeded", "failed", "cancelled"}:
+                if time.monotonic() >= deadline:
+                    raise JobTimeout()
+                time.sleep(min(.005, max(0., deadline - time.monotonic())))
         return unwrap(self._native.wait(job))
     def pending(self, owner: object) -> PendingRequest | None:
         return None
+    def pending_error(self) -> OutcomeUnknown | None:
+        return None
     def recover(self, owner: object) -> object:
         raise SdkFailure("NO_PENDING_REQUEST", "Local calls have no transport replay window")
-    def close(self) -> None:
+    def close(self, *, abandon_pending: bool = False) -> None:
         unwrap(self._native.close())

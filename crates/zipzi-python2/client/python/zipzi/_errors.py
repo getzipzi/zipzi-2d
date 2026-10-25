@@ -2,32 +2,43 @@
 from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import Literal
 from ._values import Version, record, sequence, string
-if TYPE_CHECKING:
-    from ._lifecycle import Edit, Job, JobState, Session
-    from ._values import Receipt, SaveReceipt, SessionInfo, WriteResult
-    from .meshes import Snapshot
-    from .plans import Plan
-    from .buffers import Buffer
-    from .modeling import Records as ModelingRecords, CapabilitySnapshot, ProjectReport
-    from .references import ObjectRef, LabelAddress, FieldAddress
-    from .resources import PreparedImage, ImagePixels, Snapshot as ImageSnapshot, Usage
-    from .events import Event, SessionSubscription, RegistrySubscription
-    from .bindings import Snapshot as BindingSnapshot, Batch as BindingBatch
-    from .sampling import Batch as SampleBatch
-    from .parameters import Snapshot as ParameterSnapshot, Batch as ParameterBatch
-    RecoveryResult = ObjectRef | LabelAddress | FieldAddress | ModelingRecords | CapabilitySnapshot | Job[Plan] | Job[SampleBatch] | Buffer | bytes | JobState | Plan | PreparedImage | ImagePixels | ImageSnapshot | Usage | Edit | Session | SessionInfo | Snapshot | WriteResult | Receipt | SaveReceipt | Job[Receipt] | Job[SaveReceipt] | Job[Session] | SessionSubscription | RegistrySubscription | tuple[SessionInfo, ...] | tuple[Event, ...] | tuple[Snapshot, ...] | ParameterSnapshot | ParameterBatch | BindingSnapshot | BindingBatch | SampleBatch | None
+from ._generated.modeling import ProjectReport
+
+RecoveryAction = Literal["retry", "reduce_request", "release_resources", "recover_original",
+                         "restart_edit", "refresh_source", "resync", "wait_job", "stop"]
+
+def _recovery_action(code: str, edit_state: str | None, limit_name: str | None) -> RecoveryAction:
+    if edit_state in {"aborted", "failed"}:
+        return "restart_edit"
+    if code == "OUTCOME_UNKNOWN":
+        return "recover_original"
+    if code == "JOB_TIMEOUT":
+        return "wait_job"
+    if code == "BUSY":
+        return "retry"
+    if code in {"BUDGET_EXCEEDED", "RESOURCE_BUDGET_EXCEEDED"}:
+        return "release_resources" if limit_name in {"jobs_per_client", "jobs_total", "results_per_client", "plans_per_client", "prepared_images_per_client", "references_per_client", "blobs_per_client", "jobs and retained results", "plans", "prepared images", "object references"} else "reduce_request"
+    if code in {"STALE_SOURCE", "STALE_PLAN"}:
+        return "refresh_source"
+    if code == "RESYNC_REQUIRED":
+        return "resync"
+    return "stop"
 
 class SdkFailure(Exception):
     def __init__(self, code: str, message: str, *, operation: str = "", object_ids: tuple[str, ...] = (),
         expected_version: Version | None = None, actual_version: Version | None = None,
-        field_path: str | None = None, referrers: tuple[str, ...] = (), edit_state: str | None = None, project_report: ProjectReport | None = None):
+        field_path: str | None = None, referrers: tuple[str, ...] = (), edit_state: str | None = None, project_report: ProjectReport | None = None,
+        recovery_action: RecoveryAction | None = None, requested: int | None = None,
+        allowed: int | None = None, limit_name: str | None = None):
         super().__init__(message)
         self.code, self.operation, self.object_ids = code, operation, object_ids
         self.expected_version, self.actual_version = expected_version, actual_version
         self.field_path, self.referrers, self.edit_state = field_path, referrers, edit_state
-        self.project_report=project_report
+        self.project_report = project_report
+        self.requested, self.allowed, self.limit_name = requested, allowed, limit_name
+        self.recovery_action = recovery_action or _recovery_action(code, edit_state, limit_name)
         self.cleanup: OutcomeUnknown | None = None
 
 class Busy(SdkFailure):
@@ -45,11 +56,27 @@ class OutcomeUnknown(SdkFailure):
         self.pending = pending
         self._resume: Callable[[], object] | None = None
 
-    def recover(self) -> RecoveryResult:
-        """Resume the owning lifecycle object using the retained request ID."""
+    def recover(self) -> object:
+        """Recover this complete public call using its original request identity.
+
+        The result has the original method's runtime type. The exception cannot
+        express that method's static type; use zipzi.recover_call for typed code.
+        This never invokes the original method again. Repeated recovery after
+        resolution raises NO_PENDING_REQUEST.
+        """
         if self._resume is None:
             raise SdkFailure("NO_RECOVERY_OWNER", "No owning operation is available")
-        return cast("RecoveryResult", self._resume())
+        return self._resume()
+
+class JobTimeout(SdkFailure):
+    """The accepted Job remains pending; retain it and wait again or cancel.
+
+    This confirmed nonterminal status has no PendingRequest and is distinct
+    from a lost transport reply. A timeout does not cancel the task.
+    """
+    def __init__(self, message: str = "Accepted Job is still pending"):
+        super().__init__("JOB_TIMEOUT", message, operation="job.wait", recovery_action="wait_job")
+
 
 def unwrap(value: object) -> object:
     r = record(value)
@@ -68,4 +95,13 @@ def unwrap(value: object) -> object:
         expected_version=optional("expected_version"), actual_version=optional("actual_version"),
         field_path=None if e.get("field_path") is None else string(e["field_path"]),
         referrers=tuple(string(v) for v in sequence(e.get("referrers", ()))),
-        edit_state=None if e.get("edit_state") is None else string(e["edit_state"]),project_report=report)
+        edit_state=None if e.get("edit_state") is None else string(e["edit_state"]), project_report=report,
+        requested=None if e.get("requested") is None else _limit_integer(e["requested"]),
+        allowed=None if e.get("allowed") is None else _limit_integer(e["allowed"]),
+        limit_name=None if e.get("limit_name") is None else string(e["limit_name"]))
+
+
+def _limit_integer(value: object) -> int:
+    if type(value) is not int or value < 0:
+        raise TypeError("Host budget details must be nonnegative integers")
+    return value
