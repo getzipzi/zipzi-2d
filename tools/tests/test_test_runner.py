@@ -31,7 +31,7 @@ if pathlib.Path(sys.argv[0]).name == 'python3' and pathlib.Path(sys.argv[1]).nam
     os.execv(sys.executable, [sys.executable, *sys.argv[1:]])
 with open('calls.jsonl','a') as out:
     out.write(json.dumps({'tool':pathlib.Path(sys.argv[0]).name,'args':sys.argv[1:],'session':os.environ.get('ZIPZI_DEV_SESSION_DIR'),'client':os.environ.get('ZIPZI_CLIENT_PYTHON')})+'\\n')
-if len(sys.argv)>1 and pathlib.Path(sys.argv[1]).name=='build_zipzi_client.py':
+if len(sys.argv)>1 and pathlib.Path(sys.argv[1]).name=='connected.py':
     print('/fixture/connected/bin/python');sys.exit(0)
 if sys.argv[1:2]==['fmt']:sys.exit(int(os.environ.get('FORMAT_EXIT','0')))
 sys.exit(int(os.environ.get('TEST_EXIT','0')))
@@ -91,8 +91,9 @@ sys.exit(int(os.environ.get('TEST_EXIT','0')))
     def test_acceptance_prepares_client_when_no_interpreter_was_supplied(self):
         result, calls = self.run_entrypoint("acceptance", ZIPZI_CLIENT_PYTHON="")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(Path(calls[0]["args"][0]).name, "build_zipzi_client.py")
-        self.assertIn("--install", calls[0]["args"])
+        self.assertEqual(Path(calls[0]["args"][0]).name, "connected.py")
+        self.assertIn("zipzi-python2", calls[0]["args"][0])
+        self.assertIn("--install-only", calls[0]["args"])
         self.assertEqual(calls[-1]["client"], "/fixture/connected/bin/python")
 
     def test_ui_uses_the_full_editor_feature_graph_and_keeps_the_filter(self):

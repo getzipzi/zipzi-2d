@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "date": "2026-10-25",
+  "base_commit": "1e0043f51656956788b8558eca8cbd4efa451ad6",
+  "dirty": true,
+  "status": "first_r3_reconnection_slice_passed",
+  "scope": "Independent new Python client host/session integration; R3 and R4 remain incomplete",
+  "record": "docs/plans/sdk-runtime/python2-r0-r4.md",
+  "coverage": "docs/runtime/python2-coverage.json",
+  "python": "3.14.7 (main, Sep 29 2026, 14:50:11) [Clang 22.1.3 ]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "rust": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "lockfile": {
+    "path": "Cargo.lock",
+    "sha256": "55701976f5ed5fa228d0a91fc2db7024ad2dd7c4d2ceb808e0eb7a2650c0a278"
+  },
+  "client_sha256": "33600c756101ba2c78d5205c7f3f232de0ca76bafde00f43ef0306fe651401fd",
+  "artifacts": [
+    {
+      "path": "target/debug/zipzi-editor",
+      "sha256": "12c90a2729d0301e5fa8627d68ca21b834d49e535e8e4f77f46714e558dd029d"
+    },
+    {
+      "path": "target/python2/connected/wheels/zipzi_python2-0.1.0-py3-none-any.whl",
+      "sha256": "9a6006ed3cbaf3579822781ecf1a77147bc307be1056d2d024a92981e9b0b474"
+    },
+    {
+      "path": "target/python2/native-wheels/zipzi_python2_native-0.1.0-cp314-cp314-macosx_11_0_arm64.whl",
+      "sha256": "e0e9afddfe1587cf07be1e02894d029477093e7086ffefe9f5b713ec9e5c4993"
+    },
+    {
+      "path": "crates/zipzi-python2/src/lib.rs",
+      "sha256": "76620346a7c55c2ab00230e805ddc877c0e1742b1aca2ac57561766c16c715c4"
+    },
+    {
+      "path": "crates/zipzi-editor/acceptance/runtime_ipc.rs",
+      "sha256": "4e231fceba08fd683e569030a94e9c0a4d90525f549387dfcab6c8bd35dc76e0"
+    }
+  ],
+  "contracts": {
+    "native": "zipzi-python2-4",
+    "ipc": "zipzi-runtime-r4-1"
+  },
+  "checks": [
+    {
+      "name": "existing_source_lifecycle",
+      "command": "./tools/test-sdk.sh python2",
+      "cases": 36,
+      "result": "passed",
+      "note": "Run before adding the new identity test; same public implementation"
+    },
+    {
+      "name": "resident_identity_source",
+      "command": "./tools/test-sdk.sh python2 PythonSdk.test_session_listing_identity_and_attach_use_the_same_runtime",
+      "cases": 1,
+      "result": "passed",
+      "note": "Both Local and Connected"
+    },
+    {
+      "name": "strict_types",
+      "result": "passed",
+      "positive_errors": 0,
+      "negative_errors": 3,
+      "negative_lines_zero_based": [
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "name": "installed_cpu_connection",
+      "command": "./tools/test-sdk.sh python2-connected",
+      "cases": 11,
+      "result": "passed",
+      "log": "target/python2/connected-reconnect.log"
+    },
+    {
+      "name": "production_desktop_connection",
+      "command": "./tools/test-sdk.sh python2-connected --editor-host \"$PWD/target/debug/zipzi-editor\"",
+      "cases": 1,
+      "result": "passed",
+      "log": "target/python2/connected-reconnect.log"
+    },
+    {
+      "name": "native_editor_publication",
+      "command": "ZIPZI_CLIENT_PYTHON=\"$PWD/target/python2/connected/venv/bin/python\" env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --features test-support --test runtime_ipc_acceptance",
+      "result": "passed",
+      "checks": [
+        "new installed pure distribution",
+        "same unsaved session",
+        "layer/properties projection",
+        "UI Undo visible to client",
+        "in-flight cross-session Save As refusal",
+        "Metal render"
+      ],
+      "log": "target/python2/editor-ipc.log"
+    },
+    {
+      "name": "editor_test_entrypoint",
+      "command": "uv run --locked python tools/test_tools.py -p test_test_runner.py -v",
+      "cases": 9,
+      "result": "passed"
+    },
+    {
+      "name": "release_and_probe",
+      "result": "passed",
+      "tests": [
+        "PythonSdk.test_session_listing_identity_and_attach_use_the_same_runtime",
+        "PythonSdk.test_local_bridge_does_not_encode_or_decode_python_json"
+      ],
+      "profiles": [
+        "release test-support",
+        "release test-support,bench-instrumentation"
+      ]
+    },
+    {
+      "name": "p0_regression",
+      "result": "passed",
+      "summary": "docs/plans/sdk-runtime/python2-p0-check.json",
+      "runs": 5,
+      "comparison": [],
+      "noise_rejections": [],
+      "note": "Same scoped CPU fixture workloads; not desktop/startup latency"
+    },
+    {
+      "name": "installed_normal_wheels",
+      "result": "passed",
+      "recipes": [
+        "installed_recipe.py local",
+        "installed_recipe.py connected"
+      ],
+      "checks": [
+        "production native has no test/probe controls",
+        "current wheel Python sources",
+        "current wheel README metadata",
+        "canonical licenses"
+      ]
+    },
+    {
+      "name": "generated_contract",
+      "result": "passed",
+      "files": 10
+    },
+    {
+      "name": "format_whitespace_domains",
+      "result": "passed",
+      "rust_files": 2,
+      "sdk_packages": 17,
+      "editor_packages": 3
+    }
+  ],
+  "not_run": [
+    "Full SDK/Editor gates",
+    "Full R2 performance/lifecycle matrix",
+    "Full R4 domains and method inventory",
+    "Packaged desktop installation locations and release platform matrix"
+  ]
+}

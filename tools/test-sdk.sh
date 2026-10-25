@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 
 usage() {
     cat <<'EOF'
-Usage: ./tools/test-sdk.sh [fast|runtime|mesh|regression|stress|python|python2|wheel|full] [arguments...]
+Usage: ./tools/test-sdk.sh [fast|runtime|mesh|regression|stress|python|python2|python2-connected|wheel|full] [arguments...]
 
   fast        SDK unit and ordinary CPU integration tests; optional Cargo filter
   runtime     CPU Runtime ownership, transactions, jobs and event contracts
@@ -13,6 +13,7 @@ Usage: ./tools/test-sdk.sh [fast|runtime|mesh|regression|stress|python|python2|w
   stress      complete alpha mesh suite, including the entire fixed-seed matrix
   python      build/install current Debug extension, then Python SDK tests
   python2     independent Runtime-backed Python package; Local/Connected and static types
+  python2-connected  installed pure new client; subprocess discovery/start/session acceptance
   wheel       build/install a Release wheel and run SDK acceptance
   full        formatting, complete Rust suite and CPU wheel acceptance (default)
 
@@ -63,6 +64,9 @@ case "$mode" in
         ;;
     python2)
         exec uv run --locked python crates/zipzi-python2/tools/test.py "$@"
+        ;;
+    python2-connected)
+        exec uv run --locked python crates/zipzi-python2/tools/connected.py "$@"
         ;;
     wheel)
         exec uv run --locked python tools/python/test_python.py --wheel "$@"

@@ -20,6 +20,17 @@ use zipzi_sdk::{ImageCreateSpec, MeshOperation, Version};
 struct SessionToken {
     id: SessionId,
 }
+#[pymethods]
+impl SessionToken {
+    #[getter]
+    fn runtime(&self) -> String {
+        self.id.runtime_instance().to_string()
+    }
+    #[getter]
+    fn serial(&self) -> u64 {
+        self.id.serial()
+    }
+}
 #[pyclass(frozen, name = "_EditToken")]
 struct EditToken {
     id: EditId,
@@ -245,6 +256,28 @@ fn receipt<'py>(py: Python<'py>, r: &zipzi_sdk::EditReceipt) -> PyResult<Bound<'
     d.set_item("object_ids", &r.object_ids)?;
     Ok(d)
 }
+fn session_info(py: Python<'_>, value: SessionInfo) -> PyResult<Bound<'_, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item(
+        "id",
+        identity(py, value.id.runtime_instance(), value.id.serial())?,
+    )?;
+    d.set_item("version", version(py, value.version)?)?;
+    d.set_item("modified", value.modified)?;
+    d.set_item("history_lengths", value.history_lengths)?;
+    d.set_item(
+        "state",
+        match value.state {
+            SessionState::Ready => "ready",
+            SessionState::Busy(_) => "busy",
+            SessionState::Faulted(_) => "faulted",
+            SessionState::Closing => "closing",
+            SessionState::Closed => "closed",
+        },
+    )?;
+    d.set_item("path", value.path.map(|p| p.to_string_lossy().into_owned()))?;
+    Ok(d)
+}
 #[pymethods]
 impl NativeRuntime {
     #[new]
@@ -262,7 +295,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-3"
+        "zipzi-python2-4"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
@@ -305,11 +338,39 @@ impl NativeRuntime {
         let id = session.id;
         let value = py.detach(|| self.host.call(move |rt| rt.session_info(id)));
         reply(py, value, "session.info", |s| {
-            let d = PyDict::new(py);
-            d.set_item("version", version(py, s.version)?)?;
-            d.set_item("modified", s.modified)?;
-            d.set_item("history_lengths", s.history_lengths)?;
-            Ok(d.into_any())
+            Ok(session_info(py, s)?.into_any())
+        })
+    }
+    fn list_sessions(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
+        let value = py.detach(|| self.host.call(|rt| Ok(rt.list_sessions())));
+        reply(py, value, "sessions.list", |sessions| {
+            let result = PyList::empty(py);
+            for s in sessions {
+                result.append(session_info(py, s)?)?;
+            }
+            Ok(result.into_any())
+        })
+    }
+    fn attach(&self, py: Python<'_>, runtime: String, serial: u64) -> PyResult<Py<PyDict>> {
+        let client = self.client;
+        let value = py.detach(|| {
+            self.host.call(move |rt| {
+                let id = rt
+                    .list_sessions()
+                    .into_iter()
+                    .map(|s| s.id)
+                    .find(|id| {
+                        id.runtime_instance().to_string() == runtime && id.serial() == serial
+                    })
+                    .ok_or(RuntimeError::InvalidReference)?;
+                rt.attach_session(client, id)?;
+                Ok(id)
+            })
+        });
+        reply(py, value, "sessions.attach", |id| {
+            let result = PyDict::new(py);
+            result.set_item("id", Py::new(py, SessionToken { id })?)?;
+            Ok(result.into_any())
         })
     }
     fn begin_edit(

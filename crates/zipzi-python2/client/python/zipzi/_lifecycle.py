@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Generic, Literal, TypeVar
 from . import meshes, ops, plans, resources
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
-from ._values import Receipt, SaveReceipt, SessionInfo, WriteResult, record
+from ._values import ConnectionInfo, Receipt, SaveReceipt, SessionId, SessionInfo, WriteResult, record, sequence
 from .backends import Backend, JobKind
 from ._recovery import RecoveryOwner
 from ._generated.conveniences import EditableMeshes as MeshConveniences
@@ -156,6 +156,10 @@ class Runtime:
         self._backend = backend
         self.sessions = Sessions(self)
         self.resources = resources.Resources(backend)
+    @property
+    def connection(self) -> ConnectionInfo | None:
+        """Immutable negotiated host metadata; local runtimes return None."""
+        return self._backend.connection_info
     def __enter__(self) -> "Runtime":
         return self
     def __exit__(self, kind: object, exception: BaseException | None, traceback: object) -> None:
@@ -175,6 +179,18 @@ class Sessions:
         backend = self._runtime._backend
         return known(lambda: Session(self._runtime, backend.create(document_id, self)),
             lambda: Session(self._runtime, backend.recover(self)))
+    def list(self) -> tuple[SessionInfo, ...]:
+        backend = self._runtime._backend
+        def decode(raw: object) -> tuple[SessionInfo, ...]:
+            return tuple(SessionInfo.read(item) for item in sequence(raw))
+        return known(lambda: decode(backend.list_sessions(self)), lambda: decode(backend.recover(self)))
+    def attach(self, id: SessionId) -> "Session":
+        backend = self._runtime._backend
+        if not isinstance(id, SessionId):
+            raise TypeError("Expected a SessionId")
+        def decode(raw: object) -> "Session":
+            return Session(self._runtime, record(raw)["id"])
+        return known(lambda: decode(backend.attach(id, self)), lambda: decode(backend.recover(self)))
     def open(self, path: Path) -> Job["Session"]:
         backend = self._runtime._backend
         path = absolute(path)
@@ -190,12 +206,19 @@ class Sessions:
 class Session:
     def __init__(self, runtime: Runtime, token: object):
         self._runtime, self._token, self._backend = runtime, token, runtime._backend
+        self._id = self._backend.session_id(token)
         self.meshes = Meshes(self)
         self.project = Project(self)
         self.resources = Images(self)
+    @property
+    def id(self) -> SessionId:
+        return self._id
     def info(self) -> SessionInfo:
         return known(lambda: SessionInfo.read(self._backend.info(self._token, self)),
             lambda: SessionInfo.read(self._backend.recover(self)))
+    def show_window(self) -> None:
+        """Display this resident session in its desktop host."""
+        known(lambda: self._backend.show_window(self._token, self), lambda: self._backend.recover(self))
     def edit(self, label: str) -> "Edit":
         return Edit(self, label)
     def undo(self) -> Job[Receipt]:

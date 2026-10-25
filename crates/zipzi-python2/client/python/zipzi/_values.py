@@ -3,6 +3,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
+from uuid import UUID
 
 Record = Mapping[str, object]
 
@@ -30,6 +31,54 @@ def number(value: object) -> float:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         raise TypeError("Expected a number")
     return float(value)
+
+@dataclass(frozen=True)
+class SessionId:
+    """Runtime-scoped identity, independent of paths and document UUIDs."""
+    runtime: str
+    serial: int
+
+    def __post_init__(self) -> None:
+        if str(UUID(self.runtime)) != self.runtime or type(self.serial) is not int or not 0 < self.serial < 1 << 64:
+            raise ValueError("Invalid session identity")
+
+    @classmethod
+    def read(cls, value: object) -> "SessionId":
+        raw = record(value)
+        return cls(string(raw["runtime"]), integer(raw["serial"]))
+
+    def wire(self) -> dict[str, object]:
+        return dict(runtime=self.runtime, serial=self.serial)
+
+@dataclass(frozen=True)
+class ConnectionLimits:
+    frame_bytes: int
+    reconnect_seconds: float
+    result_seconds: float
+    results_per_client: int
+    result_bytes_per_client: int
+    result_bytes_total: int
+
+    @classmethod
+    def read(cls, value: object) -> "ConnectionLimits":
+        raw = record(value)
+        return cls(integer(raw["frame_bytes"]), number(raw["reconnect_seconds"]), number(raw["result_seconds"]),
+            integer(raw["results_per_client"]), integer(raw["result_bytes_per_client"]), integer(raw["result_bytes_total"]))
+
+@dataclass(frozen=True)
+class ConnectionInfo:
+    runtime: str
+    host_pid: int
+    sdk_build: str
+    protocol: str
+    capabilities: tuple[str, ...]
+    limits: ConnectionLimits
+
+    @classmethod
+    def read(cls, value: object) -> "ConnectionInfo":
+        raw = record(value)
+        return cls(string(raw["runtime"]), integer(raw["host_pid"]), string(raw["sdk_build"]), string(raw["protocol"]),
+            tuple(string(item) for item in sequence(raw["capabilities"])), ConnectionLimits.read(raw["limits"]))
 
 @dataclass(frozen=True)
 class Version:
@@ -99,6 +148,9 @@ class SessionInfo:
     version: Version
     modified: bool
     history: tuple[int, int]
+    id: SessionId
+    state: str
+    path: Path | None
 
     @classmethod
     def read(cls, value: object) -> "SessionInfo":
@@ -106,7 +158,11 @@ class SessionInfo:
         history = sequence(r["history_lengths"])
         if type(r["modified"]) is not bool or len(history) != 2:
             raise TypeError("Invalid session info")
-        return cls(Version.read(r["version"]), r["modified"], (integer(history[0]), integer(history[1])))
+        state = string(r["state"])
+        if state not in {"ready", "busy", "faulted", "closing", "closed"}:
+            raise ValueError("Unknown session state")
+        return cls(Version.read(r["version"]), r["modified"], (integer(history[0]), integer(history[1])),
+            SessionId.read(r["id"]), state, None if r["path"] is None else Path(string(r["path"])))
 
 @dataclass(frozen=True)
 class WriteResult:

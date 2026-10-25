@@ -11,8 +11,9 @@ may change.
 - **Desktop Editor:** [setup, development and native tests](crates/zipzi-editor/README.md).
 - **Rust SDK:** [authoring API](crates/zipzi-sdk/README.md) and
   [crate responsibilities](MONOREPO.md#crate-responsibilities).
-- **Python SDK:** [installation and examples](crates/zipzi-python/README.md),
-  [API reference](crates/zipzi-python/API.md), [recipes](examples/sdk/README.md).
+- **Python SDK:** [independent Runtime client](crates/zipzi-python2/README.md),
+  [implemented capabilities](crates/zipzi-python2/CAPABILITIES.md) and
+  [Runtime R0–R4 integration](docs/plans/sdk-runtime/python2-r0-r4.md).
 - **Contributing:** [repository structure](MONOREPO.md),
   [test gates](tools/README.md#test-coverage), [tools](tools/README.md) and
   [documentation index](docs/README.md).
@@ -38,11 +39,11 @@ cargo run --locked -p zipzi-editor
 uv run --locked python tools/test_tools.py
 ```
 
-For Python development, `./tools/test-sdk.sh python` refreshes the Debug extension
-before running CPU and inspection tests; add `--observe` for GPU coverage.
-`./tools/test-sdk.sh wheel` builds a Release wheel and validates its isolated
-installation. The wheel is an independent package under `crates/zipzi-python`;
-root `pyproject.toml` and `uv.lock` manage development tools.
+For the new Python SDK, `./tools/test-sdk.sh python2` refreshes its native adapter
+and runs Local/Connected behavior and static types. `python2-connected` installs
+the pure wheel and validates real subprocess host discovery and session binding;
+add `--editor-host /absolute/path/to/zipzi-editor` for the current desktop host.
+Root `pyproject.toml` and `uv.lock` manage development tools.
 
 ## Tests
 
@@ -55,13 +56,13 @@ commands from the repository root; inspect available modes with
 | --- | --- |
 | One Rust crate/module | `cargo test --locked -p <crate> --lib <filter>`; add its integration target when relevant |
 | Runtime ownership/jobs/events | `./tools/test-sdk.sh runtime` |
-| Local protocol / installed Python client | `python3 tools/python/test_connected.py` |
+| Local protocol / installed Python client | `./tools/test-sdk.sh python2-connected` |
 | SDK authoring behavior | `./tools/test-sdk.sh fast <filter>` |
 | Alpha mesh generation | `./tools/test-sdk.sh mesh` |
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |
 | Editor UI (macOS/Metal) | `./tools/test-editor.sh ui <filter>` |
-| Python SDK | `./tools/test-sdk.sh python` (add `--observe` for GPU coverage) |
-| Independent Runtime Python SDK (`zipzi-python2`) | `./tools/test-sdk.sh python2` ([package and P0/P1 scope](crates/zipzi-python2/README.md)) |
+| Runtime Python SDK (`zipzi-python2`), Local/Connected and types | `./tools/test-sdk.sh python2` ([scope](crates/zipzi-python2/README.md)) |
+| Installed new client, host discovery and session binding | `./tools/test-sdk.sh python2-connected` (optional `--editor-host /absolute/path/to/zipzi-editor`) |
 | Repository tools | `uv run --locked python tools/test_tools.py -p test_<tool>.py` |
 
 Filters and filenames are placeholders; omit them to run the selected gate.

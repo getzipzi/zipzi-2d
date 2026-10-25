@@ -26,7 +26,7 @@ EOF
 
 prepare_runtime_client() {
     if [ -z "${ZIPZI_CLIENT_PYTHON:-}" ]; then
-        ZIPZI_CLIENT_PYTHON=$(python3 "$repo_root/tools/python/build_zipzi_client.py" --install)
+        ZIPZI_CLIENT_PYTHON=$(python3 "$repo_root/crates/zipzi-python2/tools/connected.py" --install-only)
         export ZIPZI_CLIENT_PYTHON
     fi
 }

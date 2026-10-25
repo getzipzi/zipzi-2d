@@ -18,6 +18,16 @@ R4 is in progress: see [implementation/evidence](../plans/sdk-runtime/r4-modelin
 and [current verified/pending coverage](r4-coverage.json). The active protocol is
 `zipzi-runtime-r4-1`; R3 records retain their historical contract.
 
+## Active Python implementation
+
+The current Python work uses the independent `crates/zipzi-python2` package.
+See the [R0–R4 reconnection record](../plans/sdk-runtime/python2-r0-r4.md) and
+[new-client coverage](python2-coverage.json). Host discovery, session binding and
+the selected real Editor publication recipe have new installed-client evidence.
+Typed event subscriptions, parameters and full R4 coverage remain pending.
+The inventories and older client evidence below retain their historical scope;
+they do not establish acceptance for the new package.
+
 ## Source inventory
 
 Regenerate and validate from the repository root:

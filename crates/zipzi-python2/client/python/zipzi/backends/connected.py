@@ -1,7 +1,6 @@
 """Bounded synchronous transport: bounded frames, owned request bytes and same-ID recovery.
 
-Connect to an explicit existing endpoint. Host discovery/start ownership is a
-separate lifecycle operation planned for P6.
+Host discovery/start ownership lives in _endpoint; request recovery never launches.
 """
 import hashlib
 import json
@@ -14,7 +13,7 @@ from typing import Literal
 from .. import ops, plans
 from .._generated.backends import ConnectedQueries
 from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
-from .._values import record, sequence
+from .._values import ConnectionInfo, SessionId, record, sequence
 from . import JobKind
 
 CONTRACT = "zipzi-runtime-r4-1"
@@ -45,10 +44,12 @@ def _exchange(stream: socket.socket, body: bytes) -> object:
     return json.loads(_read(stream, length), parse_constant=invalid_constant)
 
 class ConnectedBackend(ConnectedQueries):
-    def __init__(self, endpoint: Path, timeout: float = 10.) -> None:
+    def __init__(self, endpoint: Path, timeout: float = 10., *, sdk_build: str | None = None,
+        handshake_timeout: float | None = None) -> None:
         if not endpoint.is_absolute():
             raise ValueError("Endpoint must be absolute")
         self._endpoint, self._timeout = endpoint, timeout
+        self._sdk_build = sdk_build
         self._runtime: object = None
         self._client: object = None
         self._secret: object = None
@@ -57,29 +58,36 @@ class ConnectedBackend(ConnectedQueries):
         self._next = 0
         self._pending: tuple[PendingRequest, bytes, object] | None = None
         self._lock = threading.RLock()
-        self._connect()
+        self._connect(handshake_timeout)
 
     def _disconnect(self) -> None:
         if self._stream is not None:
             self._stream.close()
             self._stream = None
 
-    def _connect(self) -> None:
+    def _connect(self, timeout: float | None = None) -> None:
         if self._closed:
             raise SdkFailure("HOST_CLOSED", "Connection is closed")
         self._disconnect()
         stream = socket.socket(socket.AF_UNIX)
-        stream.settimeout(self._timeout)
+        stream.settimeout(self._timeout if timeout is None else timeout)
         try:
             stream.connect(str(self._endpoint))
             hello = record(unwrap(_exchange(stream, _body(dict(protocol=CONTRACT, runtime=self._runtime,
-                client=self._client, secret=self._secret)))))
+                client=self._client, secret=self._secret, sdk_build=self._sdk_build)))))
+            metadata = ConnectionInfo.read(hello)
+            if metadata.protocol != CONTRACT:
+                raise SdkFailure("PROTOCOL_MISMATCH", "Host returned an incompatible protocol")
+            if self._sdk_build is not None and metadata.sdk_build != self._sdk_build:
+                raise SdkFailure("BUILD_MISMATCH", "Host returned a different SDK build")
             if not {"typed_meshes", "typed_resources_plans", "typed_job_lifecycle"}.issubset(sequence(hello["capabilities"])):
                 raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed authoring operations")
         except BaseException:
             stream.close()
             raise
         self._runtime, self._client, self._secret = hello["runtime"], hello["client"], hello["secret"]
+        self.connection_info = metadata
+        stream.settimeout(self._timeout)
         self._stream = stream
 
     def _send(self, pending: PendingRequest, body: bytes, owner: object) -> object:
@@ -136,6 +144,14 @@ class ConnectedBackend(ConnectedQueries):
     def create(self, document_id: str, owner: object) -> object:
         # ModelSetup defaults are supplied by serde/SDK, not copied into Python.
         return self._request(dict(op="create_session", document_id=document_id), owner, "sessions.create")
+    def session_id(self, token: object) -> SessionId:
+        return SessionId.read(token)
+    def list_sessions(self, owner: object) -> object:
+        return self._request(dict(op="list_sessions"), owner, "sessions.list")
+    def attach(self, session: SessionId, owner: object) -> object:
+        return self._request(dict(op="attach_session", session=session.wire()), owner, "sessions.attach")
+    def show_window(self, session: object, owner: object) -> None:
+        self._request(dict(op="show_window", session=session), owner, "session.show_window")
     def info(self, session: object, owner: object) -> object:
         return self._request(dict(op="session_info", session=session), owner, "session.info")
     def begin(self, session: object, label: str, owner: object) -> object:

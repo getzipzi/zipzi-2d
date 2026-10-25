@@ -3,6 +3,13 @@
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
 日期：2026 年 10 月 24 日。状态：**R0–R3 已交付，R4 实施中，R5–R7 尚未开始**。
 
+2026-10-25 执行主线更新：Python 接入以全新的 `crates/zipzi-python2` 为唯一实现。
+原 R0–R3 交付记录保留为历史；新包涉及的 Python/安装/真实宿主证据独立补齐，
+不直接沿用旧客户端的通过结论。接回差距与本批宿主/会话验收见
+[新包 R0–R4 记录](sdk-runtime/python2-r0-r4.md)及
+[逐能力状态](../runtime/python2-coverage.json)。新包 R3 仍在接回，R4 尚未验收；
+下一切片为类型化事件订阅与参数批量读写，再扩展完整 Modeling/资源/IO。
+
 架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。`zipzi-runtime` 的进程内核心和 Editor 托管已实现；R2 性能门槛已通过，R3 本机协议与 Python 最小闭环已实现，完整领域连接继续在 R4–R7 交付。后续阶段的模块、测试名称和命令模板仍为目标，不能作为已通过的证据。实际结果见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)、[R2 实施记录](sdk-runtime/r2-editor.md)、[R3 实施记录](sdk-runtime/r3-ipc.md)与 [R4 实施记录](sdk-runtime/r4-modeling.md)。
 
 ## 1. 执行规则与阶段总览

@@ -5,15 +5,18 @@ from .plans import Plan
 from .resources import PreparedImage
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
 from ._lifecycle import Edit, Job, Runtime, Session
-from ._values import Receipt, SaveReceipt, SessionInfo, Source, Version, WriteResult
+from ._values import ConnectionInfo, ConnectionLimits, Receipt, SaveReceipt, SessionId, SessionInfo, Source, Version, WriteResult
 
 def local() -> Runtime:
     from .backends.local import LocalBackend
     return Runtime(LocalBackend())
 
-def connect(*, endpoint: Path, timeout: float = 10.) -> Runtime:
-    from .backends.connected import ConnectedBackend
-    return Runtime(ConnectedBackend(endpoint, timeout))
+def connect(*, endpoint: Path | None = None, start: bool = False, host: Path | None = None,
+    timeout: float = 10., startup_timeout: float = 15., sdk_build: str | None = None) -> Runtime:
+    """Discover a host, optionally start one, and bind a strictly checked client."""
+    from ._endpoint import connect_backend
+    return Runtime(connect_backend(endpoint, start=start, host=host, timeout=timeout,
+        startup_timeout=startup_timeout, sdk_build=sdk_build))
 
 __all__ = ["local", "connect", "Runtime", "Session", "Edit", "Job", "SdkFailure", "Busy", "OutcomeUnknown",
-    "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionInfo", "WriteResult", "meshes", "ops", "plans", "resources", "Plan", "PreparedImage"]
+    "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionId", "SessionInfo", "ConnectionInfo", "ConnectionLimits", "WriteResult", "meshes", "ops", "plans", "resources", "Plan", "PreparedImage"]

@@ -116,6 +116,31 @@ class PythonSdk(unittest.TestCase):
         self.assertFalse(session.info().modified)
         return face, saved.manifest, (session.meshes.get(face).name, formal.geometry.positions, session.info().history)
 
+    def test_session_listing_identity_and_attach_use_the_same_runtime(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(711))
+                info, = runtime.sessions.list()
+                self.assertEqual(info.id, session.id)
+                self.assertEqual(info.state, "ready")
+                self.assertIsNone(info.path)
+                attached = runtime.sessions.attach(info.id)
+                with attached.edit("same session") as edit:
+                    face = edit.meshes.create(meshes.MeshSpec("Resident", GEOMETRY))
+                self.assertEqual(session.meshes.get(face).name, "Resident")
+                self.assertEqual(session.info().history, (1, 0))
+                self.assertEqual(session.info().id, info.id)
+                self.assertEqual(session.meshes.get(face).source.runtime, info.id.runtime)
+                with zipzi.local() as foreign:
+                    with self.assertRaises(zipzi.SdkFailure) as error:
+                        foreign.sessions.attach(info.id)
+                    self.assertEqual(error.exception.code, "INVALID_REFERENCE")
+                if mode == "local":
+                    self.assertIsNone(runtime.connection)
+                else:
+                    self.assertEqual(runtime.connection.runtime, info.id.runtime)
+
     def test_shared_recipe(self):
         outputs = []
         for mode in ("local", "connected"):

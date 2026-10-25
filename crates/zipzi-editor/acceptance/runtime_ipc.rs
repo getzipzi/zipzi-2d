@@ -89,15 +89,24 @@ pub(super) fn run() -> anyhow::Result<()> {
         python,
         endpoint.path(),
         r#"
-import json,sys,zipzi
-assert __import__('importlib.util',fromlist=['find_spec']).find_spec('zipzi._native') is None
-c=zipzi.connect(start=False)
-s=c.attach_session(json.loads(sys.argv[1]))
-with s.edit('external Python') as e:
- e.rename_mesh(sys.argv[2], 'Python changed this mesh')
-assert s.mesh(sys.argv[2]).name=='Python changed this mesh'
+import sys,zipzi
+from importlib.metadata import version
+from importlib.util import find_spec
+assert version('zipzi-python2')=='0.1.0'
+assert '/site-packages/zipzi/' in zipzi.__file__
+assert find_spec('zipzi_native') is None
+with zipzi.connect() as c:
+ s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
+ assert s.id in {info.id for info in c.sessions.list()}
+ with s.edit('external Python') as e:
+  e.meshes.rename(sys.argv[3], 'Python changed this mesh')
+ assert s.meshes.get(sys.argv[3]).name=='Python changed this mesh'
 "#,
-        &[serde_json::to_string(&session)?, mesh.clone()],
+        &[
+            session.runtime_instance().to_string(),
+            session.serial().to_string(),
+            mesh.clone(),
+        ],
     )?;
     h.cx.run_until_parked();
     h.view.read_with(&h.cx, |view, _| {
@@ -132,12 +141,17 @@ assert s.mesh(sys.argv[2]).name=='Python changed this mesh'
         python,
         endpoint.path(),
         r#"
-import json,sys,zipzi
-c=zipzi.connect(start=False); s=c.attach_session(json.loads(sys.argv[1]))
-assert s.mesh(sys.argv[2]).name!='Python changed this mesh'
-assert s.history_lengths()[1]==1
+import sys,zipzi
+with zipzi.connect() as c:
+ s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
+ assert s.meshes.get(sys.argv[3]).name!='Python changed this mesh'
+ assert s.info().history[1]==1
 "#,
-        &[serde_json::to_string(&session)?, mesh.clone()],
+        &[
+            session.runtime_instance().to_string(),
+            session.serial().to_string(),
+            mesh.clone(),
+        ],
     )?;
     // UI owns an in-flight Save As; the external entry cannot bypass its target.
     let target = endpoint.path().join("project");
@@ -153,10 +167,11 @@ assert s.history_lengths()[1]==1
         endpoint.path(),
         r#"
 import sys,uuid,zipzi
-c=zipzi.connect(start=False);s=c.create_session(str(uuid.uuid4()))
-try: s.save(__import__('pathlib').Path(sys.argv[1]))
-except zipzi.Busy: pass
-else: raise AssertionError('cross-session target reservation bypassed')
+with zipzi.connect() as c:
+ s=c.sessions.create(str(uuid.uuid4()))
+ try: s.project.save(__import__('pathlib').Path(sys.argv[1])).wait()
+ except zipzi.Busy: pass
+ else: raise AssertionError('cross-session target reservation bypassed')
 "#,
         &[target.to_string_lossy().into_owned()],
     )?;
@@ -181,7 +196,7 @@ else: raise AssertionError('cross-session target reservation bypassed')
         "native render missing"
     );
     println!(
-        "R3 native IPC: installed Python -> same unsaved session -> layer/properties/history -> UI Undo -> path reservation -> Metal render passed"
+        "R3 native IPC: installed zipzi-python2 -> same unsaved session -> layer/properties/history -> UI Undo -> path reservation -> Metal render passed"
     );
     Ok(())
 }

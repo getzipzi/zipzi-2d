@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING, Literal, cast
 from .. import ops, plans
 from .._generated.backends import LocalQueries
 from .._errors import PendingRequest, SdkFailure, unwrap
+from .._values import ConnectionInfo, SessionId
 from . import JobKind
 if TYPE_CHECKING:
-    from ._native_types import NativeModule
+    from ._native_types import NativeModule, SessionToken
 
 class LocalBackend(LocalQueries):
+    connection_info: ConnectionInfo | None = None
     def __init__(self) -> None:
         try:
             module = cast("NativeModule", import_module("zipzi_native._native"))
@@ -20,12 +22,21 @@ class LocalBackend(LocalQueries):
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-3":
+        if self._native.contract != "zipzi-python2-4":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 
     def create(self, document_id: str, owner: object) -> object:
         return unwrap(self._native.create_session(document_id))
+    def session_id(self, token: object) -> SessionId:
+        value = cast("SessionToken", token)
+        return SessionId(value.runtime, value.serial)
+    def list_sessions(self, owner: object) -> object:
+        return unwrap(self._native.list_sessions())
+    def attach(self, session: SessionId, owner: object) -> object:
+        return unwrap(self._native.attach(session.runtime, session.serial))
+    def show_window(self, session: object, owner: object) -> None:
+        raise SdkFailure("UNSUPPORTED_OPERATION", "Local runtime has no Editor windows", operation="session.show_window")
     def info(self, session: object, owner: object) -> object:
         return unwrap(self._native.info(session))
     def begin(self, session: object, label: str, owner: object) -> object:

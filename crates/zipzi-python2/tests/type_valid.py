@@ -34,3 +34,14 @@ def cancellable(job: zipzi.Job[zipzi.Receipt]) -> zipzi.Receipt:
     if state == "queued":
         job.cancel()
     return job.wait()
+
+def resident(runtime: zipzi.Runtime) -> zipzi.SessionId:
+    info: zipzi.SessionInfo = runtime.sessions.list()[0]
+    session: zipzi.Session = runtime.sessions.attach(info.id)
+    metadata: zipzi.ConnectionInfo | None = runtime.connection
+    if metadata is not None and "show_window" in metadata.capabilities:
+        session.show_window()
+    return session.id
+
+def desktop(host: Path) -> zipzi.Runtime:
+    return zipzi.connect(start=True, host=host, startup_timeout=15., sdk_build="explicit build identity")

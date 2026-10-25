@@ -8,7 +8,9 @@ fixed geometry/history and the independent Rust SDK tests.
 | --- | --- | --- | --- | --- |
 | Mesh generation | Same public values/ops and query methods | Selected Rust declarations + compiled query registration | Deterministic generation/check-only/protection, real Rust negative compilation, unchanged behavior/static tests | First P2 slice implemented |
 | Local ownership | `local()` / Runtime context | `host::LocalHost` | `tests/test_api.py::test_shared_recipe`; Runtime host tests | Implemented |
+| Host discovery/start | `connect()`, `connect(start=True, host=...)`, `runtime.connection` | Same endpoint ownership/inherited fd and strict protocol/build handshake | Installed subprocess cold-start/slow/failure/security cases; current production Editor cold start/reopen | Selected Runtime R3 slice implemented; packaged app paths pending |
 | Explicit connection | `connect(endpoint=...)` | `Protocol` → same Runtime handlers | Shared recipe on real subprocess host | Implemented |
+| Resident sessions | `sessions.list/attach`, `session.id`, `session.show_window` | Runtime session registry and desktop window route | Both backends; lost list/attach responses; two installed clients share unsaved history; native Editor projection/UI Undo/Metal | Selected Runtime R3 slice implemented |
 | Session creation/info | `runtime.sessions.create`, `session.info` | `Runtime::create_session/session_info` | Shared recipe, response-loss tests | Implemented |
 | Create | `edit.meshes.create` / `ops.Create` | `Runtime::apply_authoring` → SDK `MeshCreateSpec` | SDK `mesh_create_spec_allocates_identity_and_keeps_defaults_in_sdk`; shared recipe | Implemented |
 | Rename/positions | Convenience methods / typed operation values | `Runtime::apply_authoring` → SDK `MeshOperation` | Candidate read-after-write, independent vertex IDs/positions | Implemented |
@@ -27,9 +29,10 @@ fixed geometry/history and the independent Rust SDK tests.
 | Binary buffers/large images | Explicit bounded buffers | Shared SDK/Runtime resource machinery | Independent binary/peak/cancellation coverage required | Planned P4 |
 | Scene/parameters/bindings/topology | Selected domain modules | SDK semantics with Runtime ownership | Independent recipes to be written | Planned P3 |
 | Complete project formats/binary IO | Resource/Project Jobs | Shared SDK/Runtime | Resource and filesystem failure cases required | Planned P4 |
-| CPU sampling/animation/Preview | Typed query and independent sources | Shared SDK/Runtime | Numerical and isolation recipes required | Planned P5 |
+| Modeling CPU sampling | Typed formal/candidate parameter batches | Shared SDK/Runtime frozen-source evaluation | Binding/keyform/BlendShape numerical and isolation recipes required | Required by Runtime R4; new package pending |
+| Animation/Preview | Typed query and independent sources | Shared SDK/Runtime | Numerical and isolation recipes required | Runtime R5 / Python P5 pending |
 | Observer/inspection | Device-backed observer, offline workflow | Rust observation + Python artifact organization | Conditional GPU and offline evidence required | Planned P5 |
-| Host discovery and packaged acceptance | Explicit connection lifecycle, both distributions | Same host ownership/protocol | Existing endpoint entry is insufficient | Planned P6 |
+| Packaged acceptance | Both distributions and installed desktop app locations | Same host ownership/protocol | Pure/native wheels and repository-built desktop tested; source/app/platform matrix pending | P6 partial; Runtime R3 discovery implemented above |
 
 P0 has selected the first inputs/results and failure rules: `MeshSpec` creates
 without copying a persisted Mesh; Rename/SetPositions express intent; snapshots

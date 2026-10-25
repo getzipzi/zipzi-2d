@@ -43,6 +43,7 @@ arguments and output paths.
 | `test-sdk.sh` | SDK fast, mesh, regression, stress, Python, wheel and full gates |
 | `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
 | `python/test_python.py` | Refresh Debug Python extension or build/validate an isolated Release wheel |
+| `../crates/zipzi-python2/tools/connected.py` | Build/install the independent pure client; real subprocess startup/session acceptance; `--install-only` supplies Editor's interpreter |
 | `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
 | `dev-editor.sh` | Editor development watcher and process lifecycle |
 | `build-editor-app.sh` | macOS app bundle construction |
@@ -83,6 +84,8 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | SDK `mesh` / `regression` | Daily alpha mesh / all 17 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
 | SDK `python` / `wheel` | Rebuilt Debug extension / isolated Release wheel gates |
+| SDK `python2` | New Runtime-backed package: refreshed native adapter, Local/Connected behavior, strict positive/negative types and generation drift |
+| SDK `python2-connected` | New pure wheel in an isolated environment; real cold-start/ownership/recovery; optional `--editor-host /absolute/path/to/zipzi-editor` adds production desktop acceptance |
 | SDK `full` or no argument | SDK formatting, complete 16-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
 | Editor `fast` | zipzi-editor-core library and synthetic integration |
 | Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
@@ -139,6 +142,11 @@ uv run --locked python tools/test_tools.py -k failure
 SDK `fast`/`mesh` gates run CPU behavior, while observe/render tests need a GPU.
 Editor UI and native gates require macOS and Metal. Full local licensed-model
 requirements are documented in the [Editor README](../crates/zipzi-editor/README.md#local-model-acceptance).
+
+Editor `runtime_ipc_acceptance` now exercises the independent `zipzi-python2`
+client. Acceptance/full prepares its installed pure wheel unless
+`ZIPZI_CLIENT_PYTHON` supplies an isolated interpreter. It must contain the new
+distribution without `zipzi_native`; the acceptance test checks this explicitly.
 
 See [test layout and prerequisites](tests/README.md). These tests exercise
 tooling, not the built SDK extension. For the latter use `test-sdk.sh python`:

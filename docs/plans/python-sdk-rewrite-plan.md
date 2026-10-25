@@ -2,7 +2,7 @@
 
 日期：2026-10-25。状态：**新包已建立；P1 选定试点及生命周期矩阵已验收；P0 试点两后端计时/探针与比较门禁已建立，统计范围见下文；P2 第一批网格生成链路已验收，资源/Plan 生成待扩展；P6 已有初步构建和安装证据**。见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
-本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）、`f2ef33c`（生命周期与 P0 门禁）和 2026-10-25 核对到的工作区为依据。选定 P1 试点的共享 Rust 接口、新包两后端、安装验证、生命周期与 P0 计数已保存于 `f2ef33c`；后续 P2 网格生成仍属于工作区实现，不能按该提交复现。具体测试与切片限制见实施记录；基线记录客户端/测量脚本和两个 Rust 产物的哈希。本文区分已提交基础、已有验证记录、工作区实现和后续目标；不改写此前验收结果。
+本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）、`f2ef33c`（生命周期与 P0 门禁）、`1e0043f`（P2 网格生成）和 2026-10-25 核对到的工作区为依据。当前执行主线接回 [Runtime R0–R4](sdk-runtime/python2-r0-r4.md)，先补真实宿主、事件和参数，再逐域扩展 R4；生成器随能力推进。新包的宿主发现/启动、驻留会话列表/绑定、真实 Editor 写入与安装证据属于 `1e0043f` 后的工作区，具体限制见记录。本文区分已提交基础、已有验证记录、工作区实现和后续目标，不改写此前验收结果。
 
 本计划按用户决定，从一个全新的 `crates/zipzi-python2` 开始。把 `zipzi-python` 视为不存在：不读取或导入其实现，不复用其包装、stub、构建入口或测试 recipe，不以其接口数量、行数和性能作为交付基准，也不承担迁移、兼容或删除旧包的任务。先前放在旧 crate 内的 P1 试验代码已迁入新包；旧 crate 的接线改动已撤回。
 
@@ -33,9 +33,9 @@
 | 公共 API | [meshes.py](../../crates/zipzi-python2/client/python/zipzi/meshes.py)、[ops.py](../../crates/zipzi-python2/client/python/zipzi/ops.py)：Geometry、MeshSpec、Snapshot 和 Create/Rename/SetPositions | 其余领域和更复杂 Plan 意图；操作联合现已覆盖 Mesh、图片与 ApplyPlan |
 | 生命周期 | [_lifecycle.py](../../crates/zipzi-python2/client/python/zipzi/_lifecycle.py)：Runtime/Session/Edit/Job、明确的恢复归属 | 选定 P1 矩阵已通过；P4 长任务/格式和 P6 平台验收另列 |
 | 本地执行 | [PyO3 桥接](../../crates/zipzi-python2/src/lib.rs)进入 [LocalHost](../../crates/zipzi-runtime/src/host.rs)；输入在释放 GIL 前取得所有权；本地不经 JSON 字符串或 Value 树；网格转换已生成 | 小资源/Plan 转换和预算已接线，其字段转换仍手写；二进制大负载未实现 |
-| 连接执行 | [ConnectedBackend](../../crates/zipzi-python2/client/python/zipzi/backends/connected.py)连接已有绝对 socket，进入相同 Runtime 处理器；请求保留不可变字节和原 RequestId | 宿主发现/启动、二进制负载和完整契约/构建配对 |
+| 连接执行 | [ConnectedBackend](../../crates/zipzi-python2/client/python/zipzi/backends/connected.py)进入相同 Runtime 处理器；保留不可变字节和原 RequestId；宿主发现/唯一启动、会话列表/绑定和真实 Editor 选定 recipe 已通过 | 类型化事件/参数、二进制负载和完整发行构建配对 |
 | 网格与历史 | 创建、位置、改名、候选查询、顺序批次、commit/Undo/Redo、保存重开 | 绑定、拓扑、资源引用等完整建模能力 |
-| 行为和类型测试 | [test_api.py](../../crates/zipzi-python2/tests/test_api.py)中 36 项测试；多数覆盖两后端或多个故障；Pyright 正例与三项精确反例 | 已覆盖 PreparedImage/Plan 与选定生命周期矩阵；后续领域按阶段另验收 |
+| 行为和类型测试 | [test_api.py](../../crates/zipzi-python2/tests/test_api.py)中 37 项测试；多数覆盖两后端或多个故障；Pyright 正例与三项精确反例；另有安装后宿主/Editor 接回用例 | 已覆盖 PreparedImage/Plan 与选定生命周期矩阵；后续领域按阶段另验收 |
 | 初步安装 | 记录中两个 wheel 分别构建，并在纯包连接环境及纯包+原生本地环境执行 [installed_recipe.py](../../crates/zipzi-python2/tests/installed_recipe.py) | 安装 recipe 已覆盖纹理、候选 Plan、混合历史及新宿主保存重开；真实 Editor、全领域安装及 sdist 待验收 |
 | 代码生成 | 网格字段/操作、两端转换、查询接线和便利方法已由 Rust 声明生成 | P2 第一批通过；资源/Plan、其余形状和完整源分发证据仍待扩展 |
 
@@ -273,7 +273,7 @@ zipzi-python2/
 | **P3 Modeling 与身份** | 未开始 | 场景、参数、绑定/BlendShape、拓扑、Glue/Offscreen、Ref/Address；有限生成扩展以完整领域 recipe 验收 |
 | **P4 资源与工程** | 未开始；P1 只提供小资源试点 | 二进制负载、完整图片/附件与格式 IO、重定位/长任务；资源峰值及取消/断连回归通过 |
 | **P5 动画与观察** | 未开始 | CPU 采样、Motion/Expression/Physics/Pose、独立 Preview、空间/观察、离线 inspection；数值/隔离及条件 GPU 验收 |
-| **P6 分发与使用** | 配置、wheel 构建和网格/纹理/Plan 安装试验已有证据 | 持续扩展安装 recipe；完成 sdist、配对失败、独立环境、宿主发现、真实 Editor 与全部领域验收 |
+| **P6 分发与使用** | wheel 及网格/纹理/Plan 安装；Runtime R3 宿主发现/启动和真实 Editor 选定 recipe 已有证据 | 持续扩展安装 recipe；完成 sdist、完整配对、平台/发行 app 位置与全部领域验收 |
 | **P7 全量收尾** | 未开始 | 汇总承诺能力、性能/内存、生成/手写责任；所有本项目承诺有证据，外部 Runtime 未来能力不算已交付 |
 
 依赖顺序为：**P1 图片 → Plan 与混合批次 → 生命周期与试点安装收尾，同时补该切片的 P0 → P2 → P3/P4 → P5 → P7**。P6 的构建/安装检查随每阶段持续运行，最后完成发布范围，不推迟到功能全部完成后才测安装。
@@ -377,6 +377,6 @@ python3 tools/workspace/cargo_domain.py --check
 
 `zipzi-python2` 完成需要：本项目明确承诺的能力均接线且独立验证；两后端共用 Rust 领域路径；类型、错误、恢复、资源、任务和安装可用；生成只承担机械重复；常规操作不需跨多层手改同一结构；全部阶段门槛有实际证据。
 
-当前选定 P1 生命周期矩阵已验收，P0 有冻结比较；P2 第一批网格生成链路已通过原有两后端行为/类型、Rust 编译正反例、安装和 P0 比较。下一步继续资源/Plan 形状与 source/sdist 证据，保持 P2 进行中，不把 P3–P5 的未实现领域算入生成覆盖。
+当前选定 P1 生命周期矩阵已验收，P0 有冻结比较；P2 第一批网格生成链路已通过两后端行为/类型、Rust 编译正反例、安装和 P0 比较。当前优先按 [Runtime 接回清单](sdk-runtime/python2-r0-r4.md) 补事件/参数及 R4，资源/Plan 生成随领域扩展，保持 P2 进行中。Runtime R4 的建模 CPU 采样不因 Python P5 的原排序而延后，不把未实现领域算入生成覆盖。
 
 每完成一个切片，更新能力清单和实施记录，登记提交/工作区身份、两后端状态、源码与安装证据、尚未满足的门槛。详细测试事实留在[实施记录](python-sdk-rewrite/README.md)，计划只据此调整状态与下一步，不把目标改写为完成结果。

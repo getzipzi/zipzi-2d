@@ -3,6 +3,11 @@
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
 日期：2026 年 10 月 24 日。状态：**R0–R3 已交付，R4 实施中**。
 
+2026-10-25：Python 实现切换到独立 `crates/zipzi-python2`，按
+[R0–R4 接回记录](sdk-runtime/python2-r0-r4.md)补齐新客户端验收。新包 Local 也通过
+显式拥有的 LocalHost 进入 Runtime；Connected 绑定桌面 Runtime，两者复用 SDK
+领域契约。下文旧 Python 路径及旧交付证据属于历史基线，不是继续扩展旧包的入口。
+
 实际进展与证据见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)、[R2 实施记录](sdk-runtime/r2-editor.md)、[R3 实施记录](sdk-runtime/r3-ipc.md)与 [R4 实施记录](sdk-runtime/r4-modeling.md)，不以本文的目标能力代替实施结果。
 
 实施顺序、跨仓交付物和验收编号见[分阶段实施计划](sdk-runtime-implementation-plan.md)。两份文档以本文件定义行为契约，以实施计划定义交付门槛；实施结果另行记录，不能把本文中的目标能力表述为现有能力。

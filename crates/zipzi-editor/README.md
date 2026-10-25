@@ -135,11 +135,12 @@ reopen to the existing process after a strict handshake. Protocol work enters
 Runtime on the application thread, and worker completion remains independent of
 windows. Development launches set `ZIPZI_EDITOR_HOST` to their paired executable;
 a reused resident host is reported without claiming ownership of its process.
-See [Python connection usage](../zipzi-python/README.md#connect-to-the-resident-editor-r3).
+See [new Python client connection usage](../zipzi-python2/README.md#desktop-host-and-resident-sessions)
+and the [R0–R4 reconnection record](../../docs/plans/sdk-runtime/python2-r0-r4.md).
 
 ```sh
-python3 tools/python/test_connected.py
-ZIPZI_CLIENT_PYTHON="$PWD/target/python-tests/connected/bin/python" \
+./tools/test-sdk.sh python2-connected
+ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python2/tools/connected.py --install-only) \
   env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
   --features test-support --test runtime_ipc_acceptance
 ```
