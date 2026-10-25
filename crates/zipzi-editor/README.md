@@ -75,6 +75,7 @@ env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=timeline cargo test --locked
 | `titlebar` | Project switching and empty states |
 | `transfer` | Import/export settings in English and Chinese |
 | `compact` | Compact layout, UI scaling and opaque Metal corners |
+| `parameter-toolbar` | Keyform SVG buttons, standard sizing and alignment across themes and UI scales |
 | `compact-popups` | Menus, submenus and ordinary/searchable Selects at every UI scale |
 | `properties` | Mesh properties, Part identity and Parameter validation in both locales |
 | `physics` | Physics group list and compact Properties inspector in both locales |

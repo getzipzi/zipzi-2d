@@ -54,7 +54,9 @@ pub enum AuthoringSessionReason {
 mod binding;
 #[path = "authoring/ordinary_binding.rs"]
 mod ordinary_binding;
-pub use ordinary_binding::{OrdinaryBindingAction, OrdinaryBindingCapture, OrdinaryBindingPlan};
+pub use ordinary_binding::{
+    OrdinaryBindingAction, OrdinaryBindingCapture, OrdinaryBindingPlan, ParameterKeyformAction,
+};
 #[path = "authoring/business.rs"]
 mod business;
 #[path = "authoring/motion.rs"]

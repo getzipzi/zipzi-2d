@@ -1,11 +1,13 @@
 mod headers;
 mod interactions;
+mod keyform_glyph;
 mod locate;
 mod management;
 mod selection;
 mod summary;
 mod sync;
 mod view;
+use keyform_glyph::KeyformGlyph;
 pub(crate) use management::ParameterAction;
 use view::ParameterRowView;
 pub(super) mod grouping;
@@ -53,6 +55,28 @@ struct ParameterRow {
     view: Entity<ParameterRowView>,
 }
 
+struct KeyformToolbarState {
+    context: Option<(DocumentId, String)>,
+    add_current_reason: Option<String>,
+    delete_current_reason: Option<String>,
+    add_endpoints_reason: Option<String>,
+    add_three_reason: Option<String>,
+    delete_all_reason: Option<String>,
+}
+
+impl KeyformToolbarState {
+    fn unavailable(reason: String) -> Self {
+        Self {
+            context: None,
+            add_current_reason: Some(reason.clone()),
+            delete_current_reason: Some(reason.clone()),
+            add_endpoints_reason: Some(reason.clone()),
+            add_three_reason: Some(reason.clone()),
+            delete_all_reason: Some(reason),
+        }
+    }
+}
+
 fn format_value(value: f32) -> String {
     format_one_decimal(value as f64)
 }
@@ -68,6 +92,35 @@ fn slide_number_options(parameter: &ParameterValue, disabled: bool) -> SlideNumb
         drag_distance: Some(PARAMETER_SLIDE_DISTANCE_PX),
         disabled,
     }
+}
+
+fn keyform_toolbar_button(
+    id: &'static str,
+    label: String,
+    glyph: KeyformGlyph,
+    action: zipzi_editor_core::ParameterKeyformAction,
+    context: Option<(DocumentId, String)>,
+    reason: Option<String>,
+    interaction_reason: Option<String>,
+    cx: &mut Context<ParametersPanel>,
+) -> Button {
+    let disabled = interaction_reason.is_some() || reason.is_some();
+    let tip = interaction_reason
+        .or(reason)
+        .unwrap_or_else(|| label.clone());
+    let on_click = cx.listener(move |this, _, window, cx| {
+        if let Some((document, parameter)) = &context {
+            this.edit_keyforms(*document, parameter, action, window, cx);
+        }
+    });
+    crate::ui::compact::header_button(
+        Button::new(id)
+            .accessibility_label(label)
+            .tooltip(tip)
+            .disabled(disabled)
+            .on_click(on_click)
+            .icon(glyph),
+    )
 }
 
 pub struct ParametersPanel {
@@ -193,6 +246,7 @@ impl ParametersPanel {
     fn toolbar(
         &self,
         create_disabled: bool,
+        interaction_reason: Option<String>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> PanelToolbar {
@@ -219,6 +273,71 @@ impl ParametersPanel {
         let on_group = cx.listener(|this, _, window, cx| {
             this.open_management(ParameterAction::CreateGroup, window, cx)
         });
+        let keyforms = self.keyform_toolbar_state(cx);
+        let add_current = keyform_toolbar_button(
+            "parameter-add-keyform",
+            t!("parameter.add_keyform").into_owned(),
+            KeyformGlyph::AddCurrent,
+            zipzi_editor_core::ParameterKeyformAction::AddCurrent,
+            keyforms.context.clone(),
+            keyforms.add_current_reason,
+            interaction_reason.clone(),
+            cx,
+        );
+        let delete_current = keyform_toolbar_button(
+            "parameter-delete-keyform",
+            t!("parameter.delete_keyform").into_owned(),
+            KeyformGlyph::DeleteCurrent,
+            zipzi_editor_core::ParameterKeyformAction::DeleteCurrent,
+            keyforms.context.clone(),
+            keyforms.delete_current_reason,
+            interaction_reason.clone(),
+            cx,
+        );
+        let add_endpoints = keyform_toolbar_button(
+            "parameter-add-two-keyforms",
+            t!("parameter.add_endpoint_keyforms").into_owned(),
+            KeyformGlyph::AddEndpoints,
+            zipzi_editor_core::ParameterKeyformAction::AddEndpoints,
+            keyforms.context.clone(),
+            keyforms.add_endpoints_reason,
+            interaction_reason.clone(),
+            cx,
+        );
+        let add_three = keyform_toolbar_button(
+            "parameter-add-three-keyforms",
+            t!("parameter.add_endpoint_midpoint_keyforms").into_owned(),
+            KeyformGlyph::AddThree,
+            zipzi_editor_core::ParameterKeyformAction::AddEndpointsAndMidpoint,
+            keyforms.context.clone(),
+            keyforms.add_three_reason,
+            interaction_reason.clone(),
+            cx,
+        );
+        let delete_all = keyform_toolbar_button(
+            "parameter-delete-all-keyforms",
+            t!("parameter.delete_all_keyforms").into_owned(),
+            KeyformGlyph::DeleteAll,
+            zipzi_editor_core::ParameterKeyformAction::DeleteAll,
+            keyforms.context,
+            keyforms.delete_all_reason,
+            interaction_reason,
+            cx,
+        );
+        let add_keyforms = crate::ui::compact::group(
+            "parameter-add-keyform-actions",
+            t!("parameter.add_keyform_actions"),
+            Axis::Horizontal,
+            vec![add_current, add_endpoints, add_three],
+        )
+        .flex_shrink_0();
+        let delete_keyforms = crate::ui::compact::group(
+            "parameter-delete-keyform-actions",
+            t!("parameter.delete_keyform_actions"),
+            Axis::Horizontal,
+            vec![delete_current, delete_all],
+        )
+        .flex_shrink_0();
         PanelToolbar::new("parameters-panel-toolbar")
             .action(move |_| {
                 Button::new("new-parameter")
@@ -235,8 +354,118 @@ impl ParametersPanel {
                     .disabled(group_disabled)
                     .on_click(on_group)
             })
+            .control(add_keyforms)
+            .control(delete_keyforms)
             .control(self.expansion_button(window, cx))
             .control(self.related_filter_button(window, cx))
+    }
+
+    fn keyform_toolbar_state(&self, cx: &App) -> KeyformToolbarState {
+        let Some(document_id) = self.document_id else {
+            return KeyformToolbarState::unavailable(
+                t!("parameter.keyform_select_parameter").into_owned(),
+            );
+        };
+        let Some(parameter_id) = self.navigation.inspected.as_ref().and_then(|object| {
+            (object.kind == zipzi_editor_core::ObjectKind::Parameter).then(|| object.id.clone())
+        }) else {
+            return KeyformToolbarState::unavailable(
+                t!("parameter.keyform_select_parameter").into_owned(),
+            );
+        };
+        let Some(row) = self
+            .rows
+            .iter()
+            .find(|row| row.parameter.id == parameter_id)
+        else {
+            return KeyformToolbarState::unavailable(
+                t!("parameter.keyform_select_parameter").into_owned(),
+            );
+        };
+        let Some(owner) = self.owner.upgrade() else {
+            return KeyformToolbarState::unavailable(
+                t!("parameter.keyform_unavailable").into_owned(),
+            );
+        };
+        let state = owner.read(cx);
+        let Some(document) = state.editor.document() else {
+            return KeyformToolbarState::unavailable(
+                t!("parameter.keyform_unavailable").into_owned(),
+            );
+        };
+        let context = Some((document_id, parameter_id));
+        if row.visual.kind != zipzi_core::ParameterKind::Normal {
+            let mut unavailable =
+                KeyformToolbarState::unavailable(t!("parameter.keyform_normal_only").into_owned());
+            unavailable.context = context;
+            return unavailable;
+        }
+        let targets: Vec<_> = document
+            .context()
+            .selections
+            .iter()
+            .filter(|target| {
+                matches!(
+                    target.kind,
+                    zipzi_editor_core::ObjectKind::Mesh
+                        | zipzi_editor_core::ObjectKind::Deformer
+                        | zipzi_editor_core::ObjectKind::Part
+                )
+            })
+            .cloned()
+            .collect();
+        if targets.is_empty() {
+            let mut unavailable = KeyformToolbarState::unavailable(
+                t!("parameter.keyform_select_target").into_owned(),
+            );
+            unavailable.context = context;
+            return unavailable;
+        }
+        let value = match row.slider.read(cx).value() {
+            SliderValue::Single(value) => value,
+            _ => row.parameter.value,
+        };
+        let target_axis = |target: &zipzi_editor_core::ObjectRef| {
+            document.ordinary_binding(target).and_then(|binding| {
+                binding
+                    .axes
+                    .into_iter()
+                    .find(|axis| axis.parameter_id == row.parameter.id)
+            })
+        };
+        let target_has_key = |target: &zipzi_editor_core::ObjectRef, value: f32| {
+            target_axis(target).is_some_and(|axis| axis.keys.contains(&value))
+        };
+        let covered_targets = targets
+            .iter()
+            .filter(|target| target_has_key(target, value))
+            .count();
+        let endpoints = [row.parameter.minimum, row.parameter.maximum];
+        let midpoint = row.parameter.minimum + (row.parameter.maximum - row.parameter.minimum) / 2.;
+        let all_have_endpoints = targets
+            .iter()
+            .all(|target| endpoints.iter().all(|&value| target_has_key(target, value)));
+        let all_have_three = targets.iter().all(|target| {
+            endpoints
+                .iter()
+                .copied()
+                .chain(std::iter::once(midpoint))
+                .all(|value| target_has_key(target, value))
+        });
+        let any_keyforms = targets.iter().any(|target| target_axis(target).is_some());
+        KeyformToolbarState {
+            context,
+            add_current_reason: (covered_targets == targets.len())
+                .then(|| t!("parameter.keyform_add_exists").into_owned()),
+            delete_current_reason: (covered_targets == 0)
+                .then(|| t!("parameter.keyform_delete_missing").into_owned()),
+            add_endpoints_reason: all_have_endpoints
+                .then(|| t!("parameter.keyform_preset_exists").into_owned()),
+            add_three_reason: all_have_three
+                .then(|| t!("parameter.keyform_preset_exists").into_owned()),
+            delete_all_reason: (!any_keyforms)
+                .then(|| t!("parameter.keyform_delete_all_missing").into_owned()),
+        }
     }
 
     fn refresh_visible_rows(&mut self, cx: &mut Context<Self>) {
@@ -294,18 +523,24 @@ impl Panel for ParametersPanel {
 impl crate::docking::header::PanelHeader for ParametersPanel {
     fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let dialog = window.has_active_dialog(cx);
-        let disabled = self.owner.upgrade().is_none_or(|owner| {
-            let state = owner.read(cx);
-            state.modal
-                || dialog
-                || state.editor.is_busy()
-                || !state.editor.command_available(
-                    state
-                        .editor
-                        .command(zipzi_editor_core::CommandId::CreateParameter),
-                )
-        });
-        self.toolbar(disabled, window, cx).into_any_element()
+        let (interaction_reason, create_disabled) = self.owner.upgrade().map_or(
+            (Some(t!("parameter.keyform_unavailable").into_owned()), true),
+            |owner| {
+                let state = owner.read(cx);
+                let interaction_disabled = state.modal || dialog || state.editor.is_busy();
+                let interaction_reason = interaction_disabled
+                    .then(|| t!("parameter.keyform_finish_operation").into_owned());
+                let create_disabled = interaction_disabled
+                    || !state.editor.command_available(
+                        state
+                            .editor
+                            .command(zipzi_editor_core::CommandId::CreateParameter),
+                    );
+                (interaction_reason, create_disabled)
+            },
+        );
+        self.toolbar(create_disabled, interaction_reason, window, cx)
+            .into_any_element()
     }
 }
 

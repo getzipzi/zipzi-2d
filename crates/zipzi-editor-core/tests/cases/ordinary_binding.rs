@@ -1,6 +1,7 @@
 use super::support;
 use zipzi_editor_core::{
     Document, ObjectKind as K, ObjectRef as R, OrdinaryBindingAction as A, OrdinaryBindingPlan,
+    ParameterKeyformAction,
 };
 use zipzi_sdk::{SceneContentTarget as T, SceneContentValue as V, ShapeTarget};
 fn apply(d: &mut Document, a: A) -> anyhow::Result<OrdinaryBindingPlan> {
@@ -202,6 +203,141 @@ fn invalid_duplicate_keys_locks_and_stale_plans_do_not_mutate_history() -> anyho
     assert!(d.plan_ordinary_binding(&A::Delete(b.reference)).is_err());
     Ok(())
 }
+
+#[test]
+fn parameter_panel_shortcut_creates_extends_and_removes_an_axis_atomically() -> anyhow::Result<()> {
+    let (mut d, _) = fixture(support::sample_document()?)?;
+    let mesh = R::new(K::Mesh, d.selected_id().unwrap());
+    let parameter = d.parameters()[0].id.clone();
+    let history = d.history_lengths();
+
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::AddCurrent)?;
+    let binding = d.ordinary_binding(&mesh).unwrap();
+    assert_eq!(binding.axes.len(), 1);
+    assert_eq!(binding.axes[0].keys, vec![0.]);
+    assert_eq!(d.history_lengths(), (history.0 + 1, 0));
+
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::AddEndpoints)?;
+    assert_eq!(
+        d.ordinary_binding(&mesh).unwrap().axes[0].keys,
+        vec![0., 1.]
+    );
+    d.edit_selected_parameter_keyforms(
+        &parameter,
+        ParameterKeyformAction::AddEndpointsAndMidpoint,
+    )?;
+    assert_eq!(
+        d.ordinary_binding(&mesh).unwrap().axes[0].keys,
+        vec![0., 0.5, 1.]
+    );
+
+    d.set_preview_parameter(&parameter, 0.25)?;
+    let before_insertion = d.snapshot()?.viewport_frame.drawables.clone();
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::AddCurrent)?;
+    assert_eq!(
+        d.ordinary_binding(&mesh).unwrap().axes[0].keys,
+        vec![0., 0.25, 0.5, 1.]
+    );
+    assert_eq!(before_insertion, d.snapshot()?.viewport_frame.drawables);
+    let extended_history = d.history_lengths();
+    assert!(
+        d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::AddCurrent)
+            .is_err()
+    );
+    assert_eq!(d.history_lengths(), extended_history);
+
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::DeleteCurrent)?;
+    assert_eq!(
+        d.ordinary_binding(&mesh).unwrap().axes[0].keys,
+        vec![0., 0.5, 1.]
+    );
+    let before_clear = d.snapshot()?.viewport_frame.drawables.clone();
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::DeleteAll)?;
+    assert!(d.ordinary_binding(&mesh).unwrap().axes.is_empty());
+    assert_eq!(before_clear, d.snapshot()?.viewport_frame.drawables);
+    d.undo()?;
+    assert_eq!(
+        d.ordinary_binding(&mesh).unwrap().axes[0].keys,
+        vec![0., 0.5, 1.]
+    );
+
+    d.set_preview_parameter(&parameter, 0.)?;
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::DeleteCurrent)?;
+    assert_eq!(
+        d.ordinary_binding(&mesh).unwrap().axes[0].keys,
+        vec![0.5, 1.]
+    );
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::AddCurrent)?;
+    assert_eq!(
+        d.ordinary_binding(&mesh).unwrap().axes[0].keys,
+        vec![0., 0.5, 1.]
+    );
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::DeleteCurrent)?;
+    d.set_preview_parameter(&parameter, 0.5)?;
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::DeleteCurrent)?;
+    d.set_preview_parameter(&parameter, 1.)?;
+    let before_reduction = d.snapshot()?.viewport_frame.drawables.clone();
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::DeleteCurrent)?;
+    assert!(d.ordinary_binding(&mesh).unwrap().axes.is_empty());
+    assert_eq!(before_reduction, d.snapshot()?.viewport_frame.drawables);
+    d.undo()?;
+    assert_eq!(d.ordinary_binding(&mesh).unwrap().axes[0].keys, vec![1.]);
+    Ok(())
+}
+
+#[test]
+fn parameter_panel_shortcut_batches_multiple_selected_targets_into_one_history_entry()
+-> anyhow::Result<()> {
+    let (mut d, _) = fixture(support::sample_document_with_scene_objects()?)?;
+    let targets = vec![
+        support::object(K::Deformer, 501),
+        support::object(K::Deformer, 502),
+    ];
+    d.select_objects(targets.clone())?;
+    let parameter = d.parameters()[0].id.clone();
+    let history = d.history_lengths();
+
+    d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::AddEndpoints)?;
+    assert_eq!(d.history_lengths(), (history.0 + 1, 0));
+    assert!(targets.iter().all(|target| {
+        d.ordinary_binding(target)
+            .is_some_and(|binding| binding.axes.len() == 1)
+    }));
+
+    d.undo()?;
+    assert!(
+        targets
+            .iter()
+            .all(|target| d.ordinary_binding(target).is_none())
+    );
+    Ok(())
+}
+
+#[test]
+fn parameter_panel_shortcut_rolls_back_every_target_when_one_is_locked() -> anyhow::Result<()> {
+    let (mut d, _) = fixture(support::sample_document_with_scene_objects()?)?;
+    let targets = vec![
+        support::object(K::Deformer, 501),
+        support::object(K::Deformer, 502),
+    ];
+    d.select_objects(targets.clone())?;
+    d.set_objects_locked(&[targets[1].clone()], true)?;
+    let parameter = d.parameters()[0].id.clone();
+    let history = d.history_lengths();
+
+    assert!(
+        d.edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::AddCurrent)
+            .is_err()
+    );
+    assert_eq!(d.history_lengths(), history);
+    assert!(
+        targets
+            .iter()
+            .all(|target| d.ordinary_binding(target).is_none())
+    );
+    Ok(())
+}
+
 #[test]
 fn scene_targets_create_correct_tracks_and_part_edits_capture_stored_form() -> anyhow::Result<()> {
     let (mut d, _) = fixture(support::sample_document_with_scene_objects()?)?;

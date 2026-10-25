@@ -154,12 +154,38 @@ impl Render for ParameterRowView {
                         ))
                     })
                     .when(self.indirectly_related, |name| {
-                        name.child(name_badge(
-                            format!("parameter-indirect-{parameter_id}"),
-                            t!("parameter.indirect_selection").into_owned(),
-                            Icon::new(IconName::Link).size(crate::ui::compact::rem(12.)),
-                            theme.primary,
-                        ))
+                        name.child(
+                            crate::ui::compact::header_button(
+                                Button::new(SharedString::from(format!(
+                                    "parameter-indirect-{parameter_id}"
+                                )))
+                                .icon(IconName::Link)
+                                .accessibility_label(t!("parameter.select_nearest_influence"))
+                                .tooltip(format!(
+                                    "{}\n{}",
+                                    t!("parameter.indirect_selection"),
+                                    t!("parameter.select_nearest_influence"),
+                                ))
+                                .disabled(disabled)
+                                .on_click(cx.listener(
+                                    |this, _, window, cx| {
+                                        cx.stop_propagation();
+                                        if let Some(document) = this.document_id {
+                                            let _ = this.panel.update(cx, |panel, cx| {
+                                                panel.select_nearest_direct_influence(
+                                                    document,
+                                                    &this.parameter.id,
+                                                    window,
+                                                    cx,
+                                                );
+                                            });
+                                        }
+                                    },
+                                )),
+                            )
+                            .ghost()
+                            .text_color(theme.primary),
+                        )
                     }),
             )
             .child(row::track().child(parameter_track(

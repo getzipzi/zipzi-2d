@@ -10,6 +10,7 @@ mod common;
 mod dock_and_layout;
 mod mesh_generation_scene;
 mod modeling_scene;
+mod parameter_toolbar_scene;
 mod physics_scene;
 mod properties_scene;
 mod themes_scene;
@@ -29,6 +30,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("parameter-toolbar") {
+        parameter_toolbar_scene::run(&directory)?;
+        println!("Parameter toolbar sizing and SVG screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("toolbar") {
         toolbar_scene::run(&directory)?;
         println!("Viewport toolbar Metal screenshots passed.");

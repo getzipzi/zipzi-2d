@@ -45,10 +45,11 @@ pub use document::{
     PaletteMovePlanningError, PalettePosition, PalettePreservation, PaletteProjection,
     PaletteReparentCapture, PaletteReparentPlan, ParameterCreateError, ParameterDraft,
     ParameterExportDiagnostic, ParameterGroupDraft, ParameterGroupOption, ParameterGroupValue,
-    ParameterKey, ParameterManagementError, ParameterValidationError, ParameterValue,
-    ParameterVisual, PhysicsAuthoringCapabilities, PhysicsChannelAction, PoseAuthoringCapabilities,
-    ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
-    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType, TextureInfo,
+    ParameterKey, ParameterKeyformAction, ParameterManagementError, ParameterValidationError,
+    ParameterValue, ParameterVisual, PhysicsAuthoringCapabilities, PhysicsChannelAction,
+    PoseAuthoringCapabilities, ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities,
+    SceneAuthoringCapabilities, SceneContentAuthoringCapabilities, SceneObjectCreationPlan,
+    SceneObjectType, TextureInfo,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};

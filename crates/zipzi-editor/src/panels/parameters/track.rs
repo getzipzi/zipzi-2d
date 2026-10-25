@@ -95,29 +95,6 @@ pub(super) fn parameter_track(
         .into_any_element()
 }
 
-pub(super) fn display_keys(
-    parameter: &ParameterValue,
-    visual: &ParameterVisual,
-) -> Vec<zipzi_editor_core::ParameterKey> {
-    if !visual.keys.is_empty() {
-        return visual.keys.clone();
-    }
-    let mut values = vec![parameter.minimum];
-    if parameter.maximum != parameter.minimum {
-        values.push(parameter.maximum);
-    }
-    values
-        .into_iter()
-        .map(|value| zipzi_editor_core::ParameterKey {
-            value,
-            selected: false,
-            partial: false,
-            targets: Vec::new(),
-            base: false,
-        })
-        .collect()
-}
-
 // Only the authoring track supplies interaction; preview tracks have no input
 // handlers or slider state and cannot write back to the document.
 type TrackInteraction = (
@@ -147,8 +124,8 @@ fn track_marks(
     } else {
         theme.foreground
     };
-    let display_keys = display_keys(parameter, visual);
-    let mut marks: Vec<AnyElement> = display_keys
+    let mut marks: Vec<AnyElement> = visual
+        .keys
         .iter()
         .map(|key| {
             let position = if span > 0. {

@@ -207,11 +207,8 @@ impl Document {
                 if !valid_uuid(&id) || old.iter().any(|a| a.samples.iter().any(|s| s.id == id)) {
                     return Err(Status::error("DUPLICATE_ID", id));
                 }
-                if !value.is_finite()
-                    || (!axes[i].parameter_id.is_empty()
-                        && (value <= axes[i].keys[0] || value >= *axes[i].keys.last().unwrap()))
-                {
-                    return Err(Status::error("OUTSIDE_GRID_DOMAIN", axis_id));
+                if !value.is_finite() {
+                    return Err(Status::error("INVALID_KEYS", axis_id));
                 }
                 if axes[i].keys.contains(&value) {
                     return Err(Status::error("DUPLICATE_KEY", axis_id));

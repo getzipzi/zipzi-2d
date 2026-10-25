@@ -43,7 +43,7 @@ fn scaled_parameter_rows_keep_their_spacing_after_scrolling(cx: &mut TestAppCont
 }
 
 #[gpui_kit::test]
-fn scaled_parameter_markers_stay_centered_on_their_values(cx: &mut TestAppContext) {
+fn scaled_parameter_without_keyforms_draws_only_the_axis_and_thumb(cx: &mut TestAppContext) {
     use gpui_kit::px;
     let (document, assets) = super::document_fixture::sample_document_with_parameters(1).unwrap();
     let parameter = document.parameters()[0].clone();
@@ -61,16 +61,11 @@ fn scaled_parameter_markers_stay_centered_on_their_values(cx: &mut TestAppContex
             window.render_frame(cx);
             let row = window.within(format!("parameter-row-{}", parameter.id));
             let track = row.find("slider-bar-container").bounds();
-            for (value, expected) in [
-                (parameter.minimum, track.left()),
-                (parameter.maximum, track.right()),
-            ] {
-                let marker = row
-                    .find(format!("parameter-key-{}-{value}", parameter.id))
-                    .bounds();
+            for value in [parameter.minimum, parameter.maximum] {
                 assert!(
-                    (marker.center().x - expected).abs() <= px(0.5),
-                    "marker offset at {scale:?}: {marker:?}"
+                    row.try_find(format!("parameter-key-{}-{value}", parameter.id))
+                        .is_none(),
+                    "an unbound parameter must not draw a keyform marker at {value}"
                 );
             }
             let thumb = row.find(("slider-thumb", 0_u32)).bounds();

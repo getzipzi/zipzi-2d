@@ -84,6 +84,10 @@ pub enum EditorCommand {
     SetPreviewParameters {
         values: Vec<(String, f32)>,
     },
+    EditSelectedParameterKeyforms {
+        parameter_id: String,
+        action: crate::ParameterKeyformAction,
+    },
     SetObjectVisible {
         object: crate::ObjectRef,
         visible: bool,

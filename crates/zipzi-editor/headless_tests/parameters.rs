@@ -12,6 +12,139 @@ fn show_keyforms(harness: &super::Harness, cx: &mut TestAppContext) {
     .unwrap();
 }
 
+fn indirect_selection_document(
+    bind_child: bool,
+) -> (zipzi_editor_core::Document, tempfile::TempDir, String) {
+    use zipzi_editor_core::{NewParameter, ObjectKind, ObjectRef, ParameterKeyformAction};
+    let (mut document, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
+    let parameter = document
+        .create_parameter(NewParameter {
+            name: "Ancestor driver".into(),
+            runtime_id: "AncestorDriver".into(),
+            minimum: -1.,
+            maximum: 1.,
+            default_value: 0.,
+            ..Default::default()
+        })
+        .unwrap();
+    for id in if bind_child {
+        vec![501, 502]
+    } else {
+        vec![501]
+    } {
+        document
+            .select_object(ObjectRef::new(
+                ObjectKind::Deformer,
+                uuid::Uuid::from_u128(id).to_string(),
+            ))
+            .unwrap();
+        document
+            .edit_selected_parameter_keyforms(&parameter, ParameterKeyformAction::AddEndpoints)
+            .unwrap();
+    }
+    let index = document.object_index();
+    let child = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(502).to_string());
+    let mesh = index
+        .parameter(&parameter)
+        .indirect
+        .iter()
+        .find(|path| path.target.kind == ObjectKind::Mesh && path.path.contains(&child))
+        .unwrap()
+        .target
+        .clone();
+    document.select_object(mesh).unwrap();
+    document.focus_parameter(&parameter).unwrap();
+    (document, assets, parameter)
+}
+
+#[gpui_kit::test]
+fn parameter_indirect_button_selects_the_nearest_bound_ancestor(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{ObjectKind, ObjectRef};
+    let (document, assets, parameter) = indirect_selection_document(true);
+    let history = document.history_lengths();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-indirect-{parameter}"), cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        let nearest = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(502).to_string());
+        assert_eq!(document.context().selections, vec![nearest.clone()]);
+        assert_eq!(
+            document.context().inspected.as_ref(),
+            Some(&nearest),
+            "the name click must not overwrite object inspection"
+        );
+        assert_eq!(
+            document.context().parameter_focus.as_ref(),
+            Some(&ObjectRef::new(ObjectKind::Parameter, &parameter))
+        );
+        assert_eq!(document.history_lengths(), history);
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_indirect_button_prefers_the_primary_selected_object(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{ObjectKind, ObjectRef};
+    let (mut document, assets, parameter) = indirect_selection_document(true);
+    let secondary = document.context().selection.clone().unwrap();
+    let index = document.object_index();
+    let primary = index
+        .parameter(&parameter)
+        .indirect
+        .iter()
+        .find(|path| path.target.kind == ObjectKind::Mesh && path.target != secondary)
+        .unwrap()
+        .target
+        .clone();
+    document.select_objects(vec![secondary, primary]).unwrap();
+    document.focus_parameter(&parameter).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-indirect-{parameter}"), cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.editor.document().unwrap().context().selections,
+            vec![ObjectRef::new(
+                ObjectKind::Deformer,
+                uuid::Uuid::from_u128(501).to_string()
+            )]
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_indirect_button_skips_an_unbound_ancestor(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{ObjectKind, ObjectRef};
+    let (document, assets, parameter) = indirect_selection_document(false);
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-indirect-{parameter}"), cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.editor.document().unwrap().context().selections,
+            vec![ObjectRef::new(
+                ObjectKind::Deformer,
+                uuid::Uuid::from_u128(501).to_string()
+            )]
+        );
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(
+            window
+                .try_find(format!("parameter-indirect-{parameter}"))
+                .is_none()
+        );
+    })
+    .unwrap();
+}
+
 #[gpui_kit::test]
 fn parameter_drag_tracks_outside_the_row_without_a_window_drag(cx: &mut TestAppContext) {
     use gpui_kit::{
@@ -716,6 +849,206 @@ fn single_key_click_preserves_authored_precision(cx: &mut TestAppContext) {
     harness.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.375)
     });
+}
+
+#[gpui_kit::test]
+fn parameter_titlebar_adds_the_current_keyform(cx: &mut TestAppContext) {
+    let (mut document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let target = document.context().selection.clone().unwrap();
+    document.set_preview_parameter(&parameter, 0.5).unwrap();
+    assert!(
+        !document.ordinary_binding(&target).unwrap().axes[0]
+            .keys
+            .contains(&0.5)
+    );
+    let history = document.history_lengths();
+    let harness = setup_with_document(cx, document, assets);
+
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-name-{parameter}"), cx);
+        window.render_frame(cx);
+        assert!(
+            window
+                .within("parameters-panel-toolbar")
+                .try_find("parameter-add-keyform")
+                .is_some()
+        );
+        assert!(
+            window
+                .within(format!("parameter-row-{parameter}"))
+                .try_find("parameter-add-keyform")
+                .is_none()
+        );
+        window.click("parameter-add-keyform", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(
+            document.ordinary_binding(&target).unwrap().axes[0]
+                .keys
+                .contains(&0.5)
+        );
+        assert_eq!(document.history_lengths(), (history.0 + 1, 0));
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_titlebar_deletes_the_current_keyform(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let target = document.context().selection.clone().unwrap();
+    let history = document.history_lengths();
+    let harness = setup_with_document(cx, document, assets);
+
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-name-{parameter}"), cx);
+        window.render_frame(cx);
+        window.click("parameter-delete-keyform", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(
+            !document.ordinary_binding(&target).unwrap().axes[0]
+                .keys
+                .contains(&0.)
+        );
+        assert_eq!(document.history_lengths(), (history.0 + 1, 0));
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_titlebar_adds_endpoint_keyforms(cx: &mut TestAppContext) {
+    let (mut document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].clone();
+    let target = document.context().selection.clone().unwrap();
+    document
+        .edit_selected_parameter_keyforms(
+            &parameter.id,
+            zipzi_editor_core::ParameterKeyformAction::DeleteAll,
+        )
+        .unwrap();
+    let harness = setup_with_document(cx, document, assets);
+
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-name-{}", parameter.id), cx);
+        window.render_frame(cx);
+        let standard = window.find("new-parameter").bounds();
+        for button in [
+            "parameter-add-keyform",
+            "parameter-delete-keyform",
+            "parameter-add-two-keyforms",
+            "parameter-add-three-keyforms",
+            "parameter-delete-all-keyforms",
+        ] {
+            let bounds = window.find(button).bounds();
+            assert_eq!(
+                bounds.size, standard.size,
+                "{button} must use standard icon button sizing"
+            );
+            assert_eq!(
+                bounds.center().y,
+                standard.center().y,
+                "{button} must align with the toolbar"
+            );
+        }
+        window.click("parameter-add-two-keyforms", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.editor
+                .document()
+                .unwrap()
+                .ordinary_binding(&target)
+                .unwrap()
+                .axes[0]
+                .keys,
+            vec![parameter.minimum, parameter.maximum]
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_titlebar_adds_endpoint_and_midpoint_keyforms(cx: &mut TestAppContext) {
+    let (mut document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].clone();
+    let target = document.context().selection.clone().unwrap();
+    document
+        .edit_selected_parameter_keyforms(
+            &parameter.id,
+            zipzi_editor_core::ParameterKeyformAction::DeleteAll,
+        )
+        .unwrap();
+    let harness = setup_with_document(cx, document, assets);
+
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-name-{}", parameter.id), cx);
+        window.render_frame(cx);
+        window.click("parameter-add-three-keyforms", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let midpoint = parameter.minimum + (parameter.maximum - parameter.minimum) / 2.;
+        assert_eq!(
+            view.editor
+                .document()
+                .unwrap()
+                .ordinary_binding(&target)
+                .unwrap()
+                .axes[0]
+                .keys,
+            vec![parameter.minimum, midpoint, parameter.maximum]
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_titlebar_deletes_all_keyforms(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let target = document.context().selection.clone().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-name-{parameter}"), cx);
+        window.render_frame(cx);
+        window.click("parameter-delete-all-keyforms", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert!(
+            view.editor
+                .document()
+                .unwrap()
+                .ordinary_binding(&target)
+                .unwrap()
+                .axes
+                .is_empty()
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_titlebar_disabled_keyform_button_shows_reason_tooltip(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+
+    cx.update_window(harness.window, |_, window, cx| {
+        window.hover("parameter-add-keyform", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.executor()
+        .advance_clock(std::time::Duration::from_secs(1));
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("tooltip").is_some());
+    })
+    .unwrap();
 }
 
 #[gpui_kit::test]

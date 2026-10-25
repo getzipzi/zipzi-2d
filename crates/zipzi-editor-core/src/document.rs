@@ -175,10 +175,10 @@ pub use authoring::{
     ObjectAuthoringCapabilities, OperationResult, OrdinaryBindingAction, OrdinaryBindingCapture,
     OrdinaryBindingPlan, OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination,
     PaletteMovePlan, PaletteMovePlanningError, PalettePosition, PalettePreservation,
-    PaletteProjection, PaletteReparentCapture, PaletteReparentPlan, PhysicsAuthoringCapabilities,
-    PhysicsChannelAction, PoseAuthoringCapabilities, ReferenceAuthoringCapabilities,
-    ResourceAuthoringCapabilities, SceneAuthoringCapabilities, SceneContentAuthoringCapabilities,
-    SceneObjectCreationPlan, SceneObjectType, TextureInfo,
+    PaletteProjection, PaletteReparentCapture, PaletteReparentPlan, ParameterKeyformAction,
+    PhysicsAuthoringCapabilities, PhysicsChannelAction, PoseAuthoringCapabilities,
+    ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
+    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType, TextureInfo,
 };
 mod edits;
 mod physics;

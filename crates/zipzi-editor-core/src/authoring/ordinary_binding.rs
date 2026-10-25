@@ -34,6 +34,24 @@ pub enum OrdinaryBindingAction {
         value: f32,
     },
 }
+
+/// Parameter-panel shortcut applied to every directly selected ordinary target.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ParameterKeyformAction {
+    AddCurrent,
+    DeleteCurrent,
+    AddEndpoints,
+    AddEndpointsAndMidpoint,
+    DeleteAll,
+}
+impl ParameterKeyformAction {
+    fn adds_samples(self) -> bool {
+        matches!(
+            self,
+            Self::AddCurrent | Self::AddEndpoints | Self::AddEndpointsAndMidpoint
+        )
+    }
+}
 #[derive(Clone, Debug)]
 enum Native {
     Request {
@@ -99,6 +117,181 @@ impl Document {
     ) -> Result<OrdinaryBindingPlan> {
         self.capture_ordinary_binding(action)?
             .plan(&Default::default())
+    }
+
+    /// Add or remove the current parameter coordinate for all selected ordinary
+    /// targets. The candidate composes every target edit and publishes once, so
+    /// the whole shortcut is one undo step and cannot leave a partial result.
+    pub fn edit_selected_parameter_keyforms(
+        &mut self,
+        parameter_id: &str,
+        action: ParameterKeyformAction,
+    ) -> Result<OperationResult> {
+        self.ensure_authoring_idle()?;
+        let parameter = self
+            .parameters()
+            .into_iter()
+            .find(|parameter| parameter.id == parameter_id)
+            .ok_or_else(|| anyhow::anyhow!("Parameter no longer exists"))?;
+        ensure!(
+            self.model()
+                .get_parameter(parameter_id)
+                .is_some_and(|parameter| parameter.kind == zipzi_core::ParameterKind::Normal),
+            "Only normal parameters support ordinary keyforms"
+        );
+        let targets: Vec<_> = self
+            .context()
+            .selections
+            .iter()
+            .filter(|target| {
+                matches!(
+                    target.kind,
+                    ObjectKind::Mesh | ObjectKind::Deformer | ObjectKind::Part
+                )
+            })
+            .cloned()
+            .collect();
+        ensure!(!targets.is_empty(), "Select an editable object first");
+
+        let version = self.session.version();
+        let mut edit = self.session.begin_owned_edit(
+            match action {
+                ParameterKeyformAction::AddCurrent => "Add parameter keyform",
+                ParameterKeyformAction::DeleteCurrent => "Delete parameter keyform",
+                ParameterKeyformAction::AddEndpoints => "Add parameter endpoint keyforms",
+                ParameterKeyformAction::AddEndpointsAndMidpoint => {
+                    "Add parameter endpoint and midpoint keyforms"
+                }
+                ParameterKeyformAction::DeleteAll => "Delete all parameter keyforms",
+            },
+            Some(version),
+        )?;
+        let value = parameter.value;
+        let mut added_values = match action {
+            ParameterKeyformAction::AddCurrent => vec![value],
+            ParameterKeyformAction::AddEndpoints => {
+                vec![parameter.minimum, parameter.maximum]
+            }
+            ParameterKeyformAction::AddEndpointsAndMidpoint => vec![
+                parameter.minimum,
+                parameter.minimum + (parameter.maximum - parameter.minimum) / 2.,
+                parameter.maximum,
+            ],
+            ParameterKeyformAction::DeleteCurrent | ParameterKeyformAction::DeleteAll => Vec::new(),
+        };
+        added_values.sort_by(f32::total_cmp);
+        added_values.dedup();
+        let changed = edit.apply(|candidate| {
+            let mut changed = 0usize;
+            for target in &targets {
+                let existing = {
+                    let document = candidate.candidate_document();
+                    match target.kind {
+                        ObjectKind::Mesh => document
+                            .binding_for_mesh(&target.id)
+                            .map(|binding| (binding.id.clone(), binding.axes.clone())),
+                        ObjectKind::Deformer | ObjectKind::Part => document
+                            .binding_for_scene(&target.id)
+                            .map(|binding| (binding.id.clone(), binding.axes.clone())),
+                        _ => None,
+                    }
+                };
+                let (binding_id, axes) = if let Some(existing) = existing {
+                    existing
+                } else if action.adds_samples() {
+                    let id = Uuid::new_v4().to_string();
+                    candidate.binding_authoring(BindingAuthoringEdit::Grid(
+                        BindingGridEdit::Create {
+                            id: id.clone(),
+                            target: if target.kind == ObjectKind::Mesh {
+                                BindingGridTarget::Mesh(target.id.clone())
+                            } else {
+                                BindingGridTarget::Scene(target.id.clone())
+                            },
+                        },
+                    ))?;
+                    (id, Vec::new())
+                } else {
+                    continue;
+                };
+
+                let axis = axes.iter().find(|axis| axis.parameter_id == parameter_id);
+                let operations = match (action, axis) {
+                    (
+                        ParameterKeyformAction::AddCurrent
+                        | ParameterKeyformAction::AddEndpoints
+                        | ParameterKeyformAction::AddEndpointsAndMidpoint,
+                        None,
+                    ) => vec![GridOperation::AddAxis {
+                        axis: zipzi_core::BindingAxis::new(parameter_id, added_values.clone()),
+                    }],
+                    (
+                        ParameterKeyformAction::AddCurrent
+                        | ParameterKeyformAction::AddEndpoints
+                        | ParameterKeyformAction::AddEndpointsAndMidpoint,
+                        Some(axis),
+                    ) => added_values
+                        .iter()
+                        .filter(|value| !axis.keys.contains(value))
+                        .map(|&value| GridOperation::InsertSample {
+                            axis_id: axis.id.clone(),
+                            id: Uuid::new_v4().to_string(),
+                            value,
+                        })
+                        .collect(),
+                    (ParameterKeyformAction::DeleteCurrent, Some(axis)) => axis
+                        .samples
+                        .iter()
+                        .find(|sample| sample.value == value)
+                        .map(|sample| {
+                            if axis.samples.len() == 1 {
+                                GridOperation::RemoveAxis {
+                                    axis_id: axis.id.clone(),
+                                    reduction: Some(zipzi_sdk::AxisReduction::Slice(value)),
+                                    keep_pending: false,
+                                }
+                            } else {
+                                GridOperation::DeleteSample {
+                                    sample_id: sample.id.clone(),
+                                }
+                            }
+                        })
+                        .into_iter()
+                        .collect(),
+                    (ParameterKeyformAction::DeleteAll, Some(axis)) => {
+                        let reduction = value.clamp(axis.keys[0], *axis.keys.last().unwrap());
+                        vec![GridOperation::RemoveAxis {
+                            axis_id: axis.id.clone(),
+                            reduction: Some(zipzi_sdk::AxisReduction::Resample(reduction)),
+                            keep_pending: false,
+                        }]
+                    }
+                    (
+                        ParameterKeyformAction::DeleteCurrent | ParameterKeyformAction::DeleteAll,
+                        None,
+                    ) => Vec::new(),
+                };
+                for operation in operations {
+                    candidate.binding_authoring(BindingAuthoringEdit::Grid(
+                        BindingGridEdit::Edit {
+                            owner: binding_id.clone(),
+                            operation,
+                        },
+                    ))?;
+                    changed += 1;
+                }
+            }
+            Ok(changed)
+        })?;
+        ensure!(
+            changed > 0,
+            "The selected objects already have the requested keyform state"
+        );
+        let receipt = edit.commit_to(&mut self.session)?;
+        self.pristine_blank = None;
+        self.consume_authoring_receipt(&receipt, true);
+        self.context.reconcile(&self.object_index());
+        Ok(self.authoring_result(receipt))
     }
 
     fn ordinary_part_keyform(&self, binding: &ObjectRef) -> Result<zipzi_core::PartKeyform> {

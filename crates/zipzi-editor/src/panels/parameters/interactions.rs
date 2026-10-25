@@ -2,6 +2,88 @@
 use super::*;
 
 impl ParametersPanel {
+    pub(super) fn select_nearest_direct_influence(
+        &mut self,
+        document_id: DocumentId,
+        parameter_id: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.document_id != Some(document_id) || !self.slider_interaction_allowed(window, cx) {
+            return;
+        }
+        self.finish_slider_drag(cx);
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        owner.update(cx, |owner, cx| {
+            if !owner.prepare_property_inputs(document_id, window, cx) {
+                return;
+            }
+            let Some(document) = owner.editor.document() else {
+                return;
+            };
+            let index = document.object_index();
+            let context = document.context();
+            // Paths start at the parameter and its binding, followed by the
+            // directly bound ancestor and its descendants. Prefer the primary
+            // selection's shortest path when several selected objects qualify.
+            let target = index
+                .parameter(parameter_id)
+                .indirect
+                .iter()
+                .filter(|path| context.selections.contains(&path.target))
+                .min_by_key(|path| {
+                    (
+                        context.selection.as_ref() != Some(&path.target),
+                        path.path.len(),
+                    )
+                })
+                .and_then(|path| {
+                    path.path
+                        .iter()
+                        .find_map(|reference| index.binding(reference))
+                })
+                .map(|binding| binding.target.clone());
+            if let Some(target) = target {
+                let result = owner
+                    .editor
+                    .execute_for(document_id, EditorCommand::SelectObject(target));
+                owner.complete_edit(result, cx);
+            }
+        });
+    }
+
+    pub(super) fn edit_keyforms(
+        &mut self,
+        document_id: DocumentId,
+        parameter_id: &str,
+        action: zipzi_editor_core::ParameterKeyformAction,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.document_id != Some(document_id) || !self.slider_interaction_allowed(window, cx) {
+            return;
+        }
+        self.finish_slider_drag(cx);
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        owner.update(cx, |owner, cx| {
+            if !owner.prepare_property_inputs(document_id, window, cx) {
+                return;
+            }
+            let result = owner.editor.execute_for(
+                document_id,
+                EditorCommand::EditSelectedParameterKeyforms {
+                    parameter_id: parameter_id.to_owned(),
+                    action,
+                },
+            );
+            owner.complete_edit(result, cx);
+        });
+    }
+
     pub(super) fn begin_slider_drag(
         &mut self,
         document_id: DocumentId,

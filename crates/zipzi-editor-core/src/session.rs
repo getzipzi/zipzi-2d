@@ -341,6 +341,13 @@ impl DocumentSession {
             EditorCommand::SetPreviewParameters { values } => {
                 self.document.set_preview_parameters(&values)
             }
+            EditorCommand::EditSelectedParameterKeyforms {
+                parameter_id,
+                action,
+            } => self
+                .document
+                .edit_selected_parameter_keyforms(&parameter_id, action)
+                .map(|_| ()),
             EditorCommand::SetObjectVisible { object, visible } => {
                 self.document.set_object_visible(&object, visible)
             }
