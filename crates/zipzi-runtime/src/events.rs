@@ -28,6 +28,29 @@ pub struct RuntimeEvent {
     pub operation: crate::OperationId,
     pub kind: EventKind,
 }
+impl RuntimeEvent {
+    pub(crate) fn estimated_bytes(&self) -> usize {
+        std::mem::size_of::<Self>()
+            + match &self.kind {
+                EventKind::Published(receipt) => receipt.estimated_bytes(),
+                EventKind::Saved(receipt) => {
+                    receipt.manifest.as_os_str().len()
+                        + receipt
+                            .warnings
+                            .iter()
+                            .chain(&receipt.history_warnings)
+                            .map(String::capacity)
+                            .sum::<usize>()
+                }
+                EventKind::Created(info)
+                | EventKind::Closed(info)
+                | EventKind::StateChanged(info) => {
+                    info.path.as_ref().map_or(0, |p| p.as_os_str().len())
+                        + info.fault.as_ref().map_or(0, |e| e.to_string().len())
+                }
+            }
+    }
+}
 
 pub(crate) struct EventLog {
     cursor: EventCursor,
@@ -77,38 +100,18 @@ impl EventLog {
             .sequence
             .checked_add(1)
             .expect("event sequence exhausted");
-        let size = std::mem::size_of::<RuntimeEvent>()
-            + match &kind {
-                EventKind::Published(receipt) => receipt.estimated_bytes(),
-                EventKind::Saved(receipt) => {
-                    receipt.manifest.as_os_str().len()
-                        + receipt
-                            .warnings
-                            .iter()
-                            .chain(&receipt.history_warnings)
-                            .map(String::capacity)
-                            .sum::<usize>()
-                }
-                EventKind::Created(info)
-                | EventKind::Closed(info)
-                | EventKind::StateChanged(info) => {
-                    info.path.as_ref().map_or(0, |p| p.as_os_str().len())
-                        + info.fault.as_ref().map_or(0, |e| e.to_string().len())
-                }
-            };
+        let event = Arc::new(RuntimeEvent {
+            cursor: self.cursor,
+            client,
+            job,
+            operation,
+            kind,
+        });
+        let size = event.estimated_bytes();
         // Oversized events advance the cursor but cannot silently disappear:
         // every reader preceding this event receives ResyncRequired.
         self.bytes = self.bytes.saturating_add(size);
-        self.items.push_back((
-            Arc::new(RuntimeEvent {
-                cursor: self.cursor,
-                client,
-                job,
-                operation,
-                kind,
-            }),
-            size,
-        ));
+        self.items.push_back((event, size));
         while self.items.len() > self.max_items || self.bytes > self.max_bytes {
             let (_, size) = self.items.pop_front().expect("nonempty event log");
             self.bytes -= size;

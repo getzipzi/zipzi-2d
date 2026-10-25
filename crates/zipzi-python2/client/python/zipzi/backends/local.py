@@ -7,6 +7,7 @@ from .._generated.backends import LocalQueries
 from .._errors import PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId
 from . import JobKind
+from ..events import Cursor
 if TYPE_CHECKING:
     from ._native_types import NativeModule, SessionToken
 
@@ -22,12 +23,20 @@ class LocalBackend(LocalQueries):
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-4":
+        if self._native.contract != "zipzi-python2-5":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 
     def create(self, document_id: str, owner: object) -> object:
         return unwrap(self._native.create_session(document_id))
+    def subscribe(self, session: object, owner: object) -> object:
+        return unwrap(self._native.subscribe(session))
+    def events(self, cursor: Cursor, limit: int, owner: object) -> object:
+        return unwrap(self._native.events(cursor, limit))
+    def parameters(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object:
+        return unwrap(self._native.parameters(session, edit, ids))
+    def meshes(self, session: object, edit: object | None, ids: tuple[str, ...], owner: object) -> object:
+        return unwrap(self._native.meshes(session, edit, ids))
     def session_id(self, token: object) -> SessionId:
         value = cast("SessionToken", token)
         return SessionId(value.runtime, value.serial)

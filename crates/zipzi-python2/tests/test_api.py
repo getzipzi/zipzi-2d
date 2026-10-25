@@ -1,5 +1,5 @@
 """One handwritten recipe on Local and Connected; independent geometry/history assertions."""
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 import gc
 import weakref
 import os
@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SOURCE = ROOT / "crates/zipzi-python2/client/python"
 sys.path[:0] = [str(SOURCE), os.environ["ZIPZI_PYTHON2_NATIVE"]]
 import zipzi
-from zipzi import meshes, ops, resources
+from zipzi import events, meshes, ops, parameters, resources
 
 def uid(n: int) -> str:
     return f"79000000-0000-4000-8000-{n:012x}"
@@ -140,6 +140,247 @@ class PythonSdk(unittest.TestCase):
                     self.assertIsNone(runtime.connection)
                 else:
                     self.assertEqual(runtime.connection.runtime, info.id.runtime)
+
+    def test_typed_parameters_share_a_mixed_batch_and_preserve_unspecified_fields(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(801))
+                spec = parameters.ParameterSpec("Angle", -30., 30., 0., id=uid(802), runtime_id="ParamAngle",
+                    kind=parameters.Kind.BLEND_SHAPE, decimal_places=2, repeat=True)
+                with session.edit("mesh and parameters") as edit:
+                    result = edit.apply_many((ops.Create(meshes.MeshSpec("Face", GEOMETRY, id=uid(803))),
+                        ops.CreateParameter(spec), ops.PatchParameter(uid(802), parameters.Patch(name="Final")), ops.Rename(uid(803), "Mixed")))
+                    self.assertEqual(result.ids, (uid(803), uid(802), uid(802), uid(803)))
+                    batch = edit.parameters.get_many((uid(802), uid(802)))
+                    old = batch.items[0]
+                    self.assertEqual(batch.source, result.source)
+                    self.assertEqual(batch.source.sequence, 1)
+                    self.assertIs(batch.items[0].source, batch.items[1].source)
+                    self.assertEqual((old.name, old.runtime_id, old.kind, old.decimal_places, old.repeat),
+                        ("Final", "ParamAngle", parameters.Kind.BLEND_SHAPE, 2, True))
+                    edit.parameters.patch(uid(802), parameters.Patch(default_value=5., repeat=False, decimal_places=0))
+                    changed = edit.parameters.get(uid(802))
+                    self.assertEqual((changed.runtime_id, changed.kind, changed.decimal_places, changed.repeat, changed.default_value),
+                        ("ParamAngle", parameters.Kind.BLEND_SHAPE, 0, False, 5.))
+                    self.assertEqual(changed.source.sequence, 2)
+                    normal = edit.parameters.create(parameters.ParameterSpec("Normal", -1., 1., 0.))
+                    self.assertEqual(UUID(normal).version, 4)
+                    value = edit.parameters.get(normal)
+                    self.assertEqual((value.runtime_id, value.kind, value.decimal_places, value.repeat),
+                        (normal, parameters.Kind.NORMAL, 6, False))
+                    self.assertEqual(tuple(p.id for p in edit.parameters.list().items), (uid(802), normal))
+                    self.assertEqual(edit.parameters.get_many(()).items, ())
+                self.assertEqual(session.info().history, (1, 0))
+                formal = session.parameters.get(uid(802))
+                self.assertEqual(formal.source.version, session.info().version)
+                self.assertIsNone(formal.source.edit)
+                self.assertEqual(old.default_value, 0.)
+                self.assertTrue(old.repeat)
+                with self.assertRaises(FrozenInstanceError):
+                    formal.name = "mutable"
+                self.assertEqual(session.meshes.get(uid(803)).name, "Mixed")
+
+    def test_parameter_query_admission_and_missing_records_do_not_poison_candidate(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                session = self.runtime(mode).sessions.create(uid(811))
+                with session.edit("bounded reads") as edit:
+                    id = edit.parameters.create(parameters.ParameterSpec("A", -1., 1., 0.))
+                    source = edit.parameters.get(id).source
+                    with self.assertRaises(zipzi.SdkFailure) as missing:
+                        edit.parameters.get(uid(999))
+                    self.assertEqual(missing.exception.code, "MISSING_PARAMETER")
+                    self.assertEqual(missing.exception.object_ids, (uid(999),))
+                    with self.assertRaises(zipzi.SdkFailure) as refused:
+                        edit.parameters.get_many((id,) * 257)
+                    self.assertEqual(refused.exception.code, "BUDGET_EXCEEDED")
+                    self.assertEqual(edit.parameters.get(id).source, source)
+                    edit.parameters.patch(id, parameters.Patch(name="Still editable"))
+                self.assertEqual(session.parameters.get(id).name, "Still editable")
+                self.assertEqual(session.info().history, (1, 0))
+
+    def test_parameter_errors_abort_and_noop_cancel_keep_redo(self):
+        for mode in ("local", "connected"):
+            session = self.runtime(mode).sessions.create(uid(821))
+            for bad in (parameters.Patch(minimum=2.), parameters.Patch(decimal_places=10),
+                parameters.Patch(default_value=float("nan")), parameters.Patch(repeat=1)):
+                with self.subTest(mode=mode, bad=bad):
+                    with self.assertRaises(zipzi.SdkFailure) as error:
+                        with session.edit("caught parameter error") as edit:
+                            id = edit.parameters.create(parameters.ParameterSpec("Unpublished", -1., 1., 0.))
+                            try:
+                                edit.parameters.patch(id, bad)
+                            except (zipzi.SdkFailure, TypeError, ValueError):
+                                pass
+                    self.assertEqual(error.exception.code, "EDIT_ABORTED")
+                    self.assertEqual(session.parameters.list().items, ())
+                    self.assertEqual(session.info().history, (0, 0))
+            with session.edit("base") as edit:
+                id = edit.parameters.create(parameters.ParameterSpec("Base", -1., 1., 0.))
+            with session.edit("change") as edit:
+                edit.parameters.patch(id, parameters.Patch(name="Changed"))
+            session.undo().wait()
+            with session.edit("no-op") as edit:
+                edit.parameters.patch(id, parameters.Patch(name="Base"))
+            self.assertEqual(session.info().history, (1, 1))
+            with session.edit("cancel") as edit:
+                edit.parameters.patch(id, parameters.Patch(name="Cancelled"))
+                edit.cancel()
+            self.assertEqual(session.info().history, (1, 1))
+            session.redo().wait()
+            self.assertEqual(session.parameters.get(id).name, "Changed")
+
+    def test_event_subscriptions_are_paged_immutable_independent_and_source_exact(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                registry = runtime.sessions.subscribe()
+                other_registry = runtime.sessions.subscribe()
+                self.assertEqual(registry.initial, ())
+                session = runtime.sessions.create(uid(831))
+                created, = registry.poll(limit=1)
+                self.assertIsInstance(created, events.Created)
+                self.assertEqual(created.info.id, session.id)
+                self.assertEqual(other_registry.poll(limit=1), (created,))
+                first, second = session.subscribe(), session.subscribe()
+                self.assertEqual(first.initial.version, session.info().version)
+                self.assertEqual(first.cursor, second.cursor)
+                with session.edit("publication") as edit:
+                    id = edit.parameters.create(parameters.ParameterSpec("Angle", -1., 1., 0.))
+                    self.assertEqual(first.poll(), ())
+                delivered = []
+                while page := first.poll(limit=1):
+                    delivered.extend(page)
+                self.assertEqual(second.poll(), tuple(delivered))
+                published = [e for e in delivered if isinstance(e, events.Published)]
+                self.assertEqual(len(published), 1)
+                event = published[0]
+                self.assertEqual(event.receipt.before, first.initial.version)
+                self.assertEqual(event.receipt.after, session.info().version)
+                self.assertIn(id, event.receipt.object_ids)
+                self.assertEqual(event.cursor.session, session.id)
+                self.assertEqual(event.operation.runtime, session.id.runtime)
+                self.assertEqual(event.operation.serial, event.job.serial)
+                with self.assertRaises(FrozenInstanceError):
+                    event.receipt.label = "mutable"
+                saved = session.project.save(self.folder / f"event-save-{mode}").wait()
+                save_events = [e for e in first.poll() if isinstance(e, events.Saved)]
+                self.assertEqual([e.receipt for e in save_events], [saved])
+                self.assertEqual(first.resync(), session.info())
+                self.assertEqual(first.poll(), ())
+                with self.assertRaises(zipzi.SdkFailure) as future:
+                    runtime.events_since(replace(first.cursor, sequence=first.cursor.sequence+100))
+                self.assertEqual(future.exception.code, "RESYNC_REQUIRED")
+                with zipzi.local() as foreign:
+                    other = foreign.sessions.create(uid(832))
+                    for cursor in (foreign.sessions.subscribe().cursor, other.subscribe().cursor):
+                        with self.assertRaises(zipzi.SdkFailure) as wrong:
+                            runtime.events_since(cursor)
+                        self.assertEqual(wrong.exception.code, "RESYNC_REQUIRED")
+                self.assertEqual(registry.resync(), runtime.sessions.list())
+
+    def test_event_retention_requires_explicit_resync_and_rejects_bad_page_limits(self):
+        runtime = self.runtime("connected", settings={"ZIPZI_TEST_EVENT_COUNT": "2"})
+        session = runtime.sessions.create(uid(841))
+        subscription = session.subscribe()
+        before = subscription.cursor
+        with session.edit("overflow events") as edit:
+            edit.parameters.create(parameters.ParameterSpec("Angle", -1., 1., 0.))
+        with self.assertRaises(zipzi.SdkFailure) as expired:
+            subscription.poll()
+        self.assertEqual(expired.exception.code, "RESYNC_REQUIRED")
+        self.assertEqual(subscription.cursor, before)
+        self.assertEqual(subscription.resync().history, (1, 0))
+        self.assertEqual(subscription.poll(), ())
+        for limit in (0, 257, True):
+            with self.assertRaises(ValueError):
+                subscription.poll(limit=limit)
+
+    def test_lost_subscription_poll_and_parameter_reads_keep_exact_recovery_owner(self):
+        for registry in (False, True):
+            with self.subTest(registry=registry):
+                runtime = self.runtime("connected", drop="subscribe")
+                session = runtime.sessions.create(uid(851))
+                with self.assertRaises(zipzi.OutcomeUnknown) as error:
+                    runtime.sessions.subscribe() if registry else session.subscribe()
+                subscription = error.exception.recover()
+                self.assertIsInstance(subscription, events.RegistrySubscription if registry else events.SessionSubscription)
+                self.assertEqual(subscription.poll(), ())
+        runtime = self.runtime("connected", drop="events")
+        session = runtime.sessions.create(uid(852))
+        stream = session.subscribe()
+        with session.edit("first") as edit:
+            id = edit.parameters.create(parameters.ParameterSpec("First", -1., 1., 0.))
+        before = stream.cursor
+        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+            stream.poll()
+        self.assertEqual(stream.cursor, before)
+        with self.assertRaises(zipzi.Busy):
+            stream.resync()
+        with zipzi.connect(endpoint=self.folder / str(self.counter) / "python2.sock") as peer:
+            same = peer.sessions.attach(session.id)
+            with same.edit("second") as edit:
+                edit.parameters.patch(id, parameters.Patch(name="Second"))
+        recovered = lost.exception.recover()
+        first_receipts = [e.receipt for e in recovered if isinstance(e, events.Published)]
+        self.assertEqual([r.after.revision for r in first_receipts], [1])
+        second_receipts = [e.receipt for e in stream.poll() if isinstance(e, events.Published)]
+        self.assertEqual([r.after.revision for r in second_receipts], [2])
+        with self.assertRaises(zipzi.SdkFailure) as resolved:
+            lost.exception.recover()
+        self.assertEqual(resolved.exception.code, "NO_PENDING_REQUEST")
+        for many in (False, True):
+            runtime = self.runtime("connected", drop="parameter_snapshot")
+            session = runtime.sessions.create(uid(853))
+            with session.edit("parameter") as edit:
+                id = edit.parameters.create(parameters.ParameterSpec("Read", -1., 1., 0.))
+            with self.assertRaises(zipzi.OutcomeUnknown) as error:
+                session.parameters.get_many((id,)) if many else session.parameters.get(id)
+            result = error.exception.recover()
+            self.assertEqual(result.items[0].name if many else result.name, "Read")
+
+    def test_parameter_batch_response_loss_commits_once(self):
+        runtime = self.runtime("connected", drop="apply_authoring")
+        session = runtime.sessions.create(uid(861))
+        edit = session.edit("parameter recovery")
+        with self.assertRaises(zipzi.OutcomeUnknown):
+            edit.apply_many((ops.CreateParameter(parameters.ParameterSpec("Once", -1., 1., 0., id=uid(862))),
+                ops.PatchParameter(uid(862), parameters.Patch(name="Final"))))
+        result = edit.recover()
+        self.assertEqual(result.source.sequence, 1)
+        self.assertEqual(result.ids, (uid(862), uid(862)))
+        edit.commit().wait()
+        self.assertEqual(session.parameters.get(uid(862)).name, "Final")
+        self.assertEqual(session.info().history, (1, 0))
+
+    def test_mesh_batch_admits_the_whole_selection_and_keeps_source_and_order(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(871))
+                with session.edit("batch reads") as edit:
+                    a = edit.meshes.create(meshes.MeshSpec("A", GEOMETRY))
+                    b = edit.meshes.create(meshes.MeshSpec("B", GEOMETRY))
+                    values = edit.meshes.get_many((b, a, b))
+                    self.assertEqual(tuple(v.name for v in values), ("B", "A", "B"))
+                    self.assertTrue(all(v.source == values[0].source for v in values))
+                    self.assertEqual(values[0].source.sequence, 2)
+                    self.assertEqual(edit.meshes.get_many(()), ())
+                    for ids in ((a,) * 256, (a, uid(999))):
+                        with self.assertRaises(zipzi.SdkFailure):
+                            edit.meshes.get_many(ids)
+                    self.assertEqual(edit.meshes.get(a).source, values[0].source)
+                    edit.meshes.rename(a, "After read refusal")
+                self.assertEqual(session.info().history, (1, 0))
+                self.assertEqual(session.meshes.get_many((a, b))[0].name, "After read refusal")
+        runtime = self.runtime("connected", drop="mesh_snapshots")
+        session = runtime.sessions.create(uid(872))
+        with session.edit("read recovery") as edit:
+            id = edit.meshes.create(meshes.MeshSpec("Recovered", GEOMETRY))
+        with self.assertRaises(zipzi.OutcomeUnknown) as error:
+            session.meshes.get_many((id,))
+        self.assertEqual(error.exception.recover()[0].name, "Recovered")
 
     def test_shared_recipe(self):
         outputs = []
@@ -1030,6 +1271,7 @@ assert meshes.Geometry((0,), ((0., 0.),), ((0., 0.),), ()).vertex_ids == (0,)
         with patch("json.dumps", side_effect=AssertionError("Local bridge encoded JSON")), \
              patch("json.loads", side_effect=AssertionError("Local bridge decoded JSON")):
             session = runtime.sessions.create(uid(1))
+            stream = session.subscribe()
             with session.edit("direct") as edit:
                 face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
                 edit.apply(ops.Rename(face, "Direct"))
@@ -1041,6 +1283,11 @@ assert meshes.Geometry((0,), ((0., 0.),), ((0., 0.),), ()).vertex_ids == (0,)
                         edit.apply_plan(plan)
                         self.assertEqual(plan.report.source.sequence, 3)
                     self.assertEqual(edit.resources.get(asset).pixels.rgba, b"rgba")
+                parameter = edit.parameters.create(parameters.ParameterSpec("Angle", -1., 1., 0.))
+                edit.parameters.patch(parameter, parameters.Patch(name="Direct parameter"))
+                self.assertEqual(edit.parameters.get_many((parameter,)).items[0].name, "Direct parameter")
+                self.assertEqual(edit.meshes.get_many((face,))[0].name, "Direct")
+            self.assertEqual(len([e for e in stream.poll() if isinstance(e, events.Published)]), 1)
             with session.project.save(self.folder / "direct-save") as job:
                 saved = job.wait()
             self.assertEqual(job.wait(), saved)

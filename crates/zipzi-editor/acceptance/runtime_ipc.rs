@@ -84,12 +84,14 @@ pub(super) fn run() -> anyhow::Result<()> {
             document.properties_revision(),
         )
     });
+    let event_cursor = runtime.read().subscribe_info(session)?.cursor;
     client(
         &mut h,
         python,
         endpoint.path(),
         r#"
 import sys,zipzi
+from zipzi import events,ops,parameters
 from importlib.metadata import version
 from importlib.util import find_spec
 assert version('zipzi-python2')=='0.1.0'
@@ -98,9 +100,16 @@ assert find_spec('zipzi_native') is None
 with zipzi.connect() as c:
  s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
  assert s.id in {info.id for info in c.sessions.list()}
+ stream=s.subscribe()
  with s.edit('external Python') as e:
-  e.meshes.rename(sys.argv[3], 'Python changed this mesh')
+  e.apply_many((ops.Rename(sys.argv[3],'Python changed this mesh'),
+   ops.CreateParameter(parameters.ParameterSpec('External Angle',-30.,30.,0.,id='79700000-0000-4000-8000-000000000001',runtime_id='ParamExternal',decimal_places=3))))
+  assert e.parameters.get_many(('79700000-0000-4000-8000-000000000001',)).items[0].source.sequence==1
  assert s.meshes.get(sys.argv[3]).name=='Python changed this mesh'
+ assert s.meshes.get_many((sys.argv[3],))[0].name=='Python changed this mesh'
+ published=[e for e in stream.poll() if isinstance(e,events.Published)]
+ assert len(published)==1 and published[0].receipt.before==stream.initial.version
+ assert published[0].receipt.after==s.info().version
 "#,
         &[
             session.runtime_instance().to_string(),
@@ -129,6 +138,17 @@ with zipzi.connect() as c:
             document.history_lengths() == (before.0 + 1, 0),
             "duplicate/missing history"
         );
+        ensure!(
+            document
+                .parameters()
+                .iter()
+                .any(|p| p.id == "79700000-0000-4000-8000-000000000001"
+                    && p.name == "External Angle"
+                    && p.minimum == -30.
+                    && p.maximum == 30.
+                    && p.decimal_places == 3),
+            "parameter projection did not update"
+        );
         Ok::<_, anyhow::Error>(())
     })?;
     // Human undo is immediately visible to another real Python process.
@@ -141,16 +161,25 @@ with zipzi.connect() as c:
         python,
         endpoint.path(),
         r#"
-import sys,zipzi
+import json,sys,zipzi
+from zipzi import events
 with zipzi.connect() as c:
  s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
  assert s.meshes.get(sys.argv[3]).name!='Python changed this mesh'
  assert s.info().history[1]==1
+ published=[e for e in c.events_since(events.Cursor.read(json.loads(sys.argv[4]))) if isinstance(e,events.Published)]
+ assert len(published)==2
+ assert published[0].receipt.after==published[1].receipt.before
+ assert published[1].receipt.after==s.info().version
+ try: s.parameters.get('79700000-0000-4000-8000-000000000001')
+ except zipzi.SdkFailure as error: assert error.code=='MISSING_PARAMETER'
+ else: raise AssertionError('UI Undo retained the new parameter')
 "#,
         &[
             session.runtime_instance().to_string(),
             session.serial().to_string(),
             mesh.clone(),
+            serde_json::to_string(&event_cursor)?,
         ],
     )?;
     // UI owns an in-flight Save As; the external entry cannot bypass its target.
@@ -196,7 +225,7 @@ with zipzi.connect() as c:
         "native render missing"
     );
     println!(
-        "R3 native IPC: installed zipzi-python2 -> same unsaved session -> layer/properties/history -> UI Undo -> path reservation -> Metal render passed"
+        "R3 native IPC: installed zipzi-python2 -> mixed mesh/parameter -> layer/properties/parameter projection -> cursor events/UI Undo -> path reservation -> Metal render passed"
     );
     Ok(())
 }

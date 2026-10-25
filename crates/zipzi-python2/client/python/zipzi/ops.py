@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 from .plans import Plan
 from .resources import PreparedImage
+from . import parameters
 from ._generated.mesh_ops import Create as Create, Rename as Rename, SetPositions as SetPositions, validate as validate_mesh, wire as mesh_wire
 
 @dataclass(frozen=True)
@@ -23,10 +24,29 @@ class ApplyPlan:
     plan: Plan
     kind: Literal["apply_plan"] = field(default="apply_plan", init=False)
 
-Operation = Create | Rename | SetPositions | CreateImage | ReplaceImage | ApplyPlan
+@dataclass(frozen=True)
+class CreateParameter:
+    spec: parameters.ParameterSpec
+    kind: Literal["create_parameter"] = field(default="create_parameter", init=False)
+
+@dataclass(frozen=True)
+class PatchParameter:
+    id: str
+    patch: parameters.Patch
+    kind: Literal["patch_parameter"] = field(default="patch_parameter", init=False)
+
+Operation = Create | Rename | SetPositions | CreateImage | ReplaceImage | ApplyPlan | CreateParameter | PatchParameter
 
 def validate(op: Operation) -> None:
     match op:
+        case CreateParameter(spec):
+            if not isinstance(spec, parameters.ParameterSpec):
+                raise TypeError("Expected a ParameterSpec")
+            parameters.validate(spec)
+        case PatchParameter(id, patch):
+            if not isinstance(id, str) or not isinstance(patch, parameters.Patch):
+                raise TypeError("Expected parameter ID and Patch")
+            parameters.validate(patch)
         case CreateImage(name, image, id):
             if not isinstance(name, str) or (id is not None and not isinstance(id, str)):
                 raise TypeError("Expected image name/ID text")
@@ -45,6 +65,10 @@ def validate(op: Operation) -> None:
 
 def wire(op: Operation) -> dict[str, object]:
     match op:
+        case CreateParameter(spec):
+            return dict(domain="parameter", operation=dict(op="create", spec=parameters.wire(spec)))
+        case PatchParameter(id, patch):
+            return dict(domain="parameter", operation=dict(op="patch", id=id, patch=parameters.wire(patch)))
         case CreateImage(name, image, id):
             return dict(domain="create_image", spec=dict(id=id, name=name), image=image._token)
         case ReplaceImage(id, image):

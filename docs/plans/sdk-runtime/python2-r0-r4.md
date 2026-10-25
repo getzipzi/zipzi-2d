@@ -1,6 +1,9 @@
 # 新 Python 包接回 Runtime R0–R4
 
 日期：2026-10-25。基线：`1e0043f`（网格生成器），本记录对应其后的工作区。
+宿主/会话切片现已保存于 `acc54907`；其后工作区的
+[事件、参数与批量查询接回](python2-r3-events.md)已通过最小链路验收。以下首批验证
+保留其原始范围，R4 尚未验收。
 执行主线为 [Runtime 实施计划](../sdk-runtime-implementation-plan.md) R0–R4。
 `zipzi-python2` 是本轮唯一 Python 实现；旧 R0–R4 记录保留为历史，不读取、搬回或
 继续扩展旧 Python 包。共享 Rust SDK/Runtime/Editor 能力与独立领域测试可复用。
@@ -21,14 +24,14 @@ PyO3 调用 LocalHost；Connected 进入 Editor 应用级 Runtime。窗口、脚
 | R1 会话、候选、Job、历史 | 单一正式 Session/历史、路径预留、完成消费、事件缓冲 | P1 生命周期故障矩阵；本批 Local/Connected 会话列表、身份及绑定 | 新领域继续补 Job/来源/预算验收；公共完整故障与事件视图 |
 | R2 Editor 所有权与投影 | 应用级托管、窗口 attach/detach、统一发布 | 安装新包外部改名→图层/属性更新→UI Undo→客户端读取；跨会话 Save As 竞争；Metal 渲染 | 全领域投影/选择/关系/纹理/表单；本批未重跑完整窗口/IO 生命周期及交互性能矩阵 |
 | R3 发现/启动/绑定 | 私有 endpoint、继承 flock、严格协议/构建握手、桌面重开 | 安装纯包并发冷启动；慢启动不重复拉起；失败重试；残留 socket；协议/build 拒绝；真实桌面重开复用 | 发行安装位置验收；被终止客户端等完整真实宿主生命周期扩展 |
-| R3 事件与参数最小闭环 | 注册表/会话订阅、事件 cursor/resync、SDK 参数编辑已有共享入口 | 新包尚未公开这些能力 | 下一切片：类型化订阅/事件与参数批量读写，安装后故障与同历史 recipe |
+| R3 事件与参数最小闭环 | 注册表/会话订阅、事件 cursor/resync、SDK 参数编辑 | 新包类型化事件、参数及网格批量读取、安装故障与真实 Editor 同历史 recipe 已通过 | 全领域增量事件、集合与大型读取随 R4 扩展；详见新记录 |
 | R4 场景/组织/拓扑/绑定/BlendShape | 首批 Modeling 处理器及 SDK 规则 | 新包只有选定网格/图片/改名 Plan | 逐域类型化值、操作、查询与同 recipe；大网格、有绑定拓扑、限额负例 |
 | R4 身份/地址/能力 | SDK Handle/incarnation/epoch；Runtime scoped token | 本批仅公开运行期 SessionId 和握手能力 | 对象 Handle、稳定字段/内容地址、删除/移动/Undo/generation 失效 |
 | R4 Plan 与 CPU 求值 | 来源绑定 Plan、正式/候选 CPU 采样与诊断 | 选定改名 Plan；CPU 参数 sweep 尚未接入新包 | 完整 Plan 报告、成本/损失与释放；显式参数 sweep，不改 Preview/历史 |
 | R4 资源与工程 IO | 图片实际负载计费与回收、首批 blob、路径预留和 IO Job | 新包 1 MiB 图片/PreparedImage、替换、历史、保存重开 | 真正二进制 blob；文件图片/附件、磁盘资源固定、导入/替换/generation/各格式导出；准备与编码峰值准入、取消 |
 | R4 调度与总预算 | 共享资源池、候选/Plan/Job 子预算 | P1 scoped heap/copy 探针与选定释放断言 | 昂贵准备/Plan/采样后台 Job、队列与结果总预算、公平调度及资源/RSS 报告 |
 
-本批保持 R0–R3 原共享层交付事实，**新包 R3 仍在接回，R4 未验收**。建模 CPU
+本批保持 R0–R3 原共享层交付事实；其后 **新包 R3 最小链路已贯通，R4 未验收**。建模 CPU
 采样在 R4 内；Python 自身 P5 的原排序不能成为延后它的理由。二进制 blob 与
 Modeling 调度定义从 SDK 总枚举移到适配边界的既定调整继续列入 R4。
 动画/独立 Preview/Observer、Review 分别按 Runtime R5/R6 后续推进。

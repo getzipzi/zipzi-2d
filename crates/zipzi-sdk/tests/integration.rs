@@ -73,3 +73,6 @@ mod image_memory;
 
 #[path = "image_edit.rs"]
 mod image_edit;
+
+#[path = "parameter_editing.rs"]
+mod parameter_editing;

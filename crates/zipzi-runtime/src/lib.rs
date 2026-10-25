@@ -16,7 +16,9 @@ mod types;
 pub use config::RuntimeLimits;
 pub use events::{EventCursor, EventKind, RuntimeEvent};
 pub use jobs::{Completion, Executor, Work};
-pub use runtime::{CandidateWork, RegistrySubscription, Runtime, SessionSubscription};
+pub use runtime::{
+    CandidateWork, RegistrySubscription, Runtime, SessionEventSubscription, SessionSubscription,
+};
 pub use types::*;
 
 #[cfg(feature = "test-support")]

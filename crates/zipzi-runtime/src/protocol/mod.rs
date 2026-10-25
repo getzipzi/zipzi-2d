@@ -128,6 +128,8 @@ enum Operation {
         intent: crate::authoring::PlanIntent,
     },
     MeshSnapshot(crate::authoring::MeshQuery),
+    MeshSnapshots(crate::authoring::MeshBatchQuery),
+    ParameterSnapshot(crate::authoring::ParameterQuery),
     SampleModeling {
         session: SessionId,
         edit: Option<EditId>,
@@ -230,6 +232,7 @@ enum Operation {
     },
     Events {
         cursor: EventCursor,
+        limit: Option<usize>,
     },
     RequestStatus {
         request_id: u64,
@@ -384,6 +387,9 @@ impl Protocol {
         remote.disconnected = None;
         remote.connection = self.next_connection;
         let mut capabilities = vec![
+            "typed_mesh_batch",
+            "typed_event_pages",
+            "typed_parameters",
             "typed_meshes",
             "typed_resources_plans",
             "typed_job_lifecycle",
@@ -786,6 +792,8 @@ impl Protocol {
             Operation::MeshSnapshot(input) => {
                 json!(crate::authoring::MESH_QUERY.call(rt, client, input)?)
             }
+            Operation::MeshSnapshots(input) => json!(rt.mesh_snapshots(client, input)?),
+            Operation::ParameterSnapshot(input) => json!(rt.parameter_snapshot(client, input)?),
             Operation::SampleModeling {
                 session,
                 edit,
@@ -943,15 +951,15 @@ impl Protocol {
             }
             Operation::Subscribe { session } => {
                 if let Some(session) = session {
-                    let sub = rt.subscribe(session)?;
+                    let sub = rt.subscribe_info(session)?;
                     json!({"info": info(&sub.info), "cursor": sub.cursor})
                 } else {
                     let sub = rt.subscribe_registry();
                     json!({"sessions": sub.sessions.iter().map(info).collect::<Vec<_>>(), "cursor": sub.cursor})
                 }
             }
-            Operation::Events { cursor } => json!(
-                rt.events_since(cursor)?
+            Operation::Events { cursor, limit } => json!(
+                rt.events_page(cursor, limit.unwrap_or(128))?
                     .iter()
                     .map(|e| event(e))
                     .collect::<Vec<_>>()

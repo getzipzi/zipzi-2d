@@ -53,6 +53,12 @@ a second history or changing standalone SDK ownership.
 
 ## Tests
 
+Selected parameter creation uses `ParameterCreateSpec`; UUID allocation and
+unspecified `Parameter` defaults stay in Rust. `patch_parameter` preserves
+unspecified fields in the current candidate before calling the existing checked
+replacement. The focused contract gate is
+`cargo test --locked -p zipzi-sdk --test integration parameter_editing::`.
+
 From the workspace root, `./tools/test-sdk.sh fast` runs SDK unit and ordinary CPU
 integration tests; add a module filter such as `physics_editing::` for local
 iteration. Ordinary suites share `tests/integration.rs`; register new CPU test

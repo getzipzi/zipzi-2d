@@ -11,6 +11,12 @@ impl std::fmt::Display for RuntimeInstanceId {
         self.0.fmt(f)
     }
 }
+impl std::str::FromStr for RuntimeInstanceId {
+    type Err = uuid::Error;
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        value.parse().map(Self)
+    }
+}
 
 macro_rules! ids {
     ($($name:ident),*) => {$(
@@ -26,6 +32,8 @@ macro_rules! ids {
             }
         }
         impl $name {
+            /// Construct an identity. Runtime still validates existence and ownership.
+            pub fn from_parts(runtime: RuntimeInstanceId, serial: u64) -> Self { Self { runtime, serial } }
             pub fn runtime_instance(&self) -> RuntimeInstanceId { self.runtime }
             pub fn serial(&self) -> u64 { self.serial }
         }

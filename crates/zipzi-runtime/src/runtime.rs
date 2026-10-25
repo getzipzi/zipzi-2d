@@ -53,6 +53,10 @@ pub struct SessionSubscription {
     pub snapshot: SourceSnapshot,
     pub cursor: EventCursor,
 }
+pub struct SessionEventSubscription {
+    pub info: SessionInfo,
+    pub cursor: EventCursor,
+}
 pub struct RegistrySubscription {
     pub sessions: Vec<SessionInfo>,
     pub cursor: EventCursor,
@@ -366,6 +370,14 @@ impl Runtime {
             cursor: self.entry(session)?.events.cursor(),
         })
     }
+    /// Capture metadata and its event boundary atomically, without cloning a model.
+    pub fn subscribe_info(&self, session: SessionId) -> Result<SessionEventSubscription> {
+        let entry = self.entry(session)?;
+        Ok(SessionEventSubscription {
+            info: entry.info.clone(),
+            cursor: entry.events.cursor(),
+        })
+    }
     pub fn subscribe_registry(&self) -> RegistrySubscription {
         RegistrySubscription {
             sessions: self.list_sessions(),
@@ -373,10 +385,29 @@ impl Runtime {
         }
     }
     pub fn events_since(&self, cursor: EventCursor) -> Result<Vec<Arc<RuntimeEvent>>> {
+        if cursor.runtime != self.instance {
+            return Err(RuntimeError::ResyncRequired);
+        }
         match cursor.session {
             Some(session) => self.entry(session)?.events.since(cursor),
             None => self.registry.since(cursor),
         }
+    }
+    /// Bound adapter expansion before constructing Python values or JSON trees.
+    pub fn events_page(&self, cursor: EventCursor, limit: usize) -> Result<Vec<Arc<RuntimeEvent>>> {
+        if !(1..=256).contains(&limit) {
+            return Err(RuntimeError::Budget("event page count"));
+        }
+        let mut events = self.events_since(cursor)?;
+        events.truncate(limit);
+        let bytes = events
+            .iter()
+            .fold(0usize, |bytes, e| bytes.saturating_add(e.estimated_bytes()));
+        if bytes > 1 << 20 {
+            return Err(RuntimeError::Budget("event page bytes"));
+        }
+        self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
+        Ok(events)
     }
     fn edit(&self, client: ClientId, edit: EditId) -> Result<&EditEntry> {
         self.client(client)?;

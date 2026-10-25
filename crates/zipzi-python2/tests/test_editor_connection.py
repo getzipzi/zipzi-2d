@@ -1,5 +1,6 @@
 """Installed new client against a current production desktop executable."""
 import importlib.util
+from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
@@ -27,7 +28,7 @@ class DesktopConnection(unittest.TestCase):
                 script = '''
 import json,sys,time,zipzi
 from pathlib import Path
-from zipzi import meshes
+from zipzi import events,meshes,ops,parameters
 while not Path(sys.argv[4]).exists(): time.sleep(.005)
 with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
  assert r.connection is not None
@@ -36,7 +37,9 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
  if sys.argv[3]=='0':
   s=r.sessions.create('79200000-0000-4000-8000-000000000020')
   g=meshes.Geometry((0,1,2),((0.,0.),(1.,0.),(0.,1.)),((0.,0.),(1.,0.),(0.,1.)),((0,1,2),))
-  with s.edit('desktop client one') as e: e.meshes.create(meshes.MeshSpec('First',g,id='79200000-0000-4000-8000-000000000021'))
+  with s.edit('desktop client one') as e:
+   e.meshes.create(meshes.MeshSpec('First',g,id='79200000-0000-4000-8000-000000000021'))
+   e.parameters.create(parameters.ParameterSpec('First parameter',-1.,1.,0.,id='79200000-0000-4000-8000-000000000022',runtime_id='ParamDesktop',decimal_places=4,repeat=True))
  else:
   end=time.monotonic()+10
   while True:
@@ -45,7 +48,10 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
    assert time.monotonic()<end
    time.sleep(.01)
   s=r.sessions.attach(sessions[0].id)
-  with s.edit('desktop client two') as e: e.meshes.rename('79200000-0000-4000-8000-000000000021','Second')
+  stream=s.subscribe()
+  with s.edit('desktop client two') as e:
+   e.apply_many((ops.Rename('79200000-0000-4000-8000-000000000021','Second'),ops.PatchParameter('79200000-0000-4000-8000-000000000022',parameters.Patch(name='Second parameter',default_value=.5))))
+  assert len([e for e in stream.poll() if isinstance(e,events.Published)])==1
  print(json.dumps(dict(serial=s.id.serial)),flush=True)
 '''
                 gate = folder / "go"
@@ -72,6 +78,9 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     self.assertEqual(session.info().history, (2, 0))
                     self.assertTrue(session.info().modified)
                     self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").name, "Second")
+                    value = session.parameters.get("79200000-0000-4000-8000-000000000022")
+                    self.assertEqual((value.name, value.default_value, value.runtime_id, value.decimal_places, value.repeat),
+                        ("Second parameter", .5, "ParamDesktop", 4, True))
                     session.show_window()
                     # Desktop relaunch uses its existing ownership/reopen path.
                     reopened = subprocess.Popen([str(host)], cwd="/tmp", env=dict(environment,
@@ -82,10 +91,46 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     with zipzi.connect(endpoint=endpoint) as another:
                         self.assertEqual(runtime.connection, another.connection)
                         self.assertEqual(another.sessions.attach(session.id).info().history, (2, 0))
+                    # An abruptly terminated client leaves its unpublished edit
+                    # to the host's real grace expiry. No private statistics API.
+                    abandoned = subprocess.Popen([sys.executable, "-I", "-c", '''
+import sys,time,zipzi
+from pathlib import Path
+from zipzi import parameters
+r=zipzi.connect(endpoint=Path(sys.argv[1]))
+s=r.sessions.attach(zipzi.SessionId(sys.argv[2],int(sys.argv[3])))
+with s.edit('abandoned client') as e:
+ e.parameters.patch('79200000-0000-4000-8000-000000000022',parameters.Patch(name='Never published'))
+ print('candidate ready',flush=True)
+ time.sleep(120)
+''', str(endpoint), session.id.runtime, str(session.id.serial)], cwd="/tmp", env=environment,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    processes.append(abandoned)
+                    self.assertEqual(abandoned.stdout.readline().strip(), "candidate ready")
+                    abandoned.kill()
+                    abandoned.communicate(timeout=5)
+                    self.assertEqual(session.parameters.get("79200000-0000-4000-8000-000000000022").name, "Second parameter")
+                    expiry_deadline = time.monotonic() + 40
+                    while True:
+                        try:
+                            with ExitStack() as owners:
+                                # The shared limit is four edits per session.
+                                # All four slots become available after expiry.
+                                for _ in range(4):
+                                    peer = owners.enter_context(zipzi.connect(endpoint=endpoint))
+                                    candidate = peer.sessions.attach(session.id).edit("expiry admission")
+                                    owners.callback(candidate.cancel)
+                            break
+                        except zipzi.SdkFailure as error:
+                            self.assertEqual(error.code, "BUDGET_EXCEEDED")
+                            self.assertLess(time.monotonic(), expiry_deadline)
+                            time.sleep(.25)
+                    self.assertEqual(session.info().history, (2, 0))
                     saved = session.project.save(folder / "project").wait()
                     self.assertTrue(saved.manifest.is_file())
                     self.assertFalse(session.info().modified)
                     old_id = session.id
+                    old_cursor = session.subscribe().cursor
                 os.kill(next(iter(host_pids)), signal.SIGTERM)
                 end = time.monotonic() + 5
                 while True:
@@ -100,12 +145,18 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     assert fresh.connection is not None
                     host_pids.add(fresh.connection.host_pid)
                     self.assertNotEqual(old_id.runtime, fresh.connection.runtime)
+                    with self.assertRaises(zipzi.SdkFailure) as stale_events:
+                        fresh.events_since(old_cursor)
+                    self.assertEqual(stale_events.exception.code, "RESYNC_REQUIRED")
                     with self.assertRaises(zipzi.SdkFailure):
                         fresh.sessions.attach(old_id)
                     session = fresh.sessions.open(saved.manifest).wait()
                     self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").name, "Second")
+                    value = session.parameters.get("79200000-0000-4000-8000-000000000022")
+                    self.assertEqual((value.name, value.default_value, value.runtime_id, value.decimal_places, value.repeat),
+                        ("Second parameter", .5, "ParamDesktop", 4, True))
                     self.assertEqual(session.info().history, (0, 0))
-                print("desktop: concurrent cold start, shared unsaved history, window/relaunch reuse, save/restart/open passed")
+                print("desktop: concurrent cold start, shared mesh/parameter history, window reuse, killed-client grace expiry, save/restart/open passed")
             finally:
                 # This private endpoint belongs exclusively to this test.
                 try:

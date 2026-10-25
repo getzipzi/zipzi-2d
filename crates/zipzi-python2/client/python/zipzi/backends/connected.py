@@ -15,6 +15,7 @@ from .._generated.backends import ConnectedQueries
 from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, record, sequence
 from . import JobKind
+from ..events import Cursor
 
 CONTRACT = "zipzi-runtime-r4-1"
 MAX_FRAME = 16 << 20
@@ -80,7 +81,7 @@ class ConnectedBackend(ConnectedQueries):
                 raise SdkFailure("PROTOCOL_MISMATCH", "Host returned an incompatible protocol")
             if self._sdk_build is not None and metadata.sdk_build != self._sdk_build:
                 raise SdkFailure("BUILD_MISMATCH", "Host returned a different SDK build")
-            if not {"typed_meshes", "typed_resources_plans", "typed_job_lifecycle"}.issubset(sequence(hello["capabilities"])):
+            if not {"typed_meshes", "typed_resources_plans", "typed_job_lifecycle", "typed_parameters", "typed_event_pages", "typed_mesh_batch"}.issubset(sequence(hello["capabilities"])):
                 raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed authoring operations")
         except BaseException:
             stream.close()
@@ -144,6 +145,14 @@ class ConnectedBackend(ConnectedQueries):
     def create(self, document_id: str, owner: object) -> object:
         # ModelSetup defaults are supplied by serde/SDK, not copied into Python.
         return self._request(dict(op="create_session", document_id=document_id), owner, "sessions.create")
+    def subscribe(self, session: object, owner: object) -> object:
+        return self._request(dict(op="subscribe", session=session), owner, "events.subscribe")
+    def events(self, cursor: Cursor, limit: int, owner: object) -> object:
+        return self._request(dict(op="events", cursor=cursor.wire(), limit=limit), owner, "events.poll")
+    def parameters(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object:
+        return self._request(dict(op="parameter_snapshot", session=session, edit=edit, ids=ids), owner, "parameters.get")
+    def meshes(self, session: object, edit: object | None, ids: tuple[str, ...], owner: object) -> object:
+        return self._request(dict(op="mesh_snapshots", session=session, edit=edit, ids=ids), owner, "meshes.get_many")
     def session_id(self, token: object) -> SessionId:
         return SessionId.read(token)
     def list_sessions(self, owner: object) -> object:

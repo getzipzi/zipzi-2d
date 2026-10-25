@@ -104,6 +104,19 @@ A count/byte overflow, oversized event, foreign or future cursor returns
 `ResyncRequired`. Re-subscribe to recover the current state. There are no callbacks
 under SDK borrows, and UI redraw failures cannot change a successful Job result.
 
+Python metadata subscriptions use `subscribe_info`, which captures SessionInfo
+and its cursor atomically without cloning the model. `events_page` admits at most
+256 events and a conservative 1 MiB payload estimate before adapter expansion.
+The control protocol defaults to pages of 128; cursors advance after delivery.
+The original typed `subscribe` retains its full frozen snapshot for Editor
+projection callers. Ordinary Rust `events_since` keeps its existing semantics.
+
+The independent Python client also uses typed SDK parameter create/patch intents
+in `apply_authoring` and source-bound mesh/parameter batch reads. Whole selections
+are admitted before copies. Focused gates are `--test authoring`, `--test protocol`
+and SDK `--test integration parameter_editing::`; see the
+[R3 evidence](../../docs/plans/sdk-runtime/python2-r3-events.md).
+
 R1 applies the enabled R0 defaults in `RuntimeLimits`: client/session/edit counts,
 candidate estimates, frozen document estimates, aggregate history reservations,
 accounted document CPU estimates, job slots/concurrency and event counts/bytes.

@@ -2,7 +2,7 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Generic, Literal, TypeVar
-from . import meshes, ops, plans, resources
+from . import events, meshes, ops, parameters, plans, resources
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
 from ._values import ConnectionInfo, Receipt, SaveReceipt, SessionId, SessionInfo, WriteResult, record, sequence
 from .backends import Backend, JobKind
@@ -171,10 +171,16 @@ class Runtime:
             exception.add_note(f"Runtime cleanup failed: {cleanup}")
     def close(self) -> None:
         self._backend.close()
+    def events_since(self, cursor: events.Cursor, *, limit: int = 128) -> tuple[events.Event, ...]:
+        events.check_limit(limit)
+        return known(lambda: events.batch(self._backend.events(cursor, limit, self), cursor),
+            lambda: events.batch(self._backend.recover(self), cursor))
 
 class Sessions:
     def __init__(self, runtime: Runtime):
         self._runtime = runtime
+    def subscribe(self) -> events.RegistrySubscription:
+        return events.RegistrySubscription(self._runtime._backend)._start()
     def create(self, document_id: str) -> "Session":
         backend = self._runtime._backend
         return known(lambda: Session(self._runtime, backend.create(document_id, self)),
@@ -210,6 +216,7 @@ class Session:
         self.meshes = Meshes(self)
         self.project = Project(self)
         self.resources = Images(self)
+        self.parameters = Parameters(self)
     @property
     def id(self) -> SessionId:
         return self._id
@@ -219,6 +226,8 @@ class Session:
     def show_window(self) -> None:
         """Display this resident session in its desktop host."""
         known(lambda: self._backend.show_window(self._token, self), lambda: self._backend.recover(self))
+    def subscribe(self) -> events.SessionSubscription:
+        return events.SessionSubscription(self._backend, self._token, self.id)._start()
     def edit(self, label: str) -> "Edit":
         return Edit(self, label)
     def undo(self) -> Job[Receipt]:
@@ -241,6 +250,15 @@ class Meshes:
         s = self._session
         return known(lambda: meshes.Snapshot.read(s._backend.mesh(s._token, id, None if self._edit is None else self._edit._token, self)),
             lambda: meshes.Snapshot.read(s._backend.recover(self)))
+    def get_many(self, ids: Sequence[str]) -> tuple[meshes.Snapshot, ...]:
+        owned = tuple(ids)
+        if any(not isinstance(id, str) for id in owned):
+            raise TypeError("Expected mesh ID text")
+        s = self._session
+        def decode(raw: object) -> tuple[meshes.Snapshot, ...]:
+            return tuple(meshes.Snapshot.read(item) for item in sequence(raw))
+        return known(lambda: decode(s._backend.meshes(s._token,
+            None if self._edit is None else self._edit._token, owned, self)), lambda: decode(s._backend.recover(self)))
 
     def plan(self, intent: meshes.RenameIntent) -> plans.Plan:
         s = self._session
@@ -271,6 +289,37 @@ class EditableMeshes(Meshes, MeshConveniences):
         super().__init__(session, edit)
         self._owner = edit
 
+class Parameters:
+    def __init__(self, session: Session, edit: "Edit | None" = None):
+        self._session, self._edit = session, edit
+    def _read(self, ids: tuple[str, ...] | None) -> parameters.Batch:
+        s = self._session
+        return known(lambda: parameters.Batch.read(s._backend.parameters(s._token,
+            None if self._edit is None else self._edit._token, ids, self)),
+            lambda: parameters.Batch.read(s._backend.recover(self)))
+    def get(self, id: str) -> parameters.Snapshot:
+        s = self._session
+        def decode(raw: object) -> parameters.Snapshot:
+            return parameters.Batch.read(raw).items[0]
+        return known(lambda: decode(s._backend.parameters(s._token,
+            None if self._edit is None else self._edit._token, (id,), self)), lambda: decode(s._backend.recover(self)))
+    def get_many(self, ids: Sequence[str]) -> parameters.Batch:
+        owned = tuple(ids)
+        if any(not isinstance(id, str) for id in owned):
+            raise TypeError("Expected parameter ID text")
+        return self._read(owned)
+    def list(self) -> parameters.Batch:
+        return self._read(None)
+
+class EditableParameters(Parameters):
+    def __init__(self, session: Session, edit: "Edit"):
+        super().__init__(session, edit)
+        self._owner = edit
+    def create(self, spec: parameters.ParameterSpec) -> str:
+        return self._owner.apply(ops.CreateParameter(spec)).ids[0]
+    def patch(self, id: str, patch: parameters.Patch) -> WriteResult:
+        return self._owner.apply(ops.PatchParameter(id, patch))
+
 class Edit:
     def __init__(self, session: Session, label: str):
         self._session, self._backend = session, session._backend
@@ -280,6 +329,7 @@ class Edit:
         self._job: Job[Receipt] | None = None
         self.meshes = EditableMeshes(session, self)
         self.resources = EditableImages(session, self)
+        self.parameters = EditableParameters(session, self)
         try:
             self._token = self._backend.begin(session._token, label, self)
         except OutcomeUnknown as e:
@@ -334,7 +384,7 @@ class Edit:
         self._action = "apply"
         try:
             owned = tuple(operations)
-            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan)) for op in owned):
+            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan, ops.CreateParameter, ops.PatchParameter)) for op in owned):
                 raise TypeError("Expected typed authoring operations")
             for op in owned:
                 ops.validate(op)

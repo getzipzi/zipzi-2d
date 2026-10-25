@@ -24,7 +24,10 @@ The current Python work uses the independent `crates/zipzi-python2` package.
 See the [R0–R4 reconnection record](../plans/sdk-runtime/python2-r0-r4.md) and
 [new-client coverage](python2-coverage.json). Host discovery, session binding and
 the selected real Editor publication recipe have new installed-client evidence.
-Typed event subscriptions, parameters and full R4 coverage remain pending.
+Typed event subscriptions, parameter creation/patching and mesh/parameter batch
+reads now have [new-client R3 evidence](../plans/sdk-runtime/python2-r3-events.md),
+including installed response-loss cases, real Editor projection/Undo events and
+production killed-client expiry. Full R4 coverage remains pending.
 The inventories and older client evidence below retain their historical scope;
 they do not establish acceptance for the new package.
 

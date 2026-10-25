@@ -135,8 +135,9 @@ after a confirmed outcome. Runtime shutdown or client expiry releases remaining
 leases. This first control-transport slice limits RGBA payloads to **1 MiB**;
 binary buffers and larger images belong to P4.
 
-The native contract is `zipzi-python2-4`. Connected hosts must advertise
-`typed_meshes`, `typed_resources_plans` and `typed_job_lifecycle`; a mismatched host is rejected during
+The native contract is `zipzi-python2-5`. Connected hosts must advertise
+`typed_meshes`, `typed_resources_plans`, `typed_job_lifecycle`, `typed_parameters`,
+`typed_event_pages` and `typed_mesh_batch`; a mismatched host is rejected during
 connection.
 
 `job.state()` reads status without consuming the result. `job.cancel()` requests
@@ -176,7 +177,7 @@ also searches the user/system `Applications/Zipzi Editor.app` locations.
 `SessionId(runtime, serial)` is a pure immutable identity; `session.id` sends no
 request. `sessions.list()` and `sessions.attach(id)` work on both backends.
 `SessionInfo` includes state/path/version/history. `show_window()` requires a
-desktop host. The new client is being connected to Runtime R0–R4; full R4 and
+desktop host. The new client's minimal R3 connection is implemented; full R4 and
 packaged application location acceptance remain pending.
 
 ```sh
@@ -188,7 +189,39 @@ packaged application location acceptance remain pending.
 The pure wheel runs from `/tmp` under `-I`, without a native package. Editor's
 focused `runtime_ipc_acceptance` also uses this installed client. See the
 [reconnection record](../../docs/plans/sdk-runtime/python2-r0-r4.md) for the
-coverage and remaining event/parameter/modeling work.
+coverage and remaining R4 modeling work.
+
+## Typed parameters and events
+
+```python
+from zipzi import events, parameters
+
+stream = session.subscribe()
+with session.edit("Angle") as edit:
+    angle = edit.parameters.create(parameters.ParameterSpec("Angle", -30., 30., 0.))
+    edit.parameters.patch(angle, parameters.Patch(name="Angle X"))
+    values = edit.parameters.get_many((angle,))
+    faces = edit.meshes.get_many((face,))
+for event in stream.poll():
+    if event.kind == "published":
+        print(event.receipt.after)
+```
+
+Create/patch operations compose in the same explicit batch and candidate. Rust
+owns defaults, identity and range/dependency validation; omitted patch fields
+preserve the current candidate's values. Reads own immutable source-bound values.
+`parameters.list()` uses SDK storage order. Both parameter and mesh batches admit
+the complete selection before cloning (at most 256 records and 1 MiB of
+conservative response estimates); large/paged collections remain R4 work.
+
+`runtime.sessions.subscribe()` reads registry metadata; `session.subscribe()`
+reads session metadata. Each captures its initial information and cursor together
+without cloning a model. Polling is independent per reader, defaults to 128
+events and permits at most 256. A gap requires explicit `resync()`; an unresolved
+poll must first recover its original response. Cursors and event values contain
+no native objects. Use `runtime.events_since(cursor)` to continue on another
+connection to the same host. Subscriptions do not drain SDK events or allocate a
+server lease. See [R3 evidence](../../docs/plans/sdk-runtime/python2-r3-events.md).
 
 ## P0 measurements
 

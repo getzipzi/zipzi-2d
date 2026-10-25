@@ -11,5 +11,6 @@ for the currently implemented scope and validation commands.
 absolute `host=Path(...)` or `ZIPZI_EDITOR_HOST` to launch it under the same
 endpoint ownership rule. `runtime.sessions.list()` and `sessions.attach(info.id)`
 bind existing unsaved sessions; `session.show_window()` displays one in the
-desktop host. Runtime R0–R4 integration is in progress; full Modeling, event and
-parameter coverage is not yet delivered.
+desktop host. Typed parameter create/patch/batch reads, mesh batch reads and
+independent cursor subscriptions are implemented. Runtime R4 full Modeling,
+handles/addresses, CPU evaluation and resource/IO coverage remain in progress.

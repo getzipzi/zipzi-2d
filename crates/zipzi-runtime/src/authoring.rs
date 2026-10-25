@@ -19,8 +19,32 @@ pub struct WriteResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ParameterQuery {
+    pub session: crate::SessionId,
+    pub edit: Option<crate::EditId>,
+    pub ids: Option<Vec<String>>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MeshBatchQuery {
+    pub session: crate::SessionId,
+    pub edit: Option<crate::EditId>,
+    pub ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParameterBatch {
+    pub source: SourceRef,
+    pub parameters: Vec<zipzi_core::Parameter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "domain", rename_all = "snake_case", deny_unknown_fields)]
 pub enum EditOperation {
+    Parameter {
+        operation: zipzi_sdk::ParameterOperation,
+    },
     Mesh {
         operation: zipzi_sdk::MeshOperation,
     },

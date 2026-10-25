@@ -15,6 +15,7 @@ import time
 import unittest
 from unittest.mock import patch
 import zipzi
+from zipzi import events, ops, parameters
 
 
 def stop(pid):
@@ -261,6 +262,91 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     release.set()
                     worker.join(3)
                     self.endpoint.unlink()
+
+    def test_installed_parameter_and_event_recovery_preserves_original_request(self):
+        for operation in ("subscribe", "events", "parameter_snapshot", "apply_authoring", "commit", "job"):
+            with self.subTest(operation=operation), patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE=operation):
+                endpoint = self.folder / operation / "test.sock"
+                with zipzi.connect(endpoint=endpoint, start=True, host=self.host) as runtime:
+                    session = runtime.sessions.create("79200000-0000-4000-8000-000000000030")
+                    if operation == "subscribe":
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            session.subscribe()
+                        stream = lost.exception.recover()
+                        self.assertIsInstance(stream, events.SessionSubscription)
+                    else:
+                        stream = session.subscribe()
+                    parameter = "79200000-0000-4000-8000-000000000031"
+                    edit = session.edit("installed mixed parameter batch")
+                    operations = (ops.CreateParameter(parameters.ParameterSpec("First", -1., 1., 0., id=parameter,
+                        runtime_id="ParamRecovery", decimal_places=4, repeat=True)),
+                        ops.PatchParameter(parameter, parameters.Patch(name="Final")))
+                    if operation in {"apply_authoring", "commit", "job"}:
+                        with self.assertRaises(zipzi.OutcomeUnknown):
+                            with edit:
+                                edit.apply_many(operations)
+                        recovered = edit.recover()
+                        if operation == "apply_authoring":
+                            self.assertEqual(recovered.source.sequence, 1)
+                            edit.commit().wait()
+                    else:
+                        with edit:
+                            edit.apply_many(operations)
+                    if operation == "parameter_snapshot":
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            session.parameters.get(parameter)
+                        value = lost.exception.recover()
+                    else:
+                        value = session.parameters.get(parameter)
+                    self.assertEqual((value.name,value.runtime_id,value.decimal_places,value.repeat), ("Final","ParamRecovery",4,True))
+                    if operation == "events":
+                        before = stream.cursor
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            stream.poll()
+                        self.assertEqual(stream.cursor, before)
+                        with self.assertRaises(zipzi.Busy):
+                            stream.resync()
+                        delivered = lost.exception.recover()
+                    else:
+                        delivered = stream.poll()
+                    published = [event for event in delivered if isinstance(event, events.Published)]
+                    self.assertEqual(len(published), 1)
+                    self.assertEqual(published[0].receipt.after, session.info().version)
+                    self.assertEqual(stream.poll(), ())
+                    self.assertEqual(session.info().history, (1, 0))
+
+    def test_installed_busy_and_caught_errors_keep_the_public_edit_rules(self):
+        with patch.dict(os.environ, ZIPZI_TEST_BUSY_COMMIT_ONCE="1"):
+            with self.connect() as runtime:
+                session = runtime.sessions.create("79200000-0000-4000-8000-000000000040")
+                edit = session.edit("confirmed Busy")
+                with self.assertRaises(zipzi.Busy):
+                    with edit:
+                        parameter = edit.parameters.create(parameters.ParameterSpec("Base", -1., 1., 0.))
+                self.assertEqual(edit.parameters.get(parameter).source.sequence, 1)
+                edit.commit().wait()
+                with self.assertRaises(zipzi.SdkFailure) as caught:
+                    with session.edit("caught domain failure") as failed:
+                        failed.parameters.patch(parameter, parameters.Patch(name="Unpublished"))
+                        try:
+                            failed.parameters.patch(parameter, parameters.Patch(minimum=2.))
+                        except zipzi.SdkFailure:
+                            pass
+                self.assertEqual(caught.exception.code, "EDIT_ABORTED")
+                self.assertEqual(session.parameters.get(parameter).name, "Base")
+                self.assertEqual(session.info().history, (1, 0))
+        with patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE="release_edit"):
+            with zipzi.connect(endpoint=self.folder / "cleanup" / "test.sock", start=True, host=self.host) as runtime:
+                session = runtime.sessions.create("79200000-0000-4000-8000-000000000041")
+                edit = session.edit("lost cleanup")
+                with self.assertRaises(zipzi.SdkFailure) as original:
+                    with edit:
+                        edit.parameters.create(parameters.ParameterSpec("Invalid", 1., -1., 0.))
+                self.assertEqual(original.exception.code, "INVALID_PARAMETER")
+                self.assertTrue(any("cleanup failed" in note.lower() for note in original.exception.__notes__))
+                edit.recover()
+                self.assertEqual(session.parameters.list().items, ())
+                self.assertEqual(session.info().history, (0, 0))
 
 
 if __name__ == "__main__":

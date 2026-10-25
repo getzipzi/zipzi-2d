@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "date": "2026-10-25",
-  "base_commit": "1e0043f",
+  "base_commit": "acc54907",
   "implementation": "crates/zipzi-python2",
-  "scope": "Runtime R0-R4 reconnection; first verified host/session slice; not a complete method inventory",
+  "scope": "Runtime R0-R4 reconnection; public R3 minimum loop verified; full R4/method inventory pending",
   "status": "in_progress",
   "record": "docs/plans/sdk-runtime/python2-r0-r4.md",
   "ipc_contract": "zipzi-runtime-r4-1",
-  "native_contract": "zipzi-python2-4",
+  "native_contract": "zipzi-python2-5",
   "entries": [
     {
       "id": "r0_inventory",
@@ -63,7 +63,8 @@
         "crates/zipzi-python2/client/python/zipzi/_lifecycle.py"
       ],
       "evidence": [
-        "crates/zipzi-editor/acceptance/runtime_ipc.rs"
+        "crates/zipzi-editor/acceptance/runtime_ipc.rs",
+        "docs/plans/sdk-runtime/python2-r3-events.md"
       ],
       "remaining": [
         "All-domain UI selection/relation/texture/form updates",
@@ -86,11 +87,11 @@
       ],
       "evidence": [
         "crates/zipzi-python2/tests/test_connection.py",
-        "crates/zipzi-python2/tests/test_editor_connection.py"
+        "crates/zipzi-python2/tests/test_editor_connection.py",
+        "docs/plans/sdk-runtime/python2-r3-events.md"
       ],
       "remaining": [
-        "Packaged app installation paths",
-        "Full killed-client/expiry/window lifecycle matrix on production desktop"
+        "Packaged app installation paths and release platform matrix"
       ]
     },
     {
@@ -117,34 +118,73 @@
     {
       "id": "events",
       "stage": "R3",
-      "state": "pending",
+      "state": "verified_slice",
       "acceptance": [
         "A03",
         "A10",
         "A17"
       ],
-      "shared": "Runtime subscribe/events_since; cursor/resync",
-      "python": [],
-      "evidence": [],
+      "shared": "Runtime subscribe_info/events_page; original single SDK receipt drain",
+      "python": [
+        "crates/zipzi-python2/client/python/zipzi/events.py",
+        "crates/zipzi-python2/src/streams.rs"
+      ],
+      "evidence": [
+        "crates/zipzi-python2/tests/test_api.py",
+        "crates/zipzi-python2/tests/test_connection.py",
+        "crates/zipzi-editor/acceptance/runtime_ipc.rs"
+      ],
       "remaining": [
-        "Typed session/registry subscriptions and immutable events",
-        "Lost response, bounded cursor/resync, real Editor publication recipe"
+        "Full SDK ChangeSet projection for later domains",
+        "Large/paged domain collections remain R4"
+      ]
+    },
+    {
+      "id": "mesh_batch",
+      "stage": "R3",
+      "state": "verified_slice",
+      "acceptance": [
+        "A04",
+        "A12",
+        "A17"
+      ],
+      "shared": "Runtime mesh_snapshots admits complete selection; selected shared mesh conversion",
+      "python": [
+        "crates/zipzi-python2/client/python/zipzi/_lifecycle.py",
+        "crates/zipzi-python2/src/parameter_bridge.rs"
+      ],
+      "evidence": [
+        "crates/zipzi-runtime/tests/authoring.rs",
+        "crates/zipzi-python2/tests/test_api.py",
+        "crates/zipzi-python2/tests/installed_recipe.py"
+      ],
+      "remaining": [
+        "Large/paged mesh collections in R4"
       ]
     },
     {
       "id": "parameters",
       "stage": "R3",
-      "state": "pending",
+      "state": "verified_slice",
       "acceptance": [
         "A04",
         "A12"
       ],
-      "shared": "SDK parameter contracts; Runtime query/apply_modeling",
-      "python": [],
-      "evidence": [],
+      "shared": "SDK ParameterCreateSpec/ParameterPatch; Runtime unified apply_authoring and bounded parameter_snapshot",
+      "python": [
+        "crates/zipzi-python2/client/python/zipzi/parameters.py",
+        "crates/zipzi-python2/client/python/zipzi/ops.py",
+        "crates/zipzi-python2/src/parameter_bridge.rs"
+      ],
+      "evidence": [
+        "crates/zipzi-sdk/tests/parameter_editing.rs",
+        "crates/zipzi-runtime/tests/authoring.rs",
+        "crates/zipzi-python2/tests/test_api.py",
+        "crates/zipzi-python2/tests/installed_recipe.py",
+        "crates/zipzi-editor/acceptance/runtime_ipc.rs"
+      ],
       "remaining": [
-        "Typed parameter creation/modification and batch query",
-        "Candidate reads and shared history on both backends"
+        "Groups/CDI presentation order and full R4 parameter-related domains"
       ]
     },
     {
@@ -169,7 +209,7 @@
       ],
       "remaining": [
         "Scene/organization/deformers",
-        "Parameter/group hierarchy/order",
+        "Parameter groups/hierarchy/CDI presentation order",
         "Bindings/keyforms/BlendShape",
         "Topology/Glue/Offscreen/references/document metadata",
         "Move Modeling dispatch definition from SDK aggregate enum to adapter boundary",
@@ -299,5 +339,6 @@
         "Fairness, large data, scoped copy/heap and RSS/cache reports"
       ]
     }
-  ]
+  ],
+  "latest_record": "docs/plans/sdk-runtime/python2-r3-events.md"
 }

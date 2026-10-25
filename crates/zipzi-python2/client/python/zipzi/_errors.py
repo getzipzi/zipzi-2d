@@ -10,7 +10,9 @@ if TYPE_CHECKING:
     from .meshes import Snapshot
     from .plans import Plan
     from .resources import PreparedImage, ImagePixels, Snapshot as ImageSnapshot, Usage
-    RecoveryResult = JobState | Plan | PreparedImage | ImagePixels | ImageSnapshot | Usage | Edit | Session | SessionInfo | Snapshot | WriteResult | Receipt | SaveReceipt | Job[Receipt] | Job[SaveReceipt] | Job[Session] | None
+    from .events import Event, SessionSubscription, RegistrySubscription
+    from .parameters import Snapshot as ParameterSnapshot, Batch as ParameterBatch
+    RecoveryResult = JobState | Plan | PreparedImage | ImagePixels | ImageSnapshot | Usage | Edit | Session | SessionInfo | Snapshot | WriteResult | Receipt | SaveReceipt | Job[Receipt] | Job[SaveReceipt] | Job[Session] | SessionSubscription | RegistrySubscription | tuple[SessionInfo, ...] | tuple[Event, ...] | tuple[Snapshot, ...] | ParameterSnapshot | ParameterBatch | None
 
 class SdkFailure(Exception):
     def __init__(self, code: str, message: str, *, operation: str = "", object_ids: tuple[str, ...] = (),

@@ -10,7 +10,7 @@ import tempfile
 import time
 
 import zipzi
-from zipzi import meshes, ops, resources
+from zipzi import events, meshes, ops, parameters, resources
 
 def main():
     mode = sys.argv[1]
@@ -42,6 +42,7 @@ def main():
                         time.sleep(.01)
             with runtime:
                 session = runtime.sessions.create("79300000-0000-4000-8000-000000000001")
+                stream = session.subscribe()
                 geometry = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
                     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
                 with runtime.resources.prepare_image(1, 1, bytes((12, 34, 56, 255))) as image:
@@ -56,11 +57,20 @@ def main():
                         snapshot = edit.meshes.get(face)
                         assert snapshot.source.sequence == 4
                         assert edit.resources.get(asset).pixels.rgba == bytes((21, 43, 65, 255))
+                        parameter = "79300000-0000-4000-8000-000000000002"
+                        result = edit.apply_many((ops.CreateParameter(parameters.ParameterSpec("Draft", -1., 1., 0.,
+                            id=parameter, runtime_id="ParamInstalled", kind=parameters.Kind.BLEND_SHAPE, decimal_places=3, repeat=True)),
+                            ops.PatchParameter(parameter, parameters.Patch(name="Installed parameter", default_value=.5, repeat=False))))
+                        assert result.source.sequence == 5
+                        assert edit.parameters.get_many((parameter,)).items[0].name == "Installed parameter"
+                        assert edit.meshes.get_many((face,))[0].name == "Installed"
                     assert image.pixels().rgba == bytes((12, 34, 56, 255))
                 assert runtime.resources.usage().prepared_images == 0
                 assert runtime.resources.usage().plans == 0
                 assert session.info().history == (1, 0)
                 assert session.meshes.get(face).name == "Installed"
+                published = [e for e in stream.poll() if isinstance(e, events.Published)]
+                assert len(published) == 1 and parameter in published[0].receipt.object_ids
                 assert session.undo().wait().changed
                 assert session.info().history == (0, 1)
                 try:
@@ -82,6 +92,7 @@ def main():
                 saved = save_job.wait()
                 assert save_job.state() == "succeeded"
                 assert saved.manifest.is_file()
+                assert any(isinstance(e, events.Saved) and e.receipt == saved for e in stream.poll())
             if child is not None:
                 child.terminate()
                 child.wait(timeout=5)
@@ -108,6 +119,9 @@ def main():
                 assert reopened.resources.get(asset).name == "Texture"
                 assert reopened.resources.get(asset).pixels.rgba == bytes((21, 43, 65, 255))
                 assert reopened.meshes.get(face).name == "Installed"
+                value = reopened.parameters.get(parameter)
+                assert (value.name,value.runtime_id,value.kind,value.decimal_places,value.repeat,value.default_value) == (
+                    "Installed parameter","ParamInstalled",parameters.Kind.BLEND_SHAPE,3,False,.5)
                 assert reopened.info().history == (0, 0)
             print(json.dumps(dict(mode=mode, name=snapshot.name, vertices=snapshot.geometry.vertex_ids, history=(1, 0))))
         finally:

@@ -1,7 +1,7 @@
 """These public calls must type-check; this file is not executed."""
 from pathlib import Path
 import zipzi
-from zipzi import meshes, ops, resources
+from zipzi import events, meshes, ops, parameters, resources
 
 def recipe(runtime: zipzi.Runtime) -> zipzi.SaveReceipt:
     session = runtime.sessions.create("79000000-0000-4000-8000-000000000001")
@@ -45,3 +45,20 @@ def resident(runtime: zipzi.Runtime) -> zipzi.SessionId:
 
 def desktop(host: Path) -> zipzi.Runtime:
     return zipzi.connect(start=True, host=host, startup_timeout=15., sdk_build="explicit build identity")
+
+def parameter_and_events(runtime: zipzi.Runtime, session: zipzi.Session) -> parameters.Batch:
+    stream: events.SessionSubscription = session.subscribe()
+    cursor: events.Cursor = stream.cursor
+    with session.edit("typed parameter") as edit:
+        id = edit.parameters.create(parameters.ParameterSpec("Angle", -30., 30., 0.))
+        edit.parameters.patch(id, parameters.Patch(name="Final"))
+        batch: parameters.Batch = edit.parameters.get_many((id,))
+        snapshots: tuple[meshes.Snapshot, ...] = edit.meshes.get_many(())
+        assert snapshots == ()
+    for event in stream.poll():
+        if event.kind == "published":
+            receipt: zipzi.Receipt = event.receipt
+            assert receipt.before == batch.source.version
+    replay: tuple[events.Event, ...] = runtime.events_since(cursor)
+    assert len(replay) >= 1
+    return batch

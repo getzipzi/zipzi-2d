@@ -2,10 +2,21 @@ use super::*;
 use crate::authoring::{EditOperation, MeshSnapshot, PlanIntent, PlanSnapshot, WriteResult};
 
 enum ReadyOperation {
+    Parameter(zipzi_sdk::ParameterOperation),
     Mesh(zipzi_sdk::MeshOperation),
     Image(zipzi_sdk::ImageCreateSpec, zipzi_sdk::PreparedImageContent),
     ReplaceImage(String, zipzi_sdk::PreparedImageContent),
     Plan(Arc<zipzi_sdk::ModelingPlan>, bool),
+}
+
+fn mesh_response_bytes(mesh: &zipzi_core::Mesh) -> usize {
+    mesh.vertex_ids
+        .len()
+        .saturating_mul(128)
+        .saturating_add(mesh.triangles.len().saturating_mul(64))
+        .saturating_add(mesh.id.len())
+        .saturating_add(mesh.name.len())
+        .saturating_add(4096)
 }
 
 impl Runtime {
@@ -42,6 +53,7 @@ impl Runtime {
             .enumerate()
             .map(|(index, operation)| {
                 Ok(match operation {
+                    EditOperation::Parameter { operation } => ReadyOperation::Parameter(operation),
                     EditOperation::Mesh { operation } => ReadyOperation::Mesh(operation),
                     EditOperation::CreateImage { spec, image } => {
                         ReadyOperation::Image(spec, self.prepared_image(client, image)?.clone())
@@ -70,6 +82,7 @@ impl Runtime {
             let mut ids = vec![];
             for operation in resolved {
                 match operation {
+                    ReadyOperation::Parameter(op) => ids.push(op.apply(candidate)?),
                     ReadyOperation::Mesh(op) => ids.push(op.apply(candidate)?),
                     ReadyOperation::Image(spec, image) => {
                         ids.push(candidate.create_image_spec(spec, &image)?)
@@ -134,13 +147,13 @@ impl Runtime {
         })
     }
 
-    pub fn mesh_snapshot(
+    fn with_authoring_source<T>(
         &self,
         client: ClientId,
         session: SessionId,
         edit: Option<EditId>,
-        id: &str,
-    ) -> Result<MeshSnapshot> {
+        read: impl FnOnce(&zipzi_core::Document, SourceRef) -> Result<T>,
+    ) -> Result<T> {
         self.client(client)?;
         let frozen;
         let (doc, source) = if let Some(edit) = edit {
@@ -170,48 +183,140 @@ impl Runtime {
                 (frozen.snapshot.document(), frozen.source)
             }
         };
-        let mesh = doc.get_mesh(id).ok_or_else(|| {
-            RuntimeError::Sdk(zipzi_sdk::SdkError {
-                code: "MISSING_MESH".into(),
-                message: "Mesh does not exist".into(),
-                operation: "meshes.get",
-                object_ids: vec![id.into()],
-                field_path: None,
-                expected_version: None,
-                actual_version: None,
-                referrers: Box::new([]),
+        read(doc, source)
+    }
+
+    pub fn parameter_snapshot(
+        &self,
+        client: ClientId,
+        input: crate::authoring::ParameterQuery,
+    ) -> Result<crate::authoring::ParameterBatch> {
+        self.with_authoring_source(client, input.session, input.edit, |doc, source| {
+            let ids = input
+                .ids
+                .as_deref()
+                .unwrap_or_else(|| doc.parameter_order());
+            if ids.len() > 256 {
+                return Err(RuntimeError::Budget("parameter snapshot count"));
+            }
+            // Admit the complete selection and wire expansion before cloning.
+            let mut bytes = 4096usize;
+            for id in ids {
+                let p = doc.get_parameter(id).ok_or_else(|| {
+                    RuntimeError::Sdk(zipzi_sdk::SdkError {
+                        code: "MISSING_PARAMETER".into(),
+                        message: "Parameter does not exist".into(),
+                        operation: "parameters.get",
+                        object_ids: vec![id.clone()],
+                        field_path: None,
+                        expected_version: None,
+                        actual_version: None,
+                        referrers: Box::new([]),
+                    })
+                })?;
+                bytes = bytes
+                    .saturating_add(p.id.len())
+                    .saturating_add(p.runtime_id.len())
+                    .saturating_add(p.name.len())
+                    .saturating_add(512);
+                if bytes > 1 << 20 {
+                    return Err(RuntimeError::Budget("parameter snapshot bytes"));
+                }
+            }
+            self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
+            Ok(crate::authoring::ParameterBatch {
+                source,
+                parameters: ids
+                    .iter()
+                    .map(|id| doc.get_parameter(id).unwrap().clone())
+                    .collect(),
             })
-        })?;
-        // A conservative bound for owned records AND their possible wire
-        // expansion, before cloning. Large queries need later paged/buffer APIs.
-        let bytes = mesh
-            .vertex_ids
-            .len()
-            .saturating_mul(128)
-            .saturating_add(mesh.triangles.len().saturating_mul(64))
-            .saturating_add(mesh.id.len())
-            .saturating_add(mesh.name.len())
-            .saturating_add(4096);
-        if bytes > 1 << 20 {
-            return Err(RuntimeError::Budget("mesh snapshot"));
-        }
-        self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
-        crate::metrics::copy_payload(
-            mesh.vertex_ids.len() * std::mem::size_of::<u32>()
-                + (mesh.base_positions.len() + mesh.uvs.len())
-                    * std::mem::size_of::<zipzi_core::Vec2>()
-                + mesh.triangles.len() * std::mem::size_of::<[u32; 3]>(),
-        );
-        Ok(MeshSnapshot {
-            source,
-            id: mesh.id.clone(),
-            name: mesh.name.clone(),
-            geometry: zipzi_sdk::MeshGeometry {
-                vertex_ids: mesh.vertex_ids.clone(),
-                positions: mesh.base_positions.clone(),
-                uvs: mesh.uvs.clone(),
-                triangles: mesh.triangles.clone(),
-            },
+        })
+    }
+
+    pub fn mesh_snapshots(
+        &self,
+        client: ClientId,
+        input: crate::authoring::MeshBatchQuery,
+    ) -> Result<Vec<MeshSnapshot>> {
+        self.with_authoring_source(client, input.session, input.edit, |doc, _| {
+            if input.ids.len() > 256 {
+                return Err(RuntimeError::Budget("mesh batch count"));
+            }
+            let mut bytes = 0usize;
+            for id in &input.ids {
+                let mesh = doc.get_mesh(id).ok_or_else(|| {
+                    RuntimeError::Sdk(zipzi_sdk::SdkError {
+                        code: "MISSING_MESH".into(),
+                        message: "Mesh does not exist".into(),
+                        operation: "meshes.get_many",
+                        object_ids: vec![id.clone()],
+                        field_path: None,
+                        expected_version: None,
+                        actual_version: None,
+                        referrers: Box::new([]),
+                    })
+                })?;
+                bytes = bytes.saturating_add(mesh_response_bytes(mesh));
+                if bytes > 1 << 20 {
+                    return Err(RuntimeError::Budget("mesh batch bytes"));
+                }
+            }
+            self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
+            // A host call cannot interleave publication. Reuse the same selected
+            // single-record conversion after admitting the complete batch.
+            input
+                .ids
+                .iter()
+                .map(|id| self.mesh_snapshot(client, input.session, input.edit, id))
+                .collect()
+        })
+    }
+
+    pub fn mesh_snapshot(
+        &self,
+        client: ClientId,
+        session: SessionId,
+        edit: Option<EditId>,
+        id: &str,
+    ) -> Result<MeshSnapshot> {
+        self.with_authoring_source(client, session, edit, |doc, source| {
+            let mesh = doc.get_mesh(id).ok_or_else(|| {
+                RuntimeError::Sdk(zipzi_sdk::SdkError {
+                    code: "MISSING_MESH".into(),
+                    message: "Mesh does not exist".into(),
+                    operation: "meshes.get",
+                    object_ids: vec![id.into()],
+                    field_path: None,
+                    expected_version: None,
+                    actual_version: None,
+                    referrers: Box::new([]),
+                })
+            })?;
+            // A conservative bound for owned records AND their possible wire
+            // expansion, before cloning. Large queries need later paged/buffer APIs.
+            let bytes = mesh_response_bytes(mesh);
+            if bytes > 1 << 20 {
+                return Err(RuntimeError::Budget("mesh snapshot"));
+            }
+            self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
+            crate::metrics::copy_payload(
+                mesh.vertex_ids.len() * std::mem::size_of::<u32>()
+                    + (mesh.base_positions.len() + mesh.uvs.len())
+                        * std::mem::size_of::<zipzi_core::Vec2>()
+                    + mesh.triangles.len() * std::mem::size_of::<[u32; 3]>(),
+            );
+            Ok(MeshSnapshot {
+                source,
+                id: mesh.id.clone(),
+                name: mesh.name.clone(),
+                geometry: zipzi_sdk::MeshGeometry {
+                    vertex_ids: mesh.vertex_ids.clone(),
+                    positions: mesh.base_positions.clone(),
+                    uvs: mesh.uvs.clone(),
+                    triangles: mesh.triangles.clone(),
+                },
+            })
         })
     }
 }

@@ -6,6 +6,8 @@ use pyo3::{
 };
 use std::{path::Path, sync::Arc};
 mod generated;
+mod parameter_bridge;
+mod streams;
 use generated::mesh::read_mesh_operation;
 use zipzi_runtime::authoring::{
     EditOperation, ImagePixels, MAX_IMAGE_BYTES, PlanIntent, PlanSnapshot,
@@ -186,6 +188,11 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
             let op = value?;
             let kind = op.getattr("kind")?.extract::<String>()?;
             let mesh = match kind.as_str() {
+                "create_parameter" | "patch_parameter" => {
+                    return Ok(EditOperation::Parameter {
+                        operation: parameter_bridge::read(&kind, &op)?,
+                    });
+                }
                 "create_image" => {
                     let image = op.getattr("image")?.getattr("_token")?;
                     return Ok(EditOperation::CreateImage {
@@ -295,7 +302,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-4"
+        "zipzi-python2-5"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {

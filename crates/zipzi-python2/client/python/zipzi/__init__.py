@@ -1,6 +1,6 @@
 """Typed Python authoring API backed by the Zipzi Runtime."""
 from pathlib import Path
-from . import meshes, ops, plans, resources
+from . import events, meshes, ops, parameters, plans, resources
 from .plans import Plan
 from .resources import PreparedImage
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
@@ -19,4 +19,4 @@ def connect(*, endpoint: Path | None = None, start: bool = False, host: Path | N
         startup_timeout=startup_timeout, sdk_build=sdk_build))
 
 __all__ = ["local", "connect", "Runtime", "Session", "Edit", "Job", "SdkFailure", "Busy", "OutcomeUnknown",
-    "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionId", "SessionInfo", "ConnectionInfo", "ConnectionLimits", "WriteResult", "meshes", "ops", "plans", "resources", "Plan", "PreparedImage"]
+    "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionId", "SessionInfo", "ConnectionInfo", "ConnectionLimits", "WriteResult", "events", "meshes", "ops", "parameters", "plans", "resources", "Plan", "PreparedImage"]
