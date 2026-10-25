@@ -10,6 +10,10 @@
 接回首批 R4 数值链路，源码测试为 50 项、类型反例为 8 条；完整 R4 仍待扩展。
 下面 P1/P0 记录保留原始范围。
 
+2026-10-25 [Runtime R1–R3 / Python P1–P2 整体复验](../sdk-runtime/r1-r3-python-p1-p2-acceptance.md)
+修复了丢失 Busy 响应后的 Edit 状态恢复及 Runtime 源接口清单分类。
+后续按用户要求补齐[P2 资源/Plan 生成和源码分发](p2-resources-generator.md)，并复测 Runtime、安装客户端、真实 Editor 及两组冻结性能门禁。整体复验已通过；Editor 首轮越线、对照及扩样数据也完整保留在记录中。
+
 ## 项目边界
 
 本项目从新包 `crates/zipzi-python2` 开始，Python 导入名为 `zipzi`。P0/P1 的公共类型、生命周期、两后端、薄 PyO3、包级测试、构建和测量工具均已移入新目录。旧 crate 中的临时特性接线和源码改动已撤回；旧接口去向清单和旧包性能采集工具不再属于本项目。
@@ -22,10 +26,10 @@
 | --- | --- | --- |
 | P0 | 选定六项工作负载的 Local/Connected 计时和独立 Rust/Python 探针；冻结比较及负控制 | 后续领域工作负载；计数范围之外的隐式领域 Clone 和 allocator 内部复制不计入当前负载复制数字 |
 | P1 | 选定 API、两后端、来源/资源/历史/IO、36 项公共行为与生命周期矩阵、严格类型及独立正常 wheel 验收 | 当前选定试点门槛已满足；长任务、后续领域和发布平台矩阵另列 |
-| P2 | [第一批网格生成链路](p2-mesh-generator.md)：Rust 单一声明、编译查询注册、10 个产物、确定性/漂移/保护/真实编译负例 | 资源/Plan、剩余有限类型子集和完整源分发证据 |
+| P2 | [网格历史切片](p2-mesh-generator.md)及[资源/Plan 补齐](p2-resources-generator.md)：Rust 单一声明、编译查询注册、18 个产物、有限形状和配对源码发行验证 | 当前范围退出证据见整体复验；未实施领域按 P3–P5 扩展 |
 | P3 | 选定网格/参数/网格绑定关键形与 Runtime R4 CPU 数值链路 | 场景/组织/完整绑定与拓扑、身份/地址等后续 Modeling |
 | P4/P5/P7 | 未开始 | 按计划交付；本批 CPU 建模求值归 Runtime R4，不代表 P5 动画已实现 |
-| P6 | 纯包/原生包分别构建；隔离安装 recipe；Runtime R3 宿主发现与真实 Editor 选定链路 | sdist、完整版本/平台配对、发行 app 安装位置和全部领域安装验收 |
+| P6 | 纯包/原生包分别构建；隔离安装 recipe；Runtime R3 宿主发现与真实 Editor 选定链路 | 完整版本/平台配对、发行 app 安装位置和全部领域安装验收 |
 
 能力范围见 [`CAPABILITIES.md`](../../../crates/zipzi-python2/CAPABILITIES.md)。源码接线、独立验证和阶段验收分开记录；当前选定 P1 试点已满足退出门槛，P0 试点统计有明确范围，总体后续领域仍按阶段跟踪。
 

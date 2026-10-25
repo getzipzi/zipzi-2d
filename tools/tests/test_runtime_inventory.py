@@ -42,6 +42,20 @@ pub fn helper() -> &'static str { "{" }
         self.assertEqual(apis["sdk::ImageLoadToken.cancel"]["classification"], "connected")
         self.assertEqual(apis["sdk::ObjectHandle.id"]["classification"], "local-value")
         self.assertEqual(apis["python::_session.open_project"]["classification"], "connected")
+        for name, domain in [("create_image_spec", "resources-project"),
+                             ("create_mesh_spec", "geometry-binding"),
+                             ("create_mesh_binding_spec", "geometry-binding"),
+                             ("create_parameter_spec", "scene-document"),
+                             ("patch_parameter", "scene-document")]:
+            row = apis[f"sdk::EditSession.{name}"]
+            self.assertEqual(row["domain"], domain)
+            self.assertEqual(row["classification"], "connected")
+            self.assertEqual(row["source_ref"], "edit + candidate sequence")
+        self.assertEqual(apis["sdk::EditSession.memory_image"]["effect"], "read-only candidate")
+        for owner in ("MeshOperation", "MeshBindingOperation", "ParameterOperation"):
+            row = apis[f"sdk::{owner}.apply"]
+            self.assertEqual(row["classification"], "connected")
+            self.assertEqual(row["source_ref"], "edit + candidate sequence")
         self.assertIn("replacement", apis["sdk::AuthoringSession.new_project"]["effect"])
         self.assertTrue(any(row["name"] == "MotionEdit" for row in catalog["domain_intents"]))
         self.assertTrue(any(row["name"] == "NativeBindingPlan" for row in catalog["native_types"]))

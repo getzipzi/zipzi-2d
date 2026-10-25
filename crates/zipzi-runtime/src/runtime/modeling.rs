@@ -181,7 +181,9 @@ impl Runtime {
         self.apply_authoring(
             client,
             edit,
-            vec![crate::authoring::EditOperation::ApplyPlan { plan }],
+            vec![crate::authoring::EditOperation::Resource(
+                crate::authoring::ResourceOperation::ApplyPlan { plan },
+            )],
         )
         .map(|_| ())
     }

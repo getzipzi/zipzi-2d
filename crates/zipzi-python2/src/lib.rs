@@ -10,14 +10,12 @@ mod modeling_bridge;
 mod parameter_bridge;
 mod streams;
 use generated::mesh::read_mesh_operation;
-use zipzi_runtime::authoring::{
-    EditOperation, ImagePixels, MAX_IMAGE_BYTES, PlanIntent, PlanSnapshot,
-};
+use zipzi_runtime::authoring::{EditOperation, MAX_IMAGE_BYTES};
 use zipzi_runtime::{
     host::{HostError, HostResult, LocalHost},
     *,
 };
-use zipzi_sdk::{ImageCreateSpec, MeshOperation, Version};
+use zipzi_sdk::{MeshOperation, Version};
 
 #[pyclass(frozen, name = "_SessionToken")]
 struct SessionToken {
@@ -199,65 +197,16 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
                         operation: parameter_bridge::read(&kind, &op)?,
                     });
                 }
-                "create_image" => {
-                    let image = op.getattr("image")?.getattr("_token")?;
-                    return Ok(EditOperation::CreateImage {
-                        spec: ImageCreateSpec {
-                            id: op.getattr("id")?.extract()?,
-                            name: op.getattr("name")?.extract()?,
-                        },
-                        image: image.extract::<PyRef<'_, ImageToken>>()?.id,
-                    });
-                }
-                "replace_image" => {
-                    let image = op.getattr("image")?.getattr("_token")?;
-                    return Ok(EditOperation::ReplaceImage {
-                        id: op.getattr("id")?.extract()?,
-                        image: image.extract::<PyRef<'_, ImageToken>>()?.id,
-                    });
-                }
-                "apply_plan" => {
-                    let plan = op.getattr("plan")?.getattr("_token")?;
-                    return Ok(EditOperation::ApplyPlan {
-                        plan: plan.extract::<PyRef<'_, PlanToken>>()?.id,
-                    });
+                "create_image" | "replace_image" | "apply_plan" => {
+                    return Ok(EditOperation::Resource(
+                        generated::resources::read_resourceoperation(&op)?,
+                    ));
                 }
                 _ => read_mesh_operation(&kind, &op),
             }?;
             Ok(EditOperation::Mesh { operation: mesh })
         })
         .collect()
-}
-fn pixels(py: Python<'_>, r: ImagePixels) -> PyResult<Bound<'_, PyDict>> {
-    let d = PyDict::new(py);
-    d.set_item("width", r.width)?;
-    d.set_item("height", r.height)?;
-    zipzi_runtime::metrics::copy_payload(r.rgba.len());
-    d.set_item("rgba", PyBytes::new(py, &r.rgba))?;
-    Ok(d)
-}
-fn plan_snapshot(py: Python<'_>, p: PlanSnapshot) -> PyResult<Bound<'_, PyDict>> {
-    let d = PyDict::new(py);
-    d.set_item("plan", Py::new(py, PlanToken { id: p.plan })?)?;
-    d.set_item("source", source(py, p.source)?)?;
-    let r = PyDict::new(py);
-    r.set_item("version", version(py, p.report.version)?)?;
-    r.set_item("affected_ids", p.report.affected_ids)?;
-    r.set_item("copied_ids", p.report.copied_ids)?;
-    r.set_item("losses", p.report.losses)?;
-    r.set_item("no_op", p.report.no_op)?;
-    if let Some(cost) = p.report.cost {
-        let c = PyDict::new(py);
-        c.set_item("sample_combinations", cost.sample_combinations)?;
-        c.set_item("payload_bytes", cost.payload_bytes)?;
-        c.set_item("temporary_bytes", cost.temporary_bytes)?;
-        c.set_item("history_bytes", cost.history_bytes)?;
-        r.set_item("cost", c)?;
-    } else {
-        r.set_item("cost", py.None())?;
-    }
-    d.set_item("report", r)?;
-    Ok(d)
 }
 fn receipt<'py>(py: Python<'py>, r: &zipzi_sdk::EditReceipt) -> PyResult<Bound<'py, PyDict>> {
     let d = PyDict::new(py);
@@ -308,7 +257,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-6"
+        "zipzi-python2-7"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
@@ -459,81 +408,10 @@ impl NativeRuntime {
                 .call(move |rt| rt.prepare_image(client, width, height, rgba))
         });
         reply(py, value, "resources.prepare_image", |r| {
-            let d = PyDict::new(py);
-            d.set_item("image", Py::new(py, ImageToken { id: r.image })?)?;
-            d.set_item("width", r.width)?;
-            d.set_item("height", r.height)?;
-            Ok(d.into_any())
+            Ok(generated::resources::write_preparedimageinfo(py, r)?.into_any())
         })
     }
-    fn prepared_pixels(&self, py: Python<'_>, image: &ImageToken) -> PyResult<Py<PyDict>> {
-        let (client, image) = (self.client, image.id);
-        let value = py.detach(|| {
-            self.host
-                .call(move |rt| rt.prepared_image_pixels(client, image))
-        });
-        reply(py, value, "resources.pixels", |r| {
-            Ok(pixels(py, r)?.into_any())
-        })
-    }
-    #[pyo3(signature = (session, id, edit=None))]
-    fn image(
-        &self,
-        py: Python<'_>,
-        session: &SessionToken,
-        id: String,
-        edit: Option<&EditToken>,
-    ) -> PyResult<Py<PyDict>> {
-        let (client, session, edit) = (self.client, session.id, edit.map(|e| e.id));
-        let value = py.detach(|| {
-            self.host
-                .call(move |rt| rt.image_snapshot(client, session, edit, &id))
-        });
-        reply(py, value, "resources.get", |r| {
-            let d = PyDict::new(py);
-            d.set_item("source", source(py, r.source)?)?;
-            d.set_item("id", r.id)?;
-            d.set_item("name", r.name)?;
-            d.set_item("pixels", pixels(py, r.pixels)?)?;
-            Ok(d.into_any())
-        })
-    }
-    fn plan(
-        &self,
-        py: Python<'_>,
-        session: &SessionToken,
-        edit: Option<&EditToken>,
-        intent: &Bound<'_, PyAny>,
-    ) -> PyResult<Py<PyDict>> {
-        let id = intent.getattr("id")?.extract()?;
-        let expected_name = intent.getattr("expected_name")?.extract()?;
-        let name = intent.getattr("name")?.extract()?;
-        let intent = match intent.getattr("kind")?.extract::<String>()?.as_str() {
-            "mesh_rename" => PlanIntent::MeshRename {
-                id,
-                expected_name,
-                name,
-            },
-            "image_rename" => PlanIntent::ImageRename {
-                id,
-                expected_name,
-                name,
-            },
-            _ => {
-                return Err(pyo3::exceptions::PyTypeError::new_err(
-                    "Unknown Plan intent",
-                ));
-            }
-        };
-        let (client, session, edit) = (self.client, session.id, edit.map(|e| e.id));
-        let value = py.detach(|| {
-            self.host
-                .call(move |rt| rt.plan_authoring(client, session, edit, intent))
-        });
-        reply(py, value, "plan.create", |p| {
-            Ok(plan_snapshot(py, p)?.into_any())
-        })
-    }
+
     fn release_handle(
         &self,
         py: Python<'_>,
@@ -566,27 +444,31 @@ impl NativeRuntime {
             Ok(py.None().into_bound(py))
         })
     }
+    #[cfg(feature = "test-support")]
+    fn _test_codegen_report(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
+        let report = zipzi_sdk::ModelingPlanReport {
+            version: Version {
+                session_id: 9,
+                generation: 2,
+                revision: 3,
+            },
+            affected_ids: vec!["first".into(), "second".into()],
+            copied_ids: [("z".into(), "last".into()), ("a".into(), "first".into())].into(),
+            cost: Some(zipzi_sdk::ConversionCost {
+                sample_combinations: 7,
+                payload_bytes: 1usize << 40,
+                temporary_bytes: 11,
+                history_bytes: 13,
+            }),
+            losses: vec!["fixed diagnostic".into()],
+            no_op: Some(false),
+        };
+        Ok(generated::resources::write_modelingplanreport(py, report)?.unbind())
+    }
     fn statistics(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
-        let value = py.detach(|| {
-            self.host.call(|rt| {
-                Ok((
-                    rt.prepared_image_count(),
-                    rt.modeling_plan_count(),
-                    rt.image_memory_usage(),
-                ))
-            })
-        });
-        reply(py, value, "resources.usage", |(images, plans, memory)| {
-            let d = PyDict::new(py);
-            let m = PyDict::new(py);
-            m.set_item("rgba_bytes", memory.rgba_bytes)?;
-            m.set_item("png_bytes", memory.png_bytes)?;
-            m.set_item("blob_bytes", memory.blob_bytes)?;
-            m.set_item("preparing_bytes", memory.preparing_bytes)?;
-            d.set_item("image_memory", m)?;
-            d.set_item("prepared_images", images)?;
-            d.set_item("plans", plans)?;
-            Ok(d.into_any())
+        let value = py.detach(|| self.host.call(|rt| Ok(rt.resource_usage())));
+        reply(py, value, "resources.usage", |value| {
+            Ok(generated::resources::write_resourceusage(py, value)?.into_any())
         })
     }
     fn release_edit(&self, py: Python<'_>, edit: &EditToken) -> PyResult<Py<PyDict>> {

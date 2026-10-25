@@ -1285,6 +1285,34 @@ class PythonSdk(unittest.TestCase):
         edit.commit().wait()
         self.assertEqual(session.info().history, (1, 0))
 
+    def test_recovered_busy_commit_preserves_candidate_for_retry_or_cancel(self):
+        for finish in ("commit", "cancel"):
+            with self.subTest(finish=finish):
+                session = self.runtime("connected", drop="commit",
+                    settings={"ZIPZI_TEST_BUSY_COMMIT_ONCE": "1"}).sessions.create(uid(1))
+                edit = session.edit("lost admission refusal")
+                with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                    with edit:
+                        face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                        source = edit.meshes.get(face).source
+                with self.assertRaises(zipzi.Busy):
+                    lost.exception.recover()
+                self.assertIsNone(edit.pending_request)
+                self.assertEqual(edit.meshes.get(face).source, source)
+                self.assertEqual(session.info().history, (0, 0))
+                if finish == "commit":
+                    edit.meshes.rename(face, "Retried")
+                    self.assertEqual(edit.meshes.get(face).source.sequence, source.sequence + 1)
+                    edit.commit().wait()
+                    self.assertEqual(session.meshes.get(face).name, "Retried")
+                    self.assertEqual(session.info().history, (1, 0))
+                else:
+                    edit.cancel()
+                    self.assertEqual(session.info().history, (0, 0))
+                with self.assertRaises(zipzi.SdkFailure) as resolved:
+                    lost.exception.recover()
+                self.assertEqual(resolved.exception.code, "NO_PENDING_REQUEST")
+
     def test_formal_plan_rejects_other_session_and_undo_redo_versions(self):
         for mode in ("local", "connected"):
             for changed in ("other_session", "undo", "redo"):
@@ -1440,6 +1468,35 @@ class PythonSdk(unittest.TestCase):
         other_edit.commit().wait()
         self.assertEqual(session.info().history, (1, 0))
         self.assertEqual(other.info().history, (1, 0))
+
+    def test_generated_resource_values_preserve_maps_bytes_costs_and_public_identity(self):
+        import pickle
+        from typing import get_type_hints
+        from zipzi import plans
+        from zipzi._lifecycle import EditableImages
+        self.assertIs(get_type_hints(ops.CreateImage)["image"], resources.PreparedImage)
+        self.assertIs(get_type_hints(EditableImages.create_image)["image"], resources.PreparedImage)
+        runtime = self.runtime("local")
+        session = runtime.sessions.create(uid(910))
+        with session.edit("source") as edit:
+            face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+        source = session.meshes.get(face).source
+        raw = runtime._backend._native._test_codegen_report()
+        report = plans.Report.read(source.wire(), raw)
+        self.assertEqual(report.source, source)
+        self.assertEqual((report.version.session_id, report.version.generation, report.version.revision), (9, 2, 3))
+        self.assertEqual(report.affected_ids, ("first", "second"))
+        self.assertEqual(report.copied_ids, (("a", "first"), ("z", "last")))
+        self.assertEqual(report.cost, plans.Cost(7, 1 << 40, 11, 13))
+        self.assertEqual(report.losses, ("fixed diagnostic",))
+        self.assertIs(report.no_op, False)
+        raw["no_op"] = 1
+        with self.assertRaises(TypeError):
+            plans.Report.read(source.wire(), raw)
+        self.assertEqual(resources.ImagePixels.read(dict(width=1, height=1, rgba=[0, 127, 255, 1])),
+                         resources.ImagePixels(1, 1, bytes((0, 127, 255, 1))))
+        for value in (meshes.RenameIntent(face, "Face", "Next"), resources.RenameIntent(face, "A", "B"), report):
+            self.assertEqual(pickle.loads(pickle.dumps(value)), value)
 
     def test_values_import_without_extension_or_host(self):
         code = f"""import sys

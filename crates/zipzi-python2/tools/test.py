@@ -82,9 +82,9 @@ def main() -> None:
         diagnostics = json.loads(invalid.stdout)
         actual = {(Path(d["file"]).name, d["range"]["start"]["line"], d.get("rule"))
             for d in diagnostics["generalDiagnostics"] if d["severity"] == "error"}
-        expected = {("type_invalid.py", line, "reportArgumentType") for line in (5, 6, 7, 8, 9, 12, 15, 16)}
-        if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 8 or actual != expected:
-            raise RuntimeError(f"Expected eight real public typing failures: {invalid.stdout}\n{invalid.stderr}")
+        expected = {("type_invalid.py", line, "reportArgumentType") for line in (5, 6, 7, 8, 9, 12, 15, 16, 19, 20, 21)}
+        if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 12 or actual != expected:
+            raise RuntimeError(f"Expected twelve real public typing failures: {invalid.stdout}\n{invalid.stderr}")
         print("zipzi-python2: Local/Connected behavior and positive/negative static types passed")
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import get_type_hints
 
 import zipzi
 from zipzi import bindings, sampling, events, meshes, ops, parameters, resources
@@ -16,6 +17,7 @@ def main():
     mode = sys.argv[1]
     assert version("zipzi-python2") == "0.1.0"
     assert "/site-packages/zipzi/" in zipzi.__file__, zipzi.__file__
+    assert get_type_hints(ops.CreateImage)["image"] is resources.PreparedImage
     assert "zipzi_native._native" not in sys.modules
     assert (importlib.util.find_spec("zipzi_native") is not None) == (mode == "local")
     with tempfile.TemporaryDirectory(prefix="zzpy2-", dir="/tmp") as folder:

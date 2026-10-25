@@ -1,5 +1,4 @@
 {
-  "_contract_sha256": "821c863d40aecb9d6e744d3921e0c8c97e1a6d3463cf1221304d90e632773859",
   "_generated_by": "zipzi-python2/tools/generate.py",
   "bindings": [
     {
@@ -225,6 +224,742 @@
       }
     }
   ],
+  "resources": {
+    "bindings": [
+      {
+        "form": "record",
+        "module": "resources",
+        "name": "ImageSpec",
+        "path": "zipzi_sdk::ImageCreateSpec",
+        "rust": "zipzi_sdk::image_edit::ImageCreateSpec"
+      },
+      {
+        "form": "record",
+        "module": "resources",
+        "name": "Usage",
+        "path": "zipzi_runtime::authoring::ResourceUsage",
+        "rust": "zipzi_runtime::authoring::ResourceUsage"
+      },
+      {
+        "form": "record",
+        "module": "resources",
+        "name": "ImagePixels",
+        "path": "zipzi_runtime::authoring::ImagePixels",
+        "rust": "zipzi_runtime::authoring::ImagePixels"
+      },
+      {
+        "form": "record",
+        "module": "resources",
+        "name": "Snapshot",
+        "path": "zipzi_runtime::authoring::ImageSnapshot",
+        "rust": "zipzi_runtime::authoring::ImageSnapshot"
+      },
+      {
+        "form": "record",
+        "module": "plans",
+        "name": "Cost",
+        "path": "zipzi_sdk::ConversionCost",
+        "rust": "zipzi_core::document::binding_authoring::ConversionCost"
+      },
+      {
+        "form": "record",
+        "module": "plans",
+        "name": "Report",
+        "path": "zipzi_sdk::ModelingPlanReport",
+        "rust": "zipzi_sdk::modeling::ModelingPlanReport"
+      },
+      {
+        "form": "record",
+        "module": "backend",
+        "name": "PlanSnapshot",
+        "path": "zipzi_runtime::authoring::PlanSnapshot",
+        "rust": "zipzi_runtime::authoring::PlanSnapshot"
+      },
+      {
+        "form": "record",
+        "module": "backend",
+        "name": "PreparedImageInfo",
+        "path": "zipzi_runtime::authoring::PreparedImageInfo",
+        "rust": "zipzi_runtime::authoring::PreparedImageInfo"
+      },
+      {
+        "form": "union",
+        "module": "ops",
+        "name": "ResourceOperation",
+        "path": "zipzi_runtime::authoring::ResourceOperation",
+        "rust": "zipzi_runtime::authoring::ResourceOperation"
+      },
+      {
+        "form": "union",
+        "module": "plans",
+        "name": "Intent",
+        "path": "zipzi_runtime::authoring::PlanIntent",
+        "rust": "zipzi_runtime::authoring::PlanIntent"
+      },
+      {
+        "form": "query",
+        "module": "backend",
+        "name": "ImageQuery",
+        "path": "zipzi_runtime::authoring::ImageQuery",
+        "rust": "zipzi_runtime::authoring::ImageQuery"
+      },
+      {
+        "form": "query",
+        "module": "backend",
+        "name": "PlanQuery",
+        "path": "zipzi_runtime::authoring::PlanQuery",
+        "rust": "zipzi_runtime::authoring::PlanQuery"
+      },
+      {
+        "form": "query",
+        "module": "backend",
+        "name": "PreparedPixelsQuery",
+        "path": "zipzi_runtime::authoring::PreparedPixelsQuery",
+        "rust": "zipzi_runtime::authoring::PreparedPixelsQuery"
+      },
+      {
+        "form": "handle",
+        "module": "resources",
+        "name": "PreparedImage",
+        "path": "zipzi_runtime::ImageId",
+        "rust": "zipzi_runtime::types::ImageId"
+      },
+      {
+        "form": "handle",
+        "module": "plans",
+        "name": "Plan",
+        "path": "zipzi_runtime::PlanId",
+        "rust": "zipzi_runtime::types::PlanId"
+      },
+      {
+        "form": "token",
+        "module": "native",
+        "name": "SessionToken",
+        "path": "zipzi_runtime::SessionId",
+        "rust": "zipzi_runtime::types::SessionId"
+      },
+      {
+        "form": "token",
+        "module": "native",
+        "name": "EditToken",
+        "path": "zipzi_runtime::EditId",
+        "rust": "zipzi_runtime::types::EditId"
+      },
+      {
+        "form": "source",
+        "module": "_values",
+        "name": "Source",
+        "path": "zipzi_runtime::SourceRef",
+        "rust": "zipzi_runtime::types::SourceRef"
+      },
+      {
+        "form": "version",
+        "module": "_values",
+        "name": "Version",
+        "path": "zipzi_sdk::Version",
+        "rust": "zipzi_sdk::types::Version"
+      }
+    ],
+    "operations": [
+      {
+        "backend": "image",
+        "capability": "typed_resources_plans",
+        "category": "query",
+        "handler": "zipzi_runtime::authoring::IMAGE_QUERY",
+        "input": {
+          "fields": [
+            {
+              "default": null,
+              "name": "session",
+              "shape": {
+                "kind": "opaque",
+                "name": "zipzi_runtime::types::SessionId"
+              }
+            },
+            {
+              "default": null,
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "name": "edit",
+              "shape": {
+                "item": {
+                  "kind": "opaque",
+                  "name": "zipzi_runtime::types::EditId"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "kind": "record",
+          "name": "zipzi_runtime::authoring::ImageQuery"
+        },
+        "name": "image_snapshot",
+        "output": {
+          "fields": [
+            {
+              "default": null,
+              "name": "source",
+              "shape": {
+                "kind": "opaque",
+                "name": "zipzi_runtime::types::SourceRef"
+              }
+            },
+            {
+              "default": null,
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "name": "pixels",
+              "shape": {
+                "fields": [
+                  {
+                    "default": null,
+                    "name": "width",
+                    "shape": {
+                      "kind": "u32"
+                    }
+                  },
+                  {
+                    "default": null,
+                    "name": "height",
+                    "shape": {
+                      "kind": "u32"
+                    }
+                  },
+                  {
+                    "default": null,
+                    "name": "rgba",
+                    "shape": {
+                      "kind": "bytes"
+                    }
+                  }
+                ],
+                "kind": "record",
+                "name": "zipzi_runtime::authoring::ImagePixels"
+              }
+            }
+          ],
+          "kind": "record",
+          "name": "zipzi_runtime::authoring::ImageSnapshot"
+        }
+      },
+      {
+        "backend": "prepared_pixels",
+        "capability": "typed_resources_plans",
+        "category": "query",
+        "handler": "zipzi_runtime::authoring::PREPARED_PIXELS_QUERY",
+        "input": {
+          "fields": [
+            {
+              "default": null,
+              "name": "image",
+              "shape": {
+                "kind": "opaque",
+                "name": "zipzi_runtime::types::ImageId"
+              }
+            }
+          ],
+          "kind": "record",
+          "name": "zipzi_runtime::authoring::PreparedPixelsQuery"
+        },
+        "name": "prepared_pixels",
+        "output": {
+          "fields": [
+            {
+              "default": null,
+              "name": "width",
+              "shape": {
+                "kind": "u32"
+              }
+            },
+            {
+              "default": null,
+              "name": "height",
+              "shape": {
+                "kind": "u32"
+              }
+            },
+            {
+              "default": null,
+              "name": "rgba",
+              "shape": {
+                "kind": "bytes"
+              }
+            }
+          ],
+          "kind": "record",
+          "name": "zipzi_runtime::authoring::ImagePixels"
+        }
+      },
+      {
+        "backend": "plan",
+        "capability": "typed_resources_plans",
+        "category": "planning",
+        "handler": "zipzi_runtime::authoring::PLAN_QUERY",
+        "input": {
+          "fields": [
+            {
+              "default": null,
+              "name": "session",
+              "shape": {
+                "kind": "opaque",
+                "name": "zipzi_runtime::types::SessionId"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "name": "edit",
+              "shape": {
+                "item": {
+                  "kind": "opaque",
+                  "name": "zipzi_runtime::types::EditId"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": null,
+              "name": "intent",
+              "shape": {
+                "kind": "union",
+                "name": "zipzi_runtime::authoring::PlanIntent",
+                "tag": "kind",
+                "variants": [
+                  {
+                    "fields": [
+                      {
+                        "default": null,
+                        "name": "id",
+                        "shape": {
+                          "kind": "string"
+                        }
+                      },
+                      {
+                        "default": null,
+                        "name": "expected_name",
+                        "shape": {
+                          "kind": "string"
+                        }
+                      },
+                      {
+                        "default": null,
+                        "name": "name",
+                        "shape": {
+                          "kind": "string"
+                        }
+                      }
+                    ],
+                    "rust_name": "MeshRename",
+                    "wire_name": "mesh_rename"
+                  },
+                  {
+                    "fields": [
+                      {
+                        "default": null,
+                        "name": "id",
+                        "shape": {
+                          "kind": "string"
+                        }
+                      },
+                      {
+                        "default": null,
+                        "name": "expected_name",
+                        "shape": {
+                          "kind": "string"
+                        }
+                      },
+                      {
+                        "default": null,
+                        "name": "name",
+                        "shape": {
+                          "kind": "string"
+                        }
+                      }
+                    ],
+                    "rust_name": "ImageRename",
+                    "wire_name": "image_rename"
+                  }
+                ]
+              }
+            }
+          ],
+          "kind": "record",
+          "name": "zipzi_runtime::authoring::PlanQuery"
+        },
+        "name": "plan_authoring",
+        "output": {
+          "fields": [
+            {
+              "default": null,
+              "name": "plan",
+              "shape": {
+                "kind": "opaque",
+                "name": "zipzi_runtime::types::PlanId"
+              }
+            },
+            {
+              "default": null,
+              "name": "source",
+              "shape": {
+                "kind": "opaque",
+                "name": "zipzi_runtime::types::SourceRef"
+              }
+            },
+            {
+              "default": null,
+              "name": "report",
+              "shape": {
+                "fields": [
+                  {
+                    "default": null,
+                    "name": "version",
+                    "shape": {
+                      "kind": "opaque",
+                      "name": "zipzi_sdk::types::Version"
+                    }
+                  },
+                  {
+                    "default": null,
+                    "name": "affected_ids",
+                    "shape": {
+                      "item": {
+                        "kind": "string"
+                      },
+                      "kind": "sequence"
+                    }
+                  },
+                  {
+                    "default": null,
+                    "name": "copied_ids",
+                    "shape": {
+                      "kind": "string_map",
+                      "value": {
+                        "kind": "string"
+                      }
+                    }
+                  },
+                  {
+                    "default": {
+                      "kind": "null"
+                    },
+                    "name": "cost",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "default": null,
+                            "name": "sample_combinations",
+                            "shape": {
+                              "kind": "usize"
+                            }
+                          },
+                          {
+                            "default": null,
+                            "name": "payload_bytes",
+                            "shape": {
+                              "kind": "usize"
+                            }
+                          },
+                          {
+                            "default": null,
+                            "name": "temporary_bytes",
+                            "shape": {
+                              "kind": "usize"
+                            }
+                          },
+                          {
+                            "default": null,
+                            "name": "history_bytes",
+                            "shape": {
+                              "kind": "usize"
+                            }
+                          }
+                        ],
+                        "kind": "record",
+                        "name": "zipzi_core::document::binding_authoring::ConversionCost"
+                      },
+                      "kind": "optional"
+                    }
+                  },
+                  {
+                    "default": null,
+                    "name": "losses",
+                    "shape": {
+                      "item": {
+                        "kind": "string"
+                      },
+                      "kind": "sequence"
+                    }
+                  },
+                  {
+                    "default": {
+                      "kind": "null"
+                    },
+                    "name": "no_op",
+                    "shape": {
+                      "item": {
+                        "kind": "bool"
+                      },
+                      "kind": "optional"
+                    }
+                  }
+                ],
+                "kind": "record",
+                "name": "zipzi_sdk::modeling::ModelingPlanReport"
+              }
+            }
+          ],
+          "kind": "record",
+          "name": "zipzi_runtime::authoring::PlanSnapshot"
+        }
+      }
+    ],
+    "roots": [
+      {
+        "kind": "union",
+        "name": "zipzi_runtime::authoring::ResourceOperation",
+        "tag": "domain",
+        "variants": [
+          {
+            "fields": [
+              {
+                "default": null,
+                "name": "spec",
+                "shape": {
+                  "fields": [
+                    {
+                      "default": {
+                        "kind": "null"
+                      },
+                      "name": "id",
+                      "shape": {
+                        "item": {
+                          "kind": "string"
+                        },
+                        "kind": "optional"
+                      }
+                    },
+                    {
+                      "default": null,
+                      "name": "name",
+                      "shape": {
+                        "kind": "string"
+                      }
+                    }
+                  ],
+                  "kind": "record",
+                  "name": "zipzi_sdk::image_edit::ImageCreateSpec"
+                }
+              },
+              {
+                "default": null,
+                "name": "image",
+                "shape": {
+                  "kind": "opaque",
+                  "name": "zipzi_runtime::types::ImageId"
+                }
+              }
+            ],
+            "rust_name": "CreateImage",
+            "wire_name": "create_image"
+          },
+          {
+            "fields": [
+              {
+                "default": null,
+                "name": "id",
+                "shape": {
+                  "kind": "string"
+                }
+              },
+              {
+                "default": null,
+                "name": "image",
+                "shape": {
+                  "kind": "opaque",
+                  "name": "zipzi_runtime::types::ImageId"
+                }
+              }
+            ],
+            "rust_name": "ReplaceImage",
+            "wire_name": "replace_image"
+          },
+          {
+            "fields": [
+              {
+                "default": null,
+                "name": "plan",
+                "shape": {
+                  "kind": "opaque",
+                  "name": "zipzi_runtime::types::PlanId"
+                }
+              }
+            ],
+            "rust_name": "ApplyPlan",
+            "wire_name": "apply_plan"
+          }
+        ]
+      },
+      {
+        "kind": "union",
+        "name": "zipzi_runtime::authoring::PlanIntent",
+        "tag": "kind",
+        "variants": [
+          {
+            "fields": [
+              {
+                "default": null,
+                "name": "id",
+                "shape": {
+                  "kind": "string"
+                }
+              },
+              {
+                "default": null,
+                "name": "expected_name",
+                "shape": {
+                  "kind": "string"
+                }
+              },
+              {
+                "default": null,
+                "name": "name",
+                "shape": {
+                  "kind": "string"
+                }
+              }
+            ],
+            "rust_name": "MeshRename",
+            "wire_name": "mesh_rename"
+          },
+          {
+            "fields": [
+              {
+                "default": null,
+                "name": "id",
+                "shape": {
+                  "kind": "string"
+                }
+              },
+              {
+                "default": null,
+                "name": "expected_name",
+                "shape": {
+                  "kind": "string"
+                }
+              },
+              {
+                "default": null,
+                "name": "name",
+                "shape": {
+                  "kind": "string"
+                }
+              }
+            ],
+            "rust_name": "ImageRename",
+            "wire_name": "image_rename"
+          }
+        ]
+      },
+      {
+        "fields": [
+          {
+            "default": null,
+            "name": "image",
+            "shape": {
+              "kind": "opaque",
+              "name": "zipzi_runtime::types::ImageId"
+            }
+          },
+          {
+            "default": null,
+            "name": "width",
+            "shape": {
+              "kind": "u32"
+            }
+          },
+          {
+            "default": null,
+            "name": "height",
+            "shape": {
+              "kind": "u32"
+            }
+          }
+        ],
+        "kind": "record",
+        "name": "zipzi_runtime::authoring::PreparedImageInfo"
+      },
+      {
+        "fields": [
+          {
+            "default": null,
+            "name": "prepared_images",
+            "shape": {
+              "kind": "usize"
+            }
+          },
+          {
+            "default": null,
+            "name": "plans",
+            "shape": {
+              "kind": "usize"
+            }
+          },
+          {
+            "default": null,
+            "name": "rgba_bytes",
+            "shape": {
+              "kind": "usize"
+            }
+          },
+          {
+            "default": null,
+            "name": "png_bytes",
+            "shape": {
+              "kind": "usize"
+            }
+          },
+          {
+            "default": null,
+            "name": "blob_bytes",
+            "shape": {
+              "kind": "usize"
+            }
+          },
+          {
+            "default": null,
+            "name": "preparing_bytes",
+            "shape": {
+              "kind": "usize"
+            }
+          }
+        ],
+        "kind": "record",
+        "name": "zipzi_runtime::authoring::ResourceUsage"
+      }
+    ],
+    "version": 1
+  },
   "roots": [
     {
       "fields": [

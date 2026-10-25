@@ -1,4 +1,4 @@
-"""The runner requires exactly these eight type failures, without suppressions."""
+"""The runner requires exactly these twelve type failures, without suppressions."""
 import zipzi
 from zipzi import bindings, ops, parameters
 
@@ -15,3 +15,8 @@ def bad_cursor(runtime: zipzi.Runtime) -> None:
 def bad_modeling(edit: zipzi.Edit) -> None:
     edit.bindings.set_keyform("x", bindings.Keyform(("bad",), ((0., 0.),)))
     edit.modeling.sample(({"x": "wrong"},))
+
+def bad_resources(edit: zipzi.Edit) -> None:
+    edit.resources.create_image("x", b"rgba")
+    edit.apply(ops.ApplyPlan("plan-token"))
+    edit.apply(ops.CreateImage(7, "image-token"))

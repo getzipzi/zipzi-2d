@@ -8,8 +8,31 @@ import pathlib
 import subprocess
 import sys
 import time
+import tempfile
+from contextlib import contextmanager
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 import argparse
+
+
+@contextmanager
+def isolated_runtime(environment):
+    """Each measured process owns a private, short Unix endpoint.
+
+    A resident desktop host must never receive a benchmark's reopen request.
+    Keep the endpoint out of long artifact paths and discard inherited owner fds.
+    """
+    with tempfile.TemporaryDirectory(prefix='zz-r2-', dir='/tmp') as directory:
+        isolated = dict(environment)
+        isolated.pop('ZIPZI_RUNTIME_OWNER_FD', None)
+        isolated.update(ZIPZI_RUNTIME_DIR=directory, ZIPZI_RUNTIME_PROFILE='benchmark')
+        yield isolated
+
+
+def pair_order(index):
+    """Counterbalance startup/load drift instead of always measuring baseline first."""
+    return ('baseline', 'candidate') if index % 2 == 0 else ('candidate', 'baseline')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Run five alternating Release Editor benchmark pairs from prebuilt, copied executables; no compilation during timing.')
     parser.add_argument('--binaries', type=pathlib.Path, required=True, help='directory containing baseline/candidate-{property-chain,window,timeline,interaction}')
@@ -43,7 +66,7 @@ def main():
             env0.pop(key)
     for mode in args.modes:
         for pair in range(args.pairs):
-            for side in ['baseline', 'candidate']:
+            for side in pair_order(pair):
                 directory = OUT / f'{mode}-{pair + 1}-{side}'
                 directory.mkdir(exist_ok=True)
                 env = dict(env0)
@@ -68,6 +91,7 @@ def main():
                 binary = pathlib.Path(cmd[-1] if mode not in ['cpu', 'timeline', 'interaction'] else cmd[0])
                 fingerprint = hashlib.sha256(binary.read_bytes()).hexdigest()
                 identity = {'binary_sha256': fingerprint, 'model': str(model), 'model_sha256': hashlib.sha256(model.read_bytes()).hexdigest()}
+                identity['pair_order'] = list(pair_order(pair))
                 identity['workload'] = {name: env.get(name) for name in ['ZIPZI_BENCH_PROPERTY_CASE', 'ZIPZI_BENCH_WARP', 'ZIPZI_BENCH_SAMPLES', 'ZIPZI_BENCH_WARMUP']}
                 if (directory / 'summary.json').exists():
                     if not args.resume or json.loads((directory / 'identity.json').read_text()) != identity:
@@ -78,8 +102,8 @@ def main():
                 (directory / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
                 started = time.time()
                 print('start', mode, pair + 1, side, flush=True)
-                with (directory / 'run.log').open('w') as log, (directory / 'samples.jsonl').open('w') as samples:
-                    subprocess.run(['/usr/bin/time', '-l', *cmd], cwd=ROOT, env=env, stdout=samples if mode == 'cpu' else log, stderr=log, check=True, timeout=600)
+                with isolated_runtime(env) as environment, (directory / 'run.log').open('w') as log, (directory / 'samples.jsonl').open('w') as samples:
+                    subprocess.run(['/usr/bin/time', '-l', *cmd], cwd=ROOT, env=environment, stdout=samples if mode == 'cpu' else log, stderr=log, check=True, timeout=600)
                 if mode == 'cpu':
                     summary = chain.summarize([json.loads(l) for l in (directory / 'samples.jsonl').read_text().splitlines()])
                 elif mode in ['timeline', 'interaction']:

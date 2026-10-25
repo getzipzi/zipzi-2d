@@ -10,6 +10,7 @@
 | apply 准入预算 | 通过 | 通过 | `admission_rejection_retains_candidate_and_source`：来源/序号不变，后续可编辑 |
 | 已完成但未消费的 Job 占满结果槽 | 通过 | 通过 | `retained_job_budget_refusal_keeps_edit_retryable`：拒绝 commit 不消耗候选，释放一个结果槽后可提交 |
 | 宿主交互造成确认 Busy | Rust 宿主门禁 | 通过 | `confirmed_host_busy_commit_keeps_candidate_retryable`：相同候选可重试，只有一步历史；本地队列拒绝另由 Runtime host 单测验证 |
+| Busy 拒绝响应丢失后恢复 | 无网络请求表 | 通过 | `recovered_busy_commit_preserves_candidate_for_retry_or_cancel` 及安装 `installed_lost_busy_response_allows_retry_and_cancel`：恢复确认 Busy 后回到可编辑状态，候选来源不变，可继续写入后只提交一步或取消；见[整体验收](../sdk-runtime/r1-r3-python-p1-p2-acceptance.md) |
 | 排队 Job 取消 | 通过 | 通过 | `queued_cancel_releases_candidate_and_retains_terminal_error`：终态 CANCELLED，无历史发布，候选图片字节归零，重复等待同一错误 |
 | 进入 IO 后取消 | 通过 | 通过 | `cancellation_after_entering_io_reports_actual_save`：实际写出的工程与成功回执一致，不伪造回滚 |
 | 实际文件系统失败 | 通过 | 通过 | `real_save_failure_releases_result_and_path_without_publication`：准入后改变目标路径触发 IO 错误；原文件、版本、历史、modified 保持，后续保存可成功 |

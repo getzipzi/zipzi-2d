@@ -18,8 +18,8 @@ no JSON transport conversion or direct SDK session owner.
 | `tests/` | Shared Local/Connected recipe and positive/negative type examples |
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |
-| `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract and the first mesh generator |
-| `client/python/zipzi/_generated/`, `src/generated/` | Checked-in mechanical mesh outputs |
+| `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract and selected mesh/resource/Plan generation |
+| `client/python/zipzi/_generated/`, `src/generated/` | 18 checked-in mechanical mesh/resource/Plan outputs |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
 From the repository root, using the workspace's CPython 3.14 tools:
@@ -43,11 +43,11 @@ from the importing interpreter. Tests never load Cargo's mutable output in place
 The package currently targets CPython `>=3.14,<3.15`; source acceptance is on
 macOS/Unix. Other platform/version claims require separate CI evidence.
 
-## Mesh code generation
+## Selected code generation
 
-The first P2 slice derives mesh values/operations, codecs, query signatures and
+P2 derives mesh, image and Plan values/operations, codecs, query signatures and
 simple convenience methods from selected Rust declarations. Public imports stay
-`zipzi.meshes` / `zipzi.ops`; lifecycle, resource ownership and recovery stay
+`zipzi.meshes`, `zipzi.resources`, `zipzi.plans` and `zipzi.ops`; lifecycle, resource ownership and recovery stay
 handwritten. Local conversion remains direct PyO3, with no JSON roundtrip.
 
 ```sh
@@ -59,8 +59,18 @@ uv run --locked python tools/test_tools.py -p test_python2_codegen.py -v
 The source runner checks generated drift before building. Generated files have
 explicit ownership markers; the generator cannot overwrite handwritten targets.
 Normal wheels consume checked-in outputs and do not run generation at import or
-installation. Resource/Plan generation and full source distribution acceptance
-remain pending. See the [P2 record](../../docs/plans/python-sdk-rewrite/p2-mesh-generator.md).
+installation. The paired source archives carry the same Python outputs; the native
+sdist also carries the SDK dependency closure, Rust declarations, schema exporter
+and generator. Its build backend removes reviewed desktop-only workspace patches
+and preserves locked SDK dependency versions. It delegates wheel builds to Maturin.
+
+```sh
+uv run --locked python crates/zipzi-python2/tools/distribution.py \
+  --output target/python2/source-acceptance
+```
+
+This checks generation from extracted sources, rebuilds both normal wheels, and
+runs isolated Local/Connected recipes. See the [integrated acceptance record](../../docs/plans/sdk-runtime/r1-r3-python-p1-p2-acceptance.md).
 
 ## First model
 
@@ -135,8 +145,8 @@ after a confirmed outcome. Runtime shutdown or client expiry releases remaining
 leases. This first control-transport slice limits RGBA payloads to **1 MiB**;
 binary buffers and larger images belong to P4.
 
-The native contract is `zipzi-python2-6`. Connected hosts must advertise
-`typed_meshes`, `typed_resources_plans`, `typed_job_lifecycle`, `typed_parameters`,
+The native contract is `zipzi-python2-7`. Connected hosts must advertise
+`typed_meshes`, `typed_resources_plans`, `typed_resource_values`, `typed_job_lifecycle`, `typed_parameters`,
 `typed_event_pages`, `typed_mesh_batch`, `typed_mesh_bindings` and `typed_modeling_samples`; a mismatched host is rejected during
 connection.
 
@@ -252,7 +262,7 @@ frozen source. An 8 MiB conservative output estimate and remaining host expansio
 budget can require smaller batches. These synchronous bounded CPU calls do not
 claim the later large-workload cancellation/fairness gates or full BlendShape
 and scene binding coverage. Both backends use the same Runtime entry; Local
-conversion uses direct owned PyO3 values. The existing mesh generator is unchanged.
+conversion uses direct owned PyO3 values. Generation covers the selected P1 mesh/resource/Plan types; these later binding and sampling types remain handwritten.
 
 ## P0 measurements
 

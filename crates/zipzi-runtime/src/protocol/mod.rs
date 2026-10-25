@@ -395,6 +395,7 @@ impl Protocol {
             "typed_parameters",
             "typed_meshes",
             "typed_resources_plans",
+            "typed_resource_values",
             "typed_job_lifecycle",
             "modeling_batch",
             "modeling_records",
@@ -597,12 +598,18 @@ impl Protocol {
             Operation::Statistics => {
                 let (clients, sessions, edits, jobs) = rt.live_counts();
                 let (results, result_bytes) = self.retained_results();
-                json!({"clients": clients, "sessions": sessions, "edits": edits, "jobs": jobs,
+                let mut value = json!({"clients": clients, "sessions": sessions, "edits": edits, "jobs": jobs,
                     "request_results": results, "request_result_bytes": result_bytes,
                     "accounted_document_bytes": rt.accounted_bytes().saturating_sub(rt.image_memory_usage().total_bytes()),
                     "accounted_cpu_bytes": rt.accounted_bytes(),
                     "image_memory": rt.image_memory_usage(), "plans": rt.modeling_plan_count(), "prepared_images":rt.prepared_image_count(), "blobs": rt.blob_count(),
-                    "memory_image_entries": rt.list_sessions().iter().filter_map(|s| rt.session(s.id).ok()).map(|s| s.memory_image_entries()).sum::<usize>()})
+                    "memory_image_entries": rt.list_sessions().iter().filter_map(|s| rt.session(s.id).ok()).map(|s| s.memory_image_entries()).sum::<usize>()});
+                if let (Value::Object(value), Value::Object(usage)) =
+                    (&mut value, json!(rt.resource_usage()))
+                {
+                    value.extend(usage);
+                }
+                value
             }
             Operation::ListSessions => {
                 json!(rt.list_sessions().iter().map(info).collect::<Vec<_>>())
@@ -779,19 +786,37 @@ impl Protocol {
                 height,
                 rgba,
             } => json!(rt.prepare_image(client, width, height, rgba)?),
-            Operation::PreparedPixels { image } => json!(rt.prepared_image_pixels(client, image)?),
+            Operation::PreparedPixels { image } => {
+                json!(crate::authoring::PREPARED_PIXELS_QUERY.call(
+                    rt,
+                    client,
+                    crate::authoring::PreparedPixelsQuery { image }
+                )?)
+            }
             Operation::ReleasePreparedImage { image } => {
                 rt.release_prepared_image(client, image)?;
                 Value::Null
             }
             Operation::ImageSnapshot { session, edit, id } => {
-                json!(rt.image_snapshot(client, session, edit, &id)?)
+                json!(crate::authoring::IMAGE_QUERY.call(
+                    rt,
+                    client,
+                    crate::authoring::ImageQuery { session, id, edit }
+                )?)
             }
             Operation::PlanAuthoring {
                 session,
                 edit,
                 intent,
-            } => json!(rt.plan_authoring(client, session, edit, intent)?),
+            } => json!(crate::authoring::PLAN_QUERY.call(
+                rt,
+                client,
+                crate::authoring::PlanQuery {
+                    session,
+                    edit,
+                    intent
+                }
+            )?),
             Operation::MeshSnapshot(input) => {
                 json!(crate::authoring::MESH_QUERY.call(rt, client, input)?)
             }

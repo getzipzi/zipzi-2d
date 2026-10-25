@@ -2,6 +2,7 @@
 
 Host discovery/start ownership lives in _endpoint; request recovery never launches.
 """
+from .._generated.resource_backends import ConnectedResources
 import hashlib
 import json
 from pathlib import Path
@@ -10,7 +11,7 @@ import struct
 import threading
 import time
 from typing import Literal
-from .. import ops, plans, sampling
+from .. import ops, sampling
 from .._generated.backends import ConnectedQueries
 from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source, record, sequence
@@ -44,7 +45,7 @@ def _exchange(stream: socket.socket, body: bytes) -> object:
         raise ValueError(f"Non-finite response number: {value}")
     return json.loads(_read(stream, length), parse_constant=invalid_constant)
 
-class ConnectedBackend(ConnectedQueries):
+class ConnectedBackend(ConnectedQueries, ConnectedResources):
     def __init__(self, endpoint: Path, timeout: float = 10., *, sdk_build: str | None = None,
         handshake_timeout: float | None = None) -> None:
         if not endpoint.is_absolute():
@@ -81,7 +82,7 @@ class ConnectedBackend(ConnectedQueries):
                 raise SdkFailure("PROTOCOL_MISMATCH", "Host returned an incompatible protocol")
             if self._sdk_build is not None and metadata.sdk_build != self._sdk_build:
                 raise SdkFailure("BUILD_MISMATCH", "Host returned a different SDK build")
-            if not {"typed_meshes", "typed_resources_plans", "typed_job_lifecycle", "typed_parameters", "typed_event_pages", "typed_mesh_batch", "typed_mesh_bindings", "typed_modeling_samples"}.issubset(sequence(hello["capabilities"])):
+            if not {"typed_meshes", "typed_resources_plans", "typed_resource_values", "typed_job_lifecycle", "typed_parameters", "typed_event_pages", "typed_mesh_batch", "typed_mesh_bindings", "typed_modeling_samples"}.issubset(sequence(hello["capabilities"])):
                 raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed authoring operations")
         except BaseException:
             stream.close()
@@ -174,13 +175,6 @@ class ConnectedBackend(ConnectedQueries):
         return self._request(dict(op="apply_authoring", edit=edit, operations=[ops.wire(op) for op in operations]), owner, "edit.apply")
     def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
         return self._request(dict(op="prepare_image", width=width, height=height, rgba=list(rgba)), owner, "resources.prepare_image")
-    def prepared_pixels(self, image: object, owner: object) -> object:
-        return self._request(dict(op="prepared_pixels", image=image), owner, "resources.pixels")
-    def image(self, session: object, id: str, edit: object | None, owner: object) -> object:
-        return self._request(dict(op="image_snapshot", session=session, edit=edit, id=id), owner, "resources.get")
-    def plan(self, session: object, edit: object | None, intent: plans.Intent, owner: object) -> object:
-        return self._request(dict(op="plan_authoring", session=session, edit=edit,
-            intent=dict(kind=intent.kind, id=intent.id, expected_name=intent.expected_name, name=intent.name)), owner, "plan.create")
     def release_handle(self, kind: Literal["image", "plan"], token: object, owner: object) -> None:
         operation = dict(op="release_prepared_image", image=token) if kind == "image" else dict(op="release_modeling_plan", plan=token)
         self._request(operation, owner, f"{kind}.close")

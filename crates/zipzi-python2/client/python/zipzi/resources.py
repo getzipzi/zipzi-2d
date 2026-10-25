@@ -1,60 +1,14 @@
 """Prepared images own independent leases; pixel snapshots are immutable values."""
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 from ._owned import Owned
-from ._values import Source, integer, record, sequence, string
+from ._values import integer, record
 if TYPE_CHECKING:
     from .backends import Backend
 
-@dataclass(frozen=True)
-class ImagePixels:
-    width: int
-    height: int
-    rgba: bytes
-
-    @classmethod
-    def read(cls, value: object) -> ImagePixels:
-        r = record(value)
-        raw = r["rgba"]
-        pixels = raw if isinstance(raw, bytes) else bytes(integer(v) for v in sequence(raw))
-        return cls(integer(r["width"]), integer(r["height"]), pixels)
-
-@dataclass(frozen=True)
-class Snapshot:
-    source: Source
-    id: str
-    name: str
-    pixels: ImagePixels
-
-    @classmethod
-    def read(cls, value: object) -> Snapshot:
-        r = record(value)
-        return cls(Source.read(r["source"]), string(r["id"]), string(r["name"]), ImagePixels.read(r["pixels"]))
-
-@dataclass(frozen=True)
-class RenameIntent:
-    id: str
-    expected_name: str
-    name: str
-    kind: Literal["image_rename"] = field(default="image_rename", init=False)
-
-@dataclass(frozen=True)
-class Usage:
-    """Runtime-wide table counts and actual tracked Rust buffers, not process RSS."""
-    prepared_images: int
-    plans: int
-    rgba_bytes: int
-    png_bytes: int
-    blob_bytes: int
-    preparing_bytes: int
-
-    @classmethod
-    def read(cls, value: object) -> Usage:
-        r = record(value)
-        memory = record(r["image_memory"])
-        return cls(integer(r["prepared_images"]), integer(r["plans"]),
-            *(integer(memory[k]) for k in ("rgba_bytes", "png_bytes", "blob_bytes", "preparing_bytes")))
+from ._generated.resource_values import ImagePixels as ImagePixels, Snapshot as Snapshot, Usage as Usage
+from ._generated.plan_intents import ImageRename as _RenameIntent
+RenameIntent = _RenameIntent
 
 class PreparedImage(Owned):
     def __init__(self, backend: Backend):

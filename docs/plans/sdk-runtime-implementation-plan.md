@@ -13,6 +13,10 @@ R3 最小链路验收，并已提交为 `c0e186b`。其后[网格绑定/CPU 采�
 已接通共享处理器、数值 recipe 与人工 Preview 隔离；完整 R4 Modeling、身份/地址、
 BlendShape、长任务及资源/IO 仍待扩展，R4 尚未验收。
 
+2026-10-25 [R1–R3 / Python P1–P2 整体验收](sdk-runtime/r1-r3-python-p1-p2-acceptance.md)
+已补齐资源/Plan 生成及配对源码发行，并复验真实 Editor、P0 与 R2 性能门禁。
+本轮修复与采样范围单独记录，不扩大 R4 或完整发布平台的完成范围。
+
 架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。`zipzi-runtime` 的进程内核心和 Editor 托管已实现；R2 性能门槛已通过，R3 本机协议与 Python 最小闭环已实现，完整领域连接继续在 R4–R7 交付。后续阶段的模块、测试名称和命令模板仍为目标，不能作为已通过的证据。实际结果见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)、[R2 实施记录](sdk-runtime/r2-editor.md)、[R3 实施记录](sdk-runtime/r3-ipc.md)与 [R4 实施记录](sdk-runtime/r4-modeling.md)。
 
 ## 1. 执行规则与阶段总览

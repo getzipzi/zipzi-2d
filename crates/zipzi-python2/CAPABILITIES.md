@@ -6,7 +6,8 @@ fixed geometry/history and the independent Rust SDK tests.
 
 | Capability | Public entry | Shared typed Rust route | Evidence | State |
 | --- | --- | --- | --- | --- |
-| Mesh generation | Same public values/ops and query methods | Selected Rust declarations + compiled query registration | Deterministic generation/check-only/protection, real Rust negative compilation, unchanged behavior/static tests | First P2 slice implemented |
+| Mesh generation | Same public values/ops and query methods | Selected Rust declarations + compiled query registration | Deterministic generation/check-only/protection, real Rust negative compilation, unchanged behavior/static tests | P2 mesh slice implemented |
+| Resource/Plan generation | Image values/usage, typed resource ops and rename intents, Plan report/cost, resource conveniences | Actual Rust declarations and compiled image/pixel/Plan registrations | Finite bool/u64/usize/bytes/string-map shapes, type propagation, direct native conversion and independent recipes | P2 selected slice implemented |
 | Local ownership | `local()` / Runtime context | `host::LocalHost` | `tests/test_api.py::test_shared_recipe`; Runtime host tests | Implemented |
 | Host discovery/start | `connect()`, `connect(start=True, host=...)`, `runtime.connection` | Same endpoint ownership/inherited fd and strict protocol/build handshake | Installed subprocess cold-start/slow/failure/security cases; current production Editor cold start/reopen | Selected Runtime R3 slice implemented; packaged app paths pending |
 | Explicit connection | `connect(endpoint=...)` | `Protocol` → same Runtime handlers | Shared recipe on real subprocess host | Implemented |
@@ -36,7 +37,7 @@ fixed geometry/history and the independent Rust SDK tests.
 | Modeling CPU sampling | `session/edit.modeling.sample`, immutable `sampling` values | Same typed Runtime sampling entry and frozen SDK evaluation | Mesh binding/keyform numeric recipe, source/limits/recovery and real Editor human Preview/history isolation | Selected Runtime R4 slice implemented; scene bindings/BlendShape, large cancellable work and performance pending |
 | Animation/Preview | Typed query and independent sources | Shared SDK/Runtime | Numerical and isolation recipes required | Runtime R5 / Python P5 pending |
 | Observer/inspection | Device-backed observer, offline workflow | Rust observation + Python artifact organization | Conditional GPU and offline evidence required | Planned P5 |
-| Packaged acceptance | Both distributions and installed desktop app locations | Same host ownership/protocol | Pure/native wheels and repository-built desktop tested; source/app/platform matrix pending | P6 partial; Runtime R3 discovery implemented above |
+| Packaged acceptance | Both distributions and installed desktop app locations | Same host ownership/protocol | Pure/native wheels and repository-built desktop tested; paired source archives and rebuilt wheels checked separately; app/platform matrix pending | P6 partial; Runtime R3 discovery implemented above |
 
 P0 has selected the first inputs/results and failure rules: `MeshSpec` creates
 without copying a persisted Mesh; Rename/SetPositions express intent; snapshots

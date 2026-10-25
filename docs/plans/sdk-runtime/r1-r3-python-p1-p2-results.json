@@ -1,0 +1,978 @@
+{
+  "schema": 2,
+  "date": "2026-10-25",
+  "base_commit": "3d1b1eef1cbbcd3a979a4a7d2df4946a3ef7e035",
+  "initial_dirty": false,
+  "dirty": true,
+  "status": "passed",
+  "scope": "Runtime R1-R3 and Python P1-P2 selected mesh/resource/Plan generator integrated acceptance",
+  "record": "docs/plans/sdk-runtime/r1-r3-python-p1-p2-acceptance.md",
+  "python": "3.14.7 (main, Sep 29 2026, 14:50:11) [Clang 22.1.3 ]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "rust": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "checks": [
+    {
+      "name": "runtime",
+      "command": "./tools/test-sdk.sh runtime",
+      "status": "passed",
+      "passed_tests": 69,
+      "log": {
+        "path": "target/p2-complete/runtime-final.log",
+        "sha256": "130d7197a1c867b39566888a459969190371e761ca4714704097cc6588b78783"
+      }
+    },
+    {
+      "name": "python_release",
+      "command": "./tools/test-sdk.sh python2 --release",
+      "status": "passed",
+      "passed_tests": 52,
+      "log": {
+        "path": "target/p2-complete/python2-release.log",
+        "sha256": "09f3e2e09d4de696784dba196b2ec9e62c07ecdd6acf13dbdf8be73fa1be9aea"
+      }
+    },
+    {
+      "name": "python_instrumented",
+      "command": "./tools/test-sdk.sh python2 --release --instrumented",
+      "status": "passed",
+      "passed_tests": 52,
+      "log": {
+        "path": "target/p2-complete/python2-instrumented.log",
+        "sha256": "cb0549e584525730d6990f8879c9fc84e2d5a885f5cc0e5c120b4ab30e23daf1"
+      }
+    },
+    {
+      "name": "installed_connections_and_production_editor",
+      "command": "./tools/test-sdk.sh python2-connected --editor-host /Users/liangbohao/web/zipzi-2d/target/debug/zipzi-editor",
+      "status": "passed",
+      "passed_tests": 16,
+      "log": {
+        "path": "target/p2-complete/connected-final.log",
+        "sha256": "4274ebdc512618ebbfe291b9aed7d1596232f1c921a6658b62a52302e305385a"
+      }
+    },
+    {
+      "name": "editor_core",
+      "command": "env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration runtime::",
+      "status": "passed",
+      "passed_tests": 18,
+      "log": {
+        "path": "target/p2-complete/editor-core.log",
+        "sha256": "c46c4e4174a340f0b6a3c6b57d02405e7ff3aab13e383a7325fa9f8148af3d6e"
+      }
+    },
+    {
+      "name": "editor_host",
+      "command": "./tools/test-editor.sh ui -- headless_tests::runtime_host",
+      "status": "passed",
+      "passed_tests": 7,
+      "log": {
+        "path": "target/p2-complete/editor-host.log",
+        "sha256": "e806b21bddef21472953d25d81b48846598bbce7f7341032214424f718efa5ce"
+      }
+    },
+    {
+      "name": "editor_ipc_metal",
+      "command": "env -u ZIPZI_DEV_SESSION_DIR ZIPZI_CLIENT_PYTHON=$PWD/target/python2/connected/venv/bin/python cargo test --locked -p zipzi-editor --features test-support --test runtime_ipc_acceptance",
+      "status": "passed",
+      "passed_tests": null,
+      "log": {
+        "path": "target/p2-complete/editor-ipc-final.log",
+        "sha256": "792f367e254c65a59c9ea3d0336e537b62f8d824d3a46d6c76bf0b5814d9a10e"
+      }
+    },
+    {
+      "name": "sdk_images",
+      "command": "cargo test --locked -p zipzi-sdk --test integration image_edit::",
+      "status": "passed",
+      "passed_tests": 1,
+      "log": {
+        "path": "target/p2-complete/sdk-images.log",
+        "sha256": "ae124a91c521791d9a521011506bacacc949f8892835a87de80123490a867269"
+      }
+    },
+    {
+      "name": "sdk_meshes",
+      "command": "cargo test --locked -p zipzi-sdk --test integration mesh_editing::",
+      "status": "passed",
+      "passed_tests": 8,
+      "log": {
+        "path": "target/p2-complete/sdk-meshes.log",
+        "sha256": "e6c7876ea4f32acb15adc63db0889ca32a25887a37cecd13611b2f7980b8668e"
+      }
+    },
+    {
+      "name": "sdk_parameters",
+      "command": "cargo test --locked -p zipzi-sdk --test integration parameter_editing::",
+      "status": "passed",
+      "passed_tests": 2,
+      "log": {
+        "path": "target/p2-complete/sdk-parameters.log",
+        "sha256": "a7a3dac93f4789b97951af50bbe5833718cafbd51d308b11a4f750cd0e530112"
+      }
+    },
+    {
+      "name": "sdk_candidates",
+      "command": "cargo test --locked -p zipzi-sdk --test integration candidate_snapshot::",
+      "status": "passed",
+      "passed_tests": 2,
+      "log": {
+        "path": "target/p2-complete/sdk-candidates.log",
+        "sha256": "af2c92ab5afe63b69c65b7f7497d73a108c67ccc3745c4423b6c6bbacf132c92"
+      }
+    },
+    {
+      "name": "python_tools",
+      "command": "uv run --locked python tools/test_tools.py -p 'test_python2*.py' -v",
+      "status": "passed",
+      "passed_tests": 14,
+      "log": {
+        "path": "target/p2-complete/python2-tools-final.log",
+        "sha256": "cbce6afb07ab61941c86f2b134cf85bcba8530b2ad29b24124f49224613da259"
+      }
+    },
+    {
+      "name": "runtime_tools",
+      "command": "uv run --locked python tools/test_tools.py -p 'test_runtime*.py' -v",
+      "status": "passed",
+      "passed_tests": 14,
+      "log": {
+        "path": "target/p2-complete/runtime-tools-final.log",
+        "sha256": "4b6d14b21130a0c35eed92d0fc74a00285bb82f6929a1a0f990268e684ccc9c5"
+      }
+    },
+    {
+      "name": "inventory-check",
+      "command": "python3 tools/runtime/runtime_inventory.py --check",
+      "status": "passed",
+      "passed_tests": null,
+      "log": {
+        "path": "target/p2-complete/inventory-check.log",
+        "sha256": "0c3a48a275d6c3d5a2846ad1d974f6b5ce79a31fd0af2c7db891e19c6949f122"
+      }
+    },
+    {
+      "name": "editor-boundary",
+      "command": "python3 tools/runtime/check_editor_boundary.py",
+      "status": "passed",
+      "passed_tests": null,
+      "log": {
+        "path": "target/p2-complete/editor-boundary.log",
+        "sha256": "5e123ff2897b7058bbecb933354f9123507830a66581e0323c89f19ddaceea68"
+      }
+    },
+    {
+      "name": "domain-check",
+      "command": "python3 tools/workspace/cargo_domain.py --check",
+      "status": "passed",
+      "passed_tests": null,
+      "log": {
+        "path": "target/p2-complete/domain-check.log",
+        "sha256": "0fbd4eb822d040c6ee2cf7634672938c05bc933faac21b14042d948bbe3df393"
+      }
+    },
+    {
+      "name": "paired_source_distribution",
+      "status": "passed",
+      "command": "uv run --locked python crates/zipzi-python2/tools/distribution.py --output target/p2-complete/distribution-verified --cargo-target target/p2-complete/distribution-isolated/cargo-target",
+      "log": {
+        "path": "target/p2-complete/distribution-verified.log",
+        "sha256": "1482f2211233cea6ce508a874bad8efb4a309469cf0341c5d24deafd9b94c214"
+      },
+      "results": {
+        "schema": 1,
+        "status": "passed",
+        "base_commit": "3d1b1eef1cbbcd3a979a4a7d2df4946a3ef7e035",
+        "dirty_files": [
+          " M crates/zipzi-core/src/api_shape.rs",
+          " M crates/zipzi-core/src/document/binding_authoring.rs",
+          " M crates/zipzi-python2/CAPABILITIES.md",
+          " M crates/zipzi-python2/README.md",
+          " M crates/zipzi-python2/client/python/zipzi/_lifecycle.py",
+          " M crates/zipzi-python2/client/python/zipzi/backends/__init__.py",
+          " M crates/zipzi-python2/client/python/zipzi/backends/_native_types.py",
+          " M crates/zipzi-python2/client/python/zipzi/backends/connected.py",
+          " M crates/zipzi-python2/client/python/zipzi/backends/local.py",
+          " M crates/zipzi-python2/client/python/zipzi/meshes.py",
+          " M crates/zipzi-python2/client/python/zipzi/ops.py",
+          " M crates/zipzi-python2/client/python/zipzi/plans.py",
+          " M crates/zipzi-python2/client/python/zipzi/resources.py",
+          " M crates/zipzi-python2/examples/authoring_schema.rs",
+          " M crates/zipzi-python2/pyproject.toml",
+          " M crates/zipzi-python2/schema/mesh.json",
+          " M crates/zipzi-python2/src/generated/mod.rs",
+          " M crates/zipzi-python2/src/lib.rs",
+          " M crates/zipzi-python2/tests/installed_recipe.py",
+          " M crates/zipzi-python2/tests/test_api.py",
+          " M crates/zipzi-python2/tests/test_connection.py",
+          " M crates/zipzi-python2/tests/type_invalid.py",
+          " M crates/zipzi-python2/tools/generate.py",
+          " M crates/zipzi-python2/tools/test.py",
+          " M crates/zipzi-runtime/src/authoring.rs",
+          " M crates/zipzi-runtime/src/protocol/mod.rs",
+          " M crates/zipzi-runtime/src/runtime/authoring.rs",
+          " M crates/zipzi-runtime/src/runtime/modeling.rs",
+          " M crates/zipzi-runtime/tests/protocol.rs",
+          " M crates/zipzi-runtime/tests/resources.rs",
+          " M crates/zipzi-sdk/src/image_edit.rs",
+          " M crates/zipzi-sdk/src/modeling.rs",
+          " M crates/zipzi-sdk/src/types.rs",
+          " M docs/plans/python-sdk-rewrite-plan.md",
+          " M docs/plans/python-sdk-rewrite/README.md",
+          " M docs/plans/python-sdk-rewrite/p1-lifecycle-matrix.md",
+          " M docs/runtime/api-inventory.json",
+          " M tools/runtime/runtime_inventory.py",
+          " M tools/tests/test_python2_codegen.py",
+          " M tools/tests/test_runtime_inventory.py",
+          "?? crates/zipzi-python2/build_backend.py",
+          "?? crates/zipzi-python2/client/python/zipzi/_generated/plan_intents.py",
+          "?? crates/zipzi-python2/client/python/zipzi/_generated/plan_values.py",
+          "?? crates/zipzi-python2/client/python/zipzi/_generated/resource_backends.py",
+          "?? crates/zipzi-python2/client/python/zipzi/_generated/resource_conveniences.py",
+          "?? crates/zipzi-python2/client/python/zipzi/_generated/resource_ops.py",
+          "?? crates/zipzi-python2/client/python/zipzi/_generated/resource_values.py",
+          "?? crates/zipzi-python2/src/generated/resource_queries.rs",
+          "?? crates/zipzi-python2/src/generated/resources.rs",
+          "?? crates/zipzi-python2/tools/distribution.py",
+          "?? crates/zipzi-python2/tools/generate_resources.py",
+          "?? docs/plans/python-sdk-rewrite/p2-resources-generator.md",
+          "?? docs/plans/sdk-runtime/r1-r3-python-p1-p2-acceptance.md",
+          "?? docs/plans/sdk-runtime/r1-r3-python-p1-p2-results.json",
+          "?? tools/tests/test_python2_distribution.py"
+        ],
+        "commands": [
+          {
+            "name": "client-sdist",
+            "command": [
+              "uv",
+              "build",
+              "--sdist",
+              "--out-dir",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sdists",
+              "/Users/liangbohao/web/zipzi-2d/crates/zipzi-python2/client"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d",
+            "exit_code": 0
+          },
+          {
+            "name": "native-sdist",
+            "command": [
+              "uv",
+              "build",
+              "--sdist",
+              "--out-dir",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sdists",
+              "/Users/liangbohao/web/zipzi-2d/crates/zipzi-python2"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d",
+            "exit_code": 0
+          },
+          {
+            "name": "source-generator-check",
+            "command": [
+              "/Users/liangbohao/web/zipzi-2d/.venv/bin/python",
+              "-I",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sources/zipzi_python2_native-0.1.0/crates/zipzi-python2/tools/generate.py",
+              "--check"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sources/zipzi_python2_native-0.1.0",
+            "exit_code": 0
+          },
+          {
+            "name": "client-wheel",
+            "command": [
+              "uv",
+              "build",
+              "--wheel",
+              "--out-dir",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/wheels",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sources/zipzi_python2-0.1.0"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d",
+            "exit_code": 0
+          },
+          {
+            "name": "native-wheel",
+            "command": [
+              "uv",
+              "build",
+              "--wheel",
+              "--out-dir",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/wheels",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sources/zipzi_python2_native-0.1.0"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d",
+            "exit_code": 0
+          },
+          {
+            "name": "production-host",
+            "command": [
+              "cargo",
+              "build",
+              "--locked",
+              "--release",
+              "-p",
+              "zipzi-runtime",
+              "--example",
+              "local_host_fixture"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sources/zipzi_python2_native-0.1.0",
+            "exit_code": 0
+          },
+          {
+            "name": "connected-venv",
+            "command": [
+              "uv",
+              "venv",
+              "--python",
+              "3.14",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/connected-venv"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d",
+            "exit_code": 0
+          },
+          {
+            "name": "connected-install",
+            "command": [
+              "uv",
+              "pip",
+              "install",
+              "--python",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/connected-venv/bin/python",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/wheels/zipzi_python2-0.1.0-py3-none-any.whl"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d",
+            "exit_code": 0
+          },
+          {
+            "name": "connected-recipe",
+            "command": [
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/connected-venv/bin/python",
+              "-I",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sources/zipzi_python2_native-0.1.0/crates/zipzi-python2/tests/installed_recipe.py",
+              "connected"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified",
+            "exit_code": 0
+          },
+          {
+            "name": "local-venv",
+            "command": [
+              "uv",
+              "venv",
+              "--python",
+              "3.14",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/local-venv"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d",
+            "exit_code": 0
+          },
+          {
+            "name": "local-install",
+            "command": [
+              "uv",
+              "pip",
+              "install",
+              "--python",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/local-venv/bin/python",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/wheels/zipzi_python2-0.1.0-py3-none-any.whl",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/wheels/zipzi_python2_native-0.1.0-cp314-cp314-macosx_11_0_arm64.whl"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d",
+            "exit_code": 0
+          },
+          {
+            "name": "local-recipe",
+            "command": [
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/local-venv/bin/python",
+              "-I",
+              "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sources/zipzi_python2_native-0.1.0/crates/zipzi-python2/tests/installed_recipe.py",
+              "local"
+            ],
+            "cwd": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified",
+            "exit_code": 0
+          }
+        ],
+        "artifacts": [
+          {
+            "path": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sdists/.gitignore",
+            "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1"
+          },
+          {
+            "path": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sdists/zipzi_python2-0.1.0.tar.gz",
+            "sha256": "f3369bb04c0f452af1d83e78bb94b5a3c609f238ed515c5551963582c20a4871"
+          },
+          {
+            "path": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/sdists/zipzi_python2_native-0.1.0.tar.gz",
+            "sha256": "3fc016cec020dd92e595e67efb402a4b363195cb0556af4b846a0f37648ea972"
+          },
+          {
+            "path": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/wheels/.gitignore",
+            "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1"
+          },
+          {
+            "path": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/wheels/zipzi_python2-0.1.0-py3-none-any.whl",
+            "sha256": "81034dcd1822cd122e2ddabd71a4480a1f4e5aed2076996ca4aaf6837949bdeb"
+          },
+          {
+            "path": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/wheels/zipzi_python2_native-0.1.0-cp314-cp314-macosx_11_0_arm64.whl",
+            "sha256": "3d3d276479f7165c6e10eb9ee9d9d3edd47b424783b3833aa1bd332de48c68b6"
+          },
+          {
+            "path": "/Users/liangbohao/web/zipzi-2d/target/p2-complete/distribution-verified/local_host_fixture",
+            "sha256": "704ac283049a8a7dd8bdc38e9d75e30cc13de0aef906b57b103bbeef179edc9e"
+          }
+        ],
+        "source_contract_sha256": "a8e09cd6280339d7b7ebfac30bea6343916b2f03be8ad1aee5adf91de3afee72",
+        "native_source_scope": "SDK dependency closure plus complete Python client, native adapter, Rust declarations, exporter and generator; pure client sdist carries the same Python sources and generated outputs"
+      }
+    }
+  ],
+  "generated_files": 18,
+  "typing": {
+    "positive_errors": 0,
+    "negative_diagnostics": 12
+  },
+  "repaired": [
+    "Recovered Busy after lost commit response left Edit unknown despite no pending request; confirmed apply/commit admission refusal now restores editing.",
+    "Runtime API inventory omitted four SDK modules; candidate operation and image-read classifications corrected and inventory regenerated.",
+    "Resource/Plan field conversion and selected query/convenience wiring now derive from actual Rust types; finite bool/u64/usize/bytes/string map shapes included.",
+    "Default Maturin sdist retained unavailable desktop workspace patches; reviewed patch removal and lock-version preservation make the SDK closure independently buildable.",
+    "Generated resource type annotations and pickle identity resolve from public modules, and declared empty-string/default ordering are preserved.",
+    "Source distribution builds use an isolated Cargo target, avoiding collisions with workspace doctests.",
+    "Editor benchmark processes now have private temporary Runtime endpoints and discard inherited owner fds, preventing a benchmark launch from reopening an existing desktop host; pair order is counterbalanced and checked on resume."
+  ],
+  "reproduction_before_fix": {
+    "path": "target/integrated-acceptance/repro-busy.log",
+    "sha256": "ec6ea5bec186e2e431cb9b1d6c258f44df47a7592ee4b012751677b54a1bf752"
+  },
+  "failing_gate_before_fix": {
+    "path": "target/integrated-acceptance/tools-runtime.log",
+    "sha256": "de0ebadfddb0ff3f11374046f0038f173438f21c97167a88c170eb37a435d25c"
+  },
+  "performance": {
+    "p0": {
+      "path": "docs/plans/sdk-runtime/r1-r3-python-p1-p2-p0.json",
+      "sha256": "adea993ac440855b8e64def19e93e6f540cf69c633eb57be4ef374a0c14a55f9"
+    },
+    "editor": {
+      "path": "docs/plans/sdk-runtime/r1-r3-python-p1-p2-editor-performance.json",
+      "sha256": "24633c97f57911eb46f599d20b2637455aeadc5071bd5f888f34fc4113b0afb1"
+    }
+  },
+  "complexity": {
+    "handwritten_public_lifecycle": {
+      "files": 15,
+      "lines": 1852
+    },
+    "handwritten_backends": {
+      "files": 4,
+      "lines": 405
+    },
+    "generated_python": {
+      "files": 12,
+      "lines": 477
+    },
+    "handwritten_native": {
+      "files": 1,
+      "lines": 613
+    },
+    "generated_rust": {
+      "files": 5,
+      "lines": 341
+    },
+    "contract_exporter": {
+      "files": 1,
+      "lines": 218
+    },
+    "generator": {
+      "files": 2,
+      "lines": 707
+    },
+    "build_test_measurement_tools": {
+      "files": 6,
+      "lines": 674
+    },
+    "independent_package_tests": {
+      "files": 6,
+      "lines": 2387
+    },
+    "shared_rust_delta": [
+      "34\t0\tcrates/zipzi-core/src/api_shape.rs",
+      "3\t5\tcrates/zipzi-core/src/document/binding_authoring.rs",
+      "93\t12\tcrates/zipzi-runtime/src/authoring.rs",
+      "30\t5\tcrates/zipzi-runtime/src/protocol/mod.rs",
+      "10\t5\tcrates/zipzi-runtime/src/runtime/authoring.rs",
+      "3\t1\tcrates/zipzi-runtime/src/runtime/modeling.rs",
+      "16\t12\tcrates/zipzi-runtime/tests/protocol.rs",
+      "26\t18\tcrates/zipzi-runtime/tests/resources.rs",
+      "2\t0\tcrates/zipzi-sdk/src/image_edit.rs",
+      "2\t0\tcrates/zipzi-sdk/src/modeling.rs",
+      "7\t0\tcrates/zipzi-sdk/src/types.rs"
+    ]
+  },
+  "source_files": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "55701976f5ed5fa228d0a91fc2db7024ad2dd7c4d2ceb808e0eb7a2650c0a278"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "244aae0cf1851615b879f3c9af3fc9d56afee2fad7e9ffc0c11c576418231b54"
+    },
+    {
+      "path": "crates/zipzi-core/src/api_shape.rs",
+      "sha256": "55582d68c8906484985ece50f752715ec2c44fb14a1fe2c4f826ab6ab2fd47d3"
+    },
+    {
+      "path": "crates/zipzi-core/src/document/binding_authoring.rs",
+      "sha256": "a1a188e03cc9e1b8667c89058ea1008301d7ebe903f4ae182db356cf20b1a5ae"
+    },
+    {
+      "path": "crates/zipzi-python2/CAPABILITIES.md",
+      "sha256": "7168ff8afd5af9be5489156e8bd526861c06e1385d0bcd15dd28f406cc21e15a"
+    },
+    {
+      "path": "crates/zipzi-python2/Cargo.toml",
+      "sha256": "b25814a99060454399a07cc4e2a9945f2473e65aadcd0fad4bbdae42eeb846dd"
+    },
+    {
+      "path": "crates/zipzi-python2/LICENSE-MIT",
+      "sha256": "52b76940455620f359524a54e9cdd6fc78722c6ca6039238eee0d8fe06f0e4f1"
+    },
+    {
+      "path": "crates/zipzi-python2/README.md",
+      "sha256": "25496db7a3df60fb73f3ac348def792f4038e283be68b7d02e2e3b7a653095cf"
+    },
+    {
+      "path": "crates/zipzi-python2/THIRD_PARTY_NOTICES.md",
+      "sha256": "a695d44882be4551dad3792ff715b3e4fa59cf6e962d6858bd63e98ef078fa38"
+    },
+    {
+      "path": "crates/zipzi-python2/build_backend.py",
+      "sha256": "f61ae415f11918234e37b0167ba053b8dc5fd4d57ea4467a2b42727efa6e314f"
+    },
+    {
+      "path": "crates/zipzi-python2/client/LICENSE-MIT",
+      "sha256": "52b76940455620f359524a54e9cdd6fc78722c6ca6039238eee0d8fe06f0e4f1"
+    },
+    {
+      "path": "crates/zipzi-python2/client/README.md",
+      "sha256": "30fbecc1bbaa0a5882d1f8e56cb524e725381d37497c505739f1860736195ff9"
+    },
+    {
+      "path": "crates/zipzi-python2/client/THIRD_PARTY_NOTICES.md",
+      "sha256": "a695d44882be4551dad3792ff715b3e4fa59cf6e962d6858bd63e98ef078fa38"
+    },
+    {
+      "path": "crates/zipzi-python2/client/pyproject.toml",
+      "sha256": "b6b90103103733f02da2a8f170c30e653e2e85755f7aa7a5c553eba21f177074"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/__init__.py",
+      "sha256": "63a3e8ad4ed8620d82ea03cf23aaca6873a34a5a24716e3e462458342b958563"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_endpoint.py",
+      "sha256": "b5b45d2a342d1f7de33a38a202f0f95e086d4767ad6304609e5454242cea4813"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_errors.py",
+      "sha256": "edccde338519cd6962e7022ab8cfbfa4228b341321ace630621c23dc738a75ae"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/__init__.py",
+      "sha256": "039e0cd0e3ce7aa40ab7972ade5fbd965350c6298f76dae53479486817593090"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/backends.py",
+      "sha256": "df4f4837892b562c3ef7dca7ede06572a7b6eea7f5d3df783bd36e0cc1633992"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/conveniences.py",
+      "sha256": "cdd0624adf060f4b3110e116e1d27716a4af78e6eea4c3309076bbd72a9676f3"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/mesh_ops.py",
+      "sha256": "00424b164d88f4c7e4d12c47e3d21a9ccdf14831efafd8a6529d6d63b7d49adb"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/meshes.py",
+      "sha256": "e3e4bcb3ec39ab269ca6582a1884c9fce633b125bf91f3997f58ddc394d232e8"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/plan_intents.py",
+      "sha256": "e449ae33bc2865f1f8d51945b08a530411bcfc81f430dc75ba10aa1694f8f41c"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/plan_values.py",
+      "sha256": "1edcb75b51422e8e4d1260a97e05b234eec5b9400ada3af9009f61a1fb601ca2"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/protocols.py",
+      "sha256": "9931f7bdcf6503ff74d52036955d6dfc4cb3651a9a9ba48140d57db9a64fa36c"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/resource_backends.py",
+      "sha256": "b63206f314186dfb08a2f47381b5c3237cb8f6f96c421781a7725fc7a537b3a5"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/resource_conveniences.py",
+      "sha256": "ff1f972c99b6f65f4caaa50a4a3dcd7a4c6173701885c12f3b9095757c551804"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/resource_ops.py",
+      "sha256": "ea795b15e80581ed10638b75ece0f0faae03b5a233ab834731174a0bbd3b44b5"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_generated/resource_values.py",
+      "sha256": "8f3ce736af968fb4c30d5027d3ebfb91a98459921906873ae9221f2a6ced33e1"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_lifecycle.py",
+      "sha256": "8637a17571877a33112880bb48cb4c23ad8150390a6af9fb8a48bb07cec8c2e5"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_owned.py",
+      "sha256": "f484d6b8ec159f03fbff5ae6e677670f73b051db102d4dea72230f3687a5142f"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_recovery.py",
+      "sha256": "76f6093fd04b5497d9ebe90c4d80ad52de5b8b6372e516a9d853bb22f5f0dc39"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/_values.py",
+      "sha256": "f9b7af636a25e110952a4f31479e63550ea654747dc0d9bde7ab079e73d4be2d"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/backends/__init__.py",
+      "sha256": "e160c3ba685e847dcfc3931b916e6950b9ac38b75656f49319c65fb7b4153e64"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/backends/_native_types.py",
+      "sha256": "1eafb14c942aa59aa2d3e108fc8fafa6b0ee5732d48e956c85f992ab7e45530c"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/backends/connected.py",
+      "sha256": "f9fbbd0aa152e5d86037f5a071cb348d1e396d5eb0e781b5fb5f2b170271f7ac"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/backends/local.py",
+      "sha256": "7c02d80bcfe03ba4dd7907534ad4d6d957fc8ec5567aa940d82f128a8a2b0d82"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/bindings.py",
+      "sha256": "cdd008d7e228feb1853b2e68c66b720def2493b48f9d34d977e0aac1e6a1bc83"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/events.py",
+      "sha256": "585d4583a81aa4ac68a4d13e78db8ef787f464e5b2a54d45e1b7d57e42a8c938"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/meshes.py",
+      "sha256": "b07030c0afcfc1d2bad1db6be248d795eb3cef19cf4e0da26b4f2659a4255f8d"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/ops.py",
+      "sha256": "4661f621e7124bb7886e70a482f65a82c5004cba6ff9fbecfef0da1ce1b6d2b1"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/parameters.py",
+      "sha256": "e3411873e894e62a01cec8822c02a79e5242c487795fa168a4c7e15e2706e9e0"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/plans.py",
+      "sha256": "6777d2fe24162ede2ebb1c43dff9271685f4e7af1ab8a0683fee2dfd75d499cc"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/resources.py",
+      "sha256": "43b6b0d14df8e2ce5a9451e32beedd5732b80d495eece5b3f912e2099932c8cb"
+    },
+    {
+      "path": "crates/zipzi-python2/client/python/zipzi/sampling.py",
+      "sha256": "73a1ba29c35ddfef4bfd9bfca1de858bc6c53865c0d04d1af048dfd1271aa493"
+    },
+    {
+      "path": "crates/zipzi-python2/examples/authoring_schema.rs",
+      "sha256": "d583caa1316662c94d92e8b5f9fce5e8eaf7812b2418c56dedfeb70417f2113c"
+    },
+    {
+      "path": "crates/zipzi-python2/native/zipzi_native/__init__.py",
+      "sha256": "10952f18ae963570ce5225c67f47937385fd0b241c81497b64fd5965bb10ad49"
+    },
+    {
+      "path": "crates/zipzi-python2/pyproject.toml",
+      "sha256": "334fa6490ba94ff737a83d2060dcfe391966d384af44ca802db030079ce19ebe"
+    },
+    {
+      "path": "crates/zipzi-python2/pyrightconfig.json",
+      "sha256": "988a9679daaa569f053dd5165059f0a982356c47d0db4d18b0e3920863fffc10"
+    },
+    {
+      "path": "crates/zipzi-python2/schema/mesh.json",
+      "sha256": "a8e09cd6280339d7b7ebfac30bea6343916b2f03be8ad1aee5adf91de3afee72"
+    },
+    {
+      "path": "crates/zipzi-python2/src/generated/mesh.rs",
+      "sha256": "6031ca89f01dbee012ef20e1f3abb331b4867f7b7f800fd1630b0b69d26c1ac3"
+    },
+    {
+      "path": "crates/zipzi-python2/src/generated/mod.rs",
+      "sha256": "c57099d2fb74e8ffcffe6764e3fc3158d85faf4bafeb9e9f21f0033c1bbb36d2"
+    },
+    {
+      "path": "crates/zipzi-python2/src/generated/queries.rs",
+      "sha256": "e872ce60007c2642ac47d494b5368a90acbda862504b32bf2578e9b004b21a5e"
+    },
+    {
+      "path": "crates/zipzi-python2/src/generated/resource_queries.rs",
+      "sha256": "f148368742fbbbc377ef2df92ab89ae5eb24ce467d7628d8d3826e93add54c2b"
+    },
+    {
+      "path": "crates/zipzi-python2/src/generated/resources.rs",
+      "sha256": "c7ef9750980eeba24e0cd4b1da6f7f4369564c674dd4b702f11a2e1d7a50053f"
+    },
+    {
+      "path": "crates/zipzi-python2/src/lib.rs",
+      "sha256": "f9cfbf980a53e0bbdddb706e2764ec8249995629295af58b3a13d7dc8e724f3b"
+    },
+    {
+      "path": "crates/zipzi-python2/src/modeling_bridge.rs",
+      "sha256": "2cf5abcb26eee23516b288046dd143f97631d040ee752d862728d17f3c2359e3"
+    },
+    {
+      "path": "crates/zipzi-python2/src/parameter_bridge.rs",
+      "sha256": "8fbc097adca52637ece2a7e353580fe6080f6902296a27a5086076e1205dc2ab"
+    },
+    {
+      "path": "crates/zipzi-python2/src/streams.rs",
+      "sha256": "38e5829a9f0f69ac0ad0785b54cb77b8db0e0b7c8a76d3abc02f23901c714f95"
+    },
+    {
+      "path": "crates/zipzi-python2/tests/installed_recipe.py",
+      "sha256": "e4490b849eba3825db445e47b76ad90f1104eb0ca1c4b8de0ae6c10891e876c7"
+    },
+    {
+      "path": "crates/zipzi-python2/tests/test_api.py",
+      "sha256": "87525073bc7d722de6b2bfe7b069c6c6c47284714a3a6409a22fa242fd5af616"
+    },
+    {
+      "path": "crates/zipzi-python2/tests/test_connection.py",
+      "sha256": "7f0dbe3f3bd45a9b01589e332bf9b4e0b16bb36436a1de5df7f0418c4120b4e1"
+    },
+    {
+      "path": "crates/zipzi-python2/tests/test_editor_connection.py",
+      "sha256": "0e5136cbdc5aabcbf0a705800b53c54f83c8a18f66fea27b8e99f9d7f2704a36"
+    },
+    {
+      "path": "crates/zipzi-python2/tests/type_invalid.py",
+      "sha256": "b9a744f5a904a0f4b9941cd4fbb2d754fbe17d6195f0a08ffb35f8ec84826b3d"
+    },
+    {
+      "path": "crates/zipzi-python2/tests/type_valid.py",
+      "sha256": "997c97c2093a999ed3ed9c06a05d44ecf18445f8dd226135383ff9710ec21df6"
+    },
+    {
+      "path": "crates/zipzi-python2/tools/_support.py",
+      "sha256": "34eb28f7b77fce0346fafaa002a296df5f24ca595fa996610ff66f8facabb2f9"
+    },
+    {
+      "path": "crates/zipzi-python2/tools/baseline.py",
+      "sha256": "7f7894327c15f8638c38288fd237f9c9549f2c28fc881590c3e3bfc94787f1b2"
+    },
+    {
+      "path": "crates/zipzi-python2/tools/connected.py",
+      "sha256": "dc32b17ebda89bb2bbb6124167bd86c67155d37087d0d9d18c311fb11c002b28"
+    },
+    {
+      "path": "crates/zipzi-python2/tools/distribution.py",
+      "sha256": "ce016a11e4f72c80adaeed4396fbd44c3a89d363ee6fcd6538245af54333b34f"
+    },
+    {
+      "path": "crates/zipzi-python2/tools/generate.py",
+      "sha256": "39f58ad5326a4b6ef00e45d7d240f7e3a95364b0261a239da3d3bbc76a50802d"
+    },
+    {
+      "path": "crates/zipzi-python2/tools/generate_resources.py",
+      "sha256": "8d594801ba78363b6e409925d4bb258859819ed8e7cbc7b85afcbe453c5ee4b0"
+    },
+    {
+      "path": "crates/zipzi-python2/tools/test.py",
+      "sha256": "4640acb2d54b5acc6a85318b004358215978201261914a0475ddfd8a0c679b8e"
+    },
+    {
+      "path": "crates/zipzi-runtime/build.rs",
+      "sha256": "b3e031de7fa8bdcf22aff19db956d0ab026dd49e1de2c3e80be3432ac8fd80ac"
+    },
+    {
+      "path": "crates/zipzi-runtime/examples/local_host_fixture.rs",
+      "sha256": "3ac45c14ec50c0515908941701d057a44787b8c5cd7e702eb859ba54cdee8349"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/authoring.rs",
+      "sha256": "fc43f1c10f57601bbbfadd221fed1af7e37b6c9374058a115902eff763532ece"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/config.rs",
+      "sha256": "462b8da09bf9876b6825f76453a12ac2b312a9dbcdcf29d23de4cd942c83f21f"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/events.rs",
+      "sha256": "63766f4d236fd419957f19ea6c987ee1c8aaefc88bd7454068da6bc426c33a24"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/host.rs",
+      "sha256": "c23ce85eb58a0325ff706ba07c33f1e724a5703ca344c8537b884d04cdcf06d6"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/jobs.rs",
+      "sha256": "cfa05c02a2c2f58d48da75e5e36051cdcebc20fa46a612a9fb5cd308a3796eea"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/lib.rs",
+      "sha256": "09ecf99869173ea3ec9120703d37b63aa3e07b92c034a10969832ee0061ba1fb"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/local.rs",
+      "sha256": "f587a7a13edb42298584f0126d80da440656bac0f23af9f9c166ee9a0589087b"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/metrics.rs",
+      "sha256": "29403a36163b5cad39c1c9dedb2699f9b0abef2a81b695c735560676340e9b8b"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/modeling.rs",
+      "sha256": "acb06f94c37db67c4d917e489e2b49f25fdff05860312854d4869da5fbaf978d"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/protocol/mod.rs",
+      "sha256": "1f4a390a27c37fad1dd640012ee6c7cd42589266daf7c915b23f2464b41ae8df"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/protocol/modeling_query.rs",
+      "sha256": "b042a2a97b3e9cd490c2301dbc9e6c1c29883c8fe5db50651484487508a3485a"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/protocol/values.rs",
+      "sha256": "15a9c2d4422ad66db690f58619fe63590452f0d66428eb5ff5cbe30c676940eb"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/runtime.rs",
+      "sha256": "a505ac3c5d003a50a1177cc3654b8cd7ceed804037fb716ab7fc82ba331d9461"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/runtime/authoring.rs",
+      "sha256": "7462c66eda3ce74cabb7f08ac93d7fde0eb7f1e926905922982b47132df4f2ad"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/runtime/blobs.rs",
+      "sha256": "dc4ceb245085756c4f89ae5dd6f7b9bb1d0fa110fcf8d86163089cba09e433c5"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/runtime/editor.rs",
+      "sha256": "44d359ac03fe95d8aa3fd37b81d07ef9ef57926acbea009f8484ec6540ec0b1b"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/runtime/modeling.rs",
+      "sha256": "9147a2a6ec37ba130cb2d638b492419b892090c4be9a2bab0621cb32b6e9086c"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/runtime/resources.rs",
+      "sha256": "762a55a21f82425ad8370a202d012581d169a7b432e00817f433fc9df5f0f632"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/runtime/sampling.rs",
+      "sha256": "e0ffcc8b049ca88b4dad7bde63cd57275b8b5c4e3ebc4cfaded8042a803fd37d"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/runtime/typed.rs",
+      "sha256": "5cce6c2fc3774a14b3223f40c85665752f1e78494d63b0ee361e228f8d641052"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/test_support.rs",
+      "sha256": "15a30ee27c0c80665c3b899396979a1eb9d368884707d43f424abfce8ad6f874"
+    },
+    {
+      "path": "crates/zipzi-runtime/src/types.rs",
+      "sha256": "2521fb075d36d4ba66752a9c22044631d804c576d8fb81ccd80faa2398c51fe7"
+    },
+    {
+      "path": "crates/zipzi-runtime/tests/authoring.rs",
+      "sha256": "265cd5ac9bfe23213f13212dce7bfe39647aa7ec5ca216be53dd3a9b9f7ca65d"
+    },
+    {
+      "path": "crates/zipzi-runtime/tests/host.rs",
+      "sha256": "756ec1e55d402268bb777baff6a08f59406a62488f202b370dccb8b87776afa0"
+    },
+    {
+      "path": "crates/zipzi-runtime/tests/metrics.rs",
+      "sha256": "31a6301097c4058b361a2c3c8c60f83ba5a75efab3666684fa59a13e6adc98da"
+    },
+    {
+      "path": "crates/zipzi-runtime/tests/modeling.rs",
+      "sha256": "6f5022d6f88e83afaad916abf5c1c6d61c07c5b82c3aab818290e01ecc974144"
+    },
+    {
+      "path": "crates/zipzi-runtime/tests/protocol.rs",
+      "sha256": "211c3ccd7d4b49c617d0665a07a045e0a9240672060de7045f138548ccdcb52e"
+    },
+    {
+      "path": "crates/zipzi-runtime/tests/resources.rs",
+      "sha256": "d0d9339d2724dfa326e0907909d672bf41f42195a2c0fcbb51915afae97b76ea"
+    },
+    {
+      "path": "crates/zipzi-runtime/tests/runtime.rs",
+      "sha256": "9a358f2fabd95f7baa13c6056535b2c9eeb5e565cc502626911b039fcfd182c0"
+    },
+    {
+      "path": "crates/zipzi-sdk/src/image_edit.rs",
+      "sha256": "cea2d223f70134bc1ff4587c8431d1d2acebe7d7d81bbb327e3fa42839bd57b7"
+    },
+    {
+      "path": "crates/zipzi-sdk/src/modeling.rs",
+      "sha256": "fdaed09f161a797e40f9df99218f9155d434cd2f8bbafbb997f2f2e4e7726fd1"
+    },
+    {
+      "path": "crates/zipzi-sdk/src/types.rs",
+      "sha256": "e29dcbbe3bbe1cb0afb7bf674dc3e0b34ef0769200f93bcc3e597169717be15e"
+    },
+    {
+      "path": "tools/benchmarks/README.md",
+      "sha256": "a6e58249ffc63cfe9416d40b00f1f066d3cf9caf25719c049183ee73e2b5d50f"
+    },
+    {
+      "path": "tools/runtime/editor_benchmark_pairs.py",
+      "sha256": "93c24289bc1fc6c8e1792b4b258943f2bb228dda6c1058ec72f376eef76a4de5"
+    },
+    {
+      "path": "tools/runtime/runtime_inventory.py",
+      "sha256": "89e12346f45e42475e6926719bde98c1a3399a81fd6cbaa4d6413ea2b47da64e"
+    },
+    {
+      "path": "tools/tests/test_python2_codegen.py",
+      "sha256": "c6816a89d211d672b2738c4ef8adbf050723a83f07a1bafae7adb40477d19603"
+    },
+    {
+      "path": "tools/tests/test_python2_distribution.py",
+      "sha256": "d8a24d6c138f1ece5f0f0c9796bc668081f47558f96fd63d5d7f6d4743541c66"
+    },
+    {
+      "path": "tools/tests/test_runtime_editor_performance.py",
+      "sha256": "85cc14b5b668f5596d681f2e5ca2ad9e38cf747d3a1b0a88c148f8359e273e4d"
+    },
+    {
+      "path": "tools/tests/test_runtime_inventory.py",
+      "sha256": "e9a1d20bdc159001d9a5a85f86004c38d17ab354ed571ad1d70307161aacc152"
+    }
+  ],
+  "limitations": [
+    "Selected P1/P2 scope, not Runtime R4-R7 or Python P3-P7 completion",
+    "macOS arm64 CPython 3.14; no cross-platform or installed app-location release claim",
+    "No complete SDK/Editor suite; focused shared Runtime, authoring and native integration gates",
+    "P0 copy/heap counters retain their documented explicit scopes; CPU fixture latency is not Editor latency"
+  ]
+}

@@ -272,6 +272,7 @@ pub enum ModelingPlan {
     Document(crate::DocumentEditPlan),
     Attachment(crate::AttachmentEditPlan),
 }
+zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
 pub struct ModelingPlanReport {
     pub version: crate::Version,
@@ -280,6 +281,7 @@ pub struct ModelingPlanReport {
     pub cost: Option<crate::ConversionCost>,
     pub losses: Vec<String>,
     pub no_op: Option<bool>,
+}
 }
 impl ModelingPlan {
     pub fn report(&self) -> ModelingPlanReport {

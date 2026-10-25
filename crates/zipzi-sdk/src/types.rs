@@ -316,3 +316,10 @@ pub struct HistoryState {
     pub max_steps: usize,
     pub max_bytes: usize,
 }
+impl zipzi_core::api_shape::ApiShape for Version {
+    fn api_shape() -> zipzi_core::api_shape::Shape {
+        zipzi_core::api_shape::Shape::Opaque {
+            name: concat!(module_path!(), "::Version").into(),
+        }
+    }
+}

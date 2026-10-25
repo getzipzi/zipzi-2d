@@ -9,6 +9,13 @@ pub enum Shape {
     String,
     U32,
     F32,
+    Bool,
+    U64,
+    Usize,
+    Bytes,
+    StringMap {
+        value: Box<Shape>,
+    },
     Optional {
         item: Box<Shape>,
     },
@@ -75,6 +82,33 @@ impl ApiShape for u32 {
 impl ApiShape for f32 {
     fn api_shape() -> Shape {
         Shape::F32
+    }
+}
+impl ApiShape for bool {
+    fn api_shape() -> Shape {
+        Shape::Bool
+    }
+}
+impl ApiShape for u64 {
+    fn api_shape() -> Shape {
+        Shape::U64
+    }
+}
+impl ApiShape for usize {
+    fn api_shape() -> Shape {
+        Shape::Usize
+    }
+}
+impl ApiShape for std::sync::Arc<[u8]> {
+    fn api_shape() -> Shape {
+        Shape::Bytes
+    }
+}
+impl ApiShape for std::collections::BTreeMap<String, String> {
+    fn api_shape() -> Shape {
+        Shape::StringMap {
+            value: Box::new(Shape::String),
+        }
     }
 }
 impl<T: ApiShape> ApiShape for Option<T> {

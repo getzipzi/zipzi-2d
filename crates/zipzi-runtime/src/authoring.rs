@@ -51,17 +51,8 @@ pub enum EditOperation {
     Mesh {
         operation: zipzi_sdk::MeshOperation,
     },
-    CreateImage {
-        spec: zipzi_sdk::ImageCreateSpec,
-        image: ImageId,
-    },
-    ReplaceImage {
-        id: String,
-        image: ImageId,
-    },
-    ApplyPlan {
-        plan: PlanId,
-    },
+    #[serde(untagged)]
+    Resource(ResourceOperation),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,8 +83,9 @@ pub struct ModelingSampleBatch {
     pub samples: zipzi_sdk::ModelingSamples,
 }
 
+zipzi_core::api_union! {
+tag = "kind";
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum PlanIntent {
     MeshRename {
         id: String,
@@ -106,36 +98,45 @@ pub enum PlanIntent {
         name: String,
     },
 }
+}
 
+zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
 pub struct PlanSnapshot {
     pub plan: PlanId,
     pub source: SourceRef,
     pub report: zipzi_sdk::ModelingPlanReport,
 }
+}
 
 /// The initial control transport intentionally limits pixel payloads to 1 MiB.
 /// Larger/binary payloads require the later resource transport stage.
 pub const MAX_IMAGE_BYTES: usize = 1 << 20;
 
+zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
 pub struct PreparedImageInfo {
     pub image: ImageId,
     pub width: u32,
     pub height: u32,
 }
+}
+zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
 pub struct ImagePixels {
     pub width: u32,
     pub height: u32,
     pub rgba: std::sync::Arc<[u8]>,
 }
+}
+zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
 pub struct ImageSnapshot {
     pub source: SourceRef,
     pub id: String,
     pub name: String,
     pub pixels: ImagePixels,
+}
 }
 
 zipzi_core::api_record! {
@@ -175,3 +176,83 @@ pub const MESH_QUERY: Registered<MeshQuery, MeshSnapshot> =
     Registered::new("mesh_snapshot", |rt, client, input| {
         rt.mesh_snapshot(client, input.session, input.edit, &input.id)
     });
+
+zipzi_core::api_union! {
+tag = "domain";
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ResourceOperation {
+    CreateImage {
+        spec: zipzi_sdk::ImageCreateSpec,
+        image: ImageId,
+    },
+    ReplaceImage {
+        id: String,
+        image: ImageId,
+    },
+    ApplyPlan {
+        plan: PlanId,
+    },
+}
+}
+
+zipzi_core::api_record! {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    pub struct ImageQuery {
+        pub session: crate::SessionId,
+        pub id: String,
+        pub edit: Option<crate::EditId>,
+    }
+}
+zipzi_core::api_record! {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    pub struct PlanQuery {
+        pub session: crate::SessionId,
+        pub edit: Option<crate::EditId>,
+        pub intent: PlanIntent,
+    }
+}
+zipzi_core::api_record! {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreparedPixelsQuery { pub image: ImageId }
+}
+pub const IMAGE_QUERY: Registered<ImageQuery, ImageSnapshot> =
+    Registered::new("image_snapshot", |rt, client, input| {
+        rt.image_snapshot(client, input.session, input.edit, &input.id)
+    });
+pub const PLAN_QUERY: Registered<PlanQuery, PlanSnapshot> =
+    Registered::new("plan_authoring", |rt, client, input| {
+        rt.plan_authoring(client, input.session, input.edit, input.intent)
+    });
+pub const PREPARED_PIXELS_QUERY: Registered<PreparedPixelsQuery, ImagePixels> =
+    Registered::new("prepared_pixels", |rt, client, input| {
+        rt.prepared_image_pixels(client, input.image)
+    });
+
+zipzi_core::api_record! {
+    #[derive(Debug, Clone, Serialize)]
+    pub struct ResourceUsage {
+        pub prepared_images: usize,
+        pub plans: usize,
+        pub rgba_bytes: usize,
+        pub png_bytes: usize,
+        pub blob_bytes: usize,
+        pub preparing_bytes: usize,
+    }
+}
+impl crate::Runtime {
+    /// Selected public counters; allocator/RSS and transport tables are separate.
+    pub fn resource_usage(&self) -> ResourceUsage {
+        let memory = self.image_memory_usage();
+        ResourceUsage {
+            prepared_images: self.prepared_image_count(),
+            plans: self.modeling_plan_count(),
+            rgba_bytes: memory.rgba_bytes,
+            png_bytes: memory.png_bytes,
+            blob_bytes: memory.blob_bytes,
+            preparing_bytes: memory.preparing_bytes,
+        }
+    }
+}

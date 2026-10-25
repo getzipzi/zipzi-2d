@@ -341,6 +341,31 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
             self.assertEqual(session.modeling.sample(({angle:.5},)).frames[0].drawables[0].positions[0][0],10.)
             self.assertEqual(session.info().history,(2,0))
 
+    def test_installed_lost_busy_response_allows_retry_and_cancel(self):
+        for finish in ("commit", "cancel"):
+            with self.subTest(finish=finish), patch.dict(os.environ,
+                    ZIPZI_TEST_BUSY_COMMIT_ONCE="1", ZIPZI_TEST_DROP_RESPONSE="commit"):
+                with zipzi.connect(endpoint=self.folder / finish / "test.sock", start=True, host=self.host) as runtime:
+                    session = runtime.sessions.create("79200000-0000-4000-8000-000000000042")
+                    edit = session.edit("recover Busy")
+                    with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                        with edit:
+                            parameter = edit.parameters.create(parameters.ParameterSpec("Base", -1., 1., 0.))
+                            source = edit.parameters.get(parameter).source
+                    with self.assertRaises(zipzi.Busy):
+                        lost.exception.recover()
+                    self.assertIsNone(edit.pending_request)
+                    self.assertEqual(edit.parameters.get(parameter).source, source)
+                    if finish == "commit":
+                        edit.parameters.patch(parameter, parameters.Patch(name="Retried"))
+                        edit.commit().wait()
+                        self.assertEqual(session.parameters.get(parameter).name, "Retried")
+                        self.assertEqual(session.info().history, (1, 0))
+                    else:
+                        edit.cancel()
+                        self.assertEqual(session.parameters.list().items, ())
+                        self.assertEqual(session.info().history, (0, 0))
+
     def test_installed_busy_and_caught_errors_keep_the_public_edit_rules(self):
         with patch.dict(os.environ, ZIPZI_TEST_BUSY_COMMIT_ONCE="1"):
             with self.connect() as runtime:

@@ -8,6 +8,7 @@ from ._values import ConnectionInfo, Receipt, SaveReceipt, Source, SessionId, Se
 from .backends import Backend, JobKind
 from ._recovery import RecoveryOwner
 from ._generated.conveniences import EditableMeshes as MeshConveniences
+from ._generated.resource_conveniences import EditableImages as ImageConveniences
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -277,14 +278,10 @@ class Images:
         s = self._session
         return plans.Plan.create(s._backend, s._token, None if self._edit is None else self._edit._token, intent)
 
-class EditableImages(Images):
+class EditableImages(Images, ImageConveniences):
     def __init__(self, session: Session, edit: "Edit"):
         super().__init__(session, edit)
         self._owner = edit
-    def create_image(self, name: str, image: resources.PreparedImage, *, id: str | None = None) -> str:
-        return self._owner.apply(ops.CreateImage(name, image, id)).ids[0]
-    def replace_image(self, id: str, image: resources.PreparedImage) -> WriteResult:
-        return self._owner.apply(ops.ReplaceImage(id, image))
 
 class EditableMeshes(Meshes, MeshConveniences):
     def __init__(self, session: Session, edit: "Edit"):
@@ -501,6 +498,11 @@ class Edit:
             self._bind_unknown(e)
             raise
         except Busy:
+            # A recovered admission refusal resolves the wire request without
+            # consuming the candidate. It has the same retry semantics as a
+            # Busy response received by the original apply/commit call.
+            if self.pending_request is None and self._action in {"apply", "commit"}:
+                self._state = "editing"
             raise
         except SdkFailure as e:
             if e.code not in {"REQUEST_EXPIRED", "HOST_RESTARTED", "CLIENT_EXPIRED", "NO_PENDING_REQUEST"}:

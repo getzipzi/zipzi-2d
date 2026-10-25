@@ -323,6 +323,11 @@ and `interaction` (`runtime_interaction_acceptance`). Build each isolated source
 version before timing and record source, binary and model hashes. When sharing a
 Cargo target directory across source roots, clear the owned package artifacts
 between version builds to avoid stale relative dep-info; retain copied binaries.
+Each measured process receives a private temporary Runtime directory/profile and
+no inherited owner fd, so a resident desktop host cannot intercept its startup.
+The short temporary endpoint also avoids Unix socket limits in long output paths.
+The first executable alternates by pair (AB, BA), and that order is part of the
+resume identity, preventing systematic first/second-position bias.
 
 ```sh
 python3 tools/runtime/editor_benchmark_pairs.py \

@@ -485,13 +485,15 @@ fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
     rt.apply_authoring(
         client,
         edit,
-        vec![authoring::EditOperation::CreateImage {
-            spec: zipzi_sdk::ImageCreateSpec {
-                id: Some(asset.clone()),
-                name: "A".into(),
+        vec![authoring::EditOperation::Resource(
+            crate::authoring::ResourceOperation::CreateImage {
+                spec: zipzi_sdk::ImageCreateSpec {
+                    id: Some(asset.clone()),
+                    name: "A".into(),
+                },
+                image: a,
             },
-            image: a,
-        }],
+        )],
     )
     .unwrap();
     rt.commit_edit(client, edit).unwrap();
@@ -515,13 +517,15 @@ fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
     rt.apply_authoring(
         client,
         edit,
-        vec![authoring::EditOperation::CreateImage {
-            spec: zipzi_sdk::ImageCreateSpec {
-                id: None,
-                name: "B".into(),
+        vec![authoring::EditOperation::Resource(
+            crate::authoring::ResourceOperation::CreateImage {
+                spec: zipzi_sdk::ImageCreateSpec {
+                    id: None,
+                    name: "B".into(),
+                },
+                image: b,
             },
-            image: b,
-        }],
+        )],
     )
     .unwrap();
     let job = rt.request_commit(client, edit).unwrap();

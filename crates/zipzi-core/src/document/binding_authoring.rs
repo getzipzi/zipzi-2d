@@ -47,6 +47,7 @@ impl Default for AuthoringLimits {
         }
     }
 }
+crate::api_record! {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConversionCost {
     pub sample_combinations: usize,
@@ -54,6 +55,7 @@ pub struct ConversionCost {
     pub temporary_bytes: usize,
     /// Includes the SDK's complete previous checkpoint and new candidate.
     pub history_bytes: usize,
+}
 }
 impl AuthoringLimits {
     pub fn check_grid(
@@ -142,11 +144,7 @@ impl AuthoringLimits {
 }
 
 pub(super) fn require_ok(status: Status) -> Result<(), Status> {
-    if status.is_ok() {
-        Ok(())
-    } else {
-        Err(status)
-    }
+    if status.is_ok() { Ok(()) } else { Err(status) }
 }
 pub(super) fn check_keys(parameter: &Parameter, keys: &[f32]) -> Result<(), Status> {
     if keys.is_empty()

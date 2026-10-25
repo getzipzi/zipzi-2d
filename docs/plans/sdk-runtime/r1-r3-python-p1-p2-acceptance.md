@@ -1,0 +1,99 @@
+# Runtime R1–R3 / Python P1–P2 整体验收
+
+日期：2026-10-25。基准提交：`3d1b1eef1cbbcd3a979a4a7d2df4946a3ef7e035`。
+验收对象是该提交后的工作区，包含本轮修复及 P2 补齐；验收采集时尚未提交。
+本记录替代同日“P2 仍待补齐”的初次复验结论，不改写此前独立阶段的历史记录。
+
+**结论：R1–R3、P1–P2 在计划选定范围内整体通过。**
+P2 已覆盖已交付的网格、图片资源、Plan 的机械生成、有限形状及配对源码发行。
+本轮重新运行功能、安装、真实 Editor、P0 和 R2 性能门禁，不沿用历史通过结果替代当前测量。
+完整 R4 Modeling、后续 Python P3–P7、跨平台和发行 app 安装位置仍属于后续阶段。
+
+源码、命令、日志及产物 SHA-256 见[机器可读记录](r1-r3-python-p1-p2-results.json)。
+详细实现与生成/手写边界见 [P2 补齐记录](../python-sdk-rewrite/p2-resources-generator.md)。
+本地原始日志和配对样本位于 `target/p2-complete/`；此前缺陷复现保留在
+`target/integrated-acceptance/`。这些 target 目录不作为源码分发内容。
+
+## 补齐与修复
+
+1. **资源/Plan 单一声明。** 实际 SDK/Core/Runtime 类型导出图片值/快照/统计、
+   Plan Cost/Report/意图、资源操作和查询。新增 bool、u64/usize、拥有的 bytes、
+   有序字符串映射；共享编译注册连接 Local 与协议。共 18 个受管产物，
+   包含两后端接线、直接 PyO3 转换和构造同一操作的便利方法。
+2. **已恢复 Busy 的候选仍然可用。** 宿主拒绝 commit 后丢失响应，按原 RequestId
+   确认 Busy 后，Edit 现在恢复 editing，可继续提交或取消；仍未知的请求继续阻止写入。
+   源码和隔离安装回归覆盖真实 socket、上下文退出、重试/取消及历史只发布一次。
+3. **源码发行可独立构建。** 默认 Maturin sdist 留下未打包的 Editor vendor patch，
+   解包后无法构建。新后端只移除明确的桌面 patch，离线裁剪锁文件并验证依赖版本/来源不变。
+   纯包 sdist 携带 Python 源码和产物，原生 sdist 携带 SDK 依赖闭包及完整生成来源。
+   从解包源码检查生成、重建正常 wheel 和宿主，再独立安装测试。
+4. **生成类型的公开行为。** 保留公共模块的 pickle 身份、可解析运行时注解、字段默认值
+   和可选参数排序。字符串默认值不能错误变成 None；独立传播测试覆盖该情况。
+5. **验收工具可重复运行。** 补齐 Runtime 清单遗漏的四个 SDK 模块及候选分类；
+   源码发行构建使用独立 Cargo target，避免解包源码覆盖工作区产物导致 doctest 失效。
+   Editor 性能工具另修复了宿主复用问题：每个测量进程使用独立临时 Runtime endpoint，
+   不继承 owner fd，避免已有桌面宿主接走基准启动请求。每对交替谁先运行，
+   并把顺序纳入恢复身份，避免一个版本始终处于先跑/后跑的位置。
+
+新原生契约为 `zipzi-python2-7`，连接端要求 `typed_resource_values`。
+资源 Usage 由实际 Rust 类型生成，Local 与 Connected 返回同一字段；
+旧宿主在握手时明确拒绝。输入内存准入、资源生命周期、恢复、事务和领域规则仍由手写层负责。
+没有为生成覆盖率引入新事务入口、任意公共 JSON 或本地 JSON 往返。
+
+## 功能与安装结果
+
+| 验证 | 本轮结果 | 边界 |
+| --- | --- | --- |
+| Runtime 完整 crate 门禁 | 69 通过 | 所有权、来源/候选、Job/故障、预算/资源、协议/恢复、事件 |
+| Python Release 源码行为 | 52 通过 | 同一独立预期覆盖 Local 与真实 Connected 宿主 |
+| Python 独立探针构建 | 52 通过 | 计时与分配/复制探针使用不同产物 |
+| Pyright | 正例 0 错误；12 条精确反例 | 公共 API 与新增资源/Plan 类型 |
+| 安装纯 wheel 连接验收 | 15 通过 | 发现/启动、会话绑定、同 ID 恢复及 Busy 回归 |
+| 当前生产 Editor 冷启动 | 1 通过 | 两客户端唯一宿主、共享编辑历史、重开、宽限期、保存后新宿主重开 |
+| Editor Core Runtime 测试 | 18 通过 | 同一正式文档/历史、外部发布、Busy/Faulted、无视图 IO |
+| Editor Runtime host 测试 | 7 通过 | 无窗口保存成功/失败、重开、退出和投影追赶 |
+| 原生 Editor IPC + Metal | 通过 | 安装客户端发布、事件/UI Undo、路径竞争、Preview 隔离和实际绘制 |
+| SDK 聚焦领域测试 | 图片 1、网格 8、参数 2、候选快照 2 通过 | 共享 SDK 行为与新声明承载类型 |
+| Python 工具测试 | 14 通过 | 生成确定性/保护/漂移、实际 Rust 编译正反例、字段传播、源码打包、P0 比较器 |
+| Runtime 工具测试 | 14 通过 | 依赖方向、正式写入边界、接口清单与性能比较器 |
+| 清单、Editor 边界、工作区归属 | 通过 | 清单同步；17 SDK + 3 Editor 包完整且互斥 |
+| 两个 sdist → 解包生成检查 → 两个正常 wheel | 通过 | 解包目录无 Git 来源；生成产物一致；安装时不生成 |
+| 从源码包重建 wheel 的隔离安装 recipe | Local / Connected 均通过 | 固定像素/几何、混合历史、资源/Plan、参数/绑定、保存重开；正常包无故障/探针入口 |
+
+未运行全 SDK/Editor 套件；本轮使用完整 Runtime crate、新包行为与连接门禁，
+加受影响 SDK、Editor Core 和原生整合测试。没有跳过失败用例或修改行为预期以获得通过。
+
+## 性能与资源
+
+[P0 当前完整结果](r1-r3-python-p1-p2-p0.json)对比冻结的
+[P1 schema 2 基线](../python-sdk-rewrite/p0-p1-baseline.json)：
+六类负载 × Local/Connected，每个后端分别运行五个计时进程和五个探针进程，
+每项 4 次预热、32 次采样。延迟、调用次数、显式负载复制、输入物化、Rust 请求峰值、
+JSON 计数与进程噪声按原阈值比较，回归列表为空。Local 传输编解码及 Value tree 计数仍为零；
+独立的预算估算编码保持原基线（最大 1 次），不计作传输往返。
+探针范围仍排除隐式领域 Clone、allocator 内部复制及 Python/C 堆，不能解释为全进程 memcpy/RSS。
+
+[R2 当前配对结果](r1-r3-python-p1-p2-editor-performance.json)使用经历史 SHA-256
+核验的 baseline 二进制及本工作区 Release 二进制，选择同一 Mao 模型和已审计 Warp。
+CPU 属性链、属性/颜色/变形输入、动画、时间线和并发交互七组首先各运行十对进程。
+首轮 145 项中 8 项越线；属性和时间线按预定方案各追加十对，保留全部数据。
+时间线二十对通过，属性仍越线；同一当前二进制的 A/A 对照显示明显时段/相位波动，
+且工具原来始终 baseline 先运行。修复为逐对 AB/BA 交替后，再按固定方案采集二十对属性数据，
+与此前二十对合并：最终属性四十对、时间线二十对、其余各十对，全部 145 项通过。
+[首轮报告](r1-r3-python-p1-p2-editor-initial-performance.json)、
+[首次扩样报告](r1-r3-python-p1-p2-editor-expanded-performance.json)和
+[A/A 对照](r1-r3-python-p1-p2-editor-control.json)均保留，不用后续快样本替换失败数据。
+CPU 与显示边界沿用原门槛：P50 +10%、P95 +15%，
+容差取相对值与 CPU 0.2 ms / 显示 1 ms 的较大值。全部指标通过。
+首个 UI candidate 因复用已有宿主退出且没有 trace；不完整配对保留在
+`target/p2-complete/editor-incomplete/`。修复工具隔离后，完整重跑所有 UI 配对；
+已完成的二十个 CPU 进程通过二进制/模型/负载身份检查后保留。
+本轮构建完成后才开始计时；报告同时保留各进程范围、二进制指纹和最大 RSS。
+显示边界保持原工具定义，不把提交到当前 Metal 绘制称为屏幕合成器延迟。
+
+## 范围说明
+
+本轮环境为 macOS arm64、CPython 3.14.7、Rust 1.99.0；没有声称跨平台或完整发布矩阵通过。
+R2 性能素材是本地已授权模型，不把该模型或专有运行库加入分发。
+P2 完成的是已验收 P1 网格/资源/Plan 的生成范围；参数、绑定、CPU 采样的后续生成仍随
+P3–P5 推进。R4 完整领域、二进制大负载、长任务、动画/GPU、Ref/Address 不因本次通过而变为已完成。

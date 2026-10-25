@@ -1,4 +1,4 @@
-//! Export only the reviewed P2 mesh slice. Field definitions come from Rust.
+//! Export only the reviewed P2 mesh/resource/Plan slices. Field definitions come from Rust.
 use serde::Serialize;
 use zipzi_core::api_shape::{ApiShape, Shape};
 
@@ -49,6 +49,8 @@ struct Contract {
     bindings: Vec<Binding>,
     roots: Vec<Shape>,
     operations: Vec<Operation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    resources: Option<Box<Contract>>,
 }
 fn main() {
     use zipzi_runtime::authoring::*;
@@ -56,6 +58,7 @@ fn main() {
     let (input, output) = MESH_QUERY.shapes();
     let contract = Contract {
         version: 1,
+        resources: Some(Box::new(resource_contract())),
         bindings: vec![
             binding!(zipzi_core::Vec2, "meshes", "Point", "point"),
             binding!(
@@ -98,4 +101,118 @@ fn main() {
         }],
     };
     println!("{}", serde_json::to_string_pretty(&contract).unwrap());
+}
+
+fn resource_contract() -> Contract {
+    use zipzi_runtime::authoring::*;
+    let mut operations = vec![];
+    macro_rules! operation {
+        ($registration:ident, $backend:literal, $category:literal) => {{
+            let (input, output) = $registration.shapes();
+            operations.push(Operation {
+                name: $registration.name,
+                backend: $backend,
+                capability: "typed_resources_plans",
+                category: $category,
+                handler: concat!("zipzi_runtime::authoring::", stringify!($registration)),
+                input,
+                output,
+            });
+        }};
+    }
+    operation!(IMAGE_QUERY, "image", "query");
+    operation!(PREPARED_PIXELS_QUERY, "prepared_pixels", "query");
+    operation!(PLAN_QUERY, "plan", "planning");
+    Contract {
+        version: 1,
+        resources: None,
+        bindings: vec![
+            binding!(
+                zipzi_sdk::ImageCreateSpec,
+                "resources",
+                "ImageSpec",
+                "record"
+            ),
+            binding!(
+                zipzi_runtime::authoring::ResourceUsage,
+                "resources",
+                "Usage",
+                "record"
+            ),
+            binding!(
+                zipzi_runtime::authoring::ImagePixels,
+                "resources",
+                "ImagePixels",
+                "record"
+            ),
+            binding!(
+                zipzi_runtime::authoring::ImageSnapshot,
+                "resources",
+                "Snapshot",
+                "record"
+            ),
+            binding!(zipzi_sdk::ConversionCost, "plans", "Cost", "record"),
+            binding!(zipzi_sdk::ModelingPlanReport, "plans", "Report", "record"),
+            binding!(
+                zipzi_runtime::authoring::PlanSnapshot,
+                "backend",
+                "PlanSnapshot",
+                "record"
+            ),
+            binding!(
+                zipzi_runtime::authoring::PreparedImageInfo,
+                "backend",
+                "PreparedImageInfo",
+                "record"
+            ),
+            binding!(
+                zipzi_runtime::authoring::ResourceOperation,
+                "ops",
+                "ResourceOperation",
+                "union"
+            ),
+            binding!(
+                zipzi_runtime::authoring::PlanIntent,
+                "plans",
+                "Intent",
+                "union"
+            ),
+            binding!(
+                zipzi_runtime::authoring::ImageQuery,
+                "backend",
+                "ImageQuery",
+                "query"
+            ),
+            binding!(
+                zipzi_runtime::authoring::PlanQuery,
+                "backend",
+                "PlanQuery",
+                "query"
+            ),
+            binding!(
+                zipzi_runtime::authoring::PreparedPixelsQuery,
+                "backend",
+                "PreparedPixelsQuery",
+                "query"
+            ),
+            binding!(
+                zipzi_runtime::ImageId,
+                "resources",
+                "PreparedImage",
+                "handle"
+            ),
+            binding!(zipzi_runtime::PlanId, "plans", "Plan", "handle"),
+            binding!(zipzi_runtime::SessionId, "native", "SessionToken", "token"),
+            binding!(zipzi_runtime::EditId, "native", "EditToken", "token"),
+            binding!(zipzi_runtime::SourceRef, "_values", "Source", "source"),
+            binding!(zipzi_sdk::Version, "_values", "Version", "version"),
+        ],
+        roots: vec![
+            ResourceOperation::api_shape(),
+            PlanIntent::api_shape(),
+            PreparedImageInfo::api_shape(),
+            ResourceUsage::api_shape(),
+        ],
+        operations,
+    }
 }

@@ -59,14 +59,19 @@ impl Runtime {
                     }
                     EditOperation::Parameter { operation } => ReadyOperation::Parameter(operation),
                     EditOperation::Mesh { operation } => ReadyOperation::Mesh(operation),
-                    EditOperation::CreateImage { spec, image } => {
-                        ReadyOperation::Image(spec, self.prepared_image(client, image)?.clone())
-                    }
-                    EditOperation::ReplaceImage { id, image } => ReadyOperation::ReplaceImage(
+                    EditOperation::Resource(crate::authoring::ResourceOperation::CreateImage {
+                        spec,
+                        image,
+                    }) => ReadyOperation::Image(spec, self.prepared_image(client, image)?.clone()),
+                    EditOperation::Resource(
+                        crate::authoring::ResourceOperation::ReplaceImage { id, image },
+                    ) => ReadyOperation::ReplaceImage(
                         id,
                         self.prepared_image(client, image)?.clone(),
                     ),
-                    EditOperation::ApplyPlan { plan } => {
+                    EditOperation::Resource(crate::authoring::ResourceOperation::ApplyPlan {
+                        plan,
+                    }) => {
                         let (plan, valid) = self.resolve_plan(client, edit, plan)?;
                         // No public Source describes the intermediate state of a batch.
                         // An exact-source Plan therefore applies only at its start.

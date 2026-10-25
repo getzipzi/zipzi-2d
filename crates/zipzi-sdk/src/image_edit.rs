@@ -2,11 +2,13 @@
 use crate::{EditSession, PreparedImageContent, SdkError};
 use serde::{Deserialize, Serialize};
 
+zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ImageCreateSpec {
     pub id: Option<String>,
     pub name: String,
+}
 }
 impl EditSession<'_> {
     pub fn create_image_spec(

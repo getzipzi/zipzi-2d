@@ -49,13 +49,13 @@ fn prepared_a_b_candidate_plan_and_history_hold_exact_pixels_until_last_owner() 
             client,
             edit,
             vec![
-                EditOperation::CreateImage {
+                EditOperation::Resource(crate::authoring::ResourceOperation::CreateImage {
                     spec: ImageCreateSpec {
                         id: Some(id(2)),
                         name: "A".into(),
                     },
                     image: a,
-                },
+                }),
                 mesh(),
             ],
         )
@@ -86,7 +86,9 @@ fn prepared_a_b_candidate_plan_and_history_hold_exact_pixels_until_last_owner() 
     rt.apply_authoring(
         client,
         edit,
-        vec![EditOperation::ApplyPlan { plan: plan.plan }],
+        vec![EditOperation::Resource(
+            crate::authoring::ResourceOperation::ApplyPlan { plan: plan.plan },
+        )],
     )
     .unwrap();
     rt.release_modeling_plan(client, plan.plan).unwrap();
@@ -131,13 +133,15 @@ fn bad_or_foreign_image_write_aborts_on_host_without_client_cleanup() {
     let result = rt.apply_authoring(
         client,
         edit,
-        vec![EditOperation::CreateImage {
-            spec: ImageCreateSpec {
-                id: Some(id(2)),
-                name: "foreign".into(),
+        vec![EditOperation::Resource(
+            crate::authoring::ResourceOperation::CreateImage {
+                spec: ImageCreateSpec {
+                    id: Some(id(2)),
+                    name: "foreign".into(),
+                },
+                image,
             },
-            image,
-        }],
+        )],
     );
     assert!(matches!(result, Err(RuntimeError::WrongOwner)));
     assert_eq!(rt.commit_edit(client, edit), Err(RuntimeError::Aborted));
@@ -161,13 +165,15 @@ fn preparation_failure_is_independent_and_hundred_cancelled_sources_reclaim_leas
         rt.apply_authoring(
             client,
             edit,
-            vec![EditOperation::CreateImage {
-                spec: ImageCreateSpec {
-                    id: Some(id(2)),
-                    name: "draft".into(),
+            vec![EditOperation::Resource(
+                crate::authoring::ResourceOperation::CreateImage {
+                    spec: ImageCreateSpec {
+                        id: Some(id(2)),
+                        name: "draft".into(),
+                    },
+                    image,
                 },
-                image,
-            }],
+            )],
         )
         .unwrap();
         let snapshot = rt.edit_snapshot(client, edit).unwrap();
@@ -216,13 +222,13 @@ fn plan_from_exact_source_is_stale_after_a_prior_batch_operation() {
         client,
         edit,
         vec![
-            EditOperation::CreateImage {
+            EditOperation::Resource(crate::authoring::ResourceOperation::CreateImage {
                 spec: ImageCreateSpec {
                     id: Some(id(2)),
                     name: "image".into(),
                 },
                 image,
-            },
+            }),
             mesh(),
         ],
     )
@@ -252,7 +258,9 @@ fn plan_from_exact_source_is_stale_after_a_prior_batch_operation() {
                         name: "Partial".into(),
                     },
                 },
-                EditOperation::ApplyPlan { plan: plan.plan },
+                EditOperation::Resource(crate::authoring::ResourceOperation::ApplyPlan {
+                    plan: plan.plan,
+                }),
             ],
         )
         .unwrap_err();

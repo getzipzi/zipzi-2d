@@ -33,6 +33,30 @@ class PerformanceGates(unittest.TestCase):
             compare(runs(1, 1), candidate)
 
 class MeasuredInputs(unittest.TestCase):
+    def test_pairs_balance_order_without_omitting_either_executable(self):
+        from editor_benchmark_pairs import pair_order
+        orders = [pair_order(index) for index in range(20)]
+        self.assertTrue(all(set(order) == {'baseline', 'candidate'} and len(order) == 2 for order in orders))
+        for position in (0, 1):
+            self.assertEqual(sum(order[position] == 'baseline' for order in orders), 10)
+            self.assertEqual(sum(order[position] == 'candidate' for order in orders), 10)
+
+    def test_measured_processes_cannot_reuse_the_desktop_runtime_owner(self):
+        from editor_benchmark_pairs import isolated_runtime
+        parent = dict(ZIPZI_RUNTIME_DIR='/user/runtime', ZIPZI_RUNTIME_PROFILE='user',
+                      ZIPZI_RUNTIME_OWNER_FD='42', ZIPZI_RUNTIME_INTERACTION_SAMPLES='60')
+        with isolated_runtime(parent) as first, isolated_runtime(parent) as second:
+            self.assertNotEqual(first['ZIPZI_RUNTIME_DIR'], second['ZIPZI_RUNTIME_DIR'])
+            directory = Path(first['ZIPZI_RUNTIME_DIR'])
+            self.assertTrue(directory.is_dir())
+            self.assertEqual(directory.stat().st_mode & 0o777, 0o700)
+            self.assertLess(len(str(directory / 'benchmark.sock').encode()), 104)
+            self.assertEqual(first['ZIPZI_RUNTIME_PROFILE'], 'benchmark')
+            self.assertNotIn('ZIPZI_RUNTIME_OWNER_FD', first)
+            self.assertEqual(first['ZIPZI_RUNTIME_INTERACTION_SAMPLES'], '60')
+        self.assertFalse(directory.exists())
+        self.assertEqual(parent['ZIPZI_RUNTIME_OWNER_FD'], '42')
+
     def test_startup_and_idle_frames_are_not_measured_input_latency(self):
         from editor_benchmark_report import normalized
         sample = dict(count=30, p50=1., p95=2.)

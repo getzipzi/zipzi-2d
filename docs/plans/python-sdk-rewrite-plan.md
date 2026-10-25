@@ -1,6 +1,6 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25。状态：**新包已建立；P1 选定试点及生命周期矩阵已验收；P0 试点两后端计时/探针与比较门禁已建立，统计范围见下文；P2 第一批网格生成链路已验收，资源/Plan 生成待扩展；P6 已有初步构建和安装证据**。见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+日期：2026-10-25。状态：**新包已建立；P1 选定试点及生命周期矩阵已验收；P0 试点两后端计时/探针与比较门禁已建立，统计范围见下文；P2 网格、资源/Plan 生成与配对源码分发已完成，并通过 R1–R3 / P1–P2 整体验收；P6 已有初步构建和安装证据**。见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
 本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）、`f2ef33c`（生命周期与 P0 门禁）、`1e0043f`（P2 网格生成）、`acc54907`（宿主/会话接回）、`c0e186b`（R3 事件/参数/批量）和 2026-10-25 工作区为依据。当前主线按 [Runtime R0–R4](sdk-runtime/python2-r0-r4.md) 推进；已提交的[事件、参数及批量读取](sdk-runtime/python2-r3-events.md)贯通新包 R3 最小链路；工作区中的[网格绑定和显式 CPU 采样](sdk-runtime/python2-r4-bindings.md)接回首批 R4 数值链路，生成器随能力推进。本文区分已提交基础、已有验证记录、工作区实现和后续目标，不改写此前验收结果。
 
@@ -29,15 +29,15 @@
 
 | 切片 | 当前事实与代码位置 | 仍未交付 |
 | --- | --- | --- |
-| 独立包与分发 | `crates/zipzi-python2`；纯包 `client/` 与原生 `native/` 分开；Cargo/测试域已接入 | 完整 sdist、发布构建矩阵及 CI 门禁 |
+| 独立包与分发 | `crates/zipzi-python2`；纯包 `client/` 与原生 `native/` 分开；Cargo/测试域已接入 | 发布构建矩阵及 CI 门禁；配对 sdist 见本轮验收 |
 | 公共 API | [meshes.py](../../crates/zipzi-python2/client/python/zipzi/meshes.py)、[ops.py](../../crates/zipzi-python2/client/python/zipzi/ops.py)：Geometry、MeshSpec、Snapshot 和 Create/Rename/SetPositions | 其余领域和更复杂 Plan 意图；操作联合现已覆盖 Mesh、图片与 ApplyPlan |
 | 生命周期 | [_lifecycle.py](../../crates/zipzi-python2/client/python/zipzi/_lifecycle.py)：Runtime/Session/Edit/Job、明确的恢复归属 | 选定 P1 矩阵已通过；P4 长任务/格式和 P6 平台验收另列 |
-| 本地执行 | [PyO3 桥接](../../crates/zipzi-python2/src/lib.rs)进入 [LocalHost](../../crates/zipzi-runtime/src/host.rs)；输入在释放 GIL 前取得所有权；本地不经 JSON 字符串或 Value 树；网格转换已生成 | 小资源/Plan 转换和预算已接线，其字段转换仍手写；二进制大负载未实现 |
+| 本地执行 | [PyO3 桥接](../../crates/zipzi-python2/src/lib.rs)进入 [LocalHost](../../crates/zipzi-runtime/src/host.rs)；输入在释放 GIL 前取得所有权；本地不经 JSON 字符串或 Value 树；网格转换已生成 | 小资源/Plan 机械字段转换已生成；二进制大负载未实现 |
 | 连接执行 | [ConnectedBackend](../../crates/zipzi-python2/client/python/zipzi/backends/connected.py)进入相同 Runtime 处理器；保留不可变字节和原 RequestId；发现/启动、会话绑定、类型化事件/参数、批量查询及真实 Editor recipe 已通过 | R4 完整 Modeling、二进制负载和完整发行构建配对 |
 | 网格与历史 | 创建、位置、改名、候选查询、顺序批次、commit/Undo/Redo、保存重开 | 已接回选定网格绑定/关键形与显式 CPU 采样；拓扑、BlendShape 和完整建模能力仍待扩展 |
 | 行为和类型测试 | [test_api.py](../../crates/zipzi-python2/tests/test_api.py)中 50 项测试；多数覆盖两后端或多个故障；Pyright 正例与八项精确反例；另有安装后宿主/Editor 接回用例 | 已覆盖 PreparedImage/Plan、选定生命周期矩阵与 R3 最小链路；后续领域按阶段另验收 |
 | 初步安装 | 记录中两个 wheel 分别构建，并在纯包连接环境及纯包+原生本地环境执行 [installed_recipe.py](../../crates/zipzi-python2/tests/installed_recipe.py) | 安装 recipe 已覆盖纹理、候选 Plan、混合历史及新宿主保存重开；真实 Editor、全领域安装及 sdist 待验收 |
-| 代码生成 | 网格字段/操作、两端转换、查询接线和便利方法已由 Rust 声明生成 | P2 第一批通过；资源/Plan、其余形状和完整源分发证据仍待扩展 |
+| 代码生成 | 网格、资源/Plan 字段/操作、两端转换、查询接线和便利方法由 Rust 声明生成，共 18 个产物 | 本轮 P2 范围完整；后续领域随 P3–P5 扩展 |
 
 共享 Rust 和新包现均有图片、来源绑定 Plan 的固定行为测试。工作区中的 `ImageCreateSpec`、PreparedImage 资源表、图片快照及 `EditOperation` / `PlanIntent` 已由两后端和独立 wheel 验证；仅承诺当前选定的小资源/改名 Plan 试点，不等于完整 P1 或后续领域已完成。
 
@@ -161,7 +161,7 @@ with TemporaryDirectory() as folder, zipzi.local() as runtime:
 
 每项操作登记：稳定操作名、输入/结果类型、目标对象、查询/编辑/规划/生命周期/任务类别、来源要求、处理器、能力、Python 便利入口和行为测试编号。所有权、失败后状态和预算策略引用手写实现，不把元数据扩张成业务规则语言。
 
-一个字段结构只手写一处。生成器读取由 Rust 类型声明导出的有限 schema；该 schema 是生成中间产物，不再手写对应 JSON schema、Python dataclass 和 `.pyi` 三份规范。操作注册在 Rust 编译时绑定具体输入/结果和处理器，类型不匹配或缺处理器必须失败。P0 能力清单只记录本项目选定的承诺与交付证据，不从其他 Python 实现扫描出 API 规范。P1 先手写类型与适配；P2 第一批已用 Core 中立形状宏、SDK/Runtime 实际类型和编译注册提取网格生成器。详见 [P2 记录](python-sdk-rewrite/p2-mesh-generator.md)。
+一个字段结构只手写一处。生成器读取由 Rust 类型声明导出的有限 schema；该 schema 是生成中间产物，不再手写对应 JSON schema、Python dataclass 和 `.pyi` 三份规范。操作注册在 Rust 编译时绑定具体输入/结果和处理器，类型不匹配或缺处理器必须失败。P0 能力清单只记录本项目选定的承诺与交付证据，不从其他 Python 实现扫描出 API 规范。P1 先手写类型与适配；P2 第一批已用 Core 中立形状宏、SDK/Runtime 实际类型和编译注册提取网格生成器。资源/Plan 扩展见 [P2 补齐记录](python-sdk-rewrite/p2-resources-generator.md)，保留[网格历史记录](python-sdk-rewrite/p2-mesh-generator.md)。
 
 第一版只支持试点需要的基础标量、显式可选值、记录、带标签联合、序列、受限映射及资源引用。Rust 宏/derive 或 schema 导出工具只实现这个子集；遇到新形状先评审公开语义，不建设能够理解任意 Rust 语法和泛型的编译器。具体依赖在试点后选择，本文不预先引入第三方 IDL 平台。
 
@@ -269,7 +269,7 @@ zipzi-python2/
 | --- | --- | --- |
 | **P0 范围与基线** | 选定六项工作负载的两后端计时/计数及比较门禁已建立 | 保持第 2.2 节统计边界；新领域随阶段补齐，隐式 Clone 不冒充已计数 |
 | **P1 手写完整链路** | 选定网格/资源/Plan、历史、IO、两后端和生命周期矩阵已验收 | 保持独立预期与正式 wheel 验收；后续领域、平台与 Editor 验收另列 |
-| **P2 提取生成器** | 第一批网格链路已验收 | 资源/Plan 与更多有限形状、完整 source/sdist 证据待扩展；保留独立行为/类型、编译负例和 P0 比较 |
+| **P2 提取生成器** | 网格、资源/Plan 及有限形状、配对 source/sdist 已验收 | 整体功能、安装与性能证据见[验收记录](sdk-runtime/r1-r3-python-p1-p2-acceptance.md)；后续领域按 P3–P5 扩展 |
 | **P3 Modeling 与身份** | 新包已有 R3 基础、选定网格绑定/关键形与 CPU sweep；完整 Modeling 待扩展 | 场景、参数组、绑定/BlendShape、拓扑、Glue/Offscreen、Ref/Address；有限生成扩展以完整领域 recipe 验收 |
 | **P4 资源与工程** | 未开始；P1 只提供小资源试点 | 二进制负载、完整图片/附件与格式 IO、重定位/长任务；资源峰值及取消/断连回归通过 |
 | **P5 动画与观察** | 未开始 | CPU 采样、Motion/Expression/Physics/Pose、独立 Preview、空间/观察、离线 inspection；数值/隔离及条件 GPU 验收 |
@@ -314,11 +314,11 @@ zipzi-python2/
 
 **当前选定 P1 试点已满足退出门槛**：图片、网格、Plan、历史、保存重开和上述失败链路均有证据。共享 Rust、Python 源码、探针产物与正常安装包分别记录；不据此宣布 P4 长任务、P5 动画或 P6 发布矩阵完成。
 
-### 9.5 进行中：提取最小生成器
+### 9.5 已验收：P2 最小生成器
 
 满足 P1 和试点 P0 门槛后，从第 6.3 节列出的重复处提取。首批只覆盖已经验收的网格、资源和 Plan 形状，不先给未实施领域生成 public stub。
 
-当前已完成[第一批网格链路](python-sdk-rewrite/p2-mesh-generator.md)：同一 Rust 声明导出类型、操作、直接 PyO3/wire 转换、两后端查询接线及便利方法；共有 10 个受管产物。资源/Plan 形状及完整 source/sdist 证据继续留在 P2 待办。
+在[第一批网格链路](python-sdk-rewrite/p2-mesh-generator.md)基础上补齐资源/Plan：同一 Rust 声明导出类型、操作、直接 PyO3/wire 转换、两后端查询接线及便利方法，共 18 个受管产物。有限形状新增 bool、u64/usize、拥有的 bytes 和有序字符串映射；PreparedImage/Plan 保留手写生命周期。配对 sdist 中纯包携带 Python 来源和产物，原生包还携带 SDK 依赖闭包、Rust 声明、导出器和生成器；由解包源码检查生成并重建 wheel，安装时不生成。具体证据见[P2 补齐记录](python-sdk-rewrite/p2-resources-generator.md)。
 
 退出门槛：声明与处理器静态配对；生成确定且只检查模式不写入；手写文件受保护；正反类型用例、结构转换、实际两后端行为和安装 recipe 通过；本地没有新增 JSON 往返；生成前后的调用次数、复制/资源峰值及耗时按试点基线比较。随后才按 P3–P5 扩充可生成的类型子集。
 
@@ -377,6 +377,6 @@ python3 tools/workspace/cargo_domain.py --check
 
 `zipzi-python2` 完成需要：本项目明确承诺的能力均接线且独立验证；两后端共用 Rust 领域路径；类型、错误、恢复、资源、任务和安装可用；生成只承担机械重复；常规操作不需跨多层手改同一结构；全部阶段门槛有实际证据。
 
-当前选定 P1 生命周期矩阵已验收，P0 有冻结比较；P2 第一批网格生成链路已通过两后端行为/类型、Rust 编译正反例、安装和 P0 比较。新包 R3 的宿主、事件/参数与批量查询最小链路已贯通，下一步按 [Runtime 清单](sdk-runtime/python2-r0-r4.md) 扩展 R4，资源/Plan 生成随领域推进，保持 P2 进行中。Runtime R4 的建模 CPU 采样不因 Python P5 原排序而延后，不把未实现领域算入生成覆盖。
+当前选定 P1 生命周期矩阵已验收，P0 有冻结比较；P2 第一批网格生成链路已通过两后端行为/类型、Rust 编译正反例、安装和 P0 比较。新包 R3 的宿主、事件/参数与批量查询最小链路已贯通，下一步按 [Runtime 清单](sdk-runtime/python2-r0-r4.md) 扩展 R4，P2 资源/Plan 与源码分发补齐，按[整体验收](sdk-runtime/r1-r3-python-p1-p2-acceptance.md)确认退出门槛。Runtime R4 的建模 CPU 采样不因 Python P5 原排序而延后，不把未实现领域算入生成覆盖。
 
 每完成一个切片，更新能力清单和实施记录，登记提交/工作区身份、两后端状态、源码与安装证据、尚未满足的门槛。详细测试事实留在[实施记录](python-sdk-rewrite/README.md)，计划只据此调整状态与下一步，不把目标改写为完成结果。

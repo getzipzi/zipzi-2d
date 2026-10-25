@@ -26,6 +26,10 @@ DOMAINS = {
     "project_io": ("resources-project", "R4", ["A02", "A08", "A14", "A17"]),
     "assets": ("resources-project", "R4", ["A14", "A17"]),
     "resource_authoring": ("resources-project", "R4", ["A14", "A17"]),
+    "image_edit": ("resources-project", "R4", ["A04", "A14", "A17"]),
+    "mesh_edit": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
+    "mesh_binding_edit": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
+    "parameter_edit": ("scene-document", "R3", ["A03", "A04", "A05"]),
     "document_authoring": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "authoring_collections": ("identity-collections", "R4", ["A04", "A05", "A15"]),
     "geometry": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
@@ -146,7 +150,7 @@ def rust_contract(row: dict, path: Path) -> dict:
     if owner == "EditSession":
         source, effect = "edit + candidate sequence", "candidate only; ordinary error poisons edit"
         lifecycle = "client/session owned Edit; commit consumes; cancel drops; no-op preserves redo"
-        if name in {"base_version", "candidate_document", "is_aborted", "estimated_bytes"}:
+        if name in {"base_version", "candidate_document", "is_aborted", "estimated_bytes", "memory_image"}:
             effect = "read-only candidate"
         elif name in {"commit", "commit_to"}:
             effect, stage = "one history step iff changed; SDK validates complete Version", "R3"
@@ -202,6 +206,10 @@ def rust_contract(row: dict, path: Path) -> dict:
     if module == "modeling" and (name in {"apply", "modeling_records"}):
         classification, source = "connected", "explicit formal/candidate source"
         effect = "read-only records" if name == "modeling_records" else "SDK candidate operation; no independent publication"
+    if owner in {"MeshOperation", "MeshBindingOperation", "ParameterOperation"} and name == "apply":
+        classification, source = "connected", "edit + candidate sequence"
+        effect = "candidate only; ordinary error poisons edit"
+        lifecycle = "SDK intent applied through the owning Edit; no independent publication"
     if name.startswith("plan_") or owner.endswith("Plan"):
         lifecycle = "Plan owned by client/session/source; base Version checked at execute; explicit release"
     expensive = (name.startswith(("import_", "export_", "plan_", "execute_", "prepare_"))
