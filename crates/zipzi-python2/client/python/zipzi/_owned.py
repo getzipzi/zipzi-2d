@@ -9,10 +9,10 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 class Owned(RecoveryOwner):
-    def __init__(self, backend: Backend, kind: Literal["image", "plan"]):
+    def __init__(self, backend: Backend, kind: Literal["image", "plan", "reference", "address", "buffer"]):
         super().__init__(backend)
         self._kind = kind
-        self._kind: Literal["image", "plan"]
+        self._kind: Literal["image", "plan", "reference", "address", "buffer"]
         self._token: object = None
         self._closed = False
 

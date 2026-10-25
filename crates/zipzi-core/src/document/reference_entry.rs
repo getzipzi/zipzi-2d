@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ReferenceEntry<T> {
     pub id: String,
     pub target: T,

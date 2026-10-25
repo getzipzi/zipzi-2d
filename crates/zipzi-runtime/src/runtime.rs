@@ -1,9 +1,18 @@
 mod editor;
 pub use editor::CandidateWork;
 mod authoring;
+mod binary_authoring;
 mod blobs;
+mod mesh_read;
+pub use binary_authoring::AUTHORING_MAGIC;
 mod modeling;
-mod resources;
+mod modeling_read;
+mod read_jobs;
+pub use modeling_read::{ModelingRecordBatch, ModelingRecordBlob, ModelingRecordResponse};
+mod addresses;
+mod references;
+pub(crate) mod resources;
+pub use references::{LabelAddressInfo, ObjectRefInfo};
 mod sampling;
 mod typed;
 use crate::events::EventLog;
@@ -31,6 +40,7 @@ struct SessionEntry {
     history_bytes: usize,
 }
 struct EditEntry {
+    pending_upload: Option<BlobId>,
     session: SessionId,
     client: ClientId,
     base: Version,
@@ -47,6 +57,10 @@ struct JobEntry {
     /// Pending commit candidates remain budgeted after leaving the edit table.
     candidate_bytes: usize,
     publication_bytes: usize,
+    read_source: Option<SourceSnapshot>,
+    read_bytes: usize,
+    read_only: bool,
+    plan_result: bool,
 }
 
 pub struct SessionSubscription {
@@ -64,6 +78,7 @@ pub struct RegistrySubscription {
 }
 
 pub struct Runtime {
+    editor_contexts: HashMap<SessionId, crate::editor_context::EditorContext>,
     #[cfg(feature = "test-support")]
     control: Arc<crate::test_support::Control>,
     instance: RuntimeInstanceId,
@@ -80,7 +95,10 @@ pub struct Runtime {
     image_budget: zipzi_project::ImageMemoryBudget,
     plans: HashMap<PlanId, modeling::PlanEntry>,
     prepared_images: HashMap<ImageId, resources::ImageEntry>,
+    object_refs: HashMap<ObjectRefId, references::RefEntry>,
+    field_addresses: HashMap<FieldAddressId, references::AddressEntry>,
     blobs: HashMap<BlobId, blobs::BlobEntry>,
+    external_bytes: usize,
 }
 impl Default for Runtime {
     fn default() -> Self {
@@ -96,12 +114,18 @@ impl Runtime {
             limits.registry_events,
             limits.registry_event_bytes,
         );
+        let image_budget = zipzi_project::ImageMemoryBudget::new(limits.image_bytes);
+        image_budget.bind_host_budget(0, limits.accounted_bytes);
         Self {
             #[cfg(feature = "test-support")]
             control: Arc::default(),
-            image_budget: zipzi_project::ImageMemoryBudget::new(limits.image_bytes),
+            image_budget,
+            external_bytes: 0,
+            editor_contexts: HashMap::new(),
             plans: HashMap::new(),
             prepared_images: HashMap::new(),
+            object_refs: HashMap::new(),
+            field_addresses: HashMap::new(),
             blobs: HashMap::new(),
             instance,
             next_id: 0,
@@ -142,6 +166,24 @@ impl Runtime {
     pub fn image_memory_usage(&self) -> zipzi_project::ImageMemoryUsage {
         self.image_budget.usage()
     }
+    pub fn refresh_memory_budget(&self) {
+        self.image_budget
+            .bind_host_budget(self.non_resource_bytes(), self.limits.accounted_bytes);
+    }
+    pub fn transport_budget(&self) -> zipzi_project::ImageMemoryBudget {
+        self.refresh_memory_budget();
+        self.image_budget.clone()
+    }
+    pub fn set_external_bytes(&mut self, bytes: usize) {
+        self.external_bytes = bytes;
+        self.refresh_memory_budget();
+    }
+    pub fn external_bytes_fit(&self, bytes: usize) -> bool {
+        self.accounted_bytes()
+            .saturating_sub(self.external_bytes)
+            .saturating_add(bytes)
+            <= self.limits.accounted_bytes
+    }
     pub fn collect_image_resources(&self) -> usize {
         self.sessions
             .values()
@@ -169,6 +211,7 @@ impl Runtime {
         if self.clients.len() >= self.limits.clients {
             return Err(RuntimeError::Budget("clients"));
         }
+        self.check_bytes(512, 0, 0)?;
         let id = ClientId {
             runtime: self.instance,
             serial: self.serial(),
@@ -186,6 +229,8 @@ impl Runtime {
     /// jobs and their results survive, ordinary unsubmitted candidates do not.
     pub fn release_client(&mut self, client: ClientId) {
         self.clients.remove(&client);
+        self.object_refs.retain(|_, r| r.client != client);
+        self.field_addresses.retain(|_, r| r.client != client);
         self.plans.retain(|_, p| p.client != client);
         self.prepared_images
             .retain(|_, image| image.client != client);
@@ -348,12 +393,15 @@ impl Runtime {
     }
     pub fn source_snapshot(&self, session: SessionId) -> Result<SourceSnapshot> {
         let entry = self.entry(session)?;
+        self.refresh_memory_budget();
+        let lease = Arc::new(self.reserve_transfer(entry.content_bytes.saturating_add(1024))?);
         let snapshot = if let Some(sdk) = &entry.sdk {
             Arc::new(sdk.read_snapshot())
         } else {
             entry.frozen.as_ref().ok_or(RuntimeError::Busy)?.clone()
         };
         Ok(SourceSnapshot {
+            _lease: lease,
             source: SourceRef::Formal {
                 session,
                 version: snapshot.version(),
@@ -443,6 +491,12 @@ impl Runtime {
         {
             return Err(RuntimeError::Budget("edits"));
         }
+        let estimate = self
+            .ready(session)?
+            .estimated_content_bytes()
+            .saturating_mul(2)
+            .saturating_add(4096);
+        self.check_bytes(estimate, 0, 0)?;
         let sdk = self.ready(session)?.begin_owned_edit(label, expected)?;
         let bytes = sdk.estimated_bytes();
         self.check_bytes(bytes, bytes, 0)?;
@@ -453,6 +507,7 @@ impl Runtime {
         self.edits.insert(
             id,
             EditEntry {
+                pending_upload: None,
                 session,
                 client,
                 base: sdk.base_version(),
@@ -480,8 +535,17 @@ impl Runtime {
     pub fn edit_snapshot(&self, client: ClientId, edit: EditId) -> Result<SourceSnapshot> {
         let entry = self.edit(client, edit)?;
         let sdk = entry.sdk.as_ref().ok_or(RuntimeError::Aborted)?;
+        self.refresh_memory_budget();
+        let lease = Arc::new(
+            self.reserve_transfer(
+                sdk.candidate_document()
+                    .estimated_content_bytes()
+                    .saturating_add(1024),
+            )?,
+        );
         let snapshot = Arc::new(self.ready(entry.session)?.candidate_snapshot(sdk)?);
         Ok(SourceSnapshot {
+            _lease: lease,
             source: SourceRef::Edit {
                 session: entry.session,
                 edit,
@@ -510,6 +574,9 @@ impl Runtime {
             SessionState::Faulted(_)
         ) {
             return Err(RuntimeError::Faulted);
+        }
+        if entry.pending_upload.is_some() {
+            return Err(RuntimeError::Busy);
         }
         let old_bytes = entry.bytes;
         let entry = self.edits.get_mut(&edit).unwrap();
@@ -546,6 +613,7 @@ impl Runtime {
         if failed || budget.is_err() {
             self.collect_image_resources();
         }
+        self.refresh_memory_budget();
         let value = value.map_err(RuntimeError::from)?;
         budget?;
         if failed {
@@ -558,7 +626,11 @@ impl Runtime {
         self.client(client)?;
         if self.edits.contains_key(&edit) {
             self.edit(client, edit)?;
-            let session = self.edits.remove(&edit).unwrap().session;
+            let entry = self.edits.remove(&edit).unwrap();
+            if let Some(blob) = entry.pending_upload {
+                self.blobs.remove(&blob);
+            }
+            let session = entry.session;
             if let Some(sdk) = &self.entry(session)?.sdk {
                 sdk.collect_image_resources();
             }
@@ -571,6 +643,9 @@ impl Runtime {
         entry.state = EditState::Aborted;
         entry.sdk = None;
         entry.bytes = 0;
+        if let Some(blob) = entry.pending_upload.take() {
+            self.blobs.remove(&blob);
+        }
         self.collect_image_resources();
         Ok(())
     }
@@ -584,6 +659,9 @@ impl Runtime {
         self.check_interaction(client, entry.session)?;
         if entry.state != EditState::Editing {
             return Err(RuntimeError::Aborted);
+        }
+        if entry.pending_upload.is_some() {
+            return Err(RuntimeError::Busy);
         }
         let session = entry.session;
         self.check_publication_budget(session, entry.bytes)?;
@@ -675,6 +753,20 @@ impl Runtime {
         if entry.info.modified && !discard_modified {
             return Err(RuntimeError::Modified);
         }
+        let pending = self
+            .jobs
+            .values()
+            .filter(|j| j.read_only && j.info.session == session && !j.info.state.is_terminal())
+            .map(|j| (j.info.id, j.info.client))
+            .collect::<Vec<_>>();
+        for (job, owner) in pending {
+            if self.clients.contains(&owner) {
+                self.cancel_job(owner, job)?;
+            } else if let Some(record) = self.jobs.get_mut(&job) {
+                record.cancel.store(true, Ordering::Release);
+                record.info.state = JobState::Cancelling;
+            }
+        }
         let operation = OperationId {
             runtime: self.instance,
             serial: self.serial(),
@@ -689,6 +781,9 @@ impl Runtime {
         );
         self.plans
             .retain(|_, p| p.source.source.session() != session);
+        self.object_refs.retain(|_, r| r.session != session);
+        self.field_addresses.retain(|_, r| r.session != session);
+        self.editor_contexts.remove(&session);
         let mut entry = self.sessions.remove(&session).unwrap();
         if let Some(path) = &entry.info.path {
             self.paths.remove(path);
@@ -744,6 +839,9 @@ impl Runtime {
     }
     pub fn request_commit(&mut self, client: ClientId, edit: EditId) -> Result<JobId> {
         let entry = self.edit(client, edit)?;
+        if entry.pending_upload.is_some() {
+            return Err(RuntimeError::Busy);
+        }
         let session = entry.session;
         if entry.state != EditState::Editing {
             return Err(RuntimeError::Aborted);
@@ -794,6 +892,32 @@ impl Runtime {
         target: Option<PathBuf>,
         candidate_bytes: usize,
     ) -> Result<JobId> {
+        let transfer = match &task {
+            Task::Project { _lease, .. } => Some(_lease.clone()),
+            Task::Open(path) => {
+                let length = std::fs::metadata(path).map_or(0, |m| m.len() as usize);
+                self.refresh_memory_budget();
+                Some(Arc::new(self.reserve_transfer(
+                    length.saturating_mul(128).saturating_add(4096),
+                )?))
+            }
+            Task::Import(_) => {
+                self.refresh_memory_budget();
+                Some(Arc::new(self.reserve_transfer(256 << 20)?))
+            }
+            Task::Save(_) => {
+                self.refresh_memory_budget();
+                Some(Arc::new(
+                    self.reserve_transfer(
+                        self.ready(session)?
+                            .estimated_content_bytes()
+                            .saturating_mul(64)
+                            .saturating_add(4096),
+                    )?,
+                ))
+            }
+            _ => None,
+        };
         self.check_interaction(client, session)?;
         self.check_job_slot(client)?;
         let publication_bytes = if matches!(&task, Task::Commit(_)) {
@@ -831,6 +955,10 @@ impl Runtime {
                 target: target.clone(),
                 candidate_bytes,
                 publication_bytes,
+                read_source: None,
+                read_bytes: 0,
+                read_only: false,
+                plan_result: false,
             },
         );
         if let Some(target) = target {
@@ -851,7 +979,8 @@ impl Runtime {
             client,
             session_id: session,
             base,
-            session: sdk,
+            session: Some(sdk),
+            transfer,
             task,
             cancel,
         });
@@ -870,7 +999,25 @@ impl Runtime {
             })
             .count();
         while running < self.limits.running_jobs {
-            let Some(work) = self.queue.pop_front() else {
+            // Keep an executor slot available for interactive publication. Read
+            // batches are FIFO, and cannot occupy every worker of a multi-worker host.
+            let running_reads = self
+                .jobs
+                .values()
+                .filter(|j| {
+                    j.read_only
+                        && matches!(j.info.state, JobState::Running | JobState::Cancelling)
+                        && !self.queue.iter().any(|w| w.job == j.info.id)
+                })
+                .count();
+            let index = self
+                .queue
+                .iter()
+                .position(|w| !self.jobs[&w.job].read_only)
+                .or_else(|| {
+                    (running_reads < self.limits.running_jobs.saturating_sub(1).max(1)).then_some(0)
+                });
+            let Some(work) = index.and_then(|i| self.queue.remove(i)) else {
                 break;
             };
             let job = work.job;
@@ -904,6 +1051,22 @@ impl Runtime {
             entry.cancel.store(true, Ordering::Release);
             entry.info.state = JobState::Cancelling;
         }
+        let queued = self.jobs[&job]
+            .read_only
+            .then(|| self.queue.iter().position(|w| w.job == job))
+            .flatten();
+        if let Some(index) = queued {
+            let work = self.queue.remove(index).unwrap();
+            self.complete(Completion {
+                job: work.job,
+                client: work.client,
+                session_id: work.session_id,
+                base: work.base,
+                session: None,
+                transfer: work.transfer,
+                result: Err(RuntimeError::Cancelled),
+            });
+        }
         Ok(())
     }
     pub(crate) fn cancel_host_jobs(&mut self) {
@@ -934,11 +1097,15 @@ impl Runtime {
             session_id: session,
             base,
             session: returned,
+            transfer: _transfer,
             mut result,
         } = completion;
         let Some(record) = self.jobs.get(&job) else {
             return false;
         };
+        if record.read_only {
+            return self.complete_read(job, client, session, base, result);
+        }
         let Some(entry) = self.sessions.get(&session) else {
             return false;
         };
@@ -973,7 +1140,14 @@ impl Runtime {
             self.refresh(session, Some(client), Some(job), job.into())
                 .expect("active session");
             if result.is_ok() {
-                if let Some(path) = &target {
+                if matches!(&result,Ok(JobValue::Project{report,..}) if report.before!=report.after)
+                    && target.is_none()
+                {
+                    if let Some(old) = self.sessions.get_mut(&session).unwrap().info.path.take() {
+                        self.paths.remove(&old);
+                    }
+                }
+                if let Some(path) = target.as_ref().filter(|_|!matches!(&result,Ok(JobValue::Project{report,..}) if report.before==report.after)) {
                     let old = self.sessions[&session].info.path.clone();
                     if let Some(old) = old {
                         self.paths.remove(&old);
@@ -1009,6 +1183,9 @@ impl Runtime {
             Err(RuntimeError::Cancelled) => JobState::Cancelled,
             Err(_) => JobState::Failed,
         };
+        record.read_bytes = result
+            .as_ref()
+            .map_or_else(|e| e.retained_bytes(), JobValue::retained_bytes);
         record.info.result = Some(result.clone());
         if provisional && result.is_err() {
             self.sessions.remove(&session);
@@ -1034,6 +1211,7 @@ impl Runtime {
             self.jobs.remove(&job);
         }
         self.trim_events();
+        self.refresh_memory_budget();
         true
     }
     fn trim_events(&mut self) {
@@ -1057,6 +1235,12 @@ impl Runtime {
             .values()
             .filter_map(|e| e.frozen.as_ref())
             .map(|s| s.document().estimated_content_bytes())
+            .chain(
+                self.jobs
+                    .values()
+                    .filter_map(|j| j.read_source.as_ref())
+                    .map(|s| s.snapshot.document().estimated_content_bytes()),
+            )
             .fold(0, usize::saturating_add)
     }
     fn history_bytes(&self) -> usize {
@@ -1067,6 +1251,10 @@ impl Runtime {
             .fold(0, usize::saturating_add)
     }
     pub fn accounted_bytes(&self) -> usize {
+        self.non_resource_bytes()
+            .saturating_add(self.image_budget.usage().total_bytes())
+    }
+    fn non_resource_bytes(&self) -> usize {
         self.sessions
             .values()
             .map(|e| {
@@ -1077,11 +1265,20 @@ impl Runtime {
             .fold(
                 self.registry
                     .bytes()
-                    .saturating_add(self.image_budget.usage().total_bytes())
+                    .saturating_add(self.external_bytes)
+                    .saturating_add(self.clients.len().saturating_mul(512))
                     .saturating_add(self.plans.values().map(|p| p.bytes).sum::<usize>())
                     .saturating_add(self.prepared_images.len().saturating_mul(1024))
+                    .saturating_add(self.editor_contexts.len().saturating_mul(128 << 10))
+                    .saturating_add(self.reference_bytes())
                     .saturating_add(self.candidate_bytes())
                     .saturating_add(self.frozen_bytes())
+                    .saturating_add(
+                        self.jobs
+                            .values()
+                            .map(|j| j.read_bytes.saturating_add(512))
+                            .sum::<usize>(),
+                    )
                     .saturating_add(
                         self.jobs
                             .values()
@@ -1098,9 +1295,12 @@ impl Runtime {
         if self.frozen_bytes().saturating_add(frozen) > self.limits.frozen_bytes {
             return Err(RuntimeError::Budget("frozen bytes"));
         }
-        if self.accounted_bytes().saturating_add(extra) > self.limits.accounted_bytes {
-            return Err(RuntimeError::Budget("accounted CPU bytes"));
-        }
+        self.image_budget
+            .admit_host_budget(
+                self.non_resource_bytes().saturating_add(extra),
+                self.limits.accounted_bytes,
+            )
+            .map_err(|_| RuntimeError::Budget("accounted CPU bytes"))?;
         Ok(())
     }
     fn check_publication_budget(&self, session: SessionId, candidate: usize) -> Result<usize> {
@@ -1162,6 +1362,7 @@ mod tests {
             session_id,
             base,
             session: returned,
+            transfer: None,
             result: Err(RuntimeError::WorkerPanic("injected".into())),
         };
         let wrong = SessionId {

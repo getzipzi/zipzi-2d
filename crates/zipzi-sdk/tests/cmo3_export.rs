@@ -56,8 +56,27 @@ fn boundless_draft_exports_all_editable_cubism_formats_without_mutation() {
     assert_eq!(pair.can3.bytes, animation.bytes);
     assert_eq!(session.version(), before.version());
     assert_eq!(session.modified(), modified);
-    assert!(session
-        .read_snapshot()
-        .document()
-        .same_content(before.document()));
+    assert!(
+        session
+            .read_snapshot()
+            .document()
+            .same_content(before.document())
+    );
+}
+
+#[test]
+fn static_model_linked_animation_has_a_distinct_importable_scene_identity() {
+    let root = std::env::temp_dir().join(format!("zipzi-static-cubism-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&root).unwrap();
+    let mut sdk = AuthoringSession::new(
+        "00000000-0000-4000-8000-000000003003",
+        zipzi_core::ModelSetup::default(),
+    )
+    .unwrap();
+    let artifact = sdk.encode_cubism(&CubismOptions::default()).unwrap();
+    zipzi_project::publish_cubism(&artifact, &root.join("paired")).unwrap();
+    sdk.import_cubism(&root.join("paired/model.cmo3"), None)
+        .unwrap();
+    assert!(sdk.document().validate_structure().is_empty());
+    std::fs::remove_dir_all(root).unwrap();
 }

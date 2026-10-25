@@ -1,356 +1,228 @@
 {
-  "schema": 1,
-  "date": "2026-10-25",
-  "base_commit": "c0e186b",
-  "implementation": "crates/zipzi-python2",
-  "scope": "Runtime R0-R4 reconnection; public R3 minimum and selected R4 mesh-binding/CPU loop verified; full R4/method inventory pending",
+  "schema": 2,
+  "stage": "R4",
   "status": "in_progress",
-  "record": "docs/plans/sdk-runtime/python2-r0-r4.md",
-  "ipc_contract": "zipzi-runtime-r4-1",
-  "native_contract": "zipzi-python2-6",
+  "date": "2026-10-25",
+  "implementation": "crates/zipzi-python2",
+  "contract": "zipzi-runtime-r4-3",
+  "native_contract": "zipzi-python2-10",
+  "record": "docs/plans/sdk-runtime/python2-r4-complete.md",
+  "modeling_commands": [
+    "CreateAsset",
+    "ReplaceAsset",
+    "CreateMesh",
+    "ReplaceMesh",
+    "CreateParameter",
+    "ReplaceParameter",
+    "CreatePart",
+    "ReplacePart",
+    "CreateTransform",
+    "ReplaceTransform",
+    "CreateBinding",
+    "ReplaceBinding",
+    "CreateSceneBinding",
+    "ReplaceSceneBinding",
+    "CreateBlendKeyTable",
+    "ReplaceBlendKeyTable",
+    "CreateBlendConstraint",
+    "ReplaceBlendConstraint",
+    "CreateBlendBinding",
+    "ReplaceBlendBinding",
+    "CreateGlue",
+    "ReplaceGlue",
+    "CreateOffscreen",
+    "ReplaceOffscreen",
+    "Scene",
+    "Organization",
+    "Binding",
+    "Content",
+    "References",
+    "Resource",
+    "Document",
+    "Attachment",
+    "ReplaceModelSetup",
+    "ReplaceHierarchyOrder",
+    "ReplaceEditorState",
+    "ReplaceDrawOrderGroups",
+    "EraseObject",
+    "RenameMesh",
+    "UpdatePositions",
+    "SetMeshKeyform",
+    "SetSceneKeyform",
+    "RemeshRectangleGrid",
+    "ReplaceTopology"
+  ],
+  "python_entrypoints": [
+    "Edit.apply/apply_many",
+    "Modeling.records",
+    "Meshes.get/get_many",
+    "Bindings.get/get_many/list",
+    "Session.reference/address/capabilities",
+    "ObjectRef.capabilities",
+    "FieldAddress.plan",
+    "Modeling.plan/plan_async/sample/sample_async",
+    "Edit.apply_plan",
+    "Runtime.resources.prepare_buffer/prepare_image/load_png/prepare_png",
+    "Buffer.read",
+    "Images.snapshot",
+    "ImageLease.pixels/close",
+    "Sessions.open/import_",
+    "Project.run/open/replace/save/export/diagnose",
+    "Session.editor_context",
+    "ConnectedBackend shared recipes",
+    "Images.snapshot",
+    "Runtime.resources.usage",
+    "Edit.cancel",
+    "Session.undo/redo"
+  ],
   "entries": [
     {
-      "id": "r0_inventory",
-      "stage": "R0",
-      "state": "partial",
-      "acceptance": [
-        "A01"
-      ],
-      "shared": "SDK/core/project public APIs; historical Runtime inventory",
-      "python": [
-        "docs/plans/sdk-runtime/python2-r0-r4.md"
-      ],
-      "evidence": [],
-      "remaining": [
-        "Method/intent/result inventory for all R4 domains",
-        "New workloads and host/platform provenance"
-      ]
-    },
-    {
-      "id": "runtime_ownership",
-      "stage": "R1",
-      "state": "verified_slice",
-      "acceptance": [
-        "A02",
-        "A03",
-        "A04",
-        "A08",
-        "A17"
-      ],
-      "shared": "LocalHost; Runtime candidates/jobs/paths; SDK commit",
-      "python": [
-        "crates/zipzi-python2/client/python/zipzi/_lifecycle.py",
-        "crates/zipzi-python2/src/lib.rs"
-      ],
-      "evidence": [
-        "crates/zipzi-python2/tests/test_api.py",
-        "docs/plans/python-sdk-rewrite/p1-lifecycle-matrix.md"
-      ],
-      "remaining": [
-        "Extend lifecycle/owner/total-budget cases with each new domain"
-      ]
-    },
-    {
-      "id": "editor_publication",
-      "stage": "R2",
-      "state": "verified_slice",
-      "acceptance": [
-        "A02",
-        "A10"
-      ],
-      "shared": "DesktopHost; IPC app-thread admission; Editor projections",
-      "python": [
-        "crates/zipzi-python2/client/python/zipzi/_lifecycle.py"
-      ],
-      "evidence": [
-        "crates/zipzi-editor/acceptance/runtime_ipc.rs",
-        "docs/plans/sdk-runtime/python2-r3-events.md",
-        "docs/plans/sdk-runtime/python2-r4-bindings.md"
-      ],
-      "remaining": [
-        "All-domain UI selection/relation/texture/form updates",
-        "Full window/IO lifetime and interaction performance matrices were not rerun"
-      ]
-    },
-    {
-      "id": "discovery_start",
-      "stage": "R3",
-      "state": "verified_slice",
-      "acceptance": [
-        "A06",
-        "A12",
-        "A18"
-      ],
-      "shared": "local::Endpoint ownership/inherited fd; desktop reopen",
-      "python": [
-        "crates/zipzi-python2/client/python/zipzi/_endpoint.py",
-        "crates/zipzi-python2/client/python/zipzi/backends/connected.py"
-      ],
-      "evidence": [
-        "crates/zipzi-python2/tests/test_connection.py",
-        "crates/zipzi-python2/tests/test_editor_connection.py",
-        "docs/plans/sdk-runtime/python2-r3-events.md"
-      ],
-      "remaining": [
-        "Packaged app installation paths and release platform matrix"
-      ]
-    },
-    {
-      "id": "resident_sessions",
-      "stage": "R3",
-      "state": "verified_slice",
-      "acceptance": [
-        "A02",
-        "A03",
-        "A07",
-        "A12"
-      ],
-      "shared": "Runtime list_sessions/attach_session; Protocol",
-      "python": [
-        "crates/zipzi-python2/client/python/zipzi/_values.py",
-        "crates/zipzi-python2/client/python/zipzi/_lifecycle.py"
-      ],
-      "evidence": [
-        "crates/zipzi-python2/tests/test_api.py",
-        "crates/zipzi-python2/tests/test_connection.py"
-      ],
-      "remaining": []
-    },
-    {
-      "id": "events",
-      "stage": "R3",
-      "state": "verified_slice",
-      "acceptance": [
-        "A03",
-        "A10",
-        "A17"
-      ],
-      "shared": "Runtime subscribe_info/events_page; original single SDK receipt drain",
-      "python": [
-        "crates/zipzi-python2/client/python/zipzi/events.py",
-        "crates/zipzi-python2/src/streams.rs"
-      ],
-      "evidence": [
-        "crates/zipzi-python2/tests/test_api.py",
-        "crates/zipzi-python2/tests/test_connection.py",
-        "crates/zipzi-editor/acceptance/runtime_ipc.rs"
-      ],
-      "remaining": [
-        "Full SDK ChangeSet projection for later domains",
-        "Large/paged domain collections remain R4"
-      ]
-    },
-    {
-      "id": "mesh_batch",
-      "stage": "R3",
-      "state": "verified_slice",
-      "acceptance": [
-        "A04",
-        "A12",
-        "A17"
-      ],
-      "shared": "Runtime mesh_snapshots admits complete selection; selected shared mesh conversion",
-      "python": [
-        "crates/zipzi-python2/client/python/zipzi/_lifecycle.py",
-        "crates/zipzi-python2/src/parameter_bridge.rs"
-      ],
-      "evidence": [
-        "crates/zipzi-runtime/tests/authoring.rs",
-        "crates/zipzi-python2/tests/test_api.py",
-        "crates/zipzi-python2/tests/installed_recipe.py"
-      ],
-      "remaining": [
-        "Large/paged mesh collections in R4"
-      ]
-    },
-    {
-      "id": "parameters",
-      "stage": "R3",
-      "state": "verified_slice",
-      "acceptance": [
-        "A04",
-        "A12"
-      ],
-      "shared": "SDK ParameterCreateSpec/ParameterPatch; Runtime unified apply_authoring and bounded parameter_snapshot",
-      "python": [
-        "crates/zipzi-python2/client/python/zipzi/parameters.py",
-        "crates/zipzi-python2/client/python/zipzi/ops.py",
-        "crates/zipzi-python2/src/parameter_bridge.rs"
-      ],
-      "evidence": [
-        "crates/zipzi-sdk/tests/parameter_editing.rs",
-        "crates/zipzi-runtime/tests/authoring.rs",
-        "crates/zipzi-python2/tests/test_api.py",
-        "crates/zipzi-python2/tests/installed_recipe.py",
-        "crates/zipzi-editor/acceptance/runtime_ipc.rs"
-      ],
-      "remaining": [
-        "Groups/CDI presentation order and full R4 parameter-related domains"
-      ]
-    },
-    {
       "id": "modeling",
-      "stage": "R4",
-      "state": "partial",
       "acceptance": [
         "A04",
-        "A05",
-        "A09",
-        "A10",
         "A12",
         "A15"
       ],
-      "shared": "SDK domain intents/algorithms/specs; Runtime owns cross-domain modeling dispatch",
       "python": [
-        "crates/zipzi-python2/client/python/zipzi/meshes.py",
-        "crates/zipzi-python2/client/python/zipzi/ops.py",
-        "crates/zipzi-python2/client/python/zipzi/bindings.py",
-        "crates/zipzi-python2/src/modeling_bridge.rs"
+        "Edit.apply/apply_many",
+        "Modeling.records",
+        "Meshes.get/get_many",
+        "Bindings.get/get_many/list"
       ],
+      "shared": "Exhaustive ModelingCommand dispatch to SDK; compiled ApiShape/BinaryWire; direct selected output",
       "evidence": [
+        "crates/zipzi-runtime/tests/typed_modeling.rs",
         "crates/zipzi-python2/tests/test_api.py",
-        "crates/zipzi-sdk/tests/mesh_binding_editing.rs",
-        "docs/plans/sdk-runtime/python2-r4-bindings.md"
-      ],
-      "remaining": [
-        "Scene/organization/deformers",
-        "Parameter groups/hierarchy/CDI presentation order",
-        "Scene bindings, BlendShape and full binding authoring/conversion",
-        "Topology/Glue/Offscreen/references/document metadata",
-        "Large bound topology and SDK limits; full same-recipe coverage"
+        "crates/zipzi-python2/tests/r4_recipe.py"
       ]
     },
     {
-      "id": "handles_addresses",
-      "stage": "R4",
-      "state": "pending",
+      "id": "identity_addresses",
       "acceptance": [
-        "A05"
+        "A05",
+        "A17"
       ],
-      "shared": "SDK handles/incarnation/epochs; Runtime scoped tokens",
-      "python": [],
-      "evidence": [],
-      "remaining": [
-        "Object handles/stable field and content addresses/capability queries",
-        "Delete/move/Undo/project generation invalidation"
+      "python": [
+        "Session.reference/address/capabilities",
+        "ObjectRef.capabilities",
+        "FieldAddress.plan"
+      ],
+      "shared": "Actual SDK incarnation/context/field epochs; all address and capability domains",
+      "evidence": [
+        "crates/zipzi-runtime/tests/references.rs",
+        "crates/zipzi-python2/tests/test_api.py::test_all_modeling_address_domains_keep_sdk_epochs_after_undo"
       ]
     },
     {
-      "id": "plans",
-      "stage": "R4",
-      "state": "partial",
+      "id": "plans_cpu",
       "acceptance": [
         "A04",
         "A05",
         "A15",
         "A17"
       ],
-      "shared": "Runtime source-bound plans and SDK reports",
       "python": [
-        "crates/zipzi-python2/client/python/zipzi/plans.py"
+        "Modeling.plan/plan_async/sample/sample_async",
+        "Edit.apply_plan"
       ],
+      "shared": "SDK costs/losses and evaluator; fixed source/Version/edit sequence; cancellable read workers",
       "evidence": [
-        "crates/zipzi-python2/tests/test_api.py"
-      ],
-      "remaining": [
-        "Full selected modeling intents/cost/loss/result shapes",
-        "Long preparation/cancellation and total-budget coverage"
+        "crates/zipzi-runtime/tests/read_jobs.rs",
+        "crates/zipzi-python2/tests/test_api.py::test_blendshape_bound_topology_and_candidate_cpu_sweep"
       ]
     },
     {
-      "id": "modeling_cpu",
-      "stage": "R4",
-      "state": "partial",
+      "id": "images_binary",
       "acceptance": [
-        "A14",
-        "A15"
-      ],
-      "shared": "Runtime shared typed sample_modeling; SDK stateless frozen-source CPU evaluation",
-      "python": [
-        "crates/zipzi-python2/client/python/zipzi/sampling.py",
-        "crates/zipzi-python2/src/modeling_bridge.rs"
-      ],
-      "evidence": [
-        "crates/zipzi-python2/tests/test_api.py",
-        "crates/zipzi-python2/tests/test_connection.py",
-        "crates/zipzi-editor/acceptance/runtime_ipc.rs",
-        "docs/plans/sdk-runtime/python2-r4-bindings.md"
-      ],
-      "remaining": [
-        "Scene-binding/BlendShape numerical and isolation recipes",
-        "Large cancellable sample jobs, fairness and aggregate result budgets",
-        "Sampling-specific performance/copy/heap workloads and complete R2 performance pairing"
-      ]
-    },
-    {
-      "id": "resources",
-      "stage": "R4",
-      "state": "partial",
-      "acceptance": [
+        "A07",
         "A14",
         "A17"
       ],
-      "shared": "Project image budget/reservations; SDK owned leases; Runtime resources/blobs",
       "python": [
-        "crates/zipzi-python2/client/python/zipzi/resources.py"
+        "Runtime.resources.prepare_buffer/prepare_image/load_png/prepare_png",
+        "Buffer.read",
+        "Images.snapshot",
+        "ImageLease.pixels/close"
       ],
+      "shared": "Shared ImageMemoryBudget; actual unique Arc allocations; typed binary framing and attached transactions",
       "evidence": [
-        "crates/zipzi-python2/tests/test_api.py"
-      ],
-      "remaining": [
-        "Binary blob frames (existing shared blob uses JSON arrays)",
-        "Large arrays/images, file images/attachments and disk-byte pinning",
-        "Decode/encode/conversion peak admission before allocation",
-        "Retained sources/history eviction and cancellation recipes"
+        "crates/zipzi-runtime/tests/binary.rs",
+        "crates/zipzi-runtime/tests/attached_upload.rs",
+        "crates/zipzi-sdk/tests/image_memory.rs",
+        "crates/zipzi-python2/tests/test_api.py::test_binary_authoring_recovery_every_phase_keeps_single_sequence"
       ]
     },
     {
       "id": "project_io",
-      "stage": "R4",
-      "state": "partial",
       "acceptance": [
-        "A02",
-        "A08",
-        "A13",
-        "A14"
+        "A05",
+        "A12",
+        "A14",
+        "A15",
+        "A17"
       ],
-      "shared": "Runtime ownership-carrying jobs and path reservations; SDK/project IO",
       "python": [
-        "crates/zipzi-python2/client/python/zipzi/_lifecycle.py"
+        "Sessions.open/import_",
+        "Project.run/open/replace/save/export/diagnose"
       ],
+      "shared": "Typed ProjectRequest/ProjectReport; SDK project identity/generation, native format codecs and atomic publication",
       "evidence": [
-        "crates/zipzi-python2/tests/installed_recipe.py",
-        "crates/zipzi-python2/tests/test_editor_connection.py",
-        "crates/zipzi-editor/acceptance/runtime_ipc.rs"
-      ],
-      "remaining": [
-        "File import/replacement/generation and existing format exports",
-        "No-window material import/build/save/reopen/export recipe",
-        "Cancellation/failure on the complete IO surface"
+        "crates/zipzi-sdk/tests/project_io.rs",
+        "crates/zipzi-cmo3/tests/import.rs::host_workspace_refuses_model_and_animation_before_expansion",
+        "crates/zipzi-python2/tests/r4_recipe.py"
       ]
     },
     {
-      "id": "scheduling_budget",
-      "stage": "R4",
-      "state": "partial",
+      "id": "editor",
       "acceptance": [
-        "A08",
+        "A09",
+        "A10",
+        "A12",
+        "A15"
+      ],
+      "python": [
+        "Session.editor_context",
+        "ConnectedBackend shared recipes"
+      ],
+      "shared": "Versioned optional EditorContextProvider; normal Editor projection/publication and human gesture admission",
+      "evidence": [
+        "crates/zipzi-editor/acceptance/runtime_ipc.rs",
+        "target/python2/r4-editor-metal-complete.log"
+      ]
+    },
+    {
+      "id": "resident_resources",
+      "acceptance": [
         "A14",
         "A17"
       ],
-      "shared": "Runtime executor/limits; shared image pool; first modeling limits",
       "python": [
-        "crates/zipzi-python2/client/python/zipzi/_lifecycle.py"
+        "Images.snapshot",
+        "Runtime.resources.usage",
+        "Edit.cancel",
+        "Session.undo/redo"
       ],
+      "shared": "Same resident session 100 distinct cancellation cycles +100 replacements/history eviction; root-aware reclamation",
       "evidence": [
-        "docs/plans/python-sdk-rewrite/p1-lifecycle-matrix.md"
-      ],
-      "remaining": [
-        "Expensive prepare/plan/sample cancellable jobs",
-        "All queue/result/temporary-source host aggregate budget",
-        "Fairness, large data, scoped copy/heap and RSS/cache reports"
+        "crates/zipzi-python2/tests/test_api.py::test_a17_resident_distinct_cancel_history_eviction_and_snapshot_lease",
+        "crates/zipzi-python2/tests/r4_recipe.py"
       ]
     }
   ],
-  "latest_record": "docs/plans/sdk-runtime/python2-r4-bindings.md"
+  "pending_exit_requirements": [
+    "以最新 Box 布局重建正常/探针 Release，复验 Native batch_100 延迟与 batch_100/plan 堆峰值；当前 P0 报告是修复前失败结果",
+    "最新布局修复后的 Native/Connected 行为、受影响的 Editor 后台批次路径和最终源码包/wheel 安装复验",
+    "对图片二进制协议相对旧 P0 固定 RPC/JSON/复制计数的变化完成单独判定；不宣称旧计数门禁通过"
+  ],
+  "later_stages": [
+    "Runtime R5 independent Preview/animation/Observer",
+    "Runtime R6 Proposal/review",
+    "Runtime R7 complete platform/app release matrix",
+    "Python P3A public API/agent contract refactor"
+  ],
+  "scope": "Active Python2 adapter coverage of Runtime R4; historical R0-R3 evidence remains separately recorded",
+  "ipc_contract": "zipzi-runtime-r4-3",
+  "base_commit": "e8c2849ea6b90dc9164bde18750c2a73b69eaa0a",
+  "wrapup": "用户要求直接收尾；最后布局修复通过 Runtime 回归，Release P0/最终发行复验尚未完成",
+  "results": "docs/plans/sdk-runtime/python2-r4-complete-results.json"
 }

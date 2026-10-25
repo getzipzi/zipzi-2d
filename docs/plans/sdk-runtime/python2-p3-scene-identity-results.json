@@ -1,0 +1,295 @@
+{
+  "schema": 1,
+  "date": "2026-10-25",
+  "status": "verified_slice_r4_incomplete",
+  "base_commit": "e8c2849ea6b90dc9164bde18750c2a73b69eaa0a",
+  "implementation": "crates/zipzi-python2",
+  "scope": "Python P3 selected scene/organization, mesh BlendShape/bound topology and formal SDK references/label addresses; Runtime R4 exit gate remains incomplete",
+  "python": "3.14.7 (main, Sep 29 2026, 14:50:11) [Clang 22.1.3 ]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "lock_sha256": "55701976f5ed5fa228d0a91fc2db7024ad2dd7c4d2ceb808e0eb7a2650c0a278",
+  "native_contract": "zipzi-python2-8",
+  "ipc_contract": "zipzi-runtime-r4-1",
+  "capabilities": [
+    "typed_scene_authoring",
+    "typed_object_references"
+  ],
+  "generated_outputs": 20,
+  "scene_operation_variants": 28,
+  "tests": [
+    {
+      "name": "python2_full",
+      "command": "./tools/test-sdk.sh python2",
+      "status": "passed",
+      "log": "target/python2/p3-python2.log",
+      "log_sha256": "f1572246bbe92d7bc85e98a6d978f84aa0e77b2cb2bb387ba74aadce5d75de69",
+      "tests": 57,
+      "positive_type_errors": 0,
+      "negative_type_errors": 16
+    },
+    {
+      "name": "python2_final_slice",
+      "command": "./tools/test-sdk.sh python2 <five P3 cases>",
+      "status": "passed",
+      "log": "target/python2/p3-final-python2.log",
+      "log_sha256": "240866dc9785db45e46412ea24e2badd7b5afaabfdfa3c0353cf0361f0310b6d",
+      "tests": 5,
+      "positive_type_errors": 0,
+      "negative_type_errors": 16
+    },
+    {
+      "name": "runtime",
+      "command": "cargo test --locked -p zipzi-runtime --test references --test authoring --test modeling --test protocol",
+      "status": "passed",
+      "log": "target/python2/p3-runtime.log",
+      "log_sha256": "1e68862a4c90412cf36a8c51d26f3137f4755377b5022892991e95e2538f4f6e",
+      "tests": 26,
+      "ignored": 0
+    },
+    {
+      "name": "sdk_scene",
+      "command": "cargo test --locked -p zipzi-sdk --test integration scene_",
+      "status": "passed",
+      "log": "target/python2/p3-sdk-scene.log",
+      "log_sha256": "d32f3da84930516f2d4867782ade44b37bb3888376bcad7b544b741fd5441e44",
+      "tests": 59,
+      "ignored": 0
+    },
+    {
+      "name": "codegen",
+      "command": "uv run --locked python tools/test_tools.py -p test_python2_codegen.py -v",
+      "status": "passed",
+      "log": "target/python2/p3-codegen.log",
+      "log_sha256": "637d4cdc84b544308e7b2a4bccbc84a59d6a848eb0a0a9e29a5e42e71ade6a37",
+      "tests": 9
+    },
+    {
+      "name": "editor_ipc",
+      "command": "env -u ZIPZI_DEV_SESSION_DIR ZIPZI_CLIENT_PYTHON=<isolated-python> cargo test --locked -p zipzi-editor --features test-support --test runtime_ipc_acceptance",
+      "status": "passed",
+      "log": "target/python2/p3-editor-ipc.log",
+      "log_sha256": "8375d1e2457aacd2d736f9a2c1820dea1e1f2b3d8c6d617cadea7db7868637a5",
+      "native_acceptance": true,
+      "metal": true
+    },
+    {
+      "name": "shared_inventory",
+      "status": "passed",
+      "tests": 1,
+      "command": "uv run --locked python tools/test_tools.py -p test_runtime_shared_inventory.py -v"
+    },
+    {
+      "name": "shared_inventory_drift",
+      "status": "passed",
+      "command": "uv run --locked python tools/runtime/runtime_inventory.py --shared-only --check"
+    },
+    {
+      "name": "generation_drift",
+      "status": "passed",
+      "command": "uv run --locked python crates/zipzi-python2/tools/generate.py --check"
+    }
+  ],
+  "distribution": {
+    "status": "passed",
+    "record": "target/python2/p3-final-source/results.json",
+    "commands": [
+      {
+        "name": "client-sdist",
+        "command": [
+          "uv",
+          "build",
+          "--sdist",
+          "--out-dir",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sdists",
+          "/Users/liangbohao/web/zipzi-2d/crates/zipzi-python2/client"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d",
+        "exit_code": 0
+      },
+      {
+        "name": "native-sdist",
+        "command": [
+          "uv",
+          "build",
+          "--sdist",
+          "--out-dir",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sdists",
+          "/Users/liangbohao/web/zipzi-2d/crates/zipzi-python2"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d",
+        "exit_code": 0
+      },
+      {
+        "name": "source-generator-check",
+        "command": [
+          "/Users/liangbohao/web/zipzi-2d/.venv/bin/python",
+          "-I",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sources/zipzi_python2_native-0.1.0/crates/zipzi-python2/tools/generate.py",
+          "--check"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sources/zipzi_python2_native-0.1.0",
+        "exit_code": 0
+      },
+      {
+        "name": "client-wheel",
+        "command": [
+          "uv",
+          "build",
+          "--wheel",
+          "--out-dir",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/wheels",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sources/zipzi_python2-0.1.0"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d",
+        "exit_code": 0
+      },
+      {
+        "name": "native-wheel",
+        "command": [
+          "uv",
+          "build",
+          "--wheel",
+          "--out-dir",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/wheels",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sources/zipzi_python2_native-0.1.0"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d",
+        "exit_code": 0
+      },
+      {
+        "name": "production-host",
+        "command": [
+          "cargo",
+          "build",
+          "--locked",
+          "--release",
+          "-p",
+          "zipzi-runtime",
+          "--example",
+          "local_host_fixture"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sources/zipzi_python2_native-0.1.0",
+        "exit_code": 0
+      },
+      {
+        "name": "connected-venv",
+        "command": [
+          "uv",
+          "venv",
+          "--python",
+          "3.14",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/connected-venv"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d",
+        "exit_code": 0
+      },
+      {
+        "name": "connected-install",
+        "command": [
+          "uv",
+          "pip",
+          "install",
+          "--python",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/connected-venv/bin/python",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/wheels/zipzi_python2-0.1.0-py3-none-any.whl"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d",
+        "exit_code": 0
+      },
+      {
+        "name": "connected-recipe",
+        "command": [
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/connected-venv/bin/python",
+          "-I",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sources/zipzi_python2_native-0.1.0/crates/zipzi-python2/tests/installed_recipe.py",
+          "connected"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source",
+        "exit_code": 0
+      },
+      {
+        "name": "local-venv",
+        "command": [
+          "uv",
+          "venv",
+          "--python",
+          "3.14",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/local-venv"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d",
+        "exit_code": 0
+      },
+      {
+        "name": "local-install",
+        "command": [
+          "uv",
+          "pip",
+          "install",
+          "--python",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/local-venv/bin/python",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/wheels/zipzi_python2-0.1.0-py3-none-any.whl",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/wheels/zipzi_python2_native-0.1.0-cp314-cp314-macosx_11_0_arm64.whl"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d",
+        "exit_code": 0
+      },
+      {
+        "name": "local-recipe",
+        "command": [
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/local-venv/bin/python",
+          "-I",
+          "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sources/zipzi_python2_native-0.1.0/crates/zipzi-python2/tests/installed_recipe.py",
+          "local"
+        ],
+        "cwd": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source",
+        "exit_code": 0
+      }
+    ],
+    "artifacts": [
+      {
+        "path": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sdists/.gitignore",
+        "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1"
+      },
+      {
+        "path": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sdists/zipzi_python2-0.1.0.tar.gz",
+        "sha256": "f56f56c4801744bd6ece78c1ecbbd5585321315d8ca0196d61dc07cb3cadd056"
+      },
+      {
+        "path": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/sdists/zipzi_python2_native-0.1.0.tar.gz",
+        "sha256": "f02869a4573f3bf6d9cec6e53777a9e4fb63dad765580f6fc2c0d9628078291f"
+      },
+      {
+        "path": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/wheels/.gitignore",
+        "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1"
+      },
+      {
+        "path": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/wheels/zipzi_python2-0.1.0-py3-none-any.whl",
+        "sha256": "60b827f711b70c5f98f95fe2dce3cdb2bb7bd66c12823d6b834ea5384144a958"
+      },
+      {
+        "path": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/wheels/zipzi_python2_native-0.1.0-cp314-cp314-macosx_11_0_arm64.whl",
+        "sha256": "3aa1e560942f22fb7163828dc49d1e64ac607e26add7e2df3f1d032f6e4e3af5"
+      },
+      {
+        "path": "/Users/liangbohao/web/zipzi-2d/target/python2/p3-final-source/local_host_fixture",
+        "sha256": "5e5c4b9e81ad8196008b687e26f3882dda3c86ef28ce864db699250ffef37cd9"
+      }
+    ],
+    "source_contract_sha256": "928245830731a1d952985bde2297bbced87626058af89078d89fdd1a4ed21d90"
+  },
+  "record": "docs/plans/sdk-runtime/python2-p3-scene-identity.md",
+  "remaining": [
+    "Full scene bindings, collection and conversion domains",
+    "Candidate references, remaining field/content addresses and capabilities",
+    "Binary/large resources, disk byte pinning and complete import/replacement/export",
+    "Cancellable expensive Jobs, aggregate queues/results/temporary-source budgets and fairness",
+    "R4 large workload/RSS/cache/copy/heap/performance matrix",
+    "Complete Editor projection matrix and no-window material import/build/save/reopen/export"
+  ],
+  "not_run": [
+    "SDK/Editor full",
+    "New-domain P0 performance pairs",
+    "Complete R2 interaction pairing",
+    "Licensed real model overall acceptance"
+  ]
+}

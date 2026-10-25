@@ -45,10 +45,15 @@ mod geometry;
 pub use geometry::{MeshGeometry, rectangle_grid_geometry};
 mod mesh_binding_edit;
 mod mesh_edit;
+mod scene_edit;
 pub use mesh_binding_edit::{
     MeshBindingAxisSpec, MeshBindingCreateSpec, MeshBindingOperation, MeshKeyformSpec,
 };
 pub use mesh_edit::{MeshCreateSpec, MeshOperation};
+pub use scene_edit::{
+    GluePairSpec, OffscreenFormSpec, ParameterGroupCreateSpec, PartCreateSpec, ScalarSample,
+    SceneOperation, ScenePlacement, SceneSummary, VertexPatchSpec, VertexWeightSpec,
+};
 mod parameter_edit;
 pub use parameter_edit::{ParameterCreateSpec, ParameterOperation, ParameterPatch};
 mod image_edit;
@@ -116,5 +121,5 @@ pub use authoring_collections::*;
 mod modeling;
 pub use modeling::{
     ModelingIntent, ModelingPlan, ModelingPlanReport, ModelingQuery, ModelingRecords,
-    ModelingSamples, modeling_records,
+    ModelingSamples, OwnedModelingRecords, modeling_records,
 };

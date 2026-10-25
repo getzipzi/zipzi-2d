@@ -15,6 +15,47 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_scene_contract_protects_shapes_and_generates_nested_ownership_and_typed_native_inputs(self):
+        contract = self.contract()
+        output = gen.render(contract)
+        python = output['client/python/zipzi/_generated/scene.py']
+        native = output['src/generated/scene.rs']
+        self.assertIn('triangles: tuple[tuple[int, int, int], ...]', python)
+        self.assertIn('tuple(tuple(item1 for item1 in item0) for item0 in self.triangles)', python)
+        self.assertIn('Expected i32', python)
+        self.assertIn('collect::<PyResult<_>>()?', native)
+        self.assertIn('zipzi_sdk::SceneOperation::CreateBlendTable', native)
+        for mutate in (
+            lambda c: c['scene'].update(version=999),
+            lambda c: c['scene']['bindings'].append(deepcopy(c['scene']['bindings'][0])),
+            lambda c: c['scene']['roots'][0].update(tag='unchecked'),
+            lambda c: c['scene']['roots'][0]['variants'][0]['fields'][0].update(shape={'kind':'any'}),
+            lambda c: c['scene']['roots'][0]['variants'][0]['fields'][0].update(name='wire'),
+        ):
+            invalid = deepcopy(contract)
+            mutate(invalid)
+            with self.assertRaises(ValueError):
+                gen.render(invalid)
+    def test_binary_contract_guards_compiled_source_layout_and_typed_array_outputs(self):
+        contract=self.contract()
+        output=gen.render(contract)
+        binary=output['client/python/zipzi/_generated/binary.py']
+        self.assertIn('def decode_meshes(',binary)
+        self.assertIn('def decode_samples(',binary)
+        self.assertIn('meshes.Snapshot(source=_read_sourceref(r)',binary)
+        self.assertIn("r.numeric('III', r.count())",binary)
+        self.assertIn('w.raw(b"ZZA1")',binary)
+        self.assertIn('mesh_read_bytes',output['src/generated/queries.rs'])
+        self.assertIn('if isinstance(value,cls): return value',output['client/python/zipzi/_generated/meshes.py'])
+        for mutate in (
+            lambda c:c['binary'].update(source_variants=['Edit','Formal']),
+            lambda c:c['binary'].update(source_fields=[['version','session'],['session','edit','base','sequence']]),
+            lambda c:c['binary'].update(version=999),
+            lambda c:c['binary']['edit_variants'].append('Unreviewed'),
+        ):
+            invalid=deepcopy(contract);mutate(invalid)
+            with self.assertRaises(ValueError):gen.render(invalid)
+
     def contract(self):
         return json.loads((PACKAGE / 'schema/mesh.json').read_text())
 
@@ -118,6 +159,7 @@ class Python2Codegen(unittest.TestCase):
             (folder / 'Cargo.toml').write_text('[package]\nname="zipzi_schema_compile_controls"\nversion="0.0.0"\nedition="2021"\n[workspace]\n[dependencies]\n'
                 + 'zipzi-core={path=' + json.dumps(str(ROOT / 'crates/zipzi-core')) + '}\n'
                 + 'zipzi-runtime={path=' + json.dumps(str(ROOT / 'crates/zipzi-runtime')) + '}\n'
+                + 'zipzi-api-derive={path=' + json.dumps(str(ROOT / 'crates/zipzi-api-derive')) + '}\n'
                 + 'serde={version="1",features=["derive"]}\n')
             cases = (
                 ('use zipzi_runtime::authoring::*; fn main() { let _ = MESH_QUERY.shapes(); }', None),
@@ -125,8 +167,11 @@ class Python2Codegen(unittest.TestCase):
                 ('use zipzi_runtime::{authoring::*,*}; fn wrong(_: &mut Runtime, _: ClientId, _: PlanQuery) -> Result<ImagePixels> { todo!() } fn main() { let _ = Registered::<PlanQuery,PlanSnapshot>::new("bad", wrong); }', 'E0308'),
                 ('use zipzi_runtime::authoring::*; fn main() { let _ = Registered::<MeshQuery,MeshSnapshot>::new("missing"); }', 'E0061'),
                 ('use zipzi_runtime::{authoring::*,*}; fn wrong(_: &mut Runtime, _: ClientId, _: MeshQuery) -> Result<()> { Ok(()) } fn main() { let _ = Registered::<MeshQuery,MeshSnapshot>::new("bad", wrong); }', 'E0308'),
-                ('zipzi_core::api_record! { pub struct Unsupported { pub values: std::collections::HashMap<String,String> } } fn main() {}', 'E0277'),
-                ('zipzi_core::api_record! { pub struct Unsupported { pub values: std::collections::BTreeMap<String,u32> } } fn main() {}', 'E0277'),
+                ('zipzi_core::api_record! { pub struct Supported { pub values: std::collections::HashMap<String,String> } } fn main() {}', None),
+                ('zipzi_core::api_record! { pub struct Unsupported { pub values: std::collections::HashMap<bool,String> } } fn main() {}', 'E0277'),
+                ('zipzi_core::api_record! { pub struct Supported { pub values: std::collections::BTreeMap<String,u32> } } fn main() {}', None),
+                ('zipzi_core::api_record! { pub struct Unsupported { pub values: std::collections::BTreeMap<String,std::num::NonZeroU64> } } fn main() {}', 'E0277'),
+                ('#[derive(serde::Serialize,serde::Deserialize,zipzi_api_derive::ApiShape)] pub struct Unsupported { #[serde(flatten)] pub fields: std::collections::BTreeMap<String,String> } fn main() {}', 'selected'),
                 ('zipzi_core::api_record! { #[derive(serde::Serialize,serde::Deserialize)] #[serde(rename_all="camelCase")] pub struct Unsupported { pub some_field: String } } fn main() {}', 'macro'),
                 ('zipzi_core::api_record! { #[derive(serde::Serialize,serde::Deserialize)] pub struct Unsupported { #[serde(default)] #[serde(rename="wire")] pub field: String } } fn main() {}', 'macro'),
                 ('zipzi_core::api_union! { tag="op"; #[derive(serde::Serialize,serde::Deserialize)] #[serde(rename_all_fields="camelCase")] pub enum Unsupported { Change { some_field: String } } } fn main() {}', 'macro'),
@@ -140,7 +185,9 @@ class Python2Codegen(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout[-4000:])
                 else:
                     self.assertNotEqual(result.returncode, 0)
-                    if code == 'macro':
+                    if code == 'selected':
+                        self.assertTrue(any('Unsupported selected serde attribute' in e['message'] for e in errors), result.stderr + result.stdout[-4000:])
+                    elif code == 'macro':
                         self.assertTrue(any('no rules expected' in e['message'] for e in errors), result.stderr + result.stdout[-4000:])
                     else:
                         self.assertIn(code, [(e.get('code') or {}).get('code') for e in errors], result.stderr + result.stdout[-4000:])
@@ -166,6 +213,8 @@ class Python2Codegen(unittest.TestCase):
         self.assertIn('label=op.label', output['client/python/zipzi/_generated/resource_ops.py'])
         self.assertIn('label: str', output['client/python/zipzi/_generated/resource_conveniences.py'])
         self.assertIn('op.getattr("label")', output['src/generated/resources.rs'])
+        self.assertIn('input_budget::text(&op.getattr("label")?)?', output['src/generated/resources.rs'])
+        self.assertIn('measure_planintent(intent)?', output['src/generated/resource_queries.rs'])
         self.assertIn('operations: int', output['client/python/zipzi/_generated/plan_values.py'])
         self.assertIn('value.operations', output['src/generated/resources.rs'])
         self.assertIn('description: str = ""', output['client/python/zipzi/_generated/resource_ops.py'])

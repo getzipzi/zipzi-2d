@@ -21,13 +21,21 @@ pub struct ImportedModel {
     pub images: HashMap<String, Vec<u8>>,
 }
 pub fn import_model(bytes: &[u8]) -> Result<ImportedModel> {
-    let resources = archive::read(bytes)?;
+    import_model_with_budget(bytes, usize::MAX)
+}
+/// Bound archive expansion, XML nodes and resulting document before returning
+/// ownership. Hosts reserve `workspace` before calling this function.
+pub fn import_model_with_budget(bytes: &[u8], workspace: usize) -> Result<ImportedModel> {
+    let resources = archive::read_limited(bytes, workspace / 8)?;
     let xml = std::str::from_utf8(
         resources
             .get("main.xml")
             .ok_or_else(|| invalid("Missing main.xml"))?,
     )
     .map_err(|e| invalid(e.to_string()))?;
+    if xml.len() > workspace / 512 {
+        return Err(invalid("Cubism XML workspace budget exceeded"));
+    }
     let parsed = roxmltree::Document::parse(xml).map_err(|e| invalid(e.to_string()))?;
     let graph = graph::Graph::new(&parsed)?;
     let root = parsed
@@ -36,11 +44,32 @@ pub fn import_model(bytes: &[u8]) -> Result<ImportedModel> {
         .find(|n| n.has_tag_name("main"))
         .and_then(|n| n.first_element_child())
         .ok_or_else(|| invalid("Missing Cubism model"))?;
-    model::read(&graph, graph.resolve(root)?, &resources)
+    let model = model::read(
+        &graph,
+        graph.resolve(root)?,
+        &resources,
+        (workspace / 8).min(512 << 20),
+    )?;
+    if model.document.estimated_content_bytes() > workspace / 4 {
+        return Err(invalid("Cubism document workspace budget exceeded"));
+    }
+    Ok(model)
 }
 pub fn animation_model_paths(bytes: &[u8]) -> Result<Vec<String>> {
     animation::paths(bytes)
 }
 pub fn import_animation(bytes: &[u8], document: &mut Document) -> Result<()> {
     animation::read(bytes, document)
+}
+
+/// Bounded CAN3 parsing used after a host has reserved its workspace.
+pub fn animation_model_paths_with_budget(bytes: &[u8], workspace: usize) -> Result<Vec<String>> {
+    animation::paths_with_budget(bytes, workspace)
+}
+pub fn import_animation_with_budget(
+    bytes: &[u8],
+    document: &mut Document,
+    workspace: usize,
+) -> Result<()> {
+    animation::read_with_budget(bytes, document, workspace)
 }

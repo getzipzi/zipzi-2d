@@ -36,6 +36,7 @@ DOMAINS = {
     "alpha_mesh": ("geometry-binding", "R4", ["A04", "A15", "A17"]),
     "binding_authoring": ("geometry-binding", "R4", ["A04", "A05", "A15", "A17"]),
     "scene_authoring": ("scene-document", "R4", ["A04", "A05", "A15"]),
+    "scene_edit": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "scene_content": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "organization_authoring": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "reference_authoring": ("identity-collections", "R4", ["A04", "A05", "A15"]),
@@ -206,10 +207,15 @@ def rust_contract(row: dict, path: Path) -> dict:
     if module == "modeling" and (name in {"apply", "modeling_records"}):
         classification, source = "connected", "explicit formal/candidate source"
         effect = "read-only records" if name == "modeling_records" else "SDK candidate operation; no independent publication"
-    if owner in {"MeshOperation", "MeshBindingOperation", "ParameterOperation"} and name == "apply":
+    if owner in {"MeshOperation", "MeshBindingOperation", "ParameterOperation", "SceneOperation"} and name == "apply":
         classification, source = "connected", "edit + candidate sequence"
         effect = "candidate only; ordinary error poisons edit"
         lifecycle = "SDK intent applied through the owning Edit; no independent publication"
+    if owner == "SceneSummary" or (owner == "SceneOperation" and name == "into_intent"):
+        classification = "host-only"
+        source = "borrowed formal/candidate document or typed scene input"
+        effect = "metadata projection/admission or SDK intent construction; no publication"
+        lifecycle = "Rust adapter helper; public Python uses typed values and Runtime handlers"
     if name.startswith("plan_") or owner.endswith("Plan"):
         lifecycle = "Plan owned by client/session/source; base Version checked at execute; explicit release"
     expensive = (name.startswith(("import_", "export_", "plan_", "execute_", "prepare_"))
@@ -224,12 +230,12 @@ def rust_contract(row: dict, path: Path) -> dict:
                 acceptance=acceptance, implementation="not-connected")
 
 
-def collect(root: Path = ROOT) -> dict:
+def collect(root: Path = ROOT, *, shared_only: bool = False) -> dict:
     # root is injected in tests only for the independent scanner functions.
     if root != ROOT:
         raise ValueError("inventory must describe this paired checkout")
     rows = []
-    legacy = json.loads((ROOT / "crates/zipzi-python/python-coverage.json").read_text())
+    legacy = {} if shared_only else json.loads((ROOT / "crates/zipzi-python/python-coverage.json").read_text())
     sdk_paths = sorted((ROOT / "crates/zipzi-sdk/src").rglob("*.rs"))
     public_owners = {name for path in sdk_paths for name in re.findall(
         r"\bpub\s+(?:struct|enum)\s+(\w+)", mask_rust(path.read_text()))}
@@ -263,6 +269,22 @@ def collect(root: Path = ROOT) -> dict:
                 effect="no formal history", lifecycle="client-owned Preview or local curve value; explicit release",
                 bulk="ordered schedule and sample arrays", scheduling="captured source; bounded replay worker",
                 acceptance=["A11", "A14", "A17"], implementation="not-connected"))
+
+    if shared_only:
+        # Refresh shared Rust sources without inspecting the retired client.
+        # Historical Python rows remain historical evidence, not a new API spec.
+        previous = json.loads(OUTPUT.read_text())
+        facade = [row for row in previous["apis"] if row["id"].startswith("python::")]
+        old_rows = {row["id"]: row for row in previous["apis"]}
+        for row in rows:
+            old = old_rows.get(row["id"], {})
+            if "legacy_binding_evidence" in old:
+                row["legacy_binding_evidence"] = old["legacy_binding_evidence"]
+            row["facade_route_candidates"] = [item["id"] for item in facade
+                if row["name"] in item.get("native_calls", []) or row["name"] == item.get("name")]
+            row["facade_route_status"] = "review candidate routes" if row["facade_route_candidates"] else "new route or explicit adapter required"
+        return dict(previous, apis=sorted(rows + facade, key=lambda row: row["id"]),
+                    domain_intents=domain_intents(), value_types=value_types())
 
     package = ROOT / "crates/zipzi-python/python/zipzi"
     native_imports = []
@@ -429,8 +451,9 @@ def python_row(path: Path, node: ast.FunctionDef, owner: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--shared-only", action="store_true", help="Refresh/check shared Rust sources, retaining historical Python catalog rows without reading the retired package")
     args = parser.parse_args()
-    catalog = collect()
+    catalog = collect(shared_only=args.shared_only)
     # One row per API keeps source reviews manageable while retaining valid JSON.
     encoded = "{\n" + ",\n".join(
         f"  {json.dumps(key)}: [\n" + ",\n".join("    " + json.dumps(row, ensure_ascii=False) for row in value) + "\n  ]"

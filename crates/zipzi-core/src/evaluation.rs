@@ -10,13 +10,13 @@ mod transforms;
 mod types;
 
 pub use evaluator::{
-    evaluate_frame, evaluate_frame_including_hidden, EvaluationTimings, FrameEvaluator,
+    EvaluationTimings, FrameEvaluator, evaluate_frame, evaluate_frame_including_hidden,
 };
 pub(crate) use prepared::PreparedEvaluation;
 pub use selection::evaluate_blend_binding;
 pub use types::{
-    parent_origin, parent_positions, Drawable, DrawableFrame, EvaluatedParameter, OffscreenFrame,
-    PreviewValues, RenderCommand,
+    Drawable, DrawableFrame, EvaluatedDeformer, EvaluatedParameter, OffscreenFrame, PreviewValues,
+    RenderCommand, parent_origin, parent_positions,
 };
 
 /// Native parameter-only edit snapshot, before parent inheritance and Glue.

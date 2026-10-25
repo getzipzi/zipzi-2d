@@ -9151,6 +9151,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "zipzi-api-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "zipzi-cmo3"
 version = "0.1.0"
 dependencies = [
@@ -9177,6 +9186,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.20",
  "uuid",
+ "zipzi-api-derive",
 ]
 
 [[package]]
@@ -9368,6 +9378,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.20",
  "uuid",
+ "zipzi-api-derive",
  "zipzi-core",
  "zipzi-project",
  "zipzi-sdk",
@@ -9385,6 +9396,7 @@ dependencies = [
  "spade",
  "uuid",
  "zipzi-animation",
+ "zipzi-api-derive",
  "zipzi-core",
  "zipzi-project",
 ]

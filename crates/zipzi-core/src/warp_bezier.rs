@@ -3,13 +3,29 @@
 use crate::{Status, Vec2};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct WarpBezierNode {
     pub position: Vec2,
     /// Absolute positions: left, right, up, down in lattice coordinates.
     pub handles: [Vec2; 4],
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct WarpBezier {
     pub rows: u32,
     pub columns: u32,

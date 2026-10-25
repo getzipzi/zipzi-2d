@@ -1,7 +1,7 @@
 //! Candidate-document edits and atomic publication.
 use std::collections::HashSet;
 
-use crate::session::{keys_in, object_exists_in, AuthoringSession};
+use crate::session::{AuthoringSession, keys_in, object_exists_in};
 use crate::types::*;
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::{
@@ -1098,5 +1098,13 @@ fn merge_kind(a: ChangeKind, b: ChangeKind) -> ChangeKind {
         (Appearance, _) | (_, Appearance) => Appearance,
         (Metadata, _) | (_, Metadata) => Metadata,
         _ => None,
+    }
+}
+
+impl EditSession<'_> {
+    /// Host admission may tighten conversion workspaces before invoking SDK
+    /// planners. This configuration has no document/history effect.
+    pub fn set_authoring_limits(&mut self, limits: zipzi_core::document::AuthoringLimits) {
+        self.authoring_limits = limits;
     }
 }

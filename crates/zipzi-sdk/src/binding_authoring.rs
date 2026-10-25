@@ -1,6 +1,7 @@
 //! Read-only grid/range/parent plans and one SDK transaction on execution.
 use crate::{AuthoringSession, EditReceipt, EditSession, SdkError, Version};
 use serde::{Deserialize, Serialize};
+use zipzi_core::Status;
 pub use zipzi_core::document::{
     AuthoringLimits, AxisReduction, BindingGridEdit, BindingGridPlan, BindingGridTarget,
     BindingIdentityKind, BlendAuthoringEdit, BlendAuthoringPlan, BlendTableOperation,
@@ -9,9 +10,16 @@ pub use zipzi_core::document::{
     ReparentContext, ReparentEdit, ReparentGuarantee, ReparentPlacement, ReparentPlan,
     ReparentStrategy, ReparentSupport,
 };
-use zipzi_core::Status;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum BindingAuthoringEdit {
     Grid(BindingGridEdit),
     Blend(BlendAuthoringEdit),
@@ -272,7 +280,7 @@ impl BindingFieldAddress {
         self.owner.id()
     }
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
 pub enum BindingFieldPatch {
     SampleValue(f32),
     ConstraintSample {
@@ -423,7 +431,7 @@ impl AuthoringSession {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
 pub struct BindingCapabilities {
     pub inspect: crate::CapabilityState,
     pub patch: crate::CapabilityState,

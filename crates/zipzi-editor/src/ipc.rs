@@ -55,7 +55,12 @@ pub(super) fn reopen(endpoint: &Endpoint) -> std::io::Result<u32> {
     }
 }
 pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
-    let (server, incoming) = owner.listen()?;
+    let budget = cx
+        .global::<host::DesktopHost>()
+        .runtime
+        .read()
+        .transport_budget();
+    let (server, incoming) = owner.listen_with_budget(budget)?;
     if let Some(ready_file) = std::env::var_os("ZIPZI_DEV_READY_FILE") {
         let endpoint = Endpoint::from_env()?;
         // The PID record establishes launch ownership early. Development
@@ -99,14 +104,21 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
             cx.update(|cx| {
                 let host = cx.global::<host::DesktopHost>().clone();
                 match message {
-                    Inbound::Frame { auth, value, reply } => {
-                        let result = protocol.borrow_mut().receive(
+                    Inbound::Frame {
+                        auth,
+                        value,
+                        reply,
+                        _transfer,
+                    } => {
+                        let result = protocol.borrow_mut().receive_encoded(
                             &mut host.runtime.write(),
                             auth,
                             value,
                             Instant::now(),
                         );
-                        let _ = reply.send(result);
+                        if let Some(result) = result {
+                            let _ = reply.send(result);
+                        }
                         if let Some(session) = protocol.borrow_mut().take_window_request() {
                             show_session(session, cx);
                         }
@@ -117,6 +129,24 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                         auth.connection,
                         Instant::now(),
                     ),
+                    Inbound::Binary {
+                        auth,
+                        value,
+                        bytes,
+                        reply,
+                        _transfer,
+                    } => {
+                        let mut result = protocol.borrow_mut().receive_binary(
+                            &mut host.runtime.write(),
+                            auth,
+                            value,
+                            bytes,
+                            Instant::now(),
+                        );
+                        result.transfer = Some(_transfer);
+                        let _ = reply.send(result);
+                        dispatch(host, cx);
+                    }
                 }
             });
             // Yield between requests so a busy socket cannot monopolize UI input.

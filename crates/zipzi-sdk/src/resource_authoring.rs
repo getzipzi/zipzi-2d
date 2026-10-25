@@ -4,11 +4,11 @@ use crate::{
     SdkError, Version,
 };
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 pub use zipzi_core::document::ResourceEdit;
-use zipzi_core::{document::ResourcePlan, ImageContent};
+use zipzi_core::{ImageContent, document::ResourcePlan};
 #[derive(Debug, Clone)]
 pub struct ResourceEditPlan {
     version: Version,
@@ -53,7 +53,7 @@ impl ImageLoadToken {
         self.cancelled.store(true, Ordering::Release);
     }
 }
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct ResourceCapabilities {
     pub inspect: CapabilityState,
     pub patch: CapabilityState,

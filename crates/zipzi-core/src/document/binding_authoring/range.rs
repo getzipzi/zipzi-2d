@@ -1,12 +1,30 @@
 use super::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum ParameterRangePolicy {
     KeepKeyValues,
     /// Map every dependent key by the same increasing affine change of domain.
     MapKeyValues,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct ParameterRangeEdit {
     pub parameter_id: String,
     pub minimum: f32,
@@ -288,7 +306,16 @@ impl Document {
                 map_value(v, old.minimum, old.maximum, p.minimum, p.maximum)
             });
         }
-        let mut report = ConversionReport::between(before, after, &affected, format!("{:?}: sample identities, payloads and weights retained; mapped parameter placement; precision snapping may change",edit.policy), vec![]);
+        let mut report = ConversionReport::between(
+            before,
+            after,
+            &affected,
+            format!(
+                "{:?}: sample identities, payloads and weights retained; mapped parameter placement; precision snapping may change",
+                edit.policy
+            ),
+            vec![],
+        );
         report.parameter_range = Some(ParameterRangeConversion {
             parameter_id: p.id.clone(),
             before: [old.minimum, old.maximum],

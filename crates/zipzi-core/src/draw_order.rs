@@ -3,7 +3,16 @@ use crate::{Document, Status};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DrawOrderGroup {
     /// Empty for the root; otherwise the stable ID of the Part driving this group.
     pub owner: String,

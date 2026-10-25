@@ -3,6 +3,9 @@
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
 日期：2026 年 10 月 24 日。状态：**R0–R3 已交付，R4 实施中，R5–R7 尚未开始**。
 
+2026-10-25 本轮收尾：[R4 完整连接实现与验收记录](sdk-runtime/python2-r4-complete.md)已接通完整 Modeling/地址/资源/IO、可取消读取及 Editor 投影，并取得两后端、安装和十对 UI 性能证据。P0 最后发现的普通批次/Plan 临时堆问题已做 Box 布局修复并通过 Runtime 回归；按用户“直接收尾”要求，未继续最后的 Release 与发行复验，**R4 仍为实施中**。具体未通过项与冻结产物见该记录，不将 Python P3A 标为完成。
+
+
 2026-10-25 执行主线更新：Python 接入以全新的 `crates/zipzi-python2` 为唯一实现。
 原 R0–R3 交付记录保留为历史；新包涉及的 Python/安装/真实宿主证据独立补齐，
 不直接沿用旧客户端的通过结论。接回差距与本批宿主/会话验收见
@@ -13,9 +16,16 @@ R3 最小链路验收，并已提交为 `c0e186b`。其后[网格绑定/CPU 采�
 已接通共享处理器、数值 recipe 与人工 Preview 隔离；完整 R4 Modeling、身份/地址、
 BlendShape、长任务及资源/IO 仍待扩展，R4 尚未验收。
 
+2026-10-25 [Python P3 场景/身份切片](sdk-runtime/python2-p3-scene-identity.md)新增
+选定场景/组织、Glue/Offscreen、网格 BlendShape 与带绑定拓扑，接入 SDK 对象引用、
+场景标签地址及来源绑定 Plan。已运行两后端数值、失效/恢复、安装及原生 Editor
+投影/Preview 隔离验收。**这仍是 R4 的部分交付：二进制资源/完整 IO、完整 Modeling
+及地址领域、可取消昂贵任务与总预算/性能门槛尚未完成，R4 不能标为已完成。**
+
 2026-10-25 [R1–R3 / Python P1–P2 整体验收](sdk-runtime/r1-r3-python-p1-p2-acceptance.md)
 已补齐资源/Plan 生成及配对源码发行，并复验真实 Editor、P0 与 R2 性能门禁。
 本轮修复与采样范围单独记录，不扩大 R4 或完整发布平台的完成范围。
+
 
 架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。`zipzi-runtime` 的进程内核心和 Editor 托管已实现；R2 性能门槛已通过，R3 本机协议与 Python 最小闭环已实现，完整领域连接继续在 R4–R7 交付。后续阶段的模块、测试名称和命令模板仍为目标，不能作为已通过的证据。实际结果见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)、[R2 实施记录](sdk-runtime/r2-editor.md)、[R3 实施记录](sdk-runtime/r3-ipc.md)与 [R4 实施记录](sdk-runtime/r4-modeling.md)。
 
@@ -34,7 +44,7 @@ BlendShape、长任务及资源/IO 仍待扩展，R4 尚未验收。
 | R1 | 无 UI 的 Runtime 核心与 SDK 补强 | R0 | 已交付进程内/CPU 核心，见 R1 记录 |
 | R2 | Editor 使用托管会话，窗口生命周期解耦 | R1 | 已交付，见 [R2 记录](sdk-runtime/r2-editor.md) |
 | R3 | 本机协议和 Python 最小完整闭环 | R2 | 已交付，见 [R3 记录](sdk-runtime/r3-ipc.md) |
-| R4 | Modeling、资源、Plan 与工程 IO 完整连接 | R3 | 实施中；首批进展见 [R4 记录](sdk-runtime/r4-modeling.md) |
+| R4 | Modeling、资源、Plan 与工程 IO 完整连接 | R3 | 主体已连接；最后性能/发行复验待完成，见 [本轮收尾](sdk-runtime/python2-r4-complete.md) |
 | R5 | Animation、独立 Preview、Observer 和长任务 | R4 | 未开始 |
 | R6 | 候选 Review 与人工精修后接续 | R5 | 未开始 |
 | R7 | 完整创作、发行包、性能与生命周期总验收 | R6 | 未开始 |

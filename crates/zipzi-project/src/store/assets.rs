@@ -400,6 +400,20 @@ pub fn prepare_image_content_with_budget(
     if bytes.len() as u64 != length {
         return Err(Status::error("RESOURCE_IO", "PNG changed while preparing"));
     }
+    let bytes: Arc<[u8]> = bytes.into();
+    encoded.commit(&bytes, crate::ImageBufferKind::Png)?;
+    prepare_png_content(bytes, budget)
+}
+/// Decode immutable in-memory PNG bytes under the same allocation budget as
+/// file preparation. Input Arc ownership pins the encoded source during decode.
+pub fn prepare_png_content(
+    bytes: Arc<[u8]>,
+    budget: &crate::ImageMemoryBudget,
+) -> Result<PreparedImageContent, Status> {
+    if bytes.len() > 64 << 20 {
+        return Err(Status::error("CAPACITY", "PNG source exceeds 64 MiB"));
+    }
+    budget.track(&bytes, crate::ImageBufferKind::Png)?;
     if bytes.get(..8) != Some(b"\x89PNG\r\n\x1a\n") || bytes.len() < 24 {
         return Err(Status::error("INVALID_IMAGE", "Invalid PNG header"));
     }
@@ -410,8 +424,6 @@ pub fn prepare_image_content_with_budget(
     let data = zipzi_core::image::decode_png(&bytes)?;
     let rgba: Arc<[u8]> = data.rgba.into();
     pixels.commit(&rgba, crate::ImageBufferKind::Rgba)?;
-    let bytes: Arc<[u8]> = bytes.into();
-    encoded.commit(&bytes, crate::ImageBufferKind::Png)?;
     let sha256 = content_sha256(&bytes);
     Ok(PreparedImageContent {
         content: zipzi_core::ImageContent {
@@ -651,4 +663,27 @@ impl super::DocumentSession {
             .unwrap_or_else(|p| p.into_inner())
             .len()
     }
+}
+
+/// Pin verified on-disk PNG bytes and pixels without installing a registry entry.
+/// The descriptor remains the captured source, independent of later file writes.
+pub fn prepare_project_image(
+    root: &Path,
+    asset: &ImageAsset,
+    budget: &crate::ImageMemoryBudget,
+) -> Result<PreparedImageContent, Status> {
+    let path = asset_path(root, asset)?;
+    let mut image = prepare_image_content_with_budget(&path, budget)?;
+    let content = asset
+        .content
+        .as_ref()
+        .ok_or_else(|| Status::error("MISSING_CONTENT", &asset.id))?;
+    if image.content.width != content.width || image.content.height != content.height {
+        return Err(Status::error("RESOURCE_DIMENSIONS", &asset.id));
+    }
+    if !content.sha256.is_empty() && image.content.sha256 != content.sha256 {
+        return Err(Status::error("RESOURCE_HASH", &asset.id));
+    }
+    image.content = content.clone();
+    Ok(image)
 }

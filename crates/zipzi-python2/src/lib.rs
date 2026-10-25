@@ -5,9 +5,16 @@ use pyo3::{
     types::{PyAny, PyBytes, PyDict, PyList, PyModule},
 };
 use std::{path::Path, sync::Arc};
+mod buffer_bridge;
+mod extension_bridge;
 mod generated;
+mod input_budget;
+use input_budget::input_lease;
 mod modeling_bridge;
 mod parameter_bridge;
+mod project_bridge;
+mod reference_bridge;
+mod scene_bridge;
 mod streams;
 use generated::mesh::read_mesh_operation;
 use zipzi_runtime::authoring::{EditOperation, MAX_IMAGE_BYTES};
@@ -48,6 +55,23 @@ struct ImageToken {
 #[pyclass(frozen, name = "_PlanToken")]
 struct PlanToken {
     id: PlanId,
+}
+#[pyclass(frozen, name = "_ObjectRefToken")]
+struct ObjectRefToken {
+    id: ObjectRefId,
+}
+#[pyclass(frozen, name = "_FieldAddressToken")]
+struct FieldAddressToken {
+    id: FieldAddressId,
+}
+#[pyclass(frozen)]
+struct TransferLease {
+    _guard: zipzi_runtime::TransferReservation,
+}
+
+#[pyclass(frozen, name = "_BufferToken")]
+struct BlobToken {
+    id: BlobId,
 }
 
 #[pyclass(frozen, name = "_Runtime")]
@@ -119,6 +143,14 @@ fn error<'py>(
     d.set_item("message", failure.to_string())?;
     d.set_item("operation", operation)?;
     let code = match failure {
+        HostError::Runtime(RuntimeError::Export { report, .. }) => {
+            d.set_item("operation", "project.export")?;
+            d.set_item(
+                "project_report",
+                generated::modeling::write_projectreport(py, &report)?,
+            )?;
+            "EXPORT_LOSS"
+        }
         HostError::Runtime(RuntimeError::Sdk(e)) => {
             d.set_item("message", e.message.as_ref())?;
             d.set_item("operation", e.operation)?;
@@ -151,7 +183,9 @@ fn error<'py>(
             RuntimeError::ExecutorFailure(_) => "EXECUTOR_FAILURE",
             RuntimeError::WorkerPanic(_) => "WORKER_PANIC",
             RuntimeError::Path(_) => "INVALID_PATH",
-            RuntimeError::Sdk(_) | RuntimeError::Busy => unreachable!(),
+            RuntimeError::Sdk(_) | RuntimeError::Busy | RuntimeError::Export { .. } => {
+                unreachable!()
+            }
         },
     };
     d.set_item("code", code)?;
@@ -186,6 +220,16 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
         .map(|value| {
             let op = value?;
             let kind = op.getattr("kind")?.extract::<String>()?;
+            if kind == "modeling" {
+                return Ok(EditOperation::Modeling {
+                    operation: Box::new(generated::modeling::read_modelingcommand(&op)?),
+                });
+            }
+            if kind.starts_with("scene_") {
+                return Ok(EditOperation::Scene {
+                    operation: generated::scene::read_operation(&op)?,
+                });
+            }
             let mesh = match kind.as_str() {
                 "create_mesh_binding" | "set_mesh_keyform" => {
                     return Ok(EditOperation::MeshBinding {
@@ -257,7 +301,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-7"
+        "zipzi-python2-10"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
@@ -285,7 +329,15 @@ impl NativeRuntime {
         let result = py.detach(|| self.host.close());
         reply(py, result, "close", |()| Ok(py.None().into_bound(py)))
     }
-    fn create_session(&self, py: Python<'_>, document_id: String) -> PyResult<Py<PyDict>> {
+    fn create_session(&self, py: Python<'_>, document_id: &str) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(
+            self,
+            py,
+            document_id.len().saturating_mul(4).saturating_add(128),
+            "sessions.create",
+            None
+        );
+        let document_id = document_id.to_owned();
         let client = self.client;
         let value = py.detach(|| {
             self.host.call(move |rt| {
@@ -313,7 +365,15 @@ impl NativeRuntime {
             Ok(result.into_any())
         })
     }
-    fn attach(&self, py: Python<'_>, runtime: String, serial: u64) -> PyResult<Py<PyDict>> {
+    fn attach(&self, py: Python<'_>, runtime: &str, serial: u64) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(
+            self,
+            py,
+            runtime.len().saturating_mul(4).saturating_add(128),
+            "sessions.attach",
+            None
+        );
+        let runtime = runtime.to_owned();
         let client = self.client;
         let value = py.detach(|| {
             self.host.call(move |rt| {
@@ -339,8 +399,16 @@ impl NativeRuntime {
         &self,
         py: Python<'_>,
         session: &SessionToken,
-        label: String,
+        label: &str,
     ) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(
+            self,
+            py,
+            label.len().saturating_mul(4).saturating_add(128),
+            "edit.begin",
+            None
+        );
+        let label = label.to_owned();
         let (client, session) = (self.client, session.id);
         let value = py.detach(|| {
             self.host
@@ -358,6 +426,13 @@ impl NativeRuntime {
     ) -> PyResult<Py<PyDict>> {
         // Own all arrays while attached; never borrow a mutable Python buffer
         // after releasing the GIL. Conversion failure is handled by Python Edit.
+        let _input = input_lease!(
+            self,
+            py,
+            input_budget::operations(operations)?,
+            "edit.apply",
+            Some(edit.id)
+        );
         let operations = read_operations(operations)?;
         let (client, edit) = (self.client, edit.id);
         let (value, state) = py
@@ -397,9 +472,17 @@ impl NativeRuntime {
     ) -> PyResult<Py<PyDict>> {
         if rgba.as_bytes().len() > MAX_IMAGE_BYTES {
             return Err(pyo3::exceptions::PyValueError::new_err(
-                "Initial pixel transport is limited to 1 MiB",
+                "Image payload exceeds 256 MiB",
             ));
         }
+        let size = rgba.as_bytes().len();
+        let lease = py.detach(|| self.host.call(move |rt| rt.reserve_transfer(size)));
+        let _lease = match lease {
+            Ok(value) => value,
+            Err(e) => {
+                return reply::<()>(py, Err(e), "resources.prepare_image", |_| unreachable!());
+            }
+        };
         zipzi_runtime::metrics::copy_payload(rgba.as_bytes().len());
         let rgba = rgba.as_bytes().to_vec();
         let client = self.client;
@@ -433,6 +516,24 @@ impl NativeRuntime {
                     self.host
                         .call(move |rt| rt.release_modeling_plan(client, plan))
                 })
+            }
+            "reference" => {
+                let reference = token.extract::<PyRef<'_, ObjectRefToken>>()?.id;
+                py.detach(|| {
+                    self.host
+                        .call(move |rt| rt.release_object_ref(client, reference))
+                })
+            }
+            "address" => {
+                let address = token.extract::<PyRef<'_, FieldAddressToken>>()?.id;
+                py.detach(|| {
+                    self.host
+                        .call(move |rt| rt.release_field_address(client, address))
+                })
+            }
+            "buffer" => {
+                let blob = token.extract::<PyRef<'_, BlobToken>>()?.id;
+                py.detach(|| self.host.call(move |rt| rt.release_blob(client, blob)))
             }
             _ => {
                 return Err(pyo3::exceptions::PyTypeError::new_err(
@@ -483,7 +584,15 @@ impl NativeRuntime {
             Ok(Py::new(py, JobToken { id })?.into_bound(py).into_any())
         })
     }
-    fn save(&self, py: Python<'_>, session: &SessionToken, path: String) -> PyResult<Py<PyDict>> {
+    fn save(&self, py: Python<'_>, session: &SessionToken, path: &str) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(
+            self,
+            py,
+            path.len().saturating_mul(4).saturating_add(128),
+            "project.save",
+            None
+        );
+        let path = path.to_owned();
         let (client, session) = (self.client, session.id);
         let value = py.detach(|| {
             self.host
@@ -493,7 +602,15 @@ impl NativeRuntime {
             Ok(Py::new(py, JobToken { id })?.into_bound(py).into_any())
         })
     }
-    fn open(&self, py: Python<'_>, path: String) -> PyResult<Py<PyDict>> {
+    fn open(&self, py: Python<'_>, path: &str) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(
+            self,
+            py,
+            path.len().saturating_mul(4).saturating_add(128),
+            "sessions.open",
+            None
+        );
+        let path = path.to_owned();
         let client = self.client;
         let value = py.detach(|| {
             self.host
@@ -568,6 +685,32 @@ impl NativeRuntime {
         });
         let response = reply(py, result, "job.wait", |result| {
             let d = match result {
+                JobValue::PreparedImage(_) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(
+                        "Unregistered image",
+                    ));
+                }
+                JobValue::ImagePrepared(value) => {
+                    generated::resources::write_preparedimageinfo(py, value)?
+                }
+                JobValue::Project { session, report } => {
+                    let d = PyDict::new(py);
+                    d.set_item("session", Py::new(py, SessionToken { id: session })?)?;
+                    d.set_item(
+                        "report",
+                        generated::modeling::write_projectreport(py, &report)?,
+                    )?;
+                    d
+                }
+                JobValue::Sampled(value) => modeling_bridge::sample_batch(py, &value)?,
+                JobValue::Planned(value) => {
+                    generated::resources::write_plansnapshot(py, value.as_ref().clone())?
+                }
+                JobValue::PreparedPlan(_) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(
+                        "Unpublished plan result",
+                    ));
+                }
                 JobValue::Published(r) => receipt(py, &r)?,
                 JobValue::Saved(r) => {
                     let d = PyDict::new(py);
@@ -584,10 +727,16 @@ impl NativeRuntime {
                     d.set_item("session", Py::new(py, SessionToken { id })?)?;
                     d
                 }
-                JobValue::Imported { .. } => {
-                    return Err(pyo3::exceptions::PyRuntimeError::new_err(
-                        "Import has no Python handler yet",
-                    ));
+                JobValue::Imported {
+                    session,
+                    notices,
+                    name,
+                } => {
+                    let d = PyDict::new(py);
+                    d.set_item("session", Py::new(py, SessionToken { id: session })?)?;
+                    d.set_item("notices", notices)?;
+                    d.set_item("name", name)?;
+                    d
                 }
             };
             Ok(d.into_any())

@@ -1,6 +1,7 @@
 use super::*;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape)]
 pub enum SceneContentTarget {
     VertexPosition {
         vertex_id: VertexId,
@@ -57,6 +58,7 @@ impl SceneContentTarget {
     rename_all = "snake_case",
     deny_unknown_fields
 )]
+#[derive(zipzi_api_derive::ApiShape)]
 pub enum SceneContentValue {
     Point(Vec2),
     Triangle([VertexId; 3]),

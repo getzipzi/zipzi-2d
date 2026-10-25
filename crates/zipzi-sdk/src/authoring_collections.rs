@@ -20,7 +20,7 @@ pub enum AuthoringCollection {
     Resources,
     Attachments,
 }
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, zipzi_api_derive::ApiShape, serde::Serialize)]
 pub struct CollectionCapabilities {
     pub create: CapabilityState,
     pub move_into: CapabilityState,

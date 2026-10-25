@@ -18,6 +18,12 @@ impl Runtime {
         {
             return Err(RuntimeError::Budget("edits"));
         }
+        let estimate = self
+            .ready(session)?
+            .estimated_content_bytes()
+            .saturating_mul(2)
+            .saturating_add(4096);
+        self.check_bytes(estimate, 0, 0)?;
         let sdk = self.ready(session)?.begin_owned_edit(label, expected)?;
         let bytes = sdk.estimated_bytes();
         self.check_bytes(bytes, bytes, 0)?;
@@ -28,6 +34,7 @@ impl Runtime {
         self.edits.insert(
             id,
             EditEntry {
+                pending_upload: None,
                 session,
                 client,
                 base: sdk.base_version(),
@@ -129,6 +136,7 @@ impl Runtime {
         self.edits.insert(
             id,
             EditEntry {
+                pending_upload: None,
                 session,
                 client,
                 base: sdk.base_version(),
@@ -383,5 +391,137 @@ impl Runtime {
             entry.bytes = bytes;
         }
         budget
+    }
+}
+
+impl Runtime {
+    pub fn request_project(
+        &mut self,
+        client: ClientId,
+        session: SessionId,
+        request: crate::project_io::ProjectRequest,
+    ) -> Result<JobId> {
+        use crate::project_io::ProjectRequest;
+        self.client(client)?;
+        self.exclusive(session)?;
+        let target = match &request {
+            ProjectRequest::Open { path } | ProjectRequest::Export { path, .. } => {
+                Some(identity(path)?)
+            }
+            _ => None,
+        };
+        if let Some(path) = &target {
+            if self.reservations.contains_key(path)
+                || self.paths.get(path).is_some_and(|s| *s != session)
+            {
+                return Err(RuntimeError::Busy);
+            }
+        }
+        // Reserve both codec workspace and all live image payload expansion
+        // before giving the worker ownership of the SDK session.
+        let sdk = self.ready(session)?;
+        let bytes = sdk
+            .estimated_content_bytes()
+            .saturating_mul(16)
+            .saturating_add(
+                sdk.document()
+                    .asset_order()
+                    .iter()
+                    .filter_map(|id| sdk.document().get_asset(id)?.content.as_ref())
+                    .fold(0usize, |n, c| {
+                        n.saturating_add(
+                            (c.width as usize)
+                                .saturating_mul(c.height as usize)
+                                .saturating_mul(16),
+                        )
+                    }),
+            )
+            .saturating_add(8 << 20);
+        let io = match &request {
+            ProjectRequest::Import { .. } => 256 << 20,
+            ProjectRequest::Open { path } => std::fs::metadata(path)
+                .map_or(0, |m| m.len() as usize)
+                .saturating_mul(128),
+            _ => 0,
+        };
+        self.refresh_memory_budget();
+        let lease = Arc::new(self.reserve_transfer(bytes.saturating_add(io))?);
+        self.queue_task(
+            client,
+            session,
+            Task::Project {
+                request,
+                _lease: lease,
+            },
+            target,
+            0,
+        )
+    }
+}
+
+impl Runtime {
+    pub fn request_project_target(
+        &mut self,
+        client: ClientId,
+        session: Option<SessionId>,
+        request: crate::project_io::ProjectRequest,
+    ) -> Result<JobId> {
+        if let Some(session) = session {
+            return self.request_project(client, session, request);
+        }
+        self.client(client)?;
+        self.check_job_slot(client)?;
+        if matches!(&request, crate::project_io::ProjectRequest::Export { .. }) {
+            return Err(RuntimeError::InvalidReference);
+        }
+        let sdk = AuthoringSession::new(&uuid::Uuid::new_v4().to_string(), ModelSetup::default())?;
+        let session = self.insert_session(client, sdk, true)?;
+        match self.request_project(client, session, request) {
+            Ok(job) => Ok(job),
+            Err(error) => {
+                self.sessions.remove(&session);
+                Err(error)
+            }
+        }
+    }
+}
+
+impl Runtime {
+    pub fn set_editor_context(
+        &mut self,
+        session: SessionId,
+        context: Option<crate::editor_context::EditorContext>,
+    ) -> Result<()> {
+        let version = self.session_info(session)?.version;
+        if let Some(value) = context {
+            if value.version != version {
+                return Err(RuntimeError::InvalidReference);
+            }
+            if value.selected_ids.len() > 256
+                || value.view_id.len() > 256
+                || value.active_tool.len() > 256
+                || value.workspace.len() > 256
+                || value.editing_context.len() > 256
+                || value.selected_ids.iter().any(|s| s.len() > 256)
+            {
+                return Err(RuntimeError::Budget("Editor context"));
+            }
+            self.check_bytes(128 << 10, 0, 0)?;
+            self.editor_contexts.insert(session, value);
+        } else {
+            self.editor_contexts.remove(&session);
+        }
+        self.refresh_memory_budget();
+        Ok(())
+    }
+    pub fn editor_context(
+        &self,
+        session: SessionId,
+    ) -> Result<Option<&crate::editor_context::EditorContext>> {
+        let version = self.session_info(session)?.version;
+        Ok(self
+            .editor_contexts
+            .get(&session)
+            .filter(|c| c.version == version))
     }
 }

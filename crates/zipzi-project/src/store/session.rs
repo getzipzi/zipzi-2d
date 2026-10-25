@@ -19,7 +19,7 @@ use std::{
 };
 use zipzi_core::{Document, ImageAsset, Status};
 use zipzi_moc3::ImportReport;
-use zipzi_psd::{ImportReport as PsdImportReport, import_psd_pixels};
+use zipzi_psd::ImportReport as PsdImportReport;
 
 /// Project persistence and resource state. Authoring history belongs to the SDK.
 pub struct DocumentSession {
@@ -313,12 +313,45 @@ impl DocumentSession {
                 None,
             );
         }
+        let length = match std::fs::metadata(source) {
+            Ok(m) => m.len() as usize,
+            Err(e) => return (ProjectResult::failed("PROJECT_IO", &e.to_string()), None),
+        };
+        let _encoded = match self
+            .store
+            .image_budget
+            .reserve_transfer(length.saturating_mul(2))
+        {
+            Ok(v) => v,
+            Err(s) => return (ProjectResult::from_status(s), None),
+        };
+        let limit = (self.store.image_budget.available_bytes() / 3).min(256 << 20);
+        if limit == 0 {
+            return (
+                ProjectResult::failed("RESOURCE_BUDGET_EXCEEDED", "PSD decoder budget"),
+                None,
+            );
+        }
+        let reservation = match self.store.image_budget.reserve(limit.saturating_mul(3)) {
+            Ok(v) => v,
+            Err(s) => return (ProjectResult::from_status(s), None),
+        };
         let bundle = match read_psd_bytes(source).and_then(|bytes| {
-            import_psd_pixels(&bytes).map_err(|error| Status::error(error.code, error.message))
+            zipzi_psd::import_psd_pixels_with_limit(&bytes, limit)
+                .map_err(|error| Status::error(error.code, error.message))
         }) {
             Ok(bundle) => bundle,
             Err(status) => return (ProjectResult::from_status(status), None),
         };
+        if bundle.document.estimated_content_bytes() > limit {
+            return (
+                ProjectResult::failed(
+                    "RESOURCE_BUDGET_EXCEEDED",
+                    "PSD document exceeds decoder budget",
+                ),
+                None,
+            );
+        }
         let mut document = bundle.document;
         let mut assets = HashMap::new();
         for pixels in bundle.assets {
@@ -331,13 +364,6 @@ impl DocumentSession {
             asset.content.as_mut().unwrap().source =
                 format!("assets/.memory-psd/{}.png", pixels.id);
             let rgba: Arc<[u8]> = pixels.rgba.into();
-            if let Err(status) = self
-                .store
-                .image_budget
-                .track(&rgba, crate::ImageBufferKind::Rgba)
-            {
-                return (ProjectResult::from_status(status), None);
-            }
             assets.insert(
                 asset.content.as_ref().unwrap().source.clone(),
                 Arc::new(MemoryAsset {
@@ -355,6 +381,13 @@ impl DocumentSession {
             if !edit.status.is_ok() {
                 return (ProjectResult::from_status(edit.status), None);
             }
+        }
+        let buffers: Vec<_> = assets
+            .values()
+            .map(|image| (&image.texture.rgba, crate::ImageBufferKind::Rgba))
+            .collect();
+        if let Err(status) = reservation.commit_many(&buffers) {
+            return (ProjectResult::from_status(status), None);
         }
         self.store.remember_imported_assets(&document);
         *self

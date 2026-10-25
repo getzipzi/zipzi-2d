@@ -4,11 +4,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 mod index;
 pub(in crate::document) mod lifecycle;
-pub(in crate::document) use index::{same_metadata_shape, OrganizationIndex};
+pub(in crate::document) use index::{OrganizationIndex, same_metadata_shape};
 mod scene;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum OrganizationCollection {
     Parameters { group_id: Option<String> },
     ParameterGroups { parent_id: Option<String> },
@@ -16,12 +17,14 @@ pub enum OrganizationCollection {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum OrganizationDeletePolicy {
     Contents,
     Dissolve,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum OrganizationEdit {
     CreateParameter {
         parameter: Parameter,

@@ -58,12 +58,14 @@ class ConnectionLimits:
     results_per_client: int
     result_bytes_per_client: int
     result_bytes_total: int
+    binary_bytes_per_client:int
+    binary_bytes_total:int
 
     @classmethod
     def read(cls, value: object) -> "ConnectionLimits":
         raw = record(value)
         return cls(integer(raw["frame_bytes"]), number(raw["reconnect_seconds"]), number(raw["result_seconds"]),
-            integer(raw["results_per_client"]), integer(raw["result_bytes_per_client"]), integer(raw["result_bytes_total"]))
+            integer(raw["results_per_client"]), integer(raw["result_bytes_per_client"]), integer(raw["result_bytes_total"]),integer(raw["binary_bytes_per_client"]),integer(raw["binary_bytes_total"]))
 
 @dataclass(frozen=True)
 class ConnectionInfo:

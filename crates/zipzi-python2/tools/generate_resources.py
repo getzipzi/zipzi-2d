@@ -155,8 +155,25 @@ def render_resources(contract, Model, header, rust_header):
         rust += [f'pub(crate) fn write_{rust_name(s)}(py: Python<\'_>, value: {b["path"]}) -> PyResult<Bound<\'_, PyDict>> {{','    let d = PyDict::new(py);']
         for f in s['fields']:rust += [f'    d.set_item("{f["name"]}", {native_write(f["shape"], "value."+f["name"])})?;']
         rust += ['    Ok(d)','}','']
+    def native_measure(s,e):
+        k=s['kind']
+        if k=='string':return 'input_budget::text(&'+e+')?'
+        if k=='optional':return '{ let v='+e+'; if v.is_none() { 0 } else { '+native_measure(s['item'],'v')+' } }'
+        if k=='union':return 'measure_'+rust_name(s)+'(&'+e+')?'
+        if k=='opaque' or k in {'u32','u64','usize','bool','f32'}:return '64usize'
+        if k=='record':return '256usize'+''.join('.saturating_add('+native_measure(f['shape'],e+'.getattr("'+f['name']+'")?')+')' for f in s['fields'])
+        raise ValueError('Unreviewed native input admission')
     for union in [resource_union,intent_union]:
         b=m.binding(union)
+        rust += [f'pub(crate) fn measure_{rust_name(union)}(op: &Bound<\'_, PyAny>) -> PyResult<usize> {{','    let kind=op.getattr("kind")?;','    match kind.extract::<&str>()? {']
+        for v in union['variants']:
+            cost='256usize'
+            for f in v['fields']:
+                if f['name']=='spec':
+                    cost+=''.join('.saturating_add('+native_measure(x['shape'],'op.getattr("'+x['name']+'")?')+')' for x in f['shape']['fields'])
+                else:cost+='.saturating_add('+native_measure(f['shape'],'op.getattr("'+f['name']+'")?')+')'
+            rust += ['        "'+v['wire_name']+'" => Ok('+cost+'),']
+        rust += ['        _ => Err(pyo3::exceptions::PyTypeError::new_err("Unknown typed input")),','    }','}','']
         rust += [f'pub(crate) fn read_{rust_name(union)}(op: &Bound<\'_, PyAny>) -> PyResult<{b["path"]}> {{', '    match op.getattr("kind")?.extract::<String>()?.as_str() {']
         for v in union['variants']:
             rust += [f'        "{v["wire_name"]}" => Ok({b["path"]}::{v["rust_name"]} {{']
@@ -171,7 +188,7 @@ def render_resources(contract, Model, header, rust_header):
 
     def param(s,native=False):
         if s['kind']=='optional':return ('Option<'+param(s['item'],True)+'>' if native else param(s['item'])+' | None')
-        if s['kind']=='string':return 'String' if native else 'str'
+        if s['kind']=='string':return '&str' if native else 'str'
         if s['kind']=='opaque':
             b=m.binding(s);token={'PreparedImage':'ImageToken','Plan':'PlanToken'}.get(b['name'],b['name'])
             return '&'+token if native else 'object'
@@ -198,15 +215,29 @@ def render_resources(contract, Model, header, rust_header):
                  '        return self._request(dict(op="'+o['name']+'", '+', '.join(f['name']+'='+(f'intent_wire({f["name"]})' if f['shape']['kind']=='union' else f['name']) for f in fields)+'), owner, "'+labels[o['backend']]+'")']
         native_params=', '.join(f['name']+': '+param(f['shape'],True) for f in fields)
         if o['backend']=='image':queries += ['    #[pyo3(signature = (session, id, edit=None))]']
-        queries += [f'    fn {o["backend"]}(&self, py: Python<\'_>, {native_params}) -> PyResult<Py<PyDict>> {{','        let client = self.client;',f'        let input = {m.binding(o["input"])["path"]} {{']
+        queries += [f'    fn {o["backend"]}(&self, py: Python<\'_>, {native_params}) -> PyResult<Py<PyDict>> {{']
+        costs=[]
+        for f in fields:
+            if f['shape']['kind']=='string':costs.append(f['name']+'.len().saturating_mul(4).saturating_add(128)')
+            elif f['shape']['kind']=='union':costs.append('measure_'+rust_name(f['shape'])+'('+f['name']+')?')
+        if costs:
+            cost='256usize'+''.join('.saturating_add('+e+')' for e in costs)
+            queries += [f'        let _input=input_lease!(self,py,{cost},"{labels[o["backend"]]}",None);']
+        queries += ['        let client = self.client;',f'        let input = {m.binding(o["input"])["path"]} {{']
         for f in fields:
             s=f['shape'];n=f['name'];expr=n
             if s['kind']=='opaque':expr=n+'.id'
             elif s['kind']=='optional':expr=n+'.map(|v| v.id)'
             elif s['kind']=='union':expr='read_'+rust_name(s)+'('+n+')?'
+            elif s['kind']=='string':expr=n+'.to_owned()'
             queries+=['            '+n+': '+expr+',']
-        queries+=['        };',f'        let value = py.detach(|| self.host.call(move |rt| {o["handler"]}.call(rt, client, input)));',
-                  f'        reply(py, value, "{labels[o["backend"]]}", |v| Ok(write_{rust_name(o["output"])}(py, v)?.into_any()))','    }']
+        if o['backend'] in {'image', 'prepared_pixels'}:
+            count = 'v.pixels.rgba.len()' if o['backend']=='image' else 'v.rgba.len()'
+            queries+=['        };',f'        let value = py.detach(|| self.host.call(move |rt| {{ let v = {o["handler"]}.call(rt, client, input)?; let lease = rt.reserve_transfer({count})?; Ok((v, lease)) }}));',
+                      f'        reply(py, value, "{labels[o["backend"]]}", |(v, _lease)| Ok(write_{rust_name(o["output"])}(py, v)?.into_any()))','    }']
+        else:
+            queries+=['        };',f'        let value = py.detach(|| self.host.call(move |rt| {o["handler"]}.call(rt, client, input)));',
+                      f'        reply(py, value, "{labels[o["backend"]]}", |v| Ok(write_{rust_name(o["output"])}(py, v)?.into_any()))','    }']
     queries+=['}',''];back+=['']
     output['client/python/zipzi/_generated/resource_backends.py']='\n'.join(back)
     output['src/generated/resource_queries.rs']='\n'.join(queries)

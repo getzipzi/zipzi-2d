@@ -7,7 +7,15 @@ use crate::types::{BlendMode, Status, Vec2};
 
 pub type PreviewValues = HashMap<String, f32>;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryOutput,
+)]
 pub struct Drawable {
     pub id: String,
     pub runtime_id: String,
@@ -62,7 +70,16 @@ impl Default for Drawable {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Default,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryOutput,
+)]
 pub struct EvaluatedParameter {
     pub id: String,
     pub requested: f32,
@@ -70,14 +87,31 @@ pub struct EvaluatedParameter {
     pub clamped: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryOutput,
+)]
 pub enum RenderCommand {
     BeginOffscreen { offscreen_id: String },
     DrawMesh { mesh_id: String },
     EndOffscreen { offscreen_id: String },
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryOutput,
+)]
 pub struct OffscreenFrame {
     #[serde(default = "renderable_default")]
     pub renderable: bool,
@@ -95,7 +129,16 @@ pub struct OffscreenFrame {
     pub screen_color: [f32; 4],
 }
 
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Default,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryOutput,
+)]
 pub struct DrawableFrame {
     /// Revision used to evaluate this immutable snapshot; later name edits may reuse it.
     pub source_revision: u64,
@@ -130,7 +173,16 @@ impl DrawableFrame {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Default,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryOutput,
+)]
 pub struct EvaluatedDeformer {
     pub id: String,
     pub enabled: bool,

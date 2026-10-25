@@ -117,16 +117,13 @@ are admitted before copies. Focused gates are `--test authoring`, `--test protoc
 and SDK `--test integration parameter_editing::`; see the
 [R3 evidence](../../docs/plans/sdk-runtime/python2-r3-events.md).
 
-The next R4 slice adds mesh-binding operations to `apply_authoring`, canonical
-`mesh_binding_snapshot` reads and a shared typed `sample_modeling` route for
-Local/IPC. Sampling accepts explicit poses and an optional exact SourceRef,
-admitting output expansion and remaining CPU budget before the frozen clone.
-It cannot publish or modify an Editor Preview. Bounded calls accept at most 64
-poses/256 explicit parameters each, with an 8 MiB conservative response estimate;
-large cancellable sampling and complete R4 domain coverage remain pending.
-The cross-domain `modeling::ModelingCommand` now belongs to this adapter crate;
-SDK domain methods and wire operation names are unchanged. See
-[R4 mesh-binding/CPU evidence](../../docs/plans/sdk-runtime/python2-r4-bindings.md).
+R4 routes full typed modeling commands and SDK plans through `apply_authoring`.
+Canonical selected records, geometry, bindings and CPU sample arrays use direct
+native conversion or immutable binary payloads. `sample_modeling` and frozen read
+Jobs accept at most 64 explicit poses/256 parameters per pose, with geometry-based
+aggregate admission before clone/evaluation. Reads preserve exact sources and
+cannot modify an Editor Preview or history. One worker remains available for
+formal publication. See the [R4 acceptance record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
 
 R1 applies the enabled R0 defaults in `RuntimeLimits`: client/session/edit counts,
 candidate estimates, frozen document estimates, aggregate history reservations,
@@ -136,12 +133,11 @@ Completed job results occupy bounded job slots until `release_job`; expiry drops
 an expired client's terminal results and retains ongoing work through completion.
 This conservative R1 slot policy is replaced/extended by R3 request-result windows.
 
-These are document/metadata estimates, not allocator/RSS measurements. Memory
-image payload/PNG-cache accounting and reclamation, source-bound Plan tokens and
-blob uploads are now implemented in the first R4 slice below. Disk byte pinning,
-Preview, Proposal and complete transport-queue accounting remain later work.
-Caller-owned typed snapshots are not Runtime token-table allocations. R1 does not
-claim the A17 resource-reclamation or full host-memory acceptance gates.
+Document/metadata accounting is conservative. Unique RGBA/PNG/blob allocations,
+preparation and transport leases share the host ceiling. Disk ImageLease captures
+pin actual immutable content. The independent Preview and Proposal owners are
+implemented in R5/R6 using these same resource roots. Caller-owned typed Python
+values are separate from Runtime token counts; RSS is measured independently.
 
 ## Tests
 
@@ -188,12 +184,18 @@ continue via `Executor` and completion delivery. Terminal Job queries atomically
 transfer their results into the deduplicated request window and release Job slots.
 Request status queries do not advance the monotonic admission watermark.
 
-The contract is `zipzi-runtime-r4-1`: big-endian u32 length + UTF-8 JSON, at most
-16 MiB per control frame, strict handshake and runtime-scoped IDs. R4 adds explicit client-owned blob uploads/readback in 1 MiB JSON byte-array
-chunks; each blob is at most 256 MiB. There is no separate binary frame type. The serial transport admits one outstanding request per
-connection (stricter than the R0 queue maxima), at most eight socket workers and
-16 queued transport notifications. Results retain at most 1024 entries/8 MiB per
-client, 64 MiB overall and 300 seconds; evicted IDs never execute as new requests.
+The contract is `zipzi-runtime-r4-3`: big-endian u32 length, UTF-8 JSON control
+frames (16 MiB maximum), strict handshake and runtime-scoped IDs. The high length
+bit selects binary framing: a bounded JSON header (16 KiB) plus at most 1 MiB raw
+payload. Each immutable blob is at most 256 MiB and SHA256 checked before use.
+The serial transport admits one outstanding request per connection, at most eight
+socket workers and 16 queued transport notifications. Results retain at most
+1024 entries/8 MiB of JSON per client, 64 MiB overall and 300 seconds. Binary
+backing retention separately caps unique Arc allocations at 256 MiB per client,
+512 MiB overall; eviction never makes an old ID executable again. Serialized
+outbound responses retain a transfer lease through socket send, including after
+request-cache eviction. Admission failure after an executed write produces an
+unknown outcome recoverable with the same RequestId.
 Disconnected clients get 30 seconds to resume with their secret; expiry releases
 ordinary edits while preserving formal sessions and entered jobs.
 
@@ -213,28 +215,42 @@ python3 tools/python/test_connected.py
 See [R3 acceptance evidence](../../docs/plans/sdk-runtime/r3-ipc.md) and the
 [implemented connection slice](../../docs/runtime/r3-coverage.json).
 
-## R4 work in progress
+## R4 modeling, resources and project IO
 
-The first R4 slice adds shared SDK modeling batches, explicit complete-record
-queries, formal/candidate CPU parameter batches, and source-bound SDK plans.
-Image resources now have shared RGBA/PNG/blob accounting and preparation leases;
-SDK candidates, snapshots, history and plans keep referenced content readable.
-Cancellation/client expiry and history eviction reclaim unreferenced entries.
-`image_memory_usage` reports actual buffer bytes separately from document/plan
-estimates; pixel Arcs retained by textures remain charged after table collection.
-Resource/blob combined admission is currently capped at 768 MiB, with a separate
-512 MiB blob-table cap. Plans have 128 MiB of conservative estimates and 64 slots
-per client. These are CPU payload budgets, not RSS or GPU allocation limits.
+`modeling::ModelingCommand` covers all SDK modeling domains, conversions,
+dependency-preserving topology, rectangle generation, document/reference/attachment
+operations. Generated Python inputs and binary layout signatures come from the
+compiled Rust declarations. Read admission counts borrowed fields before copying;
+large records are encoded directly from borrowed SDK data. Native output creates
+typed Python values directly. Typed binary input validates a nonallocating cost
+pass before decoding concrete arrays. Attached upload/decode/SDK failure aborts
+the candidate on the server; a pre-attachment refusal leaves it usable.
 
-Modeling queries admit borrowed index storage first, then stream the borrowed
-response through a bounded byte counter before creating JSON Values. Admission
-uses the remaining Runtime CPU estimate, retained responses, the frame cap and
-result retention limits. A conservative 128-times-wire-size estimate covers JSON
-nodes, copies and encoding; it is not an exact allocator/RSS measurement.
-Over-budget queries return `BUDGET_EXCEEDED` without aborting their candidate.
+SDK handles and all field/content/reference/selection/document address domains
+retain incarnation and epoch validation, including after moves/delete/Undo.
+Plans retain exact formal/candidate sources and immutable reports. Frozen sample
+and Plan jobs cooperate with cancellation and do not own the formal session.
+PNG preparation is independent of an Edit; only successful completion registers
+its PreparedImage. ImageLease pins disk or memory content through replacement.
 
-This is not the R4 exit gate: remote handles/addresses, full IO/export, disk-byte
-pinning, cancellable heavy read jobs and full Editor acceptance remain pending.
-See [R4 implementation record](../../docs/plans/sdk-runtime/r4-modeling.md) and
-[coverage](../../docs/runtime/r4-coverage.json). Rebuild/restart an old R3 host
-before connecting the R4 client.
+The project Job route covers new/open/import/replacement/save/diagnostics and
+all existing package/Cubism/sidecar exports. PSD and Cubism preparation bound
+archive/XML/pixel workspace before decoding. Import and replacement publish only
+a fully validated candidate and retain SDK generation semantics. Structured
+ProjectReport preserves warnings, diagnostics, codec losses, paths and durability.
+
+`image_memory_usage` separates unique backing allocations, resource entries,
+RGBA/PNG/blob/preparing/transfer bytes from metadata estimates. The default
+aggregate ceiling is 2 GiB; images/PNG/blobs share 768 MiB; the blob table caps at
+512 MiB. Plans have 128 MiB of conservative estimates and 64 slots per client.
+Reference/address tables share 1024 slots per client. History, jobs, sources and
+leases keep referenced content alive; cancellation, release/client expiry and
+history eviction reclaim it after the last root disappears. Binary recovery
+retains only the bounded cache described above. RSS/GPU memory are separate.
+
+EditorContextProvider supplies an optional versioned selection/workspace/tool
+snapshot. Editor redraw publishes it before taking the Runtime lock; stale or
+headless contexts return no snapshot. Native acceptance covers all object kinds,
+selection, relations, texture/property projection and a human gesture interleaved
+with an external stale candidate. See [R4 coverage](../../docs/runtime/r4-coverage.json)
+and [acceptance evidence](../../docs/plans/sdk-runtime/python2-r4-complete.md).

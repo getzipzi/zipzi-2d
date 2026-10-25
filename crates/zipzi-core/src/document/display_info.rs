@@ -9,6 +9,7 @@ use crate::types::{ChangeKind, EditResult, Status};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub enum DisplayInfoOrigin {
     #[default]
     Generated,
@@ -17,6 +18,7 @@ pub enum DisplayInfoOrigin {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct DisplayInfo {
     pub origin: DisplayInfoOrigin,
     /// `None` and `Some([])` retain CDI collection omission and emptiness.
@@ -31,6 +33,7 @@ pub struct DisplayInfo {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct CdiParameterGroup {
     pub id: String,
     pub runtime_id: String,
@@ -41,6 +44,7 @@ pub struct CdiParameterGroup {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub enum CdiParameterEntry {
     Resolved {
         parameter_id: String,
@@ -73,6 +77,7 @@ impl CdiParameterEntry {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub enum CdiPartEntry {
     Resolved {
         part_id: String,
@@ -95,6 +100,7 @@ impl CdiPartEntry {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum CdiParameterRef {
     Unspecified,
     Resolved { parameter_id: String },
@@ -103,6 +109,7 @@ pub enum CdiParameterRef {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct CdiCombinedSet {
     pub id: String,
     pub members: Vec<super::ReferenceEntry<CdiParameterRef>>,
@@ -110,6 +117,7 @@ pub struct CdiCombinedSet {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct CdiNamespaceIds {
     pub parameters: BTreeMap<String, String>,
     pub parts: BTreeMap<String, String>,
@@ -363,15 +371,20 @@ impl Document {
                     }
                     path.push(i);
                     current = match groups[i].parent_id.as_deref() {
-                        Some(parent) => {
-                            match positions.get(parent) {
-                                Some(index) => Some(*index),
-                                None => {
-                                    issue(&mut issues, &groups[i].id, "MISSING_CDI_GROUP", format!("$.ParameterGroups[{i}].parent_id references absent group"));
-                                    None
-                                }
+                        Some(parent) => match positions.get(parent) {
+                            Some(index) => Some(*index),
+                            None => {
+                                issue(
+                                    &mut issues,
+                                    &groups[i].id,
+                                    "MISSING_CDI_GROUP",
+                                    format!(
+                                        "$.ParameterGroups[{i}].parent_id references absent group"
+                                    ),
+                                );
+                                None
                             }
-                        }
+                        },
                         None => None,
                     };
                 }
@@ -501,7 +514,14 @@ impl Document {
                             match parameter(parameter_id) {
                                 Some(parameter) => parameter.runtime_id.as_str(),
                                 None => {
-                                    issue(&mut issues, parameter_id, "MISSING_PARAMETER", format!("$.CombinedParameters[{i}][{j}] references absent parameter"));
+                                    issue(
+                                        &mut issues,
+                                        parameter_id,
+                                        "MISSING_PARAMETER",
+                                        format!(
+                                            "$.CombinedParameters[{i}][{j}] references absent parameter"
+                                        ),
+                                    );
                                     continue;
                                 }
                             }

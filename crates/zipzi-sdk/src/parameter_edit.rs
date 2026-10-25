@@ -5,6 +5,7 @@ use zipzi_core::{Parameter, ParameterKind};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct ParameterCreateSpec {
     pub name: String,
     pub minimum: f32,
@@ -19,6 +20,7 @@ pub struct ParameterCreateSpec {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct ParameterPatch {
     pub name: Option<String>,
     pub minimum: Option<f32>,
@@ -32,6 +34,7 @@ pub struct ParameterPatch {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub enum ParameterOperation {
     Create { spec: ParameterCreateSpec },
     Patch { id: String, patch: ParameterPatch },

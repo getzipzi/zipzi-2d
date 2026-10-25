@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape)]
 pub enum DocumentField {
     Layout,
     ExportSettings,
@@ -20,6 +21,7 @@ pub enum DocumentField {
     rename_all = "snake_case",
     deny_unknown_fields
 )]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum DocumentValue {
     Layout(Option<BTreeMap<String, f64>>),
     ExportSettings(ExportSettings),
@@ -36,6 +38,7 @@ impl DocumentValue {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum DocumentAuthoringEdit {
     Patch {
         expected: DocumentValue,
@@ -89,7 +92,7 @@ impl Document {
                 return Err(Status::error(
                     "SOURCE_METADATA_READ_ONLY",
                     "Inspect source metadata through its typed read API",
-                ))
+                ));
             }
         })
     }
@@ -128,7 +131,7 @@ impl Document {
                         return Err(Status::error(
                             "SOURCE_METADATA_READ_ONLY",
                             "Source canvas is import provenance",
-                        ))
+                        ));
                     }
                 }
             }

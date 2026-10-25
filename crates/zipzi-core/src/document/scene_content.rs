@@ -13,6 +13,7 @@ pub use address::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ShapeTarget {
     #[default]
     Base,
@@ -25,24 +26,49 @@ pub enum ShapeTarget {
         sample_id: String,
     },
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct VertexContentPatch {
     pub vertex_id: VertexId,
     pub position: Option<Vec2>,
     pub uv: Option<Vec2>,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct VertexWeight {
     pub vertex_id: VertexId,
     pub weight: f32,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum VertexSeed {
     Base,
     Interpolate { weights: Vec<VertexWeight> },
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct NewMeshVertex {
     pub vertex_id: VertexId,
     pub position: Vec2,
@@ -51,12 +77,21 @@ pub struct NewMeshVertex {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum VertexDeletePolicy {
     #[default]
     RejectReferences,
     RemoveDependentContent,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct WarpPointPatch {
     pub row: u32,
     pub column: u32,
@@ -64,26 +99,38 @@ pub struct WarpPointPatch {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum OffscreenDeletePolicy {
     RejectReferences,
     Neutral,
     Remap {
+        #[serde(deserialize_with = "crate::serde_maps::usize_map")]
         replacements: BTreeMap<usize, Option<usize>>,
     },
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum PartKeyformSlot {
     Static,
     Samples { samples: Vec<String> },
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct OffscreenMappingPatch {
     pub slot: PartKeyformSlot,
     pub keyform: i32,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum SceneContentEdit {
     MeshVertices {
         mesh_id: String,
@@ -368,11 +415,7 @@ impl Document {
     }
 }
 fn check(status: Status) -> Result<(), Status> {
-    if status.is_ok() {
-        Ok(())
-    } else {
-        Err(status)
-    }
+    if status.is_ok() { Ok(()) } else { Err(status) }
 }
 fn permutation(order: &[usize], len: usize) -> Result<(), Status> {
     if order.len() != len

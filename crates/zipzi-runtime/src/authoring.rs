@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(zipzi_api_derive::BinaryOutput)]
 pub struct MeshSnapshot {
     pub source: SourceRef,
     pub id: String,
@@ -41,7 +42,14 @@ pub struct ParameterBatch {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "domain", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire)]
 pub enum EditOperation {
+    Modeling {
+        operation: Box<crate::modeling::ModelingCommand>,
+    },
+    Scene {
+        operation: zipzi_sdk::SceneOperation,
+    },
     MeshBinding {
         operation: zipzi_sdk::MeshBindingOperation,
     },
@@ -69,6 +77,18 @@ pub struct MeshBindingBatch {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct SceneQuery {
+    pub session: crate::SessionId,
+    pub edit: Option<crate::EditId>,
+    pub ids: Vec<String>,
+}
+#[derive(Debug, Clone, Serialize)]
+pub struct SceneBatch {
+    pub source: SourceRef,
+    pub items: Vec<zipzi_sdk::SceneSummary>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ModelingSampleQuery {
     pub session: crate::SessionId,
     pub edit: Option<crate::EditId>,
@@ -78,6 +98,8 @@ pub struct ModelingSampleQuery {
 }
 #[derive(Debug, Serialize)]
 pub struct ModelingSampleBatch {
+    #[serde(skip)]
+    pub lease: Option<std::sync::Arc<zipzi_project::TransferReservation>>,
     pub source: SourceRef,
     pub state: &'static str,
     pub samples: zipzi_sdk::ModelingSamples,
@@ -109,9 +131,9 @@ pub struct PlanSnapshot {
 }
 }
 
-/// The initial control transport intentionally limits pixel payloads to 1 MiB.
-/// Larger/binary payloads require the later resource transport stage.
-pub const MAX_IMAGE_BYTES: usize = 1 << 20;
+pub const MAX_IMAGE_BYTES: usize = 256 << 20;
+/// JSON controls remain bounded; larger content uses binary blob chunks.
+pub const MAX_INLINE_IMAGE_BYTES: usize = 1 << 20;
 
 zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
@@ -180,6 +202,7 @@ pub const MESH_QUERY: Registered<MeshQuery, MeshSnapshot> =
 zipzi_core::api_union! {
 tag = "domain";
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(zipzi_api_derive::BinaryWire)]
 pub enum ResourceOperation {
     CreateImage {
         spec: zipzi_sdk::ImageCreateSpec,
@@ -234,12 +257,15 @@ pub const PREPARED_PIXELS_QUERY: Registered<PreparedPixelsQuery, ImagePixels> =
 zipzi_core::api_record! {
     #[derive(Debug, Clone, Serialize)]
     pub struct ResourceUsage {
+        pub allocations:usize,
+        pub resource_entries:usize,
         pub prepared_images: usize,
         pub plans: usize,
         pub rgba_bytes: usize,
         pub png_bytes: usize,
         pub blob_bytes: usize,
         pub preparing_bytes: usize,
+        pub transfer_bytes: usize,
     }
 }
 impl crate::Runtime {
@@ -247,12 +273,15 @@ impl crate::Runtime {
     pub fn resource_usage(&self) -> ResourceUsage {
         let memory = self.image_memory_usage();
         ResourceUsage {
+            allocations: memory.allocations,
+            resource_entries: self.memory_image_entries(),
             prepared_images: self.prepared_image_count(),
             plans: self.modeling_plan_count(),
             rgba_bytes: memory.rgba_bytes,
             png_bytes: memory.png_bytes,
             blob_bytes: memory.blob_bytes,
             preparing_bytes: memory.preparing_bytes,
+            transfer_bytes: memory.transfer_bytes,
         }
     }
 }

@@ -42,6 +42,12 @@ impl DesktopHost {
         (editor, notices)
     }
     pub(super) fn park(&self, mut editor: Editor) {
+        if let Some(document) = editor.document() {
+            let _ = self
+                .runtime
+                .write()
+                .set_editor_context(document.runtime_session_id(), None);
+        }
         let _ = editor.suspend_window();
         if let Some(mut dev) = crate::dev_session::DevSession::from_env() {
             let _ = dev.sync(&editor);

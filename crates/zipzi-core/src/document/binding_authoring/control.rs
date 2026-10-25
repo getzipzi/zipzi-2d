@@ -26,6 +26,13 @@ impl ConversionControl {
             ..Self::default()
         }
     }
+    /// Share the host job cancellation flag without introducing callbacks.
+    pub fn from_cancel_flag(cancelled: Arc<AtomicBool>) -> Self {
+        Self {
+            cancelled,
+            ..Self::default()
+        }
+    }
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Release);
     }

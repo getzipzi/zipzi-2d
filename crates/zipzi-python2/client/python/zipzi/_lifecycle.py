@@ -2,7 +2,7 @@
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Generic, Literal, TypeVar
-from . import bindings, sampling, events, meshes, ops, parameters, plans, resources
+from . import bindings, sampling, events, meshes, ops, parameters, plans, resources, scene, references, modeling
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
 from ._values import ConnectionInfo, Receipt, SaveReceipt, Source, SessionId, SessionInfo, WriteResult, record, sequence
 from .backends import Backend, JobKind
@@ -82,6 +82,10 @@ class Job(RecoveryOwner, Generic[T]):
             raise
 
     def _wait_value(self, raw: object) -> T:
+        # A recovered sampled transfer can be a poll taken before completion.
+        # Its empty result is not a sample; continue polling the accepted job.
+        if raw is None and self._kind == "sampled":
+            raw = self._backend.wait(self._token, self._kind, self)
         if "result" in record(raw):
             from ._errors import unwrap
             info = record(raw)
@@ -202,6 +206,9 @@ class Sessions:
         backend = self._runtime._backend
         path = absolute(path)
         return known(lambda: self._opened(backend.open(path, self)), lambda: self._opened(backend.recover(self)))
+    def import_(self,path:Path,format:modeling.ImportFormat,*,textures:tuple[modeling.TextureSlot,...]=())->Job["Session"]:
+        request=modeling.ProjectRequestImport(path=str(absolute(path)),format=format,textures=textures)
+        return Job[Session].start(self._runtime._backend,lambda owner:self._runtime._backend.project(None,request,owner),"project",lambda raw:Session(self._runtime,record(raw)["session"]))
     def _opened(self, value: object) -> Job["Session"]:
         backend = self._runtime._backend
         raw = record(value)
@@ -220,12 +227,25 @@ class Session:
         self.parameters = Parameters(self)
         self.bindings = Bindings(self)
         self.modeling = Modeling(self)
+        self.scene = Scene(self)
     @property
     def id(self) -> SessionId:
         return self._id
+    def address(self, selector: modeling.AddressSelector) -> references.FieldAddress:
+        return references.FieldAddress.create(self._backend, self._token, selector)
+
+    def capabilities(self, query: modeling.CollectionQuery) -> modeling.CapabilitySnapshot:
+        modeling.validate_CollectionQuery(query)
+        return known(lambda: modeling.CapabilitySnapshot.read(self._backend.collection_capabilities(self._token, query, self)),
+            lambda: modeling.CapabilitySnapshot.read(self._backend.recover(self)))
+
+    def reference(self, kind: references.ObjectKind, id: str) -> references.ObjectRef:
+        return references.ObjectRef.create(self._backend, self._token, kind, id)
     def info(self) -> SessionInfo:
         return known(lambda: SessionInfo.read(self._backend.info(self._token, self)),
             lambda: SessionInfo.read(self._backend.recover(self)))
+    def editor_context(self)->modeling.EditorSnapshot:
+        return known(lambda:modeling.EditorSnapshot.read(self._backend.editor_context(self._token,self)),lambda:modeling.EditorSnapshot.read(self._backend.recover(self)))
     def show_window(self) -> None:
         """Display this resident session in its desktop host."""
         known(lambda: self._backend.show_window(self._token, self), lambda: self._backend.recover(self))
@@ -241,6 +261,18 @@ class Session:
 class Project:
     def __init__(self, session: Session):
         self._session = session
+    def run(self, request:modeling.ProjectRequest)->Job[modeling.ProjectReport]:
+        modeling.validate_ProjectRequest(request)
+        s=self._session
+        return Job[modeling.ProjectReport].start(s._backend,lambda owner:s._backend.project(s._token,request,owner),"project",lambda raw:modeling.read_ProjectReport(record(raw)["report"]))
+    def diagnose(self)->Job[modeling.ProjectReport]:
+        return self.run(modeling.ProjectRequestDiagnose())
+    def replace(self,path:Path,format:modeling.ImportFormat,*,textures:tuple[modeling.TextureSlot,...]=())->Job[modeling.ProjectReport]:
+        return self.run(modeling.ProjectRequestImport(path=str(absolute(path)),format=format,textures=textures))
+    def open(self,path:Path)->Job[modeling.ProjectReport]:
+        return self.run(modeling.ProjectRequestOpen(path=str(absolute(path))))
+    def export(self,path:Path,format:modeling.ExportFormat,*,name:str="model",object_id:str|None=None,allow_loss:bool=False,bake_animation:bool=False,auto_frame_rate:bool=False)->Job[modeling.ProjectReport]:
+        return self.run(modeling.ProjectRequestExport(path=str(absolute(path)),format=format,name=name,object_id=object_id,allow_loss=allow_loss,bake_animation=bake_animation,auto_frame_rate=auto_frame_rate))
     def save(self, path: Path) -> Job[SaveReceipt]:
         s = self._session
         path = absolute(path)
@@ -249,25 +281,24 @@ class Project:
 class Meshes:
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
-    def get(self, id: str) -> meshes.Snapshot:
-        s = self._session
-        return known(lambda: meshes.Snapshot.read(s._backend.mesh(s._token, id, None if self._edit is None else self._edit._token, self)),
-            lambda: meshes.Snapshot.read(s._backend.recover(self)))
-    def get_many(self, ids: Sequence[str]) -> tuple[meshes.Snapshot, ...]:
-        owned = tuple(ids)
-        if any(not isinstance(id, str) for id in owned):
-            raise TypeError("Expected mesh ID text")
-        s = self._session
-        def decode(raw: object) -> tuple[meshes.Snapshot, ...]:
-            return tuple(meshes.Snapshot.read(item) for item in sequence(raw))
-        return known(lambda: decode(s._backend.meshes(s._token,
-            None if self._edit is None else self._edit._token, owned, self)), lambda: decode(s._backend.recover(self)))
+    def get(self,id:str)->meshes.Snapshot:
+        s=self._session
+        return known(lambda:meshes.Snapshot.read(s._backend.mesh(s._token,id,None if self._edit is None else self._edit._token,self)),lambda:meshes.Snapshot.read(s._backend.recover(self)))
+    def get_many(self,ids:Sequence[str])->tuple[meshes.Snapshot,...]:
+        owned=tuple(ids)
+        if any(not isinstance(id,str) for id in owned):raise TypeError("Expected mesh ID text")
+        s=self._session
+        def decode(raw:object)->tuple[meshes.Snapshot,...]:return tuple(meshes.Snapshot.read(v) for v in sequence(raw))
+        return known(lambda:decode(s._backend.meshes(s._token,None if self._edit is None else self._edit._token,owned,self)),lambda:decode(s._backend.recover(self)))
 
     def plan(self, intent: meshes.RenameIntent) -> plans.Plan:
         s = self._session
         return plans.Plan.create(s._backend, s._token, None if self._edit is None else self._edit._token, intent)
 
 class Images:
+    def snapshot(self,id:str)->resources.ImageLease:
+        s=self._session
+        return resources.ImageLease.capture(s._backend,s._token,None if self._edit is None else self._edit._token,id)
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
     def get(self, id: str) -> resources.Snapshot:
@@ -349,9 +380,60 @@ class EditableBindings(Bindings):
     def set_keyform(self, id: str, keyform: bindings.Keyform) -> WriteResult:
         return self._owner.apply(ops.SetMeshKeyform(id, keyform))
 
+class Scene:
+    def __init__(self, session: Session, edit: "Edit | None" = None):
+        self._session, self._edit = session, edit
+
+    def get_many(self, ids: Sequence[str]) -> scene.Batch:
+        owned = tuple(ids)
+        if any(not isinstance(id, str) for id in owned):
+            raise TypeError("Expected scene IDs")
+        s = self._session
+        return known(lambda: scene.Batch.read(s._backend.scene(s._token,
+            None if self._edit is None else self._edit._token, owned, self)),
+            lambda: scene.Batch.read(s._backend.recover(self)))
+
+    def get(self, id: str) -> scene.Snapshot:
+        batch = self.get_many((id,))
+        return scene.Snapshot(batch.source, batch.items[0])
+
+    def plan(self, operation: scene.Operation) -> plans.Plan:
+        s = self._session
+        return plans.Plan.create_scene(s._backend, s._token,
+            None if self._edit is None else self._edit._token, operation)
+
 class Modeling:
     def __init__(self, session: Session, edit: "Edit | None" = None):
         self._session, self._edit = session, edit
+    def records(self, query: modeling.ModelingQuery) -> modeling.Records:
+        modeling.validate_ModelingQuery(query)
+        s = self._session
+        return known(lambda: modeling.Records.read(s._backend.modeling_records(s._token,
+            None if self._edit is None else self._edit._token, query, self)),
+            lambda: modeling.Records.read(s._backend.recover(self)))
+
+    def plan(self, intent: modeling.ModelingIntent) -> plans.Plan:
+        s = self._session
+        return plans.Plan.create_modeling(s._backend, s._token,
+            None if self._edit is None else self._edit._token, intent)
+
+    def plan_async(self, intent: modeling.ModelingIntent) -> Job[plans.Plan]:
+        modeling.validate_ModelingIntent(intent)
+        s = self._session
+        return Job[plans.Plan].start(s._backend, lambda owner: s._backend.modeling_plan_job(s._token,
+            None if self._edit is None else self._edit._token, intent, owner), "planned",
+            lambda value: plans.Plan(s._backend)._load(value))
+
+    def sample_async(self, poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks = sampling.Checks(),
+        expected: Source | None = None) -> Job[sampling.Batch]:
+        owned = sampling.inputs(poses)
+        if not isinstance(checks, sampling.Checks) or (expected is not None and not isinstance(expected, Source)):
+            raise TypeError("Expected Checks and optional Source")
+        checks.wire()
+        s = self._session
+        return Job[sampling.Batch].start(s._backend, lambda owner: s._backend.sample_job(s._token,
+            None if self._edit is None else self._edit._token, owned, checks, expected, owner), "sampled", sampling.Batch.read)
+
     def sample(self, poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks = sampling.Checks(),
         expected: Source | None = None) -> sampling.Batch:
         owned = sampling.inputs(poses)
@@ -375,6 +457,7 @@ class Edit:
         self.parameters = EditableParameters(session, self)
         self.bindings = EditableBindings(session, self)
         self.modeling = Modeling(session, self)
+        self.scene = Scene(session, self)
         try:
             self._token = self._backend.begin(session._token, label, self)
         except OutcomeUnknown as e:
@@ -429,7 +512,7 @@ class Edit:
         self._action = "apply"
         try:
             owned = tuple(operations)
-            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan, ops.CreateParameter, ops.PatchParameter, ops.CreateMeshBinding, ops.SetMeshKeyform)) for op in owned):
+            if any(not isinstance(op, (ops.Create, ops.Rename, ops.SetPositions, ops.CreateImage, ops.ReplaceImage, ops.ApplyPlan, ops.CreateParameter, ops.PatchParameter, ops.CreateMeshBinding, ops.SetMeshKeyform, *ops.scene.OPERATION_TYPES, *modeling.OPERATION_TYPES)) for op in owned):
                 raise TypeError("Expected typed authoring operations")
             for op in owned:
                 ops.validate(op)
@@ -445,7 +528,7 @@ class Edit:
         except Busy:
             raise
         except SdkFailure as e:
-            if e.code != "BUDGET_EXCEEDED" or e.edit_state != "editing":
+            if e.code not in {"BUDGET_EXCEEDED", "RESOURCE_BUDGET_EXCEEDED"} or e.edit_state != "editing":
                 self._poison(e)
             raise
         except (TypeError, ValueError, OverflowError, AttributeError) as e:

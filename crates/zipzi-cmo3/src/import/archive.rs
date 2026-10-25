@@ -1,11 +1,16 @@
-use super::{invalid, Result};
+use super::{Result, invalid};
 use crate::Cmo3Error;
 use std::{collections::HashMap, io::Read};
 
 const MAX_BYTES: usize = 512 * 1024 * 1024;
 /// Read CAFF without extracting paths. Cubism writes a streaming ZIP, which need
 /// not have a central directory; use its local-file record rather than ZipArchive.
+#[cfg(any(test, feature = "test-support"))]
 pub fn read(bytes: &[u8]) -> Result<HashMap<String, Vec<u8>>> {
+    read_limited(bytes, MAX_BYTES)
+}
+pub fn read_limited(bytes: &[u8], limit: usize) -> Result<HashMap<String, Vec<u8>>> {
+    let limit = limit.min(MAX_BYTES);
     if bytes.len() < 60
         || bytes.len() > MAX_BYTES
         || &bytes[..4] != b"CAFF"
@@ -49,18 +54,21 @@ pub fn read(bytes: &[u8]) -> Result<HashMap<String, Vec<u8>>> {
             return Err(invalid("Invalid or overlapping CAFF resource range"));
         }
         ranges.push((start, end));
+        if size > limit.saturating_sub(total) {
+            return Err(invalid("CAFF stored resource budget exceeded"));
+        }
         let stored: Vec<_> = bytes[start..end].iter().map(|v| v ^ key as u8).collect();
         let data = match compression {
             16 => stored,
-            33 => unzip(&stored, MAX_BYTES - total)?,
+            33 => unzip(&stored, limit - total)?,
             _ => {
                 return Err(invalid(format!(
                     "Unsupported CAFF compression: {compression}"
-                )))
+                )));
             }
         };
         total = total.checked_add(data.len()).ok_or(Cmo3Error::TooLarge)?;
-        if total > MAX_BYTES {
+        if total > limit {
             return Err(invalid("CAFF decoded resource budget exceeded"));
         }
         if out.insert(path, data).is_some() {

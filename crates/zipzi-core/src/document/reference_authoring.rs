@@ -27,6 +27,7 @@ pub(super) struct ReferenceIndex {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ReferenceCollection {
     ModelParameterGroups,
     ModelHitAreas,
@@ -36,6 +37,7 @@ pub enum ReferenceCollection {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ReferenceSelectionField {
     MeshMasks,
     OffscreenMasks,
@@ -43,6 +45,7 @@ pub enum ReferenceSelectionField {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ReferenceFields {
     ModelParameterGroup { name: String },
     ModelHitArea { name: String, mesh: ModelTargetRef },
@@ -51,6 +54,7 @@ pub enum ReferenceFields {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ReferenceEdit {
     CreateModelParameterGroup {
         id: String,

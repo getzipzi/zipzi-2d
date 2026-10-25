@@ -2,6 +2,7 @@
 
 Host discovery/start ownership lives in _endpoint; request recovery never launches.
 """
+from .._generated import modeling, binary as typed_binary
 from .._generated.resource_backends import ConnectedResources
 import hashlib
 import json
@@ -11,15 +12,18 @@ import struct
 import threading
 import time
 from typing import Literal
-from .. import ops, sampling
+from .. import ops, sampling, scene
 from .._generated.backends import ConnectedQueries
 from .._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
+from ._transfers import Transfer
 from ..events import Cursor
 
-CONTRACT = "zipzi-runtime-r4-1"
+CONTRACT = "zipzi-runtime-r4-3"
 MAX_FRAME = 16 << 20
+MAX_BINARY_CHUNK = 1 << 20
+MAX_BINARY_HEADER = 16 << 10
 
 def _body(value: object) -> bytes:
     return json.dumps(value, allow_nan=False, separators=(",", ":"), sort_keys=True).encode()
@@ -34,18 +38,47 @@ def _read(stream: socket.socket, length: int) -> bytes:
     return bytes(chunks)
 
 def _exchange(stream: socket.socket, body: bytes) -> object:
-    if not 0 < len(body) <= MAX_FRAME:
+    binary = body.startswith(b"ZZB1")
+    wire = body[4:] if binary else body
+    limit = MAX_BINARY_CHUNK + MAX_BINARY_HEADER + 4 if binary else MAX_FRAME
+    if not 0 < len(wire) <= limit:
         raise ValueError("Control frame exceeds budget")
-    stream.sendall(struct.pack(">I", len(body)))
-    stream.sendall(body)
+    stream.sendall(struct.pack(">I", len(wire) | ((1 << 31) if binary else 0)))
+    stream.sendall(wire)
     length, = struct.unpack(">I", _read(stream, 4))
-    if not 0 < length <= MAX_FRAME:
+    response_binary = bool(length & (1 << 31))
+    length &= ~(1 << 31)
+    if response_binary != binary or not 0 < length <= limit:
         raise ValueError("Invalid response length")
     def invalid_constant(value: str) -> object:
         raise ValueError(f"Non-finite response number: {value}")
-    return json.loads(_read(stream, length), parse_constant=invalid_constant)
+    if not binary:
+        return json.loads(_read(stream, length), parse_constant=invalid_constant)
+    header_length, = struct.unpack(">I", _read(stream, 4))
+    if not 0 < header_length <= MAX_BINARY_HEADER or header_length + 4 > length or length - header_length - 4 > MAX_BINARY_CHUNK:
+        raise ValueError("Invalid binary response bounds")
+    header = record(json.loads(_read(stream, header_length), parse_constant=invalid_constant))
+    response = dict(record(header["response"]))
+    payload = _read(stream, length - header_length - 4)
+    if header["has_payload"] is True:
+        if "ok" not in response:
+            raise ValueError("Binary error carried a payload")
+        response["ok"] = payload
+    elif payload:
+        raise ValueError("Unexpected binary response bytes")
+    return response
 
 class ConnectedBackend(ConnectedQueries, ConnectedResources):
+    def object_ref(self, session: object, kind: str, id: str, owner: object) -> object:
+        return self._request(dict(op="capture_object_ref", session=session, kind=kind, id=id), owner, "references.object_ref")
+    def resolve_ref(self, reference: object, owner: object) -> object:
+        return self._request(dict(op="resolve_object_ref", reference=reference), owner, "references.resolve_ref")
+    def ref_capabilities(self, reference: object, owner: object) -> object:
+        return self._request(dict(op="object_scene_capabilities", reference=reference), owner, "references.ref_capabilities")
+    def label_address(self, reference: object, owner: object) -> object:
+        return self._request(dict(op="capture_label_address", reference=reference), owner, "references.label_address")
+    def label_plan(self, address: object, name: str, owner: object) -> object:
+        return self._request(dict(op="plan_label_patch", address=address, name=name), owner, "references.label_plan")
     def __init__(self, endpoint: Path, timeout: float = 10., *, sdk_build: str | None = None,
         handshake_timeout: float | None = None) -> None:
         if not endpoint.is_absolute():
@@ -59,6 +92,7 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         self._closed = False
         self._next = 0
         self._pending: tuple[PendingRequest, bytes, object] | None = None
+        self._flows: dict[int, Transfer] = {}
         self._lock = threading.RLock()
         self._connect(handshake_timeout)
 
@@ -82,7 +116,7 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
                 raise SdkFailure("PROTOCOL_MISMATCH", "Host returned an incompatible protocol")
             if self._sdk_build is not None and metadata.sdk_build != self._sdk_build:
                 raise SdkFailure("BUILD_MISMATCH", "Host returned a different SDK build")
-            if not {"typed_meshes", "typed_resources_plans", "typed_resource_values", "typed_job_lifecycle", "typed_parameters", "typed_event_pages", "typed_mesh_batch", "typed_mesh_bindings", "typed_modeling_samples"}.issubset(sequence(hello["capabilities"])):
+            if not {"typed_binary_arrays", "typed_full_modeling", "typed_field_addresses", "read_jobs", "project_io", "resource_jobs", "editor_context", "typed_meshes", "typed_resources_plans", "typed_resource_values", "typed_job_lifecycle", "typed_parameters", "typed_event_pages", "typed_mesh_batch", "typed_mesh_bindings", "typed_modeling_samples", "typed_scene_authoring", "typed_object_references", "binary_blobs"}.issubset(sequence(hello["capabilities"])):
                 raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed authoring operations")
         except BaseException:
             stream.close()
@@ -112,6 +146,14 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         return response["ok"]
 
     def _request(self, value: dict[str, object], owner: object, operation: str) -> object:
+        return self._request_message(value, owner, operation, None)
+
+    def _binary_request(self, value: dict[str, object], payload: bytes, owner: object, operation: str) -> object:
+        if len(payload) > MAX_BINARY_CHUNK:
+            raise ValueError("Binary chunk exceeds budget")
+        return self._request_message(value, owner, operation, payload)
+
+    def _request_message(self, value: dict[str, object], owner: object, operation: str, payload: bytes | None) -> object:
         with self._lock:
             if self._closed:
                 raise SdkFailure("HOST_CLOSED", "Connection is closed", operation=operation)
@@ -121,8 +163,10 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
             request_id = self._next + 1
             body = _body(dict(protocol=CONTRACT, runtime=self._runtime, client=self._client,
                 request_id=request_id, operation=value))
-            if len(body) > MAX_FRAME:
+            if len(body) > (MAX_BINARY_HEADER if payload is not None else MAX_FRAME):
                 raise ValueError("Control frame exceeds budget")
+            if payload is not None:
+                body = b"ZZB1" + struct.pack(">I", len(body)) + body + payload
             pending = PendingRequest(request_id, hashlib.sha256(operation_bytes).hexdigest(), operation)
             self._next = request_id
             return self._send(pending, body, owner)
@@ -132,6 +176,26 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
             return self._pending[0] if self._pending is not None and self._pending[2] is owner else None
 
     def recover(self, owner: object) -> object:
+        if id(owner) in self._flows:
+            return self._drive_transfer(self._flows[id(owner)])
+        return self._recover_wire(owner)
+
+    def _drive_transfer(self, transfer: Transfer) -> object:
+        owner = transfer.owner
+        with self._lock:
+            if self._closed:
+                raise SdkFailure("HOST_CLOSED", "Connection is closed")
+            existing = self._flows.get(id(owner))
+            if (existing is not None or self.pending(owner) is not None) and existing is not transfer:
+                raise Busy("BUSY", "Recover the original transfer before starting another operation")
+            self._flows[id(owner)] = transfer
+            try:
+                return transfer.drive()
+            finally:
+                if self.pending(owner) is None:
+                    self._flows.pop(id(owner), None)
+
+    def _recover_wire(self, owner: object) -> object:
         with self._lock:
             if self._pending is None or self._pending[2] is not owner:
                 raise SdkFailure("NO_PENDING_REQUEST", "No request owned by this object needs recovery")
@@ -147,18 +211,41 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         # ModelSetup defaults are supplied by serde/SDK, not copied into Python.
         return self._request(dict(op="create_session", document_id=document_id), owner, "sessions.create")
     def bindings(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object:
-        return self._request(dict(op="mesh_binding_snapshot", session=session, edit=edit, ids=ids), owner, "bindings.get")
+        return self._drive_transfer(Transfer(self,owner,"bindings",selector=dict(op="mesh_binding_snapshot",session=session,edit=edit,ids=ids)))
+    def capture_address(self, session: object, selector: modeling.AddressSelector, owner: object) -> object:
+        return self._request(dict(op="capture_address", session=session, selector=modeling.encode_AddressSelector(selector)), owner, "capture_address")
+    def address_plan(self, address: object, patch: modeling.AddressPatch, owner: object) -> object:
+        return self._request(dict(op="plan_address_patch", address=address, patch=modeling.encode_AddressPatch(patch)), owner, "address_plan")
+    def modeling_capabilities(self, reference: object, domain: modeling.CapabilityDomain, owner: object) -> object:
+        return self._request(dict(op="modeling_capabilities", reference=reference, domain=modeling.encode_CapabilityDomain(domain)), owner, "modeling_capabilities")
+    def collection_capabilities(self, session: object, query: modeling.CollectionQuery, owner: object) -> object:
+        return self._request(dict(op="collection_capabilities", session=session, query=modeling.encode_CollectionQuery(query)), owner, "collection_capabilities")
+    def sample_job(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object:
+        return record(self._request(dict(op="request_modeling_samples", input=dict(session=session,edit=edit,parameters=poses,checks=checks.wire(),expected=None if expected is None else expected.wire())), owner, "sample_job"))["job"]
+    def modeling_plan_job(self, session: object, edit: object | None, intent: modeling.ModelingIntent, owner: object) -> object:
+        return record(self._request(dict(op="request_modeling_plan", session=session,edit=edit,intent=modeling.encode_ModelingIntent(intent)), owner, "modeling_plan_job"))["job"]
+    def modeling_records(self, session: object, edit: object | None, query: modeling.ModelingQuery, owner: object) -> object:
+        return self._drive_transfer(Transfer(self,owner,"records",selector=dict(op="modeling_query",session=session,edit=edit,query=modeling.encode_ModelingQuery(query))))
+    def modeling_plan(self, session: object, edit: object | None, intent: modeling.ModelingIntent, owner: object) -> object:
+        return self._request(dict(op="plan_modeling", session=session, edit=edit, intent=modeling.encode_ModelingIntent(intent)), owner, "modeling.plan")
+    def scene(self, session: object, edit: object | None, ids: tuple[str, ...], owner: object) -> object:
+        return self._request(dict(op="scene_snapshot", session=session, edit=edit, ids=ids), owner, "scene.get")
+    def scene_plan(self, session: object, edit: object | None, operation: scene.Operation, owner: object) -> object:
+        return self._request(dict(op="plan_scene_authoring", session=session, edit=edit,
+            operation=scene.wire(operation)["operation"]), owner, "scene.plan")
     def sample(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object:
-        return self._request(dict(op="sample_modeling", session=session, edit=edit, parameters=poses,
-            checks=checks.wire(), expected=None if expected is None else expected.wire()), owner, "modeling.sample")
+        return self._drive_transfer(Transfer(self,owner,"samples",selector=dict(op="sample_modeling", session=session, edit=edit, parameters=poses,
+            checks=checks.wire(), expected=None if expected is None else expected.wire())))
     def subscribe(self, session: object, owner: object) -> object:
         return self._request(dict(op="subscribe", session=session), owner, "events.subscribe")
     def events(self, cursor: Cursor, limit: int, owner: object) -> object:
         return self._request(dict(op="events", cursor=cursor.wire(), limit=limit), owner, "events.poll")
     def parameters(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object:
         return self._request(dict(op="parameter_snapshot", session=session, edit=edit, ids=ids), owner, "parameters.get")
+    def mesh(self,session:object,id:str,edit:object | None,owner:object)->object:
+        return self._drive_transfer(Transfer(self,owner,"meshes",selector=dict(op="mesh_snapshot",session=session,edit=edit,id=id)))
     def meshes(self, session: object, edit: object | None, ids: tuple[str, ...], owner: object) -> object:
-        return self._request(dict(op="mesh_snapshots", session=session, edit=edit, ids=ids), owner, "meshes.get_many")
+        return self._drive_transfer(Transfer(self,owner,"meshes",selector=dict(op="mesh_snapshots",session=session,edit=edit,ids=ids)))
     def session_id(self, token: object) -> SessionId:
         return SessionId.read(token)
     def list_sessions(self, owner: object) -> object:
@@ -172,11 +259,42 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
     def begin(self, session: object, label: str, owner: object) -> object:
         return self._request(dict(op="begin_edit", session=session, label=label), owner, "edit.begin")
     def apply(self, edit: object, operations: tuple[ops.Operation, ...], owner: object) -> object:
+        if len(operations)>1024:
+            return self._request(dict(op="apply_authoring",edit=edit,operations=tuple(ops.wire(op) for op in operations)),owner,"edit.apply")
+        payload = typed_binary.encode_operations(operations)
+        if len(payload) > 65536:
+            return self._drive_transfer(Transfer(self,owner,"authoring",data=payload,edit=edit))
         return self._request(dict(op="apply_authoring", edit=edit, operations=[ops.wire(op) for op in operations]), owner, "edit.apply")
     def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
+        if len(rgba) > 65536:
+            return self._drive_transfer(Transfer(self, owner, "image", data=rgba, width=width, height=height))
         return self._request(dict(op="prepare_image", width=width, height=height, rgba=list(rgba)), owner, "resources.prepare_image")
-    def release_handle(self, kind: Literal["image", "plan"], token: object, owner: object) -> None:
-        operation = dict(op="release_prepared_image", image=token) if kind == "image" else dict(op="release_modeling_plan", plan=token)
+    def prepare_image_buffer(self, width: int, height: int, blob: object, owner: object) -> object:
+        return self._request(dict(op="prepare_image_blob", width=width, height=height, blob=blob), owner, "resources.prepare_buffer")
+    def buffer_create(self, length: int, owner: object) -> object:
+        return self._request(dict(op="create_blob", length=length), owner, "buffer.create")
+    def buffer_append(self, blob: object, offset: int, data: bytes, owner: object) -> object:
+        return self._binary_request(dict(op="append_blob_binary", blob=blob, offset=offset,
+            length=len(data), payload_sha256=hashlib.sha256(data).hexdigest()), data, owner, "buffer.append")
+    def buffer_seal(self, blob: object, owner: object) -> object:
+        return self._request(dict(op="seal_blob", blob=blob), owner, "buffer.seal")
+    def buffer_read(self, blob: object, offset: int, length: int, owner: object) -> object:
+        return self._drive_transfer(Transfer(self, owner, "read", blob=blob, offset=offset, length=length))
+    def image(self, session: object, id: str, edit: object | None, owner: object) -> object:
+        return self._drive_transfer(Transfer(self, owner, "snapshot", selector=dict(op="image_snapshot", session=session, id=id, edit=edit)))
+    def prepared_pixels(self, image: object, owner: object) -> object:
+        return self._drive_transfer(Transfer(self, owner, "pixels", selector=dict(op="prepared_pixels", image=image)))
+    def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None:
+        if kind == "image":
+            operation = dict(op="release_prepared_image", image=token)
+        elif kind == "plan":
+            operation = dict(op="release_modeling_plan", plan=token)
+        elif kind == "reference":
+            operation = dict(op="release_object_ref", reference=token)
+        elif kind == "address":
+            operation = dict(op="release_field_address", address=token)
+        else:
+            operation = dict(op="release_blob", blob=token)
         self._request(operation, owner, f"{kind}.close")
     def statistics(self, owner: object) -> object:
         return self._request(dict(op="statistics"), owner, "resources.usage")
@@ -184,6 +302,14 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         self._request(dict(op="release_edit", edit=edit), owner, "edit.cancel")
     def commit(self, edit: object, owner: object) -> object:
         return record(self._request(dict(op="commit", edit=edit), owner, "edit.commit"))["job"]
+    def prepare_image_job(self,path: str | None,blob:object | None,owner:object)->object:
+        return record(self._request(dict(op="prepare_image_job",path=path,blob=blob),owner,"resources.load"))["job"]
+    def capture_image(self,session:object,edit:object | None,id:str,owner:object)->object:
+        return self._request(dict(op="capture_image",session=session,edit=edit,id=id),owner,"resources.snapshot")
+    def editor_context(self,session:object,owner:object)->object:
+        return self._request(dict(op="editor_context",session=session),owner,"session.editor_context")
+    def project(self, session: object | None, request: modeling.ProjectRequest, owner: object) -> object:
+        return record(self._request(dict(op="project",session=session,request=modeling.encode_ProjectRequest(request)),owner,"project"))["job"]
     def save(self, session: object, path: Path, owner: object) -> object:
         return record(self._request(dict(op="save", session=session, path=str(path)), owner, "project.save"))["job"]
     def open(self, path: Path, owner: object) -> object:
@@ -199,6 +325,13 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
     def wait(self, job: object, kind: JobKind, owner: object) -> object:
         deadline = time.monotonic() + self._timeout
         while True:
+            if kind=="sampled":
+                selector=dict(op="job",job=job)
+                raw=self._drive_transfer(Transfer(self,owner,"samples",selector=selector))
+                if raw is not None: return raw
+                if time.monotonic()>=deadline: raise OutcomeUnknown(PendingRequest(0,"","job.wait"),"Accepted Job is still pending; wait again")
+                time.sleep(.005)
+                continue
             info = record(self._request(dict(op="job", job=job), owner, "job.wait"))
             if info["result"] is not None:
                 result = dict(record(unwrap(info["result"])))
@@ -217,6 +350,7 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
             if self._pending is not None and self._pending[2] is not self:
                 self._closed = True
                 self._disconnect()
+                self._flows.clear()
                 return
             try:
                 if self.pending(self) is not None:
@@ -228,3 +362,4 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
                 raise
             self._closed = True
             self._disconnect()
+            self._flows.clear()

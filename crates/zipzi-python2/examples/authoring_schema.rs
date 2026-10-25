@@ -51,6 +51,10 @@ struct Contract {
     operations: Vec<Operation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     resources: Option<Box<Contract>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scene: Option<serde_json::Value>,
+    modeling: Option<serde_json::Value>,
+    binary: Option<serde_json::Value>,
 }
 fn main() {
     use zipzi_runtime::authoring::*;
@@ -59,6 +63,26 @@ fn main() {
     let contract = Contract {
         version: 1,
         resources: Some(Box::new(resource_contract())),
+        binary: Some(binary_contract()),
+        modeling: Some(
+            serde_json::json!({"version":1,"input_roots":[0,1,2,4,5,6,7,9,11],"roots":[zipzi_runtime::modeling::ModelingCommand::api_shape(),zipzi_sdk::ModelingIntent::api_shape(),zipzi_sdk::ModelingQuery::api_shape(),zipzi_sdk::OwnedModelingRecords::api_shape(),zipzi_runtime::addressing::AddressSelector::api_shape(),zipzi_runtime::addressing::AddressPatch::api_shape(),zipzi_runtime::addressing::CapabilityDomain::api_shape(),zipzi_runtime::addressing::CollectionQuery::api_shape(),zipzi_runtime::addressing::Capabilities::api_shape(),zipzi_sdk::ObjectKind::api_shape(),zipzi_sdk::ModelingSamples::api_shape(),zipzi_runtime::project_io::ProjectRequest::api_shape(),zipzi_runtime::project_io::ProjectReport::api_shape(),zipzi_runtime::editor_context::EditorContext::api_shape()]}),
+        ),
+        scene: Some(serde_json::json!({
+            "version": 1,
+            "roots": [zipzi_sdk::SceneOperation::api_shape(), zipzi_sdk::SceneSummary::api_shape()],
+            "bindings": [
+                binding!(zipzi_sdk::SceneOperation, "scene", "Operation", "union"),
+                binding!(zipzi_sdk::PartCreateSpec, "scene", "PartSpec", "record"),
+                binding!(zipzi_sdk::ParameterGroupCreateSpec, "scene", "ParameterGroupSpec", "record"),
+                binding!(zipzi_sdk::ScenePlacement, "scene", "Placement", "record"),
+                binding!(zipzi_sdk::SceneSummary, "scene", "Summary", "record"),
+                binding!(zipzi_sdk::VertexWeightSpec, "scene", "VertexWeight", "record"),
+                binding!(zipzi_sdk::ScalarSample, "scene", "Sample", "record"),
+                binding!(zipzi_sdk::VertexPatchSpec, "scene", "VertexPatch", "record"),
+                binding!(zipzi_sdk::GluePairSpec, "scene", "GluePair", "record"),
+                binding!(zipzi_sdk::OffscreenFormSpec, "scene", "OffscreenForm", "record"),
+            ],
+        })),
         bindings: vec![
             binding!(zipzi_core::Vec2, "meshes", "Point", "point"),
             binding!(
@@ -126,6 +150,9 @@ fn resource_contract() -> Contract {
     Contract {
         version: 1,
         resources: None,
+        scene: None,
+        modeling: None,
+        binary: None,
         bindings: vec![
             binding!(
                 zipzi_sdk::ImageCreateSpec,
@@ -215,4 +242,21 @@ fn resource_contract() -> Contract {
         ],
         operations,
     }
+}
+
+fn binary_contract() -> serde_json::Value {
+    use zipzi_core::binary_wire::WireWrite;
+    serde_json::json!({"version":1,"input_signature":format!("{:032x}",Vec::<zipzi_runtime::authoring::EditOperation>::SIGNATURE),
+        "output_signature":format!("{:032x}",zipzi_sdk::OwnedModelingRecords::SIGNATURE),
+        "edit_variants":zipzi_runtime::authoring::EditOperation::VARIANTS,
+        "inputs":[zipzi_runtime::modeling::ModelingCommand::api_shape(),zipzi_sdk::SceneOperation::api_shape(),zipzi_sdk::MeshOperation::api_shape(),zipzi_sdk::ParameterOperation::api_shape(),zipzi_sdk::MeshBindingOperation::api_shape(),zipzi_runtime::authoring::ResourceOperation::api_shape()],
+        "output":zipzi_sdk::OwnedModelingRecords::api_shape(),
+        "mesh":zipzi_runtime::authoring::MeshSnapshot::api_shape(),
+        "mesh_signature":format!("{:032x}",Vec::<zipzi_runtime::authoring::MeshSnapshot>::SIGNATURE),
+        "binding_signature":format!("{:032x}",Vec::<zipzi_core::MeshBinding>::SIGNATURE),
+        "source_variants":zipzi_runtime::SourceRef::VARIANTS,
+        "source_fields":zipzi_runtime::SourceRef::VARIANT_FIELDS,
+        "samples":zipzi_sdk::ModelingSamples::api_shape(),
+        "sample_signature":format!("{:032x}",zipzi_sdk::ModelingSamples::SIGNATURE),
+    })
 }

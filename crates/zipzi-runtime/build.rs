@@ -17,9 +17,15 @@ fn sources(path: &Path, files: &mut Vec<PathBuf>) {
 fn main() {
     let manifest = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let root = manifest.parent().unwrap().parent().unwrap();
-    let mut files = vec![root.join("Cargo.toml"), root.join("Cargo.lock")];
+    let mut files = vec![
+        root.join("Cargo.toml"),
+        root.join("Cargo.lock"),
+        manifest.join("build.rs"),
+    ];
     for name in [
+        "zipzi-runtime",
         "zipzi-sdk",
+        "zipzi-api-derive",
         "zipzi-core",
         "zipzi-project",
         "zipzi-animation",

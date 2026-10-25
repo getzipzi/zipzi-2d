@@ -8,20 +8,30 @@ impl NativeRuntime {
         &self,
         py: Python<'_>,
         session: &SessionToken,
-        id: String,
+        id: &str,
         edit: Option<&EditToken>,
     ) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(
+            self,
+            py,
+            256usize.saturating_add(id.len().saturating_mul(4).saturating_add(128)),
+            "resources.get",
+            None
+        );
         let client = self.client;
         let input = zipzi_runtime::authoring::ImageQuery {
             session: session.id,
-            id: id,
+            id: id.to_owned(),
             edit: edit.map(|v| v.id),
         };
         let value = py.detach(|| {
-            self.host
-                .call(move |rt| zipzi_runtime::authoring::IMAGE_QUERY.call(rt, client, input))
+            self.host.call(move |rt| {
+                let v = zipzi_runtime::authoring::IMAGE_QUERY.call(rt, client, input)?;
+                let lease = rt.reserve_transfer(v.pixels.rgba.len())?;
+                Ok((v, lease))
+            })
         });
-        reply(py, value, "resources.get", |v| {
+        reply(py, value, "resources.get", |(v, _lease)| {
             Ok(write_imagesnapshot(py, v)?.into_any())
         })
     }
@@ -30,10 +40,12 @@ impl NativeRuntime {
         let input = zipzi_runtime::authoring::PreparedPixelsQuery { image: image.id };
         let value = py.detach(|| {
             self.host.call(move |rt| {
-                zipzi_runtime::authoring::PREPARED_PIXELS_QUERY.call(rt, client, input)
+                let v = zipzi_runtime::authoring::PREPARED_PIXELS_QUERY.call(rt, client, input)?;
+                let lease = rt.reserve_transfer(v.rgba.len())?;
+                Ok((v, lease))
             })
         });
-        reply(py, value, "resources.pixels", |v| {
+        reply(py, value, "resources.pixels", |(v, _lease)| {
             Ok(write_imagepixels(py, v)?.into_any())
         })
     }
@@ -44,6 +56,13 @@ impl NativeRuntime {
         edit: Option<&EditToken>,
         intent: &Bound<'_, PyAny>,
     ) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(
+            self,
+            py,
+            256usize.saturating_add(measure_planintent(intent)?),
+            "plan.create",
+            None
+        );
         let client = self.client;
         let input = zipzi_runtime::authoring::PlanQuery {
             session: session.id,

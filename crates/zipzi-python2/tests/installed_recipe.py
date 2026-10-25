@@ -11,7 +11,7 @@ import time
 from typing import get_type_hints
 
 import zipzi
-from zipzi import bindings, sampling, events, meshes, ops, parameters, resources
+from zipzi import bindings, sampling, events, meshes, ops, parameters, resources, scene
 
 def main():
     mode = sys.argv[1]
@@ -78,10 +78,40 @@ def main():
                         cpu = edit.modeling.sample(({angle:.5},))
                         assert cpu.frames[0].drawables[0].positions[0][0] == 10.
                         assert cpu.frames[0].render_plan == (sampling.RenderCommand(sampling.RenderKind.DRAW_MESH,face),)
+                        part = "79300000-0000-4000-8000-000000000010"
+                        parent = "79300000-0000-4000-8000-000000000011"
+                        blend_parameter = "79300000-0000-4000-8000-000000000012"
+                        table = "79300000-0000-4000-8000-000000000013"
+                        blend = "79300000-0000-4000-8000-000000000014"
+                        base_sample = "79300000-0000-4000-8000-000000000015"
+                        active_sample = "79300000-0000-4000-8000-000000000016"
+                        edit.apply_many((
+                            scene.CreatePart(scene.PartSpec("Installed folder", id=part)),
+                            scene.CreateRotation("Parent", scene.Placement(part_id=part), id=parent),
+                            scene.MoveToPart((face,), part_id=part),
+                            ops.CreateParameter(parameters.ParameterSpec("Blend", 0., 1., 0., id=blend_parameter, kind=parameters.Kind.BLEND_SHAPE)),
+                            scene.CreateBlendTable(blend_parameter, (scene.Sample(base_sample,0.),scene.Sample(active_sample,1.)), base_sample, id=table),
+                            scene.CreateMeshBlend(face, table, id=blend),
+                            scene.SetMeshBlendVertices(face, blend, active_sample, tuple(scene.VertexPatch(v,position=(2.,0.)) for v in geometry.vertex_ids)),
+                            scene.InsertMeshVertex(face, 50, (.5,0.), (.5,0.), (scene.VertexWeight(42,.5),scene.VertexWeight(7,.5))),
+                            scene.ReplaceTriangles(face, ((42,50,99),(50,7,99))),
+                        ))
+                        with edit.scene.plan(scene.ReparentLocal((face,),parent_id=parent)) as plan:
+                            assert plan.report.cost is not None
+                            edit.apply_plan(plan)
+                        assert edit.scene.get(face).value.parent_id == parent
+                        assert edit.modeling.sample(({angle:.5,blend_parameter:.5},)).frames[0].drawables[0].positions[0][0] == 11.
                     assert image.pixels().rgba == bytes((12, 34, 56, 255))
                 assert runtime.resources.usage().prepared_images == 0
                 assert runtime.resources.usage().plans == 0
                 assert session.info().history == (1, 0)
+                with session.reference("mesh",face) as ref:
+                    assert ref.resolve().version == session.info().version
+                    assert ref.scene_capabilities().patch.state == "available"
+                    with ref.label() as address:
+                        assert address.expected == "Installed"
+                        with address.plan("Installed") as plan:
+                            assert plan.report.no_op
                 assert session.meshes.get(face).name == "Installed"
                 assert session.modeling.sample(({angle:.5},)).frames[0].drawables[0].positions[0][0] == 10.
                 published = [e for e in stream.poll() if isinstance(e, events.Published)]
@@ -108,6 +138,9 @@ def main():
                 assert save_job.state() == "succeeded"
                 assert saved.manifest.is_file()
                 assert any(isinstance(e, events.Saved) and e.receipt == saved for e in stream.poll())
+                import runpy
+                r4=runpy.run_path(str(Path(__file__).with_name("r4_recipe.py")))["run"](runtime,Path(__file__).resolve().parents[3],folder/"r4")
+                print(json.dumps(dict(r4=r4),sort_keys=True))
             if child is not None:
                 child.terminate()
                 child.wait(timeout=5)
@@ -134,6 +167,10 @@ def main():
                 assert reopened.resources.get(asset).name == "Texture"
                 assert reopened.resources.get(asset).pixels.rgba == bytes((21, 43, 65, 255))
                 assert reopened.meshes.get(face).name == "Installed"
+                assert reopened.scene.get(face).value.parent_id == parent
+                assert reopened.scene.get(part).value.name == "Installed folder"
+                assert reopened.meshes.get(face).geometry.vertex_ids == (42,7,99,50)
+                assert reopened.modeling.sample(({angle:.5,blend_parameter:.5},)).frames[0].drawables[0].positions[0][0] == 11.
                 value = reopened.parameters.get(parameter)
                 assert (value.name,value.runtime_id,value.kind,value.decimal_places,value.repeat,value.default_value) == (
                     "Installed parameter","ParamInstalled",parameters.Kind.BLEND_SHAPE,3,False,.5)

@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct ObjectEditorState {
     #[serde(default, skip_serializing_if = "is_false")]
     pub hidden_in_editor: bool,
@@ -17,6 +18,7 @@ fn is_false(value: &bool) -> bool {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct EditorState {
     /// Explicit flags only, keyed by globally unique object ID. Defaults are omitted.
     #[serde(default)]

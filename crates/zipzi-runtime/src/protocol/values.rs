@@ -6,6 +6,9 @@ pub(super) fn info(s: &SessionInfo) -> Value {
         "fault": s.fault.as_ref().map(|e| error(e.clone()))})
 }
 pub(super) fn error(e: RuntimeError) -> Value {
+    if let RuntimeError::Export { message, report } = e {
+        return json!({"error":{"code":"EXPORT_LOSS","message":message,"operation":"project.export","project_report":report}});
+    }
     if let RuntimeError::Sdk(e) = e {
         return json!({"error": {"category": "sdk", "code": e.code, "message": e.message,
             "operation": e.operation, "object_ids": e.object_ids, "field_path": e.field_path,
@@ -24,7 +27,7 @@ pub(super) fn error(e: RuntimeError) -> Value {
         RuntimeError::ExecutorFailure(_) => "EXECUTOR_FAILURE",
         RuntimeError::WorkerPanic(_) => "WORKER_PANIC",
         RuntimeError::Path(_) => "INVALID_PATH",
-        RuntimeError::Sdk(_) => unreachable!(),
+        RuntimeError::Sdk(_) | RuntimeError::Export { .. } => unreachable!(),
     };
     failure(code, &e.to_string())
 }
@@ -40,7 +43,14 @@ pub(super) fn job_info(j: &JobInfo) -> Value {
     json!({"id": j.id, "session": j.session, "state": match j.state { JobState::Queued=>"queued", JobState::Running=>"running", JobState::Cancelling=>"cancelling", JobState::Succeeded=>"succeeded", JobState::Failed=>"failed", JobState::Cancelled=>"cancelled" },
     "result": j.result.as_ref().map(|result| match result {
         Err(e) => error(e.clone()),
+        Ok(JobValue::PreparedPlan(_)) => failure("INTERNAL_RESULT", "Unpublished plan result"),
         Ok(value) => success(match value {
+            JobValue::PreparedImage(_)=>unreachable!("unregistered image"),
+            JobValue::ImagePrepared(value)=>json!(value),
+            JobValue::Project{session,report}=>json!({"session":session,"report":report}),
+            JobValue::Sampled(value)=>json!(value),
+            JobValue::Planned(value)=>json!(value),
+            JobValue::PreparedPlan(_)=>unreachable!("unpublished plan"),
             JobValue::Opened(s) => json!({"session": s}),
             JobValue::Saved(r) => saved(r),
             JobValue::Published(r) => receipt(r),

@@ -5,12 +5,26 @@ use crate::authoring::{
 };
 
 impl Runtime {
-    pub fn mesh_binding_snapshot(
-        &self,
-        client: ClientId,
-        input: MeshBindingQuery,
-    ) -> Result<MeshBindingBatch> {
-        self.with_authoring_source(client, input.session, input.edit, |doc, source| {
+    /// Bound frozen evaluator workspace, typed output, diagnostic worst case and
+    /// Python objects before any frame or source clone is allocated.
+    pub(super) fn sample_bytes(doc: &Document, poses: usize) -> usize {
+        let geometry = doc
+            .mesh_order()
+            .iter()
+            .filter_map(|id| doc.get_mesh(id))
+            .fold(4096usize, |n, m| {
+                n.saturating_add(m.base_positions.len().saturating_mul(512))
+                    .saturating_add(m.triangles.len().saturating_mul(384))
+                    .saturating_add(m.masks.len().saturating_mul(256))
+            });
+        doc.estimated_content_bytes()
+            .saturating_mul(8)
+            .saturating_add(geometry.saturating_mul(poses.max(1)))
+    }
+
+    pub fn binding_read_bytes(&self, client: ClientId, input: &MeshBindingQuery) -> Result<usize> {
+        use zipzi_core::binary_wire::WireWrite;
+        self.with_authoring_source(client, input.session, input.edit, |doc, _| {
             let ids = input.ids.as_deref().unwrap_or_else(|| doc.binding_order());
             if ids.len() > 256 {
                 return Err(RuntimeError::Budget("mesh binding count"));
@@ -29,45 +43,19 @@ impl Runtime {
                         referrers: Box::new([]),
                     })
                 })?;
-                bytes = bytes
-                    .saturating_add(
-                        binding
-                            .id
-                            .len()
-                            .saturating_add(binding.mesh_id.len())
-                            .saturating_mul(6),
-                    )
-                    .saturating_add(1024);
-                for axis in &binding.axes {
-                    bytes = bytes
-                        .saturating_add(
-                            axis.id
-                                .len()
-                                .saturating_add(axis.parameter_id.len())
-                                .saturating_mul(6),
-                        )
-                        .saturating_add(256);
-                    for sample in &axis.samples {
-                        bytes = bytes
-                            .saturating_add(sample.id.len().saturating_mul(6))
-                            .saturating_add(128);
-                    }
-                }
-                for keyform in &binding.keyforms {
-                    bytes = bytes
-                        .saturating_add(keyform.positions.len().saturating_mul(128))
-                        .saturating_add(1024);
-                    for sample in &keyform.samples {
-                        bytes = bytes
-                            .saturating_add(sample.len().saturating_mul(6))
-                            .saturating_add(64);
-                    }
-                }
-                if bytes > 1 << 20 {
-                    return Err(RuntimeError::Budget("mesh binding bytes"));
-                }
+                bytes = bytes.saturating_add(binding.expansion_bytes().saturating_mul(8));
             }
-            self.check_bytes(bytes.saturating_mul(8), 0, 0)?;
+            Ok(bytes)
+        })
+    }
+    pub fn mesh_binding_snapshot(
+        &self,
+        client: ClientId,
+        input: MeshBindingQuery,
+    ) -> Result<MeshBindingBatch> {
+        self.check_bytes(self.binding_read_bytes(client, &input)?, 0, 0)?;
+        self.with_authoring_source(client, input.session, input.edit, |doc, source| {
+            let ids = input.ids.as_deref().unwrap_or_else(|| doc.binding_order());
             Ok(MeshBindingBatch {
                 source,
                 bindings: ids
@@ -76,6 +64,24 @@ impl Runtime {
                     .collect(),
             })
         })
+    }
+    pub fn binding_response(
+        &mut self,
+        client: ClientId,
+        input: MeshBindingQuery,
+    ) -> Result<serde_json::Value> {
+        use zipzi_core::binary_wire::WireWrite;
+        let _lease = self.reserve_transfer(self.binding_read_bytes(client, &input)?)?;
+        let value = self.mesh_binding_snapshot(client, input)?;
+        let size = zipzi_core::binary_wire::encoded_len(&value.bindings)
+            .map_err(|_| RuntimeError::Budget("binary bindings"))?;
+        if size <= 8192 {
+            return serde_json::to_value(value).map_err(|_| RuntimeError::InvalidReference);
+        }
+        let (blob, length) = self.binary_result_blob(client, &value.bindings)?;
+        Ok(
+            serde_json::json!({"source":value.source,"blob":blob,"length":length,"signature":format!("{:032x}",Vec::<zipzi_core::MeshBinding>::SIGNATURE)}),
+        )
     }
 
     pub fn sample_modeling(
@@ -88,39 +94,16 @@ impl Runtime {
         }
         // All input/source/output admission precedes the frozen document clone
         // and evaluation. No model, Preview or history is mutated by this route.
-        let source =
+        let (source, lease) =
             self.with_authoring_source(client, input.session, input.edit, |doc, source| {
                 if input.expected.is_some_and(|expected| expected != source) {
                     return Err(RuntimeError::InvalidReference);
                 }
-                let document = doc.estimated_content_bytes();
-                let parameters =
-                    input
-                        .parameters
-                        .iter()
-                        .flat_map(|p| p.keys())
-                        .fold(0usize, |n, id| {
-                            n.saturating_add(id.len().saturating_mul(6))
-                                .saturating_add(128)
-                        });
-                let response = document
-                    .saturating_mul(input.parameters.len().max(1))
-                    .saturating_mul(8)
-                    .saturating_add(parameters)
-                    .saturating_add(4096);
-                if response > 8 << 20 {
-                    return Err(RuntimeError::Budget(
-                        "modeling sample batch; split the batch",
-                    ));
-                }
-                self.check_bytes(
-                    response
-                        .saturating_mul(128)
-                        .saturating_add(document.saturating_mul(4)),
-                    0,
-                    0,
-                )?;
-                Ok(source)
+                self.refresh_memory_budget();
+                let lease = self
+                    .reserve_transfer(Self::sample_bytes(doc, input.parameters.len()))
+                    .map_err(|_| RuntimeError::Budget("modeling sample workspace"))?;
+                Ok((source, lease))
             })?;
         let snapshot = if let Some(edit) = input.edit {
             self.edit_snapshot(client, edit)?
@@ -135,6 +118,7 @@ impl Runtime {
             SessionState::Closed => "closed",
         };
         Ok(ModelingSampleBatch {
+            lease: Some(Arc::new(lease)),
             source,
             state,
             samples: snapshot

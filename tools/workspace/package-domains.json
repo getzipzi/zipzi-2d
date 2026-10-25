@@ -16,7 +16,8 @@
     "zipzi-render-wgpu",
     "zipzi-sdk",
     "zipzi-runtime",
-    "zipzi-sdk-observe"
+    "zipzi-sdk-observe",
+    "zipzi-api-derive"
   ],
   "editor": [
     "zipzi-editor-core",

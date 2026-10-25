@@ -22,6 +22,7 @@ macro_rules! ids {
     ($($name:ident),*) => {$(
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
         #[serde(deny_unknown_fields)]
+        #[derive(zipzi_api_derive::BinaryWire)]
         pub struct $name {
             pub(crate) runtime: RuntimeInstanceId,
             pub(crate) serial: u64,
@@ -47,7 +48,9 @@ ids!(
     OperationId,
     PlanId,
     ImageId,
-    BlobId
+    BlobId,
+    ObjectRefId,
+    FieldAddressId
 );
 impl From<EditId> for OperationId {
     fn from(id: EditId) -> Self {
@@ -113,6 +116,15 @@ impl JobState {
 
 #[derive(Debug, Clone)]
 pub enum JobValue {
+    PreparedImage(std::sync::Arc<zipzi_sdk::PreparedImageContent>),
+    ImagePrepared(crate::authoring::PreparedImageInfo),
+    Project {
+        session: SessionId,
+        report: std::sync::Arc<crate::project_io::ProjectReport>,
+    },
+    Sampled(std::sync::Arc<crate::authoring::ModelingSampleBatch>),
+    PreparedPlan(std::sync::Arc<crate::PreparedModelingPlan>),
+    Planned(std::sync::Arc<crate::authoring::PlanSnapshot>),
     Imported {
         session: SessionId,
         notices: Vec<String>,
@@ -134,6 +146,11 @@ pub struct JobInfo {
 
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum RuntimeError {
+    #[error("{message}")]
+    Export {
+        message: String,
+        report: Box<crate::project_io::ProjectReport>,
+    },
     #[error(transparent)]
     Sdk(#[from] SdkError),
     #[error("Unknown or expired runtime reference")]
@@ -167,6 +184,7 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 /// the formal SDK version did not change. Snapshot/Proposal tokens arrive later.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryOutput)]
 pub enum SourceRef {
     Formal {
         session: SessionId,
@@ -196,6 +214,7 @@ impl SourceRef {
 
 #[derive(Debug, Clone)]
 pub struct SourceSnapshot {
+    pub(crate) _lease: std::sync::Arc<zipzi_project::TransferReservation>,
     pub source: SourceRef,
     pub snapshot: std::sync::Arc<AuthoringSnapshot>,
     /// Busy and faulted snapshots are explicitly frozen, never current reads.
@@ -208,7 +227,8 @@ pub enum OpenRequest {
     Pending(JobId),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "format", content = "path", rename_all = "snake_case")]
 pub enum ImportSource {
     Model3(PathBuf),
     Psd(PathBuf),
@@ -219,6 +239,94 @@ impl zipzi_core::api_shape::ApiShape for SourceRef {
     fn api_shape() -> zipzi_core::api_shape::Shape {
         zipzi_core::api_shape::Shape::Opaque {
             name: concat!(module_path!(), "::SourceRef").into(),
+        }
+    }
+}
+
+impl zipzi_core::binary_wire::WireWrite for RuntimeInstanceId {
+    const SIGNATURE: u128 = zipzi_core::binary_wire::signature("runtime-instance-uuid-v1");
+    fn encode<W: std::io::Write>(&self, out: &mut W) -> zipzi_core::binary_wire::Result<()> {
+        out.write_all(self.0.as_bytes())?;
+        Ok(())
+    }
+    fn expansion_bytes(&self) -> usize {
+        128
+    }
+}
+impl zipzi_core::binary_wire::WireRead for RuntimeInstanceId {
+    fn input_cost(
+        input: &mut zipzi_core::binary_wire::Reader<'_>,
+    ) -> zipzi_core::binary_wire::Result<usize> {
+        input.take(16)?;
+        Ok(16)
+    }
+    fn decode(
+        input: &mut zipzi_core::binary_wire::Reader<'_>,
+    ) -> zipzi_core::binary_wire::Result<Self> {
+        Ok(Self(Uuid::from_bytes(input.take(16)?.try_into().unwrap())))
+    }
+}
+
+impl JobValue {
+    pub(crate) fn retained_bytes(&self) -> usize {
+        use zipzi_core::binary_wire::WireWrite;
+        match self {
+            Self::Project { report, .. } => report.expansion_bytes(),
+            Self::Sampled(samples) => samples.samples.expansion_bytes(),
+            Self::Planned(plan) => plan.report.expansion_bytes(),
+            Self::PreparedPlan(plan) => plan.bytes,
+            Self::PreparedImage(_) | Self::ImagePrepared(_) | Self::Opened(_) => 1024,
+            Self::Published(receipt) => receipt.estimated_bytes().saturating_mul(4),
+            Self::Saved(receipt) => receipt
+                .manifest
+                .as_os_str()
+                .len()
+                .saturating_add(
+                    receipt
+                        .warnings
+                        .iter()
+                        .chain(&receipt.history_warnings)
+                        .map(|s| s.capacity().saturating_add(64))
+                        .sum::<usize>(),
+                )
+                .saturating_mul(4)
+                .saturating_add(1024),
+            Self::Imported { notices, name, .. } => notices
+                .iter()
+                .chain(name.iter())
+                .map(|s| s.capacity().saturating_add(64))
+                .sum::<usize>()
+                .saturating_mul(4)
+                .saturating_add(1024),
+        }
+    }
+}
+
+impl RuntimeError {
+    pub(crate) fn retained_bytes(&self) -> usize {
+        use zipzi_core::binary_wire::WireWrite;
+        match self {
+            Self::Export { report, message } => report
+                .expansion_bytes()
+                .saturating_add(message.len().saturating_mul(4)),
+            Self::Sdk(e) => e
+                .code
+                .len()
+                .saturating_add(e.message.len())
+                .saturating_add(e.field_path.as_ref().map_or(0, |v| v.len()))
+                .saturating_add(
+                    e.object_ids
+                        .iter()
+                        .chain(e.referrers.iter())
+                        .map(|v| v.capacity().saturating_add(64))
+                        .sum::<usize>(),
+                )
+                .saturating_mul(4)
+                .saturating_add(4096),
+            Self::Path(message) | Self::ExecutorFailure(message) | Self::WorkerPanic(message) => {
+                message.len().saturating_mul(4).saturating_add(4096)
+            }
+            _ => 4096,
         }
     }
 }

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/zipzi-api-derive",
     "crates/zipzi-core",
     "crates/zipzi-live2d",
     "crates/zipzi-animation",

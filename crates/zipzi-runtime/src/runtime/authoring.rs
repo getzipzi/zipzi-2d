@@ -2,6 +2,8 @@ use super::*;
 use crate::authoring::{EditOperation, MeshSnapshot, PlanIntent, PlanSnapshot, WriteResult};
 
 enum ReadyOperation {
+    Scene(zipzi_sdk::SceneOperation),
+    Modeling(Box<crate::modeling::ModelingCommand>),
     MeshBinding(zipzi_sdk::MeshBindingOperation),
     Parameter(zipzi_sdk::ParameterOperation),
     Mesh(zipzi_sdk::MeshOperation),
@@ -10,17 +12,63 @@ enum ReadyOperation {
     Plan(Arc<zipzi_sdk::ModelingPlan>, bool),
 }
 
-fn mesh_response_bytes(mesh: &zipzi_core::Mesh) -> usize {
-    mesh.vertex_ids
-        .len()
-        .saturating_mul(128)
-        .saturating_add(mesh.triangles.len().saturating_mul(64))
-        .saturating_add(mesh.id.len())
-        .saturating_add(mesh.name.len())
-        .saturating_add(4096)
-}
-
 impl Runtime {
+    pub fn scene_snapshot(
+        &self,
+        client: ClientId,
+        input: crate::authoring::SceneQuery,
+    ) -> Result<crate::authoring::SceneBatch> {
+        self.with_authoring_source(client, input.session, input.edit, |doc, source| {
+            if input.ids.len() > 256 {
+                return Err(RuntimeError::Budget("scene query count"));
+            }
+            // Admit borrowed metadata before response cloning/adapter expansion.
+            let mut bytes = 4096usize;
+            for id in &input.ids {
+                let size = zipzi_sdk::SceneSummary::response_bytes(doc, id).ok_or_else(|| {
+                    RuntimeError::Sdk(zipzi_sdk::SdkError {
+                        code: "NOT_FOUND".into(),
+                        message: "Scene object does not exist".into(),
+                        operation: "scene.get",
+                        object_ids: vec![id.clone()],
+                        field_path: None,
+                        expected_version: None,
+                        actual_version: None,
+                        referrers: Box::new([]),
+                    })
+                })?;
+                bytes = bytes.saturating_add(size.saturating_add(512));
+                if bytes > 1 << 20 {
+                    return Err(RuntimeError::Budget("scene query bytes"));
+                }
+            }
+            self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
+            Ok(crate::authoring::SceneBatch {
+                source,
+                items: input
+                    .ids
+                    .iter()
+                    .map(|id| zipzi_sdk::SceneSummary::read(doc, id).expect("admitted metadata"))
+                    .collect(),
+            })
+        })
+    }
+
+    pub fn plan_scene_authoring(
+        &mut self,
+        client: ClientId,
+        session: SessionId,
+        edit: Option<EditId>,
+        operation: zipzi_sdk::SceneOperation,
+    ) -> Result<PlanSnapshot> {
+        let (plan, source, report) =
+            self.plan_modeling(client, session, edit, operation.into_intent())?;
+        Ok(PlanSnapshot {
+            plan,
+            source,
+            report,
+        })
+    }
     pub fn edit_meshes(
         &mut self,
         client: ClientId,
@@ -46,14 +94,44 @@ impl Runtime {
         if self.edit(client, edit)?.state != EditState::Editing {
             return Err(RuntimeError::Aborted);
         }
+        if self.edit(client, edit)?.pending_upload.is_some() {
+            return Err(RuntimeError::Busy);
+        }
         if operations.len() > 1024 {
             return Err(RuntimeError::Budget("authoring operations"));
         }
+        use zipzi_core::binary_wire::WireWrite;
+        // Input resolution, COW detachment, planner workspace and publication
+        // growth are admitted before the first SDK mutation in this batch.
+        let document = self.edit_document(client, edit)?.estimated_content_bytes();
+        let input = operations.expansion_bytes();
+        self.refresh_memory_budget();
+        let available = self
+            .limits
+            .accounted_bytes
+            .saturating_sub(self.accounted_bytes());
+        let fixed = input
+            .saturating_add(document.saturating_mul(3))
+            .saturating_add(4096);
+        if available <= fixed {
+            return Err(RuntimeError::Budget("authoring workspace"));
+        }
+        let session = self.edit(client, edit)?.session;
+        let mut limits = self.ready(session)?.authoring_limits();
+        limits.max_conversion_bytes = limits
+            .max_conversion_bytes
+            .min((available - fixed) / 2)
+            .max(1);
+        let workspace = self.reserve_transfer(
+            fixed.saturating_add(limits.max_conversion_bytes.saturating_mul(2)),
+        )?;
         let resolved = operations
             .into_iter()
             .enumerate()
             .map(|(index, operation)| {
                 Ok(match operation {
+                    EditOperation::Scene { operation } => ReadyOperation::Scene(operation),
+                    EditOperation::Modeling { operation } => ReadyOperation::Modeling(operation),
                     EditOperation::MeshBinding { operation } => {
                         ReadyOperation::MeshBinding(operation)
                     }
@@ -88,26 +166,34 @@ impl Runtime {
             }
         };
         let ids = self.apply_edit(client, edit, |candidate| {
-            let mut ids = vec![];
-            for operation in resolved {
-                match operation {
-                    ReadyOperation::MeshBinding(op) => ids.push(op.apply(candidate)?),
-                    ReadyOperation::Parameter(op) => ids.push(op.apply(candidate)?),
-                    ReadyOperation::Mesh(op) => ids.push(op.apply(candidate)?),
-                    ReadyOperation::Image(spec, image) => {
-                        ids.push(candidate.create_image_spec(spec, &image)?)
-                    }
-                    ReadyOperation::ReplaceImage(id, image) => {
-                        candidate.replace_prepared_image(&id, &image)?;
-                        ids.push(id);
-                    }
-                    ReadyOperation::Plan(plan, valid) => {
-                        super::modeling::apply_plan(&plan, valid, candidate)?;
-                        ids.extend(plan.report().affected_ids);
+            let workspace = workspace;
+            candidate.set_authoring_limits(limits);
+            let result = (|| {
+                let mut ids = vec![];
+                for operation in resolved {
+                    match operation {
+                        ReadyOperation::Scene(op) => ids.extend(op.apply(candidate)?),
+                        ReadyOperation::Modeling(op) => op.apply(candidate)?,
+                        ReadyOperation::MeshBinding(op) => ids.push(op.apply(candidate)?),
+                        ReadyOperation::Parameter(op) => ids.push(op.apply(candidate)?),
+                        ReadyOperation::Mesh(op) => ids.push(op.apply(candidate)?),
+                        ReadyOperation::Image(spec, image) => {
+                            ids.push(candidate.create_image_spec(spec, &image)?)
+                        }
+                        ReadyOperation::ReplaceImage(id, image) => {
+                            candidate.replace_prepared_image(&id, &image)?;
+                            ids.push(id);
+                        }
+                        ReadyOperation::Plan(plan, valid) => {
+                            super::modeling::apply_plan(&plan, valid, candidate)?;
+                            ids.extend(plan.report().affected_ids);
+                        }
                     }
                 }
-            }
-            Ok(ids)
+                Ok(ids)
+            })();
+            drop(workspace);
+            result
         })?;
         let entry = self.edit(client, edit)?;
         Ok(WriteResult {
@@ -249,38 +335,13 @@ impl Runtime {
         client: ClientId,
         input: crate::authoring::MeshBatchQuery,
     ) -> Result<Vec<MeshSnapshot>> {
-        self.with_authoring_source(client, input.session, input.edit, |doc, _| {
-            if input.ids.len() > 256 {
-                return Err(RuntimeError::Budget("mesh batch count"));
-            }
-            let mut bytes = 0usize;
-            for id in &input.ids {
-                let mesh = doc.get_mesh(id).ok_or_else(|| {
-                    RuntimeError::Sdk(zipzi_sdk::SdkError {
-                        code: "MISSING_MESH".into(),
-                        message: "Mesh does not exist".into(),
-                        operation: "meshes.get_many",
-                        object_ids: vec![id.clone()],
-                        field_path: None,
-                        expected_version: None,
-                        actual_version: None,
-                        referrers: Box::new([]),
-                    })
-                })?;
-                bytes = bytes.saturating_add(mesh_response_bytes(mesh));
-                if bytes > 1 << 20 {
-                    return Err(RuntimeError::Budget("mesh batch bytes"));
-                }
-            }
-            self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
-            // A host call cannot interleave publication. Reuse the same selected
-            // single-record conversion after admitting the complete batch.
-            input
-                .ids
-                .iter()
-                .map(|id| self.mesh_snapshot(client, input.session, input.edit, id))
-                .collect()
-        })
+        let bytes = self.mesh_read_bytes(client, input.session, input.edit, &input.ids)?;
+        self.check_bytes(bytes, 0, 0)?;
+        input
+            .ids
+            .iter()
+            .map(|id| self.mesh_snapshot(client, input.session, input.edit, id))
+            .collect()
     }
 
     pub fn mesh_snapshot(
@@ -303,13 +364,11 @@ impl Runtime {
                     referrers: Box::new([]),
                 })
             })?;
-            // A conservative bound for owned records AND their possible wire
-            // expansion, before cloning. Large queries need later paged/buffer APIs.
-            let bytes = mesh_response_bytes(mesh);
-            if bytes > 1 << 20 {
-                return Err(RuntimeError::Budget("mesh snapshot"));
-            }
-            self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
+            self.check_bytes(
+                self.mesh_read_bytes(client, session, edit, &[id.to_owned()])?,
+                0,
+                0,
+            )?;
             crate::metrics::copy_payload(
                 mesh.vertex_ids.len() * std::mem::size_of::<u32>()
                     + (mesh.base_positions.len() + mesh.uvs.len())

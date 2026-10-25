@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ModelTargetRef {
     Unspecified,
     Resolved { object_id: String },
@@ -23,6 +24,7 @@ impl ModelTargetRef {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ModelParameterGroup {
     pub id: String,
     pub name: String,
@@ -33,6 +35,7 @@ pub struct ModelParameterGroup {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ModelHitArea {
     pub id: String,
     pub name: String,
@@ -43,6 +46,7 @@ pub struct ModelHitArea {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct Model3Settings {
     pub groups: Option<Vec<ModelParameterGroup>>,
     pub layout: Option<BTreeMap<String, f64>>,

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import math
 from ._values import Source, number, record, sequence, string
 from .meshes import Point
+from ._generated import modeling as m
 
 def scalar(value: float) -> None:
     if isinstance(value, bool) or not isinstance(value, (float, int)):
@@ -128,6 +129,10 @@ class Snapshot:
 
     @classmethod
     def read(cls, raw: object, source: Source) -> "Snapshot":
+        if isinstance(raw,m.MeshBinding):
+            return cls(source,raw.id,raw.mesh_id,
+                tuple(AxisSnapshot(a.id,a.parameter_id,tuple(Sample(s.id,s.value) for s in a.samples)) for a in raw.axes),
+                tuple(KeyformSnapshot(k.samples,k.positions,Appearance(k.appearance.opacity,k.appearance.multiply,k.appearance.screen),k.draw_order) for k in raw.keyforms))
         value = record(raw)
         axes: list[AxisSnapshot] = []
         for item in sequence(value["axes"]):

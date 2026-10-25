@@ -1,15 +1,33 @@
 use super::*;
-use crate::deformers::{rotation_parent_angle, rotation_points, PsmVec2};
 use crate::TransformId;
+use crate::deformers::{PsmVec2, rotation_parent_angle, rotation_points};
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum ReparentStrategy {
     KeepLocalData,
     PreserveEditState,
     PreserveParameterDomain,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct ReparentEdit {
     pub sources: Vec<String>,
     /// Empty means the model root. Part organization is an independent relation.
@@ -27,7 +45,15 @@ pub struct ReparentEdit {
     /// Motion/Physics must first be resolved to parameters by the caller.
     pub context: Option<ReparentContext>,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct ReparentPlacement {
     /// None appends; Some names an unselected member of the destination.
     pub before: Option<String>,
@@ -35,7 +61,16 @@ pub struct ReparentPlacement {
 fn default_relative_tolerance() -> f64 {
     1e-6
 }
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct ReparentContext {
     pub parameter_values: crate::PreviewValues,
     /// Empty for PreserveEditState. For domain preservation every unfixed
@@ -313,7 +348,12 @@ impl Document {
                     .iter()
                     .any(|d| d.parameter_id == parameter && d.minimum != d.maximum)
                 {
-                    return Err(Status::error("PARAMETER_DOMAIN_UNPROVEN", format!("{id}: ancestor depends on varying parameter {parameter}; a constant affine conversion is unproved")));
+                    return Err(Status::error(
+                        "PARAMETER_DOMAIN_UNPROVEN",
+                        format!(
+                            "{id}: ancestor depends on varying parameter {parameter}; a constant affine conversion is unproved"
+                        ),
+                    ));
                 }
             }
         }
@@ -479,7 +519,12 @@ impl Document {
             for id in &changing {
                 control.checkpoint()?;
                 if self.get_transform(id).is_some() {
-                    return Err(Status::error("SUBTREE_CONVERSION_UNPROVEN", format!("{id}: use KeepLocalData; preservation of this subtree is not yet proved")));
+                    return Err(Status::error(
+                        "SUBTREE_CONVERSION_UNPROVEN",
+                        format!(
+                            "{id}: use KeepLocalData; preservation of this subtree is not yet proved"
+                        ),
+                    ));
                 }
             }
         }

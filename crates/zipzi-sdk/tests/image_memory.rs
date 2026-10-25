@@ -232,3 +232,31 @@ fn prepared_images_survive_other_commits_and_unused_leases_release_memory() {
         &[2, 0, 0, 255]
     );
 }
+
+#[test]
+fn captured_disk_image_pins_encoded_bytes_and_pixels_after_source_is_replaced() {
+    let folder = std::env::temp_dir().join(format!("zipzi-disk-lease-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let budget = ImageMemoryBudget::new(1 << 20);
+    let mut sdk = session(&budget);
+    let prepared = image(17, &budget);
+    sdk.edit("image", None, |e| {
+        e.create_prepared_image(IMAGE.into(), "image".into(), &prepared)
+    })
+    .unwrap();
+    drop(prepared);
+    sdk.save_project(&folder.join("project"), None).unwrap();
+    let asset = sdk.asset(IMAGE).unwrap();
+    let root = sdk.project_path().unwrap().parent().unwrap();
+    let path = root.join(&asset.content.as_ref().unwrap().source);
+    let captured = sdk.capture_image_content(&asset, &budget).unwrap();
+    let png = captured.read_asset().unwrap().bytes;
+    std::fs::write(&path, b"changed after capture").unwrap();
+    assert_eq!(captured.texture().rgba.as_ref(), [17, 0, 0, 255]);
+    assert_eq!(captured.read_asset().unwrap().bytes, png);
+    assert!(sdk.capture_image_content(&asset, &budget).is_err());
+    drop(captured);
+    drop(sdk);
+    assert_eq!(budget.usage().total_bytes(), 0);
+    std::fs::remove_dir_all(folder).unwrap();
+}

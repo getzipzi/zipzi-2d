@@ -8,20 +8,31 @@ impl NativeRuntime {
         &self,
         py: Python<'_>,
         session: &SessionToken,
-        id: String,
+        id: &str,
         edit: Option<&EditToken>,
     ) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(self, py, id.len().saturating_mul(4), "meshes.get", None);
         let client = self.client;
         let input = zipzi_runtime::authoring::MeshQuery {
             session: session.id,
-            id,
+            id: id.to_owned(),
             edit: edit.map(|value| value.id),
         };
         let value = py.detach(|| {
-            self.host
-                .call(move |rt| zipzi_runtime::authoring::MESH_QUERY.call(rt, client, input))
+            self.host.call(move |rt| {
+                let lease = rt.reserve_transfer(rt.mesh_read_bytes(
+                    client,
+                    input.session,
+                    input.edit,
+                    std::slice::from_ref(&input.id),
+                )?)?;
+                Ok((
+                    zipzi_runtime::authoring::MESH_QUERY.call(rt, client, input)?,
+                    lease,
+                ))
+            })
         });
-        reply(py, value, "meshes.get", |value| {
+        reply(py, value, "meshes.get", |(value, _lease)| {
             Ok(write_snapshot(py, value)?.into_any())
         })
     }

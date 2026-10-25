@@ -28,14 +28,33 @@ impl Default for GeometryChecks {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryOutput,
+)]
 pub enum GeometryDiagnosticKind {
     SmallTriangle,
     InconsistentWinding,
     OutsideModelBounds,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryOutput,
+)]
 pub struct GeometryDiagnostic {
     pub kind: GeometryDiagnosticKind,
     pub mesh_id: String,
@@ -48,7 +67,11 @@ impl AuthoringSession {
         &self,
         checks: GeometryChecks,
     ) -> Result<Vec<GeometryDiagnostic>, SdkError> {
-        diagnose_geometry(self.document(), checks)
+        diagnose_geometry(
+            self.document(),
+            checks,
+            &crate::ConversionControl::default(),
+        )
     }
 }
 impl crate::AuthoringSnapshot {
@@ -56,12 +79,24 @@ impl crate::AuthoringSnapshot {
         &self,
         checks: GeometryChecks,
     ) -> Result<Vec<GeometryDiagnostic>, SdkError> {
-        diagnose_geometry(self.document(), checks)
+        diagnose_geometry(
+            self.document(),
+            checks,
+            &crate::ConversionControl::default(),
+        )
+    }
+    pub fn diagnose_geometry_with_control(
+        &self,
+        checks: GeometryChecks,
+        control: &crate::ConversionControl,
+    ) -> Result<Vec<GeometryDiagnostic>, SdkError> {
+        diagnose_geometry(self.document(), checks, control)
     }
 }
 fn diagnose_geometry(
     document: &zipzi_core::Document,
     checks: GeometryChecks,
+    control: &crate::ConversionControl,
 ) -> Result<Vec<GeometryDiagnostic>, SdkError> {
     if !checks.min_triangle_area.is_finite() || checks.min_triangle_area < 0.0 {
         return Err(SdkError::new(
@@ -91,6 +126,9 @@ fn diagnose_geometry(
     }
     let mut diagnostics = Vec::new();
     for mesh_id in document.mesh_order() {
+        control
+            .check()
+            .map_err(|s| SdkError::from_status(s, "diagnose_geometry", vec![]))?;
         let mesh = document.get_mesh(mesh_id).expect("validated mesh exists");
         let slots: HashMap<_, _> = mesh
             .vertex_ids
@@ -102,6 +140,11 @@ fn diagnose_geometry(
         let mut positive = 0usize;
         let mut negative = 0usize;
         for (triangle_index, triangle) in mesh.triangles.iter().enumerate() {
+            if triangle_index % 1024 == 0 {
+                control
+                    .check()
+                    .map_err(|s| SdkError::from_status(s, "diagnose_geometry", vec![]))?;
+            }
             let a = mesh.base_positions[slots[&triangle[0]]];
             let b = mesh.base_positions[slots[&triangle[1]]];
             let c = mesh.base_positions[slots[&triangle[2]]];

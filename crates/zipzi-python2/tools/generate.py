@@ -22,8 +22,19 @@ _RESOURCE_SPEC = importlib.util.spec_from_file_location('zipzi_resource_codegen'
 _resource_codegen = importlib.util.module_from_spec(_RESOURCE_SPEC)
 _RESOURCE_SPEC.loader.exec_module(_resource_codegen)
 RESOURCE_TARGETS = _resource_codegen.TARGETS
+_SCENE_SPEC = importlib.util.spec_from_file_location('zipzi_scene_codegen', PACKAGE / 'tools/generate_scene.py')
+_scene_codegen = importlib.util.module_from_spec(_SCENE_SPEC)
+_SCENE_SPEC.loader.exec_module(_scene_codegen)
 
-TARGETS = RESOURCE_TARGETS | frozenset({
+_MODELING_SPEC = importlib.util.spec_from_file_location('zipzi_modeling_codegen', PACKAGE / 'tools/generate_modeling.py')
+_modeling_codegen = importlib.util.module_from_spec(_MODELING_SPEC)
+_MODELING_SPEC.loader.exec_module(_modeling_codegen)
+
+_BINARY_SPEC = importlib.util.spec_from_file_location('zipzi_binary_codegen', PACKAGE / 'tools/generate_binary.py')
+_binary_codegen = importlib.util.module_from_spec(_BINARY_SPEC)
+_BINARY_SPEC.loader.exec_module(_binary_codegen)
+
+TARGETS = _binary_codegen.TARGETS | _modeling_codegen.TARGETS | RESOURCE_TARGETS | _scene_codegen.TARGETS | frozenset({
     'schema/mesh.json',
     'client/python/zipzi/_generated/__init__.py',
     'client/python/zipzi/_generated/meshes.py',
@@ -265,7 +276,7 @@ def render_mesh(contract):
                 size = item['length'] if item['kind'] == 'array' else len(item.get('fields', [])) if item['kind'] == 'record' else 0
                 if size:
                     mesh += [f'        if any(not isinstance(item, tuple) or len(item) != {size} for item in {expr}):', '            raise TypeError("Invalid geometry array shape")']
-        mesh += ['', '    @classmethod', f'    def read(cls, value: object) -> "{b["name"]}":', '        r = record(value)',
+        mesh += ['', '    @classmethod', f'    def read(cls, value: object) -> "{b["name"]}":', '        if isinstance(value,cls): return value', '        r = record(value)',
             '        return cls(' + ', '.join(m.read(f['shape'], ('r.get("' + f['name'] + '", ' + ('None' if f['default']['kind'] == 'null' else '""') + ')') if f['default'] else f'r["{f["name"]}"]') for f in shape['fields']) + ')', '']
     ops = [HEADER.rstrip(), 'from dataclasses import dataclass, field', 'from typing import Literal', 'import math',
         'from .meshes import Geometry, MeshSpec, Point', '']
@@ -297,7 +308,7 @@ def render_mesh(contract):
             inner = parameter_type(shape['item'], native)
             return f'Option<{inner}>' if native else inner + ' | None'
         if kind in {'string', 'u32', 'f32'}:
-            return {'string': 'String', 'u32': 'u32', 'f32': 'f32'}[kind] if native else m.pytype(shape)
+            return {'string': '&str', 'u32': 'u32', 'f32': 'f32'}[kind] if native else m.pytype(shape)
         raise ValueError('Query requires a reviewed ownership adapter')
     def token_input(f):
         shape, name = f['shape'], f['name']
@@ -305,7 +316,7 @@ def render_mesh(contract):
             return name + '.id'
         if shape['kind'] == 'optional' and shape['item']['kind'] == 'opaque':
             return name + '.map(|value| value.id)'
-        return name
+        return name+'.to_owned()' if shape['kind']=='string' else name
     params = ', '.join(f"{f['name']}: {parameter_type(f['shape'])}" for f in fields)
     native_params = ', '.join(f"{f['name']}: {parameter_type(f['shape'], True)}" for f in fields)
     names = ', '.join(f['name'] for f in fields)
@@ -392,9 +403,9 @@ def render_mesh(contract):
         'use crate::*;', f'use super::mesh::{output_writer};', '#[pymethods]', 'impl NativeRuntime {',
         f'    #[pyo3(signature = ({signature}))]',
         f"    fn {method}(&self, py: Python<'_>, {native_params}) -> PyResult<Py<PyDict>> {{",
-        '        let client = self.client;', f'        let input = {query_path} {{ {input_fields} }};',
-        f'        let value = py.detach(|| self.host.call(move |rt| {m.operation["handler"]}.call(rt, client, input)));',
-        f'        reply(py, value, "meshes.get", |value| Ok({output_writer}(py, value)?.into_any()))', '    }', '}', '',
+        '        let _input=input_lease!(self,py,id.len().saturating_mul(4),"meshes.get",None);', '        let client = self.client;', f'        let input = {query_path} {{ {input_fields} }};',
+        f'        let value = py.detach(|| self.host.call(move |rt| {{let lease=rt.reserve_transfer(rt.mesh_read_bytes(client,input.session,input.edit,std::slice::from_ref(&input.id))?)?;Ok(({m.operation["handler"]}.call(rt, client, input)?,lease))}}));',
+        f'        reply(py, value, "meshes.get", |(value,_lease)| Ok({output_writer}(py, value)?.into_any()))', '    }', '}', '',
     ])
     output = {
         'schema/mesh.json': json.dumps(dict(contract, _generated_by=OWNER, _contract_sha256=hashlib.sha256(json.dumps(contract, sort_keys=True).encode()).hexdigest()), indent=2, sort_keys=True) + '\n',
@@ -413,11 +424,15 @@ def render_mesh(contract):
 
 def render(contract):
     render_resources = _resource_codegen.render_resources
-    mesh_contract = {k: v for k, v in contract.items() if k != 'resources'}
+    mesh_contract = {k: v for k, v in contract.items() if k not in {'resources', 'scene', 'modeling', 'binary'}}
     output = render_mesh(mesh_contract)
     # The root intermediate is the complete executable contract.
     output['schema/mesh.json'] = json.dumps(dict(contract, _generated_by=OWNER), indent=2, sort_keys=True) + '\n'
     output.update(render_resources(contract['resources'], Model, HEADER, RUST_HEADER))
+    output.update(_scene_codegen.render_scene(contract['scene'], HEADER, RUST_HEADER, identifier, rust_path))
+    output.update(_modeling_codegen.render_modeling(contract['modeling'], HEADER, RUST_HEADER))
+    output.update(_binary_codegen.render_binary(contract['binary'], HEADER))
+    output['src/generated/mod.rs'] += 'pub mod scene;\npub mod modeling;\n'
     # rustfmt only sees generated scratch files, never handwritten sources.
     import tempfile
     with tempfile.TemporaryDirectory(prefix='zipzi-codegen-') as folder:

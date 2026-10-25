@@ -5,12 +5,14 @@ use zipzi_core::{Appearance, BindingAxis, MeshBinding, MeshKeyform, Vec2};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct MeshBindingAxisSpec {
     pub parameter_id: String,
     pub keys: Vec<f32>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct MeshKeyformSpec {
     pub keys: Vec<f32>,
     pub positions: Vec<Vec2>,
@@ -42,6 +44,7 @@ impl MeshKeyformSpec {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct MeshBindingCreateSpec {
     pub mesh_id: String,
     pub axes: Vec<MeshBindingAxisSpec>,
@@ -50,6 +53,7 @@ pub struct MeshBindingCreateSpec {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub enum MeshBindingOperation {
     Create {
         spec: MeshBindingCreateSpec,

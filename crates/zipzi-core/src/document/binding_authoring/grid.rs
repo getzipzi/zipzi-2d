@@ -2,7 +2,15 @@ use super::*;
 
 /// These coordinates use the existing grid model. The plan captures the complete
 /// structural baseline; a changed grid requires a fresh plan before execution.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum MeshGridEdit {
     Create {
         id: String,
@@ -38,7 +46,16 @@ pub enum MeshGridEdit {
         reduction: AxisReduction,
     },
 }
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum AxisReduction {
     Slice(f32),
     Resample(f32),

@@ -53,7 +53,7 @@ impl SceneContentAddress {
         &self.expected
     }
 }
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct SceneContentCapabilities {
     pub inspect: CapabilityState,
     pub edit: CapabilityState,

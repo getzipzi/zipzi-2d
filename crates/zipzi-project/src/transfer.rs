@@ -117,11 +117,24 @@ impl DocumentSession {
         if self.document().transaction_active() {
             return Err(Status::error("EDIT_ACTIVE", "Finish the active edit first"));
         }
-        let (model, animation) = linked_project(path)?;
+        // Parsing overlaps with the encoded source and prepared image buffers.
+        // Leave headroom for those allocations even when the host's remaining
+        // budget is below the normal decoder workspace cap.
+        let workspace = (self.image_memory_budget().available_bytes() / 2).min(512 << 20);
+        let _decoded = self.image_memory_budget().reserve_transfer(workspace)?;
+        let (model, animation) = linked_project_with_budget(path, workspace)?;
+        let length = fs::metadata(&model)
+            .map_err(|e| Status::error("CUBISM_IO", e.to_string()))?
+            .len() as usize;
+        let _input = self
+            .image_memory_budget()
+            .reserve_transfer(length.saturating_mul(2))?;
         let bytes = fs::read(&model).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?;
-        let mut imported = zipzi_cmo3::import_model(&bytes).map_err(codec)?;
+        let mut imported =
+            zipzi_cmo3::import_model_with_budget(&bytes, workspace).map_err(codec)?;
         if let Some(animation) = animation {
-            zipzi_cmo3::import_animation(&animation, &mut imported.document).map_err(codec)?;
+            zipzi_cmo3::import_animation_with_budget(&animation, &mut imported.document, workspace)
+                .map_err(codec)?;
         }
         let mut candidate = DocumentSession::from_authoring_document(imported.document);
         candidate.set_image_memory_budget(self.image_memory_budget().clone())?;
@@ -132,9 +145,8 @@ impl DocumentSession {
                 .images
                 .get(&old.content.as_ref().unwrap().source)
                 .ok_or_else(|| Status::error("CUBISM_RESOURCE", "Missing imported image"))?;
-            let texture = crate::decode_png(bytes)?;
             let image =
-                candidate.prepare_rgba_image(texture.width, texture.height, texture.rgba.into())?;
+                crate::prepare_png_content(bytes.clone().into(), candidate.image_memory_budget())?;
             let mut asset = old;
             asset.content = Some(image.content().clone());
             asset.unresolved_source = None;
@@ -328,14 +340,22 @@ fn resolve_cubism_model(parent: &Path, reference: &str) -> Result<PathBuf, Statu
     ))
 }
 
+#[cfg(test)]
 fn linked_project(path: &Path) -> Result<(PathBuf, Option<Vec<u8>>), Status> {
+    linked_project_with_budget(path, usize::MAX)
+}
+fn linked_project_with_budget(
+    path: &Path,
+    workspace: usize,
+) -> Result<(PathBuf, Option<Vec<u8>>), Status> {
     let parent = path
         .parent()
         .ok_or_else(|| Status::error("CUBISM_ENTRY", "Missing project directory"))?;
     let extension = path.extension().and_then(|n| n.to_str());
     if extension == Some("can3") {
-        let animation = fs::read(path).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?;
-        let paths = zipzi_cmo3::animation_model_paths(&animation).map_err(codec)?;
+        let animation = read_cubism_animation(path, workspace)?;
+        let paths =
+            zipzi_cmo3::animation_model_paths_with_budget(&animation, workspace).map_err(codec)?;
         if paths.len() != 1 {
             return Err(Status::error(
                 "CUBISM_ENTRY",
@@ -356,8 +376,8 @@ fn linked_project(path: &Path) -> Result<(PathBuf, Option<Vec<u8>>), Status> {
         if candidate.extension().and_then(|n| n.to_str()) != Some("can3") {
             continue;
         }
-        let bytes = fs::read(&candidate).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?;
-        match zipzi_cmo3::animation_model_paths(&bytes) {
+        let bytes = read_cubism_animation(&candidate, workspace)?;
+        match zipzi_cmo3::animation_model_paths_with_budget(&bytes, workspace) {
             Ok(paths) => {
                 if paths
                     .iter()
@@ -365,6 +385,12 @@ fn linked_project(path: &Path) -> Result<(PathBuf, Option<Vec<u8>>), Status> {
                 {
                     if paths.len() != 1 {
                         return Err(Status::error("CUBISM_ENTRY", "Multiple model references"));
+                    }
+                    if !matches.is_empty() {
+                        return Err(Status::error(
+                            "CUBISM_ENTRY",
+                            "Multiple matching CAN3 files",
+                        ));
                     }
                     matches.push(bytes);
                 }
@@ -385,6 +411,34 @@ fn linked_project(path: &Path) -> Result<(PathBuf, Option<Vec<u8>>), Status> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cubism_import_leaves_room_for_source_bytes_with_a_bounded_host_budget() {
+        let root =
+            std::env::temp_dir().join(format!("zipzi-cubism-budget-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&root).unwrap();
+        let mut doc = zipzi_core::Document::new();
+        assert!(
+            doc.initialize(
+                &uuid::Uuid::new_v4().to_string(),
+                zipzi_core::ModelSetup::default()
+            )
+            .is_ok()
+        );
+        let source = DocumentSession::from_authoring_document(doc);
+        let artifact = source.encode_cmo3(&Default::default()).unwrap();
+        let path = root.join("model.cmo3");
+        fs::write(&path, artifact.bytes).unwrap();
+        let budget = crate::ImageMemoryBudget::new(128 << 20);
+        budget.bind_host_budget(0, 128 << 20);
+        let mut imported = DocumentSession::new();
+        imported.set_image_memory_budget(budget.clone()).unwrap();
+        let result = imported.import_cubism_authoring(&path);
+        fs::remove_dir_all(root).unwrap();
+        assert!(result.is_ok(), "{result:?}");
+        assert_eq!(imported.document().id(), source.document().id());
+        assert_eq!(budget.usage().transfer_bytes, 0);
+    }
 
     #[test]
     fn model_reference_prefers_original_relative_or_absolute_path_over_sibling() {
@@ -482,4 +536,32 @@ mod tests {
         );
         fs::remove_dir_all(root).unwrap();
     }
+}
+
+fn read_cubism_animation(path: &Path, workspace: usize) -> Result<Vec<u8>, Status> {
+    use std::io::Read;
+    let limit = (workspace / 16).min(512 << 20);
+    let file = fs::File::open(path).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?;
+    if file
+        .metadata()
+        .map_err(|e| Status::error("CUBISM_IO", e.to_string()))?
+        .len()
+        > limit as u64
+    {
+        return Err(Status::error(
+            "RESOURCE_BUDGET_EXCEEDED",
+            "CAN3 source exceeds reserved workspace",
+        ));
+    }
+    let mut bytes = Vec::new();
+    file.take(limit as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| Status::error("CUBISM_IO", e.to_string()))?;
+    if bytes.len() > limit {
+        return Err(Status::error(
+            "RESOURCE_BUDGET_EXCEEDED",
+            "CAN3 grew beyond reserved workspace",
+        ));
+    }
+    Ok(bytes)
 }

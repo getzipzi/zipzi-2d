@@ -49,6 +49,7 @@ impl Default for AuthoringLimits {
 }
 crate::api_record! {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(zipzi_api_derive::BinaryOutput)]
 pub struct ConversionCost {
     pub sample_combinations: usize,
     pub payload_bytes: usize,

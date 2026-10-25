@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 /// Select explicit record IDs; empty lists return collection identities only.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape)]
 pub struct ModelingQuery {
     pub assets: Vec<String>,
     pub meshes: Vec<String>,
@@ -19,13 +20,15 @@ pub struct ModelingQuery {
     pub parameter_groups: Vec<String>,
     pub attachments: Vec<String>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, zipzi_api_derive::BinaryOutput)]
 pub struct ModelingRecords<'a> {
     pub document_id: &'a str,
     pub setup: zipzi_core::ModelSetup,
     pub hierarchy_order: &'a zipzi_core::document::HierarchyOrder,
     pub editor_state: &'a zipzi_core::document::EditorState,
     pub display_info: &'a zipzi_core::document::DisplayInfo,
+    pub model3_settings: &'a zipzi_core::document::Model3Settings,
+    pub draw_order_groups: Option<&'a [zipzi_core::draw_order::DrawOrderGroup]>,
     pub ids: std::collections::BTreeMap<&'static str, Vec<&'a str>>,
     pub assets: Vec<Option<&'a zipzi_core::ImageAsset>>,
     pub meshes: Vec<Option<&'a zipzi_core::Mesh>>,
@@ -41,6 +44,84 @@ pub struct ModelingRecords<'a> {
     pub offscreens: Vec<Option<&'a zipzi_core::Offscreen>>,
     pub parameter_groups: Vec<Option<&'a zipzi_core::document::CdiParameterGroup>>,
     pub attachments: Vec<Option<&'a zipzi_core::document::PackageAttachment>>,
+}
+/// Owned selected query results. No mutation or query behavior lives in this DTO.
+#[derive(Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+pub struct OwnedModelingRecords {
+    pub document_id: String,
+    pub setup: zipzi_core::ModelSetup,
+    pub hierarchy_order: zipzi_core::document::HierarchyOrder,
+    pub editor_state: zipzi_core::document::EditorState,
+    pub display_info: zipzi_core::document::DisplayInfo,
+    pub model3_settings: zipzi_core::document::Model3Settings,
+    pub draw_order_groups: Option<Vec<zipzi_core::draw_order::DrawOrderGroup>>,
+    pub ids: std::collections::BTreeMap<String, Vec<String>>,
+    pub assets: Vec<Option<zipzi_core::ImageAsset>>,
+    pub meshes: Vec<Option<zipzi_core::Mesh>>,
+    pub parameters: Vec<Option<zipzi_core::Parameter>>,
+    pub parts: Vec<Option<zipzi_core::Part>>,
+    pub transforms: Vec<Option<zipzi_core::Transform>>,
+    pub bindings: Vec<Option<zipzi_core::MeshBinding>>,
+    pub scene_bindings: Vec<Option<zipzi_core::SceneBinding>>,
+    pub blend_key_tables: Vec<Option<zipzi_core::BlendShapeKeyTable>>,
+    pub blend_constraints: Vec<Option<zipzi_core::BlendShapeConstraint>>,
+    pub blend_bindings: Vec<Option<zipzi_core::BlendShapeBinding>>,
+    pub glues: Vec<Option<zipzi_core::Glue>>,
+    pub offscreens: Vec<Option<zipzi_core::Offscreen>>,
+    pub parameter_groups: Vec<Option<zipzi_core::document::CdiParameterGroup>>,
+    pub attachments: Vec<Option<zipzi_core::document::PackageAttachment>>,
+}
+impl ModelingRecords<'_> {
+    pub fn into_owned(self) -> OwnedModelingRecords {
+        OwnedModelingRecords {
+            model3_settings: self.model3_settings.clone(),
+            draw_order_groups: self.draw_order_groups.map(<[_]>::to_vec),
+            document_id: self.document_id.into(),
+            setup: self.setup,
+            hierarchy_order: self.hierarchy_order.clone(),
+            editor_state: self.editor_state.clone(),
+            display_info: self.display_info.clone(),
+            ids: self
+                .ids
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into_iter().map(String::from).collect()))
+                .collect(),
+            assets: self.assets.into_iter().map(|v| v.cloned()).collect(),
+            meshes: self.meshes.into_iter().map(|v| v.cloned()).collect(),
+            parameters: self.parameters.into_iter().map(|v| v.cloned()).collect(),
+            parts: self.parts.into_iter().map(|v| v.cloned()).collect(),
+            transforms: self.transforms.into_iter().map(|v| v.cloned()).collect(),
+            bindings: self.bindings.into_iter().map(|v| v.cloned()).collect(),
+            scene_bindings: self
+                .scene_bindings
+                .into_iter()
+                .map(|v| v.cloned())
+                .collect(),
+            blend_key_tables: self
+                .blend_key_tables
+                .into_iter()
+                .map(|v| v.cloned())
+                .collect(),
+            blend_constraints: self
+                .blend_constraints
+                .into_iter()
+                .map(|v| v.cloned())
+                .collect(),
+            blend_bindings: self
+                .blend_bindings
+                .into_iter()
+                .map(|v| v.cloned())
+                .collect(),
+            glues: self.glues.into_iter().map(|v| v.cloned()).collect(),
+            offscreens: self.offscreens.into_iter().map(|v| v.cloned()).collect(),
+            parameter_groups: self
+                .parameter_groups
+                .into_iter()
+                .map(|v| v.cloned())
+                .collect(),
+            attachments: self.attachments.into_iter().map(|v| v.cloned()).collect(),
+        }
+    }
 }
 pub fn modeling_records<'a>(
     document: &'a zipzi_core::Document,
@@ -145,12 +226,28 @@ pub fn modeling_records<'a>(
             .map(|a| a.id.as_str())
             .collect(),
     );
+    // IO selection identities are metadata; animation record/edit APIs remain
+    // separate from the modeling projection.
+    ids.insert(
+        "motions",
+        document.motion_order().iter().map(String::as_str).collect(),
+    );
+    ids.insert(
+        "expressions",
+        document
+            .expression_order()
+            .iter()
+            .map(String::as_str)
+            .collect(),
+    );
     ModelingRecords {
         document_id: document.id(),
         setup: document.model_setup(),
         hierarchy_order: document.hierarchy_order(),
         editor_state: document.editor_state(),
         display_info: document.display_info(),
+        model3_settings: document.model3_settings(),
+        draw_order_groups: document.draw_order_groups(),
         ids,
         assets: query
             .assets
@@ -216,7 +313,7 @@ pub fn modeling_records<'a>(
             .collect(),
     }
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ModelingSamples {
     pub version: crate::Version,
     pub parameters: Vec<zipzi_core::PreviewValues>,
@@ -230,11 +327,27 @@ impl crate::AuthoringSnapshot {
         parameters: Vec<zipzi_core::PreviewValues>,
         checks: crate::GeometryChecks,
     ) -> Result<ModelingSamples, crate::SdkError> {
-        let diagnostics = self.diagnose_geometry(checks)?;
-        let frames = parameters
-            .iter()
-            .map(|p| self.evaluate(p))
-            .collect::<Result<_, _>>()?;
+        self.sample_modeling_with_control(parameters, checks, &crate::ConversionControl::default())
+    }
+    pub fn sample_modeling_with_control(
+        &self,
+        parameters: Vec<zipzi_core::PreviewValues>,
+        checks: crate::GeometryChecks,
+        control: &crate::ConversionControl,
+    ) -> Result<ModelingSamples, crate::SdkError> {
+        let check = || {
+            control
+                .check()
+                .map_err(|s| crate::SdkError::from_status(s, "sample_modeling", vec![]))
+        };
+        check()?;
+        let diagnostics = self.diagnose_geometry_with_control(checks, control)?;
+        let mut frames = Vec::with_capacity(parameters.len());
+        for p in &parameters {
+            check()?;
+            frames.push(self.evaluate(p)?);
+        }
+        check()?;
         Ok(ModelingSamples {
             version: self.version(),
             parameters,
@@ -251,6 +364,7 @@ impl crate::AuthoringSnapshot {
     rename_all = "snake_case",
     deny_unknown_fields
 )]
+#[derive(zipzi_api_derive::ApiShape)]
 pub enum ModelingIntent {
     Scene(crate::SceneEdit),
     Organization(crate::OrganizationEdit),
@@ -274,6 +388,7 @@ pub enum ModelingPlan {
 }
 zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
+#[derive(zipzi_api_derive::BinaryOutput)]
 pub struct ModelingPlanReport {
     pub version: crate::Version,
     pub affected_ids: Vec<String>,
@@ -394,3 +509,9 @@ impl crate::AuthoringSnapshot {
         })
     }
 }
+
+// Borrowed query encoding and the owned native projection must never drift.
+const _: () = assert!(
+    <ModelingRecords<'static> as zipzi_core::binary_wire::WireWrite>::FIELD_LAYOUT
+        == <OwnedModelingRecords as zipzi_core::binary_wire::WireWrite>::FIELD_LAYOUT
+);

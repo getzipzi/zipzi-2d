@@ -1,0 +1,13 @@
+[package]
+name = "zipzi-api-derive"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Compile-time shapes for explicitly selected Zipzi authoring records"
+[lib]
+proc-macro = true
+[dependencies]
+syn = { version = "2", features = ["full"] }
+quote = "1"
+proc-macro2 = "1"

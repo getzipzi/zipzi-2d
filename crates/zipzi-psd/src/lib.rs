@@ -5,13 +5,13 @@
 //! PNG encoding and publication to the project store.
 
 use ag_psd::psd::{BlendMode as PsdBlendMode, ColorMode, Layer, ReadOptions};
-use ag_psd::{read_psd, PixelData};
+use ag_psd::{PixelData, read_psd};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::fmt;
 use std::io::Cursor;
-use zipzi_core::types::{Appearance, BlendMode, Canvas, ImageAsset, Mesh, Offscreen, Part, Vec2};
 use zipzi_core::Document;
+use zipzi_core::types::{Appearance, BlendMode, Canvas, ImageAsset, Mesh, Offscreen, Part, Vec2};
 
 const MAX_FILE_BYTES: usize = 512 * 1024 * 1024;
 // Layer pixels accumulate across the document, independently of canvas size.
@@ -102,22 +102,49 @@ pub fn import_psd_pixels(bytes: &[u8]) -> Result<PixelImportBundle, ImportError>
     })
 }
 
+/// Strict host budget is checked by the PSD reader before allocating decoded
+/// channel/pixel data. Standalone imports retain their advisory default policy.
+pub fn import_psd_pixels_with_limit(
+    bytes: &[u8],
+    limit: usize,
+) -> Result<PixelImportBundle, ImportError> {
+    let builder = parse_psd_limited(bytes, false, DECODED_WARNING_BYTES, Some(limit))?;
+    Ok(PixelImportBundle {
+        document: builder.document,
+        assets: builder.pixels,
+        report: builder.report,
+    })
+}
 fn parse_psd(
     bytes: &[u8],
     encode_pngs: bool,
     decoded_warning_bytes: usize,
 ) -> Result<Builder, ImportError> {
+    parse_psd_limited(bytes, encode_pngs, decoded_warning_bytes, None)
+}
+fn parse_psd_limited(
+    bytes: &[u8],
+    encode_pngs: bool,
+    decoded_warning_bytes: usize,
+    decoded_limit: Option<usize>,
+) -> Result<Builder, ImportError> {
     preflight(bytes)?;
     let options = ReadOptions {
         skip_composite_image_data: Some(true),
         use_image_data: Some(true),
-        // Explicitly disable the reader's cumulative budget (including its
-        // default 2 GiB limit); report large imports after decoding instead.
-        total_memory_limit: None,
+        total_memory_limit: decoded_limit,
         ..ReadOptions::default()
     };
-    let mut psd = read_psd(bytes, &options)
-        .map_err(|error| ImportError::new("INVALID_PSD", error.to_string()))?;
+    let mut psd = read_psd(bytes, &options).map_err(|error| {
+        ImportError::new(
+            if matches!(error, ag_psd::ReadError::ExceededMemoryLimit { .. }) {
+                "RESOURCE_BUDGET_EXCEEDED"
+            } else {
+                "INVALID_PSD"
+            },
+            error.to_string(),
+        )
+    })?;
     if psd.color_mode != Some(ColorMode::Rgb) || psd.bits_per_channel != Some(8.0) {
         return Err(ImportError::new(
             "UNSUPPORTED_PSD",
@@ -334,7 +361,9 @@ impl Builder {
         if base.additional_info.blend_clippend_elements == Some(false) {
             return Err(ImportError::new(
                 "UNSUPPORTED_LAYER",
-                format!("{name}: clipping with Blend Clipped Layers As Group disabled cannot be represented"),
+                format!(
+                    "{name}: clipping with Blend Clipped Layers As Group disabled cannot be represented"
+                ),
             ));
         }
         let part_id = self.id("part");
@@ -507,7 +536,7 @@ impl Builder {
                 return Err(ImportError::new(
                     "UNSUPPORTED_LAYER",
                     format!("{name}: blend mode {other:?} cannot be represented"),
-                ))
+                ));
             }
         };
         let opacity = layer.opacity.unwrap_or(1.0);
@@ -662,5 +691,16 @@ mod tests {
                 assert_eq!(over_budget.pixels[0].rgba, at_budget.pixels[0].rgba);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod host_budget_tests {
+    #[test]
+    fn strict_host_limit_rejects_before_pixel_decode_without_changing_standalone_policy() {
+        let bytes = include_bytes!("../tests/fixtures/layered.psd");
+        assert!(super::import_psd_pixels_with_limit(bytes, 1).is_err());
+        assert!(super::import_psd_pixels_with_limit(bytes, 1 << 20).is_ok());
+        assert!(super::import_psd_pixels(bytes).is_ok());
     }
 }

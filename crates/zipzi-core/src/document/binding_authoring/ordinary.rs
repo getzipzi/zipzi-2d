@@ -1,17 +1,33 @@
-use super::lattice::{self, active, GridOperation};
+use super::lattice::{self, GridOperation, active};
 use super::*;
 use crate::{
     GlueBinding, GlueKeyform, MeshKeyform, OffscreenKeyform, PartKeyform, RotationKeyform,
     SceneTrack, WarpKeyform,
 };
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum BindingGridTarget {
     Mesh(String),
     Scene(String),
     Glue(String),
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum BindingGridEdit {
     /// Explicitly discard owned shapes and return to the unchanged base target.
     Delete { owner: String },
@@ -614,7 +630,16 @@ impl Document {
             }
             GridFragment::Glue(g) => after.glue(g),
         }
-        let mut report = ConversionReport::between(before, after, &affected, format!("{:?}; domain interpolation uses native channel rules; precision snapping is excluded", lattice.guarantee), vec![]);
+        let mut report = ConversionReport::between(
+            before,
+            after,
+            &affected,
+            format!(
+                "{:?}; domain interpolation uses native channel rules; precision snapping is excluded",
+                lattice.guarantee
+            ),
+            vec![],
+        );
         report.grid_guarantee = Some(lattice.guarantee.clone());
         if matches!(
             lattice.guarantee,

@@ -11,12 +11,15 @@ pub(crate) fn write_resourceusage(
     value: zipzi_runtime::authoring::ResourceUsage,
 ) -> PyResult<Bound<'_, PyDict>> {
     let d = PyDict::new(py);
+    d.set_item("allocations", value.allocations)?;
+    d.set_item("resource_entries", value.resource_entries)?;
     d.set_item("prepared_images", value.prepared_images)?;
     d.set_item("plans", value.plans)?;
     d.set_item("rgba_bytes", value.rgba_bytes)?;
     d.set_item("png_bytes", value.png_bytes)?;
     d.set_item("blob_bytes", value.blob_bytes)?;
     d.set_item("preparing_bytes", value.preparing_bytes)?;
+    d.set_item("transfer_bytes", value.transfer_bytes)?;
     Ok(d)
 }
 
@@ -103,6 +106,30 @@ pub(crate) fn write_preparedimageinfo(
     Ok(d)
 }
 
+pub(crate) fn measure_resourceoperation(op: &Bound<'_, PyAny>) -> PyResult<usize> {
+    let kind = op.getattr("kind")?;
+    match kind.extract::<&str>()? {
+        "create_image" => Ok(256usize
+            .saturating_add({
+                let v = op.getattr("id")?;
+                if v.is_none() {
+                    0
+                } else {
+                    input_budget::text(&v)?
+                }
+            })
+            .saturating_add(input_budget::text(&op.getattr("name")?)?)
+            .saturating_add(64usize)),
+        "replace_image" => Ok(256usize
+            .saturating_add(input_budget::text(&op.getattr("id")?)?)
+            .saturating_add(64usize)),
+        "apply_plan" => Ok(256usize.saturating_add(64usize)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unknown typed input",
+        )),
+    }
+}
+
 pub(crate) fn read_resourceoperation(
     op: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_runtime::authoring::ResourceOperation> {
@@ -135,6 +162,23 @@ pub(crate) fn read_resourceoperation(
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unknown typed intent",
+        )),
+    }
+}
+
+pub(crate) fn measure_planintent(op: &Bound<'_, PyAny>) -> PyResult<usize> {
+    let kind = op.getattr("kind")?;
+    match kind.extract::<&str>()? {
+        "mesh_rename" => Ok(256usize
+            .saturating_add(input_budget::text(&op.getattr("id")?)?)
+            .saturating_add(input_budget::text(&op.getattr("expected_name")?)?)
+            .saturating_add(input_budget::text(&op.getattr("name")?)?)),
+        "image_rename" => Ok(256usize
+            .saturating_add(input_budget::text(&op.getattr("id")?)?)
+            .saturating_add(input_budget::text(&op.getattr("expected_name")?)?)
+            .saturating_add(input_budget::text(&op.getattr("name")?)?)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unknown typed input",
         )),
     }
 }

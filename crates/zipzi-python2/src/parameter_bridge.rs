@@ -83,16 +83,28 @@ impl NativeRuntime {
         py: Python<'_>,
         session: &SessionToken,
         edit: Option<&EditToken>,
-        ids: Vec<String>,
+        ids: &Bound<'_, PyAny>,
     ) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(self, py, input_budget::strings(Some(ids))?, "query", None);
+        let ids = ids.extract()?;
         let client = self.client;
         let input = zipzi_runtime::authoring::MeshBatchQuery {
             session: session.id,
             edit: edit.map(|e| e.id),
             ids,
         };
-        let result = py.detach(|| self.host.call(move |rt| rt.mesh_snapshots(client, input)));
-        reply(py, result, "meshes.get_many", |values| {
+        let result = py.detach(|| {
+            self.host.call(move |rt| {
+                let lease = rt.reserve_transfer(rt.mesh_read_bytes(
+                    client,
+                    input.session,
+                    input.edit,
+                    &input.ids,
+                )?)?;
+                Ok((rt.mesh_snapshots(client, input)?, lease))
+            })
+        });
+        reply(py, result, "meshes.get_many", |(values, _lease)| {
             let result = PyList::empty(py);
             for value in values {
                 result.append(crate::generated::mesh::write_snapshot(py, value)?)?;
@@ -106,8 +118,10 @@ impl NativeRuntime {
         py: Python<'_>,
         session: &SessionToken,
         edit: Option<&EditToken>,
-        ids: Option<Vec<String>>,
+        ids: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(self, py, input_budget::strings(ids)?, "query", None);
+        let ids = ids.map(|v| v.extract()).transpose()?;
         let client = self.client;
         let input = ParameterQuery {
             session: session.id,

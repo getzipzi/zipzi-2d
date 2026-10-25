@@ -30,7 +30,7 @@ impl OrganizationEditPlan {
         self.domain.effects()
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
 pub struct OrganizationCapabilities {
     pub inspect: CapabilityState,
     pub patch: CapabilityState,

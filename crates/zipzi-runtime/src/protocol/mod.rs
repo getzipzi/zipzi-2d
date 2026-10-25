@@ -12,10 +12,11 @@ use std::{
 use zipzi_core::{Document, Mesh, ModelSetup, Parameter, Vec2};
 use zipzi_sdk::Version;
 
-mod modeling_query;
+mod binary;
+pub use binary::{BinaryReply, BinarySlice, MAX_BINARY_CHUNK, MAX_BINARY_HEADER};
 mod values;
 use values::*;
-pub const CONTRACT: &str = "zipzi-runtime-r4-1";
+pub const CONTRACT: &str = "zipzi-runtime-r4-3";
 pub const SDK_BUILD: &str = env!("ZIPZI_RUNTIME_SDK_BUILD");
 pub const MAX_FRAME: usize = 16 << 20;
 
@@ -26,6 +27,8 @@ pub struct ProtocolLimits {
     pub results_per_client: usize,
     pub result_bytes_per_client: usize,
     pub result_bytes_total: usize,
+    pub binary_bytes_per_client: usize,
+    pub binary_bytes_total: usize,
 }
 impl Default for ProtocolLimits {
     fn default() -> Self {
@@ -35,6 +38,8 @@ impl Default for ProtocolLimits {
             results_per_client: 1024,
             result_bytes_per_client: 8 << 20,
             result_bytes_total: 64 << 20,
+            binary_bytes_per_client: 256 << 20,
+            binary_bytes_total: 512 << 20,
         }
     }
 }
@@ -61,6 +66,18 @@ pub struct Request {
 enum Operation {
     ListSessions,
     Statistics,
+    EditorContext {
+        session: SessionId,
+    },
+    PrepareImageJob {
+        path: Option<std::path::PathBuf>,
+        blob: Option<BlobId>,
+    },
+    CaptureImage {
+        session: SessionId,
+        edit: Option<EditId>,
+        id: String,
+    },
     ReleaseClient,
     #[cfg(feature = "bench-instrumentation")]
     Diagnostics {
@@ -98,6 +115,14 @@ enum Operation {
         edit: Option<EditId>,
         query: zipzi_sdk::ModelingQuery,
     },
+    RequestModelingSamples {
+        input: crate::authoring::ModelingSampleQuery,
+    },
+    RequestModelingPlan {
+        session: SessionId,
+        edit: Option<EditId>,
+        intent: zipzi_sdk::ModelingIntent,
+    },
     ApplyModeling {
         edit: EditId,
         commands: Vec<crate::modeling::ModelingCommand>,
@@ -110,6 +135,19 @@ enum Operation {
         width: u32,
         height: u32,
         rgba: Vec<u8>,
+    },
+    PrepareImageBlob {
+        width: u32,
+        height: u32,
+        blob: BlobId,
+    },
+    PreparedPixelsBlob {
+        image: ImageId,
+    },
+    ImageSnapshotBlob {
+        session: SessionId,
+        edit: Option<EditId>,
+        id: String,
     },
     PreparedPixels {
         image: ImageId,
@@ -131,6 +169,52 @@ enum Operation {
     MeshSnapshots(crate::authoring::MeshBatchQuery),
     ParameterSnapshot(crate::authoring::ParameterQuery),
     MeshBindingSnapshot(crate::authoring::MeshBindingQuery),
+    SceneSnapshot(crate::authoring::SceneQuery),
+    CaptureObjectRef {
+        session: SessionId,
+        kind: zipzi_sdk::ObjectKind,
+        id: String,
+    },
+    ResolveObjectRef {
+        reference: ObjectRefId,
+    },
+    ObjectSceneCapabilities {
+        reference: ObjectRefId,
+    },
+    CaptureLabelAddress {
+        reference: ObjectRefId,
+    },
+    PlanLabelPatch {
+        address: FieldAddressId,
+        name: String,
+    },
+    CaptureAddress {
+        session: SessionId,
+        selector: crate::addressing::AddressSelector,
+    },
+    PlanAddressPatch {
+        address: FieldAddressId,
+        patch: crate::addressing::AddressPatch,
+    },
+    ModelingCapabilities {
+        reference: ObjectRefId,
+        domain: crate::addressing::CapabilityDomain,
+    },
+    CollectionCapabilities {
+        session: SessionId,
+        query: crate::addressing::CollectionQuery,
+    },
+    ReleaseObjectRef {
+        reference: ObjectRefId,
+    },
+    ReleaseFieldAddress {
+        address: FieldAddressId,
+    },
+    PlanSceneAuthoring {
+        session: SessionId,
+        edit: Option<EditId>,
+        operation: zipzi_sdk::SceneOperation,
+    },
     SampleModeling {
         session: SessionId,
         edit: Option<EditId>,
@@ -156,6 +240,17 @@ enum Operation {
         offset: usize,
         bytes: Vec<u8>,
     },
+    AppendBlobBinary {
+        blob: BlobId,
+        offset: usize,
+        length: usize,
+        payload_sha256: String,
+    },
+    ReadBlobBinary {
+        blob: BlobId,
+        offset: usize,
+        length: usize,
+    },
     ReadBlob {
         blob: BlobId,
         offset: usize,
@@ -176,7 +271,11 @@ enum Operation {
         blob: BlobId,
         replace: bool,
     },
-    ApplyModelingBlob {
+    StartAuthoringUpload {
+        edit: EditId,
+        length: usize,
+    },
+    ApplyAuthoringBlob {
         edit: EditId,
         blob: BlobId,
     },
@@ -218,6 +317,13 @@ enum Operation {
         session: SessionId,
         path: std::path::PathBuf,
         expected: Option<Version>,
+    },
+    Project {
+        session: Option<SessionId>,
+        request: crate::project_io::ProjectRequest,
+    },
+    ImportProject {
+        source: ImportSource,
     },
     Open {
         path: std::path::PathBuf,
@@ -277,7 +383,9 @@ struct Record {
     id: u64,
     digest: [u8; 32],
     result: Value,
+    binary: Option<BinarySlice>,
     bytes: usize,
+    metadata_bytes: usize,
     at: Instant,
 }
 struct RemoteClient {
@@ -290,11 +398,14 @@ struct RemoteClient {
 /// Every connection has an unguessable resume secret and a connection generation.
 /// A late disconnect from a replaced socket cannot expire the resumed client.
 pub struct Protocol {
+    execution_leases: Vec<zipzi_project::TransferReservation>,
     limits: ProtocolLimits,
     clients: HashMap<ClientId, RemoteClient>,
     next_connection: u64,
     show_window: Option<Option<SessionId>>,
     windows: bool,
+    binary_input: Option<Vec<u8>>,
+    binary_output: Option<BinarySlice>,
 }
 impl Default for Protocol {
     fn default() -> Self {
@@ -324,11 +435,14 @@ impl Protocol {
     }
     pub fn new(limits: ProtocolLimits) -> Self {
         Self {
+            execution_leases: vec![],
             limits,
             clients: HashMap::new(),
             next_connection: 0,
             show_window: None,
             windows: false,
+            binary_input: None,
+            binary_output: None,
         }
     }
     /// Hello is the first frame on every socket. No Runtime registration or writes
@@ -358,6 +472,14 @@ impl Protocol {
                 "Resume needs instance, client and secret",
             );
         }
+        let _client_memory = if hello.client.is_none() {
+            match runtime.reserve_transfer(1024) {
+                Ok(lease) => Some(lease),
+                Err(e) => return error(e),
+            }
+        } else {
+            None
+        };
         let client = if let Some(id) = hello.client {
             let Some(remote) = self.clients.get(&id) else {
                 return failure("CLIENT_EXPIRED", "Reconnect grace expired");
@@ -388,9 +510,19 @@ impl Protocol {
         remote.disconnected = None;
         remote.connection = self.next_connection;
         let mut capabilities = vec![
+            "typed_binary_arrays",
+            "typed_full_modeling",
+            "typed_field_addresses",
+            "read_jobs",
+            "project_io",
+            "resource_jobs",
+            "editor_context",
             "typed_mesh_batch",
             "typed_mesh_bindings",
             "typed_modeling_samples",
+            "typed_scene_authoring",
+            "typed_object_references",
+            "binary_blobs",
             "typed_event_pages",
             "typed_parameters",
             "typed_meshes",
@@ -417,14 +549,16 @@ impl Protocol {
         if self.windows {
             capabilities.push("show_window");
         }
-        success(
+        let response = success(
             json!({"runtime": runtime.instance_id(), "client": client, "secret": remote.secret,
             "connection": remote.connection, "sdk_build": SDK_BUILD, "protocol": CONTRACT, "host_pid": std::process::id(),
             "capabilities": capabilities,
             "limits": {"frame_bytes": MAX_FRAME, "reconnect_seconds": self.limits.reconnect_grace.as_secs_f64(),
                 "result_seconds": self.limits.result_ttl.as_secs_f64(), "results_per_client": self.limits.results_per_client,
-                "result_bytes_per_client": self.limits.result_bytes_per_client, "result_bytes_total": self.limits.result_bytes_total}}),
-        )
+                "result_bytes_per_client": self.limits.result_bytes_per_client, "result_bytes_total": self.limits.result_bytes_total,"binary_bytes_per_client":self.limits.binary_bytes_per_client,"binary_bytes_total":self.limits.binary_bytes_total}}),
+        );
+        self.refresh_memory(runtime);
+        response
     }
     pub fn disconnect(&mut self, client: ClientId, connection: u64, now: Instant) {
         if let Some(c) = self
@@ -452,6 +586,55 @@ impl Protocol {
             }
             true
         });
+        self.refresh_memory(runtime);
+    }
+    fn admit_value<T: serde::Serialize>(&mut self, rt: &Runtime, value: &T) -> Result<Value> {
+        let bytes = bounded_json_bytes(value)?;
+        self.execution_leases
+            .push(rt.reserve_transfer(bytes.saturating_mul(128).saturating_add(4096))?);
+        Ok(json!(value))
+    }
+    fn binary_bytes<'a>(records: impl Iterator<Item = &'a Record>) -> usize {
+        let mut allocations = HashMap::new();
+        for r in records {
+            if let Some(b) = &r.binary {
+                let (key, bytes) = b.allocation();
+                allocations.insert(key, bytes);
+            }
+        }
+        allocations.values().sum()
+    }
+    fn retained_metadata(&self) -> usize {
+        self.clients
+            .values()
+            .map(|c| {
+                c.records
+                    .iter()
+                    .map(|r| r.metadata_bytes)
+                    .sum::<usize>()
+                    .saturating_add(1024)
+            })
+            .sum()
+    }
+    /// Conservative JSON-node/record estimates; binary backing allocations are
+    /// shared with the resource pool and are not charged a second time here.
+    pub fn retained_memory_bytes(&self) -> usize {
+        self.retained_metadata()
+    }
+    fn refresh_memory(&mut self, runtime: &mut Runtime) {
+        while !runtime.external_bytes_fit(self.retained_metadata()) {
+            let oldest = self
+                .clients
+                .iter()
+                .filter_map(|(id, c)| c.records.front().map(|r| (*id, r.at)))
+                .min_by_key(|(_, at)| *at)
+                .map(|(id, _)| id);
+            let Some(oldest) = oldest else {
+                break;
+            };
+            self.clients.get_mut(&oldest).unwrap().records.pop_front();
+        }
+        runtime.set_external_bytes(self.retained_metadata());
     }
     pub fn retained_results(&self) -> (usize, usize) {
         self.clients
@@ -470,6 +653,7 @@ impl Protocol {
         request: Request,
         now: Instant,
     ) -> Value {
+        self.execution_leases.clear();
         self.expire(runtime, now);
         if request.protocol != CONTRACT {
             return failure("PROTOCOL_MISMATCH", "Incompatible local protocol");
@@ -488,6 +672,16 @@ impl Protocol {
             return failure(
                 "WRONG_OWNER",
                 "Request client differs from authenticated connection",
+            );
+        }
+        if matches!(
+            request.operation["op"].as_str(),
+            Some("append_blob_binary" | "read_blob_binary")
+        ) && self.binary_input.is_none()
+        {
+            return failure(
+                "INVALID_REQUEST",
+                "Binary operation requires binary framing",
             );
         }
         // Status queries never advance the admission watermark. Otherwise asking
@@ -512,6 +706,7 @@ impl Protocol {
             Sha256::digest(crate::metrics::encode(&request.operation).unwrap()).into();
         if let Some(record) = remote.records.iter().find(|r| r.id == request.request_id) {
             return if record.digest == digest {
+                self.binary_output = record.binary.clone();
                 record.result.clone()
             } else {
                 failure("REQUEST_ID_REUSED", "Request ID has different arguments")
@@ -540,14 +735,18 @@ impl Protocol {
         }
         // Reads as well as writes share monotonically increasing IDs. A result
         // larger than the retention budget is explicitly unknown, never re-run.
-        let bytes = crate::metrics::encode(&result).unwrap().len() + 128;
+        let binary = self.binary_output.clone();
+        let encoded_bytes = crate::metrics::encode(&result).unwrap().len();
+        let bytes = encoded_bytes + 128 + binary.as_ref().map_or(0, |b| b.bytes().len());
         let c = self.clients.get_mut(&client).unwrap();
         c.highest = request.request_id;
         c.records.push_back(Record {
             id: request.request_id,
             digest,
             result: result.clone(),
+            binary,
             bytes,
+            metadata_bytes: encoded_bytes.saturating_mul(128).saturating_add(256),
             at: now,
         });
         while c.records.len() > self.limits.results_per_client
@@ -556,7 +755,13 @@ impl Protocol {
         {
             c.records.pop_front();
         }
-        while self.retained_results().1 > self.limits.result_bytes_total {
+        while Self::binary_bytes(c.records.iter()) > self.limits.binary_bytes_per_client {
+            c.records.pop_front();
+        }
+        while self.retained_results().1 > self.limits.result_bytes_total
+            || Self::binary_bytes(self.clients.values().flat_map(|c| c.records.iter()))
+                > self.limits.binary_bytes_total
+        {
             let oldest = self
                 .clients
                 .iter()
@@ -566,6 +771,7 @@ impl Protocol {
                 .unwrap();
             self.clients.get_mut(&oldest).unwrap().records.pop_front();
         }
+        self.refresh_memory(runtime);
         result
     }
     fn execute(
@@ -595,12 +801,25 @@ impl Protocol {
                 rt.release_client(client);
                 Value::Null
             }
+            Operation::PrepareImageJob { path, blob } => {
+                json!({"job":rt.request_image_preparation(client,path,blob)?})
+            }
+            Operation::CaptureImage { session, edit, id } => {
+                let (image, source) = rt.capture_image(client, session, edit, &id)?;
+                json!({"image":image.image,"width":image.width,"height":image.height,"source":source})
+            }
+            Operation::EditorContext { session } => {
+                let version = rt.session_info(session)?.version;
+                json!({"source":SourceRef::Formal{session,version},"context":rt.editor_context(session)?})
+            }
             Operation::Statistics => {
                 let (clients, sessions, edits, jobs) = rt.live_counts();
                 let (results, result_bytes) = self.retained_results();
                 let mut value = json!({"clients": clients, "sessions": sessions, "edits": edits, "jobs": jobs,
+                    "binary_cached_bytes":Self::binary_bytes(self.clients.values().flat_map(|c|c.records.iter())),
                     "request_results": results, "request_result_bytes": result_bytes,
-                    "accounted_document_bytes": rt.accounted_bytes().saturating_sub(rt.image_memory_usage().total_bytes()),
+                    "accounted_document_bytes": rt.accounted_bytes().saturating_sub(rt.image_memory_usage().total_bytes()).saturating_sub(self.retained_metadata()),
+                    "accounted_transport_result_bytes": self.retained_metadata(),
                     "accounted_cpu_bytes": rt.accounted_bytes(),
                     "image_memory": rt.image_memory_usage(), "plans": rt.modeling_plan_count(), "prepared_images":rt.prepared_image_count(), "blobs": rt.blob_count(),
                     "memory_image_entries": rt.list_sessions().iter().filter_map(|s| rt.session(s.id).ok()).map(|s| s.memory_image_entries()).sum::<usize>()});
@@ -651,6 +870,27 @@ impl Protocol {
                         (frozen.snapshot.document(), session_info.version, 0)
                     }
                 };
+                if meshes.len().saturating_add(parameters.len()) > 256 {
+                    return Err(RuntimeError::Budget("inline query selection"));
+                }
+                let mut bytes = 4096usize.saturating_add(
+                    doc.mesh_order()
+                        .iter()
+                        .chain(doc.parameter_order())
+                        .map(|id| id.len().saturating_mul(6).saturating_add(8))
+                        .sum::<usize>(),
+                );
+                for id in &meshes {
+                    bytes = bytes.saturating_add(bounded_json_bytes(&doc.get_mesh(id))?);
+                }
+                for id in &parameters {
+                    bytes = bytes.saturating_add(bounded_json_bytes(&doc.get_parameter(id))?);
+                }
+                if bytes > 1 << 20 {
+                    return Err(RuntimeError::Budget("inline query bytes"));
+                }
+                self.execution_leases
+                    .push(rt.reserve_transfer(bytes.saturating_mul(128))?);
                 let mut value = query(doc, version, sequence, meshes, parameters);
                 value["source"] =
                     json!({"session":session, "edit":edit, "version":version, "sequence":sequence});
@@ -663,6 +903,30 @@ impl Protocol {
                 offset,
                 bytes,
             } => json!(rt.append_blob(client, blob, offset, &bytes)?),
+            Operation::AppendBlobBinary {
+                blob,
+                offset,
+                length,
+                payload_sha256,
+            } => {
+                let bytes = self
+                    .binary_input
+                    .as_deref()
+                    .ok_or(RuntimeError::InvalidReference)?;
+                if bytes.len() != length || payload_sha256.len() != 64 {
+                    return Err(RuntimeError::InvalidReference);
+                }
+                json!(rt.append_blob(client, blob, offset, bytes)?)
+            }
+            Operation::ReadBlobBinary {
+                blob,
+                offset,
+                length,
+            } => {
+                self.binary_output =
+                    Some(BinarySlice::new(rt.blob(client, blob)?, offset, length)?);
+                json!({"length": length})
+            }
             Operation::ReadBlob {
                 blob,
                 offset,
@@ -697,12 +961,11 @@ impl Protocol {
                 rt.apply_rgba_blob(client, edit, id, name, width, height, blob, replace)?;
                 Value::Null
             }
-            Operation::ApplyModelingBlob { edit, blob } => {
-                let bytes = rt.blob(client, blob)?;
-                let commands: Vec<crate::modeling::ModelingCommand> =
-                    crate::metrics::decode(&bytes).map_err(|_| RuntimeError::InvalidReference)?;
-                rt.apply_modeling(client, edit, commands)?;
-                Value::Null
+            Operation::StartAuthoringUpload { edit, length } => {
+                json!({"blob":rt.start_authoring_upload(client,edit,length)?})
+            }
+            Operation::ApplyAuthoringBlob { edit, blob } => {
+                json!(rt.apply_authoring_blob(client, edit, blob)?)
             }
             Operation::PlanModeling {
                 session,
@@ -727,53 +990,28 @@ impl Protocol {
                 session,
                 edit,
                 query,
-            } => {
-                let frozen;
-                let session_info = rt.session_info(session)?;
-                let (doc, source) = if let Some(edit) = edit {
-                    let candidate = rt.candidate(client, edit)?;
-                    if candidate.base_version().session_id != session_info.version.session_id {
-                        return Err(RuntimeError::InvalidReference);
-                    }
-                    (
-                        rt.edit_document(client, edit)?,
-                        SourceRef::Edit {
-                            session,
-                            edit,
-                            base: candidate.base_version(),
-                            sequence: rt.edit_sequence(client, edit)?,
-                        },
-                    )
-                } else if matches!(session_info.state, SessionState::Ready) {
-                    (
-                        rt.document(session)?,
-                        SourceRef::Formal {
-                            session,
-                            version: session_info.version,
-                        },
-                    )
-                } else {
-                    frozen = rt.source_snapshot(session)?;
-                    (frozen.snapshot.document(), frozen.source)
-                };
-                modeling_query::response(
-                    doc,
-                    &query,
-                    source,
-                    &session_info,
-                    rt.limits()
-                        .accounted_bytes
-                        .saturating_sub(rt.accounted_bytes())
-                        .saturating_sub(
-                            self.retained_results()
-                                .1
-                                .saturating_mul(modeling_query::JSON_MEMORY_FACTOR),
-                        ),
-                    self.limits
-                        .result_bytes_per_client
-                        .min(self.limits.result_bytes_total),
-                )?
+            } => match rt.modeling_record_response(client, session, edit, query)? {
+                crate::ModelingRecordResponse::Inline(value) => {
+                    let crate::ModelingRecordBatch {
+                        source,
+                        version,
+                        state,
+                        records,
+                        lease,
+                    } = value;
+                    self.execution_leases.push(lease);
+                    json!({"source":source,"version":version,"state":state,"records":records})
+                }
+                crate::ModelingRecordResponse::Blob(value) => json!(value),
+            },
+            Operation::RequestModelingSamples { input } => {
+                json!({"job":rt.request_modeling_samples(client,input)?})
             }
+            Operation::RequestModelingPlan {
+                session,
+                edit,
+                intent,
+            } => json!({"job":rt.request_modeling_plan(client,session,edit,intent)?}),
             Operation::ApplyModeling { edit, commands } => {
                 rt.apply_modeling(client, edit, commands)?;
                 Value::Null
@@ -785,24 +1023,63 @@ impl Protocol {
                 width,
                 height,
                 rgba,
-            } => json!(rt.prepare_image(client, width, height, rgba)?),
+            } => {
+                if rgba.len() > crate::authoring::MAX_INLINE_IMAGE_BYTES {
+                    return Err(RuntimeError::Budget("inline image upload"));
+                }
+                json!(rt.prepare_image(client, width, height, rgba)?)
+            }
             Operation::PreparedPixels { image } => {
-                json!(crate::authoring::PREPARED_PIXELS_QUERY.call(
+                let pixels = crate::authoring::PREPARED_PIXELS_QUERY.call(
                     rt,
                     client,
-                    crate::authoring::PreparedPixelsQuery { image }
-                )?)
+                    crate::authoring::PreparedPixelsQuery { image },
+                )?;
+                if pixels.rgba.len() > 65536 {
+                    let blob = rt.retain_blob(client, pixels.rgba)?;
+                    return Ok(success(
+                        json!({"width": pixels.width, "height": pixels.height, "blob": blob}),
+                    ));
+                }
+                self.execution_leases
+                    .push(rt.reserve_transfer(pixels.rgba.len().saturating_mul(128))?);
+                json!(pixels)
+            }
+            Operation::PrepareImageBlob {
+                width,
+                height,
+                blob,
+            } => json!(rt.prepare_image_blob(client, width, height, blob)?),
+            Operation::PreparedPixelsBlob { image } => {
+                let pixels = rt.prepared_image_pixels(client, image)?;
+                let blob = rt.retain_blob(client, pixels.rgba)?;
+                json!({"width": pixels.width, "height": pixels.height, "blob": blob})
+            }
+            Operation::ImageSnapshotBlob { session, edit, id } => {
+                let value = rt.image_snapshot(client, session, edit, &id)?;
+                let blob = rt.retain_blob(client, value.pixels.rgba)?;
+                json!({"source": value.source, "id": value.id, "name": value.name, "pixels": {"width": value.pixels.width, "height": value.pixels.height}, "blob": blob})
             }
             Operation::ReleasePreparedImage { image } => {
                 rt.release_prepared_image(client, image)?;
                 Value::Null
             }
             Operation::ImageSnapshot { session, edit, id } => {
-                json!(crate::authoring::IMAGE_QUERY.call(
+                let snapshot = crate::authoring::IMAGE_QUERY.call(
                     rt,
                     client,
-                    crate::authoring::ImageQuery { session, id, edit }
-                )?)
+                    crate::authoring::ImageQuery { session, id, edit },
+                )?;
+                if snapshot.pixels.rgba.len() > 65536 {
+                    let blob = rt.retain_blob(client, snapshot.pixels.rgba)?;
+                    return Ok(success(
+                        json!({"source": snapshot.source, "id": snapshot.id, "name": snapshot.name,
+                        "pixels": {"width": snapshot.pixels.width, "height": snapshot.pixels.height}, "blob": blob}),
+                    ));
+                }
+                self.execution_leases
+                    .push(rt.reserve_transfer(snapshot.pixels.rgba.len().saturating_mul(128))?);
+                json!(snapshot)
             }
             Operation::PlanAuthoring {
                 session,
@@ -818,13 +1095,81 @@ impl Protocol {
                 }
             )?),
             Operation::MeshSnapshot(input) => {
-                json!(crate::authoring::MESH_QUERY.call(rt, client, input)?)
+                if let Some(value) = rt.mesh_response(
+                    client,
+                    input.session,
+                    input.edit,
+                    vec![input.id.clone()],
+                    true,
+                )? {
+                    value
+                } else {
+                    let value = crate::authoring::MESH_QUERY.call(rt, client, input)?;
+                    self.admit_value(rt, &value)?
+                }
             }
-            Operation::MeshSnapshots(input) => json!(rt.mesh_snapshots(client, input)?),
-            Operation::ParameterSnapshot(input) => json!(rt.parameter_snapshot(client, input)?),
-            Operation::MeshBindingSnapshot(input) => {
-                json!(rt.mesh_binding_snapshot(client, input)?)
+            Operation::MeshSnapshots(input) => {
+                if let Some(value) =
+                    rt.mesh_response(client, input.session, input.edit, input.ids.clone(), false)?
+                {
+                    value
+                } else {
+                    let value = rt.mesh_snapshots(client, input)?;
+                    self.admit_value(rt, &value)?
+                }
             }
+            Operation::ParameterSnapshot(input) => {
+                let value = rt.parameter_snapshot(client, input)?;
+                self.admit_value(rt, &value)?
+            }
+            Operation::MeshBindingSnapshot(input) => rt.binding_response(client, input)?,
+            Operation::SceneSnapshot(input) => {
+                let value = rt.scene_snapshot(client, input)?;
+                self.admit_value(rt, &value)?
+            }
+            Operation::CaptureObjectRef { session, kind, id } => {
+                json!(rt.capture_object_ref(client, session, kind, &id)?)
+            }
+            Operation::ResolveObjectRef { reference } => {
+                json!(rt.resolve_object_ref(client, reference)?)
+            }
+            Operation::ObjectSceneCapabilities { reference } => {
+                json!(rt.object_scene_capabilities(client, reference)?)
+            }
+            Operation::CaptureLabelAddress { reference } => {
+                json!(rt.capture_label_address(client, reference)?)
+            }
+            Operation::PlanLabelPatch { address, name } => {
+                json!(rt.plan_label_patch(client, address, name)?)
+            }
+            Operation::CaptureAddress { session, selector } => {
+                let address = rt.capture_address(client, session, selector)?;
+                json!({"address":address})
+            }
+            Operation::PlanAddressPatch { address, patch } => {
+                json!(rt.plan_address_patch(client, address, patch)?)
+            }
+            Operation::ModelingCapabilities { reference, domain } => {
+                let source = rt.resolve_object_ref(client, reference)?;
+                json!({"source":source,"capabilities":rt.modeling_capabilities(client,reference,domain)?})
+            }
+            Operation::CollectionCapabilities { session, query } => {
+                let version = rt.session_info(session)?.version;
+                json!({"source":SourceRef::Formal{session,version},"capabilities":rt.collection_capabilities(client,session,query)?})
+            }
+            Operation::ReleaseObjectRef { reference } => {
+                rt.release_object_ref(client, reference)?;
+                Value::Null
+            }
+            Operation::ReleaseFieldAddress { address } => {
+                rt.release_field_address(client, address)?;
+                Value::Null
+            }
+            Operation::PlanSceneAuthoring {
+                session,
+                edit,
+                operation,
+            } => json!(rt.plan_scene_authoring(client, session, edit, operation)?),
             Operation::SampleModeling {
                 session,
                 edit,
@@ -832,7 +1177,7 @@ impl Protocol {
                 checks,
                 expected,
             } => {
-                json!(rt.sample_modeling(
+                let value = rt.sample_modeling(
                     client,
                     crate::authoring::ModelingSampleQuery {
                         session,
@@ -840,8 +1185,9 @@ impl Protocol {
                         parameters,
                         checks,
                         expected,
-                    }
-                )?)
+                    },
+                )?;
+                rt.sample_response(client, &value)?
             }
             Operation::ApplyRgba {
                 edit,
@@ -927,13 +1273,34 @@ impl Protocol {
                 }
                 json!({"job": rt.request_save(client, session, &path)?})
             }
+            Operation::Project { session, request } => {
+                json!({"job":rt.request_project_target(client,session,request)?})
+            }
+            Operation::ImportProject { source } => json!({"job":rt.request_import(client,source)?}),
             Operation::Open { path } => match rt.request_open(client, &path)? {
                 OpenRequest::Existing(s) => json!({"session": s}),
                 OpenRequest::Pending(job) => json!({"job": job}),
             },
             Operation::Job { job } => {
                 let info = rt.job_info(client, job)?;
-                let value = job_info(&info);
+                if let Some(Ok(value)) = &info.result {
+                    if !matches!(value, JobValue::Sampled(_)) {
+                        self.execution_leases.push(
+                            rt.reserve_transfer(value.retained_bytes().saturating_mul(32))
+                                .map_err(|_| RuntimeError::Busy)?,
+                        );
+                    }
+                }
+                let value = if let Some(Ok(JobValue::Sampled(samples))) = &info.result {
+                    // Serialize metadata only; sampled numeric arrays stay binary.
+                    let mut metadata = info.clone();
+                    metadata.result = None;
+                    let mut value = job_info(&metadata);
+                    value["result"] = success(rt.sample_response(client, samples)?);
+                    value
+                } else {
+                    job_info(&info)
+                };
                 if info.state.is_terminal() {
                     rt.release_job(client, job)?;
                 }
@@ -981,4 +1348,84 @@ pub fn success(value: Value) -> Value {
 }
 pub fn failure(code: &str, message: &str) -> Value {
     json!({"error": {"category": "runtime", "code": code, "message": message}})
+}
+
+/// Serialized while still on the owner thread, then held by an actual charged
+/// Arc until the socket finishes. Cache eviction cannot release its accounting.
+#[cfg(unix)]
+pub struct EncodedReply {
+    pub bytes: std::sync::Arc<[u8]>,
+    pub authenticated: Option<crate::local::Auth>,
+    pub(crate) _transfer: zipzi_project::TransferReservation,
+}
+#[cfg(unix)]
+impl Protocol {
+    pub fn receive_encoded(
+        &mut self,
+        runtime: &mut Runtime,
+        auth: Option<crate::local::Auth>,
+        value: Value,
+        now: Instant,
+    ) -> Option<EncodedReply> {
+        let result = self.receive(runtime, auth, value, now);
+        let authenticated = result
+            .get("ok")
+            .and_then(|ok| {
+                serde_json::from_value(ok["client"].clone())
+                    .ok()
+                    .zip(ok["connection"].as_u64())
+            })
+            .map(|(client, connection)| crate::local::Auth { client, connection });
+        struct Count(usize);
+        impl std::io::Write for Count {
+            fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+                self.0 = self
+                    .0
+                    .checked_add(b.len())
+                    .filter(|n| *n <= MAX_FRAME)
+                    .ok_or_else(|| std::io::Error::other("response limit"))?;
+                Ok(b.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let mut count = Count(0);
+        serde_json::to_writer(&mut count, &result).ok()?;
+        // Failure closes the transport. An executed write is resolved using its
+        // original RequestId; it is never mislabeled a known budget refusal.
+        let reservation = runtime.reserve_transfer(count.0.saturating_mul(2)).ok()?;
+        let mut bytes = Vec::new();
+        bytes.try_reserve_exact(count.0).ok()?;
+        serde_json::to_writer(&mut bytes, &result).ok()?;
+        let bytes: std::sync::Arc<[u8]> = bytes.into();
+        drop(result);
+        self.execution_leases.clear();
+        Some(EncodedReply {
+            bytes,
+            authenticated,
+            _transfer: reservation,
+        })
+    }
+}
+
+fn bounded_json_bytes<T: serde::Serialize>(value: &T) -> Result<usize> {
+    struct Count(usize);
+    impl std::io::Write for Count {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0 = self
+                .0
+                .checked_add(bytes.len())
+                .filter(|n| *n <= 1 << 20)
+                .ok_or_else(|| std::io::Error::other("inline query bytes"))?;
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let mut count = Count(0);
+    serde_json::to_writer(&mut count, value)
+        .map_err(|_| RuntimeError::Budget("inline query bytes"))?;
+    Ok(count.0)
 }

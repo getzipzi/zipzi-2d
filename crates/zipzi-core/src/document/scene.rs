@@ -1,7 +1,7 @@
 //! Scene lifecycle and collections. Organization, deformation, drawing and
 //! connection management have independent, explicit commands.
-use super::organization::lifecycle::{copy_axes, mapped, new_id, unique};
 use super::organization::Delta;
+use super::organization::lifecycle::{copy_axes, mapped, new_id, unique};
 use super::*;
 use crate::{
     Appearance, BlendMode, RotationTransform, SceneReference, TransformData, Vec2, WarpTransform,
@@ -15,6 +15,7 @@ mod fields;
 mod lifecycle;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum SceneCollection {
     Organization { part_id: Option<String> },
     Deformation { parent_id: Option<String> },
@@ -24,6 +25,7 @@ pub enum SceneCollection {
 }
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum SceneCopyScope {
     #[default]
     Selected,
@@ -31,6 +33,7 @@ pub enum SceneCopyScope {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum SceneCreate {
     Mesh {
         #[serde(default)]
@@ -51,6 +54,7 @@ pub enum SceneCreate {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape)]
 pub enum SceneField {
     Label,
     RuntimeId,
@@ -81,6 +85,7 @@ impl SceneField {
     rename_all = "snake_case",
     deny_unknown_fields
 )]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum SceneFieldValue {
     Label(String),
     RuntimeId(String),
@@ -149,6 +154,7 @@ impl SceneFieldValue {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum SceneEdit {
     Create {
         id: String,
@@ -303,7 +309,7 @@ impl Document {
             SceneCollection::Organization { part_id } => {
                 return self.organization_collection(&OrganizationCollection::PartMembers {
                     part_id: part_id.clone(),
-                })
+                });
             }
             SceneCollection::Deformation { parent_id } => {
                 self.validate_scene_collection(c)?;
@@ -475,7 +481,7 @@ impl Document {
                     return Err(Status::error(
                         "DRAWING_GROUP_ORDER_DERIVED",
                         "Move a Part drawing member to change group nesting",
-                    ))
+                    ));
                 }
                 other => {
                     let members = self.scene_collection(&other)?;
@@ -730,11 +736,7 @@ impl Document {
     }
 }
 fn check(status: Status) -> Result<(), Status> {
-    if status.is_ok() {
-        Ok(())
-    } else {
-        Err(status)
-    }
+    if status.is_ok() { Ok(()) } else { Err(status) }
 }
 fn ordered_selection(members: &[String], ids: &[String]) -> Result<Vec<String>, Status> {
     let selected: HashSet<_> = ids.iter().collect();
@@ -745,7 +747,10 @@ fn ordered_selection(members: &[String], ids: &[String]) -> Result<Vec<String>, 
         ));
     }
     if ids.iter().any(|id| !members.contains(id)) {
-        return Err(Status::error("WRONG_SCENE_COLLECTION","Source is not a member of this collection; deformation parent changes require a reparent plan"));
+        return Err(Status::error(
+            "WRONG_SCENE_COLLECTION",
+            "Source is not a member of this collection; deformation parent changes require a reparent plan",
+        ));
     }
     Ok(members
         .iter()

@@ -2,7 +2,15 @@ use super::deltas::{self, DeltaVector};
 use super::*;
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum BlendTableOperation {
     Insert {
         sample: BindingSample,
@@ -26,7 +34,15 @@ pub enum BlendTableOperation {
         policy: ParameterRangePolicy,
     },
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum BlendAuthoringEdit {
     CreateTable {
         table: BlendShapeKeyTable,
@@ -309,9 +325,9 @@ impl Document {
                                 sources: vec![(
                                     ConversionAddress {
                                         owner: b.id.clone(),
-                                        element: ConversionElement::Keyform(vec![before
-                                            .id
-                                            .clone()]),
+                                        element: ConversionElement::Keyform(vec![
+                                            before.id.clone(),
+                                        ]),
                                     },
                                     1.,
                                 )],
@@ -733,32 +749,33 @@ impl Document {
                 p.y += offset[i * 2 + 1];
             }
         };
-        let controllers =
-            |bezier: &mut Option<crate::WarpBezier>, count: usize| -> Result<(), Status> {
-                if let Some(curve) = bezier {
-                    if count == 0 {
-                        return Ok(());
-                    }
-                    if offset[..count * 2]
-                        .chunks_exact(2)
-                        .any(|p| p[0] != offset[0] || p[1] != offset[1])
-                    {
-                        return Err(Status::error(
+        let controllers = |bezier: &mut Option<crate::WarpBezier>,
+                           count: usize|
+         -> Result<(), Status> {
+            if let Some(curve) = bezier {
+                if count == 0 {
+                    return Ok(());
+                }
+                if offset[..count * 2]
+                    .chunks_exact(2)
+                    .any(|p| p[0] != offset[0] || p[1] != offset[1])
+                {
+                    return Err(Status::error(
                         "BEZIER_REBASE_NOT_REPRESENTABLE",
                         "Only uniform controller translations can represent this lattice offset",
                     ));
-                    }
-                    for n in &mut curve.nodes {
-                        n.position.x += offset[0];
-                        n.position.y += offset[1];
-                        for h in &mut n.handles {
-                            h.x += offset[0];
-                            h.y += offset[1];
-                        }
+                }
+                for n in &mut curve.nodes {
+                    n.position.x += offset[0];
+                    n.position.y += offset[1];
+                    for h in &mut n.handles {
+                        h.x += offset[0];
+                        h.y += offset[1];
                     }
                 }
-                Ok(())
-            };
+            }
+            Ok(())
+        };
         match b.target_kind {
             BlendShapeTargetKind::Mesh => {
                 let old = self.get_mesh(&b.target_id).unwrap();

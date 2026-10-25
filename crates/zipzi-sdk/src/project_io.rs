@@ -603,3 +603,51 @@ impl AuthoringSession {
         });
     }
 }
+
+impl AuthoringSession {
+    pub fn capture_image_content(
+        &self,
+        asset: &zipzi_core::ImageAsset,
+        budget: &zipzi_project::ImageMemoryBudget,
+    ) -> Result<zipzi_project::PreparedImageContent, SdkError> {
+        if let Some(image) = self.project.memory_image(asset) {
+            return image.with_budget(budget).map_err(|s| {
+                SdkError::from_status(s, "capture_image_content", vec![asset.id.clone()])
+            });
+        }
+        let root = self.project.root();
+        zipzi_project::prepare_project_image(&root, asset, budget)
+            .map_err(|s| SdkError::from_status(s, "capture_image_content", vec![asset.id.clone()]))
+    }
+}
+impl crate::AuthoringSnapshot {
+    /// Explicit resource snapshot pins disk bytes as well as memory artwork.
+    /// CPU-only document snapshots remain cheap and need not decode textures.
+    pub fn capture_image_content(
+        &self,
+        id: &str,
+        budget: &zipzi_project::ImageMemoryBudget,
+    ) -> Result<zipzi_project::PreparedImageContent, SdkError> {
+        if let Some(image) = self.memory_image(id) {
+            return image
+                .with_budget(budget)
+                .map_err(|s| SdkError::from_status(s, "capture_image_content", vec![id.into()]));
+        }
+        let asset = self.document().get_asset(id).ok_or_else(|| {
+            SdkError::new(
+                "MISSING_IMAGE",
+                "Image does not exist",
+                "capture_image_content",
+            )
+        })?;
+        let root = self.project_path().and_then(Path::parent).ok_or_else(|| {
+            SdkError::new(
+                "INVALID_PATH",
+                "Snapshot has no resource root",
+                "capture_image_content",
+            )
+        })?;
+        zipzi_project::prepare_project_image(root, asset, budget)
+            .map_err(|s| SdkError::from_status(s, "capture_image_content", vec![id.into()]))
+    }
+}

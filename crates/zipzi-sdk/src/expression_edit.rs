@@ -21,7 +21,7 @@ impl ExpressionEditPlan {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub enum CapabilityState {
     Available,
     Unsupported { code: &'static str },

@@ -6,13 +6,16 @@ mod caff;
 mod import;
 #[cfg(feature = "test-support")]
 pub use import::test_support;
-pub use import::{animation_model_paths, import_animation, import_model, ImportedModel};
+pub use import::{
+    ImportedModel, animation_model_paths, animation_model_paths_with_budget, import_animation,
+    import_animation_with_budget, import_model, import_model_with_budget,
+};
 mod can3;
 mod canvas;
 mod expression_semantics;
 pub use can3::{
-    encode_can3, encode_cubism, inspect_can3, inspect_cubism, Can3Artifact, Can3Options,
-    CubismArtifact, CubismOptions,
+    Can3Artifact, Can3Options, CubismArtifact, CubismOptions, encode_can3, encode_cubism,
+    inspect_can3, inspect_cubism,
 };
 mod export;
 mod schema;

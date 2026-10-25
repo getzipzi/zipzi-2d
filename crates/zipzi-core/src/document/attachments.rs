@@ -9,6 +9,7 @@ use crate::types::{ChangeKind, EditResult, Status};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct PackageAttachment {
     pub id: String,
     pub path: String,
@@ -30,6 +31,7 @@ pub fn valid_attachment_path(path: &str) -> bool {
 /// Imported paths remain explicitly unresolved until a matching attachment is loaded.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum AttachmentRef {
     Resolved { attachment_id: String },
     Unresolved { path: String },
@@ -181,6 +183,7 @@ impl Document {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum AttachmentEdit {
     Create {
         id: String,

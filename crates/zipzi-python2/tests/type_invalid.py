@@ -1,4 +1,4 @@
-"""The runner requires exactly these twelve type failures, without suppressions."""
+"""The runner requires exactly these sixteen type failures, without suppressions."""
 import zipzi
 from zipzi import bindings, ops, parameters
 
@@ -20,3 +20,11 @@ def bad_resources(edit: zipzi.Edit) -> None:
     edit.resources.create_image("x", b"rgba")
     edit.apply(ops.ApplyPlan("plan-token"))
     edit.apply(ops.CreateImage(7, "image-token"))
+
+from zipzi import scene
+
+def bad_scene(session: zipzi.Session, edit: zipzi.Edit) -> None:
+    session.reference("mesh", 7)
+    edit.scene.plan({"op": "delete_scene"})
+    edit.apply(scene.SetOffscreenStaticKeyform("x", "zero"))
+    edit.apply(scene.InsertMeshVertex("x", .5, (0., 0.), (0., 0.), ()))

@@ -14,9 +14,9 @@ see [R3 evidence](../plans/sdk-runtime/r3-ipc.md) and the explicit
 remains a classification catalog; `not-connected` there is not a claim that all
 entries are unimplemented. R3's coverage manifest records the verified routes.
 Python targets CPython 3.14; connection imports work without `_native`.
-R4 is in progress: see [implementation/evidence](../plans/sdk-runtime/r4-modeling.md)
+R4 remains in progress after the user-requested wrap-up: see [current implementation/evidence and remaining Release gates](../plans/sdk-runtime/python2-r4-complete.md)
 and [current verified/pending coverage](r4-coverage.json). The active protocol is
-`zipzi-runtime-r4-1`; R3 records retain their historical contract.
+`zipzi-runtime-r4-3`; R3 records retain their historical contract.
 
 ## Active Python implementation
 
@@ -30,7 +30,10 @@ including installed response-loss cases, real Editor projection/Undo events and
 production killed-client expiry. The next [R4 mesh-binding/CPU slice](../plans/sdk-runtime/python2-r4-bindings.md)
 adds canonical binding authoring/reads and shared explicit formal/candidate CPU
 samples, including real Editor human Preview isolation. Cross-domain Modeling
-dispatch now belongs to Runtime. Full R4 coverage remains pending.
+dispatch now belongs to Runtime. The [P3 scene/identity slice](../plans/sdk-runtime/python2-p3-scene-identity.md)
+adds generated scene/group operations, mesh BlendShape/bound topology recipes,
+SDK references and scene label addresses, with installed and native Editor checks.
+Full R4 coverage remains pending.
 The inventories and older client evidence below retain their historical scope;
 they do not establish acceptance for the new package.
 
@@ -39,10 +42,13 @@ they do not establish acceptance for the new package.
 Regenerate and validate from the repository root:
 
 ```sh
-uv run --locked python tools/runtime/runtime_inventory.py
-uv run --locked python tools/runtime/runtime_inventory.py --check
+uv run --locked python tools/runtime/runtime_inventory.py --shared-only
+uv run --locked python tools/runtime/runtime_inventory.py --shared-only --check
 uv run --locked python tools/test_tools.py -p test_runtime_inventory.py
 ```
+
+`--shared-only` refreshes Rust rows and keeps the historical Python catalog
+without reading the retired client package.
 
 [`api-inventory.json`](api-inventory.json) indexes all split SDK implementation
 files, the animation implementations re-exported by the SDK, Python facade
@@ -127,47 +133,30 @@ Current `_edit.py` behavior and required R3 changes:
 | NativeEdit lifecycle | Native error/abort clears workspace and releases active edit; commit consumes workspace | Retain NativeBackend semantics; introduce explicit connected state handling rather than wrapping every exception in abort. |
 | Script failure | Earlier successful commits remain | Same behavior connected; no implicit whole-script rollback. |
 
-## Memory ownership gaps for R4
+## R4 memory ownership
 
-The following records the pre-R4 baseline. The current preparation API is
-`AuthoringSession::prepare_rgba_image`, which returns an owned
-`PreparedImageContent` lease without inserting a registry entry. Candidates take
-ownership through `create_prepared_image` / `replace_prepared_image`; successful
-publication registers the content. R4 now collects unreferenced memory images
-while preserving formal/history roots and outstanding leases. The historical
-`prepare_rgba_asset` path described below has been removed.
+`PreparedImageContent` is an independent lease. Candidate publication transfers
+content roots into the project store; formal content, history, candidates,
+snapshots, plans and jobs share immutable Arc allocations. Collection removes
+only entries without a surviving root. `ImageMemoryBudget` separately reports
+resource entries, unique allocations, RGBA, PNG, blob, preparing and transfer
+bytes; metadata estimates do not stand in for these payload counters.
 
-`AuthoringSession::prepare_rgba_asset` enters project `memory_assets` before any
-candidate publication. Entries hold `Arc<MemoryAsset>` with decoded RGBA and a
-lazy `OnceLock` PNG. `replace_prepared_image_content` registers prepared content
-after successful SDK publication via `retain_prepared_image`. Resource lookup
-uses the descriptor's source key, not candidate lifetime.
+Disk and memory `ImageLease` snapshots pin the actual encoded bytes and pixels,
+so source-file replacement cannot change an already captured image. Decoder,
+query, clone, blob growth/seal and socket-output reservations precede expansion
+and survive until the owning operation releases them. PSD/Cubism/CAN3 bounds
+apply before pixel/archive/XML decoding. Atomic registration and ordinary error
+paths release temporary reservations without freeing referenced content.
 
-Dropping a candidate, cancelling a load token or evicting a history entry does
-not prune that map. Clear paths currently belong to project reset/open/import
-and project destruction. Content-hash deduplication does not bound repeated
-different images. `estimated_content_bytes` and SDK history estimates account
-for document/descriptor/checkpoint data, not the resource table's pixel/PNG
-ownership. Do not use either as the total Runtime live byte count.
-
-`read_snapshot` clones document data and retains prepared memory images by Arc;
-history/default Preview are not cloned. Disk resources still depend on source
-paths: R4 must pin actual immutable content for an observation batch, including
-candidate images, old texture versions and Undo resources. A document snapshot
-alone is not proof that external files cannot change under it.
-
-Required SDK/project primitives before R4 memory acceptance:
-
-1. Count live unique decoded bytes, encoded bytes and preparation buffers,
-   including entries not referenced by the current document.
-2. Track roots from formal content, Undo/Redo, candidates, snapshots, previews,
-   jobs and later Proposals. Prune entries only after the final root is released.
-3. Reserve image and encode/decode budgets before allocation/publication;
-   cancellation/error must release temporary registrations without freeing roots
-   still in use. Budget rejection preserves existing state.
-4. Test at least 100 cycles with distinct image content, cancelled candidates,
-   history eviction, retained snapshots and final release. Assert backing entry
-   counts/bytes separately from allocator RSS.
+The same resident-session public recipe performs 100 distinct image cancellations
+and 100 replacements with history eviction. Its current image plus 50 historical
+images retain 51 entries/204 RGBA bytes; an extra pinned snapshot is separately
+charged and reclaimed on close. Binary response recovery has a declared cache:
+256 MiB/client, 512 MiB total, 300 seconds. Allocator RSS is measured separately.
+Preview/Proposal integration continues in R5/R6. See the
+[full R4 record](../plans/sdk-runtime/python2-r4-complete.md) and
+[active coverage](r4-coverage.json).
 
 ## Reproducible CPU fixture and measurements
 

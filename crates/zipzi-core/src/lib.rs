@@ -1,6 +1,8 @@
+extern crate self as zipzi_core;
 pub mod api_shape;
 #[cfg(feature = "bench-instrumentation")]
 pub mod benchmark;
+pub mod binary_wire;
 pub mod deformers;
 pub mod document;
 pub mod draw_order;
@@ -10,6 +12,7 @@ pub mod image;
 pub mod keyforms;
 pub mod physics;
 pub mod preview;
+pub mod serde_maps;
 mod shared_vec;
 pub use shared_vec::SharedVec;
 mod scene_reference;

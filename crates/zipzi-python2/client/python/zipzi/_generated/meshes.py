@@ -41,6 +41,7 @@ class Geometry:
 
     @classmethod
     def read(cls, value: object) -> "Geometry":
+        if isinstance(value,cls): return value
         r = record(value)
         return cls(tuple(integer(item) for item in sequence(r["vertex_ids"])), tuple(_point(item) for item in sequence(r["positions"])), tuple(_point(item) for item in sequence(r["uvs"])), tuple(_array3(item) for item in sequence(r["triangles"])))
 
@@ -54,6 +55,7 @@ class MeshSpec:
 
     @classmethod
     def read(cls, value: object) -> "MeshSpec":
+        if isinstance(value,cls): return value
         r = record(value)
         return cls(string(r["name"]), Geometry.read(r["geometry"]), string(r.get("texture_asset_id", "")), None if r.get("id", None) is None else string(r.get("id", None)))
 
@@ -67,5 +69,6 @@ class Snapshot:
 
     @classmethod
     def read(cls, value: object) -> "Snapshot":
+        if isinstance(value,cls): return value
         r = record(value)
         return cls(Source.read(r["source"]), string(r["id"]), string(r["name"]), Geometry.read(r["geometry"]))

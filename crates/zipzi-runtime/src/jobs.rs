@@ -14,6 +14,11 @@ pub trait Executor {
 }
 
 pub(crate) enum Task {
+    Read(ReadTask),
+    Project {
+        request: crate::project_io::ProjectRequest,
+        _lease: Arc<zipzi_project::TransferReservation>,
+    },
     Open(PathBuf),
     Import(crate::ImportSource),
     Save(PathBuf),
@@ -23,11 +28,12 @@ pub(crate) enum Task {
 }
 
 pub struct Work {
+    pub(crate) transfer: Option<Arc<zipzi_project::TransferReservation>>,
     pub(crate) job: JobId,
     pub(crate) client: ClientId,
     pub(crate) session_id: SessionId,
     pub(crate) base: Version,
-    pub(crate) session: AuthoringSession,
+    pub(crate) session: Option<AuthoringSession>,
     pub(crate) task: Task,
     pub(crate) cancel: Arc<AtomicBool>,
 }
@@ -49,6 +55,7 @@ impl Work {
                 session_id,
                 base,
                 session: None,
+                transfer: None,
                 result: Err(RuntimeError::WorkerPanic(
                     "worker panicked outside the SDK operation".into(),
                 )),
@@ -60,7 +67,8 @@ impl Work {
                     client,
                     session_id,
                     base,
-                    session: Some(work.session),
+                    session: work.session,
+                    transfer: work.transfer,
                     result: Err(RuntimeError::ExecutorFailure(error.to_string())),
                 }
             }
@@ -84,20 +92,26 @@ impl Work {
             client: self.client,
             session_id: self.session_id,
             base: self.base,
-            session: Some(self.session),
+            session: self.session,
+            transfer: self.transfer,
             result: Err(RuntimeError::ExecutorFailure(message)),
         }
     }
     pub(crate) fn run_with_hook(self, before_io: impl FnOnce()) -> Completion {
+        if matches!(&self.task, Task::Read(_)) {
+            return self.run_read(before_io);
+        }
         let Self {
             job,
             client,
             session_id,
             base,
-            mut session,
+            session,
             task,
             cancel,
+            transfer,
         } = self;
+        let mut session = session.expect("ownership job has its session");
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             if cancel.load(Ordering::Acquire) {
                 return Err(RuntimeError::Cancelled);
@@ -106,6 +120,16 @@ impl Work {
             // Cancellation after this check is advisory. A successful SDK
             // publication/save is reported as success, never a false rollback.
             match task {
+                Task::Read(_) => unreachable!("read job dispatched separately"),
+                Task::Project { request, _lease } => {
+                    let _lease = _lease;
+                    return crate::project_io::execute(&mut session, request, &cancel).map(|r| {
+                        JobValue::Project {
+                            session: session_id,
+                            report: Arc::new(r),
+                        }
+                    });
+                }
                 Task::Import(source) => {
                     let (path, result) = match source {
                         crate::ImportSource::Model3(path) => {
@@ -162,6 +186,7 @@ impl Work {
                 session_id,
                 base,
                 session: Some(session),
+                transfer,
                 result,
             },
             Err(panic) => {
@@ -178,6 +203,7 @@ impl Work {
                     session_id,
                     base,
                     session: None,
+                    transfer,
                     result: Err(RuntimeError::WorkerPanic(message)),
                 }
             }
@@ -188,6 +214,7 @@ impl Work {
 /// Fields are private to prevent an executor from constructing, cloning or
 /// retargeting a completion. Runtime also validates the active job and version.
 pub struct Completion {
+    pub(crate) transfer: Option<Arc<zipzi_project::TransferReservation>>,
     pub(crate) job: JobId,
     pub(crate) client: ClientId,
     pub(crate) session_id: SessionId,
@@ -205,5 +232,120 @@ impl Completion {
 
     pub fn job_id(&self) -> JobId {
         self.job
+    }
+}
+
+pub(crate) enum ReadTask {
+    Image {
+        path: Option<PathBuf>,
+        bytes: Option<Arc<[u8]>>,
+        budget: zipzi_project::ImageMemoryBudget,
+    },
+    Sample {
+        source: crate::SourceSnapshot,
+        parameters: Vec<zipzi_core::PreviewValues>,
+        checks: zipzi_sdk::GeometryChecks,
+    },
+    Plan {
+        source: crate::SourceSnapshot,
+        intent: zipzi_sdk::ModelingIntent,
+        limits: zipzi_sdk::AuthoringLimits,
+        bytes: usize,
+    },
+}
+#[derive(Debug)]
+pub struct PreparedModelingPlan {
+    pub(crate) source: crate::SourceSnapshot,
+    pub(crate) plan: Arc<zipzi_sdk::ModelingPlan>,
+    pub(crate) bytes: usize,
+}
+impl Work {
+    fn run_read(self, before: impl FnOnce()) -> Completion {
+        let Self {
+            job,
+            client,
+            session_id,
+            base,
+            task,
+            cancel,
+            ..
+        } = self;
+        let Task::Read(task) = task else {
+            unreachable!()
+        };
+        let control = zipzi_sdk::ConversionControl::from_cancel_flag(cancel.clone());
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if cancel.load(Ordering::Acquire) {
+                return Err(RuntimeError::Cancelled);
+            }
+            before();
+            let value = match task {
+                ReadTask::Image {
+                    path,
+                    bytes,
+                    budget,
+                } => {
+                    let image = if let Some(path) = path {
+                        zipzi_project::prepare_image_content_with_budget(&path, &budget)
+                    } else {
+                        zipzi_project::prepare_png_content(
+                            bytes.ok_or(RuntimeError::InvalidReference)?,
+                            &budget,
+                        )
+                    }
+                    .map_err(crate::runtime::resources::preparation_error)?;
+                    JobValue::PreparedImage(Arc::new(image))
+                }
+                ReadTask::Sample {
+                    source,
+                    parameters,
+                    checks,
+                } => {
+                    let state = match source.state {
+                        crate::SessionState::Ready => "ready",
+                        crate::SessionState::Busy(_) => "busy",
+                        crate::SessionState::Faulted(_) => "faulted",
+                        _ => "closed",
+                    };
+                    let samples = source
+                        .snapshot
+                        .sample_modeling_with_control(parameters, checks, &control)?;
+                    JobValue::Sampled(Arc::new(crate::authoring::ModelingSampleBatch {
+                        source: source.source,
+                        lease: None,
+                        state,
+                        samples,
+                    }))
+                }
+                ReadTask::Plan {
+                    source,
+                    intent,
+                    limits,
+                    bytes,
+                } => {
+                    let plan = source.snapshot.plan_modeling(intent, limits, &control)?;
+                    JobValue::PreparedPlan(Arc::new(PreparedModelingPlan {
+                        source,
+                        plan: Arc::new(plan),
+                        bytes,
+                    }))
+                }
+            };
+            if cancel.load(Ordering::Acquire) {
+                Err(RuntimeError::Cancelled)
+            } else {
+                Ok(value)
+            }
+        }))
+        .unwrap_or_else(|_| Err(RuntimeError::WorkerPanic("read worker panicked".into())));
+        Completion {
+            job,
+            client,
+            session_id,
+            base,
+            session: None,
+            transfer: None,
+            result,
+        }
     }
 }

@@ -88,6 +88,16 @@ fn binding_and_sample_response_expansion_refused_without_poisoning_candidate() {
         }],
     )
     .unwrap();
+    // Typed frames no longer pay the former JSON expansion multiplier. A
+    // concurrent transfer still consumes the same aggregate ceiling.
+    rt.refresh_memory_budget();
+    let competing = rt
+        .reserve_transfer(
+            (1usize << 20)
+                .saturating_sub(rt.accounted_bytes())
+                .saturating_sub(4096),
+        )
+        .unwrap();
     assert!(matches!(
         rt.sample_modeling(
             client,
@@ -101,6 +111,7 @@ fn binding_and_sample_response_expansion_refused_without_poisoning_candidate() {
         ),
         Err(RuntimeError::Budget(_))
     ));
+    drop(competing);
     assert!(matches!(
         rt.mesh_binding_snapshot(
             client,
@@ -399,10 +410,26 @@ fn selected_mesh_batch_admits_total_expansion_before_any_snapshot_copy() {
         .mesh_snapshots(client, query(vec![id(5), id(5)]))
         .unwrap();
     assert_eq!(values[0].source, values[1].source);
+    assert_eq!(
+        rt.mesh_snapshots(client, query(vec![id(5); 256]))
+            .unwrap()
+            .len(),
+        256
+    );
+    rt.refresh_memory_budget();
+    let competing = rt
+        .reserve_transfer(
+            RuntimeLimits::default()
+                .accounted_bytes
+                .saturating_sub(rt.accounted_bytes())
+                .saturating_sub(4096),
+        )
+        .unwrap();
     assert!(matches!(
         rt.mesh_snapshots(client, query(vec![id(5); 256])),
-        Err(RuntimeError::Budget("mesh batch bytes"))
+        Err(RuntimeError::Budget(_))
     ));
+    drop(competing);
     assert!(matches!(
         rt.mesh_snapshots(client, query(vec![id(5), id(99)])),
         Err(RuntimeError::Sdk(_))
@@ -471,10 +498,24 @@ fn selected_mesh_query_checks_exact_session_and_admits_before_copy_without_poiso
         rt.mesh_snapshot(client, other, Some(edit), &id(3)),
         Err(RuntimeError::InvalidReference)
     ));
+    assert!(
+        rt.mesh_snapshot(client, session, Some(edit), &id(3))
+            .is_ok()
+    );
+    rt.refresh_memory_budget();
+    let competing = rt
+        .reserve_transfer(
+            RuntimeLimits::default()
+                .accounted_bytes
+                .saturating_sub(rt.accounted_bytes())
+                .saturating_sub(4096),
+        )
+        .unwrap();
     assert!(matches!(
         rt.mesh_snapshot(client, session, Some(edit), &id(3)),
-        Err(RuntimeError::Budget("mesh snapshot"))
+        Err(RuntimeError::Budget(_))
     ));
+    drop(competing);
     assert_eq!(rt.edit_sequence(client, edit).unwrap(), 1);
     rt.edit_meshes(
         client,

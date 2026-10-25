@@ -8,7 +8,7 @@ pub use zipzi_core::document::{
     ReferenceEffects, ReferenceFields, ReferenceIdentity, ReferenceKind, ReferenceProjection,
     ReferenceSelectionField,
 };
-use zipzi_core::{document::ReferencePlan, Document};
+use zipzi_core::{Document, document::ReferencePlan};
 #[derive(Debug, Clone)]
 pub struct ReferenceEditPlan {
     version: Version,
@@ -67,7 +67,7 @@ impl ReferenceSelectionAddress {
         &self.expected
     }
 }
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct ReferenceCapabilities {
     pub inspect: CapabilityState,
     pub patch: CapabilityState,

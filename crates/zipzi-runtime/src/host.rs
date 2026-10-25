@@ -38,7 +38,7 @@ impl Drop for Permit {
 enum Message {
     Call(Call, Permit),
     Wait(ClientId, JobId, Reply<JobInfo>, Permit),
-    Complete(Completion),
+    Complete(Box<Completion>),
     Shutdown,
     #[cfg(feature = "test-support")]
     Wake,
@@ -131,8 +131,10 @@ impl LocalHost {
         let permit = self.permit()?;
         let (reply, receive) = mpsc::sync_channel(1);
         let call = Box::new(move |runtime: &mut Runtime| {
+            runtime.refresh_memory_budget();
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| operation(runtime))) {
                 Ok(value) => {
+                    runtime.refresh_memory_budget();
                     let _ = reply.send(value.map_err(HostError::Runtime));
                     true
                 }
@@ -207,7 +209,10 @@ impl Workers {
                             let completion = control.run(work);
                             #[cfg(not(feature = "test-support"))]
                             let completion = work.run();
-                            if complete.send(Message::Complete(completion)).is_err() {
+                            if complete
+                                .send(Message::Complete(Box::new(completion)))
+                                .is_err()
+                            {
                                 break;
                             }
                         }
@@ -271,7 +276,7 @@ fn run(mut runtime: Runtime, receiver: mpsc::Receiver<Message>, mut workers: Wor
             }
             Message::Complete(completion) => {
                 workers.active -= 1;
-                runtime.complete(completion);
+                runtime.complete(*completion);
             }
             Message::Shutdown => stopping = true,
             #[cfg(feature = "test-support")]
@@ -288,6 +293,7 @@ fn run(mut runtime: Runtime, receiver: mpsc::Receiver<Message>, mut workers: Wor
             runtime.dispatch(&mut workers);
         }
         notify(&runtime, &mut waiters);
+        runtime.refresh_memory_budget();
         if stopping && workers.active == 0 {
             break;
         }
@@ -298,6 +304,12 @@ fn run(mut runtime: Runtime, receiver: mpsc::Receiver<Message>, mut workers: Wor
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn call_mailbox_cells_do_not_inline_formal_sessions() {
+        assert!(std::mem::size_of::<super::Message>() <= 128);
+        assert!(std::mem::size_of::<crate::Completion>() > 1024);
+    }
+
     use super::*;
     use std::time::Duration;
 

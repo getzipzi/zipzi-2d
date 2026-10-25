@@ -1,8 +1,9 @@
 """Typed Python authoring API backed by the Zipzi Runtime."""
 from pathlib import Path
-from . import bindings, sampling, events, meshes, ops, parameters, plans, resources
+from . import modeling as modeling, bindings, sampling, events, meshes, ops, parameters, plans, resources, scene, references
 from .plans import Plan
 from .resources import PreparedImage
+from .buffers import Buffer
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
 from ._lifecycle import Edit, Job, Runtime, Session
 from ._values import ConnectionInfo, ConnectionLimits, Receipt, SaveReceipt, SessionId, SessionInfo, Source, Version, WriteResult
@@ -19,4 +20,4 @@ def connect(*, endpoint: Path | None = None, start: bool = False, host: Path | N
         startup_timeout=startup_timeout, sdk_build=sdk_build))
 
 __all__ = ["local", "connect", "Runtime", "Session", "Edit", "Job", "SdkFailure", "Busy", "OutcomeUnknown",
-    "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionId", "SessionInfo", "ConnectionInfo", "ConnectionLimits", "WriteResult", "bindings", "sampling", "events", "meshes", "ops", "parameters", "plans", "resources", "Plan", "PreparedImage"]
+    "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionId", "SessionInfo", "ConnectionInfo", "ConnectionLimits", "WriteResult", "modeling", "bindings", "sampling", "events", "meshes", "ops", "parameters", "plans", "resources", "scene", "references", "Plan", "PreparedImage", "Buffer"]

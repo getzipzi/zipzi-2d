@@ -308,6 +308,16 @@ impl EditorView {
     }
 
     fn redraw(&mut self, cx: &mut Context<Self>) {
+        if let Some(document) = self.editor.document() {
+            use zipzi_runtime::editor_context::EditorContextProvider;
+            let session = document.runtime_session_id();
+            let context = self.editor.editor_context(session);
+            let _ = self
+                .editor
+                .runtime_host()
+                .write()
+                .set_editor_context(session, context);
+        }
         self.sync_viewports();
         self.request_preview();
         self.sync_animation_clock(cx);

@@ -205,7 +205,9 @@ fn a17_result_byte_budget_and_hundred_edits_remain_bounded() {
             ModelSetup::default(),
         )
         .unwrap();
-    let baseline = rt.accounted_bytes();
+    let baseline = rt
+        .accounted_bytes()
+        .saturating_sub(p.retained_memory_bytes());
     let mut id = 0;
     for _ in 0..100 {
         id += 1;
@@ -234,8 +236,13 @@ fn a17_result_byte_budget_and_hundred_edits_remain_bounded() {
             json!({"ok":null})
         );
         assert!(p.retained_results().1 <= 2048);
+        assert!(p.retained_memory_bytes() <= 2048 * 128 + 1024);
     }
-    assert_eq!(rt.accounted_bytes(), baseline);
+    assert_eq!(
+        rt.accounted_bytes()
+            .saturating_sub(p.retained_memory_bytes()),
+        baseline
+    );
     assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
 }
 #[test]

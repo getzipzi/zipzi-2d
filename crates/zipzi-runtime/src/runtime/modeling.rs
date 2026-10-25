@@ -19,12 +19,17 @@ impl Runtime {
         if commands.len() > 1024 {
             return Err(RuntimeError::Budget("modeling commands"));
         }
-        self.apply_edit(client, edit, |candidate| {
-            for command in commands {
-                command.apply(candidate)?;
-            }
-            Ok(())
-        })
+        self.apply_authoring(
+            client,
+            edit,
+            commands
+                .into_iter()
+                .map(|operation| crate::authoring::EditOperation::Modeling {
+                    operation: Box::new(operation),
+                })
+                .collect(),
+        )
+        .map(|_| ())
     }
 
     /// Preparation is part of this write, so a preparation failure poisons the

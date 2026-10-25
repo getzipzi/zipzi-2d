@@ -36,7 +36,15 @@ pub struct ConversionRemapping {
     pub before: ConversionLocation,
     pub after: ConversionLocation,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct ConversionDomain {
     pub parameter_id: String,
     pub minimum: f32,

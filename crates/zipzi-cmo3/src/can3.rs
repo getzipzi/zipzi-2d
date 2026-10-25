@@ -13,12 +13,12 @@ use crate::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use zipzi_core::{
+    Document,
     document::{
         ExpressionAsset, ExpressionBlend, ExpressionTarget, MotionClip, MotionKey, MotionSegment,
         MotionTrack, MotionTrackTarget,
     },
     types::Canvas,
-    Document,
 };
 
 // A reserved playlist identity namespace distinguishes model3 registrations
@@ -212,7 +212,12 @@ fn frame(time: f32, fps: f32, id: &str, report: &mut Cmo3Report) -> Result<i32, 
         )));
     }
     if (value - value.round()).abs() > 0.0001 {
-        loss(report, id, "CAN3_FRAME_QUANTIZATION", "CAN3 anchors, duration and events require integer frames; times are rounded to the nearest frame");
+        loss(
+            report,
+            id,
+            "CAN3_FRAME_QUANTIZATION",
+            "CAN3 anchors, duration and events require integer frames; times are rounded to the nearest frame",
+        );
     }
     Ok(value.round() as i32)
 }
@@ -403,7 +408,12 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
         let parameter = doc.get_parameter(parameter_id).unwrap();
         let value = value.clamp(parameter.minimum, parameter.maximum);
         if !targets.insert(parameter_id) {
-            loss(report, &asset.id, "CAN3_EXPRESSION_COLLISION", "Repeated expression parameters cannot be represented by a single CAN3 initial value");
+            loss(
+                report,
+                &asset.id,
+                "CAN3_EXPRESSION_COLLISION",
+                "Repeated expression parameters cannot be represented by a single CAN3 initial value",
+            );
             continue;
         }
         let target = MotionTrackTarget::Parameter {
@@ -434,7 +444,12 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
         .iter()
         .any(|entry| entry.blend.unwrap_or(ExpressionBlend::Add) != ExpressionBlend::Add)
     {
-        bake::info(report, &asset.id, "CAN3_EXPRESSION_SEMANTICS", "Original expression operations are embedded for reimport and exported as standard exp3 companions for Viewer/SDK motion blending. Animator scenes preview default-model poses; native CAN3 scene blending does not implement per-parameter Multiply");
+        bake::info(
+            report,
+            &asset.id,
+            "CAN3_EXPRESSION_SEMANTICS",
+            "Original expression operations are embedded for reimport and exported as standard exp3 companions for Viewer/SDK motion blending. Animator scenes preview default-model poses; native CAN3 scene blending does not implement per-parameter Multiply",
+        );
     }
     if clip
         .tracks
@@ -505,9 +520,23 @@ fn prepare(
         let mut timing = Cmo3Report::default();
         let frames = grid::frame(clip.duration, fps, id, &mut timing, inferred)?;
         if inferred {
-            bake::info(&mut report, id, "CAN3_TIME_GRID", &format!("Detected {fps} FPS anchor grid from declared {} FPS; maximum timestamp adjustment {:.6} ms. Authored keys and Bezier shapes are retained; loop transitions use the inferred scene FPS", clip.fps, grid::maximum_shift(clip,fps)*1000.));
+            bake::info(
+                &mut report,
+                id,
+                "CAN3_TIME_GRID",
+                &format!(
+                    "Detected {fps} FPS anchor grid from declared {} FPS; maximum timestamp adjustment {:.6} ms. Authored keys and Bezier shapes are retained; loop transitions use the inferred scene FPS",
+                    clip.fps,
+                    grid::maximum_shift(clip, fps) * 1000.
+                ),
+            );
         } else if auto {
-            bake::info(&mut report, id, "CAN3_TIME_GRID_UNRESOLVED", "No collision-free common time grid up to 240 FPS was found; explicit fallback baking or loss rejection is used at the declared frame rate");
+            bake::info(
+                &mut report,
+                id,
+                "CAN3_TIME_GRID_UNRESOLVED",
+                "No collision-free common time grid up to 240 FPS was found; explicit fallback baking or loss rejection is used at the declared frame rate",
+            );
         }
         if bake {
             for diagnostic in &mut timing.diagnostics {
@@ -550,7 +579,12 @@ fn prepare(
                 MotionTrackTarget::Parameter { .. } | MotionTrackTarget::PartOpacity { .. }
             ) && !matches!(&track.target, MotionTrackTarget::Model { runtime_id } if runtime_id == "Opacity")
             {
-                loss(&mut report, &track.id, "CAN3_UNSUPPORTED_TARGET", "Unresolved, EyeBlink, LipSync and other model effect curves are omitted; use parameter curves for editable animation");
+                loss(
+                    &mut report,
+                    &track.id,
+                    "CAN3_UNSUPPORTED_TARGET",
+                    "Unresolved, EyeBlink, LipSync and other model effect curves are omitted; use parameter curves for editable animation",
+                );
                 continue;
             }
             if !bake
@@ -564,7 +598,12 @@ fn prepare(
                             }
                 })
             {
-                loss(&mut report, &track.id, "CAN3_INVERSE_STEP_BOUNDARY", "Animator displays the anchor value at the first frame of an inverse-step segment, while Zipzi samples its endpoint; authored keys and segment types are retained");
+                loss(
+                    &mut report,
+                    &track.id,
+                    "CAN3_INVERSE_STEP_BOUNDARY",
+                    "Animator displays the anchor value at the first frame of an inverse-step segment, while Zipzi samples its endpoint; authored keys and segment types are retained",
+                );
             }
             let target_key = match &track.target {
                 MotionTrackTarget::Parameter { parameter_id } => {
@@ -577,7 +616,12 @@ fn prepare(
                 _ => ("model", "Opacity".into()),
             };
             if !targets.insert(target_key) {
-                loss(&mut report, &track.id, "CAN3_TRACK_COLLISION", "Multiple tracks share an Animator attribute or normalized part ID; later tracks are omitted");
+                loss(
+                    &mut report,
+                    &track.id,
+                    "CAN3_TRACK_COLLISION",
+                    "Multiple tracks share an Animator attribute or normalized part ID; later tracks are omitted",
+                );
                 continue;
             }
             scene.tracks.push(Track {
@@ -600,7 +644,12 @@ fn prepare(
         for event in &clip.events {
             let frame = grid::frame(event.time, fps, &event.id, &mut report, inferred)?;
             if scene.events.insert(frame, event.value.clone()).is_some() {
-                loss(&mut report, &event.id, "CAN3_EVENT_COLLISION", "CAN3 permits one user-data event per frame; the last event at that frame is retained");
+                loss(
+                    &mut report,
+                    &event.id,
+                    "CAN3_EVENT_COLLISION",
+                    "CAN3 permits one user-data event per frame; the last event at that frame is retained",
+                );
             }
         }
         scenes.push(scene);
@@ -611,12 +660,23 @@ fn prepare(
             || entry.sound.is_some()
             || !entry.extensions.is_empty()
     }) {
-        loss(&mut report, doc.id(), "CAN3_MOTION_REGISTRATIONS", "Registration-specific fades, sound references and opaque metadata cannot be represented by CAN3 playlists");
+        loss(
+            &mut report,
+            doc.id(),
+            "CAN3_MOTION_REGISTRATIONS",
+            "Registration-specific fades, sound references and opaque metadata cannot be represented by CAN3 playlists",
+        );
     }
     if scenes.is_empty() {
         scenes.push(Scene {
             name: "Scene".into(),
-            guid: doc.id().into(),
+            // The native editor requires one scene even for a static model.
+            // A scene is a Motion identity on import, so it must not reuse the
+            // model's document UUID in a linked CMO3/CAN3 roundtrip.
+            guid: (1u64..)
+                .map(|n| format!("ca5a0002-0000-4000-8000-{n:012x}"))
+                .find(|id| id != doc.id() && !doc.contains_id(id))
+                .expect("finite document IDs"),
             frames: 1,
             fps: 30.,
             looping: false,

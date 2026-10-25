@@ -1,7 +1,7 @@
 """These public calls must type-check; this file is not executed."""
 from pathlib import Path
 import zipzi
-from zipzi import bindings, sampling, events, meshes, ops, parameters, resources
+from zipzi import bindings, sampling, events, meshes, ops, parameters, resources, scene, references
 
 def recipe(runtime: zipzi.Runtime) -> zipzi.SaveReceipt:
     session = runtime.sessions.create("79000000-0000-4000-8000-000000000001")
@@ -76,3 +76,21 @@ def bound_cpu(session: zipzi.Session, face: str, angle: str) -> sampling.Batch:
         assert opacity == 1.
         edit.bindings.set_keyform(id, bindings.Keyform((1.,), ((20., 0.), (21., 0.), (20., 1.))))
     return session.modeling.sample(({angle: .5},), checks=sampling.Checks(.01))
+
+def scene_and_identity(session: zipzi.Session, face: str) -> references.SceneCapabilities:
+    with session.edit("organization") as edit:
+        result: zipzi.WriteResult = edit.apply(scene.CreatePart(scene.PartSpec("Folder")))
+        part: str = result.ids[0]
+        edit.apply(scene.MoveToPart((face,), part_id=part))
+        view: scene.Snapshot = edit.scene.get(face)
+        assert view.value.part_id == part
+        with edit.scene.plan(scene.SetSceneLabel(face, view.value.name, "Final")) as plan:
+            edit.apply_plan(plan)
+    with session.reference("mesh", face) as reference:
+        source: zipzi.Source = reference.resolve()
+        assert source.session == session.id.serial
+        with reference.label() as address:
+            with address.plan("Reviewed") as plan:
+                with session.edit("label") as edit:
+                    edit.apply_plan(plan)
+        return reference.scene_capabilities()

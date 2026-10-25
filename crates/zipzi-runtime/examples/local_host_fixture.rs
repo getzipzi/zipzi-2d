@@ -34,11 +34,11 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     if std::env::var_os("ZIPZI_TEST_FAIL_START").is_some() {
         return Err("Injected startup failure".into());
     }
-    let (_server, messages) = owner.listen()?;
     let mut limits = RuntimeLimits::default();
     limits.jobs_total = milliseconds("ZIPZI_TEST_JOB_COUNT", 32) as usize;
     limits.session_events = milliseconds("ZIPZI_TEST_EVENT_COUNT", 512) as usize;
     let mut runtime = Runtime::new(limits);
+    let (_server, messages) = owner.listen_with_budget(runtime.transport_budget())?;
     let ui = runtime.register_client()?;
     let mut protocol = Protocol::new(ProtocolLimits {
         reconnect_grace: Duration::from_millis(milliseconds("ZIPZI_TEST_GRACE_MS", 30000)),
@@ -58,7 +58,12 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut busy_once = std::env::var_os("ZIPZI_TEST_BUSY_COMMIT_ONCE").is_some();
     loop {
         match messages.try_recv() {
-            Ok(Inbound::Frame { auth, value, reply }) => {
+            Ok(Inbound::Frame {
+                auth,
+                value,
+                reply,
+                _transfer,
+            }) => {
                 let op = value["operation"]["op"].as_str().unwrap_or("").to_owned();
                 let interactive = if op == "commit" && busy_once {
                     busy_once = false;
@@ -74,7 +79,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                         0,
                     )));
                 }
-                let response = protocol.receive(&mut runtime, auth, value, Instant::now());
+                let response = protocol.receive_encoded(&mut runtime, auth, value, Instant::now());
                 if let Some(session) = interactive {
                     runtime.end_interaction(ui, session)?;
                 }
@@ -85,11 +90,34 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                     if !drop_response.is_empty() && drop_response == op {
                         drop_after -= 1;
                     }
-                    let _ = reply.send(response);
+                    if let Some(response) = response {
+                        let _ = reply.send(response);
+                    }
                 }
             }
             Ok(Inbound::Disconnected(auth)) => {
                 protocol.disconnect(auth.client, auth.connection, Instant::now())
+            }
+            Ok(Inbound::Binary {
+                auth,
+                value,
+                bytes,
+                reply,
+                _transfer,
+            }) => {
+                let op = value["operation"]["op"].as_str().unwrap_or("").to_owned();
+                let mut response =
+                    protocol.receive_binary(&mut runtime, auth, value, bytes, Instant::now());
+                response.transfer = Some(_transfer);
+                if !drop_response.is_empty() && drop_response == op && drop_after == 0 {
+                    drop_response.clear();
+                    drop(reply);
+                } else {
+                    if !drop_response.is_empty() && drop_response == op {
+                        drop_after -= 1;
+                    }
+                    let _ = reply.send(response);
+                }
             }
             Err(async_channel::TryRecvError::Empty) => std::thread::sleep(Duration::from_millis(1)),
             Err(async_channel::TryRecvError::Closed) => break,
@@ -106,6 +134,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             runtime.dispatch(&mut executor);
         }
         protocol.expire(&mut runtime, Instant::now());
+        runtime.refresh_memory_budget();
     }
     Ok(())
 }

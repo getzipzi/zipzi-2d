@@ -7,6 +7,7 @@ use zipzi_core::{Mesh, Vec2};
 zipzi_core::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire)]
     pub struct MeshCreateSpec {
         pub name: String,
         pub geometry: MeshGeometry,
@@ -18,6 +19,7 @@ zipzi_core::api_record! {
 zipzi_core::api_union! {
     tag = "op";
     #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(zipzi_api_derive::BinaryWire)]
     pub enum MeshOperation {
         Create { spec: MeshCreateSpec },
         Rename { id: String, name: String },

@@ -1,9 +1,10 @@
 use super::{
-    graph::{attr, Graph, Node},
-    invalid, ImportedModel, Result,
+    ImportedModel, Result,
+    graph::{Graph, Node, attr},
+    invalid,
 };
 use std::collections::HashMap;
-use zipzi_core::{types::*, Document};
+use zipzi_core::{Document, types::*};
 pub(super) fn edit(result: EditResult) -> Result<()> {
     status(result.status)
 }
@@ -22,6 +23,7 @@ pub(super) fn read(
     g: &Graph<'_>,
     root: Node<'_>,
     resources: &HashMap<String, Vec<u8>>,
+    texture_budget: usize,
 ) -> Result<ImportedModel> {
     if !root.has_tag_name("CModelSource") {
         return Err(invalid("Expected a CMO3 model"));
@@ -300,7 +302,7 @@ pub(super) fn read(
             decoded_budget = decoded_budget
                 .checked_add(u64::from(width) * u64::from(height) * 4)
                 .ok_or_else(|| invalid("Texture budget overflow"))?;
-            if width > 16384 || height > 16384 || decoded_budget > 512 * 1024 * 1024 {
+            if width > 16384 || height > 16384 || decoded_budget > texture_budget as u64 {
                 return Err(invalid("Cubism textures exceed the decoded memory budget"));
             }
             let decoded = zipzi_core::image::decode_png(&bytes).map_err(|s| invalid(s.message))?;

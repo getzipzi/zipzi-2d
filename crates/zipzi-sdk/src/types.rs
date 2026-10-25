@@ -11,6 +11,7 @@ use zipzi_project::{ImportReport, ProjectResult, PsdImportReport};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire)]
 pub struct Version {
     pub session_id: u64,
     pub generation: u64,
@@ -116,14 +117,31 @@ pub struct PsdImportReceipt {
     pub manifest: PathBuf,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum GeometrySpace {
     Model,
     RotationLocal(String),
     WarpParameter(String),
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct GeometrySnapshot {
     pub version: Version,
     pub mesh_id: String,
@@ -134,8 +152,9 @@ pub struct GeometrySnapshot {
     pub space: GeometrySpace,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape)]
 pub enum ObjectKind {
     Asset,
     Mesh,
@@ -242,12 +261,20 @@ impl From<&Mesh> for MeshProperties {
 
 /// All geometry dependencies are explicit. For an unbound mesh, pass None and
 /// empty vectors; mapping must mention every previous vertex ID exactly once.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct TopologyReplacement {
     pub mesh: Mesh,
     pub binding: Option<MeshBinding>,
     pub blend_bindings: Vec<BlendShapeBinding>,
     pub glues: Vec<Glue>,
+    #[serde(deserialize_with = "zipzi_core::serde_maps::u32_map")]
     pub vertex_mapping: HashMap<VertexId, Option<VertexId>>,
 }
 

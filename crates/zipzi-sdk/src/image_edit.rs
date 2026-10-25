@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire)]
 pub struct ImageCreateSpec {
     pub id: Option<String>,
     pub name: String,

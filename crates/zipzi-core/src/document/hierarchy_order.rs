@@ -8,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 /// Independent palette ranks for the organization and deformation projections.
 /// Partial lists are allowed: consumers retain source order for unlisted objects.
 /// Entries use globally unique scene object IDs, never visible row indices.
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct HierarchyOrder {
     #[serde(default)]
     pub organization: Vec<String>,

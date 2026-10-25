@@ -19,6 +19,7 @@ path = "tests/alpha_mesh.rs"
 bench-instrumentation = ["zipzi-core/bench-instrumentation"]
 
 [dependencies]
+zipzi-api-derive = { path = "../zipzi-api-derive" }
 zipzi-core = { path = "../zipzi-core" }
 zipzi-animation = { path = "../zipzi-animation" }
 zipzi-project = { path = "../zipzi-project" }

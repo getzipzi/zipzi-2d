@@ -19,7 +19,7 @@ no JSON transport conversion or direct SDK session owner.
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |
 | `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract and selected mesh/resource/Plan generation |
-| `client/python/zipzi/_generated/`, `src/generated/` | 18 checked-in mechanical mesh/resource/Plan outputs |
+| `client/python/zipzi/_generated/`, `src/generated/` | 23 checked-in mechanical mesh/resource/Plan/scene/modeling/binary outputs |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
 From the repository root, using the workspace's CPython 3.14 tools:
@@ -258,11 +258,98 @@ Sampling returns exact Source/Version, requested/evaluated parameters, CPU
 frames (drawables/deformers/offscreens/render commands) and advisory geometry
 diagnostics. It creates no publication, history entry or Preview change.
 Up to 64 poses with 256 explicit parameters each are admitted before capturing a
-frozen source. An 8 MiB conservative output estimate and remaining host expansion
-budget can require smaller batches. These synchronous bounded CPU calls do not
-claim the later large-workload cancellation/fairness gates or full BlendShape
-and scene binding coverage. Both backends use the same Runtime entry; Local
-conversion uses direct owned PyO3 values. Generation covers the selected P1 mesh/resource/Plan types; these later binding and sampling types remain handwritten.
+frozen source. Geometry-based expansion admission and the remaining aggregate host budget can
+require smaller batches. `sample_async` and `plan_async` capture an immutable
+source and run on cancellable read workers; formal publication retains a worker
+slot. Scene bindings and BlendShape use the same SDK evaluator. The P3 recipe additionally verifies mesh BlendShape
+interpolation and propagation through bound topology changes. Both backends use the same Runtime entry; Local
+conversion uses direct owned PyO3 values. Generation covers the selected mesh/resource/Plan and P3 scene types; these later binding and sampling types remain handwritten.
+
+## P3 scene modeling and SDK identities
+
+`zipzi.scene` provides generated, typed operations for Parts, parameter groups,
+Warp/Rotation creation, organization, local reparenting, mesh BlendShapes,
+vertex/triangle edits, Glue pairs and Offscreen keyforms/mapping. Use
+`edit.apply` / `apply_many`; these operations share the existing candidate,
+source sequence, failure state and commit. Defaults and identity allocation stay
+in SDK/core. `session/edit.scene.get/get_many` return immutable metadata with an
+exact Source; geometry and explicit CPU poses use the mesh/sampling queries.
+Metadata batches admit at most 256 selections and a conservative 1 MiB response
+before copying; a query refusal does not poison an Edit.
+
+```python
+from zipzi import scene
+
+with session.edit("Organize") as edit:
+    folder = edit.apply(scene.CreatePart(scene.PartSpec("Face"))).ids[0]
+    edit.apply(scene.MoveToPart((face,), part_id=folder))
+    value = edit.scene.get(face).value
+    with edit.scene.plan(scene.SetSceneLabel(face, value.name, "Final")) as plan:
+        edit.apply_plan(plan)
+
+with session.reference("mesh", face) as reference:
+    source = reference.resolve()
+    capabilities = reference.scene_capabilities()
+    with reference.label() as address:
+        with address.plan("Reviewed") as plan:
+            with session.edit("Review label") as edit:
+                edit.apply_plan(plan)
+```
+
+Scene plans retain their exact formal/candidate source and immutable cost/loss/
+copy reports; local reparenting selects SDK `KeepLocalData`. A label address
+captures SDK identity, owner/context and field epochs. Moving preserves a handle;
+delete/Undo never revives it. A move, field change or Undo invalidates the old
+address even when the final value matches. Addresses remain usable after their
+parent reference is closed. References and addresses share a 1024-slot per-client
+limit and count against host CPU estimates; close/client expiry/session close
+release their tables. Every create/read/plan/close retains its own recovery owner.
+
+## Complete Runtime R4 routes
+
+The native pairing contract is `zipzi-python2-10`; IPC is `zipzi-runtime-r4-3`.
+Rebuild both adapters and hosts after contract changes. Compiled Rust serde
+shapes generate `zipzi.modeling`, native constructors/writers and the binary
+array codec. `edit.apply` accepts the full `ModelingCommand` family, including
+SDK rectangle remeshing, binding conversions, topology dependencies, metadata
+and attachments. `modeling.records(ModelingQuery(...))` returns selected canonical
+records with an exact formal/candidate source. No complete model mirror is kept
+by the client. Large mesh/binding/record/sample results use immutable binary
+blobs; small ordinary getters retain a single RPC.
+
+`session.address(selector)` and `reference.capabilities(domain)` preserve the
+SDK field/context epochs and incarnation checks. `session.capabilities(query)`
+provides collection capabilities. Plans and read jobs retain their original
+version and candidate sequence; close/release frees their ownership.
+
+`runtime.resources.prepare_buffer(bytes)` returns a reusable immutable Buffer;
+`prepare_image(width,height,bytes_or_buffer)` returns an independent PreparedImage
+lease. `load_png(path)` and `prepare_png(buffer)` return cancellable Jobs.
+`session/edit.resources.snapshot(id)` pins the original encoded bytes and pixels,
+including disk images, until the ImageLease is closed. Preparation does not
+require an active Edit. Image create/replace joins the normal atomic batch.
+
+`runtime.sessions.import_(path, format)` imports PSD, Model3, bare MOC3 (explicit
+texture slots) or Cubism into a new session. `session.project.replace/open` and `run(ProjectRequestNew(...))`
+changes generation through an explicit Job; `save`, `diagnose` and `export`
+return typed receipts/reports. Export covers package, CMO3, CAN3, paired Cubism,
+Motion3, Expression3, Physics3, Pose3 and CDI3 under existing SDK loss/format rules.
+Reports preserve diagnostics, warnings, publication and durability. The optional
+`session.editor_context()` is versioned and returns no context in a headless host.
+
+Admission precedes input expansion, source cloning, decode, blob growth and seal
+peaks. Default host accounting is 2 GiB; image/PNG/blob allocations share 768 MiB,
+with a 512 MiB blob table. A binary payload is at most 256 MiB, transferred in
+1 MiB chunks. Recovery deliberately retains up to 256 MiB of binary backing per
+client (512 MiB across clients), for at most 300 seconds; a completed download
+can therefore leave a bounded cache. Distinct resource allocations are charged
+once even when candidates, history, jobs or leases share them. These are
+conservative admission bounds and actual payload counters, not process RSS.
+
+R4 verification and commands are tracked in the
+[complete acceptance record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
+The later Python P3A public-contract refactor
+remains a separate stage.
 
 ## P0 measurements
 
@@ -286,7 +373,6 @@ allocator overhead and realloc transient storage. Connected probes retain an
 empty control-window calibration. Noise and regression policies are recorded;
 CPU fixture numbers do not claim Editor latency.
 
-Full resource/IO cancellation, animation,
-observer/inspection remain planned capabilities. See the
+Animation, independent Preview and observer/inspection remain later Runtime capabilities. See the
 [construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).

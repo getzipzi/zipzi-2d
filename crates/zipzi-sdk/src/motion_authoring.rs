@@ -562,7 +562,7 @@ impl AuthoringSession {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
 pub struct AttachmentCapabilities {
     pub inspect: CapabilityState,
     pub patch: CapabilityState,

@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ModelingCommand {
     CreateAsset {
         asset: zipzi_core::ImageAsset,
@@ -131,6 +132,11 @@ pub enum ModelingCommand {
         id: String,
         keyform: zipzi_core::SceneKeyform,
     },
+    RemeshRectangleGrid {
+        id: String,
+        columns: usize,
+        rows: usize,
+    },
     ReplaceTopology {
         source: zipzi_sdk::GeometrySnapshot,
         replacement: zipzi_sdk::TopologyReplacement,
@@ -186,6 +192,9 @@ impl ModelingCommand {
             } => edit.update_positions(&id, &vertex_ids, &positions),
             Self::SetMeshKeyform { id, keyform } => edit.set_mesh_keyform(&id, keyform),
             Self::SetSceneKeyform { id, keyform } => edit.set_scene_keyform(&id, keyform),
+            Self::RemeshRectangleGrid { id, columns, rows } => {
+                edit.remesh_rectangle_grid(&id, columns, rows)
+            }
             Self::ReplaceTopology {
                 source,
                 replacement,

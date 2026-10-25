@@ -28,6 +28,7 @@ impl Status {
 
 crate::api_record! {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+#[derive(zipzi_api_derive::BinaryWire)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
@@ -45,6 +46,7 @@ pub type VertexId = u32;
 /// Source-format provenance and independent output settings. Neither affects evaluation.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct ModelSetup {
     pub source_canvas: Option<Canvas>,
     pub export: ExportSettings,
@@ -70,6 +72,7 @@ impl ModelSetup {
 /// converts those lengths into Cubism runtime units only at the file boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct ExportSettings {
     pub pixels_per_unit: f32,
     /// Optional stable rectangle [left, bottom, right, top] in model units.
@@ -123,6 +126,7 @@ fn default_canvas_flag() -> u8 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 /// A finite rectangle carried by an import/export format, not the model space.
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct Canvas {
     pub width: f32,
     pub height: f32,
@@ -185,6 +189,7 @@ impl Canvas {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct ImageAsset {
     /// Original imported path or external slot when no decoded content exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -195,6 +200,7 @@ pub struct ImageAsset {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct ImageContent {
     pub source: String,
     pub width: u32,
@@ -221,6 +227,7 @@ impl ImageAsset {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum BlendMode {
     #[default]
     Normal,
@@ -228,7 +235,16 @@ pub enum BlendMode {
     Multiplicative,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct Appearance {
     pub opacity: f32,
     pub multiply: [f32; 3],
@@ -247,7 +263,17 @@ impl Default for Appearance {
 
 /// Authoring-space origins need f64: adding a pixel-space canvas origin to an
 /// imported f32 runtime position must remain reversible before evaluation.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct PreciseVec2 {
     pub x: f64,
     pub y: f64,
@@ -264,7 +290,16 @@ impl From<Vec2> for PreciseVec2 {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct RotationPose {
     pub origin: PreciseVec2,
     pub angle: f32,
@@ -293,7 +328,15 @@ pub enum TransformKind {
     Rotation,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct Transform {
     pub id: String,
     pub runtime_id: String,
@@ -320,7 +363,15 @@ impl Default for Transform {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum TransformData {
     Warp(WarpTransform),
     Rotation(RotationTransform),
@@ -330,7 +381,15 @@ impl Default for TransformData {
         Self::Rotation(RotationTransform::default())
     }
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct WarpTransform {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bezier: Option<crate::WarpBezier>,
@@ -339,7 +398,16 @@ pub struct WarpTransform {
     pub quad: bool,
     pub points: Vec<Vec2>,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct RotationTransform {
     pub base_angle: f32,
     pub pose: RotationPose,
@@ -384,7 +452,15 @@ impl Transform {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct Part {
     pub id: String,
     pub runtime_id: String,
@@ -407,7 +483,16 @@ impl Default for Part {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct WarpKeyform {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bezier: Option<crate::WarpBezier>,
@@ -419,7 +504,16 @@ pub struct WarpKeyform {
     pub positions: Vec<Vec2>,
     pub appearance: Appearance,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct RotationKeyform {
     /// Import-only numeric coordinates; canonical documents derive these from samples.
     #[serde(skip)]
@@ -429,7 +523,16 @@ pub struct RotationKeyform {
     pub rotation: RotationPose,
     pub appearance: Appearance,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct PartKeyform {
     /// Import-only numeric coordinates; canonical documents derive these from samples.
     #[serde(skip)]
@@ -439,7 +542,15 @@ pub struct PartKeyform {
     pub draw_order: f32,
 }
 /// A single typed replacement; a track only accepts its matching variant.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum SceneKeyform {
     Warp(WarpKeyform),
     Rotation(RotationKeyform),
@@ -455,7 +566,15 @@ pub struct SceneSample<'a> {
     pub draw_order: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct Mesh {
     pub id: String,
     pub name: String,
@@ -509,13 +628,22 @@ fn default_decimal_places() -> i32 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ParameterKind {
     #[default]
     Normal,
     BlendShape,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct Parameter {
     pub id: String,
     pub runtime_id: String,
@@ -549,6 +677,7 @@ impl Default for Parameter {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum BlendShapeTargetKind {
     Mesh,
     Warp,
@@ -558,7 +687,15 @@ pub enum BlendShapeTargetKind {
     Offscreen,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct BlendShapeKeyTable {
     #[serde(default)]
     pub samples: Vec<BindingSample>,
@@ -572,7 +709,15 @@ pub struct BlendShapeKeyTable {
     pub base_key_idx: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct BlendShapeConstraint {
     #[serde(default)]
     pub samples: Vec<ConstraintSample>,
@@ -584,7 +729,16 @@ pub struct BlendShapeConstraint {
     pub weights: Vec<f32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeltaMeshKeyform {
     #[serde(default)]
     pub sample_id: String,
@@ -595,7 +749,16 @@ pub struct DeltaMeshKeyform {
     pub screen: Option<[f32; 3]>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeltaWarpKeyform {
     #[serde(default)]
     pub sample_id: String,
@@ -605,7 +768,16 @@ pub struct DeltaWarpKeyform {
     pub screen: Option<[f32; 3]>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeltaRotationKeyform {
     #[serde(default)]
     pub sample_id: String,
@@ -617,21 +789,48 @@ pub struct DeltaRotationKeyform {
     pub screen: Option<[f32; 3]>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeltaPartKeyform {
     #[serde(default)]
     pub sample_id: String,
     pub draw_order: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeltaGlueKeyform {
     #[serde(default)]
     pub sample_id: String,
     pub intensity: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeltaOffscreenKeyform {
     #[serde(default)]
     pub sample_id: String,
@@ -644,6 +843,7 @@ pub struct DeltaOffscreenKeyform {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "items", rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum DeltaKeyforms {
     Mesh(Vec<DeltaMeshKeyform>),
     Warp(Vec<DeltaWarpKeyform>),
@@ -670,7 +870,15 @@ impl DeltaKeyforms {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct BlendShapeBinding {
     pub id: String,
     pub target_id: String,
@@ -680,7 +888,15 @@ pub struct BlendShapeBinding {
     pub keyforms: DeltaKeyforms,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct GlueVertexPair {
     pub id: String,
     pub vertex_a: Option<VertexId>,
@@ -700,7 +916,15 @@ impl Default for GlueVertexPair {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct Glue {
     pub id: String,
     pub runtime_id: String,
@@ -729,26 +953,58 @@ impl Default for Glue {
 }
 
 /// Ordinary parameter grid for Glue intensity, owned and edited atomically with its Glue.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct GlueBinding {
     pub axes: Vec<BindingAxis>,
     /// First axis varies fastest, as in MOC3 ordinary bindings.
     pub keyforms: Vec<GlueKeyform>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct GlueKeyform {
     #[serde(default)]
     pub samples: Vec<String>,
     pub intensity: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct BindingSample {
     pub id: String,
     pub value: f32,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct ConstraintSample {
     pub id: String,
     pub value: f32,
@@ -782,7 +1038,16 @@ impl BindingAxis {
         self.keys = values;
     }
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct BindingAxis {
     #[serde(default)]
     pub id: String,
@@ -793,7 +1058,16 @@ pub struct BindingAxis {
     pub keys: Vec<f32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct OffscreenKeyform {
     pub opacity: f32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -802,7 +1076,15 @@ pub struct OffscreenKeyform {
     pub screen: Option<[f32; 3]>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct Offscreen {
     pub id: String,
     pub runtime_id: String,
@@ -874,7 +1156,16 @@ impl Default for Offscreen {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct MeshKeyform {
     /// Import-only numeric coordinates; canonical documents derive these from samples.
     #[serde(skip)]
@@ -886,7 +1177,16 @@ pub struct MeshKeyform {
     pub draw_order: Option<f32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Default,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct MeshBinding {
     pub id: String,
     pub mesh_id: String,
@@ -898,7 +1198,24 @@ macro_rules! scene_id {
     ($name:ident) => {
         #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
         #[serde(transparent)]
+        #[derive(zipzi_api_derive::BinaryWire)]
         pub struct $name(String);
+        impl crate::api_shape::ApiShape for $name {
+            fn api_shape() -> crate::api_shape::Shape {
+                crate::api_shape::Shape::SerdeRecord {
+                    name: concat!(module_path!(), "::", stringify!($name)).into(),
+                    transparent: true,
+                    tuple: true,
+                    fields: vec![crate::api_shape::SerdeField {
+                        rust_name: "0".into(),
+                        name: "value".into(),
+                        shape: crate::api_shape::Shape::String,
+                        skip: false,
+                        default: None,
+                    }],
+                }
+            }
+        }
         impl $name {
             pub fn as_str(&self) -> &str {
                 &self.0
@@ -926,7 +1243,15 @@ macro_rules! scene_id {
 scene_id!(TransformId);
 scene_id!(PartId);
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum SceneTrack {
     Warp {
         target_id: TransformId,
@@ -1042,7 +1367,15 @@ impl SceneTrack {
         (0..self.len()).map(|i| self.sample(i))
     }
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct SceneBinding {
     pub id: String,
     pub axes: Vec<BindingAxis>,

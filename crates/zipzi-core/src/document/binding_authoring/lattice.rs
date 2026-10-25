@@ -1,7 +1,15 @@
 use super::*;
 use crate::{Appearance, BindingSample, RotationPose, WarpBezier};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum GridOperation {
     AddAxis {
         axis: BindingAxis,

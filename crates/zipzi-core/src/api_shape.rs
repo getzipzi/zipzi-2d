@@ -7,7 +7,20 @@ use serde::Serialize;
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Shape {
     String,
+    U8,
+    U16,
+    I64,
+    F64,
+    Json,
+    Shared {
+        item: Box<Shape>,
+    },
+    IndexMap {
+        key: Box<Shape>,
+        value: Box<Shape>,
+    },
     U32,
+    I32,
     F32,
     Bool,
     U64,
@@ -34,6 +47,18 @@ pub enum Shape {
         name: String,
         tag: String,
         variants: Vec<Variant>,
+    },
+    SerdeRecord {
+        name: String,
+        fields: Vec<SerdeField>,
+        transparent: bool,
+        tuple: bool,
+    },
+    SerdeEnum {
+        name: String,
+        tag: Option<String>,
+        content: Option<String>,
+        variants: Vec<SerdeVariant>,
     },
     Opaque {
         name: String,
@@ -79,6 +104,11 @@ impl ApiShape for u32 {
         Shape::U32
     }
 }
+impl ApiShape for i32 {
+    fn api_shape() -> Shape {
+        Shape::I32
+    }
+}
 impl ApiShape for f32 {
     fn api_shape() -> Shape {
         Shape::F32
@@ -99,15 +129,24 @@ impl ApiShape for usize {
         Shape::Usize
     }
 }
-impl ApiShape for std::sync::Arc<[u8]> {
+impl<T: ApiShape> ApiShape for std::sync::Arc<[T]> {
     fn api_shape() -> Shape {
-        Shape::Bytes
+        let item = T::api_shape();
+        if matches!(item, Shape::U8) {
+            Shape::Bytes
+        } else {
+            Shape::Shared {
+                item: Box::new(Shape::Sequence {
+                    item: Box::new(item),
+                }),
+            }
+        }
     }
 }
-impl ApiShape for std::collections::BTreeMap<String, String> {
+impl<T: ApiShape> ApiShape for std::collections::BTreeMap<String, T> {
     fn api_shape() -> Shape {
         Shape::StringMap {
-            value: Box::new(Shape::String),
+            value: Box::new(T::api_shape()),
         }
     }
 }
@@ -218,4 +257,93 @@ macro_rules! api_union {
             }
         }
     };
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SerdeField {
+    pub rust_name: String,
+    pub name: String,
+    pub shape: Shape,
+    pub skip: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<serde_json::Value>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SerdeVariant {
+    pub rust_name: String,
+    pub name: String,
+    pub form: String,
+    pub fields: Vec<SerdeField>,
+}
+impl ApiShape for u8 {
+    fn api_shape() -> Shape {
+        Shape::U8
+    }
+}
+impl ApiShape for u16 {
+    fn api_shape() -> Shape {
+        Shape::U16
+    }
+}
+impl ApiShape for i64 {
+    fn api_shape() -> Shape {
+        Shape::I64
+    }
+}
+impl ApiShape for f64 {
+    fn api_shape() -> Shape {
+        Shape::F64
+    }
+}
+impl ApiShape for serde_json::Value {
+    fn api_shape() -> Shape {
+        Shape::Json
+    }
+}
+impl ApiShape for std::path::PathBuf {
+    fn api_shape() -> Shape {
+        Shape::String
+    }
+}
+
+impl<T: ApiShape> ApiShape for std::sync::Arc<T> {
+    fn api_shape() -> Shape {
+        Shape::Shared {
+            item: Box::new(T::api_shape()),
+        }
+    }
+}
+impl<T: ApiShape> ApiShape for std::collections::BTreeMap<usize, T> {
+    fn api_shape() -> Shape {
+        Shape::IndexMap {
+            key: Box::new(Shape::Usize),
+            value: Box::new(T::api_shape()),
+        }
+    }
+}
+
+impl<T: ApiShape> ApiShape for std::collections::HashMap<String, T> {
+    fn api_shape() -> Shape {
+        Shape::StringMap {
+            value: Box::new(T::api_shape()),
+        }
+    }
+}
+impl<T: ApiShape> ApiShape for std::collections::HashMap<u32, T> {
+    fn api_shape() -> Shape {
+        Shape::IndexMap {
+            key: Box::new(Shape::U32),
+            value: Box::new(T::api_shape()),
+        }
+    }
+}
+
+pub fn serde_default<T: serde::Serialize>(value: T) -> Option<serde_json::Value> {
+    Some(serde_json::to_value(value).expect("selected serde default"))
+}
+
+impl ApiShape for &str {
+    fn api_shape() -> Shape {
+        Shape::String
+    }
 }

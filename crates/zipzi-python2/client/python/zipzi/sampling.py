@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 import math
 from . import bindings
+from ._generated import modeling as m
 from ._values import Source, Version, integer, number, record, sequence, string
 from .meshes import Point
 
@@ -197,7 +198,19 @@ class Batch:
     @classmethod
     def read(cls, raw: object) -> "Batch":
         v = record(raw)
-        s = record(v["samples"])
+        raw_samples=v["samples"]
+        if isinstance(raw_samples,m.ModelingSamples):
+            source=Source.read(v["source"])
+            frames=tuple(Frame(f.source_revision,
+                tuple(Parameter(p.id,p.requested,p.value,p.clamped) for p in f.parameters),
+                tuple(Drawable(d.id,d.runtime_id,d.part_id,d.raw_blend_mode,d.texture_asset_id,d.texture_slot,d.renderable,d.positions,d.uvs,d.indices,d.draw_order,d.render_order,d.opacity,d.multiply_color,d.screen_color,BlendMode(d.blend_mode.value),d.enabled,d.visible,d.double_sided,d.inverted_mask,d.masks) for d in f.drawables),
+                tuple(Offscreen(d.renderable,d.id,d.runtime_id,d.owner_part_id,d.parent_offscreen_id,d.render_order,d.opacity,d.enabled,d.blend_mode,d.flags,d.masks,d.multiply_color,d.screen_color) for d in f.offscreens),
+                tuple(RenderCommand(RenderKind(c._variant), c.mesh_id if isinstance(c,m.RenderCommandDrawMesh) else c.offscreen_id) for c in f.render_plan),
+                tuple(Deformer(d.id,d.enabled,d.points,d.rotation_axis) for d in f.deformers)) for f in raw_samples.frames)
+            poses=tuple(Pose(tuple(sorted(p.items()))) for p in raw_samples.parameters)
+            if source.version!=raw_samples.version or len(poses)!=len(frames): raise ValueError("Inconsistent sampled source or batch")
+            return cls(source,string(v["state"]),raw_samples.version,poses,frames,tuple(Diagnostic(DiagnosticKind(d.kind.value),d.mesh_id,d.triangle_index) for d in raw_samples.diagnostics))
+        s = record(raw_samples)
         diagnostics: list[Diagnostic] = []
         for item in sequence(s["diagnostics"]):
             d = record(item)

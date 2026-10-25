@@ -5,6 +5,7 @@ use zipzi_core::{BlendShapeTargetKind, DeltaKeyforms, Vec2, VertexId};
 zipzi_core::api_record! {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::BinaryWire)]
 pub struct MeshGeometry {
     pub vertex_ids: Vec<VertexId>,
     pub positions: Vec<Vec2>,
@@ -179,67 +180,109 @@ impl AuthoringSession {
         rows: usize,
         expected: Option<Version>,
     ) -> Result<crate::EditSession<'static>, SdkError> {
-        let source = self.geometry(mesh_id).ok_or_else(|| {
-            SdkError::new("NOT_FOUND", "unknown mesh ID", "remesh_rectangle_grid")
-        })?;
-        let mut mesh = self.mesh(mesh_id).unwrap();
-        let geometry = rectangle_grid_geometry(
-            &MeshGeometry {
+        let mut edit = self.begin_owned_edit("remesh rectangle grid", expected)?;
+        edit.remesh_rectangle_grid(mesh_id, columns, rows)?;
+        Ok(edit)
+    }
+}
+impl crate::EditSession<'_> {
+    /// Generate topology and migrate ordinary/Blend keyforms in the current candidate.
+    pub fn remesh_rectangle_grid(
+        &mut self,
+        mesh_id: &str,
+        columns: usize,
+        rows: usize,
+    ) -> Result<(), SdkError> {
+        self.ensure_active("remesh_rectangle_grid")?;
+        let replacement = (|| {
+            let doc = self.candidate_document();
+            let mut mesh = doc.get_mesh(mesh_id).cloned().ok_or_else(|| {
+                SdkError::new("NOT_FOUND", "unknown mesh ID", "remesh_rectangle_grid")
+            })?;
+            let space = if mesh.deformer_id.is_empty() {
+                crate::GeometrySpace::Model
+            } else if doc
+                .get_transform(&mesh.deformer_id)
+                .is_some_and(|t| t.warp().is_some())
+            {
+                crate::GeometrySpace::WarpParameter(mesh.deformer_id.clone())
+            } else {
+                crate::GeometrySpace::RotationLocal(mesh.deformer_id.clone())
+            };
+            let source = crate::GeometrySnapshot {
+                version: self.before,
+                mesh_id: mesh_id.into(),
                 vertex_ids: mesh.vertex_ids.clone(),
                 positions: mesh.base_positions.clone(),
                 uvs: mesh.uvs.clone(),
                 triangles: mesh.triangles.clone(),
-            },
-            columns,
-            rows,
-        )?;
-        let mut binding = self.binding_for_mesh(mesh_id);
-        let mut blends: Vec<_> = self
-            .blend_binding_ids()
-            .iter()
-            .filter_map(|id| self.blend_binding(id))
-            .filter(|b| b.target_id == mesh_id)
-            .collect();
-        if (binding.is_some() || !blends.is_empty()) && columns != rows {
-            return Err(invalid(
-                "bound rectangle grids require equal columns and rows",
-            ));
-        }
-        if let Some(binding) = &mut binding {
-            for form in &mut binding.keyforms {
-                form.positions = sample(&form.positions, columns, rows)?;
-            }
-        }
-        for blend in &mut blends {
-            if blend.target_kind != BlendShapeTargetKind::Mesh {
-                return Err(invalid("unsupported BlendShape target on rectangle mesh"));
-            }
-            let DeltaKeyforms::Mesh(forms) = &mut blend.keyforms else {
-                return Err(invalid("unsupported BlendShape keyform on rectangle mesh"));
+                space,
             };
-            for form in forms {
-                form.positions = sample(&form.positions, columns, rows)?;
+            let geometry = rectangle_grid_geometry(
+                &MeshGeometry {
+                    vertex_ids: mesh.vertex_ids.clone(),
+                    positions: mesh.base_positions.clone(),
+                    uvs: mesh.uvs.clone(),
+                    triangles: mesh.triangles.clone(),
+                },
+                columns,
+                rows,
+            )?;
+            let mut binding = doc
+                .binding_order()
+                .iter()
+                .filter_map(|id| doc.get_binding(id))
+                .find(|b| b.mesh_id == mesh_id)
+                .cloned();
+            let mut blends: Vec<_> = doc
+                .blend_binding_order()
+                .iter()
+                .filter_map(|id| doc.get_blend_binding(id))
+                .filter(|b| b.target_id == mesh_id)
+                .cloned()
+                .collect();
+            if (binding.is_some() || !blends.is_empty()) && columns != rows {
+                return Err(invalid(
+                    "bound rectangle grids require equal columns and rows",
+                ));
             }
-        }
-        let glues = self
-            .glue_ids()
-            .iter()
-            .filter_map(|id| self.glue(id))
-            .filter(|g| g.mesh_a_id == mesh_id || g.mesh_b_id == mesh_id)
-            .collect();
-        mesh.vertex_ids = geometry.vertex_ids;
-        mesh.base_positions = geometry.positions;
-        mesh.uvs = geometry.uvs;
-        mesh.triangles = geometry.triangles;
-        let replacement = TopologyReplacement {
-            mesh,
-            binding,
-            blend_bindings: blends,
-            glues,
-            vertex_mapping: source.vertex_ids.iter().map(|&id| (id, Some(id))).collect(),
-        };
-        let mut edit = self.begin_owned_edit("remesh rectangle grid", expected)?;
-        edit.replace_topology(&source, replacement)?;
-        Ok(edit)
+            if let Some(binding) = &mut binding {
+                for form in &mut binding.keyforms {
+                    form.positions = sample(&form.positions, columns, rows)?;
+                }
+            }
+            for blend in &mut blends {
+                if blend.target_kind != BlendShapeTargetKind::Mesh {
+                    return Err(invalid("unsupported BlendShape target on rectangle mesh"));
+                }
+                let DeltaKeyforms::Mesh(forms) = &mut blend.keyforms else {
+                    return Err(invalid("unsupported BlendShape keyform on rectangle mesh"));
+                };
+                for form in forms {
+                    form.positions = sample(&form.positions, columns, rows)?;
+                }
+            }
+            let glues = doc
+                .glue_order()
+                .iter()
+                .filter_map(|id| doc.get_glue(id))
+                .filter(|g| g.mesh_a_id == mesh_id || g.mesh_b_id == mesh_id)
+                .cloned()
+                .collect();
+            mesh.vertex_ids = geometry.vertex_ids;
+            mesh.base_positions = geometry.positions;
+            mesh.uvs = geometry.uvs;
+            mesh.triangles = geometry.triangles;
+            let replacement = TopologyReplacement {
+                mesh,
+                binding,
+                blend_bindings: blends,
+                glues,
+                vertex_mapping: source.vertex_ids.iter().map(|&id| (id, Some(id))).collect(),
+            };
+            Ok((source, replacement))
+        })()
+        .map_err(|e| self.abort_with(e))?;
+        self.replace_topology(&replacement.0, replacement.1)
     }
 }

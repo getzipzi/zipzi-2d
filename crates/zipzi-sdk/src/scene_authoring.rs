@@ -4,12 +4,12 @@ use crate::{
     SdkError, Version,
 };
 use std::collections::BTreeMap;
+pub use zipzi_core::SceneReference;
 use zipzi_core::document::{ConversionControl, ConversionReport, OrganizationEffects, ScenePlan};
 pub use zipzi_core::document::{
     DisabledSceneItem, SceneCollection, SceneCopyScope, SceneCreate, SceneDisabledReason,
     SceneEdit, SceneField, SceneFieldValue, ScenePairSlot, SceneProjection, SceneUse,
 };
-pub use zipzi_core::SceneReference;
 #[derive(Debug, Clone)]
 pub struct SceneEditPlan {
     version: Version,
@@ -70,7 +70,7 @@ impl DrawingGroupAddress {
         self.range
     }
 }
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct SceneCapabilities {
     pub inspect: CapabilityState,
     pub patch: CapabilityState,
@@ -424,6 +424,16 @@ impl EditSession<'_> {
         Ok(())
     }
     pub fn edit_scene(&mut self, intent: SceneEdit) -> Result<(), SdkError> {
+        self.edit_scene_result(intent, |_| ())
+    }
+    pub(crate) fn edit_scene_ids(&mut self, intent: SceneEdit) -> Result<Vec<String>, SdkError> {
+        self.edit_scene_result(intent, |domain| domain.affected_ids().to_vec())
+    }
+    fn edit_scene_result<T>(
+        &mut self,
+        intent: SceneEdit,
+        result: impl FnOnce(&ScenePlan) -> T,
+    ) -> Result<T, SdkError> {
         self.ensure_active("edit_scene")?;
         let refs = users(self.candidate_document(), &intent);
         let control = ConversionControl::default();
@@ -440,6 +450,7 @@ impl EditSession<'_> {
         if let Some(cost) = domain.cost() {
             self.binding_cost = Some(cost);
         }
+        let result = result(&domain);
         self.apply_authoring_change(
             "edit_scene",
             "",
@@ -447,7 +458,7 @@ impl EditSession<'_> {
             |document| document.apply_scene_plan(&domain),
         )?;
         self.binding_controls.push(control);
-        Ok(())
+        Ok(result)
     }
 }
 

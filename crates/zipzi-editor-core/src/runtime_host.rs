@@ -627,3 +627,29 @@ mod notification_tests {
         Ok(())
     }
 }
+
+impl zipzi_runtime::editor_context::EditorContextProvider for crate::Editor {
+    fn editor_context(
+        &self,
+        session: SessionId,
+    ) -> Option<zipzi_runtime::editor_context::EditorContext> {
+        let document = self.document()?;
+        if document.runtime_session_id() != session {
+            return None;
+        }
+        Some(zipzi_runtime::editor_context::EditorContext {
+            version: document.session.version(),
+            view_id: "main".into(),
+            selected_ids: document
+                .context()
+                .selections
+                .iter()
+                .map(|o| o.id.clone())
+                .collect(),
+            workspace: format!("{:?}", self.workspace()),
+            editing_context: format!("{:?}", self.editing_context()?),
+            active_tool: format!("{:?}", self.active_tool()),
+            pending_interaction: document.has_pending_edit(),
+        })
+    }
+}

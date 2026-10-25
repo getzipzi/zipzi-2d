@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 from typing import Literal
 from . import bindings, parameters
+from ._generated import scene, modeling
 from ._generated.mesh_ops import Create as Create, Rename as Rename, SetPositions as SetPositions, validate as validate_mesh, wire as mesh_wire
 
 from ._generated.resource_ops import CreateImage as CreateImage, ReplaceImage as ReplaceImage, ApplyPlan as ApplyPlan, validate as validate_resource, wire as resource_wire
@@ -28,9 +29,15 @@ class SetMeshKeyform:
     keyform: bindings.Keyform
     kind: Literal["set_mesh_keyform"] = field(default="set_mesh_keyform", init=False)
 
-Operation = Create | Rename | SetPositions | CreateImage | ReplaceImage | ApplyPlan | CreateParameter | PatchParameter | CreateMeshBinding | SetMeshKeyform
+Operation = Create | Rename | SetPositions | CreateImage | ReplaceImage | ApplyPlan | CreateParameter | PatchParameter | CreateMeshBinding | SetMeshKeyform | scene.Operation | modeling.ModelingCommand
 
 def validate(op: Operation) -> None:
+    if isinstance(op, modeling.OPERATION_TYPES):
+        modeling.validate_ModelingCommand(op)
+        return
+    if isinstance(op, scene.OPERATION_TYPES):
+        scene.validate(op)
+        return
     match op:
         case CreateMeshBinding(spec):
             bindings.validate(spec)
@@ -52,6 +59,10 @@ def validate(op: Operation) -> None:
             validate_mesh(op)
 
 def wire(op: Operation) -> dict[str, object]:
+    if isinstance(op, modeling.OPERATION_TYPES):
+        return dict(domain="modeling", operation=modeling.encode_ModelingCommand(op))
+    if isinstance(op, scene.OPERATION_TYPES):
+        return scene.wire(op)
     match op:
         case CreateMeshBinding(spec):
             return dict(domain="mesh_binding", operation=dict(op="create", spec=bindings.wire(spec)))

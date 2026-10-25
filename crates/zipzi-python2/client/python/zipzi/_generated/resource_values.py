@@ -8,17 +8,20 @@ def _bytes(value: object) -> bytes:
 @dataclass(frozen=True)
 class Usage:
     __module__ = "zipzi.resources"
+    allocations: int
+    resource_entries: int
     prepared_images: int
     plans: int
     rgba_bytes: int
     png_bytes: int
     blob_bytes: int
     preparing_bytes: int
+    transfer_bytes: int
 
     @classmethod
     def read(cls, value: object) -> "Usage":
         r = record(value)
-        return cls(integer(r["prepared_images"]), integer(r["plans"]), integer(r["rgba_bytes"]), integer(r["png_bytes"]), integer(r["blob_bytes"]), integer(r["preparing_bytes"]))
+        return cls(integer(r["allocations"]), integer(r["resource_entries"]), integer(r["prepared_images"]), integer(r["plans"]), integer(r["rgba_bytes"]), integer(r["png_bytes"]), integer(r["blob_bytes"]), integer(r["preparing_bytes"]), integer(r["transfer_bytes"]))
 
 @dataclass(frozen=True)
 class ImagePixels:
