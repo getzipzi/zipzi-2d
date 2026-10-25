@@ -170,6 +170,14 @@ fn animation_instances_reuse_one_content_evaluation_and_accept_independent_inter
     let (second, _) = editor
         .animation_viewport_request(b, content.identity)
         .unwrap();
+    for binding in [a, b] {
+        assert!(
+            !editor
+                .viewport_state(binding.document, binding.viewport)
+                .unwrap()
+                .default_fit
+        );
+    }
     assert_eq!(first.content, second.content);
     assert_ne!(first.metrics, second.metrics);
     editor.pan_viewport(a, ViewportPoint { x: 10., y: -5. })?;

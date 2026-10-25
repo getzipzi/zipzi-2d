@@ -77,6 +77,7 @@ pub struct ParametersPanel {
     visual_revision: Option<u64>,
     visual_selection: Option<String>,
     show_indirect: bool,
+    only_related: bool,
     collapsed_groups: HashSet<Option<String>>,
     layout: ParameterLayout,
     visible_rows: Vec<ListRow>,
@@ -131,6 +132,7 @@ impl ParametersPanel {
                 visual_revision: None,
                 visual_selection: None,
                 show_indirect: false,
+                only_related: false,
                 collapsed_groups: HashSet::new(),
                 layout: ParameterLayout::default(),
                 visible_rows: Vec::new(),
@@ -234,10 +236,22 @@ impl ParametersPanel {
                     .on_click(on_group)
             })
             .control(self.expansion_button(window, cx))
+            .control(self.related_filter_button(window, cx))
     }
 
     fn refresh_visible_rows(&mut self, cx: &mut Context<Self>) {
-        self.visible_rows = grouping::visible_rows(&self.layout, &self.collapsed_groups);
+        let related = self.only_related.then(|| {
+            self.rows
+                .iter()
+                .enumerate()
+                .filter_map(|(index, row)| {
+                    let view = row.view.read(cx);
+                    (view.directly_related || view.indirectly_related).then_some(index)
+                })
+                .collect()
+        });
+        self.visible_rows =
+            grouping::visible_rows(&self.layout, &self.collapsed_groups, related.as_ref());
         self.reconcile_navigation(cx);
         for row in &self.visible_rows {
             if let ListRow::Parameter { index, depth } = row {
@@ -387,7 +401,11 @@ impl Render for ParametersPanel {
                     .p_3()
                     .text_xs()
                     .text_color(theme.muted_foreground)
-                    .child(t!("editor.no_parameters"))
+                    .child(t!(if self.only_related {
+                        "parameter.no_related"
+                    } else {
+                        "editor.no_parameters"
+                    }))
                     .into_any_element()
             } else {
                 // A drag repaints this panel; keep work proportional to visible rows.
@@ -406,11 +424,8 @@ impl Render for ParametersPanel {
                                         ))
                                         .into_any_element(),
                                     ListRow::Group {
-                                        id,
-                                        name,
-                                        depth,
-                                        count,
-                                    } => this.group_header(id, name, depth, count, disabled, cx),
+                                        id, name, depth, ..
+                                    } => this.group_header(id, name, depth, disabled, cx),
                                 })
                                 .collect()
                         })

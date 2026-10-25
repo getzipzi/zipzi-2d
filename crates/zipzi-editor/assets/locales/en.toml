@@ -187,7 +187,6 @@ draw_order_direction = "Foreground ↑ · Background ↓ · Evaluated compositio
 unused_object = "Unused"
 
 parameter_groups = "Parameter groups"
-parameter_group_inspect = "Inspect parameter group"
 aggregate_key_marks = "Key marks summarize stored keys across targets."
 binding_key_marks = "Active binding axes use their own keys; other axes show aggregate marks."
 
@@ -256,6 +255,10 @@ precision = "Precision"
 kind = "Type"
 normal = "Normal"
 repeat = "Repeat"
+indirect_selection = "Indirectly affects selected objects"
+filter_related = "Only show parameters related to selected objects"
+show_all = "Show all parameters"
+no_related = "No parameters related to selected objects"
 group = "Group"
 ungrouped = "Ungrouped"
 name_required = "Enter a parameter name"

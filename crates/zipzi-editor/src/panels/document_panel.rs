@@ -162,6 +162,7 @@ impl DocumentPanel {
                 r.id
             )))
             .test_support()
+            .rounded_none()
             .w_full()
             .px_2()
             .py_1()

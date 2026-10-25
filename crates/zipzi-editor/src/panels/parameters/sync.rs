@@ -87,11 +87,11 @@ impl ParametersPanel {
         } else {
             self.update_rows(parameters, visuals.as_ref(), order_changed, window, cx);
         }
-        if layout_changed {
-            self.refresh_visible_rows(cx);
-        }
         if visuals_changed {
             self.refresh_binding_hints(&owner, cx);
+        }
+        if layout_changed || (self.only_related && visuals_changed) {
+            self.refresh_visible_rows(cx);
         }
         self.sync_navigation(cx);
     }
@@ -159,7 +159,8 @@ impl ParametersPanel {
                     number_input: number_input.clone(),
                     disabled: false,
                     summary: String::new(),
-                    related: false,
+                    directly_related: false,
+                    indirectly_related: false,
                     selected: false,
                     cursor: false,
                     depth: 0,
@@ -335,16 +336,19 @@ impl ParametersPanel {
                     bindings.indirect_count(),
                     bindings.blend.len()
                 );
-                let related = selection.iter().any(|r| {
+                let directly_related = selection.iter().any(|r| {
                     bindings
                         .regular
                         .iter()
                         .chain(&bindings.blend)
                         .any(|reference| index.binding(reference).is_some_and(|b| &b.target == r))
-                        || bindings.indirect.iter().any(|path| &path.target == r)
                 });
+                let indirectly_related = selection
+                    .iter()
+                    .any(|r| bindings.indirect.iter().any(|path| &path.target == r));
                 row.view.update(cx, |v, cx| {
-                    v.related = related;
+                    v.directly_related = directly_related;
+                    v.indirectly_related = indirectly_related;
                     v.summary = summary;
                     cx.notify();
                 });

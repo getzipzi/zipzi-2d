@@ -1,7 +1,44 @@
 //! Parameter group headers and sorting targets.
 use super::*;
+use gpui_kit::component::button::ButtonRounded;
 
 impl ParametersPanel {
+    pub(super) fn related_filter_button(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Button {
+        crate::ui::compact::header_button(crate::ui::compact::toggle(
+            Button::new("parameters-filter-related"),
+            self.only_related,
+        ))
+        .icon(IconName::ListFilter)
+        .accessibility_label(t!("parameter.filter_related"))
+        .tooltip(t!(if self.only_related {
+            "parameter.show_all"
+        } else {
+            "parameter.filter_related"
+        }))
+        .disabled(self.document_id.is_none() || !self.slider_interaction_allowed(window, cx))
+        .on_click(cx.listener(|this, _, window, cx| {
+            if !this.slider_interaction_allowed(window, cx) {
+                return;
+            }
+            let (Some(document), Some(owner)) = (this.document_id, this.owner.upgrade()) else {
+                return;
+            };
+            if !owner.update(cx, |owner, cx| {
+                owner.prepare_property_inputs(document, window, cx)
+            }) {
+                return;
+            }
+            this.finish_slider_drag(cx);
+            this.only_related = !this.only_related;
+            this.refresh_visible_rows(cx);
+            cx.notify();
+        }))
+    }
+
     fn has_collapsed_groups(&self) -> bool {
         self.visible_rows.iter().any(|row| matches!(row,
             ListRow::Group { id: Some(id), .. } if self.collapsed_groups.contains(&Some(id.clone()))
@@ -58,7 +95,6 @@ impl ParametersPanel {
         id: Option<String>,
         name: String,
         depth: usize,
-        count: usize,
         disabled: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -78,7 +114,6 @@ impl ParametersPanel {
         };
         let selected = object.is_some() && self.navigation.inspected.as_ref() == object;
         let focused = self.navigation_focused && self.navigation.cursor.as_ref() == Some(&cursor);
-        let inspect_cursor = cursor.clone();
         let panel = cx.weak_entity();
         let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
             if let SortItem::Group(group) = item {
@@ -144,6 +179,7 @@ impl ParametersPanel {
             })
             .child(
                 Button::new(SharedString::from(format!("parameter-group-toggle-{key}")))
+                    .rounded(ButtonRounded::None)
                     .icon(if expanded {
                         IconName::ChevronDown
                     } else {
@@ -152,7 +188,6 @@ impl ParametersPanel {
                     .ghost()
                     .xsmall()
                     .h_full()
-                    .ml(crate::ui::compact::rem(depth.min(6) as f32 * 12.))
                     .disabled(disabled)
                     .accessibility_label(t!(
                         if expanded {
@@ -168,6 +203,7 @@ impl ParametersPanel {
             )
             .child(
                 Button::new(SharedString::from(format!("parameter-group-name-{key}")))
+                    .rounded(ButtonRounded::None)
                     .icon(IconName::Folder)
                     .ghost()
                     .xsmall()
@@ -186,37 +222,12 @@ impl ParametersPanel {
                             .font_weight(FontWeight::SEMIBOLD)
                             .child(name),
                     )
-                    .child(
-                        div()
-                            .id(SharedString::from(format!("parameter-group-count-{key}")))
-                            .test_support()
-                            .aria_value(count.to_string())
-                            .text_xs()
-                            .child(count.to_string()),
-                    )
                     .on_click(cx.listener(move |this, _, window, cx| {
                         if let Some(document) = document_id {
                             this.activate_row(document, cursor.clone(), window, cx);
                         }
                     })),
             )
-            .when_some(id, |header, id| {
-                header.child(
-                    Button::new(SharedString::from(format!("parameter-group-inspect-{id}")))
-                        .icon(IconName::Info)
-                        .ghost()
-                        .xsmall()
-                        .h_full()
-                        .disabled(disabled)
-                        .accessibility_label(t!("editor.parameter_group_inspect"))
-                        .tooltip(t!("editor.parameter_group_inspect"))
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            if let Some(document) = document_id {
-                                this.activate_row(document, inspect_cursor.clone(), window, cx);
-                            }
-                        })),
-                )
-            })
             .map(|element| management::row_menu(element, menu_panel, document_id, menu_actions))
             .into_any_element()
     }

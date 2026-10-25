@@ -43,11 +43,10 @@ fn empty_group_creation_and_rename_preserve_preview_and_have_separate_undo(
                 .find(("animation-motion-group-header", 1usize))
                 .visible()
         );
-        assert_eq!(
+        assert!(
             window
-                .find(("animation-motion-group-count", 1usize))
-                .value(),
-            Some("0")
+                .try_find(("animation-motion-group-count", 1usize))
+                .is_none()
         );
     })
     .unwrap();

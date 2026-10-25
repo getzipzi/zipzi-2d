@@ -4,6 +4,11 @@ Tool state belongs to the document's Modeling context. A viewport provides the
 displayed frame, projection and input owner; multiple viewports share object and
 component selection but keep navigation and presentation independent.
 
+Each document/viewport fits its content once, when first presented with visible
+metrics. Later parameter previews, geometry/visibility changes, animation frames
+and resizes preserve its zoom and pan. The explicit Fit command fits the current
+content again; an unmeasured or hidden viewport keeps its initial fit pending.
+
 ## Where behavior lives
 
 [`zipzi-editor-core/src/tools/`](../../crates/zipzi-editor-core/src/tools/) groups interaction

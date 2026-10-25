@@ -478,18 +478,6 @@ fn parameter_names_drag_between_parameters_and_into_empty_groups(cx: &mut TestAp
             );
             assert_eq!(document.history_lengths(), (2, 0));
         });
-        assert_eq!(
-            window
-                .find(format!("parameter-group-count-{}", id(104)))
-                .value(),
-            Some("1")
-        );
-        assert_eq!(
-            window
-                .find(format!("parameter-group-count-{}", id(102)))
-                .value(),
-            Some("1")
-        );
     })
     .unwrap();
 }

@@ -1,5 +1,6 @@
 //! Independently observed, virtualized parameter row views.
 use super::*;
+use gpui_kit::component::Icon;
 
 // Each row owns its slider dependency so changing one thumb does not rebuild
 // the other visible sliders (including their labels, tooltips and hover rings).
@@ -13,7 +14,8 @@ pub(super) struct ParameterRowView {
     pub(super) number_input: Entity<SlideNumberInput>,
     pub(super) disabled: bool,
     pub(super) summary: String,
-    pub(super) related: bool,
+    pub(super) directly_related: bool,
+    pub(super) indirectly_related: bool,
     pub(super) selected: bool,
     pub(super) cursor: bool,
     pub(super) depth: usize,
@@ -128,20 +130,37 @@ impl Render for ParameterRowView {
                             }
                         });
                     })
-                    .text_color(if self.related {
+                    .text_color(if self.directly_related {
                         theme.primary
                     } else {
                         theme.foreground
                     })
                     .flex()
                     .items_center()
+                    .gap(crate::ui::compact::rem(4.))
                     .h_full()
                     .child(
                         div()
                             .min_w_0()
                             .text_ellipsis()
                             .child(parameter.name.clone()),
-                    ),
+                    )
+                    .when(self.visual.repeat, |name| {
+                        name.child(name_badge(
+                            format!("parameter-repeat-{parameter_id}"),
+                            t!("parameter.repeat").into_owned(),
+                            Icon::new(IconName::Repeat).size(crate::ui::compact::rem(12.)),
+                            theme.muted_foreground,
+                        ))
+                    })
+                    .when(self.indirectly_related, |name| {
+                        name.child(name_badge(
+                            format!("parameter-indirect-{parameter_id}"),
+                            t!("parameter.indirect_selection").into_owned(),
+                            Icon::new(IconName::Link).size(crate::ui::compact::rem(12.)),
+                            theme.primary,
+                        ))
+                    }),
             )
             .child(row::track().child(parameter_track(
                 slider,
@@ -188,4 +207,23 @@ impl Render for ParameterRowView {
                 )
             })
     }
+}
+
+fn name_badge(
+    id: String,
+    label: impl Into<SharedString>,
+    content: impl IntoElement,
+    color: Hsla,
+) -> impl IntoElement {
+    let label = label.into();
+    div()
+        .id(SharedString::from(id))
+        .test_support()
+        .aria_label(label.clone())
+        .tooltip(move |window, cx| Tooltip::new(label.clone()).build(window, cx))
+        .flex()
+        .items_center()
+        .flex_shrink_0()
+        .text_color(color)
+        .child(content)
 }

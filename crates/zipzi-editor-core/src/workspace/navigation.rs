@@ -86,11 +86,6 @@ impl Editor {
         if metrics.visible() {
             let session = self.entry_mut(binding.document)?.session_mut().unwrap();
             session.fit_view(binding.viewport, metrics)?;
-            session
-                .views
-                .entry(binding.viewport)
-                .or_default()
-                .default_fit = false;
         }
         Ok(())
     }

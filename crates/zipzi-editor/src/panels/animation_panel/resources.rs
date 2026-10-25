@@ -10,7 +10,7 @@ use crate::panels::{
     sorting::{self, SortItem},
 };
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Icon;
+use gpui_kit::component::{Icon, button::ButtonRounded};
 use std::collections::{HashMap, HashSet};
 use zipzi_editor_core::{CommandId, DocumentId, MotionSelection};
 use zipzi_editor_core::{ObjectKind, ObjectRef};
@@ -342,8 +342,7 @@ impl AnimationPanel {
             .min_h_0()
             .w_full()
             .overflow_y_scroll()
-            .track_scroll(&self.resources.view.scroll)
-            .when(!motion_panel, |list| list.p_1());
+            .track_scroll(&self.resources.view.scroll);
         list = sorting::scroll_div(list, &self.sorting, &self.resources.view.scroll);
         let mut choices = Vec::new();
         let mut selected_cursor = None;
@@ -473,6 +472,7 @@ impl AnimationPanel {
                         })
                         .child(
                             Button::new(("animation-motion-group", group_index))
+                                .rounded(ButtonRounded::None)
                                 .icon(if expanded {
                                     IconName::ChevronDown
                                 } else {
@@ -492,52 +492,42 @@ impl AnimationPanel {
                         );
                     let label = group_name.clone();
                     let object_for_click = object.clone();
-                    header = header
-                        .child(
-                            Button::new(("animation-motion-group-name", group_index))
-                                .icon(IconName::Folder)
-                                .ghost()
-                                .xsmall()
-                                .h_full()
-                                .flex_1()
-                                .min_w_0()
-                                .justify_start()
-                                .disabled(disabled || object.is_none())
-                                .accessibility_label(label.clone())
-                                .child(
-                                    div()
-                                        .id(("animation-motion-group-label", group_index))
-                                        .test_support()
-                                        .flex_1()
-                                        .min_w_0()
-                                        .text_ellipsis()
-                                        .text_xs()
-                                        .font_weight(FontWeight::SEMIBOLD)
-                                        .child(label),
-                                )
-                                .on_click(cx.listener(move |panel, _, window, cx| {
-                                    if let Some(object) = &object_for_click {
-                                        panel.resources.view.cursor = Some(cursor);
-                                        panel.choose(
-                                            id,
-                                            Choice::Inspect(object.clone()),
-                                            false,
-                                            window,
-                                            cx,
-                                        );
-                                    }
-                                })),
-                        )
-                        .child(
-                            div()
-                                .id(("animation-motion-group-count", group_index))
-                                .test_support()
-                                .aria_value(members.len().to_string())
-                                .flex_shrink_0()
-                                .text_size(crate::ui::compact::rem(crate::ui::compact::CAPTION))
-                                .text_color(theme.muted_foreground)
-                                .child(members.len().to_string()),
-                        );
+                    header = header.child(
+                        Button::new(("animation-motion-group-name", group_index))
+                            .rounded(ButtonRounded::None)
+                            .icon(IconName::Folder)
+                            .ghost()
+                            .xsmall()
+                            .h_full()
+                            .flex_1()
+                            .min_w_0()
+                            .justify_start()
+                            .disabled(disabled || object.is_none())
+                            .accessibility_label(label.clone())
+                            .child(
+                                div()
+                                    .id(("animation-motion-group-label", group_index))
+                                    .test_support()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .text_ellipsis()
+                                    .text_xs()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .child(label),
+                            )
+                            .on_click(cx.listener(move |panel, _, window, cx| {
+                                if let Some(object) = &object_for_click {
+                                    panel.resources.view.cursor = Some(cursor);
+                                    panel.choose(
+                                        id,
+                                        Choice::Inspect(object.clone()),
+                                        false,
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            })),
+                    );
                     if let Some(object) = object {
                         list =
                             list.child(authoring::row_menu(header, self.owner.clone(), id, object));
@@ -583,6 +573,7 @@ impl AnimationPanel {
                             window,
                             cx,
                         )
+                        .pl(group_header::left_padding(usize::from(group.is_some())))
                         .test_support()
                         .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
                         .child(
@@ -664,12 +655,6 @@ impl AnimationPanel {
                     ));
                 }
             }
-            list = list.child(sorting::root_drop_target(
-                "animation-motion-root-drop",
-                &self.sorting,
-                SortItem::ResourceRoot { motion: true },
-                cx,
-            ));
         } else {
             for (index, resource) in catalog.expressions.iter().enumerate() {
                 let selected = animation.expression.as_ref() == Some(&resource.id);
@@ -825,6 +810,14 @@ impl AnimationPanel {
                 list,
                 &self.resources.view.scroll,
             ))
+            .when(motion_panel, |panel| {
+                panel.child(sorting::root_drop_target(
+                    "animation-motion-root-drop",
+                    &self.sorting,
+                    SortItem::ResourceRoot { motion: true },
+                    cx,
+                ))
+            })
             .on_key_down(cx.listener(move |panel, event: &KeyDownEvent, window, cx| {
                 if disabled || !panel.focus.is_focused(window) || choices.is_empty() {
                     return;
@@ -900,7 +893,7 @@ impl AnimationPanel {
             .items_center()
             .gap(crate::ui::compact::rem(crate::ui::compact::GAP))
             .px(crate::ui::compact::rem(crate::ui::compact::PADDING))
-            .rounded(crate::ui::compact::rem(crate::ui::compact::RADIUS))
+            .rounded_none()
             .border_1()
             .border_color(
                 if self.focus.is_focused(window) && self.resources.view.cursor == Some(cursor) {

@@ -4,6 +4,7 @@ use crate::{MAX_ZOOM, MIN_ZOOM, ViewState, ViewportMetrics, ViewportPoint};
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ViewportState {
     pub view: ViewState,
+    /// Pending one-time fit for this document/viewport's first visible frame.
     pub default_fit: bool,
     pub revision: u64,
 }
@@ -40,6 +41,9 @@ impl ViewportState {
                 return;
             }
         }
+        // A successful fit completes initialization, even if the view already
+        // matches. Later geometry or viewport-size changes must not refit it.
+        self.default_fit = false;
         if self.view != fitted {
             self.view = fitted;
             self.revision += 1;

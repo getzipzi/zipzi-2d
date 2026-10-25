@@ -157,11 +157,10 @@ fn motion_groups_collapse_without_changing_selection(cx: &mut TestAppContext) {
                 .expanded(),
             Some(false)
         );
-        assert_eq!(
+        assert!(
             window
-                .find(("animation-motion-group-count", 0usize))
-                .value(),
-            Some("2")
+                .try_find(("animation-motion-group-count", 0usize))
+                .is_none()
         );
         assert!(window.try_find(("animation-motion", 0usize)).is_none());
         assert!(window.try_find(("animation-motion", 1usize)).is_none());
@@ -768,15 +767,18 @@ fn motion_group_titles_show_unnamed_and_empty_groups_and_align_left_at_all_scale
                 ScrollDelta::Pixels(point(px(0.), px(10000.))),
                 cx,
             );
+            let root_drop = window.find("animation-motion-root-drop");
+            assert!(root_drop.visible());
+            let root_bounds = root_drop.bounds();
+            assert!(window.find("animation-motion-list").bounds().bottom() <= root_bounds.top());
             assert_eq!(
                 window.find(("animation-motion-group-name", 0usize)).label(),
                 Some("Unnamed group")
             );
-            assert_eq!(
+            assert!(
                 window
-                    .find(("animation-motion-group-count", 1usize))
-                    .value(),
-                Some("0")
+                    .try_find(("animation-motion-group-count", 1usize))
+                    .is_none()
             );
             for i in [0usize, 1] {
                 let header = window.find(("animation-motion-group-header", i)).bounds();
@@ -795,6 +797,11 @@ fn motion_group_titles_show_unnamed_and_empty_groups_and_align_left_at_all_scale
             let last = window.find(("animation-motion-group-header", group_count - 1));
             assert!(last.visible());
             assert!((last.bounds().size.height.as_f32() - 22. * scale.factor()).abs() <= 0.5);
+            assert!(last.bounds().bottom() <= root_bounds.top());
+            assert_eq!(
+                window.find("animation-motion-root-drop").bounds(),
+                root_bounds
+            );
         })
         .unwrap();
         cx.run_until_parked();

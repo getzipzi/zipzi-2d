@@ -17,6 +17,92 @@ fn command(editor: &Editor, viewport: ViewportId, id: CommandId) -> Command {
 }
 
 #[test]
+fn initial_fit_is_once_and_parameter_preview_and_resize_keep_navigation() -> anyhow::Result<()> {
+    let (document, _assets) = support::rectangle_document(true)?;
+    let parameter = document.parameters()[0].id.clone();
+    let mut editor = support::editor_from_document(document);
+    let binding = editor.primary_viewport_binding().unwrap();
+    // Hidden/unmeasured previews must not consume the pending initial fit.
+    assert!(editor.preview()?.canvas.is_none());
+    assert!(
+        editor
+            .viewport_state(binding.document, binding.viewport)
+            .unwrap()
+            .default_fit
+    );
+    editor.set_canvas_metrics(metrics(800., 600., 1.));
+    let initial = editor.preview()?.canvas.unwrap();
+    let state = editor
+        .viewport_state(binding.document, binding.viewport)
+        .unwrap();
+    assert!(!state.default_fit);
+    for value in [0.25, 0.75, 1.] {
+        editor.execute(EditorCommand::SetPreviewParameters {
+            values: vec![(parameter.clone(), value)],
+        })?;
+        let changed = editor.preview()?.canvas.unwrap();
+        assert_ne!(
+            changed.geometry.content_bounds(),
+            initial.geometry.content_bounds()
+        );
+        assert_eq!(changed.transform, initial.transform);
+        assert_eq!(
+            editor.viewport_state(binding.document, binding.viewport),
+            Some(state)
+        );
+    }
+    // Explicit Fit still uses the latest geometry, then holds that view too.
+    editor.dispatch(command(&editor, binding.viewport, CommandId::FitView))?;
+    let fitted = editor
+        .viewport_state(binding.document, binding.viewport)
+        .unwrap();
+    assert_ne!(fitted.view, state.view);
+    editor.execute(EditorCommand::SetPreviewParameter {
+        parameter_id: parameter,
+        value: 0.,
+    })?;
+    editor.preview()?;
+    assert_eq!(
+        editor.viewport_state(binding.document, binding.viewport),
+        Some(fitted)
+    );
+    editor.set_canvas_metrics(metrics(420., 900., 2.));
+    editor.preview()?;
+    let resized = editor
+        .viewport_state(binding.document, binding.viewport)
+        .unwrap();
+    assert_eq!(resized.view, fitted.view);
+    assert!(!resized.default_fit);
+    // A newly created viewport still gets its own initial fit.
+    let added = ViewportId::new();
+    editor.register_viewport(added, ViewportKind::Modeling)?;
+    editor.set_viewport_metrics(added, metrics(240., 300., 1.));
+    editor.preview_for(editor.viewport_binding(added).unwrap())?;
+    let added_state = editor.viewport_state(binding.document, added).unwrap();
+    assert!(!added_state.default_fit);
+    assert_ne!(added_state.view, resized.view);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn empty_initial_fit_completes_even_when_navigation_does_not_change() -> anyhow::Result<()> {
+    let mut editor = support::new_editor()?;
+    let binding = editor.primary_viewport_binding().unwrap();
+    editor.set_canvas_metrics(metrics(800., 600., 1.));
+    let before = editor
+        .viewport_state(binding.document, binding.viewport)
+        .unwrap();
+    editor.preview()?;
+    let after = editor
+        .viewport_state(binding.document, binding.viewport)
+        .unwrap();
+    assert_eq!(after.view, before.view);
+    assert!(!after.default_fit);
+    Ok(())
+}
+
+#[test]
 fn same_kind_instances_keep_navigation_metrics_limits_and_revisions_independent()
 -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document()?;

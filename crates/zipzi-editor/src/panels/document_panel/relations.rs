@@ -3,7 +3,7 @@ use super::*;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
     Icon, Sizable,
-    button::{Button, ButtonVariants},
+    button::{Button, ButtonRounded, ButtonVariants},
     tooltip::Tooltip,
 };
 use zipzi_editor_core::Document;
@@ -87,6 +87,7 @@ impl DocumentPanel {
         let influences = format!("{} · {}", t!("editor.indirect_influences"), paths.len());
         rows = rows.child(
             Button::new("relations-indirect-toggle")
+                .rounded(ButtonRounded::None)
                 .ghost()
                 .xsmall()
                 .h(compact::rem(compact::ROW))
@@ -177,6 +178,7 @@ impl DocumentPanel {
                 "relation-row-{}",
                 self.row_sequence
             )))
+            .rounded_none()
             .test_support()
             .w_full()
             .h(compact::rem(compact::ROW))

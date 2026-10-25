@@ -5,7 +5,10 @@ use crate::{
     panels::toolbar::PanelToolbar,
     ui::compact,
 };
-use gpui_kit::{assets::IconName, component::menu::ContextMenuExt};
+use gpui_kit::{
+    assets::IconName,
+    component::{button::ButtonRounded, menu::ContextMenuExt},
+};
 use zipzi_editor_core::{BusinessAction as A, ObjectKind as K, ObjectRef as R};
 #[derive(Clone)]
 struct Row {
@@ -237,6 +240,7 @@ impl AnimationPanel {
                                     .role(Role::TreeItem)
                                     .aria_label(row.title.clone())
                                     .aria_selected(selected.as_ref() == Some(&object))
+                                    .rounded_none()
                                     .h(compact::rem(compact::ROW))
                                     .w_full()
                                     .min_w_0()
@@ -256,6 +260,7 @@ impl AnimationPanel {
                                                 "pose-fold-{}",
                                                 object.id
                                             )))
+                                            .rounded(ButtonRounded::None)
                                             .ghost()
                                             .icon(if collapsed.contains(&object.id) {
                                                 IconName::ChevronRight

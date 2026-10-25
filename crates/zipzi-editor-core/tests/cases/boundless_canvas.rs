@@ -122,7 +122,7 @@ fn fit_command_before_preview_and_after_manual_navigation_uses_content() -> anyh
     assert_eq!(
         editor.view(),
         fitted,
-        "Explicit Fit disables automatic layout fitting"
+        "Resizing must preserve the fitted view"
     );
     Ok(())
 }
@@ -161,21 +161,28 @@ fn content_fit_preserves_other_viewports_and_pointer_zoom_anchor() -> anyhow::Re
 }
 
 #[test]
-fn invalidated_geometry_is_fitted_before_the_next_frame() -> anyhow::Result<()> {
+fn visibility_changes_preserve_navigation_until_explicit_fit() -> anyhow::Result<()> {
     let (mut editor, _dir) = fixture()?;
     editor.set_canvas_metrics(metrics(1.));
     assert_fitted(&editor.preview()?.canvas.unwrap());
+    let fitted = editor.view();
     let mesh = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::from_u128(3).to_string());
     editor.execute(EditorCommand::SetObjectVisible {
         object: mesh.clone(),
         visible: false,
     })?;
+    assert_eq!(editor.view(), fitted);
+    // Explicit Fit must evaluate the invalidated geometry before the next frame.
+    editor.dispatch(editor.command(CommandId::FitView))?;
     editor.preview_if_needed()?.unwrap();
     assert_eq!(editor.view(), ViewState::default());
     editor.execute(EditorCommand::SetObjectVisible {
         object: mesh,
         visible: true,
     })?;
+    editor.preview_if_needed()?.unwrap();
+    assert_eq!(editor.view(), ViewState::default());
+    editor.dispatch(editor.command(CommandId::FitView))?;
     assert_fitted(&editor.preview_if_needed()?.unwrap().canvas.unwrap());
     Ok(())
 }
