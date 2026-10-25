@@ -6,6 +6,8 @@ from ._errors import Busy, SdkFailure
 from ._recovery import RecoveryOwner
 if TYPE_CHECKING:
     from .backends import Backend
+else:
+    Backend = object
 T = TypeVar("T")
 
 class Owned(RecoveryOwner):
@@ -30,6 +32,7 @@ class Owned(RecoveryOwner):
         return super()._request(action, call, decode)
 
     def close(self) -> None:
+        'Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.'
         if self._closed:
             return
         def closed(_: object) -> None:

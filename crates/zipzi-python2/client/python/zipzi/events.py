@@ -5,6 +5,8 @@ from ._recovery import RecoveryOwner
 from ._values import SessionId, SessionInfo, record, sequence
 if TYPE_CHECKING:
     from .backends import Backend
+else:
+    Backend = object
 
 from ._generated.event_values import (
     Cursor as Cursor, Origin as Origin, Published as Published, Saved as Saved,
@@ -53,7 +55,7 @@ class _Subscription(RecoveryOwner, Generic[T]):
 
     def _reset(self, raw: object) -> T:
         value = record(raw)
-        cursor = Cursor.read(value["cursor"])
+        cursor = Cursor._read(value["cursor"])
         if cursor.session != self._expected:
             raise ValueError("Subscription has another event stream")
         initial = self._decode(raw)
@@ -82,8 +84,10 @@ class _Subscription(RecoveryOwner, Generic[T]):
 
 class SessionSubscription(_Subscription[SessionInfo]):
     def __init__(self, backend: "Backend", token: object, id: SessionId):
-        super().__init__(backend, token, id, lambda raw: SessionInfo.read(record(raw)["info"]))
+        super().__init__(backend, token, id, lambda raw: SessionInfo._read(record(raw)["info"]))
 
 class RegistrySubscription(_Subscription[tuple[SessionInfo, ...]]):
     def __init__(self, backend: "Backend"):
-        super().__init__(backend, None, None, lambda raw: tuple(SessionInfo.read(item) for item in sequence(record(raw)["sessions"])))
+        super().__init__(backend, None, None, lambda raw: tuple(SessionInfo._read(item) for item in sequence(record(raw)["sessions"])))
+
+__all__ = ['Cursor', 'Origin', 'Published', 'Saved', 'StateChanged', 'Created', 'Closed', 'Event', 'SessionSubscription', 'RegistrySubscription']

@@ -1,8 +1,8 @@
 """Recoverable bounded byte transfers; each subrequest keeps the public owner."""
 from __future__ import annotations
 import hashlib
-from typing import TYPE_CHECKING, Literal
-from .._errors import OutcomeUnknown, SdkFailure, unwrap
+from typing import TYPE_CHECKING, Literal, Protocol
+from .._errors import OutcomeUnknown, SdkFailure, PendingRequest, unwrap
 from .._results import Batch
 from .._values import Source
 from .._values import integer, record, string
@@ -10,11 +10,18 @@ from .._generated import binary as typed_binary
 if TYPE_CHECKING:
     from .connected import ConnectedBackend
 
+class TransferBackend(Protocol):
+    def _request(self, value: dict[str,object], owner: object, operation: str) -> object: ...
+    def _recover_wire(self, owner: object) -> object: ...
+    def _binary_request(self, value: dict[str,object], payload: bytes, owner: object, operation: str) -> object: ...
+    def pending(self, owner: object) -> PendingRequest | None: ...
+    def recover(self, owner: object) -> object: ...
+
 CHUNK = 1 << 20
 
 class Transfer:
-    def __init__(self, backend: ConnectedBackend, owner: object,
-        kind: Literal["image", "buffer", "pixels", "snapshot", "read", "authoring", "records", "samples", "meshes", "bindings"], *, data: bytes = b"",
+    def __init__(self, backend: TransferBackend, owner: object,
+        kind: Literal["image", "buffer", "pixels", "snapshot", "read", "authoring", "records", "samples", "meshes", "bindings", "images"], *, data: bytes = b"",
         width: int = 0, height: int = 0, selector: dict[str, object] | None = None,
         blob: object = None, offset: int = 0, length: int = 0, edit: object = None):
         self.backend, self.owner, self.kind = backend, owner, kind
@@ -84,7 +91,7 @@ class Transfer:
                     if "blob" not in value:
                         return self.value
                     self.blob = value["blob"]
-                    if self.kind in {"records","samples","meshes","bindings"}:
+                    if self.kind in {"records","samples","meshes","bindings","images"}:
                         self.end = integer(value["length"])
                     else:
                         pixels = record(value["pixels"]) if self.kind == "snapshot" else value
@@ -100,12 +107,15 @@ class Transfer:
                             return content
                         value = dict(record(self.value))
                         value.pop("blob", None)
-                        if self.kind in {"records","samples","meshes","bindings"}:
-                            if self.kind=="bindings":
+                        if self.kind in {"records","samples","meshes","bindings","images"}:
+                            if self.kind=="images":
+                                values=typed_binary.decode_images(content,string(value["signature"]))
+                                self.value=Batch(Source._read(value["source"]),tuple(item.value for item in values))
+                            elif self.kind=="bindings":
                                 self.value=dict(source=value["source"],bindings=typed_binary.decode_bindings(content,string(value["signature"])))
                             elif self.kind=="meshes":
                                 values=typed_binary.decode_meshes(content,string(value["signature"]))
-                                self.value=values[0] if value["single"] else Batch(Source.read(value["source"]), tuple(item.value for item in values))
+                                self.value=values[0] if value["single"] else Batch(Source._read(value["source"]), tuple(item.value for item in values))
                             else:
                                 self.value = (dict(source=value["source"], records=typed_binary.decode_records(content,string(value["signature"]))) if self.kind=="records" else dict(source=value["source"],state=value["state"],samples=typed_binary.decode_samples(content,string(value["signature"]))))
                             self.phase = "release"

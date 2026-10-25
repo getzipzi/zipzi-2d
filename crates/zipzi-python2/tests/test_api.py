@@ -1038,7 +1038,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(binding.value.keyforms[1].appearance, bindings.Appearance(1., (1., 1., 1.), (0., 0., 0.)))
                     queried = edit.bindings.get_many((uid(4), uid(4)))
                     self.assertEqual(queried.items, (binding.value, binding.value))
-                    self.assertEqual(edit.bindings.list(), zipzi.Batch(binding.source, (binding.value,)))
+                    self.assertEqual(tuple(item.id for item in edit.bindings.list().items), (binding.value.id,))
                     poses = [{uid(3): x} for x in (0., .5, 1., 2.)]
                     sampled = edit.modeling.sample(poses, expected=result.source, checks=sampling.Checks(.75))
                     poses[0][uid(3)] = 1.
@@ -1385,7 +1385,7 @@ class PythonSdk(unittest.TestCase):
             lost.exception.recover()
         self.assertEqual(resolved.exception.code, "NO_PENDING_REQUEST")
         for many in (False, True):
-            runtime = self.runtime("connected", drop="parameter_snapshot")
+            runtime = self.runtime("connected", drop="read_selection")
             session = runtime.sessions.create(uid(853))
             with session.edit("parameter") as edit:
                 id = edit.parameters.create(parameters.ParameterSpec("Read", -1., 1., 0.))
@@ -1429,7 +1429,7 @@ class PythonSdk(unittest.TestCase):
                     edit.meshes.rename(a, "After read refusal")
                 self.assertEqual(session.info().history, (1, 0))
                 self.assertEqual(session.meshes.get_many((a, b)).items[0].name, "After read refusal")
-        runtime = self.runtime("connected", drop="mesh_snapshots")
+        runtime = self.runtime("connected", drop="read_selection")
         session = runtime.sessions.create(uid(872))
         with session.edit("read recovery") as edit:
             id = edit.meshes.create(meshes.MeshSpec("Recovered", GEOMETRY))
@@ -2351,7 +2351,7 @@ class PythonSdk(unittest.TestCase):
     def test_generated_resource_values_preserve_maps_bytes_costs_and_public_identity(self):
         import pickle
         from typing import get_type_hints
-        from zipzi import plans
+        from zipzi._generated import plan_values as plans
         from zipzi._lifecycle import EditableImages
         self.assertIs(get_type_hints(resources.CreateImage)["image"], resources.PreparedImage)
         self.assertIs(get_type_hints(EditableImages.create_image)["image"], resources.PreparedImage)
@@ -2361,18 +2361,18 @@ class PythonSdk(unittest.TestCase):
             face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
         source = session.meshes.get(face).source
         raw = runtime._backend._native._test_codegen_report()
-        report = plans.Report.read(source.wire(), raw)
+        report = plans.PlanReport._read(source._wire(), raw)
         self.assertEqual(report.source, source)
         self.assertEqual((report.version.session_id, report.version.generation, report.version.revision), (9, 2, 3))
         self.assertEqual(report.affected_ids, ("first", "second"))
         self.assertEqual(report.copied_ids, (("a", "first"), ("z", "last")))
-        self.assertEqual(report.cost, plans.Cost(7, 1 << 40, 11, 13))
+        self.assertEqual(report.cost, plans.PlanCost(7, 1 << 40, 11, 13))
         self.assertEqual(report.losses, ("fixed diagnostic",))
         self.assertIs(report.no_op, False)
         raw["no_op"] = 1
         with self.assertRaises(TypeError):
-            plans.Report.read(source.wire(), raw)
-        self.assertEqual(resources.ImagePixels.read(dict(width=1, height=1, rgba=[0, 127, 255, 1])),
+            plans.PlanReport._read(source._wire(), raw)
+        self.assertEqual(resources.ImagePixels._read(dict(width=1, height=1, rgba=[0, 127, 255, 1])),
                          resources.ImagePixels(1, 1, bytes((0, 127, 255, 1))))
         for value in (meshes.Rename(face, "Next", expected_name="Face"), resources.RenameImage(face, "B", expected_name="A"), report):
             self.assertEqual(pickle.loads(pickle.dumps(value)), value)

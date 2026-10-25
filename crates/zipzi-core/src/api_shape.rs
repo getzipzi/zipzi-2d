@@ -66,6 +66,7 @@ pub enum Shape {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Field {
+    pub doc: String,
     pub name: String,
     pub shape: Shape,
     pub default: Option<DefaultValue>,
@@ -178,10 +179,20 @@ impl<T: ApiShape, const N: usize> ApiShape for [T; N] {
     }
 }
 impl Field {
+    pub fn documented(mut self, doc: &str) -> Self {
+        self.doc = if self.doc.is_empty() {
+            doc.trim().into()
+        } else {
+            format!("{}\n{}", doc.trim(), self.doc)
+        };
+        self
+    }
+
     pub fn of<T: ApiShape>(name: &str) -> Self {
         let shape = T::api_shape();
         let default = matches!(shape, Shape::Optional { .. }).then_some(DefaultValue::Null);
         Self {
+            doc: String::new(),
             name: name.into(),
             shape,
             default,
@@ -189,6 +200,7 @@ impl Field {
     }
     pub fn defaulted<T: ApiShape + ApiDefault>(name: &str) -> Self {
         Self {
+            doc: String::new(),
             name: name.into(),
             shape: T::api_shape(),
             default: Some(T::api_default()),
@@ -219,9 +231,9 @@ macro_rules! api_record_attributes {
 #[macro_export]
 macro_rules! api_field {
     ($name:ident: $ty:ty; #[serde(default)] $($rest:tt)*) => { $crate::api_field!(@default $name: $ty; $($rest)*) };
-    (@default $name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!(@default $name: $ty; $($rest)*) };
+    (@default $name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!(@default $name: $ty; $($rest)*).documented($doc) };
     (@default $name:ident: $ty:ty;) => { $crate::api_shape::Field::defaulted::<$ty>(stringify!($name)) };
-    ($name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!($name: $ty; $($rest)*) };
+    ($name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!($name: $ty; $($rest)*).documented($doc) };
     ($name:ident: $ty:ty;) => { $crate::api_shape::Field::of::<$ty>(stringify!($name)) };
 }
 #[macro_export]
@@ -261,6 +273,7 @@ macro_rules! api_union {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SerdeField {
+    pub doc: String,
     pub rust_name: String,
     pub name: String,
     pub shape: Shape,

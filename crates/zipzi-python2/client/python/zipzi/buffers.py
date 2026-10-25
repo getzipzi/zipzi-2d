@@ -6,6 +6,8 @@ from ._values import integer
 from ._errors import OutcomeUnknown, SdkFailure
 if TYPE_CHECKING:
     from .backends import Backend
+else:
+    Backend = object
 
 MAX_BUFFER_BYTES = 256 << 20
 CHUNK = 1 << 20
@@ -23,7 +25,7 @@ class Buffer(Owned):
         return self._size
 
     @classmethod
-    def prepare(cls, backend: Backend, data: bytes | bytearray | memoryview) -> Buffer:
+    def _prepare(cls, backend: Backend, data: bytes | bytearray | memoryview) -> Buffer:
         if not isinstance(data, (bytes, bytearray, memoryview)):
             raise TypeError("Expected bytes or a buffer")
         size = data.nbytes if isinstance(data, memoryview) else len(data)

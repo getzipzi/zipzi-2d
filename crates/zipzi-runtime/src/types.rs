@@ -184,7 +184,7 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 /// the formal SDK version did not change. Snapshot/Proposal tokens arrive later.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::BinaryOutput)]
+#[derive(zipzi_api_derive::BinaryWire)]
 pub enum SourceRef {
     Formal {
         session: SessionId,

@@ -8,7 +8,6 @@ TARGETS = frozenset({
     'client/python/zipzi/_generated/plan_intents.py',
     'client/python/zipzi/_generated/resource_ops.py',
     'client/python/zipzi/_generated/resource_backends.py',
-    'client/python/zipzi/_generated/resource_conveniences.py',
     'src/generated/resources.rs',
     'src/generated/resource_queries.rs',
 })
@@ -195,25 +194,17 @@ def render_resources(contract, Model, header, rust_header):
             return '&'+token if native else 'object'
         if s['kind']=='union':return "&Bound<'_, PyAny>" if native else 'Intent'
         raise ValueError('Unreviewed query parameter')
-    back=[header.rstrip(),'from abc import ABC, abstractmethod','from typing import TYPE_CHECKING, Protocol','from .._errors import unwrap','from .plan_intents import Intent, wire as intent_wire',
-          'if TYPE_CHECKING:','    from ..backends._native_types import NativeRuntime','']
+    back=[header.rstrip(),'from typing import Protocol','from .plan_intents import Intent','']
     for cls,owner in [('ResourceBackend',True),('NativeResources',False)]:
         back+=['class '+cls+'(Protocol):']
         for o in contract['operations']:
             params=', '.join(f['name']+': '+param(f['shape']) for f in o['input']['fields'])
             back += [f'    def {o["backend"]}(self, {params}{", owner: object" if owner else ""}) -> object: ...']
         back+=['']
-    back+=['class LocalResources:','    _native: "NativeRuntime"']
-    for o in contract['operations']:
-        fields=o['input']['fields'];params=', '.join(f['name']+': '+param(f['shape']) for f in fields)
-        back += [f'    def {o["backend"]}(self, {params}, owner: object) -> object:',f'        return unwrap(self._native.{o["backend"]}('+', '.join(f['name'] for f in fields)+'))']
-    back+=['','class ConnectedResources(ABC):','    @abstractmethod','    def _request(self, value: dict[str, object], owner: object, operation: str) -> object: ...']
     labels={'image':'resources.get','prepared_pixels':'resources.pixels','plan':'plan.create'}
     queries=[rust_header.rstrip(),'use crate::*;','use super::resources::*;','#[pymethods]','impl NativeRuntime {']
     for o in contract['operations']:
         fields=o['input']['fields'];params=', '.join(f['name']+': '+param(f['shape']) for f in fields)
-        back += [f'    def {o["backend"]}(self, {params}, owner: object) -> object:',
-                 '        return self._request(dict(op="'+o['name']+'", '+', '.join(f['name']+'='+(f'intent_wire({f["name"]})' if f['shape']['kind']=='union' else f['name']) for f in fields)+'), owner, "'+labels[o['backend']]+'")']
         native_params=', '.join(f['name']+': '+param(f['shape'],True) for f in fields)
         if o['backend']=='image':queries += ['    #[pyo3(signature = (session, id, edit=None))]']
         queries += [f'    fn {o["backend"]}(&self, py: Python<\'_>, {native_params}) -> PyResult<Py<PyDict>> {{']
@@ -240,21 +231,6 @@ def render_resources(contract, Model, header, rust_header):
             queries+=['        };',f'        let value = py.detach(|| self.host.call(move |rt| {o["handler"]}.call(rt, client, input)));',
                       f'        reply(py, value, "{labels[o["backend"]]}", |v| Ok(write_{rust_name(o["output"])}(py, v)?.into_any()))','    }']
     queries+=['}',''];back+=['']
-    output['client/python/zipzi/_generated/resource_backends.py']='\n'.join(back)
+    output['client/python/zipzi/_generated/resource_backends.py']='\n'.join(back).rstrip()+'\n'
     output['src/generated/resource_queries.rs']='\n'.join(queries)
-    conveniences=[header.rstrip(),'from collections.abc import Callable','from typing import Protocol','from . import resource_ops as ops','from .._values import WriteResult','from .._calls import project, single_id','from .. import resources','',
-                  'class ResourceWriter(Protocol):','    def _construct_and_apply(self, construct: Callable[[], ops.CreateImage | ops.ReplaceImage]) -> WriteResult: ...','','class EditableImages:','    _owner: ResourceWriter']
-    for v in resource_union['variants'][:2]:
-        params=[]
-        for f in projected_fields(v):
-            if f['default'] and '*' not in params:params.append('*')
-            params.append(f['name']+': '+typ(f['shape'])+default_suffix(f))
-        create=v['rust_name']=='CreateImage'
-        conveniences += [f'    def {v["wire_name"]}(self, '+', '.join(params)+') -> '+('str' if create else 'WriteResult')+':']
-        operation = 'ops.'+v['rust_name']+'('+', '.join(f['name'] for f in projected_fields(v))+')'
-        if create:
-            conveniences += ['        return project(lambda: self._owner._construct_and_apply(lambda: '+operation+'), single_id, operation="resources.create_image", inputs=(name, image, id))']
-        else:
-            conveniences += ['        return self._owner._construct_and_apply(lambda: '+operation+')']
-    output['client/python/zipzi/_generated/resource_conveniences.py']='\n'.join(conveniences)+'\n'
     return output

@@ -32,3 +32,9 @@ _register_requests()
 __all__ += ["Snapshot", "Batch", "Page", "PageCursor"]
 
 __all__ += ["PlanCost", "PlanReport"]
+
+from ._generated.discovery import RuntimeCapabilities, RuntimeLimits, ObjectSummary
+__all__ += ["RuntimeCapabilities", "RuntimeLimits", "ObjectSummary"]
+
+from ._documentation import ApiDescription, describe
+__all__ += ["ApiDescription", "describe"]

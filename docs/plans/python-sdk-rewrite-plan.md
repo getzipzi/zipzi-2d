@@ -2,6 +2,8 @@
 
 日期：2026-10-25。状态：**P1/P2 选定范围已有验收，P0 有试点比较门禁，P3 已交付选定建模/身份切片；P3A-0/P3A-1 已通过，P3A-1 本轮性能噪声由用户豁免，P3A-2 统一值、领域操作、DTO 单一声明和 plan/apply 已验收，整体 P3A 尚未验收。P3 剩余工作归 P3B；P4–P7 按本文调整后的依赖推进。** 既有证据见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
+**本轮推进：**[P3A-3/4/5 实现已落地](python-sdk-rewrite/p3a-345.md)，按用户要求期间不验收，统一留待 P3A-6；不得据此标为阶段通过。
+
 本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）、`f2ef33c`（生命周期与 P0 门禁）、`1e0043f`（P2 网格生成）、`acc54907`（宿主/会话接回）、`c0e186b`（R3 事件/参数/批量）和 2026-10-25 工作区为依据。当前主线按 [Runtime R0–R4](sdk-runtime/python2-r0-r4.md) 推进；已提交的[事件、参数及批量读取](sdk-runtime/python2-r3-events.md)贯通新包 R3 最小链路；工作区中的[网格绑定和显式 CPU 采样](sdk-runtime/python2-r4-bindings.md)接回首批 R4 数值链路，生成器随能力推进。本文区分已提交基础、已有验证记录、工作区实现和后续目标，不改写此前验收结果。
 
 本计划按用户决定，从一个全新的 `crates/zipzi-python2` 开始。把 `zipzi-python` 视为不存在：不读取或导入其实现，不复用其包装、stub、构建入口或测试 recipe，不以其接口数量、行数和性能作为交付基准，也不承担迁移、兼容或删除旧包的任务。先前放在旧 crate 内的 P1 试验代码已迁入新包；旧 crate 的接线改动已撤回。

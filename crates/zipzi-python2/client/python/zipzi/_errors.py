@@ -85,7 +85,7 @@ def unwrap(value: object) -> object:
     e = record(r["error"])
     code = string(e["code"])
     def optional(key: str) -> Version | None:
-        return None if e.get(key) is None else Version.read(e[key])
+        return None if e.get(key) is None else Version._read(e[key])
     report=None
     if e.get("project_report") is not None:
         from .modeling import read_ProjectReport

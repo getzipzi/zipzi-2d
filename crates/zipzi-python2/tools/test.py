@@ -24,6 +24,7 @@ def main() -> None:
     parser.add_argument("--release", action="store_true", help="Build the native adapter in Release for P0 measurements")
     parser.add_argument("--instrumented", action="store_true", help="Build separate P0 allocator/codec/copy probes; never use for latency")
     parser.add_argument("--recovery", action="store_true", help="Run focused P3A-1 complete-call/Edit/Job recovery tests; optional P3ARecovery.test_name selectors")
+    parser.add_argument("--discovery", action="store_true", help="Run staged P3A-3/4/5 discovery/lifecycle/documentation regressions; optional P3ADiscovery.test_name selectors")
     args = parser.parse_args()
     if sys.version_info[:2] != (3, 14):
         parser.error("Run with uv run --locked python (CPython 3.14)")
@@ -73,9 +74,9 @@ def main() -> None:
             host_sha256=hashlib.sha256(host.read_bytes()).hexdigest(),
             python=sys.version, artifact_sha256=hashlib.sha256(extension.read_bytes()).hexdigest()), indent=2) + "\n")
         env.update(ZIPZI_PYTHON2_NATIVE=str(native.parent), ZIPZI_PYTHON2_HOST=str(host))
-        module = "test_p3a_recovery.py" if args.recovery else "test_api.py"
+        module = "test_p3a_discovery.py" if args.discovery else "test_p3a_recovery.py" if args.recovery else "test_api.py"
         subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests" / module), "-v", *args.tests], cwd="/tmp", env=env, check=True)
-        if not args.tests and not args.recovery:
+        if not args.tests and not args.recovery and not args.discovery:
             subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_p3a_recovery.py"), "-v"], cwd="/tmp", env=env, check=True)
         subprocess.run(["uv", "run", "--locked", "pyright", "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json")], cwd=ROOT, check=True)
         invalid = subprocess.run(["uv", "run", "--locked", "--project", str(ROOT), "pyright",

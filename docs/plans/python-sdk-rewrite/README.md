@@ -2,6 +2,8 @@
 
 日期：2026-10-25。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../crates/zipzi-python2/README.md)。
 
+**本轮推进：**[P3A-3/4/5 实现已落地](p3a-345.md)，按用户要求期间不验收，统一留待 P3A-6；不得据此标为阶段通过。
+
 **当前阶段：**[P3A：统一 API 与 agent 契约重构](p3a-api-agent-contract.md)已通过 [P3A-0 冻结门禁](p3a-0.md)，并通过 [P3A-1 完整调用恢复](p3a-1.md)验收（本轮性能噪声由用户豁免）；[P3A-2](p3a-2.md) 已完成统一值、领域操作、DTO 单一声明和 plan/apply 验收；P3A-3–6 和整体阶段尚未验收。后续继续生成 facade、分页/Session 关闭及文档和 agent 门禁，再进入 P3B/P4。原始[启动记录](p3a-start.md)与既有 Buffer/二进制证据保留；历史通过记录不自动覆盖新接口，当前用法见包 README。
 
 当前执行主线接回 [Runtime R0–R4](../sdk-runtime/python2-r0-r4.md)。`1e0043f`

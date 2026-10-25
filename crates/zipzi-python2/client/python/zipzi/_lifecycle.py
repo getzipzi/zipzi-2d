@@ -1,4 +1,5 @@
 """Handwritten ownership/known-state wrappers. Runtime remains authoritative."""
+from ._generated import modeling as _modeling_codec
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Generic, Literal, TypeVar, overload
@@ -15,8 +16,6 @@ from . import _queries as queries
 from enum import Enum
 import math
 import time
-from ._generated.conveniences import EditableMeshes as MeshConveniences
-from ._generated.resource_conveniences import EditableImages as ImageConveniences
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -26,126 +25,23 @@ def absolute(path: Path) -> Path:
         raise ValueError("Path must be absolute on the execution host")
     return path
 
-JobState = Literal["queued", "running", "cancelling", "succeeded", "failed", "cancelled"]
+from ._jobs import Job, JobState
 
-class Job(RecoveryOwner, Generic[T]):
-    def __init__(self, backend: Backend, token: object, kind: JobKind, decode: Callable[[object], T], on_terminal: Callable[[bool | None], None] | None = None):
+from ._generated.facades import Meshes, EditableMeshes, Images, EditableImages, Parameters, EditableParameters, Bindings, EditableBindings, Scene, Modeling
+from ._generated.discovery import RuntimeCapabilities, RuntimeLimits
+
+class _SessionBinding(RecoveryOwner):
+    def __init__(self, backend: Backend, token: object):
         super().__init__(backend)
-        self._token, self._kind, self._decode = token, kind, decode
-        self._kind: JobKind
-        self._result: tuple[T] | None = None
-        self._failure: SdkFailure | None = None
-        self._on_terminal = on_terminal
-        self._terminal_failure = False
-        self._deadline: float | None = None
-
-    @classmethod
-    def start(cls, backend: Backend, begin: Callable[[object], object], kind: JobKind,
-        decode: Callable[[object], T]) -> "Job[T]":
-        job = cls(backend, None, kind, decode)
-        def start() -> "Job[T]":
-            job._token = begin(job)
-            return job
-        def resume() -> "Job[T]":
-            job._token = record(backend.recover(job))["job"]
-            return job
-        return known(start, resume)
-
-    def _request_unknown(self, action: str, error: OutcomeUnknown) -> None:
-        super()._request_unknown(action, error)
-        if action == "wait" and self._on_terminal is not None:
-            self._on_terminal(None)
-
-    def _request_failed(self, action: str, error: BaseException) -> None:
-        if action == "wait" and isinstance(error, SdkFailure) and not isinstance(error, (Busy, JobTimeout)):
-            self._failure = error
-            self._terminal_failure = error.code not in {"REQUEST_EXPIRED", "CLIENT_EXPIRED", "HOST_RESTARTED",
-                "HOST_CLOSED", "HOST_PANICKED", "INVALID_REFERENCE", "NO_PENDING_REQUEST", "RESYNC_REQUIRED"}
-            if self._on_terminal is not None:
-                self._on_terminal(False if self._terminal_failure else None)
-
-    def _remaining(self) -> float | None:
-        return None if self._deadline is None else max(0., self._deadline - time.monotonic())
-
-    def _wait_value(self, raw: object) -> T:
-        # A recovered sampled transfer can be a poll taken before completion.
-        # Its empty result is not a sample; continue polling the accepted job.
-        if raw is None and self._kind == "sampled":
-            raw = self._backend.wait(self._token, self._kind, self, timeout=self._remaining())
-        if "result" in record(raw):
-            from ._errors import unwrap
-            info = record(raw)
-            if info["result"] is None:
-                return self._wait_value(self._backend.wait(self._token, self._kind, self, timeout=self._remaining()))
-            try:
-                raw = unwrap(info["result"])
-            except SdkFailure as e:
-                self._failure = e
-                raise
-        result = self._decode(raw)
-        self._result = (result,)
-        if self._on_terminal is not None:
-            self._on_terminal(True)
-        return result
-
-    def wait(self, *, timeout: float | None = None) -> T:
-        """Wait for and cache the actual terminal result, releasing its slot.
-
-        None waits indefinitely. A finite nonnegative timeout raises JobTimeout
-        while preserving the accepted Job. Transport loss raises OutcomeUnknown
-        for the complete original wait, which can be recovered without replay.
-        A pending cancel/status request must be recovered before waiting.
-        """
-        if timeout is not None and (isinstance(timeout, bool) or not isinstance(timeout, (int, float))
-                or not math.isfinite(timeout) or timeout < 0):
-            raise ValueError("timeout must be None or a finite nonnegative number")
-        if self._failure is not None:
-            raise self._failure
-        if self._result is not None:
-            return self._result[0]
-        if self.pending_request is None:
-            self._deadline = None if timeout is None else time.monotonic() + timeout
-        return self._request("wait", lambda: self._backend.wait(self._token, self._kind, self,
-                            timeout=self._remaining()), self._wait_value)
-
-    def cancel(self) -> None:
-        """Request cancellation. Wait still reports the actual entered-IO result."""
-        if self._failure is not None and not self._terminal_failure:
-            raise self._failure
-        if self._result is None and self._failure is None:
-            self._request("cancel", lambda: self._backend.cancel_job(self._token, self), lambda _: None)
-
-    def state(self) -> JobState:
-        if self._failure is not None:
-            if not self._terminal_failure:
-                raise self._failure
-            return "cancelled" if self._failure.code == "CANCELLED" else "failed"
-        if self._result is not None:
-            return "succeeded"
-        def decode(raw: object) -> JobState:
-            if raw not in ("queued", "running", "cancelling", "succeeded", "failed", "cancelled"):
-                raise TypeError("Invalid job state")
-            return raw
-        return self._request("state", lambda: self._backend.job_state(self._token, self), decode)
-
-    def close(self) -> None:
-        """Wait for the actual outcome and release its Runtime result slot."""
-        project(self.wait, lambda _: None, operation="job.close")
-
-    def __enter__(self) -> "Job[T]":
-        return self
-
-    def __exit__(self, kind: object, exception: BaseException | None, traceback: object) -> None:
-        try:
-            self.close()
-        except BaseException as cleanup:
-            if exception is None:
-                raise
-            exception.add_note(f"Job cleanup failed: {cleanup}")
+        self.token=token
+        self.active=True
+        self.closed: SessionInfo | None=None
 
 class Runtime:
+    'Explicit client lifetime. Construct with zipzi.local() or zipzi.connect(); Connected keeps formal sessions resident after client close.'
     def __init__(self, backend: Backend):
         self._backend = backend
+        self._bindings: dict[SessionId, _SessionBinding] = {}
         self.sessions = Sessions(self)
         self.resources = resources.Resources(backend)
     @property
@@ -173,26 +69,37 @@ class Runtime:
                 raise SdkFailure("NO_PENDING_REQUEST", "Runtime close has already been resolved")
             self._backend.close(abandon_pending=abandon_pending)
         known(lambda: self._backend.close(abandon_pending=abandon_pending), resume)
+    def capabilities(self) -> RuntimeCapabilities:
+        """Query actual implementation and environment capabilities; this does not reserve future admission."""
+        return known(lambda: RuntimeCapabilities._read(self._backend.runtime_capabilities(self)),lambda: RuntimeCapabilities._read(self._backend.recover(self)))
+    def limits(self) -> RuntimeLimits:
+        """Query current Runtime count, byte and scan budgets. Values are estimates, not process RSS limits."""
+        return known(lambda: RuntimeLimits._read(self._backend.runtime_limits(self)),lambda: RuntimeLimits._read(self._backend.recover(self)))
     def events_since(self, cursor: events.Cursor, *, limit: int = 128) -> tuple[events.Event, ...]:
         events.check_limit(limit)
         return known(lambda: events.batch(self._backend.events(cursor, limit, self), cursor),
             lambda: events.batch(self._backend.recover(self), cursor))
 
 class Sessions:
+    'Bounded host registry. Listing and attaching share the resident document; neither creates a Python mirror.'
     def __init__(self, runtime: Runtime):
         self._runtime = runtime
     def subscribe(self) -> events.RegistrySubscription:
+        'Capture current registry metadata and an independent cursor. Poll bounded pages; resync explicitly after RESYNC_REQUIRED. This does not drain another subscriber.'
         return events.RegistrySubscription(self._runtime._backend)._start()
-    def create(self, document_id: str) -> "Session":
+    def create(self, document_id: str | None = None) -> "Session":
+        'Create a session with SDK defaults. None allocates a canonical document UUID in Rust. Returns the owned binding; a lost reply must recover this original call, never create another session.'
         backend = self._runtime._backend
         return known(lambda: Session(self._runtime, backend.create(document_id, self)),
             lambda: Session(self._runtime, backend.recover(self)))
     def list(self) -> tuple[SessionInfo, ...]:
+        'Read one bounded tuple of resident SessionInfo values. Registry order uses SessionId. No object geometry or pixel payload is returned; transport loss recovers the captured tuple.'
         backend = self._runtime._backend
         def decode(raw: object) -> tuple[SessionInfo, ...]:
-            return tuple(SessionInfo.read(item) for item in sequence(raw))
+            return tuple(SessionInfo._read(item) for item in sequence(raw))
         return known(lambda: decode(backend.list_sessions(self)), lambda: decode(backend.recover(self)))
     def attach(self, id: SessionId) -> "Session":
+        'Bind this client to an existing Runtime-scoped SessionId without copying content. Detached old wrappers stay invalid; a successful attach creates a fresh binding. Wrong Runtime or missing IDs fail.'
         backend = self._runtime._backend
         if not isinstance(id, SessionId):
             raise TypeError("Expected a SessionId")
@@ -200,12 +107,14 @@ class Sessions:
             return Session(self._runtime, record(raw)["id"])
         return known(lambda: decode(backend.attach(id, self)), lambda: decode(backend.recover(self)))
     def open(self, path: Path) -> Job["Session"]:
+        'Submit host-absolute project open and return Job[Session], including already-open paths through a cached completed Job. Wait for the actual outcome; recover a lost start before waiting.'
         backend = self._runtime._backend
         path = absolute(path)
         return known(lambda: self._opened(backend.open(path, self)), lambda: self._opened(backend.recover(self)))
     def import_(self,path:Path,format:modeling.ImportFormat,*,textures:tuple[modeling.TextureSlot,...]=())->Job["Session"]:
+        'Submit an explicit host format import into a new session. Textures are explicit host paths. Wait for Job[Session]; cancellation reports the real outcome if IO has already entered.'
         request=modeling.ProjectRequestImport(path=str(absolute(path)),format=format,textures=textures)
-        return Job[Session].start(self._runtime._backend,lambda owner:self._runtime._backend.project(None,request,owner),"project",lambda raw:Session(self._runtime,record(raw)["session"]))
+        return Job[Session]._start(self._runtime._backend,lambda owner:self._runtime._backend.project(None,request,owner),"project",lambda raw:Session(self._runtime,record(raw)["session"]))
     def _opened(self, value: object) -> Job["Session"]:
         backend = self._runtime._backend
         raw = record(value)
@@ -215,9 +124,15 @@ class Sessions:
         return job
 
 class Session:
+    'One client binding to a resident document. Use runtime.sessions factories; aliases share detach/close state. id is pure cached identity, while info queries host state.'
     def __init__(self, runtime: Runtime, token: object):
-        self._runtime, self._token, self._backend = runtime, token, runtime._backend
+        self._runtime, self._backend = runtime, runtime._backend
         self._id = self._backend.session_id(token)
+        binding=runtime._bindings.get(self._id)
+        if binding is None or not binding.active:
+            binding=_SessionBinding(self._backend,token)
+            runtime._bindings[self._id]=binding
+        self._binding=binding
         self.meshes = Meshes(self)
         self.project = Project(self)
         self.resources = Images(self)
@@ -227,217 +142,100 @@ class Session:
         self.scene = Scene(self)
     @property
     def id(self) -> SessionId:
+        'Return cached Runtime-scoped identity without IO. Persistent object IDs belong to this session and do not substitute for a SessionId.'
         return self._id
+    @property
+    def _token(self) -> object:
+        self._check_binding()
+        return self._binding.token
+    def _check_binding(self) -> None:
+        if not self._binding.active:
+            raise SdkFailure("INVALID_REFERENCE", "This Session binding was detached or closed; attach again for a new binding")
+    def detach(self) -> None:
+        """Release this client's binding and its references. Active work refuses detach; the host session remains resident. Aliases become invalid."""
+        binding=self._binding
+        if not binding.active:return
+        def finish(_:object)->None:binding.active=False
+        binding._request("detach",lambda:self._backend.detach_session(binding.token,binding),finish)
+    def close(self, *, discard_modified: bool = False) -> SessionInfo:
+        """Close the host session and release its path/slot. Unsaved changes and other clients refuse closure without changes. Never saves implicitly."""
+        binding=self._binding
+        if binding.closed is not None:return binding.closed
+        self._check_binding()
+        if type(discard_modified) is not bool:raise TypeError("Expected discard_modified bool")
+        def finish(raw:object)->SessionInfo:
+            info=SessionInfo._read(raw);binding.closed=info;binding.active=False;return info
+        return binding._request("close",lambda:self._backend.close_session(binding.token,discard_modified,binding),finish)
     def plan(self, operation: ops.PlannableOperation) -> plans.Plan:
-        return plans.Plan.create(self._backend, self._token, None, operation)
+        'Plan a registered typed domain operation against the exact formal Source. Read cost/losses, apply through an Edit, then close the Plan. Planning failures do not abort another candidate.'
+        return plans.Plan._create(self._backend, self._token, None, operation)
 
     def plan_async(self, operation: ModelingPlanOperation) -> Job[plans.Plan]:
+        'Submit a registered expensive modeling plan at the captured Source. Returns Job[Plan]; wait before applying and close the resulting Plan. Input type determines this explicit Job API.'
         return _plan_job(self._backend, self._token, None, operation)
 
     def address(self, selector: modeling.AddressSelector) -> references.FieldAddress:
-        return references.FieldAddress.create(self._backend, self._token, selector)
+        'Capture a field address with incarnation, context and field epochs. The returned handle owns a lease and must be closed; recreated IDs cannot revive an old address.'
+        return references.FieldAddress._create(self._backend, self._token, selector)
 
     def capabilities(self, query: modeling.CollectionQuery) -> Snapshot[modeling.Capabilities]:
-        modeling.validate_CollectionQuery(query)
+        'Query selected collection capabilities at the captured formal Source. Results explain available/unavailable/unsupported states and do not reserve future admission.'
+        _modeling_codec.validate_CollectionQuery(query)
         return known(lambda: queries.capabilities(self._backend.collection_capabilities(self._token, query, self)),
             lambda: queries.capabilities(self._backend.recover(self)))
 
     def reference(self, kind: references.ObjectKind, id: str) -> references.ObjectRef:
-        return references.ObjectRef.create(self._backend, self._token, kind, id)
+        'Capture an SDK object reference for the declared kind and canonical UUID. Runtime validates session ownership and incarnation. Close the returned reference after use.'
+        return references.ObjectRef._create(self._backend, self._token, kind, id)
     def info(self) -> SessionInfo:
-        return known(lambda: SessionInfo.read(self._backend.info(self._token, self)),
-            lambda: SessionInfo.read(self._backend.recover(self)))
+        'Read current version, modified state, history lengths, path and host state. Returns an owned value; a lost response recovers the original query.'
+        return known(lambda: SessionInfo._read(self._backend.info(self._token, self)),
+            lambda: SessionInfo._read(self._backend.recover(self)))
     def editor_context(self)->Snapshot[modeling.EditorContext | None]:
+        'Read an owned optional Editor context and exact formal Source. Local or non-Editor hosts can return None; no Editor object is exposed.'
         return known(lambda:queries.editor_context(self._backend.editor_context(self._token,self)),lambda:queries.editor_context(self._backend.recover(self)))
     def show_window(self) -> None:
         """Display this resident session in its desktop host."""
         known(lambda: self._backend.show_window(self._token, self), lambda: self._backend.recover(self))
     def subscribe(self) -> events.SessionSubscription:
+        'Capture SessionInfo and an independent exact event cursor. Poll explicit bounded pages and resync on gaps; subscribed metadata does not hold a model mirror.'
         return events.SessionSubscription(self._backend, self._token, self.id)._start()
     def edit(self, label: str) -> "Edit":
+        'Begin an explicit candidate with a history label. Reads see candidate changes; normal context exit commits and waits. Confirmed write failures require a new Edit and unknown outcomes require original-call recovery.'
         return Edit(self, label)
     def undo(self) -> Job[Receipt]:
-        return Job[Receipt].start(self._backend, lambda owner: self._backend.history(self._token, False, owner), "published", Receipt.read)
+        'Submit one formal history undo and return Job[Receipt]. Wait for confirmed content/version/history; conflicting or busy sessions reject without silently changing the target.'
+        return Job[Receipt]._start(self._backend, lambda owner: self._backend.history(self._token, False, owner), "published", Receipt._read)
     def redo(self) -> Job[Receipt]:
-        return Job[Receipt].start(self._backend, lambda owner: self._backend.history(self._token, True, owner), "published", Receipt.read)
+        'Submit one formal history redo and return Job[Receipt]. Wait for the actual receipt. Cancelling or a no-op Edit preserves redo according to SDK history rules.'
+        return Job[Receipt]._start(self._backend, lambda owner: self._backend.history(self._token, True, owner), "published", Receipt._read)
 
 class Project:
+    'Host-side format and persistence operations. Every path is absolute on the selected execution host; IO returns explicit Jobs.'
     def __init__(self, session: Session):
         self._session = session
     def run(self, request:modeling.ProjectRequest)->Job[modeling.ProjectReport]:
-        modeling.validate_ProjectRequest(request)
+        'Submit one typed ProjectRequest and return Job[ProjectReport]. Input selects explicit format/IO policy; losses and notices belong to the report. Wait and verify before claiming publication.'
+        _modeling_codec.validate_ProjectRequest(request)
         s=self._session
-        return Job[modeling.ProjectReport].start(s._backend,lambda owner:s._backend.project(s._token,request,owner),"project",lambda raw:modeling.read_ProjectReport(record(raw)["report"]))
+        return Job[modeling.ProjectReport]._start(s._backend,lambda owner:s._backend.project(s._token,request,owner),"project",lambda raw:_modeling_codec.read_ProjectReport(record(raw)["report"]))
     def diagnose(self)->Job[modeling.ProjectReport]:
+        'Submit SDK project diagnostics without publishing edited model content. Returns Job[ProjectReport] with owned diagnostics; wait releases the result slot.'
         return self.run(modeling.ProjectRequestDiagnose())
     def replace(self,path:Path,format:modeling.ImportFormat,*,textures:tuple[modeling.TextureSlot,...]=())->Job[modeling.ProjectReport]:
+        'Submit explicit format import to replace this session. Textures are host-absolute slots. Wait for the real report; generation changes only after confirmed publication.'
         return self.run(modeling.ProjectRequestImport(path=str(absolute(path)),format=format,textures=textures))
     def open(self,path:Path)->Job[modeling.ProjectReport]:
+        'Replace this session from an absolute host project path through an explicit Job. Successful replacement advances generation and invalidates old source-bound addresses/plans.'
         return self.run(modeling.ProjectRequestOpen(path=str(absolute(path))))
     def export(self,path:Path,format:modeling.ExportFormat,*,name:str="model",object_id:str|None=None,allow_loss:bool=False,bake_animation:bool=False,auto_frame_rate:bool=False)->Job[modeling.ProjectReport]:
+        'Submit a selected export to a host-absolute path. allow_loss, animation baking and frame-rate choices are explicit. Read report losses/published and wait for the durable IO outcome.'
         return self.run(modeling.ProjectRequestExport(path=str(absolute(path)),format=format,name=name,object_id=object_id,allow_loss=allow_loss,bake_animation=bake_animation,auto_frame_rate=auto_frame_rate))
     def save(self, path: Path) -> Job[SaveReceipt]:
+        'Submit saving to a host-absolute project folder. Returns Job[SaveReceipt]; wait checks durable and before/after versions. A client-side Path.exists is not evidence of host persistence.'
         s = self._session
         path = absolute(path)
-        return Job[SaveReceipt].start(s._backend, lambda owner: s._backend.save(s._token, path, owner), "saved", SaveReceipt.read)
-
-class Meshes:
-    def __init__(self, session: Session, edit: "Edit | None" = None):
-        self._session, self._edit = session, edit
-    def get(self, id: str) -> Snapshot[meshes.Mesh]:
-        s = self._session
-        def decode(raw: object) -> Snapshot[meshes.Mesh]:
-            return queries.snapshot(raw, meshes.Mesh.read)
-        return known(lambda: decode(s._backend.mesh(s._token, id,
-            None if self._edit is None else self._edit._token, self)), lambda: decode(s._backend.recover(self)))
-
-    def get_many(self, ids: Sequence[str]) -> Batch[meshes.Mesh]:
-        owned = tuple(ids)
-        if any(not isinstance(id, str) for id in owned):
-            raise TypeError("Expected mesh ID text")
-        s = self._session
-        def decode(raw: object) -> Batch[meshes.Mesh]:
-            return queries.batch(raw, "items", meshes.Mesh.read)
-        return known(lambda: decode(s._backend.meshes(s._token,
-            None if self._edit is None else self._edit._token, owned, self)), lambda: decode(s._backend.recover(self)))
-
-
-class Images:
-    def snapshot(self,id:str)->resources.ImageLease:
-        s=self._session
-        return resources.ImageLease.capture(s._backend,s._token,None if self._edit is None else self._edit._token,id)
-    def __init__(self, session: Session, edit: "Edit | None" = None):
-        self._session, self._edit = session, edit
-    def get(self, id: str) -> Snapshot[resources.Image]:
-        s = self._session
-        def decode(raw: object) -> Snapshot[resources.Image]:
-            return queries.snapshot(raw, resources.Image.read)
-        return known(lambda: decode(s._backend.image(s._token, id,
-            None if self._edit is None else self._edit._token, self)), lambda: decode(s._backend.recover(self)))
-
-class EditableImages(Images, ImageConveniences):
-    def __init__(self, session: Session, edit: "Edit"):
-        super().__init__(session, edit)
-        self._owner = edit
-
-class EditableMeshes(Meshes, MeshConveniences):
-    def __init__(self, session: Session, edit: "Edit"):
-        super().__init__(session, edit)
-        self._owner = edit
-
-class Parameters:
-    def __init__(self, session: Session, edit: "Edit | None" = None):
-        self._session, self._edit = session, edit
-    def _read(self, ids: tuple[str, ...] | None) -> Batch[parameters.Parameter]:
-        s = self._session
-        def decode(raw: object) -> Batch[parameters.Parameter]:
-            return queries.batch(raw, "parameters", parameters.Parameter.read)
-        return known(lambda: decode(s._backend.parameters(s._token,
-            None if self._edit is None else self._edit._token, ids, self)), lambda: decode(s._backend.recover(self)))
-
-    def get(self, id: str) -> Snapshot[parameters.Parameter]:
-        return project(lambda: self._read((id,)), queries.single, operation="parameters.get", inputs=(id,))
-
-    def get_many(self, ids: Sequence[str]) -> Batch[parameters.Parameter]:
-        owned = tuple(ids)
-        if any(not isinstance(id, str) for id in owned):
-            raise TypeError("Expected parameters ID text")
-        return self._read(owned)
-
-    def list(self) -> Batch[parameters.Parameter]:
-        return self._read(None)
-
-class EditableParameters(Parameters):
-    def __init__(self, session: Session, edit: "Edit"):
-        super().__init__(session, edit)
-        self._owner = edit
-    def create(self, spec: parameters.ParameterSpec) -> str:
-        return project(lambda: self._owner._construct_and_apply(lambda: parameters.Create(spec)),
-                       single_id, operation="parameters.create", inputs=(spec,))
-    def patch(self, id: str, patch: parameters.ParameterPatch) -> WriteResult:
-        return self._owner._construct_and_apply(lambda: parameters.Patch(id, patch))
-
-class Bindings:
-    def __init__(self, session: Session, edit: "Edit | None" = None):
-        self._session, self._edit = session, edit
-    def _read(self, ids: tuple[str, ...] | None) -> Batch[bindings.MeshBinding]:
-        s = self._session
-        def decode(raw: object) -> Batch[bindings.MeshBinding]:
-            return queries.batch(raw, "bindings", bindings.MeshBinding.read)
-        return known(lambda: decode(s._backend.bindings(s._token,
-            None if self._edit is None else self._edit._token, ids, self)), lambda: decode(s._backend.recover(self)))
-
-    def get(self, id: str) -> Snapshot[bindings.MeshBinding]:
-        return project(lambda: self._read((id,)), queries.single, operation="bindings.get", inputs=(id,))
-
-    def get_many(self, ids: Sequence[str]) -> Batch[bindings.MeshBinding]:
-        owned = tuple(ids)
-        if any(not isinstance(id, str) for id in owned):
-            raise TypeError("Expected bindings ID text")
-        return self._read(owned)
-
-    def list(self) -> Batch[bindings.MeshBinding]:
-        return self._read(None)
-
-class EditableBindings(Bindings):
-    def __init__(self, session: Session, edit: "Edit"):
-        super().__init__(session, edit)
-        self._owner = edit
-    def create(self, spec: bindings.MeshBindingSpec) -> str:
-        return project(lambda: self._owner._construct_and_apply(lambda: bindings.Create(spec)),
-                       single_id, operation="bindings.create", inputs=(spec,))
-    def set_keyform(self, id: str, keyform: bindings.Keyform) -> WriteResult:
-        return self._owner._construct_and_apply(lambda: bindings.SetKeyform(id, keyform))
-
-class Scene:
-    def __init__(self, session: Session, edit: "Edit | None" = None):
-        self._session, self._edit = session, edit
-
-    def get_many(self, ids: Sequence[str]) -> Batch[scene.Summary]:
-        owned = tuple(ids)
-        if any(not isinstance(id, str) for id in owned):
-            raise TypeError("Expected scene IDs")
-        s = self._session
-        def decode(raw: object) -> Batch[scene.Summary]:
-            return queries.batch(raw, "items", scene.Summary.read)
-        return known(lambda: decode(s._backend.scene(s._token,
-            None if self._edit is None else self._edit._token, owned, self)), lambda: decode(s._backend.recover(self)))
-
-    def get(self, id: str) -> Snapshot[scene.Summary]:
-        return project(lambda: self.get_many((id,)), queries.single,
-                       operation="scene.get", inputs=(id,))
-
-
-class Modeling:
-    def __init__(self, session: Session, edit: "Edit | None" = None):
-        self._session, self._edit = session, edit
-    def records(self, query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]:
-        modeling.validate_ModelingQuery(query)
-        s = self._session
-        return known(lambda: queries.records(s._backend.modeling_records(s._token,
-            None if self._edit is None else self._edit._token, query, self)),
-            lambda: queries.records(s._backend.recover(self)))
-
-    def sample_async(self, poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks = sampling.Checks(),
-        expected: Source | None = None) -> Job[Snapshot[sampling.Result]]:
-        owned = sampling.inputs(poses)
-        if not isinstance(checks, sampling.Checks) or (expected is not None and not isinstance(expected, Source)):
-            raise TypeError("Expected Checks and optional Source")
-        checks.wire()
-        s = self._session
-        return Job[Snapshot[sampling.Result]].start(s._backend, lambda owner: s._backend.sample_job(s._token,
-            None if self._edit is None else self._edit._token, owned, checks, expected, owner), "sampled", sampling.read)
-
-    def sample(self, poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks = sampling.Checks(),
-        expected: Source | None = None) -> Snapshot[sampling.Result]:
-        owned = sampling.inputs(poses)
-        if not isinstance(checks, sampling.Checks) or (expected is not None and not isinstance(expected, Source)):
-            raise TypeError("Expected Checks and optional Source")
-        checks.wire()
-        s = self._session
-        return known(lambda: sampling.read(s._backend.sample(s._token,
-            None if self._edit is None else self._edit._token, owned, checks, expected, self)),
-            lambda: sampling.read(s._backend.recover(self)))
+        return Job[SaveReceipt]._start(s._backend, lambda owner: s._backend.save(s._token, path, owner), "saved", SaveReceipt._read)
 
 class EditState(str, Enum):
     editing = "editing"
@@ -450,6 +248,7 @@ class EditState(str, Enum):
 
 
 class Edit(RecoveryOwner):
+    'One mutable candidate owned by one sequential caller. Use session.edit. Successful writes advance sequence; publication is a separate Job and ordinary failures cannot be caught into a successful commit.'
     def __init__(self, session: Session, label: str):
         super().__init__(session._backend)
         self._session = session
@@ -541,10 +340,12 @@ class Edit(RecoveryOwner):
         self._run("release", lambda: self._backend.release(self._token, self), released)
 
     def plan(self, operation: ops.PlannableOperation) -> plans.Plan:
+        'Plan a registered typed operation against this candidate and exact sequence. A subsequent write invalidates the Plan. Apply as the first and only Plan in a batch, then close it.'
         self._ensure_editing()
-        return plans.Plan.create(self._backend, self._session._token, self._token, operation)
+        return plans.Plan._create(self._backend, self._session._token, self._token, operation)
 
     def plan_async(self, operation: ModelingPlanOperation) -> Job[plans.Plan]:
+        'Submit registered modeling planning against this candidate Source. Wait for Plan before applying; a changed candidate makes it stale. Job timeout does not cancel or replay work.'
         self._ensure_editing()
         return _plan_job(self._backend, self._session._token, self._token, operation)
 
@@ -553,6 +354,7 @@ class Edit(RecoveryOwner):
     @overload
     def apply(self, operation: plans.Plan) -> WriteResult: ...
     def apply(self, operation: ops.Operation | plans.Plan) -> WriteResult:
+        'Apply one domain Operation or owned Plan to the candidate. Returns WriteResult with exact new Source and ordered IDs; commit remains separate. On transport loss recover the original call, never resend the operation.'
         return self.apply_many((operation,))
 
     def _construct_and_apply(self, construct: Callable[[], ops.Operation]) -> WriteResult:
@@ -565,6 +367,7 @@ class Edit(RecoveryOwner):
         return self.apply(operation)
 
     def apply_many(self, values: Sequence[ops.Operation | plans.Plan]) -> WriteResult:
+        'Own and execute an ordered atomic candidate batch. At most one Plan is allowed, in the first position. Success advances sequence once; partial candidate failure aborts the Edit and never publishes formal partial content.'
         self._ensure_editing()
         try:
             owned = tuple(values)
@@ -583,7 +386,7 @@ class Edit(RecoveryOwner):
                     op.plan._check(self._backend)
             return self._backend.apply(self._token, wire, self)
         def applied(raw: object) -> WriteResult:
-            value = WriteResult.read(raw)
+            value = WriteResult._read(raw)
             self._state, self._unknown = EditState.editing, None
             return value
         return self._run("apply", execute, applied, owned)
@@ -605,14 +408,16 @@ class Edit(RecoveryOwner):
                 self._failure = self._job._failure
 
     def commit(self) -> Job[Receipt]:
+        'Accept publication and return Job[Receipt]. A recovered commit returns that same Job without implicitly waiting. Wait confirms publication; context exit waits if necessary. Never replay an unknown commit.'
         self._ensure_editing()
         def accepted(raw: object) -> Job[Receipt]:
-            self._job = Job(self._backend, record(raw)["job"], "published", Receipt.read, self._finished)
+            self._job = Job(self._backend, record(raw)["job"], "published", Receipt._read, self._finished)
             self._state, self._unknown = EditState.committing, None
             return self._job
         return self._run("commit", lambda: dict(job=self._backend.commit(self._token, self)), accepted)
 
     def cancel(self) -> None:
+        'Release this candidate without publishing or inventing a Receipt. Cancellation is idempotent after confirmation; a lost release response remains recoverable by its original owner.'
         if self._state == EditState.unknown or self.pending_request is not None:
             raise Busy("BUSY", "Recover the original Edit call before cleanup", edit_state=self._state.value,
                        recovery_action="recover_original")
@@ -664,6 +469,6 @@ def _plan_job(backend: Backend, session: object, edit: object | None,
               operation: ModelingPlanOperation) -> Job[plans.Plan]:
     if not isinstance(operation, MODELING_PLAN_TYPES):
         raise TypeError("This operation is not registered for asynchronous planning")
-    modeling.validate_ModelingCommand(operation)
-    return Job[plans.Plan].start(backend, lambda owner: backend.modeling_plan_job(session, edit, operation, owner),
+    _modeling_codec.validate_ModelingCommand(operation)
+    return Job[plans.Plan]._start(backend, lambda owner: backend.modeling_plan_job(session, edit, operation, owner),
         "planned", lambda raw: plans.Plan(backend)._load(raw))

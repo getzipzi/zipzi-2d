@@ -150,7 +150,7 @@ pub struct PreparedImageInfo {
 }
 }
 zipzi_core::api_record! {
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
 pub struct ImagePixels {
     pub width: u32,
     pub height: u32,
@@ -158,7 +158,7 @@ pub struct ImagePixels {
 }
 }
 zipzi_core::api_record! {
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
 pub struct ImageSnapshot {
     pub source: SourceRef,
     pub id: String,

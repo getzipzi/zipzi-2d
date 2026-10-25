@@ -5,7 +5,7 @@ from typing import cast
 from uuid import UUID
 import math
 import struct
-from .. import _operations as ops, scene, meshes, modeling as m
+from .. import _operations as ops, scene, meshes, resources, modeling as m
 from .._values import Source,Version
 from .._results import Snapshot
 from .._values import record, sequence, string, integer, number
@@ -3304,6 +3304,12 @@ def _read_sourceref(r: Reader) -> Source:
     sequence=integer(r.scalar("Q")) if tag==1 else 0
     return Source(runtime,session,version,edit,sequence)
 
+def _read_imagesnapshot(r: Reader) -> Snapshot[resources.Image]:
+    return Snapshot(_read_sourceref(r), resources.Image(id=r.text(), name=r.text(), pixels=_read_imagepixels(r)))
+
+def _read_imagepixels(r: Reader) -> resources.ImagePixels:
+    return resources.ImagePixels(width=integer(r.scalar('I')), height=integer(r.scalar('I')), rgba=r.bytes())
+
 def encode_operations(operations: tuple[ops.WireOperation, ...]) -> bytes:
     if len(operations)>1024: raise ValueError("Too many authoring operations")
     w=Writer()
@@ -3378,5 +3384,12 @@ def decode_bindings(value:bytes,signature:str)->tuple[m.MeshBinding,...]:
     if signature!=BINDING_SIGNATURE: raise ValueError("Binary binding contract differs")
     r=Reader(value)
     result=tuple(_read_meshbinding(r) for _ in range(r.count()))
+    r.finish()
+    return result
+
+def decode_images(value:bytes,signature:str)->tuple[Snapshot[resources.Image],...]:
+    if signature!='fbafcb840850220e3314b16301323be6': raise ValueError("Binary image contract differs")
+    r=Reader(value)
+    result=tuple(_read_imagesnapshot(r) for _ in range(r.count()))
     r.finish()
     return result

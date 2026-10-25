@@ -1,0 +1,181 @@
+"""Deterministic offline API metadata, sourced from bindings, Rust fields and source docs."""
+import ast
+import re
+import pprint
+import hashlib
+from copy import deepcopy
+from pathlib import Path
+
+TARGETS=frozenset({'client/python/zipzi/_generated/catalog.py','client/python/zipzi/docs/reference.md'})
+
+def compact(source):
+    lines=source.splitlines();result=[];decorated=False;changed=False
+    for line in lines:
+        if line.startswith('@dataclass('):
+            if 'repr=' not in line:line=line[:-1]+', repr=False)'
+            decorated=True
+        elif decorated and line.startswith('class '):
+            if line.endswith(':') and '(' not in line:line=line[:-1]+'(CompactValue):'
+            elif '(Generic[' in line:line=line.replace('(Generic[','(CompactValue, Generic[')
+            decorated=False;changed=True
+        elif line and not line.startswith('@') and not line.startswith('class '):decorated=False
+        result.append(line)
+    if changed:
+        index=next((i+1 for i,x in enumerate(result) if x.startswith('from __future__ import')),1)
+        result.insert(index,'from .._presentation import CompactValue')
+    return '\n'.join(result)+'\n'
+
+
+def render_catalog(contract,output,header,package):
+    # Read sources rather than importing them: generation never creates Runtime,
+    # imports native code, introspects private tokens or depends on an installed wheel.
+    sources={p.relative_to(package).as_posix():p.read_text() for p in (package/'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts}
+    sources.update({p:s for p,s in output.items() if p.endswith('.py')})
+    for p,s in list(output.items()):
+        if p.endswith('.py') and '@dataclass(' in s:output[p]=compact(s);sources[p]=output[p]
+    for path,content in list(output.items()):
+        if path.endswith('/_generated/modeling.py'):
+            tree=ast.parse(content)
+            names=[n.name for n in tree.body if isinstance(n,ast.ClassDef) and not n.name.startswith('_')]
+            names += [n.target.id for n in tree.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and 'TypeAlias' in ast.unparse(n.annotation)]
+            output[path]=content+'\n__all__ = '+repr(names)+'\n'
+            sources[path]=output[path]
+    read_classes=set()
+    for path,content in sources.items():
+        if '/_generated/' not in path and not path.endswith('/_values.py'):continue
+        for node in ast.parse(content).body:
+            if isinstance(node,ast.ClassDef) and any(isinstance(f,ast.FunctionDef) and f.name in {'read','_read'} for f in node.body):read_classes.add(node.name)
+    pattern=r'\b('+'|'.join(sorted(read_classes))+r')\.read\b'
+    for path,content in list(output.items()):
+        if not path.endswith('.py'):continue
+        content=re.sub(pattern,r'\1._read',content)
+        content=content.replace('    def read(', '    def _read(').replace('    def wire(', '    def _wire(').replace('.wire()', '._wire()')
+        output[path]=content;sources[path]=content
+    docs={}
+    def visit(s):
+        if isinstance(s,dict):
+            if 'name' in s and 'fields' in s:
+                docs.setdefault(s['name'].rsplit('::',1)[-1],[(f['name'],f.get('doc') or ('Declared by '+s['name']+'.'+f['name']+'; '+f['shape']['kind']+' value'+('; default '+repr(f['default']) if f.get('default') is not None else '')+'.')) for f in s['fields'] if not f.get('skip')])
+            for value in s.values():visit(value)
+        elif isinstance(s,list):
+            for value in s:visit(value)
+    visit(contract)
+    aliases={'MeshSpec':'MeshCreateSpec','Geometry':'MeshGeometry','ParameterSpec':'ParameterCreateSpec','MeshBindingSpec':'MeshBindingCreateSpec','Checks':'GeometryChecks'}
+    for path,content in list(output.items()):
+        if not path.endswith('.py') or '/_generated/' not in path or '@dataclass' not in content:continue
+        tree=ast.parse(content);lines=content.splitlines(True);edits=[]
+        for node in tree.body:
+            if not isinstance(node,ast.ClassDef) or ast.get_docstring(node) or not any(isinstance(n,ast.Name) and n.id=='CompactValue' for n in node.bases):continue
+            fs=docs.get(aliases.get(node.name,node.name),[])
+            text='Immutable owned '+node.name+' value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+            if fs:text+='\n\nFields:\n'+'\n'.join(name+': '+doc for name,doc in fs)
+            edits.append((node.body[0].lineno-1,'    '+repr(text)+'\n'))
+        for index,value in reversed(edits):lines.insert(index,value)
+        output[path]=''.join(lines);sources[path]=output[path]
+    prefix='client/python/zipzi/'
+    trees={p[len(prefix):-3].replace('/','.') if p!=prefix+'__init__.py' else '':ast.parse(s) for p,s in sources.items() if p.startswith(prefix)}
+    symbols={}
+    def signature(node):
+        if isinstance(node,ast.FunctionDef):
+            arguments=deepcopy(node.args)
+            if arguments.args and arguments.args[0].arg in {'self','cls'}:arguments.args.pop(0)
+            return '('+ast.unparse(arguments)+')'+(' -> '+ast.unparse(node.returns) if node.returns else '')
+        init=next((n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='__init__'),None)
+        if init:
+            if any(a.arg in {'backend','token','session','edit'} for a in init.args.args[1:]) and node.name in {'Runtime','Session','Edit','Job','Plan','PreparedImage','ImageLease','Buffer','ObjectRef','LabelAddress','FieldAddress'}:return '(factory-owned; use the documented public entry)'
+            return signature(init)
+        fields=[n for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_') and not (isinstance(n.annotation,ast.Subscript) and ast.unparse(n.annotation.value)=='ClassVar')]
+        return '('+', '.join(n.target.id+': '+ast.unparse(n.annotation)+(' = '+ast.unparse(n.value) if n.value else '') for n in fields)+')'
+    for module,tree in trees.items():
+        table={}
+        for node in tree.body:
+            if isinstance(node,(ast.ClassDef,ast.FunctionDef)):table[node.name]=node
+            elif isinstance(node,ast.ImportFrom) and node.level:
+                parent=module.split('.')[:-1] if module else []
+                if module.endswith('.__init__'):parent=module.split('.')[:-1]
+                target='.'.join(parent[:len(parent)-node.level+1]+(node.module or '').split('.')).strip('.')
+                for a in node.names:table[a.asname or a.name]=(target,a.name)
+            elif isinstance(node,(ast.Assign,ast.AnnAssign)):
+                for n in getattr(node,'targets',[getattr(node,'target',None)]):
+                    if isinstance(n,ast.Name):table[n.id]=node
+        symbols[module]=table
+    def resolve(module,name,seen=None):
+        seen=set() if seen is None else seen
+        if (module,name) in seen:return None
+        seen.add((module,name));node=symbols.get(module,{}).get(name)
+        if isinstance(node,tuple):return resolve(*node,seen)
+        return node
+    node_modules={id(node):module for module,tree in trees.items() for node in tree.body if isinstance(node,ast.ClassDef)}
+    def public_methods(node,seen=None):
+        seen=set() if seen is None else seen
+        if id(node) in seen:return {}
+        seen.add(id(node));methods={}
+        module=node_modules.get(id(node),'')
+        for base in node.bases:
+            value=base.value if isinstance(base,ast.Subscript) else base
+            parent=resolve(module,value.id) if isinstance(value,ast.Name) else None
+            if isinstance(parent,ast.ClassDef):methods.update(public_methods(parent,seen))
+        methods.update({n.name:n for n in node.body if isinstance(n,ast.FunctionDef) and not n.name.startswith('_')})
+        return methods
+    catalog={'zipzi':dict(kind='module',signature='',documentation='Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release.',example='docs/recipes.py',children=[])}
+    def add(path,node,field_docs=None):
+        kind='type' if isinstance(node,ast.ClassDef) else 'callable' if isinstance(node,ast.FunctionDef) else 'value'
+        text=ast.get_docstring(node) if isinstance(node,(ast.ClassDef,ast.FunctionDef)) else ''
+        fields=field_docs or []
+        if isinstance(node,ast.ClassDef):
+            fields=fields or docs.get(node.name,[])
+            if not fields:fields=[(n.target.id, 'Owned '+ast.unparse(n.annotation)+' value.') for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_')]
+        catalog[path]=dict(kind=kind,signature=signature(node) if kind in {'type','callable'} else '',documentation=text or ('Immutable typed value. See field semantics and the linked workflow.' if kind=='type' else 'Typed public API entry.'),fields=fields,children=[],example='docs/recipes.py')
+        if isinstance(node,ast.ClassDef):
+            for child in public_methods(node).values():
+                add(path+'.'+child.name,child);catalog[path]['children'].append(path+'.'+child.name)
+    # Public paths are explicit reexports in domain modules, plus canonical modeling DTO types/unions.
+    domains=('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops')
+    for module in ('',*domains):
+        public='zipzi'+('.'+module if module else '')
+        if module:catalog[public]=dict(kind='module',signature='',documentation=ast.get_docstring(trees[module]) or '',children=[])
+        names=[]
+        if module=='':
+            for node in trees[''].body:
+                if isinstance(node,(ast.Assign,ast.AugAssign)) and any(isinstance(t,ast.Name) and t.id=='__all__' for t in (node.targets if isinstance(node,ast.Assign) else [node.target])):
+                    try:names+=ast.literal_eval(node.value)
+                    except (ValueError,TypeError):pass
+        elif any(isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='__all__' for t in n.targets) for n in trees[module].body):
+            for n in trees[module].body:
+                if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='__all__' for t in n.targets):names+=ast.literal_eval(n.value)
+        elif module=='modeling':
+            names=[n.name for n in trees['_generated.modeling'].body if isinstance(n,ast.ClassDef) and not n.name.startswith('_')]
+            names += [n.target.id for n in trees['_generated.modeling'].body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and 'TypeAlias' in ast.unparse(n.annotation)]
+        else:
+            for name,node in symbols[module].items():
+                if name.startswith('_') or name in {'Backend','Source','Snapshot','TYPE_CHECKING','Callable','Generic','Self','TypeVar','Plan','Owned','RecoveryOwner','Mapping','Sequence','record','sequence','string','inputs','read','wire','validate','batch','check_limit','OBJECT_KINDS','OPERATION_TYPES','Inputs'}:continue
+                if isinstance(node,tuple) and node[0].startswith('_generated') or isinstance(node,(ast.ClassDef,ast.FunctionDef)) or module=='ops':names.append(name)
+        for name in dict.fromkeys(names):
+            if name in domains:continue
+            node=resolve(module,name)
+            if node is None and module=='modeling':node=resolve('_generated.modeling',name)
+            if node is None:continue
+            add(public+'.'+name,node);catalog[public]['children'].append(public+'.'+name)
+    # Register bound facade paths as users encounter them on Session/Edit.
+    for owner in ('Session','Edit'):
+        for cls,domain in [('Meshes','meshes'),('Parameters','parameters'),('Bindings','bindings'),('Images','resources'),('Scene','scene'),('Modeling','modeling')]:
+            base=resolve('_generated.facades',cls)
+            if base is None:continue
+            path='zipzi.'+owner+'.'+domain;add(path,base)
+            if owner=='Edit':
+                edit=resolve('_generated.facades','Editable'+cls)
+                if edit:
+                    for child in edit.body:
+                        if isinstance(child,ast.FunctionDef) and not child.name.startswith('_'):add(path+'.'+child.name,child);catalog[path]['children'].append(path+'.'+child.name)
+            if 'zipzi.'+owner in catalog:catalog['zipzi.'+owner]['children'].append(path)
+    for owner,module,cls in [('Runtime.sessions','_lifecycle','Sessions'),('Session.project','_lifecycle','Project'),('Runtime.resources','resources','Resources')]:
+        node=resolve(module,cls)
+        if node:add('zipzi.'+owner,node)
+    for row in catalog.values():row['children']=tuple(sorted(set(row.get('children',()))))
+    reference=[header.rstrip(),'# Installed Python API reference','','Generated from the compiled authoring contract, the finite binding directory and lifecycle source docs.','']
+    for path,row in sorted(catalog.items()):
+        reference+=['## '+path,'', '`'+row.get('signature','')+'`','',row.get('documentation',''),'']
+        for field,text in row.get('fields',()):reference+=['- `'+field+'`: '+text]
+        reference+=['']
+    result={'client/python/zipzi/_generated/catalog.py':header+'"""Offline API directory; no imports or host probes."""\nfrom typing import TypedDict, NotRequired\nfrom collections.abc import Sequence\nclass _Entry(TypedDict):\n    kind: str\n    signature: str\n    documentation: str\n    fields: NotRequired[Sequence[tuple[str,str]]]\n    children: tuple[str,...]\n    example: NotRequired[str]\nCONTRACT = "zipzi-runtime-p3a-345-1"\nPACKAGE_VERSION = "0.1.0"\nCONTRACT_SHA256 = '+repr(hashlib.sha256(__import__('json').dumps(contract,sort_keys=True).encode()).hexdigest())+'\nCATALOG: dict[str,_Entry] = '+pprint.pformat(catalog,width=120,sort_dicts=True)+'\n', 'client/python/zipzi/docs/reference.md':'\n'.join(reference)+'\n'}
+    return result

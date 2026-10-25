@@ -6,6 +6,8 @@ from ._errors import Busy, OutcomeUnknown, PendingRequest
 from ._calls import Call
 if TYPE_CHECKING:
     from .backends import Backend
+else:
+    Backend = object
 T = TypeVar("T")
 
 class RecoveryOwner:
