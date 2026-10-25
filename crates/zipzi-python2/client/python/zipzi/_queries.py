@@ -13,7 +13,7 @@ def snapshot(raw: object, read: Callable[[object], T]) -> Snapshot[T]:
         value = cast(Snapshot[object], raw)
         return Snapshot(value.source, read(value.value))
     value = record(raw)
-    return Snapshot(Source.read(value["source"]), read(value))
+    return Snapshot(Source._read(value["source"]), read(value))
 
 
 def batch(raw: object, key: str, read: Callable[[object], T]) -> Batch[T]:
@@ -21,7 +21,7 @@ def batch(raw: object, key: str, read: Callable[[object], T]) -> Batch[T]:
         value = cast(Batch[object], raw)
         return Batch(value.source, tuple(read(item) for item in value.items))
     value = record(raw)
-    return Batch(Source.read(value["source"]), tuple(read(item) for item in sequence(value[key])))
+    return Batch(Source._read(value["source"]), tuple(read(item) for item in sequence(value[key])))
 
 
 def single(value: Batch[T]) -> Snapshot[T]:
@@ -32,14 +32,14 @@ def single(value: Batch[T]) -> Snapshot[T]:
 
 def records(value: object) -> Snapshot[modeling.OwnedModelingRecords]:
     raw = record(value)
-    return Snapshot(Source.read(raw["source"]), modeling.read_OwnedModelingRecords(raw["records"]))
+    return Snapshot(Source._read(raw["source"]), modeling.read_OwnedModelingRecords(raw["records"]))
 
 
 def capabilities(value: object) -> Snapshot[modeling.Capabilities]:
     raw = record(value)
-    return Snapshot(Source.read(raw["source"]), modeling.read_Capabilities(raw["capabilities"]))
+    return Snapshot(Source._read(raw["source"]), modeling.read_Capabilities(raw["capabilities"]))
 
 
 def editor_context(value: object) -> Snapshot[modeling.EditorContext | None]:
     raw = record(value)
-    return Snapshot(Source.read(raw["source"]), None if raw["context"] is None else modeling.read_EditorContext(raw["context"]))
+    return Snapshot(Source._read(raw["source"]), None if raw["context"] is None else modeling.read_EditorContext(raw["context"]))

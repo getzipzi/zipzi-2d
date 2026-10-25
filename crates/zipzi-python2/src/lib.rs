@@ -10,6 +10,7 @@ mod extension_bridge;
 mod generated;
 mod input_budget;
 use input_budget::input_lease;
+mod discovery_bridge;
 mod modeling_bridge;
 mod parameter_bridge;
 mod project_bridge;
@@ -304,7 +305,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-13"
+        "zipzi-python2-14"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
@@ -332,19 +333,27 @@ impl NativeRuntime {
         let result = py.detach(|| self.host.close());
         reply(py, result, "close", |()| Ok(py.None().into_bound(py)))
     }
-    fn create_session(&self, py: Python<'_>, document_id: &str) -> PyResult<Py<PyDict>> {
+    #[pyo3(signature = (document_id=None))]
+    fn create_session(&self, py: Python<'_>, document_id: Option<&str>) -> PyResult<Py<PyDict>> {
         let _input = input_lease!(
             self,
             py,
-            document_id.len().saturating_mul(4).saturating_add(128),
+            document_id
+                .map_or(0, str::len)
+                .saturating_mul(4)
+                .saturating_add(128),
             "sessions.create",
             None
         );
-        let document_id = document_id.to_owned();
+        let document_id = document_id.map(str::to_owned);
         let client = self.client;
         let value = py.detach(|| {
             self.host.call(move |rt| {
-                rt.create_session(client, &document_id, zipzi_core::ModelSetup::default())
+                rt.create_session_auto(
+                    client,
+                    document_id.as_deref(),
+                    zipzi_core::ModelSetup::default(),
+                )
             })
         });
         reply(py, value, "sessions.create", |id| {

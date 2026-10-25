@@ -19,7 +19,7 @@ no JSON transport conversion or direct SDK session owner.
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |
 | `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract and selected mesh/resource/Plan generation |
-| `client/python/zipzi/_generated/`, `src/generated/` | 29 checked-in mechanical values/operations/DTO/scene/modeling/binary outputs |
+| `client/python/zipzi/_generated/`, `src/generated/` | 37 managed outputs, including uniform facades, backend bindings, metadata, public reexports and the offline API reference |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
 From the repository root, using the workspace's CPython 3.14 tools:
@@ -353,7 +353,7 @@ release their tables. Every create/read/plan/close retains its own recovery owne
 
 ## Complete Runtime R4 routes
 
-The native pairing contract is `zipzi-python2-13`; IPC is `zipzi-runtime-p3a-2-1`.
+The native pairing contract is `zipzi-python2-14`; IPC is `zipzi-runtime-p3a-345-1`.
 Rebuild both adapters and hosts after contract changes. Compiled Rust serde
 shapes generate `zipzi.modeling`, native constructors/writers and the binary
 array codec. `edit.apply` accepts the full `ModelingCommand` family, including
@@ -421,3 +421,41 @@ CPU fixture numbers do not claim Editor latency.
 Animation, independent Preview and observer/inspection remain later Runtime capabilities. See the
 [construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).
+
+
+## P3A-3/4/5 implementation (acceptance deferred)
+
+This implementation is staged for P3A-6. By user request, no behavior, type,
+installed-package, Editor, performance or agent acceptance was run in this slice.
+The generator was run and the native adapter was compiled while implementing.
+
+All five object collections now provide `get(id, expected=...)`,
+`get_many(ids, expected=...)` and `list(name=None, limit=128, cursor=None)` on both
+Session and Edit. List returns `Page[Summary]` in SDK storage order, with exact
+case-sensitive names and an opaque source-bound continuation. Restart explicitly
+on `STALE_SOURCE`; an empty page can still advance a bounded scan. Metadata
+never includes geometry/keyforms/pixels. Resources also support selected batches.
+
+`runtime.capabilities()` and `runtime.limits()` query host facts. Sessions can
+`detach()` or `close(discard_modified=False)`; aliases share binding state,
+modified/other-client/active-work refusals leave the document intact. Creation
+accepts an omitted document UUID allocated by Rust.
+
+`zipzi.describe("Session.meshes.list")` reads the installed offline directory.
+The [short guide](client/python/zipzi/docs/guide.md),
+[generated API reference](client/python/zipzi/docs/reference.md) and
+[executable recipes](client/python/zipzi/docs/recipes.py) are included as package
+resources. Pure DTO codecs and internal ownership factories use private names.
+Owned DTO and query-container repr/summary is bounded and does no IO.
+
+Generation uses `schema/authoring.json`; API bindings, public reexports, complete
+request registration and transport-hook metadata come from the same finite
+binding layer. Rust field docs survive export into class docstrings/reference.
+Runtime state machines, identity rules, resource ownership and binary transfer
+stages remain handwritten. New normal native/IPC pairs are required; no fallback.
+
+For the later focused run, `./tools/test-sdk.sh python2 --discovery` selects the
+staged regressions. Agent packets and recorders are prepared via
+`tools/python/python2_agent_tasks.py --help`; preparing fixtures does not run an
+agent or prove G01–G08. Full doc/typing coverage, fault-controller integration and
+independent task execution remain part of the later combined acceptance.

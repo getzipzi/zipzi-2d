@@ -1,7 +1,13 @@
 /// R0 defaults for the objects enabled in R1. Estimates conservatively count
 /// shared document content per holder; these are not RSS or GPU limits.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct RuntimeLimits {
+    /// Maximum records returned by one collection page or selected batch.
+    pub collection_records: usize,
+    /// Maximum escaped metadata bytes in one collection page.
+    pub collection_bytes: usize,
+    /// Maximum entries examined by one collection page.
+    pub collection_scan: usize,
     pub clients: usize,
     pub sessions: usize,
     pub edits_per_client_session: usize,
@@ -29,6 +35,9 @@ pub struct RuntimeLimits {
 impl Default for RuntimeLimits {
     fn default() -> Self {
         Self {
+            collection_records: 256,
+            collection_bytes: 256 << 10,
+            collection_scan: 16384,
             clients: 8,
             sessions: 32,
             edits_per_client_session: 1,

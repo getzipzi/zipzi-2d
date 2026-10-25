@@ -73,7 +73,7 @@ class Python2Codegen(unittest.TestCase):
             with self.assertRaises(ValueError):gen.render(invalid)
 
     def contract(self):
-        return json.loads((PACKAGE / 'schema/mesh.json').read_text())
+        return json.loads((PACKAGE / 'schema/authoring.json').read_text())
 
     def files(self, folder):
         return {p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob('*') if p.is_file()}

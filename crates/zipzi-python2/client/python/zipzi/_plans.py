@@ -5,6 +5,8 @@ from ._owned import Owned
 from ._values import record
 if TYPE_CHECKING:
     from .backends import Backend
+else:
+    Backend = object
 from ._generated.plan_values import PlanCost as PlanCost, PlanReport as PlanReport
 from . import ops
 
@@ -16,11 +18,11 @@ class Plan(Owned):
     def _load(self, value: object) -> Plan:
         r = record(value)
         self._token = r["plan"]
-        self._report = PlanReport.read(r["source"], r["report"])
+        self._report = PlanReport._read(r["source"], r["report"])
         return self
 
     @classmethod
-    def create(cls, backend: Backend, session: object, edit: object | None, operation: ops.PlannableOperation) -> Plan:
+    def _create(cls, backend: Backend, session: object, edit: object | None, operation: ops.PlannableOperation) -> Plan:
         from . import _planning
         plan = cls(backend)
         return plan._request("plan", lambda: _planning.request(backend, session, edit, operation, plan), plan._load)

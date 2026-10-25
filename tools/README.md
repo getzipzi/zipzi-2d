@@ -323,3 +323,13 @@ between profiles; retain a separate copy under `target/` when comparing both.
 
 These commands create local unsigned artifacts. They do not upload releases,
 notarize apps, change remote repositories or verify GitHub license presentation.
+
+
+P3A-3/4/5 implementation is staged without acceptance, by user request.
+`./tools/test-sdk.sh python2 --discovery` selects the new focused collection,
+Session lifecycle and offline catalog regressions for a later run. It is not a
+record of a completed gate. `uv run --locked python tools/python/python2_agent_tasks.py --help`
+describes fixed installed-only agent packets and bounded run recording; preparation
+does not run a model or mark G01–G08 passed. Fixture data lives in
+`fixtures/python_sdk_agent/`; private controller manifests and raw run events belong
+under `target/`, while plan directories keep Markdown conclusions only.

@@ -84,7 +84,7 @@ def main():
         report=dict(schema=1,status='passed',base_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
             dirty_files=subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).splitlines(),commands=commands,
             artifacts=[dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in artifacts],
-            source_contract_sha256=hashlib.sha256((archived/'schema/mesh.json').read_bytes()).hexdigest(),
+            source_contract_sha256=hashlib.sha256((archived/'schema/authoring.json').read_bytes()).hexdigest(),
             native_source_scope='SDK dependency closure plus complete Python client, native adapter, Rust declarations, exporter and generator; pure client sdist carries the same Python sources and generated outputs')
         (output/'results.json').write_text(json.dumps(report,indent=2)+'\n')
         print(output/'results.json')

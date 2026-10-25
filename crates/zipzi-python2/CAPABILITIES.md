@@ -70,3 +70,13 @@ use root `Snapshot[T]`/`Batch[T]` with pure payloads and exact empty-batch sourc
 Domain operations, the common plan/apply path, generated parameter/binding/sampling/
 event/reference DTOs and root `PlanCost`/`PlanReport` are implemented.
 `Page`/`PageCursor` are value shapes; collection pagination remains P3A-4.
+
+
+P3A-3/4/5 implementation is staged; **not accepted**. It adds generated uniform
+facades/backend registration and unique transport hooks, exact-source metadata
+pages and selected reads, Runtime capabilities/limits, Session close/detach and
+alias invalidation, bounded owned-value output, private codecs/factories, and the
+offline catalog/reference/guide/recipes. Agent fixture inputs, installed packet
+preparation and bounded recording are present; independent runs and external
+fault-controller integration have not been executed. Only generation and build
+work was performed. Earlier P3A-0–2 acceptance is not reused as proof for these APIs.

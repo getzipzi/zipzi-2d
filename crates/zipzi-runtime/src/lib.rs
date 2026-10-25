@@ -30,3 +30,8 @@ pub use zipzi_project::TransferReservation;
 
 #[cfg(feature = "test-support")]
 pub mod test_support;
+
+pub use runtime::{
+    CollectionDomain, CollectionPage, CollectionQuery, ObjectSummary, RuntimeCapabilities,
+    Selection,
+};

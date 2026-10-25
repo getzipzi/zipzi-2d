@@ -1207,6 +1207,7 @@ macro_rules! scene_id {
                     transparent: true,
                     tuple: true,
                     fields: vec![crate::api_shape::SerdeField {
+                        doc: "Persistent scene object identifier.".into(),
                         rust_name: "0".into(),
                         name: "value".into(),
                         shape: crate::api_shape::Shape::String,

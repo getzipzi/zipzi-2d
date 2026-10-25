@@ -80,7 +80,7 @@ class P3AContract(unittest.TestCase):
         self.assertEqual(session.info().history, (1, 0))
 
     def test_scene_get_recovery_keeps_single_snapshot(self):
-        runtime = self.runtime("connected", drop="scene_snapshot")
+        runtime = self.runtime("connected", drop="read_selection")
         session = runtime.sessions.create(support.uid(1))
         with session.edit("create part") as edit:
             part = edit.apply(scene.CreatePart(scene.PartSpec("Face"))).ids[0]

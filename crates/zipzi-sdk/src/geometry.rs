@@ -7,9 +7,13 @@ zipzi_core::api_record! {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
 pub struct MeshGeometry {
+    /// Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
     pub vertex_ids: Vec<VertexId>,
+    /// Model-space XY coordinates ordered by vertex_ids.
     pub positions: Vec<Vec2>,
+    /// Texture UV coordinates ordered by vertex_ids.
     pub uvs: Vec<Vec2>,
+    /// Triangle entries reference vertex_ids values, never offsets into positions.
     pub triangles: Vec<[VertexId; 3]>,
 }
 }

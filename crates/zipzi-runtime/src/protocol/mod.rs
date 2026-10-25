@@ -16,7 +16,7 @@ mod binary;
 pub use binary::{BinaryReply, BinarySlice, MAX_BINARY_CHUNK, MAX_BINARY_HEADER};
 mod values;
 use values::*;
-pub const CONTRACT: &str = "zipzi-runtime-p3a-2-1";
+pub const CONTRACT: &str = "zipzi-runtime-p3a-345-1";
 pub const SDK_BUILD: &str = env!("ZIPZI_RUNTIME_SDK_BUILD");
 pub const MAX_FRAME: usize = 16 << 20;
 
@@ -65,6 +65,25 @@ pub struct Request {
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 enum Operation {
     ListSessions,
+    RuntimeCapabilities,
+    RuntimeLimits,
+    CollectionPage {
+        input: crate::CollectionQuery,
+    },
+    ReadSelection {
+        session: SessionId,
+        edit: Option<EditId>,
+        domain: crate::CollectionDomain,
+        ids: Vec<String>,
+        expected: Option<SourceRef>,
+    },
+    DetachSession {
+        session: SessionId,
+    },
+    CloseSession {
+        session: SessionId,
+        discard_modified: bool,
+    },
     Statistics,
     EditorContext {
         session: SessionId,
@@ -94,7 +113,7 @@ enum Operation {
         action: String,
     },
     CreateSession {
-        document_id: String,
+        document_id: Option<String>,
         #[serde(default)]
         setup: ModelSetup,
     },
@@ -510,6 +529,9 @@ impl Protocol {
         remote.disconnected = None;
         remote.connection = self.next_connection;
         let mut capabilities = vec![
+            "collection_pages",
+            "session_lifecycle",
+            "runtime_introspection",
             "typed_binary_arrays",
             "typed_full_modeling",
             "typed_field_addresses",
@@ -781,6 +803,61 @@ impl Protocol {
         op: Operation,
     ) -> crate::Result<Value> {
         let value = match op {
+            Operation::RuntimeCapabilities => {
+                let mut c = rt.runtime_capabilities();
+                c.editor_windows = self.windows;
+                json!(c)
+            }
+            Operation::RuntimeLimits => json!(rt.limits()),
+            Operation::CollectionPage { input } => json!(rt.collection_page(client, input)?),
+            Operation::ReadSelection {
+                session,
+                edit,
+                domain,
+                ids,
+                expected,
+            } => {
+                rt.check_authoring_source(client, session, edit, expected)?;
+                if ids.len() > rt.limits().collection_records {
+                    return Err(RuntimeError::Budget("collection_records"));
+                }
+                match domain {
+                    CollectionDomain::Meshes => self.execute(
+                        rt,
+                        client,
+                        Operation::MeshSnapshots(crate::authoring::MeshBatchQuery {
+                            session,
+                            edit,
+                            ids,
+                        }),
+                    )?,
+                    CollectionDomain::Bindings => self.execute(
+                        rt,
+                        client,
+                        Operation::MeshBindingSnapshot(crate::authoring::MeshBindingQuery {
+                            session,
+                            edit,
+                            ids: Some(ids),
+                        }),
+                    )?,
+                    _ => match rt.read_selection(client, session, edit, domain, ids, expected)? {
+                        Selection::Parameters(v) => json!(v),
+                        Selection::Scene(v) => json!(v),
+                        Selection::Resources(source, images) => {
+                            rt.image_selection_blob(client, source, images)?
+                        }
+                        _ => unreachable!(),
+                    },
+                }
+            }
+            Operation::DetachSession { session } => {
+                rt.detach_session(client, session)?;
+                Value::Null
+            }
+            Operation::CloseSession {
+                session,
+                discard_modified,
+            } => info(&rt.close_session(client, session, discard_modified)?),
             #[cfg(feature = "test-support")]
             Operation::TestControl { action } => json!(rt.test_controller().command(&action)?),
             Operation::CancelJob { job } => {
@@ -834,7 +911,7 @@ impl Protocol {
                 json!(rt.list_sessions().iter().map(info).collect::<Vec<_>>())
             }
             Operation::CreateSession { document_id, setup } => {
-                json!(rt.create_session(client, &document_id, setup)?)
+                json!(rt.create_session_auto(client, document_id.as_deref(), setup)?)
             }
             Operation::AttachSession { session } => {
                 rt.attach_session(client, session)?;
