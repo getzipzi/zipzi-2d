@@ -12,6 +12,10 @@ crate-type = ["cdylib"]
 test = false
 doctest = false
 
+[features]
+test-support = ["zipzi-runtime/test-support"]
+bench-instrumentation = ["zipzi-runtime/bench-instrumentation"]
+
 [dependencies]
 zipzi-core.workspace = true
 zipzi-sdk.workspace = true

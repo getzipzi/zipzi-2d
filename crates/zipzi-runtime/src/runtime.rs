@@ -59,6 +59,8 @@ pub struct RegistrySubscription {
 }
 
 pub struct Runtime {
+    #[cfg(feature = "test-support")]
+    control: Arc<crate::test_support::Control>,
     instance: RuntimeInstanceId,
     next_id: u64,
     limits: RuntimeLimits,
@@ -90,6 +92,8 @@ impl Runtime {
             limits.registry_event_bytes,
         );
         Self {
+            #[cfg(feature = "test-support")]
+            control: Arc::default(),
             image_budget: zipzi_project::ImageMemoryBudget::new(limits.image_bytes),
             plans: HashMap::new(),
             prepared_images: HashMap::new(),
@@ -125,6 +129,10 @@ impl Runtime {
             self.edits.len(),
             self.jobs.len(),
         )
+    }
+    #[cfg(feature = "test-support")]
+    pub fn test_controller(&self) -> Arc<crate::test_support::Control> {
+        self.control.clone()
     }
     pub fn image_memory_usage(&self) -> zipzi_project::ImageMemoryUsage {
         self.image_budget.usage()
@@ -1093,6 +1101,7 @@ pub(crate) fn serialized_bytes(value: &impl serde::Serialize) -> Result<usize> {
             Ok(())
         }
     }
+    crate::metrics::admission_encode();
     let mut counter = Counter(0);
     serde_json::to_writer(&mut counter, value).map_err(|_| RuntimeError::InvalidReference)?;
     Ok(counter.0)

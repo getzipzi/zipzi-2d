@@ -16,6 +16,8 @@ fixed geometry/history and the independent Rust SDK tests.
 | Commit/Undo/Redo | Edit context, explicit Jobs | Runtime request/completion routes | One publication, no-op/cancel preserves redo | Implemented |
 | Save/open | Project/Sessions Jobs | `request_save/request_open` | Save, close host, reopen and compare geometry/history | Implemented |
 | Error/recovery ownership | Pure Python errors, `recover()` | Protocol request retention before shared handler | Apply/commit/Job/read/start/cleanup loss; foreign recovery owner refused | Implemented |
+| Job lifecycle | `state/cancel/wait/close` | Runtime Job table + owner completion | Queued/entered IO cancellation, real IO and worker failures, retained-slot budget, exact recovery owner | Selected P1 implemented |
+| Explicit client close | Runtime close, same-ID acknowledgment recovery | `release_client` / LocalHost shutdown | Immediate client lease cleanup, formal preservation, entered IO finishes; last native owner releases lock | Selected P1 implemented |
 | Native blocking/lifetime | Job wait, close, destruction | Local owner + CPU workers | Native waits, idempotent close, Rust completion/last-owner tests | Implemented |
 | Import without native | Values, errors, Connected backend | Pure Python | Isolated process without extension | Implemented |
 | PreparedImage | `runtime.resources.prepare_image`, `pixels`, `close`/context | Client-owned Runtime image table + SDK preparation | A/B independence; 100 cancelled sources reclaim actual Rust bytes; response-loss recovery; both installed wheels | Selected P1 implemented; 1 MiB limit |
@@ -35,7 +37,9 @@ Jobs; failed writes cannot commit; unknown outcomes retain the original owner.
 Coordinates are finite f32, IDs are u32, array order is explicit, and all native
 input storage is owned before detaching from Python.
 
-P0/P1 remain incomplete while lifecycle failure matrices and measurement gaps
-remain. Implemented source APIs and installed-package acceptance are tracked
+The selected P1 slice has a completed lifecycle acceptance matrix. P0 now records
+both backends with separate timing/probe binaries and frozen comparison gates;
+its explicit copy and requested-heap scopes are documented. Later domain, binary,
+CPU/GPU and platform work remains in its own phases. Implemented source APIs and installed-package acceptance are tracked
 separately. New capabilities require explicit handlers and independent evidence;
 there are no generated unsupported-operation placeholders.

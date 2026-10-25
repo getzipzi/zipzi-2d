@@ -176,11 +176,19 @@ fn geometry(py: Python<'_>, value: MeshGeometry) -> PyResult<Bound<'_, PyDict>> 
     Ok(d)
 }
 fn read_points(value: Bound<'_, PyAny>) -> PyResult<Vec<Vec2>> {
-    Ok(value
-        .extract::<Vec<(f32, f32)>>()?
-        .into_iter()
-        .map(|(x, y)| Vec2::new(x, y))
-        .collect())
+    let pairs = value.extract::<Vec<(f32, f32)>>()?;
+    zipzi_runtime::metrics::materialized_input(pairs.len() * std::mem::size_of::<(f32, f32)>());
+    Ok(pairs.into_iter().map(|(x, y)| Vec2::new(x, y)).collect())
+}
+fn read_ids(value: Bound<'_, PyAny>) -> PyResult<Vec<u32>> {
+    let ids: Vec<u32> = value.extract()?;
+    zipzi_runtime::metrics::materialized_input(ids.len() * std::mem::size_of::<u32>());
+    Ok(ids)
+}
+fn read_triangles(value: Bound<'_, PyAny>) -> PyResult<Vec<[u32; 3]>> {
+    let triangles: Vec<[u32; 3]> = value.extract()?;
+    zipzi_runtime::metrics::materialized_input(triangles.len() * std::mem::size_of::<[u32; 3]>());
+    Ok(triangles)
 }
 fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>> {
     operations
@@ -220,10 +228,10 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
                             name: spec.getattr("name")?.extract()?,
                             texture_asset_id: spec.getattr("texture_asset_id")?.extract()?,
                             geometry: MeshGeometry {
-                                vertex_ids: g.getattr("vertex_ids")?.extract()?,
+                                vertex_ids: read_ids(g.getattr("vertex_ids")?)?,
                                 positions: read_points(g.getattr("positions")?)?,
                                 uvs: read_points(g.getattr("uvs")?)?,
-                                triangles: g.getattr("triangles")?.extract()?,
+                                triangles: read_triangles(g.getattr("triangles")?)?,
                             },
                         },
                     })
@@ -234,7 +242,7 @@ fn read_operations(operations: &Bound<'_, PyAny>) -> PyResult<Vec<EditOperation>
                 }),
                 "set_positions" => Ok(MeshOperation::SetPositions {
                     id: op.getattr("id")?.extract()?,
-                    vertex_ids: op.getattr("vertex_ids")?.extract()?,
+                    vertex_ids: read_ids(op.getattr("vertex_ids")?)?,
                     positions: read_points(op.getattr("positions")?)?,
                 }),
                 _ => Err(pyo3::exceptions::PyTypeError::new_err(
@@ -249,6 +257,7 @@ fn pixels(py: Python<'_>, r: ImagePixels) -> PyResult<Bound<'_, PyDict>> {
     let d = PyDict::new(py);
     d.set_item("width", r.width)?;
     d.set_item("height", r.height)?;
+    zipzi_runtime::metrics::copy_payload(r.rgba.len());
     d.set_item("rgba", PyBytes::new(py, &r.rgba))?;
     Ok(d)
 }
@@ -302,7 +311,29 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-2"
+        "zipzi-python2-3"
+    }
+    #[cfg(feature = "bench-instrumentation")]
+    fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
+        let s = if reset {
+            zipzi_runtime::metrics::reset()
+        } else {
+            zipzi_runtime::metrics::snapshot()
+        };
+        let d = PyDict::new(py);
+        d.set_item("enabled", s.enabled)?;
+        d.set_item("rust_live_bytes", s.rust_live_bytes)?;
+        d.set_item("rust_start_bytes", s.rust_start_bytes)?;
+        d.set_item("rust_peak_bytes", s.rust_peak_bytes)?;
+        d.set_item("rust_allocations", s.rust_allocations)?;
+        d.set_item("rust_allocated_bytes", s.rust_allocated_bytes)?;
+        d.set_item("json_encodes", s.json_encodes)?;
+        d.set_item("json_decodes", s.json_decodes)?;
+        d.set_item("json_value_builds", s.json_value_builds)?;
+        d.set_item("json_admission_encodes", s.json_admission_encodes)?;
+        d.set_item("materialized_input_bytes", s.materialized_input_bytes)?;
+        d.set_item("copied_payload_bytes", s.copied_payload_bytes)?;
+        Ok(d.unbind())
     }
     fn close(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
         let result = py.detach(|| self.host.close());
@@ -417,6 +448,7 @@ impl NativeRuntime {
                 "Initial pixel transport is limited to 1 MiB",
             ));
         }
+        zipzi_runtime::metrics::copy_payload(rgba.as_bytes().len());
         let rgba = rgba.as_bytes().to_vec();
         let client = self.client;
         let value = py.detach(|| {
@@ -606,6 +638,38 @@ impl NativeRuntime {
         });
         reply(py, value, "session.history", |id| {
             Ok(Py::new(py, JobToken { id })?.into_bound(py).into_any())
+        })
+    }
+    #[cfg(feature = "test-support")]
+    fn _test_control(&self, py: Python<'_>, action: String) -> PyResult<Py<PyDict>> {
+        reply(
+            py,
+            self.host.test_control(&action).map_err(HostError::Runtime),
+            "test.control",
+            |v| Ok(v.into_pyobject(py)?.to_owned().into_any()),
+        )
+    }
+    fn cancel_job(&self, py: Python<'_>, job: &JobToken) -> PyResult<Py<PyDict>> {
+        let (client, job) = (self.client, job.id);
+        let result = py.detach(|| self.host.call(move |rt| rt.cancel_job(client, job)));
+        reply(py, result, "job.cancel", |()| Ok(py.None().into_bound(py)))
+    }
+    fn job_state(&self, py: Python<'_>, job: &JobToken) -> PyResult<Py<PyDict>> {
+        let (client, job) = (self.client, job.id);
+        let result = py.detach(|| {
+            self.host
+                .call(move |rt| Ok(rt.job_info(client, job)?.state))
+        });
+        reply(py, result, "job.state", |state| {
+            let name = match state {
+                JobState::Queued => "queued",
+                JobState::Running => "running",
+                JobState::Cancelling => "cancelling",
+                JobState::Succeeded => "succeeded",
+                JobState::Failed => "failed",
+                JobState::Cancelled => "cancelled",
+            };
+            Ok(name.into_pyobject(py)?.into_any())
         })
     }
     fn wait(&self, py: Python<'_>, job: &JobToken) -> PyResult<Py<PyDict>> {

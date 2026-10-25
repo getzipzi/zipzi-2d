@@ -8,6 +8,7 @@ authors.workspace = true
 description = "Project persistence, document codec, resource management and publication for Zipzi 2D"
 
 [features]
+bench-instrumentation = []
 binary-prototype = ["dep:ciborium"]
 
 [dependencies]

@@ -19,7 +19,7 @@ class LocalBackend:
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-2":
+        if self._native.contract != "zipzi-python2-3":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 
@@ -55,6 +55,12 @@ class LocalBackend:
         return unwrap(self._native.open(str(path)))
     def history(self, session: object, redo: bool, owner: object) -> object:
         return unwrap(self._native.history(session, redo))
+    def cancel_job(self, job: object, owner: object) -> None:
+        unwrap(self._native.cancel_job(job))
+    def job_state(self, job: object, owner: object) -> object:
+        return unwrap(self._native.job_state(job))
+    def _test_control(self, action: str) -> object:
+        return unwrap(self._native._test_control(action))
     def wait(self, job: object, kind: JobKind, owner: object) -> object:
         return unwrap(self._native.wait(job))
     def pending(self, owner: object) -> PendingRequest | None:

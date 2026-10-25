@@ -2,7 +2,8 @@
 //! decoding, sockets and workers never borrow a formal session.
 use crate::*;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
+macro_rules! json { ($($value:tt)*) => {{ crate::metrics::value_build(); serde_json::json!($($value)*) }}; }
 use sha2::{Digest, Sha256};
 use std::{
     collections::{HashMap, VecDeque},
@@ -60,6 +61,21 @@ pub struct Request {
 enum Operation {
     ListSessions,
     Statistics,
+    ReleaseClient,
+    #[cfg(feature = "bench-instrumentation")]
+    Diagnostics {
+        reset: bool,
+    },
+    CancelJob {
+        job: JobId,
+    },
+    JobStatus {
+        job: JobId,
+    },
+    #[cfg(feature = "test-support")]
+    TestControl {
+        action: String,
+    },
     CreateSession {
         document_id: String,
         #[serde(default)]
@@ -296,7 +312,7 @@ impl Protocol {
     ) -> Value {
         match auth {
             None => self.hello(runtime, value, now),
-            Some(auth) => match serde_json::from_value(value) {
+            Some(auth) => match crate::metrics::from_value(value) {
                 Ok(request) => self.handle(runtime, auth.client, auth.connection, request, now),
                 Err(e) => failure("INVALID_REQUEST", &e.to_string()),
             },
@@ -322,7 +338,7 @@ impl Protocol {
         if hello.get("protocol").and_then(Value::as_str) != Some(CONTRACT) {
             return failure("PROTOCOL_MISMATCH", "Incompatible local protocol");
         }
-        let hello: Hello = match serde_json::from_value(hello) {
+        let hello: Hello = match crate::metrics::from_value(hello) {
             Ok(hello) => hello,
             Err(e) => return failure("INVALID_HANDSHAKE", &e.to_string()),
         };
@@ -374,6 +390,7 @@ impl Protocol {
         let mut capabilities = vec![
             "typed_meshes",
             "typed_resources_plans",
+            "typed_job_lifecycle",
             "modeling_batch",
             "modeling_records",
             "modeling_cpu_samples",
@@ -470,7 +487,7 @@ impl Protocol {
         // Status queries never advance the admission watermark. Otherwise asking
         // whether an unreceived request ran would make its original ID expire.
         if request.operation.get("op").and_then(Value::as_str) == Some("request_status") {
-            return match serde_json::from_value::<Operation>(request.operation) {
+            return match crate::metrics::from_value::<Operation>(request.operation) {
                 Ok(Operation::RequestStatus { request_id }) => {
                     if let Some(r) = remote.records.iter().find(|r| r.id == request_id) {
                         success(json!({"state": "completed", "response": r.result}))
@@ -486,7 +503,7 @@ impl Protocol {
         // Value's sorted map gives a canonical key order. Hashes bound input storage,
         // including large apply batches, without a collision-prone short hash.
         let digest: [u8; 32] =
-            Sha256::digest(serde_json::to_vec(&request.operation).unwrap()).into();
+            Sha256::digest(crate::metrics::encode(&request.operation).unwrap()).into();
         if let Some(record) = remote.records.iter().find(|r| r.id == request.request_id) {
             return if record.digest == digest {
                 record.result.clone()
@@ -500,8 +517,8 @@ impl Protocol {
         let target_edit = request
             .operation
             .get("edit")
-            .and_then(|v| serde_json::from_value::<EditId>(v.clone()).ok());
-        let mut result = match serde_json::from_value::<Operation>(request.operation) {
+            .and_then(|v| crate::metrics::from_value::<EditId>(v.clone()).ok());
+        let mut result = match crate::metrics::from_value::<Operation>(request.operation) {
             Ok(op) => self.execute(runtime, client, op).unwrap_or_else(error),
             Err(e) => failure("UNSUPPORTED_OPERATION", &e.to_string()),
         };
@@ -517,7 +534,7 @@ impl Protocol {
         }
         // Reads as well as writes share monotonically increasing IDs. A result
         // larger than the retention budget is explicitly unknown, never re-run.
-        let bytes = serde_json::to_vec(&result).unwrap().len() + 128;
+        let bytes = crate::metrics::encode(&result).unwrap().len() + 128;
         let c = self.clients.get_mut(&client).unwrap();
         c.highest = request.request_id;
         c.records.push_back(Record {
@@ -552,6 +569,26 @@ impl Protocol {
         op: Operation,
     ) -> crate::Result<Value> {
         let value = match op {
+            #[cfg(feature = "test-support")]
+            Operation::TestControl { action } => json!(rt.test_controller().command(&action)?),
+            Operation::CancelJob { job } => {
+                rt.cancel_job(client, job)?;
+                Value::Null
+            }
+            Operation::JobStatus { job } => json!(rt.job_info(client, job)?.state),
+            #[cfg(feature = "bench-instrumentation")]
+            Operation::Diagnostics { reset } => {
+                let snapshot = if reset {
+                    crate::metrics::reset()
+                } else {
+                    crate::metrics::snapshot()
+                };
+                json!(snapshot)
+            }
+            Operation::ReleaseClient => {
+                rt.release_client(client);
+                Value::Null
+            }
             Operation::Statistics => {
                 let (clients, sessions, edits, jobs) = rt.live_counts();
                 let (results, result_bytes) = self.retained_results();
@@ -651,7 +688,7 @@ impl Protocol {
             Operation::ApplyModelingBlob { edit, blob } => {
                 let bytes = rt.blob(client, blob)?;
                 let commands: Vec<zipzi_sdk::ModelingCommand> =
-                    serde_json::from_slice(&bytes).map_err(|_| RuntimeError::InvalidReference)?;
+                    crate::metrics::decode(&bytes).map_err(|_| RuntimeError::InvalidReference)?;
                 rt.apply_modeling(client, edit, commands)?;
                 Value::Null
             }

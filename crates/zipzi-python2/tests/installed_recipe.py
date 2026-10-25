@@ -25,6 +25,8 @@ def main():
             if mode == "local":
                 assert version("zipzi-python2-native") == "0.1.0"
                 runtime = zipzi.local()
+                assert not hasattr(runtime._backend._native, "_test_control")
+                assert not hasattr(runtime._backend._native, "_measure")
             else:
                 child = subprocess.Popen([os.environ["ZIPZI_PYTHON2_HOST"]],
                     env=dict(os.environ, ZIPZI_RUNTIME_DIR=str(folder), ZIPZI_RUNTIME_PROFILE="python2"))
@@ -59,7 +61,26 @@ def main():
                 assert runtime.resources.usage().plans == 0
                 assert session.info().history == (1, 0)
                 assert session.meshes.get(face).name == "Installed"
-                saved = session.project.save(folder / "project").wait()
+                assert session.undo().wait().changed
+                assert session.info().history == (0, 1)
+                try:
+                    session.meshes.get(face)
+                except zipzi.SdkFailure as error:
+                    assert error.code == "MISSING_MESH"
+                else:
+                    raise AssertionError("Undo retained a newly created mesh")
+                assert session.redo().wait().changed
+                assert session.resources.get(asset).pixels.rgba == bytes((21, 43, 65, 255))
+                assert session.info().history == (1, 0)
+                save_job = session.project.save(folder / "project")
+                deadline = time.monotonic() + 10
+                while save_job.state() not in {"succeeded", "failed", "cancelled"}:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("Installed Job completion")
+                    time.sleep(.005)
+                save_job.cancel()  # A terminal success remains success.
+                saved = save_job.wait()
+                assert save_job.state() == "succeeded"
                 assert saved.manifest.is_file()
             if child is not None:
                 child.terminate()

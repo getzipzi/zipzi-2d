@@ -112,23 +112,47 @@ after a confirmed outcome. Runtime shutdown or client expiry releases remaining
 leases. This first control-transport slice limits RGBA payloads to **1 MiB**;
 binary buffers and larger images belong to P4.
 
-The native contract is `zipzi-python2-2`. Connected hosts must advertise
-`typed_meshes` and `typed_resources_plans`; a mismatched host is rejected during
+The native contract is `zipzi-python2-3`. Connected hosts must advertise
+`typed_meshes`, `typed_resources_plans` and `typed_job_lifecycle`; a mismatched host is rejected during
 connection.
+
+`job.state()` reads status without consuming the result. `job.cancel()` requests
+cancellation; queued work reports `CANCELLED`, while already entered IO reports
+its actual result. `wait()`/`close()` cache both terminal success and failure.
+Recover a lost cancel/status response before waiting or taking another action.
+
+Explicit Connected shutdown releases unsubmitted candidates, prepared images and
+Plans while retaining formal sessions. Entered Jobs finish on the host. Closing
+with another unresolved request disconnects and leaves cleanup to grace expiry;
+it does not send a new write ID or guess the unknown outcome. A lost close
+acknowledgment has its own recovery owner.
+
+The lifecycle matrix is recorded in the
+[P1 acceptance table](../../docs/plans/python-sdk-rewrite/p1-lifecycle-matrix.md).
+Fault gates are compiled only under `test-support`; normal wheels expose neither
+fault controls nor allocator probes.
 
 ## P0 measurements
 
 ```sh
 ./tools/test-sdk.sh python2 --release
+./tools/test-sdk.sh python2 --release --instrumented
 uv run --locked python crates/zipzi-python2/tools/baseline.py \
   --output target/python2/baseline-first
+# Later runs can add --compare docs/plans/python-sdk-rewrite/p0-p1-baseline.json
 ```
 
 The first measurements cover selected queries, single writes, 100-operation
 batches, large position arrays, 256×256 RGBA preparation/create/commit/release,
 and formal Plan creation/apply/commit/release. Python JSON/native boundary counts and Python
-heap probes are measured separately from timing. Missing Rust codec/copy/heap
-metrics stay explicit; no performance gate is inferred from logical input bytes.
+heap probes are measured in separate processes and instrumented binaries from
+latency. Both the adapter and CPU host use frozen Release artifacts. Schema 2
+records actual Rust codec calls, requested Rust heap live/peak bytes, selected
+explicit payload copies, and array materialization. Copy scope excludes implicit
+domain clones and allocator-internal copies; heap scope excludes Python/C heaps,
+allocator overhead and realloc transient storage. Connected probes retain an
+empty control-window calibration. Noise and regression policies are recorded;
+CPU fixture numbers do not claim Editor latency.
 
 Full resource/IO cancellation, animation,
 observer/inspection and host discovery remain planned capabilities. See the

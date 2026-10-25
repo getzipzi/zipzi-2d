@@ -1,74 +1,139 @@
 """Handwritten ownership/known-state wrappers. Runtime remains authoritative."""
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Generic, TypeVar
+from typing import Generic, Literal, TypeVar
 from . import meshes, ops, plans, resources
 from ._errors import Busy, OutcomeUnknown, PendingRequest, SdkFailure
 from ._values import Receipt, SaveReceipt, SessionInfo, WriteResult, record
 from .backends import Backend, JobKind
+from ._recovery import RecoveryOwner
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 def known(call: Callable[[], T], resume: Callable[[], T]) -> T:
-    """Attach a typed wrapper's recovery to an otherwise opaque transport loss."""
-    def retry() -> T:
-        return known(resume, resume)
-    try:
-        return call()
-    except OutcomeUnknown as e:
-        e._resume = retry
-        raise
+    """One recovery closure remains bound to its original outcome."""
+    resolved = False
+    def invoke(action: Callable[[], T]) -> T:
+        nonlocal resolved
+        if resolved:
+            raise SdkFailure("NO_PENDING_REQUEST", "This request has already been resolved")
+        try:
+            result = action()
+        except OutcomeUnknown as e:
+            e._resume = lambda: invoke(resume)
+            raise
+        except Busy:
+            raise
+        except BaseException:
+            resolved = True
+            raise
+        resolved = True
+        return result
+    return invoke(call)
 
 def absolute(path: Path) -> Path:
     if not path.is_absolute():
         raise ValueError("Path must be absolute on the execution host")
     return path
 
-class Job(Generic[T]):
-    def __init__(self, backend: Backend, token: object, kind: JobKind, decode: Callable[[object], T]):
-        self._backend, self._token, self._kind, self._decode = backend, token, kind, decode
+JobState = Literal["queued", "running", "cancelling", "succeeded", "failed", "cancelled"]
+
+class Job(RecoveryOwner, Generic[T]):
+    def __init__(self, backend: Backend, token: object, kind: JobKind, decode: Callable[[object], T], on_terminal: Callable[[bool | None], None] | None = None):
+        super().__init__(backend)
+        self._token, self._kind, self._decode = token, kind, decode
         self._kind: JobKind
         self._result: tuple[T] | None = None
         self._failure: SdkFailure | None = None
+        self._on_terminal = on_terminal
+        self._terminal_failure = False
 
     @classmethod
     def start(cls, backend: Backend, begin: Callable[[object], object], kind: JobKind,
         decode: Callable[[object], T]) -> "Job[T]":
         job = cls(backend, None, kind, decode)
-        def resume() -> "Job[T]":
-            job._token = record(backend.recover(job))["job"]
-            return job
         def start() -> "Job[T]":
             job._token = begin(job)
             return job
+        def resume() -> "Job[T]":
+            job._token = record(backend.recover(job))["job"]
+            return job
         return known(start, resume)
+
+    def _request(self, action: str, call: Callable[[], object], decode: Callable[[object], U]) -> U:
+        try:
+            return super()._request(action, call, decode)
+        except OutcomeUnknown as e:
+            if action == "wait" and self.pending_request is None:
+                e._resume = self.wait
+            raise
+        except Busy:
+            raise
+        except SdkFailure as e:
+            if action == "wait":
+                self._failure = e
+                self._terminal_failure = e.code not in {"REQUEST_EXPIRED", "CLIENT_EXPIRED", "HOST_RESTARTED",
+                    "HOST_CLOSED", "HOST_PANICKED", "INVALID_REFERENCE", "NO_PENDING_REQUEST", "RESYNC_REQUIRED"}
+                if self._on_terminal is not None:
+                    self._on_terminal(False if self._terminal_failure else None)
+            raise
+
+    def _wait_value(self, raw: object) -> T:
+        if "result" in record(raw):
+            from ._errors import unwrap
+            info = record(raw)
+            if info["result"] is None:
+                return self._wait_value(self._backend.wait(self._token, self._kind, self))
+            try:
+                raw = unwrap(info["result"])
+            except SdkFailure as e:
+                self._failure = e
+                raise
+        result = self._decode(raw)
+        self._result = (result,)
+        if self._on_terminal is not None:
+            self._on_terminal(True)
+        return result
 
     def wait(self) -> T:
         if self._failure is not None:
             raise self._failure
-        if self._result is None:
-            try:
-                raw = self._backend.recover(self) if self.pending_request is not None else self._backend.wait(self._token, self._kind, self)
-                # A recovered terminal query has the JobInfo envelope; a
-                # nonterminal recovered query must continue waiting normally.
-                if self.pending_request is None and "result" in record(raw):
-                    from ._errors import unwrap
-                    info = record(raw)
-                    raw = self._backend.wait(self._token, self._kind, self) if info["result"] is None else unwrap(info["result"])
-                self._result = (self._decode(raw),)
-            except OutcomeUnknown as e:
+        if self._result is not None:
+            return self._result[0]
+        try:
+            return self._request("wait", lambda: self._backend.wait(self._token, self._kind, self), self._wait_value)
+        except OutcomeUnknown as e:
+            # A wait timeout has no pending wire request; the accepted Job is
+            # still queryable by its stable identity.
+            if self.pending_request is None:
                 e._resume = self.wait
-                raise
-            except Busy:
-                raise
-            except SdkFailure as e:
-                self._failure = e
-                raise
-        return self._result[0]
+            raise
+        except Busy:
+            raise
+        except SdkFailure as e:
+            self._failure = e
+            raise
 
-    @property
-    def pending_request(self) -> PendingRequest | None:
-        return self._backend.pending(self)
+    def cancel(self) -> None:
+        """Request cancellation. Wait still reports the actual entered-IO result."""
+        if self._failure is not None and not self._terminal_failure:
+            raise self._failure
+        if self._result is None and self._failure is None:
+            self._request("cancel", lambda: self._backend.cancel_job(self._token, self), lambda _: None)
+
+    def state(self) -> JobState:
+        if self._failure is not None:
+            if not self._terminal_failure:
+                raise self._failure
+            return "cancelled" if self._failure.code == "CANCELLED" else "failed"
+        if self._result is not None:
+            return "succeeded"
+        def decode(raw: object) -> JobState:
+            if raw not in ("queued", "running", "cancelling", "succeeded", "failed", "cancelled"):
+                raise TypeError("Invalid job state")
+            return raw
+        return self._request("state", lambda: self._backend.job_state(self._token, self), decode)
 
     def close(self) -> None:
         """Wait for the actual outcome and release its Runtime result slot."""
@@ -201,9 +266,18 @@ class Edit:
             self._token = self._backend.begin(session._token, label, self)
         except OutcomeUnknown as e:
             self._state = "unknown"
-            e._resume = self.recover
+            self._bind_unknown(e)
             raise
         self._state = "editing"
+
+    def _bind_unknown(self, error: OutcomeUnknown) -> None:
+        expected, action = error.pending, self._action
+        def resume() -> "Edit | WriteResult | Receipt | None":
+            pending = self._job.pending_request if action == "wait" and self._job is not None else self.pending_request
+            if self._action != action or (pending is not None and pending != expected):
+                raise SdkFailure("NO_PENDING_REQUEST", "This Edit request has already been resolved")
+            return self.recover()
+        error._resume = resume
 
     def __enter__(self) -> "Edit":
         self._ensure_editing()
@@ -228,7 +302,7 @@ class Edit:
         except OutcomeUnknown as e:
             if self._state != "aborted":
                 self._state = "unknown"
-            e._resume = self.recover
+            self._bind_unknown(e)
             raise
 
     def apply(self, operation: ops.Operation) -> WriteResult:
@@ -253,7 +327,7 @@ class Edit:
             return WriteResult.read(self._backend.apply(self._token, owned, self))
         except OutcomeUnknown as e:
             self._state = "unknown"
-            e._resume = self.recover
+            self._bind_unknown(e)
             raise
         except Busy:
             raise
@@ -265,6 +339,12 @@ class Edit:
             self._poison(e)
             raise
 
+    def _finished(self, success: bool | None) -> None:
+        if success is None:
+            self._state, self._action = "unknown", "wait"
+        else:
+            self._state = "committed" if success else "failed"
+
     def commit(self) -> Job[Receipt]:
         self._ensure_editing()
         self._action = "commit"
@@ -272,16 +352,16 @@ class Edit:
             token = self._backend.commit(self._token, self)
         except OutcomeUnknown as e:
             self._state = "unknown"
-            e._resume = self.recover
+            self._bind_unknown(e)
             raise
         self._state = "committing"
-        self._job = Job(self._backend, token, "published", Receipt.read)
+        self._job = Job(self._backend, token, "published", Receipt.read, self._finished)
         return self._job
 
     def cancel(self) -> None:
         if self._state == "unknown":
             raise SdkFailure("OUTCOME_UNKNOWN", "Recover this Edit before cleanup")
-        if self._state in {"cancelled", "committed"}:
+        if self._state in {"cancelled", "committed", "failed"}:
             return
         if self._state == "committing":
             raise Busy("BUSY", "Accepted commit must complete before its outcome is known")
@@ -302,7 +382,7 @@ class Edit:
         try:
             raw = self._backend.recover(self)
         except OutcomeUnknown as e:
-            e._resume = self.recover
+            self._bind_unknown(e)
             raise
         except Busy:
             raise
@@ -324,7 +404,7 @@ class Edit:
             self._state = "cancelled"
             return None
         if self._action == "commit":
-            self._job = Job(self._backend, record(raw)["job"], "published", Receipt.read)
+            self._job = Job(self._backend, record(raw)["job"], "published", Receipt.read, self._finished)
             self._state = "committing"
             result = self._job.wait()
             self._state = "committed"
@@ -358,6 +438,6 @@ class Edit:
                 self._job.wait()
             except OutcomeUnknown as e:
                 self._state, self._action = "unknown", "wait"
-                e._resume = self.recover
+                self._bind_unknown(e)
                 raise
             self._state = "committed"

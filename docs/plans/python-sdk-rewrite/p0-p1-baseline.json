@@ -1,0 +1,2946 @@
+{
+  "schema": 2,
+  "status": "p1_slice",
+  "workspace": {
+    "base_commit": "7cf4bed90bee80c3a316591cdbad4704c1df46fe",
+    "dirty_files": [
+      " M crates/zipzi-project/Cargo.toml",
+      " M crates/zipzi-project/src/resource_budget.rs",
+      " M crates/zipzi-project/src/store/assets.rs",
+      " M crates/zipzi-python2/Cargo.toml",
+      " M crates/zipzi-python2/README.md",
+      " M crates/zipzi-python2/client/python/zipzi/_errors.py",
+      " M crates/zipzi-python2/client/python/zipzi/_lifecycle.py",
+      " M crates/zipzi-python2/client/python/zipzi/_owned.py",
+      " M crates/zipzi-python2/client/python/zipzi/backends/__init__.py",
+      " M crates/zipzi-python2/client/python/zipzi/backends/_native_types.py",
+      " M crates/zipzi-python2/client/python/zipzi/backends/connected.py",
+      " M crates/zipzi-python2/client/python/zipzi/backends/local.py",
+      " M crates/zipzi-python2/src/lib.rs",
+      " M crates/zipzi-python2/tests/installed_recipe.py",
+      " M crates/zipzi-python2/tests/test_api.py",
+      " M crates/zipzi-python2/tests/type_valid.py",
+      " M crates/zipzi-python2/tools/baseline.py",
+      " M crates/zipzi-python2/tools/test.py",
+      " M crates/zipzi-runtime/Cargo.toml",
+      " M crates/zipzi-runtime/examples/local_host_fixture.rs",
+      " M crates/zipzi-runtime/src/host.rs",
+      " M crates/zipzi-runtime/src/jobs.rs",
+      " M crates/zipzi-runtime/src/lib.rs",
+      " M crates/zipzi-runtime/src/local.rs",
+      " M crates/zipzi-runtime/src/protocol/mod.rs",
+      " M crates/zipzi-runtime/src/runtime.rs",
+      " M crates/zipzi-runtime/src/runtime/authoring.rs",
+      " M crates/zipzi-runtime/src/types.rs",
+      " M tools/tests/test_python2_tools.py",
+      "?? crates/zipzi-python2/client/python/zipzi/_recovery.py",
+      "?? crates/zipzi-runtime/src/metrics.rs",
+      "?? crates/zipzi-runtime/src/test_support.rs",
+      "?? crates/zipzi-runtime/tests/metrics.rs",
+      "?? docs/plans/python-sdk-rewrite/p0-p1-baseline.json"
+    ]
+  },
+  "builds": {
+    "timing": {
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": false
+      },
+      "instrumented": false,
+      "host_profile": "release",
+      "host_sha256": "40d1bb2a3d5ece69f388c011701cd21209820404d1024bf0f85c0b672f4ff916",
+      "python": "3.14.7 (main, Sep 29 2026, 14:50:11) [Clang 22.1.3 ]",
+      "artifact_sha256": "97a64f834f55df387bc39cdedfbe35c55fd761a0d4fa93ba1a7f089320c907bf"
+    },
+    "probe": {
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": false
+      },
+      "instrumented": true,
+      "host_profile": "release",
+      "host_sha256": "df5aace265170bbdec2c986117cbfcd936eebe75faa9a4240d0d56c541a7cee7",
+      "python": "3.14.7 (main, Sep 29 2026, 14:50:11) [Clang 22.1.3 ]",
+      "artifact_sha256": "9228357aea7ad1143433b05d9445c4e9057a2933411758b9978e69b99ae0b172"
+    }
+  },
+  "client_sha256": "6539fa021826aea04108b7ef1d20888e9741fcb115549a331d59c67d99274cbb",
+  "measurement_sha256": "7f7894327c15f8638c38288fd237f9c9549f2c28fc881590c3e3bfc94787f1b2",
+  "python": "3.14.7 (main, Sep 29 2026, 14:50:11) [Clang 22.1.3 ]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "runs": 5,
+  "samples": 32,
+  "warmup": 4,
+  "measurements": {
+    "local": {
+      "small_query": {
+        "p50_ns": 14125.0,
+        "p95_ns": 21583,
+        "p50_range_ns": [
+          13583.5,
+          14896.0
+        ],
+        "relative_p50_range": 0.09292035398230089,
+        "probes": [
+          {
+            "calls": {
+              "native.mesh": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 228098,
+              "rust_start_bytes": 228098
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 6538,
+            "python_peak_bytes": 8594,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1376,
+              "rust_allocations": 13,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 229438,
+              "rust_start_bytes": 228098
+            }
+          },
+          {
+            "calls": {
+              "native.mesh": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 228098,
+              "rust_start_bytes": 228098
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 6538,
+            "python_peak_bytes": 8594,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1376,
+              "rust_allocations": 13,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 229438,
+              "rust_start_bytes": 228098
+            }
+          },
+          {
+            "calls": {
+              "native.mesh": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 228098,
+              "rust_start_bytes": 228098
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 6538,
+            "python_peak_bytes": 8594,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1376,
+              "rust_allocations": 13,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 229438,
+              "rust_start_bytes": 228098
+            }
+          },
+          {
+            "calls": {
+              "native.mesh": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 228098,
+              "rust_start_bytes": 228098
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 6538,
+            "python_peak_bytes": 8594,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1376,
+              "rust_allocations": 13,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 229438,
+              "rust_start_bytes": 228098
+            }
+          },
+          {
+            "calls": {
+              "native.mesh": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 228098,
+              "rust_start_bytes": 228098
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 6538,
+            "python_peak_bytes": 8594,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1376,
+              "rust_allocations": 13,
+              "rust_live_bytes": 228098,
+              "rust_peak_bytes": 229438,
+              "rust_start_bytes": 228098
+            }
+          }
+        ]
+      },
+      "single_edit": {
+        "p50_ns": 53521.0,
+        "p95_ns": 80291,
+        "p50_range_ns": [
+          51604.0,
+          54542.0
+        ],
+        "relative_p50_range": 0.05489434053922759,
+        "probes": [
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3446,
+            "python_peak_bytes": 4993,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 27097,
+              "rust_allocations": 145,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 555485,
+              "rust_start_bytes": 539350
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3446,
+            "python_peak_bytes": 4993,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 27097,
+              "rust_allocations": 145,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 555485,
+              "rust_start_bytes": 539350
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3446,
+            "python_peak_bytes": 4993,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 27097,
+              "rust_allocations": 145,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 555485,
+              "rust_start_bytes": 539350
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3446,
+            "python_peak_bytes": 4993,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 27097,
+              "rust_allocations": 145,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 555485,
+              "rust_start_bytes": 539350
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3446,
+            "python_peak_bytes": 4993,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 27097,
+              "rust_allocations": 145,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 555485,
+              "rust_start_bytes": 539350
+            }
+          }
+        ]
+      },
+      "batch_100": {
+        "p50_ns": 167312.5,
+        "p95_ns": 189209,
+        "p50_range_ns": [
+          161083.5,
+          170687.5
+        ],
+        "relative_p50_range": 0.05740156892043332,
+        "probes": [
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3710,
+            "python_peak_bytes": 28952,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 103613,
+              "rust_allocations": 1343,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 572227,
+              "rust_start_bytes": 539350
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3622,
+            "python_peak_bytes": 28864,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 103613,
+              "rust_allocations": 1343,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 572227,
+              "rust_start_bytes": 539350
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 4729,
+            "python_peak_bytes": 29971,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 103613,
+              "rust_allocations": 1343,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 572227,
+              "rust_start_bytes": 539350
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3622,
+            "python_peak_bytes": 28864,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 103613,
+              "rust_allocations": 1343,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 572227,
+              "rust_start_bytes": 539350
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 531780,
+              "rust_peak_bytes": 531780,
+              "rust_start_bytes": 531780
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3532,
+            "python_peak_bytes": 28774,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 103613,
+              "rust_allocations": 1343,
+              "rust_live_bytes": 543603,
+              "rust_peak_bytes": 572227,
+              "rust_start_bytes": 539350
+            }
+          }
+        ]
+      },
+      "large_array": {
+        "p50_ns": 359250.0,
+        "p95_ns": 384083,
+        "p50_range_ns": [
+          349812.0,
+          364520.5
+        ],
+        "relative_p50_range": 0.040942240779401534,
+        "probes": [
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 2228016,
+              "rust_peak_bytes": 2228016,
+              "rust_start_bytes": 2228016
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3622,
+            "python_peak_bytes": 5169,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 13068,
+              "rust_allocated_bytes": 444893,
+              "rust_allocations": 219,
+              "rust_live_bytes": 2378586,
+              "rust_peak_bytes": 2562507,
+              "rust_start_bytes": 2328084
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 2228016,
+              "rust_peak_bytes": 2228016,
+              "rust_start_bytes": 2228016
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3622,
+            "python_peak_bytes": 5169,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 13068,
+              "rust_allocated_bytes": 444893,
+              "rust_allocations": 219,
+              "rust_live_bytes": 2378586,
+              "rust_peak_bytes": 2562507,
+              "rust_start_bytes": 2328084
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 2228016,
+              "rust_peak_bytes": 2228016,
+              "rust_start_bytes": 2228016
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3622,
+            "python_peak_bytes": 5169,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 13068,
+              "rust_allocated_bytes": 444893,
+              "rust_allocations": 219,
+              "rust_live_bytes": 2378586,
+              "rust_peak_bytes": 2562507,
+              "rust_start_bytes": 2328084
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 2228016,
+              "rust_peak_bytes": 2228016,
+              "rust_start_bytes": 2228016
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3622,
+            "python_peak_bytes": 5169,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 13068,
+              "rust_allocated_bytes": 444893,
+              "rust_allocations": 219,
+              "rust_live_bytes": 2378586,
+              "rust_peak_bytes": 2562507,
+              "rust_start_bytes": 2328084
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 2228016,
+              "rust_peak_bytes": 2228016,
+              "rust_start_bytes": 2228016
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 3622,
+            "python_peak_bytes": 5169,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 13068,
+              "rust_allocated_bytes": 444893,
+              "rust_allocations": 219,
+              "rust_live_bytes": 2378586,
+              "rust_peak_bytes": 2562507,
+              "rust_start_bytes": 2328084
+            }
+          }
+        ]
+      },
+      "image": {
+        "p50_ns": 249833.0,
+        "p95_ns": 353542,
+        "p50_range_ns": [
+          236541.5,
+          281021.0
+        ],
+        "relative_p50_range": 0.17803692866835047,
+        "probes": [
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.prepare_image": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 1673609,
+              "rust_peak_bytes": 1673609,
+              "rust_start_bytes": 1673609
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 3666,
+            "python_peak_bytes": 5325,
+            "rust": {
+              "copied_payload_bytes": 524288,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1410601,
+              "rust_allocations": 5946,
+              "rust_live_bytes": 1743407,
+              "rust_peak_bytes": 1982732,
+              "rust_start_bytes": 1719588
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.prepare_image": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 1673609,
+              "rust_peak_bytes": 1673609,
+              "rust_start_bytes": 1673609
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 3666,
+            "python_peak_bytes": 5325,
+            "rust": {
+              "copied_payload_bytes": 524288,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1410601,
+              "rust_allocations": 5946,
+              "rust_live_bytes": 1743407,
+              "rust_peak_bytes": 1982732,
+              "rust_start_bytes": 1719588
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.prepare_image": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 1673609,
+              "rust_peak_bytes": 1673609,
+              "rust_start_bytes": 1673609
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 3621,
+            "python_peak_bytes": 5280,
+            "rust": {
+              "copied_payload_bytes": 524288,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1410601,
+              "rust_allocations": 5946,
+              "rust_live_bytes": 1743407,
+              "rust_peak_bytes": 1982732,
+              "rust_start_bytes": 1719588
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.prepare_image": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 1673609,
+              "rust_peak_bytes": 1673609,
+              "rust_start_bytes": 1673609
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 3623,
+            "python_peak_bytes": 5282,
+            "rust": {
+              "copied_payload_bytes": 524288,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1410601,
+              "rust_allocations": 5946,
+              "rust_live_bytes": 1743407,
+              "rust_peak_bytes": 1982732,
+              "rust_start_bytes": 1719588
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.prepare_image": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 1673609,
+              "rust_peak_bytes": 1673609,
+              "rust_start_bytes": 1673609
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 3666,
+            "python_peak_bytes": 5325,
+            "rust": {
+              "copied_payload_bytes": 524288,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 1410601,
+              "rust_allocations": 5946,
+              "rust_live_bytes": 1743407,
+              "rust_peak_bytes": 1982732,
+              "rust_start_bytes": 1719588
+            }
+          }
+        ]
+      },
+      "plan": {
+        "p50_ns": 71271.0,
+        "p95_ns": 85167,
+        "p50_range_ns": [
+          69396.0,
+          71833.5
+        ],
+        "relative_p50_range": 0.03420044618428253,
+        "probes": [
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.plan": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 532356,
+              "rust_peak_bytes": 532356,
+              "rust_start_bytes": 532356
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 4086,
+            "python_peak_bytes": 6323,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 37619,
+              "rust_allocations": 190,
+              "rust_live_bytes": 544146,
+              "rust_peak_bytes": 564080,
+              "rust_start_bytes": 539904
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.plan": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 532356,
+              "rust_peak_bytes": 532356,
+              "rust_start_bytes": 532356
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 4086,
+            "python_peak_bytes": 6323,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 37619,
+              "rust_allocations": 190,
+              "rust_live_bytes": 544146,
+              "rust_peak_bytes": 563690,
+              "rust_start_bytes": 539904
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.plan": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 532356,
+              "rust_peak_bytes": 532356,
+              "rust_start_bytes": 532356
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 4086,
+            "python_peak_bytes": 6323,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 37619,
+              "rust_allocations": 190,
+              "rust_live_bytes": 544146,
+              "rust_peak_bytes": 564080,
+              "rust_start_bytes": 539904
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.plan": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 532356,
+              "rust_peak_bytes": 532356,
+              "rust_start_bytes": 532356
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 4086,
+            "python_peak_bytes": 6323,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 37619,
+              "rust_allocations": 190,
+              "rust_live_bytes": 544146,
+              "rust_peak_bytes": 564080,
+              "rust_start_bytes": 539904
+            }
+          },
+          {
+            "calls": {
+              "native.apply": 1,
+              "native.begin_edit": 1,
+              "native.commit": 1,
+              "native.plan": 1,
+              "native.release_handle": 1,
+              "native.wait": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 0,
+              "rust_allocations": 0,
+              "rust_live_bytes": 532356,
+              "rust_peak_bytes": 532356,
+              "rust_start_bytes": 532356
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 4086,
+            "python_peak_bytes": 6323,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 0,
+              "json_encodes": 0,
+              "json_value_builds": 0,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 37619,
+              "rust_allocations": 190,
+              "rust_live_bytes": 544146,
+              "rust_peak_bytes": 564080,
+              "rust_start_bytes": 539904
+            }
+          }
+        ]
+      }
+    },
+    "connected": {
+      "small_query": {
+        "p50_ns": 1547541.5,
+        "p95_ns": 1592750,
+        "p50_range_ns": [
+          1538271.0,
+          1555625.0
+        ],
+        "relative_p50_range": 0.011213915749593791,
+        "probes": [
+          {
+            "calls": {
+              "python_json.dumps": 2,
+              "python_json.loads": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13636,
+              "rust_allocations": 80,
+              "rust_live_bytes": 617443,
+              "rust_peak_bytes": 620748,
+              "rust_start_bytes": 614621
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8020,
+            "python_peak_bytes": 11389,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 7,
+              "json_encodes": 6,
+              "json_value_builds": 4,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 50165,
+              "rust_allocations": 299,
+              "rust_live_bytes": 652181,
+              "rust_peak_bytes": 662362,
+              "rust_start_bytes": 639661
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 2,
+              "python_json.loads": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13636,
+              "rust_allocations": 80,
+              "rust_live_bytes": 617443,
+              "rust_peak_bytes": 620748,
+              "rust_start_bytes": 614621
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8020,
+            "python_peak_bytes": 11389,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 7,
+              "json_encodes": 6,
+              "json_value_builds": 4,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 50165,
+              "rust_allocations": 299,
+              "rust_live_bytes": 652181,
+              "rust_peak_bytes": 662362,
+              "rust_start_bytes": 639661
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 2,
+              "python_json.loads": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13636,
+              "rust_allocations": 80,
+              "rust_live_bytes": 617443,
+              "rust_peak_bytes": 620748,
+              "rust_start_bytes": 614621
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8020,
+            "python_peak_bytes": 11389,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 7,
+              "json_encodes": 6,
+              "json_value_builds": 4,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 50165,
+              "rust_allocations": 299,
+              "rust_live_bytes": 652181,
+              "rust_peak_bytes": 662362,
+              "rust_start_bytes": 639661
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 2,
+              "python_json.loads": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13636,
+              "rust_allocations": 80,
+              "rust_live_bytes": 617443,
+              "rust_peak_bytes": 620748,
+              "rust_start_bytes": 614621
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8020,
+            "python_peak_bytes": 11389,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 7,
+              "json_encodes": 6,
+              "json_value_builds": 4,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 50165,
+              "rust_allocations": 299,
+              "rust_live_bytes": 652181,
+              "rust_peak_bytes": 662362,
+              "rust_start_bytes": 639661
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 2,
+              "python_json.loads": 1
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13636,
+              "rust_allocations": 80,
+              "rust_live_bytes": 617443,
+              "rust_peak_bytes": 620748,
+              "rust_start_bytes": 614621
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8020,
+            "python_peak_bytes": 11389,
+            "rust": {
+              "copied_payload_bytes": 104,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 7,
+              "json_encodes": 6,
+              "json_value_builds": 4,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 50165,
+              "rust_allocations": 299,
+              "rust_live_bytes": 652181,
+              "rust_peak_bytes": 662362,
+              "rust_start_bytes": 639661
+            }
+          }
+        ]
+      },
+      "single_edit": {
+        "p50_ns": 6277500.0,
+        "p95_ns": 6518584,
+        "p50_range_ns": [
+          6227521.0,
+          6316750.0
+        ],
+        "relative_p50_range": 0.01421409796893668,
+        "probes": [
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1229077,
+              "rust_peak_bytes": 1232382,
+              "rust_start_bytes": 1226255
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8626,
+            "python_peak_bytes": 15739,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 142918,
+              "rust_allocations": 865,
+              "rust_live_bytes": 1300784,
+              "rust_peak_bytes": 1313278,
+              "rust_start_bytes": 1275941
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1229077,
+              "rust_peak_bytes": 1232382,
+              "rust_start_bytes": 1226255
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8780,
+            "python_peak_bytes": 15846,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 142918,
+              "rust_allocations": 865,
+              "rust_live_bytes": 1300784,
+              "rust_peak_bytes": 1313278,
+              "rust_start_bytes": 1275941
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1229077,
+              "rust_peak_bytes": 1232382,
+              "rust_start_bytes": 1226255
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8835,
+            "python_peak_bytes": 15901,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 142918,
+              "rust_allocations": 865,
+              "rust_live_bytes": 1300784,
+              "rust_peak_bytes": 1313278,
+              "rust_start_bytes": 1275941
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1229077,
+              "rust_peak_bytes": 1232382,
+              "rust_start_bytes": 1226255
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8675,
+            "python_peak_bytes": 15741,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 142918,
+              "rust_allocations": 865,
+              "rust_live_bytes": 1300784,
+              "rust_peak_bytes": 1313278,
+              "rust_start_bytes": 1275941
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1229077,
+              "rust_peak_bytes": 1232382,
+              "rust_start_bytes": 1226255
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 8885,
+            "python_peak_bytes": 15951,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 142918,
+              "rust_allocations": 865,
+              "rust_live_bytes": 1300784,
+              "rust_peak_bytes": 1313278,
+              "rust_start_bytes": 1275941
+            }
+          }
+        ]
+      },
+      "batch_100": {
+        "p50_ns": 6712312.5,
+        "p95_ns": 8495375,
+        "p50_range_ns": [
+          6413000.0,
+          7717479.5
+        ],
+        "relative_p50_range": 0.19434129444956563,
+        "probes": [
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1471357,
+              "rust_peak_bytes": 1474662,
+              "rust_start_bytes": 1468535
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 20956,
+            "python_peak_bytes": 95838,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 623890,
+              "rust_allocations": 3765,
+              "rust_live_bytes": 1563254,
+              "rust_peak_bytes": 1694572,
+              "rust_start_bytes": 1531681
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1471357,
+              "rust_peak_bytes": 1474662,
+              "rust_start_bytes": 1468535
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 20790,
+            "python_peak_bytes": 95785,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 623890,
+              "rust_allocations": 3765,
+              "rust_live_bytes": 1563254,
+              "rust_peak_bytes": 1694572,
+              "rust_start_bytes": 1531681
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1471357,
+              "rust_peak_bytes": 1474662,
+              "rust_start_bytes": 1468535
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 20857,
+            "python_peak_bytes": 95791,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 623890,
+              "rust_allocations": 3765,
+              "rust_live_bytes": 1563254,
+              "rust_peak_bytes": 1694572,
+              "rust_start_bytes": 1531681
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1471357,
+              "rust_peak_bytes": 1474662,
+              "rust_start_bytes": 1468535
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 21003,
+            "python_peak_bytes": 95838,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 623890,
+              "rust_allocations": 3765,
+              "rust_live_bytes": 1563254,
+              "rust_peak_bytes": 1694572,
+              "rust_start_bytes": 1531681
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1471357,
+              "rust_peak_bytes": 1474662,
+              "rust_start_bytes": 1468535
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 20692,
+            "python_peak_bytes": 95838,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 623890,
+              "rust_allocations": 3765,
+              "rust_live_bytes": 1563254,
+              "rust_peak_bytes": 1694572,
+              "rust_start_bytes": 1531681
+            }
+          }
+        ]
+      },
+      "large_array": {
+        "p50_ns": 8370041.0,
+        "p95_ns": 9952375,
+        "p50_range_ns": [
+          8338375.0,
+          8470021.0
+        ],
+        "relative_p50_range": 0.015728238368246942,
+        "probes": [
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2925390,
+              "rust_peak_bytes": 2928695,
+              "rust_start_bytes": 2922568
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 21113,
+            "python_peak_bytes": 294734,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 2763228,
+              "rust_allocations": 6444,
+              "rust_live_bytes": 3136045,
+              "rust_peak_bytes": 4045572,
+              "rust_start_bytes": 3064886
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2925390,
+              "rust_peak_bytes": 2928695,
+              "rust_start_bytes": 2922568
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 21000,
+            "python_peak_bytes": 294687,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 2763228,
+              "rust_allocations": 6444,
+              "rust_live_bytes": 3136045,
+              "rust_peak_bytes": 4045572,
+              "rust_start_bytes": 3064886
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2925390,
+              "rust_peak_bytes": 2928695,
+              "rust_start_bytes": 2922568
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 20838,
+            "python_peak_bytes": 294624,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 2763228,
+              "rust_allocations": 6444,
+              "rust_live_bytes": 3136045,
+              "rust_peak_bytes": 4045572,
+              "rust_start_bytes": 3064886
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2925390,
+              "rust_peak_bytes": 2928695,
+              "rust_start_bytes": 2922568
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 21213,
+            "python_peak_bytes": 294784,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 2763228,
+              "rust_allocations": 6444,
+              "rust_live_bytes": 3136045,
+              "rust_peak_bytes": 4045572,
+              "rust_start_bytes": 3064886
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 8,
+              "python_json.loads": 4
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2928045,
+              "rust_peak_bytes": 2931350,
+              "rust_start_bytes": 2925223
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 20945,
+            "python_peak_bytes": 294624,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 17,
+              "json_encodes": 15,
+              "json_value_builds": 12,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 2763228,
+              "rust_allocations": 6444,
+              "rust_live_bytes": 3138700,
+              "rust_peak_bytes": 4048227,
+              "rust_start_bytes": 3067541
+            }
+          }
+        ]
+      },
+      "image": {
+        "p50_ns": 26069708.5,
+        "p95_ns": 29991625,
+        "p50_range_ns": [
+          25435020.5,
+          26784104.5
+        ],
+        "relative_p50_range": 0.0517491018359488,
+        "probes": [
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2479359,
+              "rust_peak_bytes": 2482664,
+              "rust_start_bytes": 2476537
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 9896,
+            "python_peak_bytes": 4657010,
+            "rust": {
+              "copied_payload_bytes": 262144,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 23,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 53775160,
+              "rust_allocations": 6828,
+              "rust_live_bytes": 2617423,
+              "rust_peak_bytes": 19352247,
+              "rust_start_bytes": 2570220
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2474049,
+              "rust_peak_bytes": 2477354,
+              "rust_start_bytes": 2471227
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 10079,
+            "python_peak_bytes": 4657010,
+            "rust": {
+              "copied_payload_bytes": 262144,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 23,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 53775160,
+              "rust_allocations": 6828,
+              "rust_live_bytes": 2612113,
+              "rust_peak_bytes": 19346937,
+              "rust_start_bytes": 2564910
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2474049,
+              "rust_peak_bytes": 2477354,
+              "rust_start_bytes": 2471227
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 10189,
+            "python_peak_bytes": 4657010,
+            "rust": {
+              "copied_payload_bytes": 262144,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 23,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 53775160,
+              "rust_allocations": 6828,
+              "rust_live_bytes": 2612113,
+              "rust_peak_bytes": 19346937,
+              "rust_start_bytes": 2564910
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2471394,
+              "rust_peak_bytes": 2474699,
+              "rust_start_bytes": 2468572
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 10236,
+            "python_peak_bytes": 4657010,
+            "rust": {
+              "copied_payload_bytes": 262144,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 23,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 53775160,
+              "rust_allocations": 6828,
+              "rust_live_bytes": 2609458,
+              "rust_peak_bytes": 19344282,
+              "rust_start_bytes": 2562255
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 2471394,
+              "rust_peak_bytes": 2474699,
+              "rust_start_bytes": 2468572
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 524288
+            },
+            "python_live_bytes": 10021,
+            "python_peak_bytes": 4657010,
+            "rust": {
+              "copied_payload_bytes": 262144,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 23,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 53775160,
+              "rust_allocations": 6828,
+              "rust_live_bytes": 2609458,
+              "rust_peak_bytes": 19344282,
+              "rust_start_bytes": 2562255
+            }
+          }
+        ]
+      },
+      "plan": {
+        "p50_ns": 9290229.0,
+        "p95_ns": 9622416,
+        "p50_range_ns": [
+          9283229.5,
+          9304042.0
+        ],
+        "relative_p50_range": 0.002240256940921478,
+        "probes": [
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1445137,
+              "rust_peak_bytes": 1448442,
+              "rust_start_bytes": 1442315
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 10480,
+            "python_peak_bytes": 17737,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 24,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 183172,
+              "rust_allocations": 1089,
+              "rust_live_bytes": 1534784,
+              "rust_peak_bytes": 1554709,
+              "rust_start_bytes": 1503961
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1445137,
+              "rust_peak_bytes": 1448442,
+              "rust_start_bytes": 1442315
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 9797,
+            "python_peak_bytes": 17007,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 24,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 183172,
+              "rust_allocations": 1089,
+              "rust_live_bytes": 1534784,
+              "rust_peak_bytes": 1554709,
+              "rust_start_bytes": 1503961
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1445137,
+              "rust_peak_bytes": 1448442,
+              "rust_start_bytes": 1442315
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 10310,
+            "python_peak_bytes": 17572,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 24,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 183172,
+              "rust_allocations": 1089,
+              "rust_live_bytes": 1534784,
+              "rust_peak_bytes": 1554709,
+              "rust_start_bytes": 1503961
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1445137,
+              "rust_peak_bytes": 1448442,
+              "rust_start_bytes": 1442315
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 10047,
+            "python_peak_bytes": 17257,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 24,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 183172,
+              "rust_allocations": 1089,
+              "rust_live_bytes": 1534784,
+              "rust_peak_bytes": 1554709,
+              "rust_start_bytes": 1503961
+            }
+          },
+          {
+            "calls": {
+              "python_json.dumps": 12,
+              "python_json.loads": 6
+            },
+            "empty_control_window": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 0,
+              "json_decodes": 3,
+              "json_encodes": 3,
+              "json_value_builds": 2,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 13637,
+              "rust_allocations": 80,
+              "rust_live_bytes": 1445137,
+              "rust_peak_bytes": 1448442,
+              "rust_start_bytes": 1442315
+            },
+            "image_memory_after": {
+              "blob_bytes": 0,
+              "plans": 0,
+              "png_bytes": 0,
+              "prepared_images": 0,
+              "preparing_bytes": 0,
+              "rgba_bytes": 0
+            },
+            "python_live_bytes": 10161,
+            "python_peak_bytes": 17583,
+            "rust": {
+              "copied_payload_bytes": 0,
+              "enabled": true,
+              "json_admission_encodes": 1,
+              "json_decodes": 24,
+              "json_encodes": 21,
+              "json_value_builds": 15,
+              "materialized_input_bytes": 0,
+              "rust_allocated_bytes": 183172,
+              "rust_allocations": 1089,
+              "rust_live_bytes": 1534784,
+              "rust_peak_bytes": 1554709,
+              "rust_start_bytes": 1503961
+            }
+          }
+        ]
+      }
+    }
+  },
+  "pending_workloads": [
+    "cpu_sample"
+  ],
+  "probe_scope": {
+    "heap": "All Rust threads in the extension/host; requested live Layout bytes, excluding Python/C heaps, allocator overhead and realloc transient storage",
+    "copy": "Explicit native RGBA input/PyBytes output, Vec-to-Arc image preparation and selected Runtime mesh snapshot arrays; implicit domain clones/realloc copies are outside this counter",
+    "connected": "Private CPU fixture, asynchronous completion; empty diagnostic control window retained; not an Editor latency measurement"
+  },
+  "thresholds": {
+    "p50_ratio": 1.5,
+    "p95_ratio": 2.0,
+    "max_process_p50_range": 0.5,
+    "copy_growth_bytes": 0,
+    "wire_poll_codec_allowance": 3,
+    "max_rust_peak_growth_ratio": 1.5,
+    "frozen": true
+  },
+  "limitations": [
+    "Copy count is scoped, not total process memcpy",
+    "Rust peak is requested live bytes, not RSS",
+    "CPU sampling is a later P5 workload"
+  ],
+  "noise_rejections": []
+}

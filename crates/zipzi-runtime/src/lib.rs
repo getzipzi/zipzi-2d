@@ -8,6 +8,7 @@ pub mod host;
 mod jobs;
 #[cfg(unix)]
 pub mod local;
+pub mod metrics;
 pub mod protocol;
 mod runtime;
 mod types;
@@ -17,3 +18,6 @@ pub use events::{EventCursor, EventKind, RuntimeEvent};
 pub use jobs::{Completion, Executor, Work};
 pub use runtime::{CandidateWork, RegistrySubscription, Runtime, SessionSubscription};
 pub use types::*;
+
+#[cfg(feature = "test-support")]
+pub mod test_support;

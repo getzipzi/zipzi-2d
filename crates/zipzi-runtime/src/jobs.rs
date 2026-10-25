@@ -75,6 +75,20 @@ impl Work {
     /// Always emits a terminal completion for unwind panics. Process aborts
     /// cannot be recovered. SDK errors return the same session and history.
     pub fn run(self) -> Completion {
+        self.run_with_hook(|| {})
+    }
+    #[cfg(feature = "test-support")]
+    pub(crate) fn executor_failure(self, message: String) -> Completion {
+        Completion {
+            job: self.job,
+            client: self.client,
+            session_id: self.session_id,
+            base: self.base,
+            session: Some(self.session),
+            result: Err(RuntimeError::ExecutorFailure(message)),
+        }
+    }
+    pub(crate) fn run_with_hook(self, before_io: impl FnOnce()) -> Completion {
         let Self {
             job,
             client,
@@ -88,6 +102,7 @@ impl Work {
             if cancel.load(Ordering::Acquire) {
                 return Err(RuntimeError::Cancelled);
             }
+            before_io();
             // Cancellation after this check is advisory. A successful SDK
             // publication/save is reported as success, never a false rollback.
             match task {

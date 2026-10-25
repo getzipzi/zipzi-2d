@@ -73,7 +73,7 @@ class ConnectedBackend:
             stream.connect(str(self._endpoint))
             hello = record(unwrap(_exchange(stream, _body(dict(protocol=CONTRACT, runtime=self._runtime,
                 client=self._client, secret=self._secret)))))
-            if not {"typed_meshes", "typed_resources_plans"}.issubset(sequence(hello["capabilities"])):
+            if not {"typed_meshes", "typed_resources_plans", "typed_job_lifecycle"}.issubset(sequence(hello["capabilities"])):
                 raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed authoring operations")
         except BaseException:
             stream.close()
@@ -125,7 +125,11 @@ class ConnectedBackend:
             if self._pending is None or self._pending[2] is not owner:
                 raise SdkFailure("NO_PENDING_REQUEST", "No request owned by this object needs recovery")
             pending, body, _ = self._pending
-            self._connect()
+            try:
+                self._connect()
+            except (OSError, EOFError, ValueError, TypeError) as e:
+                self._disconnect()
+                raise OutcomeUnknown(pending, str(e)) from e
             return self._send(pending, body, owner)
 
     def create(self, document_id: str, owner: object) -> object:
@@ -163,6 +167,12 @@ class ConnectedBackend:
         return self._request(dict(op="open", path=str(path)), owner, "sessions.open")
     def history(self, session: object, redo: bool, owner: object) -> object:
         return record(self._request(dict(op="redo" if redo else "undo", session=session), owner, "session.history"))["job"]
+    def cancel_job(self, job: object, owner: object) -> None:
+        self._request(dict(op="cancel_job", job=job), owner, "job.cancel")
+    def job_state(self, job: object, owner: object) -> object:
+        return self._request(dict(op="job_status", job=job), owner, "job.state")
+    def _test_control(self, action: str) -> object:
+        return self._request(dict(op="test_control", action=action), self, "test.control")
     def wait(self, job: object, kind: JobKind, owner: object) -> object:
         deadline = time.monotonic() + self._timeout
         while True:
@@ -177,5 +187,21 @@ class ConnectedBackend:
 
     def close(self) -> None:
         with self._lock:
+            if self._closed:
+                return
+            # An explicit shutdown with another unresolved owner abandons its
+            # connection; grace expiry reclaims it without a new write ID.
+            if self._pending is not None and self._pending[2] is not self:
+                self._closed = True
+                self._disconnect()
+                return
+            try:
+                if self.pending(self) is not None:
+                    self.recover(self)
+                else:
+                    self._request(dict(op="release_client"), self, "runtime.close")
+            except OutcomeUnknown as e:
+                e._resume = self.close
+                raise
             self._closed = True
             self._disconnect()

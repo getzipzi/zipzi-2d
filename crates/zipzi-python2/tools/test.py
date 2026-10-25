@@ -22,17 +22,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("tests", nargs="*", help="Optional unittest names, e.g. PythonSdk.test_shared_recipe")
     parser.add_argument("--release", action="store_true", help="Build the native adapter in Release for P0 measurements")
+    parser.add_argument("--instrumented", action="store_true", help="Build separate P0 allocator/codec/copy probes; never use for latency")
     args = parser.parse_args()
     if sys.version_info[:2] != (3, 14):
         parser.error("Run with uv run --locked python (CPython 3.14)")
-    output = ROOT / "target/python2"
+    common = ROOT / "target/python2"
+    output = common / "probes" if args.instrumented else common
     output.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, PYO3_PYTHON=sys.executable, PYO3_BUILD_EXTENSION_MODULE="1")
     for name in ("PYTHONPATH", "PYTHONHOME", "ZIPZI_DEV_SESSION_DIR"):
         env.pop(name, None)
-    with exclusive_run(output / "runner.lock"):
+    with exclusive_run(common / "runner.lock"):
         command = ["cargo", "rustc", "--locked", "-p", "zipzi-python2", "--lib",
-            "--message-format=json-render-diagnostics"]
+            "--message-format=json-render-diagnostics", "--features", "test-support,bench-instrumentation" if args.instrumented else "test-support"]
         if args.release:
             command.append("--release")
         if sys.platform == "darwin":
@@ -57,10 +59,18 @@ def main() -> None:
         (native / "__init__.py").write_text('"""Source validation fixture for zipzi-python2-native."""\n')
         extension = native / ("_native" + sysconfig.get_config_var("EXT_SUFFIX"))
         shutil.copy2(libraries.pop(), extension)
+        host_command = ["cargo", "build", "--locked", "-p", "zipzi-runtime", "--features",
+            "test-support,bench-instrumentation" if args.instrumented else "test-support", "--example", "local_host_fixture"]
+        if args.release:
+            host_command.append("--release")
+        subprocess.run(host_command, cwd=ROOT, env=env, check=True)
+        host = output / "local_host_fixture"
+        shutil.copy2(ROOT / "target" / ("release" if args.release else "debug") / "examples/local_host_fixture", host)
         (output / "build-metadata.json").write_text(json.dumps(dict(profile=artifacts[0]["profile"],
+            instrumented=args.instrumented, host_profile="release" if args.release else "debug",
+            host_sha256=hashlib.sha256(host.read_bytes()).hexdigest(),
             python=sys.version, artifact_sha256=hashlib.sha256(extension.read_bytes()).hexdigest()), indent=2) + "\n")
-        subprocess.run(["cargo", "build", "--locked", "-p", "zipzi-runtime", "--example", "local_host_fixture"], cwd=ROOT, env=env, check=True)
-        env.update(ZIPZI_PYTHON2_NATIVE=str(native.parent), ZIPZI_PYTHON2_HOST=str(ROOT / "target/debug/examples/local_host_fixture"))
+        env.update(ZIPZI_PYTHON2_NATIVE=str(native.parent), ZIPZI_PYTHON2_HOST=str(host))
         subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_api.py"), "-v", *args.tests], cwd="/tmp", env=env, check=True)
         subprocess.run(["uv", "run", "--locked", "pyright", "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json")], cwd=ROOT, check=True)
         invalid = subprocess.run(["uv", "run", "--locked", "--project", str(ROOT), "pyright",

@@ -196,6 +196,12 @@ impl Runtime {
             return Err(RuntimeError::Budget("mesh snapshot"));
         }
         self.check_bytes(bytes.saturating_mul(128), 0, 0)?;
+        crate::metrics::copy_payload(
+            mesh.vertex_ids.len() * std::mem::size_of::<u32>()
+                + (mesh.base_positions.len() + mesh.uvs.len())
+                    * std::mem::size_of::<zipzi_core::Vec2>()
+                + mesh.triangles.len() * std::mem::size_of::<[u32; 3]>(),
+        );
         Ok(MeshSnapshot {
             source,
             id: mesh.id.clone(),

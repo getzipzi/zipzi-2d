@@ -1,7 +1,7 @@
 //! Unix-only transport and endpoint ownership. Framing/threads have no UI access.
 use crate::{
-    protocol::{failure, MAX_FRAME},
     ClientId,
+    protocol::{MAX_FRAME, failure},
 };
 use serde_json::Value;
 use std::{
@@ -16,8 +16,9 @@ use std::{
     },
     path::{Path, PathBuf},
     sync::{
+        Arc,
         atomic::{AtomicBool, AtomicUsize, Ordering},
-        mpsc, Arc,
+        mpsc,
     },
     thread,
     time::Duration,
@@ -262,7 +263,7 @@ fn serve(mut stream: UnixStream, sender: async_channel::Sender<Inbound>, stop: A
         };
         if auth.is_none() {
             if let Some(ok) = response.get("ok") {
-                auth = serde_json::from_value(ok["client"].clone())
+                auth = crate::metrics::from_value(ok["client"].clone())
                     .ok()
                     .zip(ok["connection"].as_u64())
                     .map(|(client, connection)| Auth { client, connection });
@@ -296,13 +297,13 @@ pub fn read_frame(reader: &mut impl Read) -> io::Result<Value> {
     }
     let mut body = vec![0; length];
     reader.read_exact(&mut body).map_err(partial)?;
-    serde_json::from_slice(&body).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    crate::metrics::decode(&body).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 fn partial(e: io::Error) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, format!("Incomplete frame: {e}"))
 }
 pub fn write_frame(writer: &mut impl Write, value: &Value) -> io::Result<()> {
-    let body = serde_json::to_vec(value)?;
+    let body = crate::metrics::encode(value)?;
     if body.len() > MAX_FRAME {
         return write_frame(
             writer,

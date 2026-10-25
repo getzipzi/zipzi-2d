@@ -40,6 +40,8 @@ enum Message {
     Wait(ClientId, JobId, Reply<JobInfo>, Permit),
     Complete(Completion),
     Shutdown,
+    #[cfg(feature = "test-support")]
+    Wake,
 }
 struct Waiter {
     client: ClientId,
@@ -52,6 +54,8 @@ struct Waiter {
 /// its sessions, without saving them. Entered IO finishes with its actual result;
 /// queued jobs are cancelled. Waiting never holds a Runtime lock.
 pub struct LocalHost {
+    #[cfg(feature = "test-support")]
+    control: Arc<crate::test_support::Control>,
     sender: mpsc::Sender<Message>,
     queued: Arc<AtomicUsize>,
     capacity: usize,
@@ -67,19 +71,35 @@ impl LocalHost {
             ));
         }
         let (sender, receiver) = mpsc::channel();
-        let workers = Workers::new(limits.running_jobs, sender.clone())?;
+        let runtime = Runtime::new(limits.clone());
+        #[cfg(feature = "test-support")]
+        let control = runtime.test_controller();
+        let workers = Workers::new(
+            limits.running_jobs,
+            sender.clone(),
+            #[cfg(feature = "test-support")]
+            control.clone(),
+        )?;
         let owner = thread::Builder::new()
             .name("zipzi-local-runtime".into())
             .spawn(move || {
-                run(Runtime::new(limits), receiver, workers);
+                run(runtime, receiver, workers);
             })?;
         Ok(Self {
+            #[cfg(feature = "test-support")]
+            control,
             sender,
             queued: Arc::new(AtomicUsize::new(0)),
             capacity: call_capacity,
             closed: AtomicBool::new(false),
             owner: Mutex::new(Some(owner)),
         })
+    }
+    #[cfg(feature = "test-support")]
+    pub fn test_control(&self, action: &str) -> Result<bool> {
+        let result = self.control.command(action);
+        let _ = self.sender.send(Message::Wake);
+        result
     }
     fn permit(&self) -> HostResult<Permit> {
         if self.closed.load(Ordering::Acquire) {
@@ -161,7 +181,11 @@ struct Workers {
     active: usize,
 }
 impl Workers {
-    fn new(count: usize, complete: mpsc::Sender<Message>) -> std::io::Result<Self> {
+    fn new(
+        count: usize,
+        complete: mpsc::Sender<Message>,
+        #[cfg(feature = "test-support")] control: Arc<crate::test_support::Control>,
+    ) -> std::io::Result<Self> {
         let (queue, receiver) = async_channel::bounded::<Work>(count);
         let mut workers = Self {
             queue,
@@ -171,13 +195,19 @@ impl Workers {
         for index in 0..count {
             let receiver = receiver.clone();
             let complete = complete.clone();
+            #[cfg(feature = "test-support")]
+            let control = control.clone();
             workers.threads.push(
                 thread::Builder::new()
                     .name(format!("zipzi-local-io-{index}"))
                     .stack_size(16 << 20)
                     .spawn(move || {
                         while let Ok(work) = receiver.recv_blocking() {
-                            if complete.send(Message::Complete(work.run())).is_err() {
+                            #[cfg(feature = "test-support")]
+                            let completion = control.run(work);
+                            #[cfg(not(feature = "test-support"))]
+                            let completion = work.run();
+                            if complete.send(Message::Complete(completion)).is_err() {
                                 break;
                             }
                         }
@@ -244,11 +274,19 @@ fn run(mut runtime: Runtime, receiver: mpsc::Receiver<Message>, mut workers: Wor
                 runtime.complete(completion);
             }
             Message::Shutdown => stopping = true,
+            #[cfg(feature = "test-support")]
+            Message::Wake => (),
         }
         if stopping {
             runtime.cancel_host_jobs();
         }
-        runtime.dispatch(&mut workers);
+        #[cfg(feature = "test-support")]
+        let dispatch = stopping || runtime.test_controller().dispatch_enabled();
+        #[cfg(not(feature = "test-support"))]
+        let dispatch = true;
+        if dispatch {
+            runtime.dispatch(&mut workers);
+        }
         notify(&runtime, &mut waiters);
         if stopping && workers.active == 0 {
             break;

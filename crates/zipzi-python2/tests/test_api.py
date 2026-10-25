@@ -1,5 +1,7 @@
 """One handwritten recipe on Local and Connected; independent geometry/history assertions."""
 from dataclasses import FrozenInstanceError
+import gc
+import weakref
 import os
 from pathlib import Path
 import subprocess
@@ -30,14 +32,15 @@ class PythonSdk(unittest.TestCase):
         self.folder = Path(self.temporary.name)
         self.counter = 0
 
-    def runtime(self, mode, *, drop=None, drop_after=0):
+    def runtime(self, mode, *, drop=None, drop_after=0, settings=None, directory=None):
         if mode == "local":
             runtime = zipzi.local()
         else:
             self.counter += 1
-            directory = self.folder / str(self.counter)
-            directory.mkdir(mode=0o700)
+            directory = directory or self.folder / str(self.counter)
+            directory.mkdir(mode=0o700, exist_ok=True)
             env = dict(os.environ, ZIPZI_RUNTIME_DIR=str(directory), ZIPZI_RUNTIME_PROFILE="python2")
+            env.update(settings or {})
             if drop:
                 env["ZIPZI_TEST_DROP_RESPONSE"] = drop
                 env["ZIPZI_TEST_DROP_RESPONSE_AFTER"] = str(drop_after)
@@ -468,6 +471,426 @@ class PythonSdk(unittest.TestCase):
         image.close()
         self.assertEqual(session.info().history, (1, 0))
         self.assertEqual(session.resources.get(uid(2)).pixels.rgba, b"rgba")
+
+    def control(self, runtime, action):
+        return runtime._backend._test_control(action)
+
+    def await_io(self, runtime):
+        deadline = time.monotonic() + 5
+        while not self.control(runtime, "entered"):
+            self.assertLess(time.monotonic(), deadline, "Worker did not enter IO")
+            time.sleep(.005)
+
+    def test_queued_cancel_releases_candidate_and_retains_terminal_error(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(1))
+                image = runtime.resources.prepare_image(1, 1, b"rgba")
+                edit = session.edit("queued")
+                asset = edit.resources.create_image("Draft", image)
+                image.close()
+                self.control(runtime, "pause_dispatch")
+                job = edit.commit()
+                self.assertEqual(job.state(), "queued")
+                job.cancel()
+                self.assertEqual(job.state(), "cancelling")
+                self.control(runtime, "resume_dispatch")
+                with self.assertRaises(zipzi.SdkFailure) as error:
+                    job.wait()
+                self.assertEqual(error.exception.code, "CANCELLED")
+                with self.assertRaises(zipzi.SdkFailure) as again:
+                    job.close()
+                self.assertIs(again.exception, error.exception)
+                self.assertEqual(job.state(), "cancelled")
+                self.assertEqual(session.info().history, (0, 0))
+                with self.assertRaises(zipzi.SdkFailure):
+                    session.resources.get(asset)
+                self.assertEqual(runtime.resources.usage().rgba_bytes, 0)
+
+    def test_cancellation_after_entering_io_reports_actual_save(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(1))
+                with session.edit("base") as edit:
+                    face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                self.control(runtime, "hold_io")
+                job = session.project.save(self.folder / mode)
+                self.await_io(runtime)
+                job.cancel()
+                self.assertEqual(job.state(), "cancelling")
+                self.control(runtime, "release_io")
+                saved = job.wait()
+                self.assertTrue(saved.manifest.is_file())
+                self.assertEqual(job.state(), "succeeded")
+                self.assertIs(job.wait(), saved)
+                self.assertEqual(session.info().history, (1, 0))
+                self.assertFalse(session.info().modified)
+                self.assertEqual(session.meshes.get(face).name, "Face")
+
+    def test_worker_failure_and_panic_have_distinct_recovery_scopes(self):
+        for mode in ("local", "connected"):
+            for fault, expected in (("fail_next", "EXECUTOR_FAILURE"), ("panic_next", "WORKER_PANIC")):
+                with self.subTest(mode=mode, fault=fault):
+                    runtime = self.runtime(mode)
+                    session = runtime.sessions.create(uid(1))
+                    with session.edit("base") as edit:
+                        face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                    old = session.meshes.get(face)
+                    self.control(runtime, fault)
+                    job = session.project.save(self.folder / f"{mode}-{fault}")
+                    with self.assertRaises(zipzi.SdkFailure) as error:
+                        job.wait()
+                    self.assertEqual(error.exception.code, expected)
+                    self.assertEqual(job.state(), "failed")
+                    with self.assertRaises(zipzi.SdkFailure) as again:
+                        job.wait()
+                    self.assertIs(again.exception, error.exception)
+                    self.assertEqual(session.meshes.get(face), old)
+                    self.assertEqual(session.info().history, (1, 0))
+                    if fault == "panic_next":
+                        with self.assertRaises(zipzi.SdkFailure) as faulted:
+                            session.edit("unsafe")
+                        self.assertEqual(faulted.exception.code, "FAULTED")
+                    else:
+                        with session.edit("retry") as edit:
+                            edit.meshes.rename(face, "After rejection")
+                        self.assertEqual(session.info().history, (2, 0))
+
+    def test_cancel_and_state_response_loss_cannot_be_consumed_by_wait(self):
+        for lost in ("cancel_job", "job_status"):
+            with self.subTest(lost=lost):
+                runtime = self.runtime("connected", drop=lost)
+                session = runtime.sessions.create(uid(1))
+                edit = session.edit("pending")
+                edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                self.control(runtime, "pause_dispatch")
+                job = edit.commit()
+                with self.assertRaises(zipzi.OutcomeUnknown) as error:
+                    job.cancel() if lost == "cancel_job" else job.state()
+                with self.assertRaises(zipzi.Busy):
+                    job.wait()
+                self.assertEqual(error.exception.recover(), None if lost == "cancel_job" else "queued")
+                self.control(runtime, "resume_dispatch")
+                if lost == "cancel_job":
+                    with self.assertRaises(zipzi.SdkFailure) as cancelled:
+                        job.wait()
+                    self.assertEqual(cancelled.exception.code, "CANCELLED")
+                else:
+                    self.assertTrue(job.wait().changed)
+
+    def test_expired_request_never_replays_a_write_under_a_new_id(self):
+        for lost in ("apply_authoring", "prepare_image", "plan_authoring", "commit", "job"):
+            with self.subTest(lost=lost):
+                runtime = self.runtime("connected", drop=lost, settings={"ZIPZI_TEST_RESULT_TTL_MS": "30"})
+                session = runtime.sessions.create(uid(1))
+                edit = session.edit("expiry")
+                if lost in {"plan_authoring", "commit", "job"}:
+                    face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                with self.assertRaises(zipzi.OutcomeUnknown) as error:
+                    if lost == "apply_authoring":
+                        edit.meshes.create(meshes.MeshSpec("Once", GEOMETRY))
+                    elif lost == "prepare_image":
+                        runtime.resources.prepare_image(1, 1, b"rgba")
+                    elif lost == "plan_authoring":
+                        edit.meshes.plan(meshes.RenameIntent(face, "Face", "Planned"))
+                    elif lost == "commit":
+                        edit.commit()
+                    else:
+                        pending_job = edit.commit()
+                        pending_job.wait()
+                request_id = runtime._backend._next
+                time.sleep(.08)
+                with self.assertRaises(zipzi.SdkFailure) as expired:
+                    error.exception.recover()
+                self.assertEqual(expired.exception.code, "REQUEST_EXPIRED")
+                self.assertEqual(runtime._backend._next, request_id)
+                if lost == "job":
+                    with self.assertRaises(zipzi.SdkFailure) as unknown_state:
+                        pending_job.state()
+                    self.assertEqual(unknown_state.exception.code, "REQUEST_EXPIRED")
+                self.assertEqual(session.info().history, (1, 0) if lost in {"commit", "job"} else (0, 0))
+
+    def test_client_expiry_reclaims_prepared_plan_and_candidate_without_new_identity(self):
+        runtime = self.runtime("connected", drop="plan_authoring", settings={"ZIPZI_TEST_GRACE_MS": "30"})
+        session = runtime.sessions.create(uid(1))
+        image = runtime.resources.prepare_image(1, 1, b"rgba")
+        edit = session.edit("expired client")
+        asset = edit.resources.create_image("Draft", image)
+        snapshot = edit.resources.get(asset)
+        with self.assertRaises(zipzi.OutcomeUnknown) as error:
+            edit.resources.plan(resources.RenameIntent(asset, "Draft", "Planned"))
+        old_client, old_id = runtime._backend._client, runtime._backend._next
+        time.sleep(.1)
+        with self.assertRaises(zipzi.SdkFailure) as expired:
+            error.exception.recover()
+        self.assertEqual(expired.exception.code, "CLIENT_EXPIRED")
+        self.assertEqual((runtime._backend._client, runtime._backend._next), (old_client, old_id))
+        observer = zipzi.connect(endpoint=runtime._backend._endpoint)
+        self.addCleanup(observer.close)
+        usage = observer.resources.usage()
+        self.assertEqual((usage.prepared_images, usage.plans, usage.rgba_bytes), (0, 0, 0))
+        self.assertEqual(snapshot.pixels.rgba, b"rgba")
+        observer._backend._request(dict(op="attach_session", session=session._token), observer, "test.attach")
+        self.assertEqual(zipzi.Session(observer, session._token).info().history, (0, 0))
+
+    def test_host_restart_refuses_original_pending_request(self):
+        runtime = self.runtime("connected", drop="apply_authoring")
+        session = runtime.sessions.create(uid(1))
+        edit = session.edit("old runtime")
+        with self.assertRaises(zipzi.OutcomeUnknown) as error:
+            edit.meshes.create(meshes.MeshSpec("Once", GEOMETRY))
+        endpoint, old_id = runtime._backend._endpoint, runtime._backend._next
+        self.stop_host()
+        with self.assertRaises(zipzi.OutcomeUnknown) as unavailable:
+            error.exception.recover()
+        self.assertEqual(unavailable.exception.pending, error.exception.pending)
+        fresh = self.runtime("connected", directory=endpoint.parent)
+        with self.assertRaises(zipzi.SdkFailure) as restarted:
+            error.exception.recover()
+        self.assertEqual(restarted.exception.code, "HOST_RESTARTED")
+        self.assertEqual(runtime._backend._next, old_id)
+        self.assertEqual(fresh.resources.usage().prepared_images, 0)
+
+    def test_idle_completion_and_close_during_entered_io(self):
+        for mode in ("local", "connected"):
+            runtime = self.runtime(mode)
+            session = runtime.sessions.create(uid(1))
+            edit = session.edit("idle")
+            face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+            job = edit.commit()
+            time.sleep(.08)
+            self.assertEqual(job.state(), "succeeded")
+            self.assertEqual(session.info().history, (1, 0))
+            self.assertEqual(session.meshes.get(face).name, "Face")
+            job.wait()
+        runtime = self.runtime("local")
+        session = runtime.sessions.create(uid(2))
+        self.control(runtime, "hold_io")
+        session.project.save(self.folder / "close-inflight")
+        self.await_io(runtime)
+        thread = threading.Thread(target=runtime.close)
+        thread.start()
+        time.sleep(.02)
+        self.assertTrue(thread.is_alive(), "close returned before entered IO finished")
+        self.control(runtime, "release_io")
+        thread.join(timeout=5)
+        self.assertFalse(thread.is_alive())
+        manifest = self.folder / "close-inflight/project.zipzi.json"
+        self.assertTrue(manifest.is_file(), "Entered save was silently rolled back by close")
+        reopened = self.runtime("local").sessions.open(manifest).wait()
+        self.assertFalse(reopened.info().modified)
+
+    def test_retained_job_budget_refusal_keeps_edit_retryable(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                jobs = [runtime.sessions.create(uid(100 + n)).project.save(self.folder / mode / str(n)) for n in range(8)]
+                session = runtime.sessions.create(uid(999))
+                edit = session.edit("quota")
+                face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                source = edit.meshes.get(face).source
+                with self.assertRaises(zipzi.SdkFailure) as error:
+                    edit.commit()
+                self.assertEqual(error.exception.code, "BUDGET_EXCEEDED")
+                self.assertEqual(edit.meshes.get(face).source, source)
+                jobs[0].wait()
+                edit.commit().wait()
+                self.assertEqual(session.info().history, (1, 0))
+                for job in jobs[1:]:
+                    job.wait()
+
+    def test_real_save_failure_releases_result_and_path_without_publication(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(1))
+                with session.edit("base") as edit:
+                    face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                before = session.info()
+                invalid = self.folder / f"{mode}-file"
+                self.control(runtime, "hold_io")
+                job = session.project.save(invalid)
+                self.await_io(runtime)
+                invalid.write_bytes(b"keep")
+                self.control(runtime, "release_io")
+                try:
+                    with self.assertRaises(zipzi.SdkFailure) as error:
+                        job.wait()
+                    with self.assertRaises(zipzi.SdkFailure) as again:
+                        job.wait()
+                    self.assertIs(again.exception, error.exception)
+                except zipzi.SdkFailure as error:
+                    self.fail(f"Expected admitted IO failure, got preflight: {error}")
+                self.assertEqual(invalid.read_bytes(), b"keep")
+                self.assertEqual(session.info(), before)
+                self.assertEqual(session.meshes.get(face).name, "Face")
+                self.assertTrue(session.project.save(self.folder / f"{mode}-retry").wait().manifest.is_file())
+
+    def test_last_native_owner_releases_project_lock_and_unsaved_memory(self):
+        runtime = zipzi.local()
+        session = runtime.sessions.create(uid(1))
+        with runtime.resources.prepare_image(1, 1, b"rgba") as image:
+            with session.edit("memory") as edit:
+                asset = edit.resources.create_image("Texture", image)
+        saved = session.project.save(self.folder / "last-owner").wait()
+        pixels = session.resources.get(asset).pixels
+        unused = runtime.resources.prepare_image(1, 1, b"abcd")
+        edit = session.edit("never publish or autosave")
+        draft = edit.resources.create_image("Unsaved", unused)
+        unused.close()
+        # Saved-image caches may be evicted; the unsaved candidate must still
+        # pin its own actual RGBA allocation until the host is dropped.
+        self.assertGreaterEqual(runtime.resources.usage().rgba_bytes, 4)
+        self.assertEqual(edit.resources.get(draft).pixels.rgba, b"abcd")
+        backend = weakref.ref(runtime._backend)
+        del image, unused, edit, session, runtime
+        gc.collect()
+        self.assertIsNone(backend(), "A final Python owner still retains the native host")
+        reopened = self.runtime("local").sessions.open(saved.manifest).wait()
+        self.assertEqual(reopened.resources.get(asset).pixels, pixels)
+        with self.assertRaises(zipzi.SdkFailure) as unsaved:
+            reopened.resources.get(draft)
+        self.assertEqual(unsaved.exception.code, "MISSING_IMAGE")
+
+    def test_connected_close_releases_client_leases_and_recovers_lost_ack(self):
+        for lost in (None, "release_client"):
+            with self.subTest(lost=lost):
+                runtime = self.runtime("connected", drop=lost)
+                session = runtime.sessions.create(uid(1))
+                with session.edit("formal") as edit:
+                    face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                image = runtime.resources.prepare_image(1, 1, b"rgba")
+                edit = session.edit("discard")
+                asset = edit.resources.create_image("Draft", image)
+                plan = edit.resources.plan(resources.RenameIntent(asset, "Draft", "Planned"))
+                observer = zipzi.connect(endpoint=runtime._backend._endpoint)
+                self.addCleanup(observer.close)
+                if lost:
+                    with self.assertRaises(zipzi.OutcomeUnknown) as error:
+                        runtime.close()
+                    request_id = runtime._backend._next
+                    self.assertIsNone(error.exception.recover())
+                    self.assertEqual(runtime._backend._next, request_id)
+                else:
+                    runtime.close()
+                runtime.close()
+                usage = observer.resources.usage()
+                self.assertEqual((usage.prepared_images, usage.plans, usage.rgba_bytes), (0, 0, 0))
+                observer._backend._request(dict(op="attach_session", session=session._token), observer, "test.attach")
+                retained = zipzi.Session(observer, session._token)
+                self.assertEqual(retained.meshes.get(face).name, "Face")
+                self.assertEqual(retained.info().history, (1, 0))
+                self.assertEqual(plan.report.source.sequence, 1)
+
+    def test_failed_terminal_reply_recovery_caches_original_error(self):
+        for fault, code in (("fail_next", "EXECUTOR_FAILURE"), ("panic_next", "WORKER_PANIC")):
+            with self.subTest(fault=fault):
+                runtime = self.runtime("connected", drop="job")
+                session = runtime.sessions.create(uid(1))
+                self.control(runtime, fault)
+                job = session.project.save(self.folder / fault)
+                with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                    job.wait()
+                with self.assertRaises(zipzi.SdkFailure) as failed:
+                    lost.exception.recover()
+                self.assertEqual(failed.exception.code, code)
+                with self.assertRaises(zipzi.SdkFailure) as again:
+                    job.wait()
+                self.assertIs(again.exception, failed.exception)
+
+    def test_connected_close_does_not_cancel_entered_publication(self):
+        runtime = self.runtime("connected")
+        session = runtime.sessions.create(uid(1))
+        with session.edit("base") as edit:
+            face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+        observer = zipzi.connect(endpoint=runtime._backend._endpoint)
+        self.addCleanup(observer.close)
+        observer._backend._request(dict(op="attach_session", session=session._token), observer, "test.attach")
+        retained = zipzi.Session(observer, session._token)
+        self.control(runtime, "hold_io")
+        session.project.save(self.folder / "detached-save")
+        self.await_io(runtime)
+        runtime.close()
+        self.control(observer, "release_io")
+        deadline = time.monotonic() + 5
+        while retained.info().modified:
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(.005)
+        self.assertTrue((self.folder / "detached-save/project.zipzi.json").is_file())
+        self.assertEqual(retained.meshes.get(face).name, "Face")
+        self.assertEqual(retained.info().history, (1, 0))
+
+    def test_confirmed_host_busy_commit_keeps_candidate_retryable(self):
+        session = self.runtime("connected", settings={"ZIPZI_TEST_BUSY_COMMIT_ONCE": "1"}).sessions.create(uid(1))
+        edit = session.edit("busy admission")
+        face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+        source = edit.meshes.get(face).source
+        with self.assertRaises(zipzi.Busy):
+            edit.commit()
+        self.assertEqual(edit.meshes.get(face).source, source)
+        edit.commit().wait()
+        self.assertEqual(session.info().history, (1, 0))
+
+    def test_formal_plan_rejects_other_session_and_undo_redo_versions(self):
+        for mode in ("local", "connected"):
+            for changed in ("other_session", "undo", "redo"):
+                with self.subTest(mode=mode, changed=changed):
+                    runtime = self.runtime(mode)
+                    session = runtime.sessions.create(uid(1))
+                    with session.edit("base") as edit:
+                        face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                    with session.meshes.plan(meshes.RenameIntent(face, "Face", "Planned")) as plan:
+                        source = plan.report.source
+                        target = runtime.sessions.create(uid(2)) if changed == "other_session" else session
+                        if changed in {"undo", "redo"}:
+                            session.undo().wait()
+                        if changed == "redo":
+                            session.redo().wait()
+                        edit = target.edit("stale formal")
+                        with self.assertRaises(zipzi.SdkFailure) as error:
+                            edit.apply_plan(plan)
+                        self.assertEqual(error.exception.code, "STALE_PLAN")
+                        self.assertEqual(plan.report.source, source)
+                        self.assertEqual(session.info().history, (0, 1) if changed == "undo" else (1, 0))
+                        if changed != "undo":
+                            self.assertEqual(session.meshes.get(face).name, "Face")
+
+    def test_old_exception_cannot_consume_a_later_request_from_the_same_owner(self):
+        from zipzi.backends import connected
+        exchange = connected._exchange
+        def lose_reply(stream, body):
+            exchange(stream, body)
+            raise EOFError("Lost after actual execution")
+        for operation in ("create", "info", "apply"):
+            with self.subTest(operation=operation):
+                runtime = self.runtime("connected")
+                session = runtime.sessions.create(uid(1))
+                edit = session.edit("same owner") if operation == "apply" else None
+                if edit is not None:
+                    face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
+                def call(n):
+                    if operation == "create":
+                        return runtime.sessions.create(uid(n))
+                    if operation == "info":
+                        return session.info()
+                    return edit.meshes.rename(face, f"Name {n}")
+                with patch.object(connected, "_exchange", side_effect=lose_reply):
+                    with self.assertRaises(zipzi.OutcomeUnknown) as first:
+                        call(2)
+                first.exception.recover()
+                with patch.object(connected, "_exchange", side_effect=lose_reply):
+                    with self.assertRaises(zipzi.OutcomeUnknown) as second:
+                        call(3)
+                with self.assertRaises(zipzi.SdkFailure) as resolved:
+                    first.exception.recover()
+                self.assertEqual(resolved.exception.code, "NO_PENDING_REQUEST")
+                result = second.exception.recover()
+                if edit is not None:
+                    self.assertEqual(result.source.sequence, 3)
+                    edit.commit().wait()
+                    self.assertEqual(session.meshes.get(face).name, "Name 3")
 
     def test_local_wait_releases_gil_and_close_is_idempotent(self):
         runtime = self.runtime("local")

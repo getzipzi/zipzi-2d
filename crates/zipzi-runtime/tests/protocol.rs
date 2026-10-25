@@ -465,3 +465,149 @@ fn modeling_query_rejects_expansion_before_json_and_keeps_candidate_usable() {
     assert_eq!(rt.session(session).unwrap().version(), version);
     assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
 }
+
+#[test]
+fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
+    let (mut rt, mut protocol, client, connection, now) = setup(Default::default());
+    let session = rt
+        .create_session(
+            client,
+            &uuid::Uuid::new_v4().to_string(),
+            ModelSetup::default(),
+        )
+        .unwrap();
+    let asset = uuid::Uuid::new_v4().to_string();
+    let a = rt
+        .prepare_image(client, 1, 1, vec![12, 34, 56, 255])
+        .unwrap()
+        .image;
+    let edit = rt.begin_edit(client, session, "formal", None).unwrap();
+    rt.apply_authoring(
+        client,
+        edit,
+        vec![authoring::EditOperation::CreateImage {
+            spec: zipzi_sdk::ImageCreateSpec {
+                id: Some(asset.clone()),
+                name: "A".into(),
+            },
+            image: a,
+        }],
+    )
+    .unwrap();
+    rt.commit_edit(client, edit).unwrap();
+    rt.release_prepared_image(client, a).unwrap();
+    let b = rt
+        .prepare_image(client, 1, 1, vec![11, 22, 33, 255])
+        .unwrap()
+        .image;
+    rt.plan_authoring(
+        client,
+        session,
+        None,
+        authoring::PlanIntent::ImageRename {
+            id: asset.clone(),
+            expected_name: "A".into(),
+            name: "Planned".into(),
+        },
+    )
+    .unwrap();
+    let edit = rt.begin_edit(client, session, "cancel", None).unwrap();
+    rt.apply_authoring(
+        client,
+        edit,
+        vec![authoring::EditOperation::CreateImage {
+            spec: zipzi_sdk::ImageCreateSpec {
+                id: None,
+                name: "B".into(),
+            },
+            image: b,
+        }],
+    )
+    .unwrap();
+    let job = rt.request_commit(client, edit).unwrap();
+    assert_eq!(
+        request(
+            &mut rt,
+            &mut protocol,
+            client,
+            connection,
+            1,
+            json!({"op":"job_status","job":job}),
+            now
+        )["ok"],
+        "queued"
+    );
+    assert!(
+        request(
+            &mut rt,
+            &mut protocol,
+            client,
+            connection,
+            2,
+            json!({"op":"cancel_job","job":job}),
+            now
+        )
+        .get("ok")
+        .is_some()
+    );
+    struct Manual(Vec<Work>);
+    impl Executor for Manual {
+        fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
+            self.0.push(work);
+            Ok(())
+        }
+    }
+    let mut executor = Manual(vec![]);
+    rt.dispatch(&mut executor);
+    rt.complete(executor.0.pop().unwrap().run());
+    assert_eq!(
+        request(
+            &mut rt,
+            &mut protocol,
+            client,
+            connection,
+            3,
+            json!({"op":"job_status","job":job}),
+            now
+        )["ok"],
+        "cancelled"
+    );
+    assert_eq!(rt.job_info(client, job).unwrap().state, JobState::Cancelled);
+    request(
+        &mut rt,
+        &mut protocol,
+        client,
+        connection,
+        4,
+        json!({"op":"job","job":job}),
+        now,
+    );
+    assert!(rt.job_info(client, job).is_err());
+    let release = json!({"op":"release_client"});
+    let response = request(
+        &mut rt,
+        &mut protocol,
+        client,
+        connection,
+        5,
+        release.clone(),
+        now,
+    );
+    assert_eq!(
+        request(&mut rt, &mut protocol, client, connection, 5, release, now),
+        response
+    );
+    assert_eq!(rt.prepared_image_count(), 0);
+    assert_eq!(rt.modeling_plan_count(), 0);
+    assert_eq!(rt.image_memory_usage().rgba_bytes, 4);
+    assert_eq!(rt.session_info(session).unwrap().history_lengths, (1, 0));
+    let observer = rt.register_client().unwrap();
+    assert_eq!(
+        rt.image_snapshot(observer, session, None, &asset)
+            .unwrap()
+            .pixels
+            .rgba
+            .as_ref(),
+        &[12, 34, 56, 255]
+    );
+}

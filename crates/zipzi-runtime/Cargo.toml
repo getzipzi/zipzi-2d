@@ -6,6 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 description = "UI-independent host for Zipzi authoring sessions"
 
+[features]
+test-support = []
+bench-instrumentation = ["zipzi-project/bench-instrumentation"]
+
 [dependencies]
 zipzi-core.workspace = true
 zipzi-sdk.workspace = true

@@ -12,12 +12,12 @@
 
 | 阶段 | 已实现 | 尚未满足的退出门槛 |
 | --- | --- | --- |
-| P0 | 新包边界、两分发配置、选定输入/结果/失败契约、能力范围；新包自身的固定性能采集入口 | 全部工作负载接线、Rust 编码/实际复制/存活峰值指标、噪声调查与阈值冻结 |
-| P1 | 纯 Python 公共类型/异常/包装、薄 PyO3、两后端；网格、图片准备/创建/替换/查询、正式/候选 Plan、混合批次、历史、保存重开和响应恢复 | 完整取消/worker 失败/请求过期、客户端过期和宿主重启的 Python 矩阵 |
+| P0 | 选定六项工作负载的 Local/Connected 计时和独立 Rust/Python 探针；冻结比较及负控制 | 后续领域工作负载；计数范围之外的隐式领域 Clone 和 allocator 内部复制不计入当前负载复制数字 |
+| P1 | 选定 API、两后端、来源/资源/历史/IO、36 项公共行为与生命周期矩阵、严格类型及独立正常 wheel 验收 | 当前选定试点门槛已满足；长任务、后续领域和发布平台矩阵另列 |
 | P2–P5/P7 | 未开始 | 按计划交付 |
 | P6 | 纯包/原生包分别构建；初步隔离安装 recipe | sdist、完整版本/平台配对、宿主发现、真实 Editor 和全部领域安装验收 |
 
-能力范围见 [`CAPABILITIES.md`](../../../crates/zipzi-python2/CAPABILITIES.md)。源码接线、独立验证与完整阶段验收分开记录；P0/P1 均未标为完成。
+能力范围见 [`CAPABILITIES.md`](../../../crates/zipzi-python2/CAPABILITIES.md)。源码接线、独立验证和阶段验收分开记录；当前选定 P1 试点已满足退出门槛，P0 试点统计有明确范围，总体后续领域仍按阶段跟踪。
 
 ## P1 当前链路
 
@@ -33,7 +33,7 @@
 
 ## 2026-10-25 资源与 Plan 切片
 
-提交 `ad868c8a` 已保存独立新包基础。本节是该提交之后的工作区验收，不能用旧提交重现本节新增功能；尚未生成 P2 绑定。
+提交 `ad868c8a` 保存独立新包基础，`7cf4bed` 保存本节资源与 Plan 切片。本节 19 项行为及初步测量是当时的验收事实；后续生命周期/P0 工作区结果见下节，尚未生成 P2 绑定。
 
 - SDK 新增 `ImageCreateSpec`，身份/default 在 SDK；Runtime 增加按 client 持有的 PreparedImage 表，与文档和历史各自持有引用。独立准备失败不污染 Edit，创建/替换失败与其他写入共用候选失败作用域。
 - `EditOperation` 包含网格、接纳/替换图片及应用 Plan；两个后端共用 `Runtime::apply_authoring`。批次只推进一次序号；Plan 仅可位于批次开头，后续项可继续编辑。过期、错误 owner 或释放引用使候选不可提交，无正式部分发布。
@@ -48,7 +48,7 @@
 ## 验证入口
 
 ```sh
-# 19 项新包测试，其中多项对 Local/Connected 或多种故障分别验证；加严格正反类型检查。
+# 当前 36 项新包测试，其中多项对 Local/Connected 或多种故障分别验证；加严格正反类型检查。
 ./tools/test-sdk.sh python2
 ./tools/test-sdk.sh python2 --release
 
@@ -71,10 +71,39 @@ uv build --wheel --out-dir target/python2/native-wheels crates/zipzi-python2
 
 Rust 聚焦门禁覆盖 SDK 网格编辑及 Runtime 会话/来源/预算/任务；不运行完整 SDK/Editor、GPU 或授权素材验收。当前实际环境为 Rust 1.99.0、CPython 3.14.7、macOS。全仓既有格式差异不在本项目批量改写。
 
-## P0 自身测量
+## P1 生命周期补齐与 P0 schema 2
+
+`7cf4bed` 之后新增 [P1 生命周期矩阵](p1-lifecycle-matrix.md)，当前源码行为测试共 36 项。排队取消、进入 IO 后取消、实际 IO 失败、executor 失败、worker panic、保留结果槽准入、无后续调用完成、明确 close 和最后 owner 释放均有对应断言；IPC 另验证请求/客户端过期、暂时离线、宿主重启、丢响应及同一 owner 的旧异常不能消费新请求。
+
+Job 共用 `_recovery.py` 的原请求持有原语，状态查询不释放结果，取消与 close 分开。成功/失败均缓存，Edit 跟随其提交 Job 的终态更新。Connected 的明确正常关闭调用 `release_client`，保留正式 Session；另一请求尚未确认时只断开并等待 grace expiry，不发新写 ID。关闭确认本身丢失仍有恢复 owner。原生契约为 `zipzi-python2-3`，IPC 要求 `typed_job_lifecycle`。
+
+Fault 控制与计数分配器分别位于 `test-support` / `bench-instrumentation`，正常 wheel 不包含控制或探针入口。Runtime CPU fixture 现在真正异步运行 work 并在 idle 时消费 completion，不把 worker 放在请求线程内执行。正常 wheel 的两种独立环境重跑图片、Plan、替换、Undo/Redo、Job 状态/终态取消、保存重开。
+
+最新证据为 [`p0-p1-baseline.json`](p0-p1-baseline.json) 和独立 [`p0-p1-check.json`](p0-p1-check.json)。每个后端 5 个计时进程 + 5 个探针进程，6 项工作负载，每项 4 次预热、32 个计时样本。两种产物和 CPU 宿主均 Release、复制到独立路径并冻结哈希；探针不进入计时二进制。详细统计范围和阈值见计划第 2.2 节及 JSON，后续比较拒绝工作负载脚本/平台/Python 的漂移。
+
+当前冻结基线摘要（CPU fixture，非 Editor）：
+
+| 工作负载 | Local P50 / P95 (μs) | Connected P50 / P95 (μs) |
+| --- | --- | --- |
+| small_query | 14.1 / 21.6 | 1547.5 / 1592.8 |
+| single_edit | 53.5 / 80.3 | 6277.5 / 6518.6 |
+| batch_100 | 167.3 / 189.2 | 6712.3 / 8495.4 |
+| large_array | 359.2 / 384.1 | 8370.0 / 9952.4 |
+| image | 249.8 / 353.5 | 26069.7 / 29991.6 |
+| plan | 71.3 / 85.2 | 9290.2 / 9622.4 |
+
+最终客户端的独立复测 `comparison` 为空（通过）；基线与复测各自记录源码哈希，允许客户端修正而拒绝工作负载漂移。普通 Rust 定向门禁 49 项、计数探针 1 项、仓库工具 4 项通过；公共行为 36 项及严格正例/三条精确反例通过，正常 wheel 两种隔离安装通过。
+
+当前指标有真实 Runtime JSON 编解码、Plan 准入序列化、Rust 分配次数/字节与请求堆存活/峰值、原生数值数组物化、显式负载复制、图片资源存活，以及 Python 调用和堆探针。Local transport 的 Rust JSON 编解码/Value 构造为零；Plan 准入的计数式序列化单独报告一次。复制范围包含原生 RGBA/PyBytes、图片 Vec→Arc 和网格快照数组，排除隐式领域 Clone/realloc 内部复制；Rust 堆是 Layout 请求字节，排除 Python/C、分配器元数据和 realloc 内部峰值。数组物化计数仅覆盖原生 Vec 提取，Connected 的 typed JSON 数组转换不在此计数内，零不表示没有物化。Connected 保留空控制窗口校准，不将其隐式扣掉，不把其 CPU fixture 延迟当作真实 Editor 延迟。
+
+仓库工具负控制拒绝空/伪造探针、source/binary/workload 漂移、复制/codec/调用/堆/延迟增长与超阈值噪声。各轮原始 JSON/标准错误留在 `target/python2/p0-p1-final` 与 `target/python2/p0-p1-verified-check`；提交的摘要保存五轮探针及构建/源码身份。旧 schema-1 的 null 指标保持原样，不倒填历史证据。
+
+## P0 首次测量历史
+
 
 ```sh
 ./tools/test-sdk.sh python2 --release
+./tools/test-sdk.sh python2 --release --instrumented
 uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/python2/baseline-first
 ```
 

@@ -28,3 +28,9 @@ def textured_recipe(runtime: zipzi.Runtime) -> resources.Usage:
             assert snapshot.pixels == pixels
             edit.resources.replace_image(id, image)
     return runtime.resources.usage()
+
+def cancellable(job: zipzi.Job[zipzi.Receipt]) -> zipzi.Receipt:
+    state: str = job.state()
+    if state == "queued":
+        job.cancel()
+    return job.wait()

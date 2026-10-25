@@ -183,3 +183,19 @@ impl Drop for ImageMemoryReservation {
             .preparing -= self.bytes;
     }
 }
+
+// Actual Vec<u8> -> Arc<[u8]> payload copy in the selected preparation path.
+#[cfg(feature = "bench-instrumentation")]
+static RGBA_COPIES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+#[cfg(feature = "bench-instrumentation")]
+pub fn record_rgba_copy(bytes: usize) {
+    RGBA_COPIES.fetch_add(bytes, std::sync::atomic::Ordering::Relaxed);
+}
+#[cfg(feature = "bench-instrumentation")]
+pub fn rgba_copy_bytes(reset: bool) -> usize {
+    if reset {
+        RGBA_COPIES.swap(0, std::sync::atomic::Ordering::Relaxed)
+    } else {
+        RGBA_COPIES.load(std::sync::atomic::Ordering::Relaxed)
+    }
+}

@@ -1,8 +1,8 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25。状态：**新包已建立；P0 已有部分基线，P1 网格、资源与 Plan 试点链路已验证，生命周期矩阵待补齐；P2 尚未开始；P6 已有初步构建和安装证据**。见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+日期：2026-10-25。状态：**新包已建立；P1 选定试点及生命周期矩阵已验收；P0 试点两后端计时/探针与比较门禁已建立，统计范围见下文；P2 尚未开始；P6 已有初步构建和安装证据**。见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
-本次计划修订以提交 `ad868c8a`（独立新包基础）和 2026-10-25 核对到的工作区为依据。该提交之后的工作区已补齐资源与 Plan 试点的共享 Rust 接口、新包两后端及安装验证；具体测试与切片限制见实施记录，尚未提交的代码不能按基础提交复现。本文区分已提交基础、已有验证记录、工作区实现和后续目标；不改写此前验收结果。
+本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）和 2026-10-25 核对到的工作区为依据。该提交之后的工作区已补齐资源与 Plan 试点的共享 Rust 接口、新包两后端及安装验证；具体测试与切片限制见实施记录，随后补齐的生命周期与 P0 计数仍属于工作区实现，不能按旧提交复现；基线记录客户端/测量脚本和两个 Rust 产物的哈希。本文区分已提交基础、已有验证记录、工作区实现和后续目标；不改写此前验收结果。
 
 本计划按用户决定，从一个全新的 `crates/zipzi-python2` 开始。把 `zipzi-python` 视为不存在：不读取或导入其实现，不复用其包装、stub、构建入口或测试 recipe，不以其接口数量、行数和性能作为交付基准，也不承担迁移、兼容或删除旧包的任务。先前放在旧 crate 内的 P1 试验代码已迁入新包；旧 crate 的接线改动已撤回。
 
@@ -31,29 +31,29 @@
 | --- | --- | --- |
 | 独立包与分发 | `crates/zipzi-python2`；纯包 `client/` 与原生 `native/` 分开；Cargo/测试域已接入 | 完整 sdist、发布构建矩阵及 CI 门禁 |
 | 公共 API | [meshes.py](../../crates/zipzi-python2/client/python/zipzi/meshes.py)、[ops.py](../../crates/zipzi-python2/client/python/zipzi/ops.py)：Geometry、MeshSpec、Snapshot 和 Create/Rename/SetPositions | 其余领域和更复杂 Plan 意图；操作联合现已覆盖 Mesh、图片与 ApplyPlan |
-| 生命周期 | [_lifecycle.py](../../crates/zipzi-python2/client/python/zipzi/_lifecycle.py)：Runtime/Session/Edit/Job、明确的恢复归属 | 资源/Plan 包装已接线；取消、过期与 worker 失败的完整 Python 验收待补齐 |
+| 生命周期 | [_lifecycle.py](../../crates/zipzi-python2/client/python/zipzi/_lifecycle.py)：Runtime/Session/Edit/Job、明确的恢复归属 | 选定 P1 矩阵已通过；P4 长任务/格式和 P6 平台验收另列 |
 | 本地执行 | [PyO3 桥接](../../crates/zipzi-python2/src/lib.rs)进入 [LocalHost](../../crates/zipzi-runtime/src/host.rs)；输入在释放 GIL 前取得所有权；本地不经 JSON 字符串或 Value 树 | 小资源/Plan 转换和预算已接线；二进制大负载未实现，字段转换仍手写 |
 | 连接执行 | [ConnectedBackend](../../crates/zipzi-python2/client/python/zipzi/backends/connected.py)连接已有绝对 socket，进入相同 Runtime 处理器；请求保留不可变字节和原 RequestId | 宿主发现/启动、二进制负载和完整契约/构建配对 |
 | 网格与历史 | 创建、位置、改名、候选查询、顺序批次、commit/Undo/Redo、保存重开 | 绑定、拓扑、资源引用等完整建模能力 |
-| 行为和类型测试 | [test_api.py](../../crates/zipzi-python2/tests/test_api.py)中 19 项测试；多数覆盖两后端或多个故障；Pyright 正例与三项精确反例 | 已覆盖 PreparedImage/Plan；完整 Rust 峰值与更多生命周期故障待补齐 |
+| 行为和类型测试 | [test_api.py](../../crates/zipzi-python2/tests/test_api.py)中 36 项测试；多数覆盖两后端或多个故障；Pyright 正例与三项精确反例 | 已覆盖 PreparedImage/Plan 与选定生命周期矩阵；后续领域按阶段另验收 |
 | 初步安装 | 记录中两个 wheel 分别构建，并在纯包连接环境及纯包+原生本地环境执行 [installed_recipe.py](../../crates/zipzi-python2/tests/installed_recipe.py) | 安装 recipe 已覆盖纹理、候选 Plan、混合历史及新宿主保存重开；真实 Editor、全领域安装及 sdist 待验收 |
 | 代码生成 | 当前公共类型、两端转换与接线全部手写 | 尚无生成器或生成绑定；P2 不能标为进行中或完成 |
 
 共享 Rust 和新包现均有图片、来源绑定 Plan 的固定行为测试。工作区中的 `ImageCreateSpec`、PreparedImage 资源表、图片快照及 `EditOperation` / `PlanIntent` 已由两后端和独立 wheel 验证；仅承诺当前选定的小资源/改名 Plan 试点，不等于完整 P1 或后续领域已完成。
 
-### 2.2 P0 已有测量的准确范围
+### 2.2 P0 试点测量与统计范围
 
-[P0 记录](python-sdk-rewrite/p0-baseline.json)状态为 `partial`：只测 **LocalBackend、源码客户端、Release 原生扩展、macOS / CPython 3.14.7**。四项工作负载为小查询、单项编辑、100 项批次、位置数组；每项 4 次预热、32 个样本，共 5 个独立进程，计时与探针分开。
+保留 [首次四项 Local 记录](python-sdk-rewrite/p0-baseline.json)和 [资源/Plan 补测](python-sdk-rewrite/p0-resources-baseline.json)作为历史证据；其中缺失项仍是 `null`，不改写成后来获得的结果。
 
-已有 Python JSON/native 边界调用计数，以及 Python 堆存活/峰值。Rust codec 次数、实际复制字节、Rust 堆存活/峰值均缺失，不能把 `null` 解读为零。该文件保留首次四项记录；补测 [资源/Plan 基线](python-sdk-rewrite/p0-resources-baseline.json)已覆盖图片和 Plan，CPU 采样仍留待 P5。尚无 Connected 性能基线或冻结的回归阈值。小查询与单项编辑的进程间 P50 相对范围约为 125% / 160%，现有数据不能直接充当稳定的延迟门禁。
+当前 [schema-2 基线](python-sdk-rewrite/p0-p1-baseline.json)覆盖 Local/Connected 的小查询、单项编辑、100 项批次、位置数组、256×256 RGBA 准备/创建/提交/释放和正式 Plan 创建/应用/提交/释放。每个后端分别使用 5 个独立计时进程、5 个独立探针进程；每项 4 次预热和 32 个计时样本。延迟使用无计数分配器的 Release 产物；Rust 探针使用独立 instrumented Release 产物，CPU 宿主也分别复制并校验哈希。
 
-P0 后续按能力切片补基线：
+已记录 Python JSON/native 调用、Python 堆存活/峰值、实际 Runtime JSON 编解码、Plan 准入的计数式序列化、Rust 分配次数/请求分配字节及存活/峰值、原生数值数组输入物化、显式负载复制和实际图片资源存活字节。Connected 探针保留空控制窗口，不隐式扣减控制消息或使用逻辑输入大小补复制量。
 
-- **进入 P2 前：**完成网格、P1 小图片、正式/候选 Plan 的固定输入和两后端测量；补齐这几条路径的边界/codec、实际复制和资源存活/峰值指标，先调查噪声再确定比较方法和阈值。
-- **P3–P5：**新领域、二进制大负载、CPU 采样/动画与 GPU 各自在优化或生成扩展前记录自己的首个基线。CPU 采样尚待 P5，不反过来阻塞 P1/P2。
-- **P7：**汇总各切片与共享 Rust 的新增成本。P0 的总体指标跟踪未完成，不妨碍已满足门槛的切片进入下一阶段，也不能提前把整个 P0 标为完成。
+统计边界必须随数字一起解释：Rust 堆为该扩展/宿主内所有 Rust 线程请求的 Layout 字节，排除 Python/C 堆、分配器元数据及 realloc 内部瞬时存储；复制计数覆盖原生 RGBA 输入/PyBytes 输出、图片 Vec→Arc 和 Runtime 网格快照数组，**不是全部领域 Clone 或进程 memcpy 总量**。这比把缺项填零更窄，但可在明确的复制位置上独立验证。原生数组物化计数不覆盖 Connected 的 typed JSON 数组转换，其零值不能解读为没有物化。后续新增负载须扩大探针范围后再设相应门禁。
 
-能力清单记录本项目明确选择的能力、公共入口、处理器、状态和证据，不驱动代码生成，也不从其他 Python 包推导覆盖目标。
+基线冻结 P50/P95 比率、进程间 P50 噪声、显式复制/物化/调用增长和请求 Rust 堆峰值门禁，并有独立复测与负控制用例。比较要求相同工作负载脚本、平台、Python、样本/预热数；产物或客户端变化允许用于测回归，工作负载漂移则拒绝比较。阈值只针对这份 CPU 宿主试点，不宣称真实 Editor 或跨机器延迟。
+
+P1 选定矩阵见[验收表](python-sdk-rewrite/p1-lifecycle-matrix.md)。P0 总体仍追踪 P3–P5 新领域、二进制大负载、CPU 采样/动画和 GPU；这些后续工作负载不反过来阻塞当前 P1 试点。P2 可据当前选定类型和行为提取最小生成器，不能把本表当作完整后续领域的性能保证。
 
 ## 3. 能力范围与共享边界
 
@@ -98,7 +98,7 @@ flowchart TD
 
 LocalBackend 已使用显式拥有的 LocalHost：只有 owner 线程进入 Runtime，调用/等待有容量限制，worker 完成通知由宿主主动消费。后续沿用该宿主，不另建 Python 事件泵。同步等待释放 GIL；执行线程不反向调用 Python 用户回调，不在持有 Runtime 锁时等待依赖该线程的 Job。已有完成消费、GIL 与关停证据应保留，资源/Plan 扩展要补相应持有与失败用例。
 
-当前 `Job.close()` 等待真实结果并释放结果槽，**不等于取消**。P1 补齐取消/故障验收时，区分排队取消、已经进入的 IO 和宿主关停；需要公开 cancel 时单独定义支持范围，不能修改 close 的解释来冒充取消已实现。
+`Job.close()` 等待真实结果并释放结果槽，**不等于取消**。已公开的 `cancel()` 独立请求取消，排队任务报告 CANCELLED，已进入 IO 报告实际结果；`state()` 不消费结果。成功与失败均缓存，cancel/status 待确认时不能被 wait 误消费。
 
 本地 Runtime 的生命周期由显式上下文拥有，关闭会释放它的会话，不自动保存。关闭 Connected 客户端只释放该客户端资源，宿主正式会话继续驻留。两者生命周期有实际差异，不用模拟网络断线来强求形式一致。
 
@@ -106,7 +106,7 @@ LocalBackend 已使用显式拥有的 LocalHost：只有 owner 线程进入 Runt
 
 模块按领域组织：`meshes`、`parameters`、`bindings`、`resources`、`scene`、`animation`、`project`。根模块只导出 Runtime 入口、Session/Edit、常用值和异常，不重新导出所有内部类。
 
-下面使用新包当前已有的网格接口，需安装可选本地分发。PreparedImage/Plan 不放进这个示例冒充可用能力；其接口在第 9 节作为待交付项。
+下面演示新包的网格接口，需安装可选本地分发。资源/Plan 示例和完整试点限制见包 README 与第 9 节。
 
 ```python
 from pathlib import Path
@@ -135,7 +135,7 @@ with TemporaryDirectory() as folder, zipzi.local() as runtime:
     assert saved.manifest.is_file()
 ```
 
-已有连接入口是 `zipzi.connect(endpoint=absolute_socket_path)`，只连接正在运行的宿主。当前 `create` 返回持久 ID 字符串，Snapshot 包含不可变 tuple 和 Source；尚未公开具备 incarnation/epoch 的 Ref/Address。`Edit.apply_many` 当前只接受 Mesh 操作，跨领域批次是下一条 P1 链路的工作，不能按已实现理解。
+已有连接入口是 `zipzi.connect(endpoint=absolute_socket_path)`，只连接正在运行的宿主。当前 `create` 返回持久 ID 字符串，Snapshot 包含不可变 tuple 和 Source；尚未公开具备 incarnation/epoch 的 Ref/Address。`Edit.apply_many` 接受有限的 Mesh、图片接纳/替换及 ApplyPlan 联合；Plan 必须位于批次开头。
 
 以下继续规定扩展时的目标约束：
 
@@ -267,8 +267,8 @@ zipzi-python2/
 
 | 阶段 | 当前状态 | 下一步与退出门槛 |
 | --- | --- | --- |
-| **P0 范围与基线** | 范围/构建边界已建立，四项 Local 测量为 partial | 按第 2.2 节补测；P2 只依赖试点切片的完整证据，后续能力随阶段补齐 |
-| **P1 手写完整链路** | 网格/历史/保存重开/恢复已落地；图片/Plan 试点已通过两后端、类型与安装验证 | 完成下方四项工作；新包两后端及安装 recipe 验证完整试点，不能只引用共享 Rust 测试 |
+| **P0 范围与基线** | 选定六项工作负载的两后端计时/计数及比较门禁已建立 | 保持第 2.2 节统计边界；新领域随阶段补齐，隐式 Clone 不冒充已计数 |
+| **P1 手写完整链路** | 选定网格/资源/Plan、历史、IO、两后端和生命周期矩阵已验收 | 保持独立预期与正式 wheel 验收；后续领域、平台与 Editor 验收另列 |
 | **P2 提取生成器** | 未开始 | P1 资源/Plan 语义及代表性形状稳定后提取；同一组独立预期继续通过，缺处理器、非法声明、漂移均失败 |
 | **P3 Modeling 与身份** | 未开始 | 场景、参数、绑定/BlendShape、拓扑、Glue/Offscreen、Ref/Address；有限生成扩展以完整领域 recipe 验收 |
 | **P4 资源与工程** | 未开始；P1 只提供小资源试点 | 二进制负载、完整图片/附件与格式 IO、重定位/长任务；资源峰值及取消/断连回归通过 |
@@ -302,9 +302,9 @@ zipzi-python2/
 
 **完成证据：**网格+图片+Plan 在一个 Edit 内组合，提交形成一个历史步骤；只读报告、过期拒绝、释放、丢响应恢复和两后端固定结果均通过。
 
-### 9.4 下一步：P1 生命周期矩阵和 P0 指标收尾
+### 9.4 已验收：P1 生命周期矩阵和 P0 试点指标
 
-保留现有 19 项测试的有效断言，补缺口而不是重写成弱化版本：
+当前 36 项公共行为用例保留原有 19 项断言，新增恢复/取消/过期/worker/close 边界。以下要求均有选定切片的源码、共享 Rust 或安装证据，后端适用范围在[矩阵](python-sdk-rewrite/p1-lifecycle-matrix.md)逐项标明：
 
 1. 请求记录过期、客户端过期和宿主重启；过期结果不能使用新 RequestId 重放写入。
 2. 图片/Plan 的创建、应用、释放，以及 Job 启动/终态查询的恢复归属；其他对象不能消费待确认结果。
@@ -312,9 +312,9 @@ zipzi-python2/
 4. 预算拒绝与执行失败区分；错误后来源和历史不变；只读失败不毒化 Edit，Edit 内普通准备失败不可被捕获异常绕过。
 5. 两种隔离安装环境运行扩展后的完整 P1 recipe。纯包/原生包拥有不同 namespace；两个公开 SDK 若都使用 `zipzi`，测试环境必须独立，不能用混装后恰巧导入某份源码作为验证。
 
-**P1 完成**以图片、网格、Plan、历史、保存重开和上述失败链路均有证据为准。共享 Rust 测试通过、Python 源码可运行、安装包可用分别记录。
+**当前选定 P1 试点已满足退出门槛**：图片、网格、Plan、历史、保存重开和上述失败链路均有证据。共享 Rust、Python 源码、探针产物与正常安装包分别记录；不据此宣布 P4 长任务、P5 动画或 P6 发布矩阵完成。
 
-### 9.5 下一步四：提取最小生成器
+### 9.5 下一步：提取最小生成器
 
 满足 P1 和试点 P0 门槛后，从第 6.3 节列出的重复处提取。首批只覆盖已经验收的网格、资源和 Plan 形状，不先给未实施领域生成 public stub。
 
@@ -358,7 +358,9 @@ uv run --locked python crates/zipzi-python2/tools/test.py --help
 ./tools/test-sdk.sh python2
 ./tools/test-sdk.sh python2 PythonSdk.test_shared_recipe
 ./tools/test-sdk.sh python2 --release
+./tools/test-sdk.sh python2 --release --instrumented
 uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/python2/baseline-first
+# 后续采集可加 --compare docs/plans/python-sdk-rewrite/p0-p1-baseline.json
 cargo test --locked -p zipzi-runtime --test authoring --test resources --test modeling --test protocol
 cargo test --locked -p zipzi-sdk --test integration image_edit::
 cargo test --locked -p zipzi-runtime --test host
@@ -373,6 +375,6 @@ python3 tools/workspace/cargo_domain.py --check
 
 `zipzi-python2` 完成需要：本项目明确承诺的能力均接线且独立验证；两后端共用 Rust 领域路径；类型、错误、恢复、资源、任务和安装可用；生成只承担机械重复；常规操作不需跨多层手改同一结构；全部阶段门槛有实际证据。
 
-当前应继续补齐 P1 生命周期故障矩阵，以及试点切片的 P0 Connected/codec/实际复制/资源峰值指标。PreparedImage、图片创建/替换、正式/候选改名 Plan 和混合批次已通过两后端与独立 wheel 验证。新包基础无需重建，已有通过的网格、恢复和安装断言继续保护；P2 生成器尚不开始全量扩展。
+当前选定 P1 生命周期矩阵已验收，P0 已有明确统计范围的两后端计时/计数、冻结比较与负控制。下一步仅从这些已验证形状提取 P2 最小生成器，并继续保留手写生命周期和独立预期；不扩张到尚未实现的 P3–P5 领域。
 
 每完成一个切片，更新能力清单和实施记录，登记提交/工作区身份、两后端状态、源码与安装证据、尚未满足的门槛。详细测试事实留在[实施记录](python-sdk-rewrite/README.md)，计划只据此调整状态与下一步，不把目标改写为完成结果。

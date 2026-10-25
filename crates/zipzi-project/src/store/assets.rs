@@ -1,7 +1,7 @@
 //! Disk resource validation and lazily encoded in-memory draft textures.
 use super::{DocumentStore, ResourceDiagnostic};
 use crate::filesystem as io;
-use crate::resources::{content_sha256, decode_png, AssetData, TextureData};
+use crate::resources::{AssetData, TextureData, content_sha256, decode_png};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -463,6 +463,8 @@ impl PreparedImageContent {
             ));
         }
         let reservation = budget.reserve(rgba.len().saturating_mul(2))?;
+        #[cfg(feature = "bench-instrumentation")]
+        crate::resource_budget::record_rgba_copy(rgba.len());
         let rgba: Arc<[u8]> = rgba.into();
         reservation.commit(&rgba, crate::ImageBufferKind::Rgba)?;
         Self::from_rgba(width, height, rgba, budget)

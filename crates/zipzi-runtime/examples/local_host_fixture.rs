@@ -42,11 +42,19 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let ui = runtime.register_client()?;
     let mut protocol = Protocol::new(ProtocolLimits {
         reconnect_grace: Duration::from_millis(milliseconds("ZIPZI_TEST_GRACE_MS", 30000)),
+        result_ttl: Duration::from_millis(milliseconds("ZIPZI_TEST_RESULT_TTL_MS", 300000)),
         results_per_client: milliseconds("ZIPZI_TEST_RESULT_COUNT", 1024) as usize,
         ..Default::default()
     });
     let mut drop_response = std::env::var("ZIPZI_TEST_DROP_RESPONSE").unwrap_or_default();
     let mut drop_after = milliseconds("ZIPZI_TEST_DROP_RESPONSE_AFTER", 0);
+    let (completed, completions) = std::sync::mpsc::channel();
+    let mut executor = Threaded {
+        completed,
+        threads: vec![],
+        #[cfg(feature = "test-support")]
+        control: runtime.test_controller(),
+    };
     let mut busy_once = std::env::var_os("ZIPZI_TEST_BUSY_COMMIT_ONCE").is_some();
     loop {
         match messages.try_recv() {
@@ -70,11 +78,6 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 if let Some(session) = interactive {
                     runtime.end_interaction(ui, session)?;
                 }
-                let mut executor = Threaded::default();
-                runtime.dispatch(&mut executor);
-                for task in executor.0 {
-                    runtime.complete(task.run());
-                }
                 if !drop_response.is_empty() && drop_response == op && drop_after == 0 {
                     drop_response.clear();
                     drop(reply);
@@ -91,18 +94,66 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             Err(async_channel::TryRecvError::Empty) => std::thread::sleep(Duration::from_millis(1)),
             Err(async_channel::TryRecvError::Closed) => break,
         }
+        while let Ok(completion) = completions.try_recv() {
+            runtime.complete(completion);
+        }
+        executor.reap();
+        #[cfg(feature = "test-support")]
+        let dispatch = runtime.test_controller().dispatch_enabled();
+        #[cfg(not(feature = "test-support"))]
+        let dispatch = true;
+        if dispatch {
+            runtime.dispatch(&mut executor);
+        }
         protocol.expire(&mut runtime, Instant::now());
     }
     Ok(())
 }
 #[cfg(unix)]
-#[derive(Default)]
-struct Threaded(Vec<Work>);
+struct Threaded {
+    completed: std::sync::mpsc::Sender<Completion>,
+    threads: Vec<std::thread::JoinHandle<()>>,
+    #[cfg(feature = "test-support")]
+    control: std::sync::Arc<zipzi_runtime::test_support::Control>,
+}
+#[cfg(unix)]
+impl Threaded {
+    fn reap(&mut self) {
+        let mut index = 0;
+        while index < self.threads.len() {
+            if self.threads[index].is_finished() {
+                let _ = self.threads.swap_remove(index).join();
+            } else {
+                index += 1;
+            }
+        }
+    }
+}
 #[cfg(unix)]
 impl Executor for Threaded {
     fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
-        self.0.push(work);
-        Ok(())
+        let pending = std::sync::Arc::new(std::sync::Mutex::new(Some(work)));
+        let owned = pending.clone();
+        let completed = self.completed.clone();
+        #[cfg(feature = "test-support")]
+        let control = self.control.clone();
+        match std::thread::Builder::new()
+            .name("zipzi-fixture-io".into())
+            .stack_size(16 << 20)
+            .spawn(move || {
+                let work = owned.lock().unwrap().take().unwrap();
+                #[cfg(feature = "test-support")]
+                let result = control.run(work);
+                #[cfg(not(feature = "test-support"))]
+                let result = work.run();
+                let _ = completed.send(result);
+            }) {
+            Ok(thread) => {
+                self.threads.push(thread);
+                Ok(())
+            }
+            Err(_) => Err(Box::new(pending.lock().unwrap().take().unwrap())),
+        }
     }
 }
 
