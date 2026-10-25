@@ -26,6 +26,7 @@ BlendShape、长任务及资源/IO 仍待扩展，R4 尚未验收。
 已补齐资源/Plan 生成及配对源码发行，并复验真实 Editor、P0 与 R2 性能门禁。
 本轮修复与采样范围单独记录，不扩大 R4 或完整发布平台的完成范围。
 
+2026-10-25 Python 后续顺序调整：新增 [P3A：统一 API 与 agent 契约重构](python-sdk-rewrite/p3a-api-agent-contract.md)，作为现有切片之后的下一阶段，详细契约、任务和验收由该独立方案维护。公共返回/恢复、生成 facade、Session 关闭/分页、随包文档和 agent 验收先收敛，再扩展 Python P3B/P4/P5 的剩余领域。已进行的二进制资源工作保留，源码接线与验收分别记录。本调整不重排 Runtime R0–R7，也不将 R4 标为完成；P3A 所需共享 Runtime 能力计入对应实际实现与测试。
 
 架构与行为契约以[详细设计](sdk-runtime-design.md)为准。本文定义两个仓库的交付顺序、接口覆盖与验收。`zipzi-runtime` 的进程内核心和 Editor 托管已实现；R2 性能门槛已通过，R3 本机协议与 Python 最小闭环已实现，完整领域连接继续在 R4–R7 交付。后续阶段的模块、测试名称和命令模板仍为目标，不能作为已通过的证据。实际结果见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)、[R2 实施记录](sdk-runtime/r2-editor.md)、[R3 实施记录](sdk-runtime/r3-ipc.md)与 [R4 实施记录](sdk-runtime/r4-modeling.md)。
 

@@ -2,13 +2,17 @@
 
 日期：2026-10-25。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../crates/zipzi-python2/README.md)。
 
+**下一阶段调整：**[P3A：统一 API 与 agent 契约重构](p3a-api-agent-contract.md)已拆为独立方案，当前仅完成方案，尚未实施/验收。先统一公开返回与恢复、生成/手写边界、分页/Session 关闭及随包文档和 agent 门禁，再进入 P3B 剩余 Modeling 和 P4 剩余资源工作。现有 Buffer/二进制工作保留并单独记录证据；下文历史通过记录不自动覆盖新接口，当前包使用方式仍见包 README。
+
 当前执行主线接回 [Runtime R0–R4](../sdk-runtime/python2-r0-r4.md)。`1e0043f`
 已保存 P2 网格切片；其后的工作区补齐宿主发现/唯一启动、会话身份/列表/绑定，
 并通过安装纯包的真实 Editor 冷启动、重开及原生 UI 发布验收。其后工作区的
 [事件、参数和批量查询](../sdk-runtime/python2-r3-events.md)已接回 R3 最小链路，
 该切片已提交为 `c0e186b`。其后[网格绑定与显式 CPU 采样](../sdk-runtime/python2-r4-bindings.md)
 接回首批 R4 数值链路，源码测试为 50 项、类型反例为 8 条；完整 R4 仍待扩展。
-下面 P1/P0 记录保留原始范围。
+最新 [P3 场景/身份记录](../sdk-runtime/python2-p3-scene-identity.md)补齐选定场景/组织、
+网格 BlendShape/带绑定拓扑与 SDK 引用/标签地址；57 项源码行为、16 条类型反例及
+安装/Editor 证据已更新。R4 仍未达到全部退出门槛。下面 P1/P0 记录保留原始范围。
 
 2026-10-25 [Runtime R1–R3 / Python P1–P2 整体复验](../sdk-runtime/r1-r3-python-p1-p2-acceptance.md)
 修复了丢失 Busy 响应后的 Edit 状态恢复及 Runtime 源接口清单分类。
@@ -27,8 +31,11 @@
 | P0 | 选定六项工作负载的 Local/Connected 计时和独立 Rust/Python 探针；冻结比较及负控制 | 后续领域工作负载；计数范围之外的隐式领域 Clone 和 allocator 内部复制不计入当前负载复制数字 |
 | P1 | 选定 API、两后端、来源/资源/历史/IO、36 项公共行为与生命周期矩阵、严格类型及独立正常 wheel 验收 | 当前选定试点门槛已满足；长任务、后续领域和发布平台矩阵另列 |
 | P2 | [网格历史切片](p2-mesh-generator.md)及[资源/Plan 补齐](p2-resources-generator.md)：Rust 单一声明、编译查询注册、18 个产物、有限形状和配对源码发行验证 | 当前范围退出证据见整体复验；未实施领域按 P3–P5 扩展 |
-| P3 | 选定网格/参数/网格绑定关键形与 Runtime R4 CPU 数值链路 | 场景/组织/完整绑定与拓扑、身份/地址等后续 Modeling |
-| P4/P5/P7 | 未开始 | 按计划交付；本批 CPU 建模求值归 Runtime R4，不代表 P5 动画已实现 |
+| P3 | [已开始：场景/身份切片](../sdk-runtime/python2-p3-scene-identity.md)，含生成的场景操作、网格 BlendShape/带绑定拓扑、SDK Ref/标签地址 | 完整场景绑定/转换/集合及剩余字段/内容地址；R4 全量资源/IO/任务预算 |
+| P3A | 下一阶段；仅有[独立重构方案](p3a-api-agent-contract.md)，未实施 | 最终 API、完整调用恢复、统一生成 facade、分页/关闭、文档自省与 agent 任务门禁，全部按独立方案重新验收 |
+| P3B | P3 剩余领域，待 P3A | 按统一契约补完整 Modeling/地址；已有数值与身份预期保留 |
+| P4 | 工作区已有 Buffer/二进制资源实现与测试；完整阶段未验收 | 已公开包装纳入 P3A；完整 IO/格式、昂贵任务、资源峰值及正式发行证据继续按计划交付 |
+| P5/P7 | 未开始 | 按调整后的计划交付；已有 CPU 建模求值归 Runtime R4，不代表 P5 动画已实现 |
 | P6 | 纯包/原生包分别构建；隔离安装 recipe；Runtime R3 宿主发现与真实 Editor 选定链路 | 完整版本/平台配对、发行 app 安装位置和全部领域安装验收 |
 
 能力范围见 [`CAPABILITIES.md`](../../../crates/zipzi-python2/CAPABILITIES.md)。源码接线、独立验证和阶段验收分开记录；当前选定 P1 试点已满足退出门槛，P0 试点统计有明确范围，总体后续领域仍按阶段跟踪。
@@ -130,6 +137,6 @@ uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/py
 
 ## 复杂度记录
 
-新包从零计数，不按其他 Python 实现的接口数量或行数设指标。当前全部为手写实现；尚无绑定生成器或生成绑定。分别检查 `client/python/zipzi` 的公共/生命周期和 backend/机械转换、`src/lib.rs` 的 PyO3、`tools/`、`tests/`、共享 Runtime/SDK 新增代码及构建元数据。许可副本与文档不计为生产逻辑。
+新包从零计数，不按其他 Python 实现的接口数量或行数设指标。P1 初始记录时全部为手写实现，尚无绑定生成器；后续 P2/P3 生成范围见对应阶段记录，P3A 再统一公开包装。分别检查 `client/python/zipzi` 的公共/生命周期和 backend/机械转换、`src/lib.rs` 的 PyO3、`tools/`、`tests/`、共享 Runtime/SDK 新增代码及构建元数据。许可副本与文档不计为生产逻辑。
 
-P2 第一批已提取网格字段、操作、codec、查询和便利方法，生成与手写目录分开；资源/Plan 仍手写。基础设施（Core 中立形状、Runtime 注册、exporter/renderer）与生成产物分别计数，不把增加的共享 Rust 隐藏成“减少 Python”。独立行为预期不由生成器产生，详见 [P2 记录](p2-mesh-generator.md)。
+P2 第一批提取了网格字段、操作、codec、查询和便利方法，生成与手写目录分开；资源/Plan 在当时仍手写，随后由 P2 补齐记录接入生成。基础设施（Core 中立形状、Runtime 注册、exporter/renderer）与生成产物分别计数，不把增加的共享 Rust 隐藏成“减少 Python”。独立行为预期不由生成器产生，详见 [P2 记录](p2-mesh-generator.md)。

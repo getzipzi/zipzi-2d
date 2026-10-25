@@ -348,7 +348,7 @@ conservative admission bounds and actual payload counters, not process RSS.
 
 R4 verification and commands are tracked in the
 [complete acceptance record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
-The later Python P3A public-contract refactor
+The later Python [P3A public-contract refactor](../../docs/plans/python-sdk-rewrite/p3a-api-agent-contract.md)
 remains a separate stage.
 
 ## P0 measurements
