@@ -852,9 +852,21 @@ impl Editor {
             PlayPause => self
                 .animation()
                 .is_some_and(|animation| animation.playing && !animation.physics_preview.manual),
-            SelectTool => !animation_navigation && self.active_tool() == crate::ToolId::Select,
-            LassoTool => !animation_navigation && self.active_tool() == crate::ToolId::Lasso,
-            GlueTool => !animation_navigation && self.active_tool() == crate::ToolId::Glue,
+            SelectTool => {
+                !animation_navigation
+                    && !self.manual_active()
+                    && self.active_tool() == crate::ToolId::Select
+            }
+            LassoTool => {
+                !animation_navigation
+                    && !self.manual_active()
+                    && self.active_tool() == crate::ToolId::Lasso
+            }
+            GlueTool => {
+                !animation_navigation
+                    && !self.manual_active()
+                    && self.active_tool() == crate::ToolId::Glue
+            }
             HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,
             ManualMesh => self.manual_active(),
             ManualSelect => self.manual_tool() == Some(crate::ManualTool::Select),

@@ -48,7 +48,7 @@ impl SceneSnapshot {
         reference.runtime_id = reference.id.clone();
         reference.visible = true;
         reference.enabled = true;
-        reference.opacity = 0.65;
+        reference.opacity = 1.;
         reference.masks.clear();
         let corners = [
             zipzi_core::Vec2::new(0., 0.),

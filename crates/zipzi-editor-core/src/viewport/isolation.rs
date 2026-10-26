@@ -42,11 +42,20 @@ impl ViewportIsolation {
         }
         let mut scene = source.clone();
         let frame = Arc::make_mut(&mut scene.viewport_frame);
+        // The full-image reference belongs to the same isolation scope as its mesh.
+        let mut render_scope = scope.as_ref().clone();
+        for drawable in &frame.drawables {
+            if let Some(id) = drawable.id.strip_prefix("__manual_mesh_reference_") {
+                if scope.contains(&ObjectRef::new(ObjectKind::Mesh, id)) {
+                    render_scope.insert(ObjectRef::new(ObjectKind::Mesh, &drawable.id));
+                }
+            }
+        }
         match self.display {
-            IsolationDisplay::Dim => compositing::dim_context(frame, scope),
+            IsolationDisplay::Dim => compositing::dim_context(frame, &render_scope),
             IsolationDisplay::Hide => {
                 for mesh in &mut frame.drawables {
-                    if !scope.contains(&ObjectRef::new(ObjectKind::Mesh, &mesh.id)) {
+                    if !render_scope.contains(&ObjectRef::new(ObjectKind::Mesh, &mesh.id)) {
                         mesh.visible = false;
                     }
                 }
@@ -158,7 +167,10 @@ impl Editor {
             ensure!(!scope.is_empty(), "Select canvas objects to isolate");
             Some(Arc::new(scope))
         };
-        self.active_session_mut().unwrap().modeling.tools.clear();
+        let tools = &mut self.active_session_mut().unwrap().modeling.tools;
+        if !tools.manual_active() {
+            tools.clear();
+        }
         let presentation = self.viewport_presentation_mut(binding.viewport).unwrap();
         presentation.isolation.scope = scope;
         presentation.isolation.cache = None;

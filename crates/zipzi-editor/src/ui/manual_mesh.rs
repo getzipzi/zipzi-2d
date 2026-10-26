@@ -16,7 +16,7 @@ pub(crate) fn diagnostic(message: &str) -> String {
         || reason.contains("touches multiple edges")
     {
         t!("manual_mesh.overlap").into_owned()
-    } else if reason.contains("fewer than three boundary") {
+    } else if reason.contains("fewer than three boundary") || reason.contains("no mesh faces") {
         t!("manual_mesh.minimum_boundary").into_owned()
     } else if reason.contains("independent source image") {
         t!("manual_mesh.shared_image").into_owned()

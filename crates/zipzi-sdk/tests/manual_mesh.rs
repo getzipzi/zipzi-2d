@@ -287,7 +287,7 @@ fn boundary_delete_and_chained_constraint_keep_single_domain() {
 }
 
 #[test]
-fn concave_boundary_rejects_outside_point_and_reconnect_is_repeatable() {
+fn concave_boundary_expands_to_outside_point_and_reconnect_is_repeatable() {
     let g = MeshGeometry {
         vertex_ids: vec![10, 20, 30, 40, 50],
         uvs: vec![
@@ -311,14 +311,25 @@ fn concave_boundary_rejects_outside_point_and_reconnect_is_repeatable() {
         extract_manual_meshing(&g).unwrap().boundary,
         vec![10, 20, 30, 40, 50]
     );
-    assert!(edit_manual_mesh(
+    let expanded = edit_manual_mesh(
         &g,
         ManualMeshOperation::InsertVertex {
             id: 60,
             uv: Vec2::new(0.5, 0.9),
-        }
+        },
     )
-    .is_err());
+    .unwrap();
+    assert!(expanded
+        .geometry
+        .meshing
+        .as_ref()
+        .unwrap()
+        .boundary
+        .contains(&60));
+    assert_eq!(expanded.geometry.vertex_ids.len(), 6);
+    for face in &g.triangles {
+        assert!(expanded.geometry.triangles.contains(face));
+    }
     let a = edit_manual_mesh(&g, ManualMeshOperation::Reconnect).unwrap();
     let b = edit_manual_mesh(&g, ManualMeshOperation::Reconnect).unwrap();
     assert_eq!(a.geometry, b.geometry);
@@ -650,4 +661,126 @@ fn projected_insert_splits_a_slanted_edge_after_f32_rounding() {
         .boundary
         .contains(&50));
     assert_eq!(result.geometry.triangles.len(), 3);
+}
+
+#[test]
+fn outside_insert_expands_outline_without_replacing_old_faces() {
+    let mut source = square_geometry();
+    for uv in &mut source.uvs {
+        uv.x = 0.25 + uv.x * 0.5;
+        uv.y = 0.25 + uv.y * 0.5;
+    }
+    source.positions = source.uvs.clone();
+    for uv in [
+        Vec2::new(0.9, 0.5),
+        Vec2::new(0.9, 0.9),
+        Vec2::new(0.5, 0.1),
+    ] {
+        let result =
+            edit_manual_mesh(&source, ManualMeshOperation::InsertVertex { id: 50, uv }).unwrap();
+        assert!(result
+            .geometry
+            .meshing
+            .as_ref()
+            .unwrap()
+            .boundary
+            .contains(&50));
+        assert_eq!(result.geometry.vertex_ids.len(), 5);
+        for face in &source.triangles {
+            assert!(result.geometry.triangles.contains(face));
+        }
+    }
+}
+
+#[test]
+fn deleting_outer_edge_exposes_remaining_faces_and_removes_orphans() {
+    let source = square_geometry();
+    let result =
+        edit_manual_mesh(&source, ManualMeshOperation::DeleteEdge { a: 10, b: 20 }).unwrap();
+    assert_eq!(result.geometry.triangles, vec![[10, 30, 40]]);
+    assert_eq!(result.removed, vec![20]);
+    assert_eq!(
+        result.geometry.meshing.as_ref().unwrap().boundary,
+        vec![10, 30, 40]
+    );
+    assert!(edit_manual_mesh(
+        &result.geometry,
+        ManualMeshOperation::DeleteEdge { a: 10, b: 30 }
+    )
+    .is_err());
+
+    let fan = edit_manual_mesh(
+        &source,
+        ManualMeshOperation::InsertVertex {
+            id: 50,
+            uv: Vec2::new(0.5, 0.5),
+        },
+    )
+    .unwrap()
+    .geometry;
+    let result = edit_manual_mesh(&fan, ManualMeshOperation::DeleteEdge { a: 10, b: 20 }).unwrap();
+    assert!(result.removed.is_empty());
+    assert_eq!(
+        result.geometry.meshing.as_ref().unwrap().boundary,
+        vec![10, 50, 20, 30, 40]
+    );
+    assert_eq!(result.geometry.triangles.len(), 3);
+}
+
+#[test]
+fn connected_insert_is_atomic_and_can_extend_the_outline() {
+    let mut source = square_geometry();
+    source = edit_manual_mesh(&source, ManualMeshOperation::ConstrainEdge { a: 10, b: 30 })
+        .unwrap()
+        .geometry;
+    assert!(edit_manual_mesh(
+        &source,
+        ManualMeshOperation::InsertConnectedVertex {
+            from: 20,
+            id: 50,
+            uv: Vec2::new(0.2, 0.8)
+        }
+    )
+    .is_err());
+    assert_eq!(source.vertex_ids.len(), 4);
+    let result = edit_manual_mesh(
+        &source,
+        ManualMeshOperation::InsertConnectedVertex {
+            from: 20,
+            id: 50,
+            uv: Vec2::new(0.8, 0.2),
+        },
+    )
+    .unwrap();
+    assert_eq!(result.added, vec![50]);
+    assert!(result
+        .geometry
+        .meshing
+        .as_ref()
+        .unwrap()
+        .constraints
+        .iter()
+        .any(|c| c.endpoints == [20, 50]));
+    let cut = edit_manual_mesh(
+        &square_geometry(),
+        ManualMeshOperation::DeleteEdge { a: 10, b: 20 },
+    )
+    .unwrap()
+    .geometry;
+    let result = edit_manual_mesh(
+        &cut,
+        ManualMeshOperation::InsertConnectedVertex {
+            from: 10,
+            id: 50,
+            uv: Vec2::new(0.8, 0.2),
+        },
+    )
+    .unwrap();
+    assert!(result
+        .geometry
+        .meshing
+        .as_ref()
+        .unwrap()
+        .boundary
+        .contains(&50));
 }

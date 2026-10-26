@@ -83,26 +83,6 @@ impl ToolbarRegistry {
                 icon: IconName::GitBranch,
                 command: CommandId::ManualMesh,
             },
-            ToolbarItemConfig {
-                id: "tool_manual_select",
-                icon: IconName::MousePointer,
-                command: CommandId::ManualSelect,
-            },
-            ToolbarItemConfig {
-                id: "tool_manual_create",
-                icon: IconName::Plus,
-                command: CommandId::ManualCreate,
-            },
-            ToolbarItemConfig {
-                id: "tool_manual_delete",
-                icon: IconName::Trash,
-                command: CommandId::ManualDelete,
-            },
-            ToolbarItemConfig {
-                id: "tool_manual_preview",
-                icon: IconName::Eye,
-                command: CommandId::ManualPreviewResult,
-            },
         ] {
             registry.register(item).unwrap();
         }
@@ -157,25 +137,6 @@ impl RenderOnce for CanvasToolbar {
             .gap(compact::rem(1.));
         for item in items {
             let command = item.command;
-            let manual = view.editor.manual_active();
-            if matches!(
-                command,
-                CommandId::ManualSelect
-                    | CommandId::ManualCreate
-                    | CommandId::ManualDelete
-                    | CommandId::ManualPreviewResult
-            ) && !manual
-            {
-                continue;
-            }
-            if manual
-                && matches!(
-                    command,
-                    CommandId::SelectTool | CommandId::LassoTool | CommandId::GlueTool
-                )
-            {
-                continue;
-            }
             let invocation = canvas.read(cx).command(
                 &view.editor,
                 command,
@@ -231,4 +192,30 @@ impl RenderOnce for CanvasToolbar {
             .child(PRIMARY.background(cx))
             .child(tools)
     }
+}
+
+/// The shared top-attached secondary toolbar, used by each editing context.
+pub(super) fn secondary_bar(id: &'static str, content: impl IntoElement, cx: &App) -> AnyElement {
+    div()
+        .absolute()
+        .top_0()
+        .left_0()
+        .w_full()
+        .flex()
+        .justify_center()
+        .child(
+            div()
+                .id(id)
+                .test_support()
+                .relative()
+                .px(compact::rem(SECONDARY.end_padding()))
+                .py(compact::rem(SECONDARY.inset))
+                .occlude()
+                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
+                .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
+                .child(SECONDARY.background(cx))
+                .child(content),
+        )
+        .into_any_element()
 }

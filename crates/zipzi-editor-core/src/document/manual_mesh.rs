@@ -35,7 +35,7 @@ impl Document {
                 && model
                     .get_mesh(id)
                     .is_some_and(|other| other.texture_asset_id == mesh.texture_asset_id)),
-            "Manual mesh editing requires an independent source image"
+            "Mesh Edit requires an independent source image"
         );
         ensure!(
             mesh.deformer_id.is_empty(),
@@ -47,7 +47,7 @@ impl Document {
                 .iter()
                 .filter_map(|id| model.get_binding(id))
                 .any(|binding| binding.mesh_id == object.id),
-            "Manual mesh editing requires no ordinary binding"
+            "Mesh Edit requires no ordinary binding"
         );
         ensure!(
             !model
@@ -55,7 +55,7 @@ impl Document {
                 .iter()
                 .filter_map(|id| model.get_blend_binding(id))
                 .any(|binding| binding.target_id == object.id),
-            "Manual mesh editing requires no BlendShape"
+            "Mesh Edit requires no BlendShape"
         );
         ensure!(
             !model
@@ -63,7 +63,7 @@ impl Document {
                 .iter()
                 .filter_map(|id| model.get_glue(id))
                 .any(|glue| glue.mesh_a_id == object.id || glue.mesh_b_id == object.id),
-            "Manual mesh editing requires no Glue"
+            "Mesh Edit requires no Glue"
         );
         let texture = self
             .textures
@@ -99,11 +99,11 @@ impl Document {
     pub(crate) fn validate_manual_target(&self, target: &ManualMeshTarget) -> Result<()> {
         ensure!(
             self.context().selections.as_slice() == [target.object.clone()],
-            "Manual mesh target changed"
+            "Mesh Edit target changed"
         );
         ensure!(
             self.session.version() == target.source.version(),
-            "Manual mesh source version changed"
+            "Mesh Edit source version changed"
         );
         let texture = self
             .textures
@@ -149,7 +149,7 @@ impl Document {
             self.manual_pending = Some(ManualPending {
                 edit: self
                     .session
-                    .begin_owned_edit("Edit manual mesh", Some(target.source.version()))?
+                    .begin_owned_edit("Mesh Edit", Some(target.source.version()))?
                     .interactive()?,
                 preview: PreviewState::default(),
                 changed: false,

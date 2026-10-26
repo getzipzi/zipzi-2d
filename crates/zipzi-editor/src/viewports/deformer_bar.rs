@@ -14,6 +14,9 @@ pub fn render_deformer_bar(
         return div().into_any_element();
     };
     let state = owner.read(cx);
+    if state.editor.manual_active() {
+        return render_mesh_edit_bar(canvas, modal, cx);
+    }
     if !state.editor.document().is_some_and(|d| {
         d.context()
             .selections
@@ -119,26 +122,72 @@ pub fn render_deformer_bar(
                 .px(compact::rem(3.)),
         );
     }
-    div()
-        .absolute()
-        .top_0()
-        .left_0()
-        .w_full()
-        .flex()
-        .justify_center()
-        .child(
-            div()
-                .id("deformer-actions")
-                .test_support()
-                .relative()
-                .px(compact::rem(SECONDARY.end_padding()))
-                .py(compact::rem(SECONDARY.inset))
-                .occlude()
-                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
-                .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
-                .child(SECONDARY.background(cx))
-                .child(tools),
-        )
-        .into_any_element()
+    super::toolbar::secondary_bar("deformer-actions", tools, cx)
+}
+
+fn render_mesh_edit_bar(
+    canvas: &ViewportSurface,
+    modal: bool,
+    cx: &mut Context<ViewportSurface>,
+) -> AnyElement {
+    let owner = canvas.owner.upgrade().unwrap();
+    let state = owner.read(cx);
+    let mut tools = gpui_kit::component::toolbar::ToolbarGroup::new("mesh-edit-tools")
+        .label(t!("editor.tool_manual_mesh"))
+        .gap(compact::rem(1.));
+    for (id, icon, command) in [
+        (
+            "tool_manual_select",
+            IconName::MousePointer,
+            CommandId::ManualSelect,
+        ),
+        (
+            "tool_manual_create",
+            IconName::Plus,
+            CommandId::ManualCreate,
+        ),
+        (
+            "tool_manual_delete",
+            IconName::Trash,
+            CommandId::ManualDelete,
+        ),
+        (
+            "tool_manual_reconnect",
+            IconName::GitBranch,
+            CommandId::ManualReconnect,
+        ),
+        (
+            "tool_manual_preview",
+            IconName::Eye,
+            CommandId::ManualPreviewResult,
+        ),
+    ] {
+        let invocation = canvas.command(&state.editor, command, CommandSource::Toolbar);
+        let status = state.editor.command_state(invocation);
+        let canvas = cx.entity();
+        let owner = owner.clone();
+        let button = compact::toggle(Button::new(id), status.checked)
+            .icon(icon)
+            .accessibility_label(t!(command.spec().label).into_owned())
+            .tooltip(t!(command.spec().label))
+            .disabled(modal || !status.enabled)
+            .on_click(move |_, window, cx| {
+                let focus = canvas.read(cx).focus.clone();
+                window.focus(&focus, cx);
+                owner.update(cx, |owner, cx| {
+                    if let Some(dock) = &mut owner.dock {
+                        dock.activate_viewport(canvas.entity_id());
+                    }
+                    owner.run_invocation(invocation, window, cx);
+                });
+            });
+        tools = tools.content(
+            super::toolbar::attached_button(button, SECONDARY, cx)
+                .xsmall()
+                .h(compact::rem(SECONDARY.button_size))
+                .min_w(compact::rem(SECONDARY.button_size))
+                .px(compact::rem(3.)),
+        );
+    }
+    super::toolbar::secondary_bar("mesh-edit-actions", tools, cx)
 }

@@ -79,7 +79,7 @@ env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=timeline cargo test --locked
 | `compact-popups` | Menus, submenus and ordinary/searchable Selects at every UI scale |
 | `properties` | Mesh properties, Part identity and Parameter validation in both locales |
 | `physics` | Physics group list and compact Properties inspector in both locales |
-| `manual-mesh` | Point creation, drag, constraints, undo/redo, diagnostics, generation preview and native save/reopen |
+| `manual-mesh` | Mesh Edit secondary toolbar, isolation, outline deletion/extension, connected point creation, undo/redo and native save/reopen |
 
 Imported motion edge cases, editing and canvas navigation are covered by
 `timeline_acceptance` using the local Mao asset:

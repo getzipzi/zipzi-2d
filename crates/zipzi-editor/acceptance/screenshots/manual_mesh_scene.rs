@@ -129,6 +129,45 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     click(&mut h, "mesh-generation-cancel")?;
     h.capture()?;
     check(&h, 5, (4, 0));
+    click(&mut h, "btn_isolate_selection")?;
+    h.capture()?;
+    check(&h, 5, (4, 0));
+    h.cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |v, cx| {
+            let binding = v.editor.primary_viewport_binding().unwrap();
+            assert!(v.editor.viewport_isolated(binding));
+            v.editor
+                .set_viewport_isolation_display(binding, zipzi_editor_core::IsolationDisplay::Hide)
+                .unwrap();
+            v.redraw(cx);
+        });
+    })?;
+    // Return to full-source display while isolated; it must remain visible.
+    click(&mut h, "tool_manual_preview")?;
+    let image = h.capture()?;
+    save(&image, directory, "manual-mesh-08-isolated.png")?;
+    click(&mut h, "tool_manual_delete")?;
+    h.capture()?;
+    click_model(&mut h, ModelPoint { x: 128., y: 24. })?;
+    let image = h.capture()?;
+    check(&h, 5, (5, 0));
+    save(&image, directory, "manual-mesh-09-outline-delete.png")?;
+    click(&mut h, "tool_manual_create")?;
+    h.capture()?;
+    drag_model(
+        &mut h,
+        ModelPoint { x: 24., y: 24. },
+        ModelPoint { x: 128., y: 60. },
+    )?;
+    let image = h.capture()?;
+    check(&h, 6, (6, 0));
+    save(&image, directory, "manual-mesh-10-outline-extend.png")?;
+    h.cx.update_window(h.window, |_, window, cx| window.press("cmd-z", cx))?;
+    h.capture()?;
+    check(&h, 5, (5, 1));
+    h.cx.update_window(h.window, |_, window, cx| window.press("cmd-shift-z", cx))?;
+    h.capture()?;
+    check(&h, 6, (6, 0));
     let (path, expected_meshes) = h.view.read_with(&h.cx, |v, _| {
         let doc = v.editor.document().unwrap();
         (doc.path().unwrap().to_path_buf(), meshes(doc))
@@ -148,8 +187,8 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
     let image = h.capture()?;
-    check(&h, 5, (4, 0));
-    save(&image, directory, "manual-mesh-08-saved.png")?;
+    check(&h, 6, (6, 0));
+    save(&image, directory, "manual-mesh-11-saved.png")?;
     let reopened = zipzi_editor_core::Document::open(&path)?;
     assert_eq!(
         meshes(&reopened),

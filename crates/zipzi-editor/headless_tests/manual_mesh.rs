@@ -105,7 +105,13 @@ fn manual_mesh_toolbar_only_shows_relevant_tools(cx: &mut TestAppContext) {
     cx.simulate_prompt_answer("Use full image");
     present(&h, cx);
     cx.update_window(h.window, |_, window, _| {
-        assert!(window.try_find("tool_select").is_none());
+        assert!(window.find("tool_select").visible());
+        assert!(window.find("tool_lasso").visible());
+        assert!(window.find("tool_glue").visible());
+        assert!(window.find("mesh-edit-actions").visible());
+        let secondary = window.find("mesh-edit-actions").bounds();
+        let create = window.find("tool_manual_create").bounds();
+        assert!(secondary.contains(&create.center()));
         assert!(window.find("tool_manual_create").visible());
         assert!(window.find("tool_manual_preview").visible());
     })

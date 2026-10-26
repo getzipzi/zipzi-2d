@@ -161,15 +161,8 @@ impl ManualMeshMode {
                 ids: self.selected.clone(),
             })
         } else {
-            self.selected_edge.and_then(|[a, b]| {
-                let model = document.model();
-                let meshing = model.get_mesh(&self.target.object.id)?.meshing.as_ref()?;
-                meshing
-                    .constraints
-                    .iter()
-                    .any(|constraint| constraint.endpoints == [a, b])
-                    .then_some(ManualMeshOperation::ReleaseConstraint { a, b })
-            })
+            self.selected_edge
+                .map(|[a, b]| ManualMeshOperation::DeleteEdge { a, b })
         };
         let Some(operation) = operation else {
             return Ok(false);
@@ -363,65 +356,35 @@ impl ManualMeshMode {
                         if let Hit::Vertex(a) = hit {
                             self.selected = vec![a];
                             self.selected_edge = None;
-                            if let Hit::Vertex(b) = self.hit(frame, point) {
+                            let end = self.hit(frame, point);
+                            if let Hit::Vertex(b) = end {
                                 if a != b {
                                     changed = self.apply_once(
                                         document,
                                         ManualMeshOperation::ConstrainEdge { a, b },
                                     )?;
                                 }
+                            } else if gesture.moved
+                                || crate::picking::distance2(gesture.start, point) >= 9.
+                            {
+                                changed = self.create_vertex_at(
+                                    document,
+                                    gesture.transform,
+                                    point,
+                                    end,
+                                    Some(a),
+                                )?;
                             }
                         } else if !gesture.moved
                             && crate::picking::distance2(gesture.start, point) < 9.
                         {
-                            let mesh = document
-                                .model()
-                                .get_mesh(&self.target.object.id)
-                                .unwrap()
-                                .clone();
-                            let uv = if let Hit::Edge([a, b], _) = hit {
-                                let a = mesh.vertex_ids.iter().position(|id| *id == a).unwrap();
-                                let b = mesh.vertex_ids.iter().position(|id| *id == b).unwrap();
-                                let project = |slot: usize| {
-                                    let p = mesh.base_positions[slot];
-                                    gesture
-                                        .transform
-                                        .to_viewport(crate::ModelPoint { x: p.x, y: p.y })
-                                };
-                                let pa = project(a);
-                                let pb = project(b);
-                                let dx = (pb.x - pa.x) as f64;
-                                let dy = (pb.y - pa.y) as f64;
-                                let t = (((gesture.start.x - pa.x) as f64 * dx
-                                    + (gesture.start.y - pa.y) as f64 * dy)
-                                    / (dx * dx + dy * dy))
-                                    .clamp(0., 1.);
-                                let a = mesh.uvs[a];
-                                let b = mesh.uvs[b];
-                                Vec2::new(
-                                    (a.x as f64 + t * (b.x as f64 - a.x as f64)) as f32,
-                                    (a.y as f64 + t * (b.y as f64 - a.y as f64)) as f32,
-                                )
-                            } else {
-                                let position = gesture.transform.to_model(gesture.start);
-                                self.target.mapping.uv(Vec2::new(position.x, position.y))?
-                            };
-                            let geometry = MeshGeometry {
-                                vertex_ids: mesh.vertex_ids,
-                                positions: mesh.base_positions,
-                                uvs: mesh.uvs,
-                                triangles: mesh.triangles,
-                                meshing: mesh.meshing,
-                            };
-                            let id = self.allocator.allocate(&geometry)?;
-                            changed = self.apply_once(
+                            changed = self.create_vertex_at(
                                 document,
-                                ManualMeshOperation::InsertVertex { id, uv },
+                                gesture.transform,
+                                gesture.start,
+                                hit,
+                                None,
                             )?;
-                            if changed {
-                                self.selected = vec![id];
-                                self.selected_edge = None;
-                            }
                         }
                     }
                     GestureKind::Delete(hit) => {
@@ -430,10 +393,9 @@ impl ManualMeshMode {
                                 document,
                                 ManualMeshOperation::DeleteVertices { ids: vec![id] },
                             )?,
-                            Hit::Edge([a, b], EdgeHitKind::Constraint) => self.apply_once(
-                                document,
-                                ManualMeshOperation::ReleaseConstraint { a, b },
-                            )?,
+                            Hit::Edge([a, b], _) => {
+                                self.apply_once(document, ManualMeshOperation::DeleteEdge { a, b })?
+                            }
                             _ => false,
                         };
                     }
@@ -441,6 +403,63 @@ impl ManualMeshMode {
                 Ok(changed)
             }
         }
+    }
+
+    fn create_vertex_at(
+        &mut self,
+        document: &mut Document,
+        transform: ViewportTransform,
+        point: ViewportPoint,
+        hit: Hit,
+        from: Option<VertexId>,
+    ) -> Result<bool> {
+        let mesh = document
+            .model()
+            .get_mesh(&self.target.object.id)
+            .unwrap()
+            .clone();
+        let uv = if let Hit::Edge([a, b], _) = hit {
+            let a = mesh.vertex_ids.iter().position(|id| *id == a).unwrap();
+            let b = mesh.vertex_ids.iter().position(|id| *id == b).unwrap();
+            let project = |slot: usize| {
+                let p = mesh.base_positions[slot];
+                transform.to_viewport(crate::ModelPoint { x: p.x, y: p.y })
+            };
+            let pa = project(a);
+            let pb = project(b);
+            let dx = (pb.x - pa.x) as f64;
+            let dy = (pb.y - pa.y) as f64;
+            let t = (((point.x - pa.x) as f64 * dx + (point.y - pa.y) as f64 * dy)
+                / (dx * dx + dy * dy))
+                .clamp(0., 1.);
+            let a = mesh.uvs[a];
+            let b = mesh.uvs[b];
+            Vec2::new(
+                (a.x as f64 + t * (b.x as f64 - a.x as f64)) as f32,
+                (a.y as f64 + t * (b.y as f64 - a.y as f64)) as f32,
+            )
+        } else {
+            let position = transform.to_model(point);
+            self.target.mapping.uv(Vec2::new(position.x, position.y))?
+        };
+        let geometry = MeshGeometry {
+            vertex_ids: mesh.vertex_ids,
+            positions: mesh.base_positions,
+            uvs: mesh.uvs,
+            triangles: mesh.triangles,
+            meshing: mesh.meshing,
+        };
+        let id = self.allocator.allocate(&geometry)?;
+        let operation = match from {
+            Some(from) => ManualMeshOperation::InsertConnectedVertex { from, id, uv },
+            None => ManualMeshOperation::InsertVertex { id, uv },
+        };
+        let changed = self.apply_once(document, operation)?;
+        if changed {
+            self.selected = vec![id];
+            self.selected_edge = None;
+        }
+        Ok(changed)
     }
 
     fn apply_once(
@@ -648,9 +667,9 @@ impl ManualMeshMode {
         }
         out.target_label = Some(self.target.object.id.clone());
         out.interaction_label = Some(if projected.truncated {
-            format!("Manual mesh · {:?} · showing first 100000 edges", self.tool)
+            format!("Mesh Edit · {:?} · showing first 100000 edges", self.tool)
         } else {
-            format!("Manual mesh · {:?}", self.tool)
+            format!("Mesh Edit · {:?}", self.tool)
         });
         if let Some(reason) = &self.diagnostic {
             out.interaction_label = Some(reason.clone());

@@ -984,3 +984,117 @@ fn manual_mesh_sparse_interior_is_a_valid_noop_on_an_untouched_mesh() -> anyhow:
     assert_eq!(doc.history_lengths(), (0, 0));
     Ok(())
 }
+
+fn edited_mesh(editor: &Editor) -> zipzi_core::Mesh {
+    let document = editor.document().unwrap();
+    let host = document.runtime_host();
+    let runtime = host.read();
+    runtime
+        .document(document.runtime_session_id())
+        .unwrap()
+        .get_mesh(&mesh().id)
+        .unwrap()
+        .clone()
+}
+
+#[test]
+fn manual_mesh_isolation_keeps_reference_at_full_opacity_and_mode_active() -> anyhow::Result<()> {
+    use zipzi_core::evaluation::RenderCommand;
+    for isolate_first in [false, true] {
+        let (doc, _dir) = support::alpha_document()?;
+        let mut editor = crate::support::editor_from_document(doc);
+        support::attach_viewports(&mut editor);
+        let binding = editor.primary_viewport_binding().unwrap();
+        if isolate_first {
+            editor.toggle_viewport_isolation(binding)?;
+        }
+        editor.enter_manual_mesh(editor.active_id().unwrap())?;
+        if !isolate_first {
+            editor.toggle_viewport_isolation(binding)?;
+        }
+        assert!(editor.manual_active());
+        for display in [IsolationDisplay::Dim, IsolationDisplay::Hide] {
+            editor.set_viewport_isolation_display(binding, display)?;
+            let preview = editor.preview()?;
+            let frame = &preview.scene.viewport_frame;
+            let reference = frame
+                .drawables
+                .iter()
+                .find(|d| d.id.starts_with("__manual_mesh_reference_"))
+                .unwrap();
+            assert!(reference.visible);
+            assert_eq!(reference.opacity, 1.);
+            if display == IsolationDisplay::Dim {
+                let drawn = frame.render_plan.iter().position(|c| matches!(c, RenderCommand::DrawMesh { mesh_id } if mesh_id == &reference.id)).unwrap();
+                let context_end = frame.render_plan.iter().position(|c| matches!(c, RenderCommand::EndOffscreen { offscreen_id } if offscreen_id == "zipzi-editor:isolation:context")).unwrap();
+                assert!(
+                    drawn > context_end,
+                    "Reference must not be composited into the dimmed context"
+                );
+            }
+        }
+        editor.toggle_viewport_isolation(binding)?;
+        assert!(editor.manual_active());
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_drag_to_empty_space_creates_connected_point_with_one_undo() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let original = edited_mesh(&editor);
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let from = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+    let to = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: from,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: to,
+            left_down: true,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: to })?;
+    let created = edited_mesh(&editor);
+    assert_eq!(created.vertex_ids.len(), 5);
+    assert_eq!(created.meshing.as_ref().unwrap().constraints.len(), 1);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), original);
+    editor.dispatch(editor.command(CommandId::Redo))?;
+    assert_eq!(edited_mesh(&editor), created);
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_delete_outer_edge_then_create_outside_the_new_outline() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let original = edited_mesh(&editor);
+    editor.dispatch(editor.command(CommandId::ManualDelete))?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    manual_click(
+        &mut editor,
+        frame.transform.to_viewport(ModelPoint { x: 128., y: 24. }),
+    )?;
+    assert_eq!(edited_mesh(&editor).triangles.len(), 1);
+    editor.dispatch(editor.command(CommandId::ManualCreate))?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    manual_click(
+        &mut editor,
+        frame.transform.to_viewport(ModelPoint { x: 160., y: 80. }),
+    )?;
+    assert_eq!(edited_mesh(&editor).vertex_ids.len(), 4);
+    assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), original);
+    Ok(())
+}

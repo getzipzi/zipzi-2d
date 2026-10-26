@@ -543,6 +543,18 @@ pub enum ManualMeshOperation {
         id: VertexId,
         uv: Vec2,
     },
+    /// Insert and connect in a single atomic operation/history step.
+    InsertConnectedVertex {
+        from: VertexId,
+        id: VertexId,
+        uv: Vec2,
+    },
+    /// Remove an outer edge's incident face and recover the remaining outline.
+    /// Internal fixed edges become automatic edges.
+    DeleteEdge {
+        a: VertexId,
+        b: VertexId,
+    },
     /// Absolute UV targets; motion_from is the last accepted preview when supplied.
     MoveVertices {
         targets: Vec<ManualVertexTarget>,
@@ -599,6 +611,15 @@ fn triangulate(
     m: &MeshMeshing,
     preserved: &BTreeSet<Edge>,
 ) -> Result<Vec<[VertexId; 3]>, SdkError> {
+    triangulate_with_extension(g, m, preserved, None)
+}
+
+fn triangulate_with_extension(
+    g: &MeshGeometry,
+    m: &MeshMeshing,
+    preserved: &BTreeSet<Edge>,
+    extension: Option<VertexId>,
+) -> Result<Vec<[VertexId; 3]>, SdkError> {
     let points = uv_map(g);
     let mut cdt = Cdt::new();
     let mut handles = HashMap::new();
@@ -645,10 +666,16 @@ fn triangulate(
     let mut faces = Vec::new();
     for face in cdt.inner_faces() {
         let center = face.center();
-        if !polygon_contains([center.x, center.y], &m.boundary, &points) {
+        let mut t = face.vertices().map(|v| reverse[&v.index()]);
+        if !polygon_contains([center.x, center.y], &m.boundary, &points)
+            && !extension.is_some_and(|id| {
+                t.iter()
+                    .position(|vertex| *vertex == id)
+                    .is_some_and(|i| boundary.contains(&edge(t[(i + 1) % 3], t[(i + 2) % 3])))
+            })
+        {
             continue;
         }
-        let mut t = face.vertices().map(|v| reverse[&v.index()]);
         if old_sign < 0. {
             t.swap(1, 2);
         }
@@ -665,6 +692,18 @@ pub fn edit_manual_mesh(
     source: &MeshGeometry,
     operation: ManualMeshOperation,
 ) -> Result<ManualMeshResult, SdkError> {
+    if let ManualMeshOperation::InsertConnectedVertex { from, id, uv } = operation {
+        let mut inserted = edit_manual_mesh(source, ManualMeshOperation::InsertVertex { id, uv })?;
+        let connected = edit_manual_mesh(
+            &inserted.geometry,
+            ManualMeshOperation::ConstrainEdge { a: from, b: id },
+        )?;
+        inserted.geometry = connected.geometry;
+        inserted.affected_edges.extend(connected.affected_edges);
+        inserted.affected_edges.sort_unstable();
+        inserted.affected_edges.dedup();
+        return Ok(inserted);
+    }
     let original = extract_manual_meshing(source)?;
     let mut g = source.clone();
     g.meshing = Some(original.clone());
@@ -704,9 +743,7 @@ pub fn edit_manual_mesh(
             if hit.len() > 1 {
                 return Err(bad("new UV touches multiple edges"));
             }
-            if hit.is_empty() && !polygon_contains(p, &m.boundary, &points) {
-                return Err(bad("new UV lies outside the boundary"));
-            }
+            let outside = hit.is_empty() && !polygon_contains(p, &m.boundary, &points);
             if let Some([a, b]) = hit.first().copied() {
                 split_edges(&mut m, a, b, id);
                 preserved.remove(&edge(a, b));
@@ -716,7 +753,75 @@ pub fn edit_manual_mesh(
             g.positions.push(map.position(uv));
             added.push(id);
             touched.insert(id);
-            force_rebuild = true;
+            if outside {
+                // Keep every old face/edge, adding the new point's exterior fan.
+                // Unlike a convex hull this leaves unrelated concavities intact.
+                g.triangles = triangulate_with_extension(&g, &m, &preserved, Some(id))?;
+                g.meshing = None;
+                let expanded = extract_manual_meshing(&g);
+                if let Ok(expanded) = expanded {
+                    m.boundary = expanded.boundary;
+                } else {
+                    // A fan can bridge several concave lobes and introduce a hole.
+                    // Attach to one visible edge instead, retaining a single outline.
+                    let mut accepted = None;
+                    for i in 0..m.boundary.len() {
+                        let a = m.boundary[i];
+                        let b = m.boundary[(i + 1) % m.boundary.len()];
+                        if cross(points[&a], points[&b], p) >= 0. {
+                            continue;
+                        }
+                        let mut candidate = m.clone();
+                        candidate.boundary.insert(i + 1, id);
+                        let mut trial = g.clone();
+                        if let Ok(faces) = triangulate(&trial, &candidate, &preserved) {
+                            trial.triangles = faces;
+                            if validate(&trial, &candidate).is_ok() {
+                                accepted = Some((candidate, trial.triangles));
+                                break;
+                            }
+                        }
+                    }
+                    let (boundary, faces) = accepted
+                        .ok_or_else(|| bad("cannot extend a single boundary to this point"))?;
+                    m = boundary;
+                    g.triangles = faces;
+                }
+            } else {
+                force_rebuild = true;
+            }
+        }
+        ManualMeshOperation::InsertConnectedVertex { .. } => unreachable!(),
+        ManualMeshOperation::DeleteEdge { a, b } => {
+            let e = edge(a, b);
+            if !old_edges.contains(&e) {
+                return Err(bad("unknown edge"));
+            }
+            if boundary_edges(&m.boundary).contains(&e) {
+                g.triangles
+                    .retain(|face| !(face.contains(&a) && face.contains(&b)));
+                if g.triangles.is_empty() {
+                    return Err(bad("deletion leaves no mesh faces"));
+                }
+                let used: BTreeSet<_> = g.triangles.iter().flatten().copied().collect();
+                for i in (0..g.vertex_ids.len()).rev() {
+                    if !used.contains(&g.vertex_ids[i]) {
+                        removed.push(g.vertex_ids.remove(i));
+                        g.uvs.remove(i);
+                        g.positions.remove(i);
+                    }
+                }
+                removed.sort_unstable();
+                g.meshing = None;
+                let recovered = extract_manual_meshing(&g)?;
+                m.boundary = recovered.boundary;
+                let edges = mesh_edges(&g.triangles);
+                let boundary = boundary_edges(&m.boundary);
+                m.constraints
+                    .retain(|c| edges.contains(&c.endpoints) && !boundary.contains(&c.endpoints));
+            } else {
+                m.constraints.retain(|c| c.endpoints != e);
+            }
         }
         ManualMeshOperation::MoveVertices {
             targets,

@@ -104,7 +104,7 @@ impl MeshGenerationSource {
                 if self.manual_target.is_some() {
                     ensure!(
                         alpha_options.clip_to_image,
-                        "Manual stages require sites inside the complete source image"
+                        "Mesh Edit stages require sites inside the complete source image"
                     );
                 }
                 ensure!(

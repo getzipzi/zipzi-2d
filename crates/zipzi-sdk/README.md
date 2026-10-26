@@ -97,6 +97,13 @@ candidates so old references cannot name a later point. `AffineUvMap::from_geome
 recovers the fixed image transform, including reflections. The focused gate is
 `cargo test --locked -p zipzi-sdk --test integration manual_mesh::`.
 
+Mesh Edit can insert outside the current outline within the source image, extending
+the boundary while keeping old faces. `InsertConnectedVertex` inserts and fixes its
+connection atomically. `DeleteEdge` on an outer edge removes its incident face and
+orphaned vertices, then recovers the remaining outline; an internal fixed edge becomes
+automatic. Operations that leave no faces, holes or disconnected regions fail without
+modifying the input.
+
 `alpha_mesh_geometry(AlphaMask { width, height, alpha }, &AlphaMeshOptions)`
 is a deterministic, CPU-only geometry operation. `alpha` contains one byte per
 pixel, in top-down rows; retained pixels above `alpha_threshold` are included.
