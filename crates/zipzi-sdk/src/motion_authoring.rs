@@ -20,17 +20,27 @@ impl MotionEditPlan {
         self.domain.migrated_to_root()
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct MotionCapabilities {
+    /// Read this object while its identity/context remains valid.
     pub inspect: CapabilityState,
+    /// Modify typed fields through a validated native intent/address.
     pub patch: CapabilityState,
+    /// Duplicate the selected object while allocating fresh owned identities.
     pub duplicate: CapabilityState,
+    /// Delete the selected object subject to native reference and lock rules.
     pub delete: CapabilityState,
+    /// Move the selected object between compatible native owners.
     pub move_object: CapabilityState,
+    /// Native preview eligibility; host preview API availability is advertised separately.
     pub preview: CapabilityState,
+    /// Create owned child rows in this object.
     pub create_child: CapabilityState,
+    /// Change ordered sibling membership without changing identity.
     pub reorder: CapabilityState,
+    /// Repair an explicitly unresolved native reference.
     pub repair: CapabilityState,
+    /// Edit the owning clip content, preserving stable track/key/event identities.
     pub edit_content: CapabilityState,
 }
 #[derive(Debug, Clone)]
@@ -293,6 +303,7 @@ pub struct MotionRegistrationAddress {
     handle: ObjectHandle,
     owner: Option<ObjectHandle>,
     epoch: u64,
+    field_epoch: u64,
     expected: zipzi_core::document::MotionRegistration,
 }
 impl AuthoringSession {
@@ -315,6 +326,7 @@ impl AuthoringSession {
             handle: self.handle(ObjectKind::MotionRegistration, id)?,
             owner,
             epoch: self.motion_contexts.get(id).map_or(0, |c| c.1),
+            field_epoch: self.animation_field_epoch(id),
             expected: entry.clone(),
         })
     }
@@ -324,6 +336,13 @@ impl AuthoringSession {
         entry: zipzi_core::document::MotionRegistration,
     ) -> Result<MotionEditPlan, SdkError> {
         self.resolve_handle(&address.handle)?;
+        if self.animation_field_epoch(address.handle.id()) != address.field_epoch {
+            return Err(SdkError::new(
+                "STALE_FIELD_ADDRESS",
+                "Registration fields changed; capture a new address",
+                "plan_motion_registration_patch",
+            ));
+        }
         if let Some(owner) = &address.owner {
             self.resolve_handle(owner)?;
         }
@@ -627,6 +646,23 @@ impl crate::AuthoringSnapshot {
                 .document()
                 .plan_attachment_edit(intent)
                 .map_err(|s| SdkError::from_status(s, "plan_attachment_edit", vec![]))?,
+        })
+    }
+}
+
+impl crate::AuthoringSnapshot {
+    /// Plan a typed motion edit on an immutable source, without changing preview/history.
+    pub fn plan_motion_edit(
+        &self,
+        intent: zipzi_core::document::MotionEdit,
+    ) -> Result<MotionEditPlan, SdkError> {
+        let domain = self
+            .document()
+            .plan_motion_edit(intent)
+            .map_err(|s| SdkError::from_status(s, "plan_motion_edit", vec![]))?;
+        Ok(MotionEditPlan {
+            version: self.version(),
+            domain,
         })
     }
 }

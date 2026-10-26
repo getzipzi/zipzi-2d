@@ -15,7 +15,7 @@ again. `job.wait(timeout=None)` waits until terminal; a finite timeout raises
 `JobTimeout` while the accepted Job remains usable. Close an unresolved Runtime
 only after recovery or with explicit `abandon_pending=True`.
 
-The native/host pairing is `zipzi-python2-14` / `zipzi-runtime-p3a-345-1`; rebuild
+The native/host pairing is `zipzi-python2-15` / `zipzi-runtime-r5-authoring-1`; rebuild
 adapters and hosts together after a contract change.
 
 See the [package source](https://github.com/getzipzi/zipzi-2d/tree/main/crates/zipzi-python2)
@@ -53,5 +53,6 @@ new offline catalog have deterministic and installed P3A-6 evidence. The fixed
 agent functional gate passed. P3A is accepted after the user removed the
 model/service identity gate; `gpt-6.1-sol/high` is recorded as the configured
 model/effort. The P0 stability waiver applies only to its recorded 2026-10-26 round.
-Animation authoring, independent
+Typed Motion/Expression/Physics/Pose authoring, selected records, plans and stable
+addresses are connected through the canonical modeling API. Independent animation
 Preview and GPU observer/inspection remain future Runtime capabilities.

@@ -4,6 +4,7 @@
 #[path = "authoring_acceptance.rs"]
 mod authoring_acceptance;
 
+mod animation_field_epochs;
 #[path = "binding_authoring.rs"]
 mod binding_authoring;
 #[path = "cdi_authoring.rs"]

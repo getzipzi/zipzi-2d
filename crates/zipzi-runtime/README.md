@@ -186,7 +186,7 @@ continue via `Executor` and completion delivery. Terminal Job queries atomically
 transfer their results into the deduplicated request window and release Job slots.
 Request status queries do not advance the monotonic admission watermark.
 
-The current contract is `zipzi-runtime-p3a-345-1`: big-endian u32 length, UTF-8 JSON control
+The current contract is `zipzi-runtime-r5-authoring-1`: big-endian u32 length, UTF-8 JSON control
 frames (16 MiB maximum), strict handshake and runtime-scoped IDs. The high length
 bit selects binary framing: a bounded JSON header (16 KiB) plus at most 1 MiB raw
 payload. Each immutable blob is at most 256 MiB and SHA256 checked before use.
@@ -256,3 +256,18 @@ headless contexts return no snapshot. Native acceptance covers all object kinds,
 selection, relations, texture/property projection and a human gesture interleaved
 with an external stale candidate. See [R4 coverage](../../docs/runtime/r4-coverage.json)
 and [acceptance evidence](../../docs/plans/sdk-runtime/python2-r4-complete.md).
+
+## R5 animation authoring slice
+
+Typed Motion/registration/track/key/event, Expression, Physics and Pose edits,
+whole-asset commands, selected canonical records, SDK plans, field addresses and
+capability queries use the same Runtime handlers on Local and Connected. The
+host advertises `animation_authoring`; this does not advertise independent
+Preview or Observer support. Large animation values reuse binary admission and
+recovery. Native/IPC pairing is `zipzi-python2-15` / `zipzi-runtime-r5-authoring-1`.
+
+The SDK now retains animation field epochs across edits and Undo. Physics change
+summaries compare stable row IDs so a sibling reorder preserves field addresses.
+The [R5/P5 record](../../docs/plans/sdk-runtime/python2-r5-authoring.md) tracks
+source/installed evidence and the remaining Preview, Observer, scheduling and
+Editor work; R5 as a whole remains in progress.

@@ -16,6 +16,40 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_flattened_physics_extensions_roundtrip_and_cannot_shadow_fields(self):
+        import sys
+        with patch.object(sys, 'path', [str(PACKAGE / 'client/python'), *sys.path]):
+            from zipzi._generated import modeling as codec
+            domain = codec.PhysicsRange(Minimum=-1., Default=0., Maximum=1.)
+            nested = {'enabled': True, 'levels': [1, 2]}
+            value = codec.PhysicsNormalization(Position=domain, Angle=domain,
+                extensions={'VendorNormalization': nested})
+            nested['levels'].append(3)
+            wire = codec.encode_PhysicsNormalization(value)
+            self.assertEqual(wire, {'Position': {'Minimum': -1., 'Default': 0., 'Maximum': 1.},
+                'Angle': {'Minimum': -1., 'Default': 0., 'Maximum': 1.},
+                'VendorNormalization': {'enabled': True, 'levels': [1, 2]}})
+            self.assertEqual(codec.read_PhysicsNormalization(wire), value)
+            codec.validate_PhysicsNormalization(value)
+            shadow = codec.PhysicsNormalization(Position=domain, Angle=domain,
+                extensions={'Position': 42})
+            with self.assertRaisesRegex(ValueError, 'overlap declared fields'):
+                codec.validate_PhysicsNormalization(shadow)
+
+    def test_single_variant_type_alias_keeps_fields_and_public_methods_in_catalog(self):
+        output=gen.render(self.contract());namespace={}
+        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
+        catalog=namespace['CATALOG']
+        alias='zipzi.modeling.PhysicsAssetProperty'
+        concrete='zipzi.modeling.PhysicsAssetPropertyFps'
+        self.assertEqual(catalog[alias]['kind'],'type')
+        self.assertEqual(catalog[alias]['fields'],catalog[concrete]['fields'])
+        self.assertTrue(dict(catalog[alias]['fields'])['value'])
+        for method in ('summary','__repr__'):
+            self.assertEqual(catalog[alias+'.'+method]['kind'],'callable')
+            self.assertEqual(catalog[alias+'.'+method]['documentation'],
+                             catalog[concrete+'.'+method]['documentation'])
+
     def test_catalog_version_follows_distribution_metadata(self):
         output=gen.render(self.contract())
         namespace={}

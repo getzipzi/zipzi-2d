@@ -2,8 +2,8 @@
 from . import modeling as m
 from .._values import record
 
-ModelingPlanOperation = m.ModelingCommandScene | m.ModelingCommandOrganization | m.ModelingCommandBinding | m.ModelingCommandContent | m.ModelingCommandReferences | m.ModelingCommandResource | m.ModelingCommandDocument | m.ModelingCommandAttachment
-MODELING_PLAN_TYPES = (m.ModelingCommandScene, m.ModelingCommandOrganization, m.ModelingCommandBinding, m.ModelingCommandContent, m.ModelingCommandReferences, m.ModelingCommandResource, m.ModelingCommandDocument, m.ModelingCommandAttachment,)
+ModelingPlanOperation = m.ModelingCommandScene | m.ModelingCommandOrganization | m.ModelingCommandBinding | m.ModelingCommandContent | m.ModelingCommandReferences | m.ModelingCommandResource | m.ModelingCommandDocument | m.ModelingCommandAttachment | m.ModelingCommandMotion | m.ModelingCommandExpression | m.ModelingCommandPhysics | m.ModelingCommandPose
+MODELING_PLAN_TYPES = (m.ModelingCommandScene, m.ModelingCommandOrganization, m.ModelingCommandBinding, m.ModelingCommandContent, m.ModelingCommandReferences, m.ModelingCommandResource, m.ModelingCommandDocument, m.ModelingCommandAttachment, m.ModelingCommandMotion, m.ModelingCommandExpression, m.ModelingCommandPhysics, m.ModelingCommandPose,)
 
 def encode_modeling(value: ModelingPlanOperation) -> dict[str, object]:
     raw = record(m.encode_ModelingCommand(value))

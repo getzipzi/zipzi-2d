@@ -32,6 +32,7 @@ DOMAINS = {
     "document_authoring": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "authoring_collections": ("identity-collections", "R4", ["A04", "A05", "A15"]),
     "geometry": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
+    "manual_mesh": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
     "alpha_mesh": ("geometry-binding", "R4", ["A04", "A15", "A17"]),
     "binding_authoring": ("geometry-binding", "R4", ["A04", "A05", "A15", "A17"]),
     "scene_authoring": ("scene-document", "R4", ["A04", "A05", "A15"]),

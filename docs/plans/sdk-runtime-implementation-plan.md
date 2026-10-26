@@ -1,11 +1,13 @@
 # SDK Runtime 分阶段实施计划
 
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
-日期：2026 年 10 月 24 日。状态：**R0–R4 已交付，R4 最后复验于 2026-10-26 完成，R5–R7 尚未开始**。
+日期：2026 年 10 月 24 日。状态：**R0–R4 已交付，R4 最后复验于 2026-10-26 完成；R5 与 Python P5 同步实施中，首批接通动画创作，独立 Preview/Observer 和调度待交付；R6–R7 尚未开始**。
 
 2026-10-26 Python 公共契约收尾：[P3A 已完成验收](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。用户确认运行配置 `gpt-6.1-sol/high` 并移除模型/服务身份门禁；既有确定性/安装/Editor/固定功能门禁证据和本轮 P0 稳定性豁免保留。随后完成独立的 R4 最后复验，见下节；P3A 完成与 R4 完成分别有记录。
 
 2026-10-26 R4 收尾：R4 完整 Modeling/地址/资源/IO 在 Python P3A/P3B 拆分前已实现。本轮修复 Editor 原生验收的旧 API 接线，优化普通网格操作分派，并完成 Box 布局相关 Release 复验、当前安装两后端全 R4 recipe、配对源码包/wheel 及真实 Editor/Metal 验收。R4 已交付，具体数字、旧 P0 口径限制和后续边界见 [R4 最终复验](sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验)。R5/P5 继续交付动画/独立 Preview/Observer；已有 R4 能力不重复列为 P3B/P4 新开发。
+
+2026-10-26 R5/P5 开始：P4 已提交为 `e1401632`。在同一独立 worktree 接通 Motion/注册/Track/Key/Event、Expression、Physics、Pose 的类型化写入、选取式读取、SDK Plan、地址和能力查询，并修复动画字段地址在 Undo 后复活的问题。首批源码与共享领域回归通过，发行安装证据和未交付项见 [动画创作记录](sdk-runtime/python2-r5-authoring.md)。本切片不代表 R5 整体完成。
 
 以下 2026-10-25 条目保留历史推进过程；其中旧 R4 未完成状态由本轮最终记录替代。
 
@@ -52,7 +54,7 @@ BlendShape、长任务及资源/IO 仍待扩展，R4 尚未验收。
 | R2 | Editor 使用托管会话，窗口生命周期解耦 | R1 | 已交付，见 [R2 记录](sdk-runtime/r2-editor.md) |
 | R3 | 本机协议和 Python 最小完整闭环 | R2 | 已交付，见 [R3 记录](sdk-runtime/r3-ipc.md) |
 | R4 | Modeling、资源、Plan 与工程 IO 完整连接 | R3 | 已交付；最后布局/性能、当前 Python 接线和源码分发复验已完成，见 [最终复验](sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验) |
-| R5 | Animation、独立 Preview、Observer 和长任务 | R4 | 未开始 |
+| R5 | Animation、独立 Preview、Observer 和长任务 | R4 | 实施中；[首批动画创作](sdk-runtime/python2-r5-authoring.md)已接通，独立 Preview/Observer、调度和 Editor 验收待交付 |
 | R6 | 候选 Review 与人工精修后接续 | R5 | 未开始 |
 | R7 | 完整创作、发行包、性能与生命周期总验收 | R6 | 未开始 |
 

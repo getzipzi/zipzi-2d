@@ -1490,6 +1490,7 @@ macro_rules! scene_id {
                         name: "value".into(),
                         shape: crate::api_shape::Shape::String,
                         skip: false,
+                        flatten: false,
                         default: None,
                     }],
                 }

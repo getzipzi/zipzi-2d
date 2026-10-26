@@ -27,6 +27,92 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_r5_physics_extension_shadowing_aborts_the_candidate_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(1))
+                before = session.info()
+                with self.assertRaisesRegex(ValueError, "overlap declared fields"):
+                    with session.edit("Invalid flattened metadata") as edit:
+                        edit.apply(m.ModelingCommandPhysics(intent=m.PhysicsEditCreateGroup(
+                            asset_id=uid(2), id=uid(3), name="Rig")))
+                        physics = edit.modeling.records(m.ModelingQuery(physics=True)).value.physics
+                        group = physics.data.settings[0]
+                        normalized = replace(group.normalization, extensions={"Position": 42})
+                        invalid = replace(physics, data=replace(physics.data,
+                            settings=(replace(group, normalization=normalized),)))
+                        edit.apply(m.ModelingCommandSetPhysics(physics=invalid))
+                self.assertEqual(session.info(), before)
+                self.assertIsNone(session.modeling.records(m.ModelingQuery(physics=True)).value.physics)
+
+    def test_r5_large_motion_binary_records_and_complete_call_recovery(self):
+        for mode, phase, after in (("local", None, 0), ("connected", None, 0),
+                ("connected", "apply_authoring_blob", 0), ("connected", "modeling_query", 1),
+                ("connected", "read_blob_binary", 0)):
+            with self.subTest(mode=mode, phase=phase):
+                runtime = self.runtime(mode, drop=phase, drop_after=after)
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Large motion graph") as edit:
+                    parameter = edit.parameters.create(parameters.ParameterSpec("P", -1., 1., 0., id=uid(2)))
+                    edit.apply(m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(3), name="Large",
+                        registration_id=uid(4), destination=m.MotionContainerRoot())))
+                    clip = edit.modeling.records(m.ModelingQuery(motions=(uid(3),))).value.motions[0]
+                    segments = tuple(m.MotionSegmentLinear(end=m.MotionKey(id=uid(10_000+i),
+                        time=float(i), value=float(i % 2))) for i in range(1, 4097))
+                    track = m.MotionTrack(id=uid(5), target=m.MotionTrackTargetParameter(parameter_id=parameter),
+                        initial=m.MotionKey(id=uid(6), time=0., value=0.), segments=segments, extensions={})
+                    operation = m.ModelingCommandReplaceMotion(clip=replace(clip, duration=4096., tracks=(track,)))
+                    if phase == "apply_authoring_blob":
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            edit.apply(operation)
+                        result = lost.exception.recover()
+                        self.assertIsInstance(result, zipzi.WriteResult)
+                        self.assertEqual(result.source.sequence, 3)
+                    else:
+                        edit.apply(operation)
+                    query = m.ModelingQuery(motions=(uid(3),))
+                    if phase in {"modeling_query", "read_blob_binary"}:
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            edit.modeling.records(query)
+                        snapshot = lost.exception.recover()
+                    else:
+                        snapshot = edit.modeling.records(query)
+                    self.assertEqual(snapshot.source.sequence, 3)
+                    self.assertEqual(snapshot.value.motions[0].tracks[0], track)
+                    self.assertEqual(session.info().history, (0, 0))
+                self.assertEqual(session.info().history, (1, 0))
+                self.assertEqual(snapshot.value.motions[0].tracks[0].segments[-1].end.time, 4096.)
+
+    def test_r5_local_animation_bridge_does_not_encode_or_decode_python_json(self):
+        runtime = self.runtime("local")
+        with patch("json.dumps", side_effect=AssertionError("Local animation encoded JSON")), \
+             patch("json.loads", side_effect=AssertionError("Local animation decoded JSON")):
+            session = runtime.sessions.create(uid(1))
+            with session.edit("Direct animation") as edit:
+                edit.apply_many((
+                    m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(2), name="Motion",
+                        registration_id=uid(3), destination=m.MotionContainerRoot())),
+                    m.ModelingCommandExpression(intent=m.ExpressionEditCreate(id=uid(4), name="Expression")),
+                    m.ModelingCommandPhysics(intent=m.PhysicsEditCreateGroup(asset_id=uid(5), id=uid(6), name="Physics")),
+                    m.ModelingCommandPose(intent=m.PoseEditCreateGroup(pose_id=uid(7), id=uid(8), name="Pose")),
+                ))
+                selected = edit.modeling.records(m.ModelingQuery(motions=(uid(2),), expressions=(uid(4),), physics=True, pose=True))
+                self.assertEqual(selected.value.motions[0].name, "Motion")
+                self.assertEqual(selected.value.physics.data.meta.PhysicsSettingCount, 1)
+                self.assertEqual(selected.source.sequence, 1)
+            self.assertEqual(session.info().history, (1, 0))
+
+    def test_r5_animation_authoring_plans_addresses_and_sidecars(self):
+        import runpy
+        recipe = runpy.run_path(str(Path(__file__).with_name("r5_authoring_recipe.py")))["run"]
+        results = []
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                results.append(recipe(self.runtime(mode), self.folder / (mode + "-r5")))
+        if len(results) == 2:
+            self.assertEqual(results[0], results[1])
+
     def test_manual_mesh_structure_roundtrips_local_connected_binary_history_and_project(self):
         boundary = [10, 20, 30, 40]
         support = meshes.Constraint((10, 30), meshes.ConstraintKind.EDGE_SUPPORT)

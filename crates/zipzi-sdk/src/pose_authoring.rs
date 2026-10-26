@@ -18,17 +18,27 @@ impl PoseEditPlan {
         self.domain.affected_ids()
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct PoseCapabilities {
+    /// Read this object while its identity/context remains valid.
     pub inspect: CapabilityState,
+    /// Modify typed fields through a validated native intent/address.
     pub patch: CapabilityState,
+    /// Create owned child rows in this object.
     pub create_child: CapabilityState,
+    /// Duplicate the selected object while allocating fresh owned identities.
     pub duplicate: CapabilityState,
+    /// Delete the selected object subject to native reference and lock rules.
     pub delete: CapabilityState,
+    /// Move the selected object between compatible native owners.
     pub move_object: CapabilityState,
+    /// Change ordered sibling membership without changing identity.
     pub reorder: CapabilityState,
+    /// Repair an explicitly unresolved native reference.
     pub repair: CapabilityState,
+    /// Remove this container while moving owned content to an explicit destination.
     pub dissolve: CapabilityState,
+    /// Native preview eligibility; host preview API availability is advertised separately.
     pub preview: CapabilityState,
 }
 #[derive(Debug, Clone)]
@@ -42,6 +52,7 @@ pub struct PoseFieldAddress {
     entity: ObjectHandle,
     owner: Option<ObjectHandle>,
     epoch: u64,
+    field_epoch: u64,
     expected: PoseFields,
 }
 impl PoseFieldAddress {
@@ -245,6 +256,7 @@ impl AuthoringSession {
             entity: self.handle(pose_kind(self.document(), id), id)?,
             owner,
             epoch: self.pose_contexts.get(id).map_or(0, |c| c.1),
+            field_epoch: self.animation_field_epoch(id),
             expected,
         })
     }
@@ -257,6 +269,7 @@ impl AuthoringSession {
             std::iter::once(&address.entity).chain(&address.owner),
             || {
                 self.pose_contexts.get(address.id()).map_or(0, |c| c.1) != address.epoch
+                    || self.animation_field_epoch(address.id()) != address.field_epoch
                     || self.document().pose_owner(address.id())
                         != address.owner.as_ref().map(|o| o.id())
                     || self.document().pose_fields(address.id()).as_ref() != Some(&address.expected)
@@ -325,5 +338,22 @@ impl EditSession<'_> {
             document.apply_pose_plan(&plan)
         })?;
         Ok(())
+    }
+}
+
+impl crate::AuthoringSnapshot {
+    /// Plan a typed pose edit on an immutable source, without changing preview/history.
+    pub fn plan_pose_edit(
+        &self,
+        intent: zipzi_core::document::PoseEdit,
+    ) -> Result<PoseEditPlan, SdkError> {
+        let domain = self
+            .document()
+            .plan_pose_edit(intent)
+            .map_err(|s| SdkError::from_status(s, "plan_pose_edit", vec![]))?;
+        Ok(PoseEditPlan {
+            version: self.version(),
+            domain,
+        })
     }
 }

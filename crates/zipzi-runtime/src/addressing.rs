@@ -59,6 +59,22 @@ pub enum AddressSelector {
         /// Explicit field discriminator; must match the addressed object/domain.
         field: DocumentField,
     },
+    MotionRegistration {
+        /// Stable identity of the addressed native animation object.
+        id: String,
+    },
+    ExpressionEntry {
+        /// Stable identity of the addressed native animation object.
+        id: String,
+    },
+    Physics {
+        /// Stable identity of the addressed native animation object.
+        id: String,
+    },
+    Pose {
+        /// Stable identity of the addressed native animation object.
+        id: String,
+    },
 }
 #[derive(Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
@@ -108,6 +124,22 @@ pub enum AddressPatch {
         /// Scalar value in the referenced parameter domain.
         value: DocumentValue,
     },
+    MotionRegistration {
+        /// Complete replacement registration with its existing stable identity.
+        entry: zipzi_core::document::MotionRegistration,
+    },
+    ExpressionEntry {
+        /// Replacement expression target/value/blend fields, under captured owner epochs.
+        fields: zipzi_core::document::ExpressionEntryFields,
+    },
+    Physics {
+        /// Atomic property changes targeting only the captured Physics entity.
+        changes: Vec<zipzi_core::document::PhysicsProperty>,
+    },
+    Pose {
+        /// Replacement fields for the captured Pose singleton/group/entry/link.
+        fields: zipzi_core::document::PoseFields,
+    },
 }
 pub(crate) enum CapturedAddress {
     Scene(SceneFieldAddress),
@@ -120,6 +152,10 @@ pub(crate) enum CapturedAddress {
     ResourceName(ResourceNameAddress),
     AttachmentPath(AttachmentPathAddress),
     Document(DocumentFieldAddress),
+    MotionRegistration(MotionRegistrationAddress),
+    ExpressionEntry(ExpressionEntryAddress),
+    Physics(PhysicsFieldAddress),
+    Pose(PoseFieldAddress),
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
@@ -132,6 +168,10 @@ pub enum CapabilityDomain {
     References,
     Resource,
     Attachment,
+    Motion,
+    Expression,
+    Physics,
+    Pose,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
@@ -153,6 +193,25 @@ pub enum CollectionQuery {
     Document {
         /// Explicit field discriminator; must match the addressed object/domain.
         field: DocumentField,
+    },
+    Motion {
+        /// Root or stable motion-group container for library registrations.
+        collection: zipzi_core::document::MotionContainer,
+    },
+    MotionGroups,
+    Clips,
+    Expressions,
+    ExpressionEntries {
+        /// Stable expression asset ID owning the entry collection.
+        expression_id: String,
+    },
+    Physics {
+        /// Native Physics group/input/output/node collection selector.
+        collection: PhysicsCollection,
+    },
+    Pose {
+        /// Native Pose group/entry/link collection selector.
+        collection: zipzi_core::document::PoseCollection,
     },
 }
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape)]
@@ -202,5 +261,21 @@ pub enum Capabilities {
         /// Current document configuration and metadata repair capability states and reasons; do
         /// not infer support from method presence.
         CapabilityState,
+    ),
+    Motion(
+        /// Current native motion eligibility; host Preview support is advertised separately.
+        MotionCapabilities,
+    ),
+    Expression(
+        /// Current native expression eligibility; host Preview support is advertised separately.
+        ExpressionCapabilities,
+    ),
+    Physics(
+        /// Current native physics eligibility; host Preview support is advertised separately.
+        PhysicsCapabilities,
+    ),
+    Pose(
+        /// Current native pose eligibility; host Preview support is advertised separately.
+        PoseCapabilities,
     ),
 }

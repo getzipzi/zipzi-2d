@@ -13,7 +13,8 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
   [crate responsibilities](MONOREPO.md#crate-responsibilities).
 - **Python SDK:** [independent Runtime client](crates/zipzi-python2/README.md),
   [implemented capabilities](crates/zipzi-python2/CAPABILITIES.md) and
-  [Runtime R0–R4 integration](docs/plans/sdk-runtime/python2-r0-r4.md).
+  [Runtime R0–R4 integration](docs/plans/sdk-runtime/python2-r0-r4.md) and
+  [R5/P5 animation authoring](docs/plans/sdk-runtime/python2-r5-authoring.md).
 - **Contributing:** [repository structure](MONOREPO.md),
   [test gates](tools/README.md#test-coverage), [tools](tools/README.md) and
   [documentation index](docs/README.md).

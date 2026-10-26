@@ -278,6 +278,8 @@ pub struct SerdeField {
     pub name: String,
     pub shape: Shape,
     pub skip: bool,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub flatten: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<serde_json::Value>,
 }

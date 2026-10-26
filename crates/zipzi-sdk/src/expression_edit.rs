@@ -33,15 +33,23 @@ pub enum CapabilityState {
         code: &'static str,
     },
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct ExpressionCapabilities {
+    /// Read this object while its identity/context remains valid.
     pub inspect: CapabilityState,
+    /// Create an owned expression entry.
     pub create_entry: CapabilityState,
+    /// Modify typed fields through a validated native intent/address.
     pub patch: CapabilityState,
+    /// Transfer expression entries between compatible owners.
     pub move_entry: CapabilityState,
+    /// Duplicate the selected object while allocating fresh owned identities.
     pub duplicate: CapabilityState,
+    /// Delete the selected object subject to native reference and lock rules.
     pub delete: CapabilityState,
+    /// Repair an explicitly unresolved native reference.
     pub repair: CapabilityState,
+    /// Native preview eligibility; host preview API availability is advertised separately.
     pub preview: CapabilityState,
 }
 
@@ -52,6 +60,7 @@ pub struct ExpressionEntryAddress {
     pub(crate) entry: ObjectHandle,
     pub(crate) owner: ObjectHandle,
     owner_epoch: u64,
+    field_epoch: u64,
     pub(crate) expected: ExpressionEntryFields,
 }
 impl ExpressionEntryAddress {
@@ -182,6 +191,7 @@ impl AuthoringSession {
                 .get(id)
                 .map_or(0, |context| context.1),
             expected: entry.into(),
+            field_epoch: self.animation_field_epoch(id),
         })
     }
     pub fn plan_expression_entry_patch(
@@ -196,6 +206,7 @@ impl AuthoringSession {
             .get(address.entry.id())
             .map_or(0, |context| context.1)
             != address.owner_epoch
+            || self.animation_field_epoch(address.entry.id()) != address.field_epoch
             || self
                 .document()
                 .get_expression_entry(address.entry.id())
@@ -411,4 +422,21 @@ pub struct ExpressionCollection {
     pub entries: Vec<ObjectHandle>,
     pub semantic_order: bool,
     pub allows_empty: bool,
+}
+
+impl crate::AuthoringSnapshot {
+    /// Plan a typed expression edit on an immutable source, without changing preview/history.
+    pub fn plan_expression_edit(
+        &self,
+        intent: zipzi_core::document::ExpressionEdit,
+    ) -> Result<ExpressionEditPlan, SdkError> {
+        let domain = self
+            .document()
+            .plan_expression_edit(intent)
+            .map_err(|s| SdkError::from_status(s, "plan_expression_edit", vec![]))?;
+        Ok(ExpressionEditPlan {
+            version: self.version(),
+            domain,
+        })
+    }
 }

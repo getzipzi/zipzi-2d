@@ -10,6 +10,29 @@ use std::{
 #[serde(transparent)]
 pub struct SharedVec<T>(Arc<Vec<T>>);
 
+impl<T: crate::api_shape::ApiShape> crate::api_shape::ApiShape for SharedVec<T> {
+    fn api_shape() -> crate::api_shape::Shape {
+        <Vec<T> as crate::api_shape::ApiShape>::api_shape()
+    }
+}
+impl<T: crate::binary_wire::WireWrite> crate::binary_wire::WireWrite for SharedVec<T> {
+    const SIGNATURE: u128 = <Vec<T> as crate::binary_wire::WireWrite>::SIGNATURE;
+    fn encode<W: std::io::Write>(&self, out: &mut W) -> crate::binary_wire::Result<()> {
+        self.0.encode(out)
+    }
+    fn expansion_bytes(&self) -> usize {
+        self.0.expansion_bytes()
+    }
+}
+impl<T: crate::binary_wire::WireRead> crate::binary_wire::WireRead for SharedVec<T> {
+    fn input_cost(input: &mut crate::binary_wire::Reader<'_>) -> crate::binary_wire::Result<usize> {
+        <Vec<T> as crate::binary_wire::WireRead>::input_cost(input)
+    }
+    fn decode(input: &mut crate::binary_wire::Reader<'_>) -> crate::binary_wire::Result<Self> {
+        Ok(<Vec<T> as crate::binary_wire::WireRead>::decode(input)?.into())
+    }
+}
+
 impl<T> Clone for SharedVec<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
@@ -66,6 +89,29 @@ impl<T: Clone> IntoIterator for SharedVec<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn binary_roundtrip_uses_vec_layout_and_admits_before_allocating() {
+        use crate::binary_wire::{Reader, WireRead, WireWrite};
+        let original: SharedVec<String> = vec!["first".into(), "second".into()].into();
+        let mut bytes = Vec::new();
+        original.encode(&mut bytes).unwrap();
+        let mut plain = Vec::new();
+        original.to_vec().encode(&mut plain).unwrap();
+        assert_eq!(bytes, plain);
+        let mut cost = Reader::new(&bytes).unwrap();
+        assert!(SharedVec::<String>::input_cost(&mut cost).unwrap() >= 11);
+        cost.finish().unwrap();
+        let mut input = Reader::new(&bytes).unwrap();
+        let decoded = SharedVec::<String>::decode(&mut input).unwrap();
+        input.finish().unwrap();
+        assert_eq!(decoded, original);
+        let mut changed = decoded.clone();
+        changed[0] = "new".into();
+        assert_eq!(decoded[0], "first");
+        let invalid = u32::MAX.to_le_bytes();
+        let mut oversized = Reader::new(&invalid).unwrap();
+        assert!(SharedVec::<String>::input_cost(&mut oversized).is_err());
+    }
     #[test]
     fn clones_share_storage_and_mutations_detach_without_changing_json() {
         let original: SharedVec<String> = vec!["old".into()].into();

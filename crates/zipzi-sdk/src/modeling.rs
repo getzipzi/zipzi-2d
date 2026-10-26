@@ -47,6 +47,18 @@ pub struct ModelingQuery {
     /// Explicit IDs of package attachments to read, in result-slot order; an empty list
     /// requests no payloads, while collection IDs remain discoverable.
     pub attachments: Vec<String>,
+    /// Explicit motion clip IDs; payload slots follow order and retain missing IDs.
+    pub motions: Vec<String>,
+    /// Explicit motion registration-group IDs; group payloads include their ordered entries.
+    pub motion_groups: Vec<String>,
+    /// Explicit registration IDs, including root and grouped registrations.
+    pub motion_registrations: Vec<String>,
+    /// Explicit expression asset IDs; entries are owned by the selected asset.
+    pub expressions: Vec<String>,
+    /// Request the Physics singleton payload; false requests no Physics content.
+    pub physics: bool,
+    /// Request the Pose singleton payload; false requests no Pose content.
+    pub pose: bool,
 }
 #[derive(Debug, Serialize, zipzi_api_derive::BinaryOutput)]
 pub struct ModelingRecords<'a> {
@@ -72,6 +84,12 @@ pub struct ModelingRecords<'a> {
     pub offscreens: Vec<Option<&'a zipzi_core::Offscreen>>,
     pub parameter_groups: Vec<Option<&'a zipzi_core::document::CdiParameterGroup>>,
     pub attachments: Vec<Option<&'a zipzi_core::document::PackageAttachment>>,
+    pub motions: Vec<Option<&'a zipzi_core::document::MotionClip>>,
+    pub motion_groups: Vec<Option<&'a zipzi_core::document::MotionGroup>>,
+    pub motion_registrations: Vec<Option<&'a zipzi_core::document::MotionRegistration>>,
+    pub expressions: Vec<Option<&'a zipzi_core::document::ExpressionAsset>>,
+    pub physics: Option<&'a zipzi_core::document::PhysicsAsset>,
+    pub pose: Option<&'a zipzi_core::document::PoseAsset>,
 }
 /// Owned selected query results. No mutation or query behavior lives in this DTO.
 #[derive(Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
@@ -136,6 +154,18 @@ pub struct OwnedModelingRecords {
     /// Owned package attachments aligned with the corresponding query ID list; None marks a
     /// missing requested ID and an empty query returns no payloads.
     pub attachments: Vec<Option<zipzi_core::document::PackageAttachment>>,
+    /// Owned selected motions aligned with query IDs; None marks a missing ID.
+    pub motions: Vec<Option<zipzi_core::document::MotionClip>>,
+    /// Owned selected motion_groups aligned with query IDs; None marks a missing ID.
+    pub motion_groups: Vec<Option<zipzi_core::document::MotionGroup>>,
+    /// Owned selected motion_registrations aligned with query IDs; None marks a missing ID.
+    pub motion_registrations: Vec<Option<zipzi_core::document::MotionRegistration>>,
+    /// Owned selected expressions aligned with query IDs; None marks a missing ID.
+    pub expressions: Vec<Option<zipzi_core::document::ExpressionAsset>>,
+    /// Owned Physics singleton when requested and present; None otherwise.
+    pub physics: Option<zipzi_core::document::PhysicsAsset>,
+    /// Owned Pose singleton when requested and present; None otherwise.
+    pub pose: Option<zipzi_core::document::PoseAsset>,
 }
 impl ModelingRecords<'_> {
     pub fn into_owned(self) -> OwnedModelingRecords {
@@ -186,6 +216,16 @@ impl ModelingRecords<'_> {
                 .map(|v| v.cloned())
                 .collect(),
             attachments: self.attachments.into_iter().map(|v| v.cloned()).collect(),
+            motions: self.motions.into_iter().map(|v| v.cloned()).collect(),
+            motion_groups: self.motion_groups.into_iter().map(|v| v.cloned()).collect(),
+            motion_registrations: self
+                .motion_registrations
+                .into_iter()
+                .map(|v| v.cloned())
+                .collect(),
+            expressions: self.expressions.into_iter().map(|v| v.cloned()).collect(),
+            physics: self.physics.cloned(),
+            pose: self.pose.cloned(),
         }
     }
 }
@@ -292,8 +332,7 @@ pub fn modeling_records<'a>(
             .map(|a| a.id.as_str())
             .collect(),
     );
-    // IO selection identities are metadata; animation record/edit APIs remain
-    // separate from the modeling projection.
+    // Collection identities remain available without loading animation payloads.
     ids.insert(
         "motions",
         document.motion_order().iter().map(String::as_str).collect(),
@@ -305,6 +344,35 @@ pub fn modeling_records<'a>(
             .iter()
             .map(String::as_str)
             .collect(),
+    );
+    ids.insert(
+        "motion_groups",
+        document
+            .motion_groups()
+            .iter()
+            .map(|g| g.id.as_str())
+            .collect(),
+    );
+    ids.insert(
+        "motion_registrations",
+        document
+            .motion_registrations()
+            .map(|e| e.id.as_str())
+            .collect(),
+    );
+    ids.insert(
+        "physics",
+        document
+            .physics()
+            .map(|v| vec![v.id.as_str()])
+            .unwrap_or_default(),
+    );
+    ids.insert(
+        "pose",
+        document
+            .pose()
+            .map(|v| vec![v.id.as_str()])
+            .unwrap_or_default(),
     );
     ModelingRecords {
         document_id: document.id(),
@@ -377,6 +445,28 @@ pub fn modeling_records<'a>(
             .iter()
             .map(|id| document.get_attachment(id))
             .collect(),
+        motions: query
+            .motions
+            .iter()
+            .map(|id| document.get_motion(id))
+            .collect(),
+        motion_groups: query
+            .motion_groups
+            .iter()
+            .map(|id| document.get_motion_group(id))
+            .collect(),
+        motion_registrations: query
+            .motion_registrations
+            .iter()
+            .map(|id| document.get_motion_registration(id).map(|(_, entry)| entry))
+            .collect(),
+        expressions: query
+            .expressions
+            .iter()
+            .map(|id| document.get_expression(id))
+            .collect(),
+        physics: query.physics.then(|| document.physics()).flatten(),
+        pose: query.pose.then(|| document.pose()).flatten(),
     }
 }
 #[derive(Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
@@ -477,6 +567,26 @@ pub enum ModelingIntent {
         /// Session/Edit source rather than mutating this value.
         zipzi_core::document::AttachmentEdit,
     ),
+    /// Typed motion intent evaluated against the exact formal/candidate source.
+    Motion(
+        /// Typed native motion operation against this captured source.
+        zipzi_core::document::MotionEdit,
+    ),
+    /// Typed expression intent evaluated against the exact formal/candidate source.
+    Expression(
+        /// Typed native expression operation against this captured source.
+        zipzi_core::document::ExpressionEdit,
+    ),
+    /// Typed physics intent evaluated against the exact formal/candidate source.
+    Physics(
+        /// Typed native physics operation against this captured source.
+        zipzi_core::document::PhysicsEdit,
+    ),
+    /// Typed pose intent evaluated against the exact formal/candidate source.
+    Pose(
+        /// Typed native pose operation against this captured source.
+        zipzi_core::document::PoseEdit,
+    ),
 }
 #[derive(Debug, Clone)]
 pub enum ModelingPlan {
@@ -488,6 +598,10 @@ pub enum ModelingPlan {
     Resource(crate::ResourceEditPlan),
     Document(crate::DocumentEditPlan),
     Attachment(crate::AttachmentEditPlan),
+    Motion(crate::MotionEditPlan),
+    Expression(crate::ExpressionEditPlan),
+    Physics(crate::PhysicsEditPlan),
+    Pose(crate::PoseEditPlan),
 }
 zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
@@ -566,6 +680,43 @@ impl ModelingPlan {
                 r.losses = p.losses().to_vec();
                 r
             }
+            Self::Motion(p) => ModelingPlanReport {
+                version: p.version(),
+                affected_ids: p.affected_ids().to_vec(),
+                copied_ids: Default::default(),
+                cost: None,
+                losses: vec![],
+                no_op: None,
+            },
+            Self::Expression(p) => ModelingPlanReport {
+                version: p.version(),
+                affected_ids: p
+                    .affected_expressions()
+                    .iter()
+                    .chain(p.affected_entries())
+                    .cloned()
+                    .collect(),
+                copied_ids: Default::default(),
+                cost: None,
+                losses: vec![],
+                no_op: None,
+            },
+            Self::Physics(p) => ModelingPlanReport {
+                version: p.version(),
+                affected_ids: p.affected_ids().to_vec(),
+                copied_ids: Default::default(),
+                cost: None,
+                losses: vec![],
+                no_op: None,
+            },
+            Self::Pose(p) => ModelingPlanReport {
+                version: p.version(),
+                affected_ids: p.affected_ids().to_vec(),
+                copied_ids: Default::default(),
+                cost: None,
+                losses: vec![],
+                no_op: None,
+            },
             Self::Attachment(p) => ModelingPlanReport {
                 version: p.version(),
                 affected_ids: vec![],
@@ -586,6 +737,10 @@ impl ModelingPlan {
             Self::Resource(p) => edit.apply_resource_plan(p),
             Self::Document(p) => edit.apply_document_plan(p),
             Self::Attachment(p) => edit.apply_attachment_plan(p),
+            Self::Motion(p) => edit.apply_motion_plan(p),
+            Self::Expression(p) => edit.apply_expression_plan(p),
+            Self::Physics(p) => edit.apply_physics_plan(p),
+            Self::Pose(p) => edit.apply_pose_plan(p),
         }
     }
 }
@@ -609,6 +764,12 @@ impl crate::AuthoringSnapshot {
             ModelingIntent::Content(i) => {
                 ModelingPlan::Content(self.plan_scene_content_with_control(i, limits, control)?)
             }
+            ModelingIntent::Motion(i) => ModelingPlan::Motion(self.plan_motion_edit(i)?),
+            ModelingIntent::Expression(i) => {
+                ModelingPlan::Expression(self.plan_expression_edit(i)?)
+            }
+            ModelingIntent::Physics(i) => ModelingPlan::Physics(self.plan_physics_edit(i)?),
+            ModelingIntent::Pose(i) => ModelingPlan::Pose(self.plan_pose_edit(i)?),
             ModelingIntent::References(i) => ModelingPlan::References(self.plan_reference_edit(i)?),
             ModelingIntent::Resource(i) => ModelingPlan::Resource(self.plan_resource_edit(i)?),
             ModelingIntent::Document(i) => ModelingPlan::Document(self.plan_document_edit(i)?),

@@ -171,3 +171,16 @@ def resource_project_jobs(runtime: zipzi.Runtime, session: zipzi.Session, path: 
     export = zipzi.recover_call(session.project.export, path, modeling.ExportFormat.PACKAGE)
     assert_type(export, zipzi.Job[modeling.ProjectReport])
     return zipzi.recover_call(export.wait)
+
+
+def animation_authoring(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi.Snapshot[modeling.OwnedModelingRecords]:
+    operation = modeling.ModelingCommandMotion(intent=modeling.MotionEditCreateGroup(id=id, name="Motion group"))
+    assert_type(edit.apply(operation), zipzi.WriteResult)
+    assert_type(session.plan(operation), zipzi.Plan)
+    assert_type(zipzi.recover_call(edit.plan_async, operation), zipzi.Job[zipzi.Plan])
+    query = modeling.ModelingQuery(motions=(id,), expressions=(id,), physics=True, pose=True)
+    snapshot = session.modeling.records(query)
+    assert_type(snapshot.value.physics, modeling.PhysicsAsset | None)
+    with session.address(modeling.AddressSelectorPose(id=id)) as address:
+        assert_type(address.plan(modeling.AddressPatchPose(fields=modeling.PoseFieldsGroup(name="New"))), zipzi.Plan)
+    return snapshot

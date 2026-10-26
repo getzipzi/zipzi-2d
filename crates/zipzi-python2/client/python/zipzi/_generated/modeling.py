@@ -374,6 +374,116 @@ class ModelingCommandAttachment(CompactValue):
 ModelingCommandAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandMotion(CompactValue):
+    'Immutable owned ModelingCommandMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nintent: Motion library/track/key/event intent; use a Plan or apply to an Edit.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'motion'
+    kind: _ClassVar[str] = "modeling"
+    intent: MotionEdit
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'intent', self.intent)
+ModelingCommandMotion.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandExpression(CompactValue):
+    'Immutable owned ModelingCommandExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nintent: Expression asset/entry intent, validated by the shared SDK planner.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'expression'
+    kind: _ClassVar[str] = "modeling"
+    intent: ExpressionEdit
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'intent', self.intent)
+ModelingCommandExpression.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandPhysics(CompactValue):
+    'Immutable owned ModelingCommandPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nintent: Physics rig/row/node intent with native ownership and reference checks.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'physics'
+    kind: _ClassVar[str] = "modeling"
+    intent: PhysicsEdit
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'intent', self.intent)
+ModelingCommandPhysics.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandPose(CompactValue):
+    'Immutable owned ModelingCommandPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nintent: Pose singleton/group/entry/link intent, independent of playback state.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'pose'
+    kind: _ClassVar[str] = "modeling"
+    intent: PoseEdit
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'intent', self.intent)
+ModelingCommandPose.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandCreateMotion(CompactValue):
+    'Immutable owned ModelingCommandCreateMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nclip: Complete owned clip with stable track/key/event identities.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'create_motion'
+    kind: _ClassVar[str] = "modeling"
+    clip: MotionClip
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'clip', self.clip)
+ModelingCommandCreateMotion.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandReplaceMotion(CompactValue):
+    'Immutable owned ModelingCommandReplaceMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nclip: Complete replacement clip preserving its stable object ID.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'replace_motion'
+    kind: _ClassVar[str] = "modeling"
+    clip: MotionClip
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'clip', self.clip)
+ModelingCommandReplaceMotion.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandCreateExpression(CompactValue):
+    'Immutable owned ModelingCommandCreateExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nexpression: Complete expression asset with ordered owned entries.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'create_expression'
+    kind: _ClassVar[str] = "modeling"
+    expression: ExpressionAsset
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'expression', self.expression)
+ModelingCommandCreateExpression.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandReplaceExpression(CompactValue):
+    'Immutable owned ModelingCommandReplaceExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nexpression: Complete replacement expression preserving its object ID.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'replace_expression'
+    kind: _ClassVar[str] = "modeling"
+    expression: ExpressionAsset
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'expression', self.expression)
+ModelingCommandReplaceExpression.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandSetPhysics(CompactValue):
+    'Immutable owned ModelingCommandSetPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nphysics: Complete Physics singleton and ordered rig data.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'set_physics'
+    kind: _ClassVar[str] = "modeling"
+    physics: PhysicsAsset
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'physics', self.physics)
+ModelingCommandSetPhysics.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandSetPose(CompactValue):
+    'Immutable owned ModelingCommandSetPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npose: Complete Pose singleton and owned part/link references.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'set_pose'
+    kind: _ClassVar[str] = "modeling"
+    pose: PoseAsset
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'pose', self.pose)
+ModelingCommandSetPose.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceModelSetup(CompactValue):
     'Immutable owned ModelingCommandReplaceModelSetup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsetup: Model source-canvas and export-frame configuration.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     _variant: _ClassVar[str] = 'replace_model_setup'
@@ -510,7 +620,7 @@ class ModelingCommandReplaceTopology(CompactValue):
         object.__setattr__(self, 'replacement', self.replacement)
 ModelingCommandReplaceTopology.__module__ = "zipzi.modeling"
 
-ModelingCommand: TypeAlias = ModelingCommandCreateAsset | ModelingCommandReplaceAsset | ModelingCommandCreateMesh | ModelingCommandReplaceMesh | ModelingCommandCreateParameter | ModelingCommandReplaceParameter | ModelingCommandCreatePart | ModelingCommandReplacePart | ModelingCommandCreateTransform | ModelingCommandReplaceTransform | ModelingCommandCreateBinding | ModelingCommandReplaceBinding | ModelingCommandCreateSceneBinding | ModelingCommandReplaceSceneBinding | ModelingCommandCreateBlendKeyTable | ModelingCommandReplaceBlendKeyTable | ModelingCommandCreateBlendConstraint | ModelingCommandReplaceBlendConstraint | ModelingCommandCreateBlendBinding | ModelingCommandReplaceBlendBinding | ModelingCommandCreateGlue | ModelingCommandReplaceGlue | ModelingCommandCreateOffscreen | ModelingCommandReplaceOffscreen | ModelingCommandScene | ModelingCommandOrganization | ModelingCommandBinding | ModelingCommandContent | ModelingCommandReferences | ModelingCommandResource | ModelingCommandDocument | ModelingCommandAttachment | ModelingCommandReplaceModelSetup | ModelingCommandReplaceHierarchyOrder | ModelingCommandReplaceEditorState | ModelingCommandReplaceDrawOrderGroups | ModelingCommandEraseObject | ModelingCommandRenameMesh | ModelingCommandUpdatePositions | ModelingCommandSetMeshKeyform | ModelingCommandSetSceneKeyform | ModelingCommandRemeshRectangleGrid | ModelingCommandReplaceTopology
+ModelingCommand: TypeAlias = ModelingCommandCreateAsset | ModelingCommandReplaceAsset | ModelingCommandCreateMesh | ModelingCommandReplaceMesh | ModelingCommandCreateParameter | ModelingCommandReplaceParameter | ModelingCommandCreatePart | ModelingCommandReplacePart | ModelingCommandCreateTransform | ModelingCommandReplaceTransform | ModelingCommandCreateBinding | ModelingCommandReplaceBinding | ModelingCommandCreateSceneBinding | ModelingCommandReplaceSceneBinding | ModelingCommandCreateBlendKeyTable | ModelingCommandReplaceBlendKeyTable | ModelingCommandCreateBlendConstraint | ModelingCommandReplaceBlendConstraint | ModelingCommandCreateBlendBinding | ModelingCommandReplaceBlendBinding | ModelingCommandCreateGlue | ModelingCommandReplaceGlue | ModelingCommandCreateOffscreen | ModelingCommandReplaceOffscreen | ModelingCommandScene | ModelingCommandOrganization | ModelingCommandBinding | ModelingCommandContent | ModelingCommandReferences | ModelingCommandResource | ModelingCommandDocument | ModelingCommandAttachment | ModelingCommandMotion | ModelingCommandExpression | ModelingCommandPhysics | ModelingCommandPose | ModelingCommandCreateMotion | ModelingCommandReplaceMotion | ModelingCommandCreateExpression | ModelingCommandReplaceExpression | ModelingCommandSetPhysics | ModelingCommandSetPose | ModelingCommandReplaceModelSetup | ModelingCommandReplaceHierarchyOrder | ModelingCommandReplaceEditorState | ModelingCommandReplaceDrawOrderGroups | ModelingCommandEraseObject | ModelingCommandRenameMesh | ModelingCommandUpdatePositions | ModelingCommandSetMeshKeyform | ModelingCommandSetSceneKeyform | ModelingCommandRemeshRectangleGrid | ModelingCommandReplaceTopology
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ImageAsset(CompactValue):
@@ -3542,6 +3652,1673 @@ AttachmentRefUnresolved.__module__ = "zipzi.modeling"
 AttachmentRef: TypeAlias = AttachmentRefResolved | AttachmentRefUnresolved
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditCreate(CompactValue):
+    'Immutable owned MotionEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Explicit destination owner/container; order is controlled separately by before.'
+    _variant: _ClassVar[str] = 'create'
+    id: str
+    name: str
+    registration_id: str
+    destination: MotionContainer
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'registration_id', self.registration_id)
+        object.__setattr__(self, 'destination', self.destination)
+MotionEditCreate.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditCreateGroup(CompactValue):
+    'Immutable owned MotionEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    _variant: _ClassVar[str] = 'create_group'
+    id: str
+    name: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+MotionEditCreateGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditRenameGroup(CompactValue):
+    'Immutable owned MotionEditRenameGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    _variant: _ClassVar[str] = 'rename_group'
+    id: str
+    name: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+MotionEditRenameGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditReorderGroups(CompactValue):
+    'Immutable owned MotionEditReorderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    _variant: _ClassVar[str] = 'reorder_groups'
+    ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+MotionEditReorderGroups.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditRegister(CompactValue):
+    'Immutable owned MotionEditRegister value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry: Complete replacement motion registration; its owner is selected separately.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'register'
+    entry: MotionRegistration
+    destination: MotionContainer
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'entry', self.entry)
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+MotionEditRegister.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditPatchRegistration(CompactValue):
+    'Immutable owned MotionEditPatchRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nentry: Complete replacement motion registration; its owner is selected separately.'
+    _variant: _ClassVar[str] = 'patch_registration'
+    id: str
+    expected: MotionRegistration
+    entry: MotionRegistration
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'expected', self.expected)
+        object.__setattr__(self, 'entry', self.entry)
+MotionEditPatchRegistration.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditMoveRegistrations(CompactValue):
+    'Immutable owned MotionEditMoveRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'move_registrations'
+    ids: tuple[str, ...]
+    destination: MotionContainer
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+MotionEditMoveRegistrations.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDuplicateRegistrations(CompactValue):
+    'Immutable owned MotionEditDuplicateRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'duplicate_registrations'
+    ids: tuple[str, ...]
+    destination: MotionContainer
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+MotionEditDuplicateRegistrations.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDeleteRegistrations(CompactValue):
+    'Immutable owned MotionEditDeleteRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    _variant: _ClassVar[str] = 'delete_registrations'
+    ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+MotionEditDeleteRegistrations.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDissolveGroup(CompactValue):
+    'Immutable owned MotionEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    _variant: _ClassVar[str] = 'dissolve_group'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+MotionEditDissolveGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDeleteGroup(CompactValue):
+    'Immutable owned MotionEditDeleteGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    _variant: _ClassVar[str] = 'delete_group'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+MotionEditDeleteGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDuplicateGroup(CompactValue):
+    'Immutable owned MotionEditDuplicateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    _variant: _ClassVar[str] = 'duplicate_group'
+    source: str
+    id: str
+    name: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'source', self.source)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+MotionEditDuplicateGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDuplicateClip(CompactValue):
+    'Immutable owned MotionEditDuplicateClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Explicit destination owner/container; order is controlled separately by before.'
+    _variant: _ClassVar[str] = 'duplicate_clip'
+    source: str
+    id: str
+    name: str
+    registration_id: str
+    destination: MotionContainer
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'source', self.source)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'registration_id', self.registration_id)
+        object.__setattr__(self, 'destination', self.destination)
+MotionEditDuplicateClip.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDeleteClip(CompactValue):
+    'Immutable owned MotionEditDeleteClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    _variant: _ClassVar[str] = 'delete_clip'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+MotionEditDeleteClip.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditReorderTracks(CompactValue):
+    'Immutable owned MotionEditReorderTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    _variant: _ClassVar[str] = 'reorder_tracks'
+    clip: str
+    ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'clip', self.clip)
+        object.__setattr__(self, 'ids', tuple(self.ids))
+MotionEditReorderTracks.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditCreateTrack(CompactValue):
+    'Immutable owned MotionEditCreateTrack value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nkey_id: Stable identity allocated for the initial key of a new track.\ntime: Absolute time in seconds within the owning motion clip.'
+    _variant: _ClassVar[str] = 'create_track'
+    clip: str
+    id: str
+    key_id: str
+    time: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'clip', self.clip)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'key_id', self.key_id)
+        object.__setattr__(self, 'time', self.time)
+MotionEditCreateTrack.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditSetTrackTarget(CompactValue):
+    'Immutable owned MotionEditSetTrackTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    _variant: _ClassVar[str] = 'set_track_target'
+    id: str
+    target: MotionTrackTarget
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'target', self.target)
+MotionEditSetTrackTarget.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditMoveTracks(CompactValue):
+    'Immutable owned MotionEditMoveTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.\ncopy: True allocates copied identities; false transfers the existing identities.'
+    _variant: _ClassVar[str] = 'move_tracks'
+    ids: tuple[str, ...]
+    destination: str
+    before: (str | None) = None
+    copy: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+        object.__setattr__(self, 'copy', self.copy)
+MotionEditMoveTracks.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDeleteTracks(CompactValue):
+    'Immutable owned MotionEditDeleteTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    _variant: _ClassVar[str] = 'delete_tracks'
+    ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+MotionEditDeleteTracks.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditTransferKeys(CompactValue):
+    'Immutable owned MotionEditTransferKeys value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination_track: Stable receiving track ID for transferred keys.\ntime_offset: Offset in seconds added when moving or copying keys/events.\ncopy: True allocates copied identities; false transfers the existing identities.'
+    _variant: _ClassVar[str] = 'transfer_keys'
+    ids: tuple[str, ...]
+    destination_track: str
+    time_offset: float
+    copy: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'destination_track', self.destination_track)
+        object.__setattr__(self, 'time_offset', self.time_offset)
+        object.__setattr__(self, 'copy', self.copy)
+MotionEditTransferKeys.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditSetEvent(CompactValue):
+    'Immutable owned MotionEditSetEvent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nevent: Owned motion event with a stable ID, time in seconds and string payload.'
+    _variant: _ClassVar[str] = 'set_event'
+    clip: str
+    event: MotionEvent
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'clip', self.clip)
+        object.__setattr__(self, 'event', self.event)
+MotionEditSetEvent.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditDeleteEvents(CompactValue):
+    'Immutable owned MotionEditDeleteEvents value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    _variant: _ClassVar[str] = 'delete_events'
+    ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+MotionEditDeleteEvents.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEditMoveEvents(CompactValue):
+    'Immutable owned MotionEditMoveEvents value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\ntime_offset: Offset in seconds added when moving or copying keys/events.\ncopy: True allocates copied identities; false transfers the existing identities.'
+    _variant: _ClassVar[str] = 'move_events'
+    ids: tuple[str, ...]
+    destination: str
+    time_offset: float
+    copy: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'time_offset', self.time_offset)
+        object.__setattr__(self, 'copy', self.copy)
+MotionEditMoveEvents.__module__ = "zipzi.modeling"
+
+MotionEdit: TypeAlias = MotionEditCreate | MotionEditCreateGroup | MotionEditRenameGroup | MotionEditReorderGroups | MotionEditRegister | MotionEditPatchRegistration | MotionEditMoveRegistrations | MotionEditDuplicateRegistrations | MotionEditDeleteRegistrations | MotionEditDissolveGroup | MotionEditDeleteGroup | MotionEditDuplicateGroup | MotionEditDuplicateClip | MotionEditDeleteClip | MotionEditReorderTracks | MotionEditCreateTrack | MotionEditSetTrackTarget | MotionEditMoveTracks | MotionEditDeleteTracks | MotionEditTransferKeys | MotionEditSetEvent | MotionEditDeleteEvents | MotionEditMoveEvents
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionContainerRoot(CompactValue):
+    'Immutable owned MotionContainerRoot value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'root'
+MotionContainerRoot.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionContainerGroup(CompactValue):
+    'Immutable owned MotionContainerGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Destination motion-group identity; Root selects ungrouped registrations.'
+    _variant: _ClassVar[str] = 'group'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+MotionContainerGroup.__module__ = "zipzi.modeling"
+
+MotionContainer: TypeAlias = MotionContainerRoot | MotionContainerGroup
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionRegistration(CompactValue):
+    'Immutable owned MotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nclip_id: Stable motion clip ID referenced by this registration.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nsound: Optional attachment reference for the registered motion sound.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    id: str
+    clip_id: str
+    fade_in: (float | None) = None
+    fade_out: (float | None) = None
+    sound: (AttachmentRef | None) = None
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'clip_id', self.clip_id)
+        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
+        object.__setattr__(self, 'fade_out', None if self.fade_out is None else self.fade_out)
+        object.__setattr__(self, 'sound', None if self.sound is None else self.sound)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+MotionRegistration.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionTrackTargetUnspecified(CompactValue):
+    'Immutable owned MotionTrackTargetUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'unspecified'
+MotionTrackTargetUnspecified.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionTrackTargetModel(CompactValue):
+    'Immutable owned MotionTrackTargetModel value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    _variant: _ClassVar[str] = 'model'
+    runtime_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'runtime_id', self.runtime_id)
+MotionTrackTargetModel.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionTrackTargetParameter(CompactValue):
+    'Immutable owned MotionTrackTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
+    _variant: _ClassVar[str] = 'parameter'
+    parameter_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'parameter_id', self.parameter_id)
+MotionTrackTargetParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionTrackTargetPartOpacity(CompactValue):
+    'Immutable owned MotionTrackTargetPartOpacity value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
+    _variant: _ClassVar[str] = 'part_opacity'
+    part_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'part_id', self.part_id)
+MotionTrackTargetPartOpacity.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionTrackTargetUnresolved(CompactValue):
+    'Immutable owned MotionTrackTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncategory: Imported Physics target category retained by this wire metadata record.\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    _variant: _ClassVar[str] = 'unresolved'
+    category: str
+    runtime_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'category', self.category)
+        object.__setattr__(self, 'runtime_id', self.runtime_id)
+MotionTrackTargetUnresolved.__module__ = "zipzi.modeling"
+
+MotionTrackTarget: TypeAlias = MotionTrackTargetUnspecified | MotionTrackTargetModel | MotionTrackTargetParameter | MotionTrackTargetPartOpacity | MotionTrackTargetUnresolved
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEvent(CompactValue):
+    'Immutable owned MotionEvent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    id: str
+    time: float
+    value: str
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'time', self.time)
+        object.__setattr__(self, 'value', self.value)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+MotionEvent.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditCreate(CompactValue):
+    'Immutable owned ExpressionEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    _variant: _ClassVar[str] = 'create'
+    id: str
+    name: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+ExpressionEditCreate.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditCreateEntry(CompactValue):
+    'Immutable owned ExpressionEditCreateEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nowner: Stable expression asset ID owning the selected entries.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'create_entry'
+    owner: str
+    id: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'owner', self.owner)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+ExpressionEditCreateEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditPatchEntry(CompactValue):
+    'Immutable owned ExpressionEditPatchEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nfields: Typed replacement fields for the addressed object, applied atomically.'
+    _variant: _ClassVar[str] = 'patch_entry'
+    id: str
+    expected: ExpressionEntryFields
+    fields: ExpressionEntryFields
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'expected', self.expected)
+        object.__setattr__(self, 'fields', self.fields)
+ExpressionEditPatchEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditMoveEntries(CompactValue):
+    'Immutable owned ExpressionEditMoveEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'move_entries'
+    ids: tuple[str, ...]
+    destination: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+ExpressionEditMoveEntries.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditDuplicateEntries(CompactValue):
+    'Immutable owned ExpressionEditDuplicateEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nnew_ids: New stable identities paired with the selected source objects.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'duplicate_entries'
+    ids: tuple[str, ...]
+    new_ids: tuple[str, ...]
+    destination: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'new_ids', tuple(self.new_ids))
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+ExpressionEditDuplicateEntries.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditDeleteEntries(CompactValue):
+    'Immutable owned ExpressionEditDeleteEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    _variant: _ClassVar[str] = 'delete_entries'
+    ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+ExpressionEditDeleteEntries.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditDuplicate(CompactValue):
+    'Immutable owned ExpressionEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentry_ids: New stable entry IDs paired with the source expression entries.'
+    _variant: _ClassVar[str] = 'duplicate'
+    source: str
+    id: str
+    name: str
+    entry_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'source', self.source)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'entry_ids', tuple(self.entry_ids))
+ExpressionEditDuplicate.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditDelete(CompactValue):
+    'Immutable owned ExpressionEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    _variant: _ClassVar[str] = 'delete'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+ExpressionEditDelete.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEditReorder(CompactValue):
+    'Immutable owned ExpressionEditReorder value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    _variant: _ClassVar[str] = 'reorder'
+    ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+ExpressionEditReorder.__module__ = "zipzi.modeling"
+
+ExpressionEdit: TypeAlias = ExpressionEditCreate | ExpressionEditCreateEntry | ExpressionEditPatchEntry | ExpressionEditMoveEntries | ExpressionEditDuplicateEntries | ExpressionEditDeleteEntries | ExpressionEditDuplicate | ExpressionEditDelete | ExpressionEditReorder
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEntryFields(CompactValue):
+    'Immutable owned ExpressionEntryFields value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nblend: Optional expression blend mode; None uses the native Add default.'
+    target: ExpressionTarget
+    value: float
+    blend: (ExpressionBlend | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'target', self.target)
+        object.__setattr__(self, 'value', self.value)
+        object.__setattr__(self, 'blend', None if self.blend is None else self.blend)
+ExpressionEntryFields.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionTargetUnspecified(CompactValue):
+    'Immutable owned ExpressionTargetUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'unspecified'
+ExpressionTargetUnspecified.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionTargetResolved(CompactValue):
+    'Immutable owned ExpressionTargetResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
+    _variant: _ClassVar[str] = 'resolved'
+    parameter_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'parameter_id', self.parameter_id)
+ExpressionTargetResolved.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionTargetUnresolved(CompactValue):
+    'Immutable owned ExpressionTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    _variant: _ClassVar[str] = 'unresolved'
+    runtime_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'runtime_id', self.runtime_id)
+ExpressionTargetUnresolved.__module__ = "zipzi.modeling"
+
+ExpressionTarget: TypeAlias = ExpressionTargetUnspecified | ExpressionTargetResolved | ExpressionTargetUnresolved
+
+class ExpressionBlend(str, Enum):
+    __module__ = "zipzi.modeling"
+    ADD = 'add'
+    MULTIPLY = 'multiply'
+    OVERWRITE = 'overwrite'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditCreateGroup(CompactValue):
+    'Immutable owned PhysicsEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nasset_id: Stable Physics singleton ID owning these changes.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'create_group'
+    asset_id: str
+    id: str
+    name: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'asset_id', self.asset_id)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditCreateGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditCreateInput(CompactValue):
+    'Immutable owned PhysicsEditCreateInput value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'create_input'
+    group_id: str
+    id: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditCreateInput.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditCreateOutput(CompactValue):
+    'Immutable owned PhysicsEditCreateOutput value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'create_output'
+    group_id: str
+    id: str
+    node_id: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'node_id', self.node_id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditCreateOutput.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditInsertNode(CompactValue):
+    'Immutable owned PhysicsEditInsertNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nnode: Complete Physics node to insert, including its stable identity and authored dynamics.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'insert_node'
+    group_id: str
+    node: PhysicsNode
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+        object.__setattr__(self, 'node', self.node)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditInsertNode.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditMoveNode(CompactValue):
+    'Immutable owned PhysicsEditMoveNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'move_node'
+    id: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditMoveNode.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditDuplicateNode(CompactValue):
+    'Immutable owned PhysicsEditDuplicateNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'duplicate_node'
+    id: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditDuplicateNode.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditPatch(CompactValue):
+    'Immutable owned PhysicsEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npatch: Typed atomic Physics changes validated against the current candidate.'
+    _variant: _ClassVar[str] = 'patch'
+    patch: PhysicsPatch
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'patch', self.patch)
+PhysicsEditPatch.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditMoveInputs(CompactValue):
+    'Immutable owned PhysicsEditMoveInputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'move_inputs'
+    ids: tuple[str, ...]
+    group_id: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'group_id', self.group_id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditMoveInputs.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditMoveOutputs(CompactValue):
+    'Immutable owned PhysicsEditMoveOutputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.\nnode_replacements: Explicit old-node to replacement-node identities used when repairing output references.'
+    _variant: _ClassVar[str] = 'move_outputs'
+    ids: tuple[str, ...]
+    group_id: str
+    before: (str | None) = None
+    node_replacements: _Mapping[str, str]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'group_id', self.group_id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+        object.__setattr__(self, 'node_replacements', MappingProxyType({key0: v0 for key0, v0 in self.node_replacements.items()}))
+PhysicsEditMoveOutputs.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditReorderGroups(CompactValue):
+    'Immutable owned PhysicsEditReorderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'reorder_groups'
+    ids: tuple[str, ...]
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditReorderGroups.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditDuplicate(CompactValue):
+    'Immutable owned PhysicsEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'duplicate'
+    ids: tuple[str, ...]
+    group_id: (str | None) = None
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PhysicsEditDuplicate.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsEditDelete(CompactValue):
+    'Immutable owned PhysicsEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nnode_replacements: Explicit old-node to replacement-node identities used when repairing output references.'
+    _variant: _ClassVar[str] = 'delete'
+    ids: tuple[str, ...]
+    node_replacements: _Mapping[str, str]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'node_replacements', MappingProxyType({key0: v0 for key0, v0 in self.node_replacements.items()}))
+PhysicsEditDelete.__module__ = "zipzi.modeling"
+
+PhysicsEdit: TypeAlias = PhysicsEditCreateGroup | PhysicsEditCreateInput | PhysicsEditCreateOutput | PhysicsEditInsertNode | PhysicsEditMoveNode | PhysicsEditDuplicateNode | PhysicsEditPatch | PhysicsEditMoveInputs | PhysicsEditMoveOutputs | PhysicsEditReorderGroups | PhysicsEditDuplicate | PhysicsEditDelete
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsNode(CompactValue):
+    'Immutable owned PhysicsNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nposition: Authored two-dimensional Physics node position or normalization domain, as declared by the field.\nmobility: Native Physics node mobility coefficient.\ndelay: Native Physics node delay coefficient.\nacceleration: Native Physics node acceleration coefficient.\nradius: Native Physics node segment length/radius.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    id: str
+    position: PhysicsVector
+    mobility: float
+    delay: float
+    acceleration: float
+    radius: float
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'position', self.position)
+        object.__setattr__(self, 'mobility', self.mobility)
+        object.__setattr__(self, 'delay', self.delay)
+        object.__setattr__(self, 'acceleration', self.acceleration)
+        object.__setattr__(self, 'radius', self.radius)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsNode.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsVector(CompactValue):
+    'Immutable owned PhysicsVector value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nX: Horizontal component in the native Physics coordinate convention.\nY: Vertical component in the native Physics coordinate convention.'
+    X: float
+    Y: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'X', self.X)
+        object.__setattr__(self, 'Y', self.Y)
+PhysicsVector.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPatch(CompactValue):
+    'Immutable owned PhysicsPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nasset_id: Stable Physics singleton ID owning these changes.\nasset_changes: Ordered changes to Physics asset metadata; rig-local changes are separate.\nrig: Optional atomic changes to one owned Physics rig/group.'
+    asset_id: str
+    asset_changes: tuple[PhysicsAssetProperty, ...]
+    rig: (PhysicsRigPatch | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'asset_id', self.asset_id)
+        object.__setattr__(self, 'asset_changes', tuple(self.asset_changes))
+        object.__setattr__(self, 'rig', None if self.rig is None else self.rig)
+PhysicsPatch.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsAssetPropertyFps(CompactValue):
+    'Immutable owned PhysicsAssetPropertyFps value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Optional Physics fixed-step frequency; None follows the evaluation delta.'
+    _variant: _ClassVar[str] = 'Fps'
+    value: (float | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', None if self.value is None else self.value)
+PhysicsAssetPropertyFps.__module__ = "zipzi.modeling"
+
+PhysicsAssetProperty: TypeAlias = PhysicsAssetPropertyFps
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsRigPatch(CompactValue):
+    'Immutable owned PhysicsRigPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nchanges: Ordered typed property changes validated as one native operation.'
+    group_id: str
+    changes: tuple[PhysicsProperty, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+        object.__setattr__(self, 'changes', tuple(self.changes))
+PhysicsRigPatch.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyName(CompactValue):
+    'Immutable owned PhysicsPropertyName value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement display name of the Physics group.'
+    _variant: _ClassVar[str] = 'Name'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyName.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyInputWeight(CompactValue):
+    'Immutable owned PhysicsPropertyInputWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'InputWeight'
+    id: str
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyInputWeight.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyInputAxis(CompactValue):
+    'Immutable owned PhysicsPropertyInputAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'InputAxis'
+    id: str
+    value: PhysicsAxis
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyInputAxis.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyInputReflect(CompactValue):
+    'Immutable owned PhysicsPropertyInputReflect value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'InputReflect'
+    id: str
+    value: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyInputReflect.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyInputParameter(CompactValue):
+    'Immutable owned PhysicsPropertyInputParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    _variant: _ClassVar[str] = 'InputParameter'
+    id: str
+    target: PhysicsTarget
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'target', self.target)
+PhysicsPropertyInputParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyOutputWeight(CompactValue):
+    'Immutable owned PhysicsPropertyOutputWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'OutputWeight'
+    id: str
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyOutputWeight.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyOutputScale(CompactValue):
+    'Immutable owned PhysicsPropertyOutputScale value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'OutputScale'
+    id: str
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyOutputScale.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyOutputAxis(CompactValue):
+    'Immutable owned PhysicsPropertyOutputAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'OutputAxis'
+    id: str
+    value: PhysicsAxis
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyOutputAxis.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyOutputReflect(CompactValue):
+    'Immutable owned PhysicsPropertyOutputReflect value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'OutputReflect'
+    id: str
+    value: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyOutputReflect.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyOutputParameter(CompactValue):
+    'Immutable owned PhysicsPropertyOutputParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    _variant: _ClassVar[str] = 'OutputParameter'
+    id: str
+    target: PhysicsTarget
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'target', self.target)
+PhysicsPropertyOutputParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyOutputNode(CompactValue):
+    'Immutable owned PhysicsPropertyOutputNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.'
+    _variant: _ClassVar[str] = 'OutputNode'
+    id: str
+    node_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'node_id', self.node_id)
+PhysicsPropertyOutputNode.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyVertexPosition(CompactValue):
+    'Immutable owned PhysicsPropertyVertexPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'VertexPosition'
+    id: str
+    value: PhysicsVector
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyVertexPosition.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyVertexRadius(CompactValue):
+    'Immutable owned PhysicsPropertyVertexRadius value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'VertexRadius'
+    id: str
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyVertexRadius.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyVertexMobility(CompactValue):
+    'Immutable owned PhysicsPropertyVertexMobility value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'VertexMobility'
+    id: str
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyVertexMobility.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyVertexDelay(CompactValue):
+    'Immutable owned PhysicsPropertyVertexDelay value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'VertexDelay'
+    id: str
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyVertexDelay.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyVertexAcceleration(CompactValue):
+    'Immutable owned PhysicsPropertyVertexAcceleration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    _variant: _ClassVar[str] = 'VertexAcceleration'
+    id: str
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyVertexAcceleration.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyPositionNormalization(CompactValue):
+    'Immutable owned PhysicsPropertyPositionNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement minimum/default/maximum range for position normalization.'
+    _variant: _ClassVar[str] = 'PositionNormalization'
+    value: PhysicsRange
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyPositionNormalization.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyAngleNormalization(CompactValue):
+    'Immutable owned PhysicsPropertyAngleNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement minimum/default/maximum range for angle normalization.'
+    _variant: _ClassVar[str] = 'AngleNormalization'
+    value: PhysicsRange
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+PhysicsPropertyAngleNormalization.__module__ = "zipzi.modeling"
+
+PhysicsProperty: TypeAlias = PhysicsPropertyName | PhysicsPropertyInputWeight | PhysicsPropertyInputAxis | PhysicsPropertyInputReflect | PhysicsPropertyInputParameter | PhysicsPropertyOutputWeight | PhysicsPropertyOutputScale | PhysicsPropertyOutputAxis | PhysicsPropertyOutputReflect | PhysicsPropertyOutputParameter | PhysicsPropertyOutputNode | PhysicsPropertyVertexPosition | PhysicsPropertyVertexRadius | PhysicsPropertyVertexMobility | PhysicsPropertyVertexDelay | PhysicsPropertyVertexAcceleration | PhysicsPropertyPositionNormalization | PhysicsPropertyAngleNormalization
+
+class PhysicsAxis(str, Enum):
+    __module__ = "zipzi.modeling"
+    X = 'X'
+    Y = 'Y'
+    ANGLE = 'Angle'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsTargetUnspecified(CompactValue):
+    'Immutable owned PhysicsTargetUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'unspecified'
+PhysicsTargetUnspecified.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsTargetResolved(CompactValue):
+    'Immutable owned PhysicsTargetResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
+    _variant: _ClassVar[str] = 'resolved'
+    parameter_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'parameter_id', self.parameter_id)
+PhysicsTargetResolved.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsTargetUnresolved(CompactValue):
+    'Immutable owned PhysicsTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    _variant: _ClassVar[str] = 'unresolved'
+    runtime_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'runtime_id', self.runtime_id)
+PhysicsTargetUnresolved.__module__ = "zipzi.modeling"
+
+PhysicsTarget: TypeAlias = PhysicsTargetUnspecified | PhysicsTargetResolved | PhysicsTargetUnresolved
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsRange(CompactValue):
+    'Immutable owned PhysicsRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nMinimum: Lower normalization bound in the declared position or angle domain.\nDefault: Neutral normalization coordinate between the declared bounds.\nMaximum: Upper normalization bound in the declared position or angle domain.'
+    Minimum: float
+    Default: float
+    Maximum: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'Minimum', self.Minimum)
+        object.__setattr__(self, 'Default', self.Default)
+        object.__setattr__(self, 'Maximum', self.Maximum)
+PhysicsRange.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditCreate(CompactValue):
+    'Immutable owned PoseEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    _variant: _ClassVar[str] = 'create'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+PoseEditCreate.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditCreateGroup(CompactValue):
+    'Immutable owned PoseEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npose_id: Stable Pose singleton ID; the operation may create it when absent.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'create_group'
+    pose_id: str
+    id: str
+    name: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'pose_id', self.pose_id)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PoseEditCreateGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditCreateEntry(CompactValue):
+    'Immutable owned PoseEditCreateEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'create_entry'
+    group_id: str
+    id: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PoseEditCreateEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditCreateLink(CompactValue):
+    'Immutable owned PoseEditCreateLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry_id: Stable ID of the owning entry; links remain owned by that entry.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'create_link'
+    entry_id: str
+    id: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'entry_id', self.entry_id)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PoseEditCreateLink.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditPatch(CompactValue):
+    'Immutable owned PoseEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nfields: Typed replacement fields for the addressed object, applied atomically.'
+    _variant: _ClassVar[str] = 'patch'
+    id: str
+    expected: PoseFields
+    fields: PoseFields
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'expected', self.expected)
+        object.__setattr__(self, 'fields', self.fields)
+PoseEditPatch.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditMove(CompactValue):
+    'Immutable owned PoseEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'move'
+    ids: tuple[str, ...]
+    destination: PoseCollection
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PoseEditMove.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditDuplicate(CompactValue):
+    'Immutable owned PoseEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'duplicate'
+    ids: tuple[str, ...]
+    destination: PoseCollection
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PoseEditDuplicate.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditDelete(CompactValue):
+    'Immutable owned PoseEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    _variant: _ClassVar[str] = 'delete'
+    ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+PoseEditDelete.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEditDissolveGroup(CompactValue):
+    'Immutable owned PoseEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    _variant: _ClassVar[str] = 'dissolve_group'
+    id: str
+    destination: str
+    before: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'before', None if self.before is None else self.before)
+PoseEditDissolveGroup.__module__ = "zipzi.modeling"
+
+PoseEdit: TypeAlias = PoseEditCreate | PoseEditCreateGroup | PoseEditCreateEntry | PoseEditCreateLink | PoseEditPatch | PoseEditMove | PoseEditDuplicate | PoseEditDelete | PoseEditDissolveGroup
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseFieldsAsset(CompactValue):
+    'Immutable owned PoseFieldsAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.'
+    _variant: _ClassVar[str] = 'asset'
+    fade_in: (float | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
+PoseFieldsAsset.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseFieldsGroup(CompactValue):
+    'Immutable owned PoseFieldsGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    _variant: _ClassVar[str] = 'group'
+    name: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'name', self.name)
+PoseFieldsGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseFieldsEntry(CompactValue):
+    'Immutable owned PoseFieldsEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart: Typed resolved/unresolved Part reference retained by the Pose entry or link.'
+    _variant: _ClassVar[str] = 'entry'
+    part: PosePartRef
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'part', self.part)
+PoseFieldsEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseFieldsLink(CompactValue):
+    'Immutable owned PoseFieldsLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    _variant: _ClassVar[str] = 'link'
+    target: PosePartRef
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'target', self.target)
+PoseFieldsLink.__module__ = "zipzi.modeling"
+
+PoseFields: TypeAlias = PoseFieldsAsset | PoseFieldsGroup | PoseFieldsEntry | PoseFieldsLink
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PosePartRefUnspecified(CompactValue):
+    'Immutable owned PosePartRefUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'unspecified'
+PosePartRefUnspecified.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PosePartRefResolved(CompactValue):
+    'Immutable owned PosePartRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
+    _variant: _ClassVar[str] = 'resolved'
+    part_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'part_id', self.part_id)
+PosePartRefResolved.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PosePartRefUnresolved(CompactValue):
+    'Immutable owned PosePartRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    _variant: _ClassVar[str] = 'unresolved'
+    runtime_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'runtime_id', self.runtime_id)
+PosePartRefUnresolved.__module__ = "zipzi.modeling"
+
+PosePartRef: TypeAlias = PosePartRefUnspecified | PosePartRefResolved | PosePartRefUnresolved
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseCollectionGroups(CompactValue):
+    'Immutable owned PoseCollectionGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'groups'
+PoseCollectionGroups.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseCollectionEntries(CompactValue):
+    'Immutable owned PoseCollectionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.'
+    _variant: _ClassVar[str] = 'entries'
+    group_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+PoseCollectionEntries.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseCollectionLinks(CompactValue):
+    'Immutable owned PoseCollectionLinks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry_id: Stable ID of the owning entry; links remain owned by that entry.'
+    _variant: _ClassVar[str] = 'links'
+    entry_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'entry_id', self.entry_id)
+PoseCollectionLinks.__module__ = "zipzi.modeling"
+
+PoseCollection: TypeAlias = PoseCollectionGroups | PoseCollectionEntries | PoseCollectionLinks
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionClip(CompactValue):
+    'Immutable owned MotionClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nduration: Motion playback duration in seconds; authoring keys may retain source-range provenance.\nfps: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.\nlooping: Whether motion playback repeats after its duration.\nrestricted_beziers: Whether motion Bezier export follows the restricted control-time convention.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\ntrack_order: Display order only; tracks retain their execution order. Empty uses execution order.\ntracks: Ordered persistent motion tracks; playback state is owned separately.\nevents: Ordered owned events in the motion clip; reading them does not advance playback.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nmeta_extensions: Owned opaque motion metadata fields preserved for format roundtrips.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
+    id: str
+    name: str
+    duration: float
+    fps: float
+    looping: bool
+    restricted_beziers: bool
+    fade_in: (float | None) = None
+    fade_out: (float | None) = None
+    track_order: tuple[str, ...]
+    tracks: tuple[MotionTrack, ...]
+    events: tuple[MotionEvent, ...]
+    extensions: _Mapping[str, ExtensionValue]
+    meta_extensions: _Mapping[str, ExtensionValue]
+    opaque_source_ids: (_Mapping[str, str] | None) = None
+    opaque_source_content_hash: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'duration', self.duration)
+        object.__setattr__(self, 'fps', self.fps)
+        object.__setattr__(self, 'looping', self.looping)
+        object.__setattr__(self, 'restricted_beziers', self.restricted_beziers)
+        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
+        object.__setattr__(self, 'fade_out', None if self.fade_out is None else self.fade_out)
+        object.__setattr__(self, 'track_order', tuple(self.track_order))
+        object.__setattr__(self, 'tracks', tuple(self.tracks))
+        object.__setattr__(self, 'events', tuple(self.events))
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+        object.__setattr__(self, 'meta_extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.meta_extensions.items()}))
+        object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.opaque_source_ids.items()}))
+        object.__setattr__(self, 'opaque_source_content_hash', None if self.opaque_source_content_hash is None else self.opaque_source_content_hash)
+MotionClip.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionTrack(CompactValue):
+    'Immutable owned MotionTrack value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\ninitial: First persistent key of the track; following segment endpoints carry their own key IDs.\nsegments: Ordered interpolation segments after the initial key, with stable endpoint identities.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    id: str
+    target: MotionTrackTarget
+    initial: MotionKey
+    segments: tuple[MotionSegment, ...]
+    fade_in: (float | None) = None
+    fade_out: (float | None) = None
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'target', self.target)
+        object.__setattr__(self, 'initial', self.initial)
+        object.__setattr__(self, 'segments', tuple(self.segments))
+        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
+        object.__setattr__(self, 'fade_out', None if self.fade_out is None else self.fade_out)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+MotionTrack.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionKey(CompactValue):
+    'Immutable owned MotionKey value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    id: str
+    time: float
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'time', self.time)
+        object.__setattr__(self, 'value', self.value)
+MotionKey.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionSegmentLinear(CompactValue):
+    'Immutable owned MotionSegmentLinear value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    _variant: _ClassVar[str] = 'linear'
+    end: MotionKey
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'end', self.end)
+MotionSegmentLinear.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionSegmentBezier(CompactValue):
+    'Immutable owned MotionSegmentBezier value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncontrol1: First Bezier control point in seconds/channel-value coordinates; it has no key identity.\ncontrol2: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    _variant: _ClassVar[str] = 'bezier'
+    control1: MotionPoint
+    control2: MotionPoint
+    end: MotionKey
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'control1', self.control1)
+        object.__setattr__(self, 'control2', self.control2)
+        object.__setattr__(self, 'end', self.end)
+MotionSegmentBezier.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionSegmentStepped(CompactValue):
+    'Immutable owned MotionSegmentStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    _variant: _ClassVar[str] = 'stepped'
+    end: MotionKey
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'end', self.end)
+MotionSegmentStepped.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionSegmentInverseStepped(CompactValue):
+    'Immutable owned MotionSegmentInverseStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    _variant: _ClassVar[str] = 'inverse_stepped'
+    end: MotionKey
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'end', self.end)
+MotionSegmentInverseStepped.__module__ = "zipzi.modeling"
+
+MotionSegment: TypeAlias = MotionSegmentLinear | MotionSegmentBezier | MotionSegmentStepped | MotionSegmentInverseStepped
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionPoint(CompactValue):
+    'Immutable owned MotionPoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    time: float
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'time', self.time)
+        object.__setattr__(self, 'value', self.value)
+MotionPoint.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionAsset(CompactValue):
+    'Immutable owned ExpressionAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Registration name in model3; independent of parameter display names.\nfile_type: Optional format type label retained from the imported expression or Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Full Parameter UUID-to-runtime-ID namespace when opaque fields exist.\nopaque_source_content_hash: Hash of imported content when opaque fields exist; known-field edits\ncannot silently change the meaning of those fields.'
+    id: str
+    name: str
+    file_type: (str | None) = None
+    fade_in: (float | None) = None
+    fade_out: (float | None) = None
+    entries: tuple[ExpressionEntry, ...]
+    extensions: _Mapping[str, ExtensionValue]
+    opaque_source_ids: (_Mapping[str, str] | None) = None
+    opaque_source_content_hash: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'file_type', None if self.file_type is None else self.file_type)
+        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
+        object.__setattr__(self, 'fade_out', None if self.fade_out is None else self.fade_out)
+        object.__setattr__(self, 'entries', tuple(self.entries))
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+        object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.opaque_source_ids.items()}))
+        object.__setattr__(self, 'opaque_source_content_hash', None if self.opaque_source_content_hash is None else self.opaque_source_content_hash)
+ExpressionAsset.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionEntry(CompactValue):
+    "Immutable owned ExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nblend: Missing means Framework's default Add blend.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed."
+    id: str
+    target: ExpressionTarget
+    value: float
+    blend: (ExpressionBlend | None) = None
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'target', self.target)
+        object.__setattr__(self, 'value', self.value)
+        object.__setattr__(self, 'blend', None if self.blend is None else self.blend)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+ExpressionEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsAsset(CompactValue):
+    'Immutable owned PhysicsAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndata: Complete persistent Physics definition; simulation state lives outside the document.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
+    id: str
+    data: PhysicsDefinition
+    opaque_source_ids: (_Mapping[str, str] | None) = None
+    opaque_source_content_hash: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'data', self.data)
+        object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.opaque_source_ids.items()}))
+        object.__setattr__(self, 'opaque_source_content_hash', None if self.opaque_source_content_hash is None else self.opaque_source_content_hash)
+PhysicsAsset.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsDefinition(CompactValue):
+    'Immutable owned PhysicsDefinition value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nversion: Native Physics format version number.\nmeta: Physics format metadata and counts maintained by native authoring validation.\nsettings: Ordered shared Physics rig definitions.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    version: int
+    meta: PhysicsMeta
+    settings: tuple[PhysicsSetting, ...]
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'version', self.version)
+        object.__setattr__(self, 'meta', self.meta)
+        object.__setattr__(self, 'settings', tuple(v0 for v0 in self.settings))
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsDefinition.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsMeta(CompactValue):
+    'Immutable owned PhysicsMeta value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nPhysicsSettingCount: Exported count of Physics settings, maintained by native validation.\nTotalInputCount: Exported count of Physics inputs, maintained by native validation.\nTotalOutputCount: Exported count of Physics outputs, maintained by native validation.\nVertexCount: Exported count of Physics nodes, maintained by native validation.\nEffectiveForces: Native effective gravity and wind vectors.\nPhysicsDictionary: Ordered exported Physics rig ID/name metadata.\nFps: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    PhysicsSettingCount: int
+    TotalInputCount: int
+    TotalOutputCount: int
+    VertexCount: int
+    EffectiveForces: PhysicsForces
+    PhysicsDictionary: tuple[PhysicsDictionaryEntry, ...]
+    Fps: (float | None) = None
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'PhysicsSettingCount', self.PhysicsSettingCount)
+        object.__setattr__(self, 'TotalInputCount', self.TotalInputCount)
+        object.__setattr__(self, 'TotalOutputCount', self.TotalOutputCount)
+        object.__setattr__(self, 'VertexCount', self.VertexCount)
+        object.__setattr__(self, 'EffectiveForces', self.EffectiveForces)
+        object.__setattr__(self, 'PhysicsDictionary', tuple(self.PhysicsDictionary))
+        object.__setattr__(self, 'Fps', None if self.Fps is None else self.Fps)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsMeta.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsForces(CompactValue):
+    'Immutable owned PhysicsForces value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nGravity: Effective gravity vector in the native Physics coordinate convention.\nWind: Effective wind vector in the native Physics coordinate convention.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    Gravity: PhysicsVector
+    Wind: PhysicsVector
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'Gravity', self.Gravity)
+        object.__setattr__(self, 'Wind', self.Wind)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsForces.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsDictionaryEntry(CompactValue):
+    'Immutable owned PhysicsDictionaryEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nId: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nName: Human-readable display or registration name; distinct from persistent object identity.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    Id: str
+    Name: str
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'Id', self.Id)
+        object.__setattr__(self, 'Name', self.Name)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsDictionaryEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsSetting(CompactValue):
+    'Immutable owned PhysicsSetting value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexternal_id: Imported/exported Physics rig label, distinct from its persistent group UUID.\ninputs: Ordered Physics input rows, each with a stable identity and typed parameter source.\noutputs: Ordered Physics output rows, each with a stable identity and node reference.\nvertices: Ordered Physics node chain; outputs refer to stable node IDs.\nnormalization: Native position and angle normalization ranges for this Physics rig.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    id: str
+    external_id: str
+    inputs: tuple[PhysicsInput, ...]
+    outputs: tuple[PhysicsOutput, ...]
+    vertices: tuple[PhysicsNode, ...]
+    normalization: PhysicsNormalization
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'external_id', self.external_id)
+        object.__setattr__(self, 'inputs', tuple(self.inputs))
+        object.__setattr__(self, 'outputs', tuple(self.outputs))
+        object.__setattr__(self, 'vertices', tuple(self.vertices))
+        object.__setattr__(self, 'normalization', self.normalization)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsSetting.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsInput(CompactValue):
+    'Immutable owned PhysicsInput value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nreference_extensions: Owned opaque fields attached to an imported Physics parameter reference.\nweight: Native Physics influence weight, expressed as a percentage.\nkind: Native Physics axis/channel discriminator; distinct from an object identity.\nreflect: Whether the native Physics mapping reflects the selected axis.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    id: str
+    source: PhysicsTarget
+    reference_extensions: _Mapping[str, ExtensionValue]
+    weight: float
+    kind: PhysicsAxis
+    reflect: bool
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'source', self.source)
+        object.__setattr__(self, 'reference_extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.reference_extensions.items()}))
+        object.__setattr__(self, 'weight', self.weight)
+        object.__setattr__(self, 'kind', self.kind)
+        object.__setattr__(self, 'reflect', self.reflect)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsInput.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsOutput(CompactValue):
+    'Immutable owned PhysicsOutput value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nreference_extensions: Owned opaque fields attached to an imported Physics parameter reference.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.\nscale: Native Physics output multiplier applied to the selected axis.\nweight: Native Physics influence weight, expressed as a percentage.\nkind: Native Physics axis/channel discriminator; distinct from an object identity.\nreflect: Whether the native Physics mapping reflects the selected axis.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    id: str
+    destination: PhysicsTarget
+    reference_extensions: _Mapping[str, ExtensionValue]
+    node_id: str
+    scale: float
+    weight: float
+    kind: PhysicsAxis
+    reflect: bool
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'destination', self.destination)
+        object.__setattr__(self, 'reference_extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.reference_extensions.items()}))
+        object.__setattr__(self, 'node_id', self.node_id)
+        object.__setattr__(self, 'scale', self.scale)
+        object.__setattr__(self, 'weight', self.weight)
+        object.__setattr__(self, 'kind', self.kind)
+        object.__setattr__(self, 'reflect', self.reflect)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsOutput.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsNormalization(CompactValue):
+    'Immutable owned PhysicsNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nPosition: Authored two-dimensional Physics node position or normalization domain, as declared by the field.\nAngle: Angle normalization range, in the native Physics coordinate convention.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    Position: PhysicsRange
+    Angle: PhysicsRange
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'Position', self.Position)
+        object.__setattr__(self, 'Angle', self.Angle)
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PhysicsNormalization.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseAsset(CompactValue):
+    'Immutable owned PoseAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nfile_type: Optional format type label retained from the imported expression or Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\ngroups: Ordered owned Pose groups; each owns its entries and link rows.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
+    id: str
+    file_type: (str | None) = None
+    fade_in: (float | None) = None
+    groups: tuple[PoseGroup, ...]
+    extensions: _Mapping[str, ExtensionValue]
+    opaque_source_ids: (_Mapping[str, str] | None) = None
+    opaque_source_content_hash: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'file_type', None if self.file_type is None else self.file_type)
+        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
+        object.__setattr__(self, 'groups', tuple(self.groups))
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+        object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.opaque_source_ids.items()}))
+        object.__setattr__(self, 'opaque_source_content_hash', None if self.opaque_source_content_hash is None else self.opaque_source_content_hash)
+PoseAsset.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseGroup(CompactValue):
+    'Immutable owned PoseGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.'
+    id: str
+    name: str
+    entries: tuple[PoseEntry, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'entries', tuple(self.entries))
+PoseGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseEntry(CompactValue):
+    'Immutable owned PoseEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\npart: Typed resolved/unresolved Part reference retained by the Pose entry or link.\nlinks: Optional ordered Pose links; None retains absence rather than an explicit empty list.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    id: str
+    part: PosePartRef
+    links: (tuple[PoseLink, ...] | None) = None
+    extensions: _Mapping[str, ExtensionValue]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'part', self.part)
+        object.__setattr__(self, 'links', None if self.links is None else tuple(self.links))
+        object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
+PoseEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseLink(CompactValue):
+    'Immutable owned PoseLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    id: str
+    target: PosePartRef
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'target', self.target)
+PoseLink.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class ModelSetup(CompactValue):
     'Immutable owned ModelSetup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource_canvas: Optional imported canvas metadata; None means this model has no source-canvas provenance.\nexport: Export-frame settings; padding is applied when computing an exported frame.'
     source_canvas: (Canvas | None) = None
@@ -3702,7 +5479,7 @@ TopologyReplacement.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingQuery(CompactValue):
-    'Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nassets: Explicit IDs of image assets to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nmeshes: Explicit IDs of meshes to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparameters: Explicit IDs of parameters to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparts: Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,\nwhile collection IDs remain discoverable.\ntransforms: Explicit IDs of deformation transforms to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nbindings: Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nscene_bindings: Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nblend_key_tables: Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_constraints: Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_bindings: Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nglues: Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\noffscreens: Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests\nno payloads, while collection IDs remain discoverable.\nparameter_groups: Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nattachments: Explicit IDs of package attachments to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.'
+    'Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nassets: Explicit IDs of image assets to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nmeshes: Explicit IDs of meshes to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparameters: Explicit IDs of parameters to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparts: Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,\nwhile collection IDs remain discoverable.\ntransforms: Explicit IDs of deformation transforms to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nbindings: Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nscene_bindings: Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nblend_key_tables: Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_constraints: Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_bindings: Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nglues: Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\noffscreens: Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests\nno payloads, while collection IDs remain discoverable.\nparameter_groups: Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nattachments: Explicit IDs of package attachments to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nmotions: Explicit motion clip IDs; payload slots follow order and retain missing IDs.\nmotion_groups: Explicit motion registration-group IDs; group payloads include their ordered entries.\nmotion_registrations: Explicit registration IDs, including root and grouped registrations.\nexpressions: Explicit expression asset IDs; entries are owned by the selected asset.\nphysics: Request the Physics singleton payload; false requests no Physics content.\npose: Request the Pose singleton payload; false requests no Pose content.'
     assets: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     meshes: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     parameters: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
@@ -3717,6 +5494,12 @@ class ModelingQuery(CompactValue):
     offscreens: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     parameter_groups: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     attachments: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
+    motions: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
+    motion_groups: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
+    motion_registrations: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
+    expressions: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
+    physics: bool = field(default_factory=lambda: _boolean(False))
+    pose: bool = field(default_factory=lambda: _boolean(False))
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'assets', tuple(self.assets))
@@ -3733,11 +5516,17 @@ class ModelingQuery(CompactValue):
         object.__setattr__(self, 'offscreens', tuple(self.offscreens))
         object.__setattr__(self, 'parameter_groups', tuple(self.parameter_groups))
         object.__setattr__(self, 'attachments', tuple(self.attachments))
+        object.__setattr__(self, 'motions', tuple(self.motions))
+        object.__setattr__(self, 'motion_groups', tuple(self.motion_groups))
+        object.__setattr__(self, 'motion_registrations', tuple(self.motion_registrations))
+        object.__setattr__(self, 'expressions', tuple(self.expressions))
+        object.__setattr__(self, 'physics', self.physics)
+        object.__setattr__(self, 'pose', self.pose)
 ModelingQuery.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OwnedModelingRecords(CompactValue):
-    'Immutable owned OwnedModelingRecords value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ndocument_id: Stable document UUID; not a Runtime Session handle.\nsetup: Model source-canvas and export-frame configuration.\nhierarchy_order: Independent organization/deformation palette ranks; does not alter model relationships.\neditor_state: Owned authoring visibility/lock metadata; separate from evaluated model appearance.\ndisplay_info: Owned CDI display metadata, including explicit imported unresolved references.\nmodel3_settings: Owned model3 export metadata and reference registrations.\ndraw_order_groups: Optional drawing-order groups; None leaves grouping absent instead of supplying an empty\ngroup list.\nids: Domain-name-to-ID directory of document collections; identities remain available even\nwhen no record payloads were requested.\nassets: Owned image assets aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nmeshes: Owned meshes aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nparameters: Owned parameters aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nparts: Owned Parts aligned with the corresponding query ID list; None marks a missing requested\nID and an empty query returns no payloads.\ntransforms: Owned deformation transforms aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nbindings: Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nscene_bindings: Owned scene bindings aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nblend_key_tables: Owned BlendShape key tables aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nblend_constraints: Owned BlendShape constraints aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nblend_bindings: Owned BlendShape bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nglues: Owned Glue objects aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\noffscreens: Owned Offscreen objects aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nparameter_groups: Owned CDI parameter groups aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nattachments: Owned package attachments aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.'
+    'Immutable owned OwnedModelingRecords value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ndocument_id: Stable document UUID; not a Runtime Session handle.\nsetup: Model source-canvas and export-frame configuration.\nhierarchy_order: Independent organization/deformation palette ranks; does not alter model relationships.\neditor_state: Owned authoring visibility/lock metadata; separate from evaluated model appearance.\ndisplay_info: Owned CDI display metadata, including explicit imported unresolved references.\nmodel3_settings: Owned model3 export metadata and reference registrations.\ndraw_order_groups: Optional drawing-order groups; None leaves grouping absent instead of supplying an empty\ngroup list.\nids: Domain-name-to-ID directory of document collections; identities remain available even\nwhen no record payloads were requested.\nassets: Owned image assets aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nmeshes: Owned meshes aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nparameters: Owned parameters aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nparts: Owned Parts aligned with the corresponding query ID list; None marks a missing requested\nID and an empty query returns no payloads.\ntransforms: Owned deformation transforms aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nbindings: Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nscene_bindings: Owned scene bindings aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nblend_key_tables: Owned BlendShape key tables aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nblend_constraints: Owned BlendShape constraints aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nblend_bindings: Owned BlendShape bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nglues: Owned Glue objects aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\noffscreens: Owned Offscreen objects aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nparameter_groups: Owned CDI parameter groups aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nattachments: Owned package attachments aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nmotions: Owned selected motions aligned with query IDs; None marks a missing ID.\nmotion_groups: Owned selected motion_groups aligned with query IDs; None marks a missing ID.\nmotion_registrations: Owned selected motion_registrations aligned with query IDs; None marks a missing ID.\nexpressions: Owned selected expressions aligned with query IDs; None marks a missing ID.\nphysics: Owned Physics singleton when requested and present; None otherwise.\npose: Owned Pose singleton when requested and present; None otherwise.'
     document_id: str
     setup: ModelSetup
     hierarchy_order: HierarchyOrder
@@ -3760,6 +5549,12 @@ class OwnedModelingRecords(CompactValue):
     offscreens: tuple[(Offscreen | None), ...]
     parameter_groups: tuple[(CdiParameterGroup | None), ...]
     attachments: tuple[(PackageAttachment | None), ...]
+    motions: tuple[(MotionClip | None), ...]
+    motion_groups: tuple[(MotionGroup | None), ...]
+    motion_registrations: tuple[(MotionRegistration | None), ...]
+    expressions: tuple[(ExpressionAsset | None), ...]
+    physics: (PhysicsAsset | None) = None
+    pose: (PoseAsset | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'document_id', self.document_id)
@@ -3784,6 +5579,12 @@ class OwnedModelingRecords(CompactValue):
         object.__setattr__(self, 'offscreens', tuple(None if v0 is None else v0 for v0 in self.offscreens))
         object.__setattr__(self, 'parameter_groups', tuple(None if v0 is None else v0 for v0 in self.parameter_groups))
         object.__setattr__(self, 'attachments', tuple(None if v0 is None else v0 for v0 in self.attachments))
+        object.__setattr__(self, 'motions', tuple(None if v0 is None else v0 for v0 in self.motions))
+        object.__setattr__(self, 'motion_groups', tuple(None if v0 is None else v0 for v0 in self.motion_groups))
+        object.__setattr__(self, 'motion_registrations', tuple(None if v0 is None else v0 for v0 in self.motion_registrations))
+        object.__setattr__(self, 'expressions', tuple(None if v0 is None else v0 for v0 in self.expressions))
+        object.__setattr__(self, 'physics', None if self.physics is None else self.physics)
+        object.__setattr__(self, 'pose', None if self.pose is None else self.pose)
 OwnedModelingRecords.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3970,6 +5771,19 @@ class ModelHitArea(CompactValue):
 ModelHitArea.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class MotionGroup(CompactValue):
+    'Immutable owned MotionGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.'
+    id: str
+    name: str
+    entries: tuple[MotionRegistration, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'name', self.name)
+        object.__setattr__(self, 'entries', tuple(self.entries))
+MotionGroup.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorScene(CompactValue):
     'Immutable owned AddressSelectorScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nfield: Explicit field discriminator; must match the addressed object/domain.'
     _variant: _ClassVar[str] = 'scene'
@@ -4075,7 +5889,47 @@ class AddressSelectorDocument(CompactValue):
         object.__setattr__(self, 'field', self.field)
 AddressSelectorDocument.__module__ = "zipzi.modeling"
 
-AddressSelector: TypeAlias = AddressSelectorScene | AddressSelectorDrawingGroup | AddressSelectorBinding | AddressSelectorOrganization | AddressSelectorContent | AddressSelectorReference | AddressSelectorSelection | AddressSelectorResourceName | AddressSelectorAttachmentPath | AddressSelectorDocument
+@dataclass(frozen=True, kw_only=True, repr=False)
+class AddressSelectorMotionRegistration(CompactValue):
+    'Immutable owned AddressSelectorMotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity of the addressed native animation object.'
+    _variant: _ClassVar[str] = 'motion_registration'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+AddressSelectorMotionRegistration.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class AddressSelectorExpressionEntry(CompactValue):
+    'Immutable owned AddressSelectorExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity of the addressed native animation object.'
+    _variant: _ClassVar[str] = 'expression_entry'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+AddressSelectorExpressionEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class AddressSelectorPhysics(CompactValue):
+    'Immutable owned AddressSelectorPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity of the addressed native animation object.'
+    _variant: _ClassVar[str] = 'physics'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+AddressSelectorPhysics.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class AddressSelectorPose(CompactValue):
+    'Immutable owned AddressSelectorPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity of the addressed native animation object.'
+    _variant: _ClassVar[str] = 'pose'
+    id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+AddressSelectorPose.__module__ = "zipzi.modeling"
+
+AddressSelector: TypeAlias = AddressSelectorScene | AddressSelectorDrawingGroup | AddressSelectorBinding | AddressSelectorOrganization | AddressSelectorContent | AddressSelectorReference | AddressSelectorSelection | AddressSelectorResourceName | AddressSelectorAttachmentPath | AddressSelectorDocument | AddressSelectorMotionRegistration | AddressSelectorExpressionEntry | AddressSelectorPhysics | AddressSelectorPose
 
 class SceneField(str, Enum):
     __module__ = "zipzi.modeling"
@@ -4296,7 +6150,47 @@ class AddressPatchDocument(CompactValue):
         object.__setattr__(self, 'value', self.value)
 AddressPatchDocument.__module__ = "zipzi.modeling"
 
-AddressPatch: TypeAlias = AddressPatchScene | AddressPatchDrawingRange | AddressPatchBinding | AddressPatchOrganization | AddressPatchContent | AddressPatchReference | AddressPatchSelection | AddressPatchResourceName | AddressPatchAttachmentPath | AddressPatchDocument
+@dataclass(frozen=True, kw_only=True, repr=False)
+class AddressPatchMotionRegistration(CompactValue):
+    'Immutable owned AddressPatchMotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry: Complete replacement registration with its existing stable identity.'
+    _variant: _ClassVar[str] = 'motion_registration'
+    entry: MotionRegistration
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'entry', self.entry)
+AddressPatchMotionRegistration.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class AddressPatchExpressionEntry(CompactValue):
+    'Immutable owned AddressPatchExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfields: Replacement expression target/value/blend fields, under captured owner epochs.'
+    _variant: _ClassVar[str] = 'expression_entry'
+    fields: ExpressionEntryFields
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'fields', self.fields)
+AddressPatchExpressionEntry.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class AddressPatchPhysics(CompactValue):
+    'Immutable owned AddressPatchPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nchanges: Atomic property changes targeting only the captured Physics entity.'
+    _variant: _ClassVar[str] = 'physics'
+    changes: tuple[PhysicsProperty, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'changes', tuple(self.changes))
+AddressPatchPhysics.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class AddressPatchPose(CompactValue):
+    'Immutable owned AddressPatchPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfields: Replacement fields for the captured Pose singleton/group/entry/link.'
+    _variant: _ClassVar[str] = 'pose'
+    fields: PoseFields
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'fields', self.fields)
+AddressPatchPose.__module__ = "zipzi.modeling"
+
+AddressPatch: TypeAlias = AddressPatchScene | AddressPatchDrawingRange | AddressPatchBinding | AddressPatchOrganization | AddressPatchContent | AddressPatchReference | AddressPatchSelection | AddressPatchResourceName | AddressPatchAttachmentPath | AddressPatchDocument | AddressPatchMotionRegistration | AddressPatchExpressionEntry | AddressPatchPhysics | AddressPatchPose
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingFieldPatchSampleValue(CompactValue):
@@ -4395,6 +6289,10 @@ class CapabilityDomain(str, Enum):
     REFERENCES = 'references'
     RESOURCE = 'resource'
     ATTACHMENT = 'attachment'
+    MOTION = 'motion'
+    EXPRESSION = 'expression'
+    PHYSICS = 'physics'
+    POSE = 'pose'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryScene(CompactValue):
@@ -4448,7 +6346,103 @@ class CollectionQueryDocument(CompactValue):
         object.__setattr__(self, 'field', self.field)
 CollectionQueryDocument.__module__ = "zipzi.modeling"
 
-CollectionQuery: TypeAlias = CollectionQueryScene | CollectionQueryOrganization | CollectionQueryReferences | CollectionQueryResources | CollectionQueryAttachments | CollectionQueryDocument
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CollectionQueryMotion(CompactValue):
+    'Immutable owned CollectionQueryMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Root or stable motion-group container for library registrations.'
+    _variant: _ClassVar[str] = 'motion'
+    collection: MotionContainer
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'collection', self.collection)
+CollectionQueryMotion.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CollectionQueryMotionGroups(CompactValue):
+    'Immutable owned CollectionQueryMotionGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'motion_groups'
+CollectionQueryMotionGroups.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CollectionQueryClips(CompactValue):
+    'Immutable owned CollectionQueryClips value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'clips'
+CollectionQueryClips.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CollectionQueryExpressions(CompactValue):
+    'Immutable owned CollectionQueryExpressions value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'expressions'
+CollectionQueryExpressions.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CollectionQueryExpressionEntries(CompactValue):
+    'Immutable owned CollectionQueryExpressionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nexpression_id: Stable expression asset ID owning the entry collection.'
+    _variant: _ClassVar[str] = 'expression_entries'
+    expression_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'expression_id', self.expression_id)
+CollectionQueryExpressionEntries.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CollectionQueryPhysics(CompactValue):
+    'Immutable owned CollectionQueryPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Native Physics group/input/output/node collection selector.'
+    _variant: _ClassVar[str] = 'physics'
+    collection: PhysicsCollection
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'collection', self.collection)
+CollectionQueryPhysics.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CollectionQueryPose(CompactValue):
+    'Immutable owned CollectionQueryPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Native Pose group/entry/link collection selector.'
+    _variant: _ClassVar[str] = 'pose'
+    collection: PoseCollection
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'collection', self.collection)
+CollectionQueryPose.__module__ = "zipzi.modeling"
+
+CollectionQuery: TypeAlias = CollectionQueryScene | CollectionQueryOrganization | CollectionQueryReferences | CollectionQueryResources | CollectionQueryAttachments | CollectionQueryDocument | CollectionQueryMotion | CollectionQueryMotionGroups | CollectionQueryClips | CollectionQueryExpressions | CollectionQueryExpressionEntries | CollectionQueryPhysics | CollectionQueryPose
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsCollectionGroups(CompactValue):
+    'Immutable owned PhysicsCollectionGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'groups'
+PhysicsCollectionGroups.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsCollectionInputs(CompactValue):
+    'Immutable owned PhysicsCollectionInputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
+    _variant: _ClassVar[str] = 'inputs'
+    group_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+PhysicsCollectionInputs.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsCollectionOutputs(CompactValue):
+    'Immutable owned PhysicsCollectionOutputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
+    _variant: _ClassVar[str] = 'outputs'
+    group_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+PhysicsCollectionOutputs.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsCollectionNodes(CompactValue):
+    'Immutable owned PhysicsCollectionNodes value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
+    _variant: _ClassVar[str] = 'nodes'
+    group_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'group_id', self.group_id)
+PhysicsCollectionNodes.__module__ = "zipzi.modeling"
+
+PhysicsCollection: TypeAlias = PhysicsCollectionGroups | PhysicsCollectionInputs | PhysicsCollectionOutputs | PhysicsCollectionNodes
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesScene(CompactValue):
@@ -4540,7 +6534,47 @@ class CapabilitiesDocument(CompactValue):
         object.__setattr__(self, 'value', self.value)
 CapabilitiesDocument.__module__ = "zipzi.modeling"
 
-Capabilities: TypeAlias = CapabilitiesScene | CapabilitiesOrganization | CapabilitiesBinding | CapabilitiesContent | CapabilitiesReferences | CapabilitiesResource | CapabilitiesAttachment | CapabilitiesCollection | CapabilitiesDocument
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CapabilitiesMotion(CompactValue):
+    'Immutable owned CapabilitiesMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current native motion eligibility; host Preview support is advertised separately.'
+    _variant: _ClassVar[str] = 'motion'
+    value: MotionCapabilities
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+CapabilitiesMotion.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CapabilitiesExpression(CompactValue):
+    'Immutable owned CapabilitiesExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current native expression eligibility; host Preview support is advertised separately.'
+    _variant: _ClassVar[str] = 'expression'
+    value: ExpressionCapabilities
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+CapabilitiesExpression.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CapabilitiesPhysics(CompactValue):
+    'Immutable owned CapabilitiesPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current native physics eligibility; host Preview support is advertised separately.'
+    _variant: _ClassVar[str] = 'physics'
+    value: PhysicsCapabilities
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+CapabilitiesPhysics.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CapabilitiesPose(CompactValue):
+    'Immutable owned CapabilitiesPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current native pose eligibility; host Preview support is advertised separately.'
+    _variant: _ClassVar[str] = 'pose'
+    value: PoseCapabilities
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+CapabilitiesPose.__module__ = "zipzi.modeling"
+
+Capabilities: TypeAlias = CapabilitiesScene | CapabilitiesOrganization | CapabilitiesBinding | CapabilitiesContent | CapabilitiesReferences | CapabilitiesResource | CapabilitiesAttachment | CapabilitiesCollection | CapabilitiesDocument | CapabilitiesMotion | CapabilitiesExpression | CapabilitiesPhysics | CapabilitiesPose
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCapabilities(CompactValue):
@@ -4719,6 +6753,108 @@ class CollectionCapabilities(CompactValue):
         object.__setattr__(self, 'move_into', self.move_into)
         object.__setattr__(self, 'reorder', self.reorder)
 CollectionCapabilities.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCapabilities(CompactValue):
+    'Immutable owned MotionCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\npreview: Native preview eligibility; host preview API availability is advertised separately.\ncreate_child: Create owned child rows in this object.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\nedit_content: Edit the owning clip content, preserving stable track/key/event identities.'
+    inspect: CapabilityState
+    patch: CapabilityState
+    duplicate: CapabilityState
+    delete: CapabilityState
+    move_object: CapabilityState
+    preview: CapabilityState
+    create_child: CapabilityState
+    reorder: CapabilityState
+    repair: CapabilityState
+    edit_content: CapabilityState
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'inspect', self.inspect)
+        object.__setattr__(self, 'patch', self.patch)
+        object.__setattr__(self, 'duplicate', self.duplicate)
+        object.__setattr__(self, 'delete', self.delete)
+        object.__setattr__(self, 'move_object', self.move_object)
+        object.__setattr__(self, 'preview', self.preview)
+        object.__setattr__(self, 'create_child', self.create_child)
+        object.__setattr__(self, 'reorder', self.reorder)
+        object.__setattr__(self, 'repair', self.repair)
+        object.__setattr__(self, 'edit_content', self.edit_content)
+MotionCapabilities.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ExpressionCapabilities(CompactValue):
+    'Immutable owned ExpressionCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ninspect: Read this object while its identity/context remains valid.\ncreate_entry: Create an owned expression entry.\npatch: Modify typed fields through a validated native intent/address.\nmove_entry: Transfer expression entries between compatible owners.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nrepair: Repair an explicitly unresolved native reference.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
+    inspect: CapabilityState
+    create_entry: CapabilityState
+    patch: CapabilityState
+    move_entry: CapabilityState
+    duplicate: CapabilityState
+    delete: CapabilityState
+    repair: CapabilityState
+    preview: CapabilityState
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'inspect', self.inspect)
+        object.__setattr__(self, 'create_entry', self.create_entry)
+        object.__setattr__(self, 'patch', self.patch)
+        object.__setattr__(self, 'move_entry', self.move_entry)
+        object.__setattr__(self, 'duplicate', self.duplicate)
+        object.__setattr__(self, 'delete', self.delete)
+        object.__setattr__(self, 'repair', self.repair)
+        object.__setattr__(self, 'preview', self.preview)
+ExpressionCapabilities.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsCapabilities(CompactValue):
+    'Immutable owned PhysicsCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\ncreate_child: Create owned child rows in this object.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
+    inspect: CapabilityState
+    patch: CapabilityState
+    create_child: CapabilityState
+    duplicate: CapabilityState
+    delete: CapabilityState
+    move_object: CapabilityState
+    reorder: CapabilityState
+    repair: CapabilityState
+    preview: CapabilityState
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'inspect', self.inspect)
+        object.__setattr__(self, 'patch', self.patch)
+        object.__setattr__(self, 'create_child', self.create_child)
+        object.__setattr__(self, 'duplicate', self.duplicate)
+        object.__setattr__(self, 'delete', self.delete)
+        object.__setattr__(self, 'move_object', self.move_object)
+        object.__setattr__(self, 'reorder', self.reorder)
+        object.__setattr__(self, 'repair', self.repair)
+        object.__setattr__(self, 'preview', self.preview)
+PhysicsCapabilities.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PoseCapabilities(CompactValue):
+    'Immutable owned PoseCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\ncreate_child: Create owned child rows in this object.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\ndissolve: Remove this container while moving owned content to an explicit destination.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
+    inspect: CapabilityState
+    patch: CapabilityState
+    create_child: CapabilityState
+    duplicate: CapabilityState
+    delete: CapabilityState
+    move_object: CapabilityState
+    reorder: CapabilityState
+    repair: CapabilityState
+    dissolve: CapabilityState
+    preview: CapabilityState
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'inspect', self.inspect)
+        object.__setattr__(self, 'patch', self.patch)
+        object.__setattr__(self, 'create_child', self.create_child)
+        object.__setattr__(self, 'duplicate', self.duplicate)
+        object.__setattr__(self, 'delete', self.delete)
+        object.__setattr__(self, 'move_object', self.move_object)
+        object.__setattr__(self, 'reorder', self.reorder)
+        object.__setattr__(self, 'repair', self.repair)
+        object.__setattr__(self, 'dissolve', self.dissolve)
+        object.__setattr__(self, 'preview', self.preview)
+PoseCapabilities.__module__ = "zipzi.modeling"
 
 class ObjectKind(str, Enum):
     __module__ = "zipzi.modeling"
@@ -5178,6 +7314,26 @@ def validate_ModelingCommand(value: ModelingCommand) -> None:
         validate_DocumentAuthoringEdit(value.intent)
     elif isinstance(value, ModelingCommandAttachment):
         validate_AttachmentEdit(value.intent)
+    elif isinstance(value, ModelingCommandMotion):
+        validate_MotionEdit(value.intent)
+    elif isinstance(value, ModelingCommandExpression):
+        validate_ExpressionEdit(value.intent)
+    elif isinstance(value, ModelingCommandPhysics):
+        validate_PhysicsEdit(value.intent)
+    elif isinstance(value, ModelingCommandPose):
+        validate_PoseEdit(value.intent)
+    elif isinstance(value, ModelingCommandCreateMotion):
+        validate_MotionClip(value.clip)
+    elif isinstance(value, ModelingCommandReplaceMotion):
+        validate_MotionClip(value.clip)
+    elif isinstance(value, ModelingCommandCreateExpression):
+        validate_ExpressionAsset(value.expression)
+    elif isinstance(value, ModelingCommandReplaceExpression):
+        validate_ExpressionAsset(value.expression)
+    elif isinstance(value, ModelingCommandSetPhysics):
+        validate_PhysicsAsset(value.physics)
+    elif isinstance(value, ModelingCommandSetPose):
+        validate_PoseAsset(value.pose)
     elif isinstance(value, ModelingCommandReplaceModelSetup):
         validate_ModelSetup(value.setup)
     elif isinstance(value, ModelingCommandReplaceHierarchyOrder):
@@ -5295,6 +7451,26 @@ def encode_ModelingCommand(value: ModelingCommand) -> object:
         return {'op': 'document', **cast(Mapping[str, object], {'intent': encode_DocumentAuthoringEdit(value.intent)})}
     elif isinstance(value, ModelingCommandAttachment):
         return {'op': 'attachment', **cast(Mapping[str, object], {'intent': encode_AttachmentEdit(value.intent)})}
+    elif isinstance(value, ModelingCommandMotion):
+        return {'op': 'motion', **cast(Mapping[str, object], {'intent': encode_MotionEdit(value.intent)})}
+    elif isinstance(value, ModelingCommandExpression):
+        return {'op': 'expression', **cast(Mapping[str, object], {'intent': encode_ExpressionEdit(value.intent)})}
+    elif isinstance(value, ModelingCommandPhysics):
+        return {'op': 'physics', **cast(Mapping[str, object], {'intent': encode_PhysicsEdit(value.intent)})}
+    elif isinstance(value, ModelingCommandPose):
+        return {'op': 'pose', **cast(Mapping[str, object], {'intent': encode_PoseEdit(value.intent)})}
+    elif isinstance(value, ModelingCommandCreateMotion):
+        return {'op': 'create_motion', **cast(Mapping[str, object], {'clip': encode_MotionClip(value.clip)})}
+    elif isinstance(value, ModelingCommandReplaceMotion):
+        return {'op': 'replace_motion', **cast(Mapping[str, object], {'clip': encode_MotionClip(value.clip)})}
+    elif isinstance(value, ModelingCommandCreateExpression):
+        return {'op': 'create_expression', **cast(Mapping[str, object], {'expression': encode_ExpressionAsset(value.expression)})}
+    elif isinstance(value, ModelingCommandReplaceExpression):
+        return {'op': 'replace_expression', **cast(Mapping[str, object], {'expression': encode_ExpressionAsset(value.expression)})}
+    elif isinstance(value, ModelingCommandSetPhysics):
+        return {'op': 'set_physics', **cast(Mapping[str, object], {'physics': encode_PhysicsAsset(value.physics)})}
+    elif isinstance(value, ModelingCommandSetPose):
+        return {'op': 'set_pose', **cast(Mapping[str, object], {'pose': encode_PoseAsset(value.pose)})}
     elif isinstance(value, ModelingCommandReplaceModelSetup):
         return {'op': 'replace_model_setup', **cast(Mapping[str, object], {'setup': encode_ModelSetup(value.setup)})}
     elif isinstance(value, ModelingCommandReplaceHierarchyOrder):
@@ -5320,7 +7496,7 @@ def encode_ModelingCommand(value: ModelingCommand) -> object:
     raise TypeError("Expected ModelingCommand")
 
 def read_ModelingCommand(value: object) -> ModelingCommand:
-    if isinstance(value, (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology,)): return value
+    if isinstance(value, (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandMotion, ModelingCommandExpression, ModelingCommandPhysics, ModelingCommandPose, ModelingCommandCreateMotion, ModelingCommandReplaceMotion, ModelingCommandCreateExpression, ModelingCommandReplaceExpression, ModelingCommandSetPhysics, ModelingCommandSetPose, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology,)): return value
     r = record(value)
     tag = string(r['op'])
     if tag == 'create_asset':
@@ -5419,6 +7595,36 @@ def read_ModelingCommand(value: object) -> ModelingCommand:
     elif tag == 'attachment':
         f = record(r)
         return ModelingCommandAttachment(intent=read_AttachmentEdit(f['intent']))
+    elif tag == 'motion':
+        f = record(r)
+        return ModelingCommandMotion(intent=read_MotionEdit(f['intent']))
+    elif tag == 'expression':
+        f = record(r)
+        return ModelingCommandExpression(intent=read_ExpressionEdit(f['intent']))
+    elif tag == 'physics':
+        f = record(r)
+        return ModelingCommandPhysics(intent=read_PhysicsEdit(f['intent']))
+    elif tag == 'pose':
+        f = record(r)
+        return ModelingCommandPose(intent=read_PoseEdit(f['intent']))
+    elif tag == 'create_motion':
+        f = record(r)
+        return ModelingCommandCreateMotion(clip=read_MotionClip(f['clip']))
+    elif tag == 'replace_motion':
+        f = record(r)
+        return ModelingCommandReplaceMotion(clip=read_MotionClip(f['clip']))
+    elif tag == 'create_expression':
+        f = record(r)
+        return ModelingCommandCreateExpression(expression=read_ExpressionAsset(f['expression']))
+    elif tag == 'replace_expression':
+        f = record(r)
+        return ModelingCommandReplaceExpression(expression=read_ExpressionAsset(f['expression']))
+    elif tag == 'set_physics':
+        f = record(r)
+        return ModelingCommandSetPhysics(physics=read_PhysicsAsset(f['physics']))
+    elif tag == 'set_pose':
+        f = record(r)
+        return ModelingCommandSetPose(pose=read_PoseAsset(f['pose']))
     elif tag == 'replace_model_setup':
         f = record(r)
         return ModelingCommandReplaceModelSetup(setup=read_ModelSetup(f['setup']))
@@ -9131,6 +11337,1945 @@ def read_AttachmentRef(value: object) -> AttachmentRef:
         return AttachmentRefUnresolved(path=string(f['path']))
     raise ValueError("Unknown AttachmentRef variant")
 
+def validate_MotionEdit(value: MotionEdit) -> None:
+    if isinstance(value, MotionEditCreate):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.registration_id, str):
+            raise ValueError("Expected string")
+        validate_MotionContainer(value.destination)
+    elif isinstance(value, MotionEditCreateGroup):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionEditRenameGroup):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionEditReorderGroups):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, MotionEditRegister):
+        validate_MotionRegistration(value.entry)
+        validate_MotionContainer(value.destination)
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, MotionEditPatchRegistration):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_MotionRegistration(value.expected)
+        validate_MotionRegistration(value.entry)
+    elif isinstance(value, MotionEditMoveRegistrations):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        validate_MotionContainer(value.destination)
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, MotionEditDuplicateRegistrations):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        validate_MotionContainer(value.destination)
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, MotionEditDeleteRegistrations):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, MotionEditDissolveGroup):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionEditDeleteGroup):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionEditDuplicateGroup):
+        if not isinstance(value.source, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionEditDuplicateClip):
+        if not isinstance(value.source, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.registration_id, str):
+            raise ValueError("Expected string")
+        validate_MotionContainer(value.destination)
+    elif isinstance(value, MotionEditDeleteClip):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionEditReorderTracks):
+        if not isinstance(value.clip, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, MotionEditCreateTrack):
+        if not isinstance(value.clip, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.key_id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, MotionEditSetTrackTarget):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_MotionTrackTarget(value.target)
+    elif isinstance(value, MotionEditMoveTracks):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if not isinstance(value.destination, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+        if type(value.copy) is not bool:
+            raise ValueError("Expected bool")
+    elif isinstance(value, MotionEditDeleteTracks):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, MotionEditTransferKeys):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if not isinstance(value.destination_track, str):
+            raise ValueError("Expected string")
+        if isinstance(value.time_offset, bool) or not isinstance(value.time_offset, (float, int)) or not math.isfinite(value.time_offset) or abs(value.time_offset) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+        if type(value.copy) is not bool:
+            raise ValueError("Expected bool")
+    elif isinstance(value, MotionEditSetEvent):
+        if not isinstance(value.clip, str):
+            raise ValueError("Expected string")
+        validate_MotionEvent(value.event)
+    elif isinstance(value, MotionEditDeleteEvents):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, MotionEditMoveEvents):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if not isinstance(value.destination, str):
+            raise ValueError("Expected string")
+        if isinstance(value.time_offset, bool) or not isinstance(value.time_offset, (float, int)) or not math.isfinite(value.time_offset) or abs(value.time_offset) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+        if type(value.copy) is not bool:
+            raise ValueError("Expected bool")
+    else:
+        raise TypeError("Expected MotionEdit")
+
+def encode_MotionEdit(value: MotionEdit) -> object:
+    if isinstance(value, MotionEditCreate):
+        return {'op': 'create', **cast(Mapping[str, object], {'id': value.id, 'name': value.name, 'registration_id': value.registration_id, 'destination': encode_MotionContainer(value.destination)})}
+    elif isinstance(value, MotionEditCreateGroup):
+        return {'op': 'create_group', **cast(Mapping[str, object], {'id': value.id, 'name': value.name})}
+    elif isinstance(value, MotionEditRenameGroup):
+        return {'op': 'rename_group', **cast(Mapping[str, object], {'id': value.id, 'name': value.name})}
+    elif isinstance(value, MotionEditReorderGroups):
+        return {'op': 'reorder_groups', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids]})}
+    elif isinstance(value, MotionEditRegister):
+        return {'op': 'register', **cast(Mapping[str, object], {'entry': encode_MotionRegistration(value.entry), 'destination': encode_MotionContainer(value.destination), 'before': None if value.before is None else value.before})}
+    elif isinstance(value, MotionEditPatchRegistration):
+        return {'op': 'patch_registration', **cast(Mapping[str, object], {'id': value.id, 'expected': encode_MotionRegistration(value.expected), 'entry': encode_MotionRegistration(value.entry)})}
+    elif isinstance(value, MotionEditMoveRegistrations):
+        return {'op': 'move_registrations', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'destination': encode_MotionContainer(value.destination), 'before': None if value.before is None else value.before})}
+    elif isinstance(value, MotionEditDuplicateRegistrations):
+        return {'op': 'duplicate_registrations', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'destination': encode_MotionContainer(value.destination), 'before': None if value.before is None else value.before})}
+    elif isinstance(value, MotionEditDeleteRegistrations):
+        return {'op': 'delete_registrations', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids]})}
+    elif isinstance(value, MotionEditDissolveGroup):
+        return {'op': 'dissolve_group', **cast(Mapping[str, object], {'id': value.id})}
+    elif isinstance(value, MotionEditDeleteGroup):
+        return {'op': 'delete_group', **cast(Mapping[str, object], {'id': value.id})}
+    elif isinstance(value, MotionEditDuplicateGroup):
+        return {'op': 'duplicate_group', **cast(Mapping[str, object], {'source': value.source, 'id': value.id, 'name': value.name})}
+    elif isinstance(value, MotionEditDuplicateClip):
+        return {'op': 'duplicate_clip', **cast(Mapping[str, object], {'source': value.source, 'id': value.id, 'name': value.name, 'registration_id': value.registration_id, 'destination': encode_MotionContainer(value.destination)})}
+    elif isinstance(value, MotionEditDeleteClip):
+        return {'op': 'delete_clip', **cast(Mapping[str, object], {'id': value.id})}
+    elif isinstance(value, MotionEditReorderTracks):
+        return {'op': 'reorder_tracks', **cast(Mapping[str, object], {'clip': value.clip, 'ids': [v0 for v0 in value.ids]})}
+    elif isinstance(value, MotionEditCreateTrack):
+        return {'op': 'create_track', **cast(Mapping[str, object], {'clip': value.clip, 'id': value.id, 'key_id': value.key_id, 'time': value.time})}
+    elif isinstance(value, MotionEditSetTrackTarget):
+        return {'op': 'set_track_target', **cast(Mapping[str, object], {'id': value.id, 'target': encode_MotionTrackTarget(value.target)})}
+    elif isinstance(value, MotionEditMoveTracks):
+        return {'op': 'move_tracks', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'destination': value.destination, 'before': None if value.before is None else value.before, 'copy': value.copy})}
+    elif isinstance(value, MotionEditDeleteTracks):
+        return {'op': 'delete_tracks', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids]})}
+    elif isinstance(value, MotionEditTransferKeys):
+        return {'op': 'transfer_keys', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'destination_track': value.destination_track, 'time_offset': value.time_offset, 'copy': value.copy})}
+    elif isinstance(value, MotionEditSetEvent):
+        return {'op': 'set_event', **cast(Mapping[str, object], {'clip': value.clip, 'event': encode_MotionEvent(value.event)})}
+    elif isinstance(value, MotionEditDeleteEvents):
+        return {'op': 'delete_events', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids]})}
+    elif isinstance(value, MotionEditMoveEvents):
+        return {'op': 'move_events', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'destination': value.destination, 'time_offset': value.time_offset, 'copy': value.copy})}
+    raise TypeError("Expected MotionEdit")
+
+def read_MotionEdit(value: object) -> MotionEdit:
+    if isinstance(value, (MotionEditCreate, MotionEditCreateGroup, MotionEditRenameGroup, MotionEditReorderGroups, MotionEditRegister, MotionEditPatchRegistration, MotionEditMoveRegistrations, MotionEditDuplicateRegistrations, MotionEditDeleteRegistrations, MotionEditDissolveGroup, MotionEditDeleteGroup, MotionEditDuplicateGroup, MotionEditDuplicateClip, MotionEditDeleteClip, MotionEditReorderTracks, MotionEditCreateTrack, MotionEditSetTrackTarget, MotionEditMoveTracks, MotionEditDeleteTracks, MotionEditTransferKeys, MotionEditSetEvent, MotionEditDeleteEvents, MotionEditMoveEvents,)): return value
+    r = record(value)
+    tag = string(r['op'])
+    if tag == 'create':
+        f = record(r)
+        return MotionEditCreate(id=string(f['id']), name=string(f['name']), registration_id=string(f['registration_id']), destination=read_MotionContainer(f['destination']))
+    elif tag == 'create_group':
+        f = record(r)
+        return MotionEditCreateGroup(id=string(f['id']), name=string(f['name']))
+    elif tag == 'rename_group':
+        f = record(r)
+        return MotionEditRenameGroup(id=string(f['id']), name=string(f['name']))
+    elif tag == 'reorder_groups':
+        f = record(r)
+        return MotionEditReorderGroups(ids=tuple(string(v0) for v0 in sequence(f['ids'])))
+    elif tag == 'register':
+        f = record(r)
+        return MotionEditRegister(entry=read_MotionRegistration(f['entry']), destination=read_MotionContainer(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'patch_registration':
+        f = record(r)
+        return MotionEditPatchRegistration(id=string(f['id']), expected=read_MotionRegistration(f['expected']), entry=read_MotionRegistration(f['entry']))
+    elif tag == 'move_registrations':
+        f = record(r)
+        return MotionEditMoveRegistrations(ids=tuple(string(v0) for v0 in sequence(f['ids'])), destination=read_MotionContainer(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'duplicate_registrations':
+        f = record(r)
+        return MotionEditDuplicateRegistrations(ids=tuple(string(v0) for v0 in sequence(f['ids'])), destination=read_MotionContainer(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'delete_registrations':
+        f = record(r)
+        return MotionEditDeleteRegistrations(ids=tuple(string(v0) for v0 in sequence(f['ids'])))
+    elif tag == 'dissolve_group':
+        f = record(r)
+        return MotionEditDissolveGroup(id=string(f['id']))
+    elif tag == 'delete_group':
+        f = record(r)
+        return MotionEditDeleteGroup(id=string(f['id']))
+    elif tag == 'duplicate_group':
+        f = record(r)
+        return MotionEditDuplicateGroup(source=string(f['source']), id=string(f['id']), name=string(f['name']))
+    elif tag == 'duplicate_clip':
+        f = record(r)
+        return MotionEditDuplicateClip(source=string(f['source']), id=string(f['id']), name=string(f['name']), registration_id=string(f['registration_id']), destination=read_MotionContainer(f['destination']))
+    elif tag == 'delete_clip':
+        f = record(r)
+        return MotionEditDeleteClip(id=string(f['id']))
+    elif tag == 'reorder_tracks':
+        f = record(r)
+        return MotionEditReorderTracks(clip=string(f['clip']), ids=tuple(string(v0) for v0 in sequence(f['ids'])))
+    elif tag == 'create_track':
+        f = record(r)
+        return MotionEditCreateTrack(clip=string(f['clip']), id=string(f['id']), key_id=string(f['key_id']), time=number(f['time']))
+    elif tag == 'set_track_target':
+        f = record(r)
+        return MotionEditSetTrackTarget(id=string(f['id']), target=read_MotionTrackTarget(f['target']))
+    elif tag == 'move_tracks':
+        f = record(r)
+        return MotionEditMoveTracks(ids=tuple(string(v0) for v0 in sequence(f['ids'])), destination=string(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)), copy=_boolean(f['copy']))
+    elif tag == 'delete_tracks':
+        f = record(r)
+        return MotionEditDeleteTracks(ids=tuple(string(v0) for v0 in sequence(f['ids'])))
+    elif tag == 'transfer_keys':
+        f = record(r)
+        return MotionEditTransferKeys(ids=tuple(string(v0) for v0 in sequence(f['ids'])), destination_track=string(f['destination_track']), time_offset=number(f['time_offset']), copy=_boolean(f['copy']))
+    elif tag == 'set_event':
+        f = record(r)
+        return MotionEditSetEvent(clip=string(f['clip']), event=read_MotionEvent(f['event']))
+    elif tag == 'delete_events':
+        f = record(r)
+        return MotionEditDeleteEvents(ids=tuple(string(v0) for v0 in sequence(f['ids'])))
+    elif tag == 'move_events':
+        f = record(r)
+        return MotionEditMoveEvents(ids=tuple(string(v0) for v0 in sequence(f['ids'])), destination=string(f['destination']), time_offset=number(f['time_offset']), copy=_boolean(f['copy']))
+    raise ValueError("Unknown MotionEdit variant")
+
+def validate_MotionContainer(value: MotionContainer) -> None:
+    if isinstance(value, MotionContainerRoot):
+        pass
+    elif isinstance(value, MotionContainerGroup):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected MotionContainer")
+
+def encode_MotionContainer(value: MotionContainer) -> object:
+    if isinstance(value, MotionContainerRoot):
+        return {'kind': 'root'}
+    elif isinstance(value, MotionContainerGroup):
+        return {'kind': 'group', 'id': value.value}
+    raise TypeError("Expected MotionContainer")
+
+def read_MotionContainer(value: object) -> MotionContainer:
+    if isinstance(value, (MotionContainerRoot, MotionContainerGroup,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'root':
+        return MotionContainerRoot()
+    elif tag == 'group':
+        return MotionContainerGroup(value=string(r['id']))
+    raise ValueError("Unknown MotionContainer variant")
+
+def validate_MotionRegistration(value: MotionRegistration) -> None:
+    if not isinstance(value, MotionRegistration):
+        raise TypeError("Expected MotionRegistration")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.clip_id, str):
+        raise ValueError("Expected string")
+    if value.fade_in is not None:
+        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if value.fade_out is not None:
+        if isinstance(value.fade_out, bool) or not isinstance(value.fade_out, (float, int)) or not math.isfinite(value.fade_out) or abs(value.fade_out) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if value.sound is not None:
+        validate_AttachmentRef(value.sound)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_MotionRegistration(value: MotionRegistration) -> object:
+    return {'id': value.id, 'clip_id': value.clip_id, 'fade_in': None if value.fade_in is None else value.fade_in, 'fade_out': None if value.fade_out is None else value.fade_out, 'sound': None if value.sound is None else encode_AttachmentRef(value.sound), 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_MotionRegistration(value: object) -> MotionRegistration:
+    if isinstance(value, MotionRegistration): return value
+    r = record(value)
+    return MotionRegistration(id=string(r['id']), clip_id=string(r['clip_id']), fade_in=None if r.get('fade_in', None) is None else number(r.get('fade_in', None)), fade_out=None if r.get('fade_out', None) is None else number(r.get('fade_out', None)), sound=None if r.get('sound', None) is None else read_AttachmentRef(r.get('sound', None)), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_MotionTrackTarget(value: MotionTrackTarget) -> None:
+    if isinstance(value, MotionTrackTargetUnspecified):
+        pass
+    elif isinstance(value, MotionTrackTargetModel):
+        if not isinstance(value.runtime_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionTrackTargetParameter):
+        if not isinstance(value.parameter_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionTrackTargetPartOpacity):
+        if not isinstance(value.part_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, MotionTrackTargetUnresolved):
+        if not isinstance(value.category, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.runtime_id, str):
+            raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected MotionTrackTarget")
+
+def encode_MotionTrackTarget(value: MotionTrackTarget) -> object:
+    if isinstance(value, MotionTrackTargetUnspecified):
+        return {'kind': 'unspecified', **cast(Mapping[str, object], {})}
+    elif isinstance(value, MotionTrackTargetModel):
+        return {'kind': 'model', **cast(Mapping[str, object], {'runtime_id': value.runtime_id})}
+    elif isinstance(value, MotionTrackTargetParameter):
+        return {'kind': 'parameter', **cast(Mapping[str, object], {'parameter_id': value.parameter_id})}
+    elif isinstance(value, MotionTrackTargetPartOpacity):
+        return {'kind': 'part_opacity', **cast(Mapping[str, object], {'part_id': value.part_id})}
+    elif isinstance(value, MotionTrackTargetUnresolved):
+        return {'kind': 'unresolved', **cast(Mapping[str, object], {'category': value.category, 'runtime_id': value.runtime_id})}
+    raise TypeError("Expected MotionTrackTarget")
+
+def read_MotionTrackTarget(value: object) -> MotionTrackTarget:
+    if isinstance(value, (MotionTrackTargetUnspecified, MotionTrackTargetModel, MotionTrackTargetParameter, MotionTrackTargetPartOpacity, MotionTrackTargetUnresolved,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'unspecified':
+        return MotionTrackTargetUnspecified()
+    elif tag == 'model':
+        f = record(r)
+        return MotionTrackTargetModel(runtime_id=string(f['runtime_id']))
+    elif tag == 'parameter':
+        f = record(r)
+        return MotionTrackTargetParameter(parameter_id=string(f['parameter_id']))
+    elif tag == 'part_opacity':
+        f = record(r)
+        return MotionTrackTargetPartOpacity(part_id=string(f['part_id']))
+    elif tag == 'unresolved':
+        f = record(r)
+        return MotionTrackTargetUnresolved(category=string(f['category']), runtime_id=string(f['runtime_id']))
+    raise ValueError("Unknown MotionTrackTarget variant")
+
+def validate_MotionEvent(value: MotionEvent) -> None:
+    if not isinstance(value, MotionEvent):
+        raise TypeError("Expected MotionEvent")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if not isinstance(value.value, str):
+        raise ValueError("Expected string")
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_MotionEvent(value: MotionEvent) -> object:
+    return {'id': value.id, 'time': value.time, 'value': value.value, 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_MotionEvent(value: object) -> MotionEvent:
+    if isinstance(value, MotionEvent): return value
+    r = record(value)
+    return MotionEvent(id=string(r['id']), time=number(r['time']), value=string(r['value']), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_ExpressionEdit(value: ExpressionEdit) -> None:
+    if isinstance(value, ExpressionEditCreate):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, ExpressionEditCreateEntry):
+        if not isinstance(value.owner, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, ExpressionEditPatchEntry):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_ExpressionEntryFields(value.expected)
+        validate_ExpressionEntryFields(value.fields)
+    elif isinstance(value, ExpressionEditMoveEntries):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if not isinstance(value.destination, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, ExpressionEditDuplicateEntries):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if not isinstance(value.new_ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.new_ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if not isinstance(value.destination, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, ExpressionEditDeleteEntries):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, ExpressionEditDuplicate):
+        if not isinstance(value.source, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.entry_ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.entry_ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, ExpressionEditDelete):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, ExpressionEditReorder):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected ExpressionEdit")
+
+def encode_ExpressionEdit(value: ExpressionEdit) -> object:
+    if isinstance(value, ExpressionEditCreate):
+        return {'op': 'create', **cast(Mapping[str, object], {'id': value.id, 'name': value.name})}
+    elif isinstance(value, ExpressionEditCreateEntry):
+        return {'op': 'create_entry', **cast(Mapping[str, object], {'owner': value.owner, 'id': value.id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, ExpressionEditPatchEntry):
+        return {'op': 'patch_entry', **cast(Mapping[str, object], {'id': value.id, 'expected': encode_ExpressionEntryFields(value.expected), 'fields': encode_ExpressionEntryFields(value.fields)})}
+    elif isinstance(value, ExpressionEditMoveEntries):
+        return {'op': 'move_entries', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'destination': value.destination, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, ExpressionEditDuplicateEntries):
+        return {'op': 'duplicate_entries', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'new_ids': [v0 for v0 in value.new_ids], 'destination': value.destination, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, ExpressionEditDeleteEntries):
+        return {'op': 'delete_entries', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids]})}
+    elif isinstance(value, ExpressionEditDuplicate):
+        return {'op': 'duplicate', **cast(Mapping[str, object], {'source': value.source, 'id': value.id, 'name': value.name, 'entry_ids': [v0 for v0 in value.entry_ids]})}
+    elif isinstance(value, ExpressionEditDelete):
+        return {'op': 'delete', **cast(Mapping[str, object], {'id': value.id})}
+    elif isinstance(value, ExpressionEditReorder):
+        return {'op': 'reorder', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids]})}
+    raise TypeError("Expected ExpressionEdit")
+
+def read_ExpressionEdit(value: object) -> ExpressionEdit:
+    if isinstance(value, (ExpressionEditCreate, ExpressionEditCreateEntry, ExpressionEditPatchEntry, ExpressionEditMoveEntries, ExpressionEditDuplicateEntries, ExpressionEditDeleteEntries, ExpressionEditDuplicate, ExpressionEditDelete, ExpressionEditReorder,)): return value
+    r = record(value)
+    tag = string(r['op'])
+    if tag == 'create':
+        f = record(r)
+        return ExpressionEditCreate(id=string(f['id']), name=string(f['name']))
+    elif tag == 'create_entry':
+        f = record(r)
+        return ExpressionEditCreateEntry(owner=string(f['owner']), id=string(f['id']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'patch_entry':
+        f = record(r)
+        return ExpressionEditPatchEntry(id=string(f['id']), expected=read_ExpressionEntryFields(f['expected']), fields=read_ExpressionEntryFields(f['fields']))
+    elif tag == 'move_entries':
+        f = record(r)
+        return ExpressionEditMoveEntries(ids=tuple(string(v0) for v0 in sequence(f['ids'])), destination=string(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'duplicate_entries':
+        f = record(r)
+        return ExpressionEditDuplicateEntries(ids=tuple(string(v0) for v0 in sequence(f['ids'])), new_ids=tuple(string(v0) for v0 in sequence(f['new_ids'])), destination=string(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'delete_entries':
+        f = record(r)
+        return ExpressionEditDeleteEntries(ids=tuple(string(v0) for v0 in sequence(f['ids'])))
+    elif tag == 'duplicate':
+        f = record(r)
+        return ExpressionEditDuplicate(source=string(f['source']), id=string(f['id']), name=string(f['name']), entry_ids=tuple(string(v0) for v0 in sequence(f['entry_ids'])))
+    elif tag == 'delete':
+        f = record(r)
+        return ExpressionEditDelete(id=string(f['id']))
+    elif tag == 'reorder':
+        f = record(r)
+        return ExpressionEditReorder(ids=tuple(string(v0) for v0 in sequence(f['ids'])))
+    raise ValueError("Unknown ExpressionEdit variant")
+
+def validate_ExpressionEntryFields(value: ExpressionEntryFields) -> None:
+    if not isinstance(value, ExpressionEntryFields):
+        raise TypeError("Expected ExpressionEntryFields")
+    validate_ExpressionTarget(value.target)
+    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if value.blend is not None:
+        validate_ExpressionBlend(value.blend)
+
+def encode_ExpressionEntryFields(value: ExpressionEntryFields) -> object:
+    return {'target': encode_ExpressionTarget(value.target), 'value': value.value, 'blend': None if value.blend is None else encode_ExpressionBlend(value.blend)}
+
+def read_ExpressionEntryFields(value: object) -> ExpressionEntryFields:
+    if isinstance(value, ExpressionEntryFields): return value
+    r = record(value)
+    return ExpressionEntryFields(target=read_ExpressionTarget(r['target']), value=number(r['value']), blend=None if r.get('blend', None) is None else read_ExpressionBlend(r.get('blend', None)))
+
+def validate_ExpressionTarget(value: ExpressionTarget) -> None:
+    if isinstance(value, ExpressionTargetUnspecified):
+        pass
+    elif isinstance(value, ExpressionTargetResolved):
+        if not isinstance(value.parameter_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, ExpressionTargetUnresolved):
+        if not isinstance(value.runtime_id, str):
+            raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected ExpressionTarget")
+
+def encode_ExpressionTarget(value: ExpressionTarget) -> object:
+    if isinstance(value, ExpressionTargetUnspecified):
+        return {'kind': 'unspecified', **cast(Mapping[str, object], {})}
+    elif isinstance(value, ExpressionTargetResolved):
+        return {'kind': 'resolved', **cast(Mapping[str, object], {'parameter_id': value.parameter_id})}
+    elif isinstance(value, ExpressionTargetUnresolved):
+        return {'kind': 'unresolved', **cast(Mapping[str, object], {'runtime_id': value.runtime_id})}
+    raise TypeError("Expected ExpressionTarget")
+
+def read_ExpressionTarget(value: object) -> ExpressionTarget:
+    if isinstance(value, (ExpressionTargetUnspecified, ExpressionTargetResolved, ExpressionTargetUnresolved,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'unspecified':
+        return ExpressionTargetUnspecified()
+    elif tag == 'resolved':
+        f = record(r)
+        return ExpressionTargetResolved(parameter_id=string(f['parameter_id']))
+    elif tag == 'unresolved':
+        f = record(r)
+        return ExpressionTargetUnresolved(runtime_id=string(f['runtime_id']))
+    raise ValueError("Unknown ExpressionTarget variant")
+
+def validate_ExpressionBlend(value: ExpressionBlend) -> None:
+    if not isinstance(value, ExpressionBlend):
+        raise TypeError("Expected ExpressionBlend")
+
+def encode_ExpressionBlend(value: ExpressionBlend) -> object:
+    return value.value
+
+def read_ExpressionBlend(value: object) -> ExpressionBlend:
+    if isinstance(value, ExpressionBlend): return value
+    return ExpressionBlend(string(value))
+
+def validate_PhysicsEdit(value: PhysicsEdit) -> None:
+    if isinstance(value, PhysicsEditCreateGroup):
+        if not isinstance(value.asset_id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditCreateInput):
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditCreateOutput):
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.node_id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditInsertNode):
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+        validate_PhysicsNode(value.node)
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditMoveNode):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditDuplicateNode):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditPatch):
+        validate_PhysicsPatch(value.patch)
+    elif isinstance(value, PhysicsEditMoveInputs):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditMoveOutputs):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+        for key0, v0 in value.node_replacements.items():
+            if not isinstance(key0, str):
+                raise ValueError("Expected string")
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditReorderGroups):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditDuplicate):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        if value.group_id is not None:
+            if not isinstance(value.group_id, str):
+                raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PhysicsEditDelete):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        for key0, v0 in value.node_replacements.items():
+            if not isinstance(key0, str):
+                raise ValueError("Expected string")
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected PhysicsEdit")
+
+def encode_PhysicsEdit(value: PhysicsEdit) -> object:
+    if isinstance(value, PhysicsEditCreateGroup):
+        return {'operation': 'create_group', **cast(Mapping[str, object], {'asset_id': value.asset_id, 'id': value.id, 'name': value.name, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditCreateInput):
+        return {'operation': 'create_input', **cast(Mapping[str, object], {'group_id': value.group_id, 'id': value.id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditCreateOutput):
+        return {'operation': 'create_output', **cast(Mapping[str, object], {'group_id': value.group_id, 'id': value.id, 'node_id': value.node_id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditInsertNode):
+        return {'operation': 'insert_node', **cast(Mapping[str, object], {'group_id': value.group_id, 'node': encode_PhysicsNode(value.node), 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditMoveNode):
+        return {'operation': 'move_node', **cast(Mapping[str, object], {'id': value.id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditDuplicateNode):
+        return {'operation': 'duplicate_node', **cast(Mapping[str, object], {'id': value.id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditPatch):
+        return {'operation': 'patch', **cast(Mapping[str, object], {'patch': encode_PhysicsPatch(value.patch)})}
+    elif isinstance(value, PhysicsEditMoveInputs):
+        return {'operation': 'move_inputs', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'group_id': value.group_id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditMoveOutputs):
+        return {'operation': 'move_outputs', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'group_id': value.group_id, 'before': None if value.before is None else value.before, 'node_replacements': {str(key0): v0 for key0, v0 in value.node_replacements.items()}})}
+    elif isinstance(value, PhysicsEditReorderGroups):
+        return {'operation': 'reorder_groups', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditDuplicate):
+        return {'operation': 'duplicate', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'group_id': None if value.group_id is None else value.group_id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PhysicsEditDelete):
+        return {'operation': 'delete', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'node_replacements': {str(key0): v0 for key0, v0 in value.node_replacements.items()}})}
+    raise TypeError("Expected PhysicsEdit")
+
+def read_PhysicsEdit(value: object) -> PhysicsEdit:
+    if isinstance(value, (PhysicsEditCreateGroup, PhysicsEditCreateInput, PhysicsEditCreateOutput, PhysicsEditInsertNode, PhysicsEditMoveNode, PhysicsEditDuplicateNode, PhysicsEditPatch, PhysicsEditMoveInputs, PhysicsEditMoveOutputs, PhysicsEditReorderGroups, PhysicsEditDuplicate, PhysicsEditDelete,)): return value
+    r = record(value)
+    tag = string(r['operation'])
+    if tag == 'create_group':
+        f = record(r)
+        return PhysicsEditCreateGroup(asset_id=string(f['asset_id']), id=string(f['id']), name=string(f['name']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'create_input':
+        f = record(r)
+        return PhysicsEditCreateInput(group_id=string(f['group_id']), id=string(f['id']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'create_output':
+        f = record(r)
+        return PhysicsEditCreateOutput(group_id=string(f['group_id']), id=string(f['id']), node_id=string(f['node_id']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'insert_node':
+        f = record(r)
+        return PhysicsEditInsertNode(group_id=string(f['group_id']), node=read_PhysicsNode(f['node']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'move_node':
+        f = record(r)
+        return PhysicsEditMoveNode(id=string(f['id']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'duplicate_node':
+        f = record(r)
+        return PhysicsEditDuplicateNode(id=string(f['id']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'patch':
+        f = record(r)
+        return PhysicsEditPatch(patch=read_PhysicsPatch(f['patch']))
+    elif tag == 'move_inputs':
+        f = record(r)
+        return PhysicsEditMoveInputs(ids=tuple(string(v0) for v0 in sequence(f['ids'])), group_id=string(f['group_id']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'move_outputs':
+        f = record(r)
+        return PhysicsEditMoveOutputs(ids=tuple(string(v0) for v0 in sequence(f['ids'])), group_id=string(f['group_id']), before=None if f.get('before', None) is None else string(f.get('before', None)), node_replacements={key0: string(v0) for key0, v0 in record(f['node_replacements']).items()})
+    elif tag == 'reorder_groups':
+        f = record(r)
+        return PhysicsEditReorderGroups(ids=tuple(string(v0) for v0 in sequence(f['ids'])), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'duplicate':
+        f = record(r)
+        return PhysicsEditDuplicate(ids=tuple(string(v0) for v0 in sequence(f['ids'])), group_id=None if f.get('group_id', None) is None else string(f.get('group_id', None)), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'delete':
+        f = record(r)
+        return PhysicsEditDelete(ids=tuple(string(v0) for v0 in sequence(f['ids'])), node_replacements={key0: string(v0) for key0, v0 in record(f['node_replacements']).items()})
+    raise ValueError("Unknown PhysicsEdit variant")
+
+def validate_PhysicsNode(value: PhysicsNode) -> None:
+    if not isinstance(value, PhysicsNode):
+        raise TypeError("Expected PhysicsNode")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    validate_PhysicsVector(value.position)
+    if isinstance(value.mobility, bool) or not isinstance(value.mobility, (float, int)) or not math.isfinite(value.mobility) or abs(value.mobility) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.delay, bool) or not isinstance(value.delay, (float, int)) or not math.isfinite(value.delay) or abs(value.delay) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.acceleration, bool) or not isinstance(value.acceleration, (float, int)) or not math.isfinite(value.acceleration) or abs(value.acceleration) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.radius, bool) or not isinstance(value.radius, (float, int)) or not math.isfinite(value.radius) or abs(value.radius) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_PhysicsNode(value: PhysicsNode) -> object:
+    return {'id': value.id, 'position': encode_PhysicsVector(value.position), 'mobility': value.mobility, 'delay': value.delay, 'acceleration': value.acceleration, 'radius': value.radius, 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsNode(value: object) -> PhysicsNode:
+    if isinstance(value, PhysicsNode): return value
+    r = record(value)
+    return PhysicsNode(id=string(r['id']), position=read_PhysicsVector(r['position']), mobility=number(r['mobility']), delay=number(r['delay']), acceleration=number(r['acceleration']), radius=number(r['radius']), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_PhysicsVector(value: PhysicsVector) -> None:
+    if not isinstance(value, PhysicsVector):
+        raise TypeError("Expected PhysicsVector")
+    if isinstance(value.X, bool) or not isinstance(value.X, (float, int)) or not math.isfinite(value.X) or abs(value.X) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.Y, bool) or not isinstance(value.Y, (float, int)) or not math.isfinite(value.Y) or abs(value.Y) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+
+def encode_PhysicsVector(value: PhysicsVector) -> object:
+    return {'X': value.X, 'Y': value.Y}
+
+def read_PhysicsVector(value: object) -> PhysicsVector:
+    if isinstance(value, PhysicsVector): return value
+    r = record(value)
+    return PhysicsVector(X=number(r['X']), Y=number(r['Y']))
+
+def validate_PhysicsPatch(value: PhysicsPatch) -> None:
+    if not isinstance(value, PhysicsPatch):
+        raise TypeError("Expected PhysicsPatch")
+    if not isinstance(value.asset_id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.asset_changes, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.asset_changes:
+        validate_PhysicsAssetProperty(v0)
+    if value.rig is not None:
+        validate_PhysicsRigPatch(value.rig)
+
+def encode_PhysicsPatch(value: PhysicsPatch) -> object:
+    return {'asset_id': value.asset_id, 'asset_changes': [encode_PhysicsAssetProperty(v0) for v0 in value.asset_changes], 'rig': None if value.rig is None else encode_PhysicsRigPatch(value.rig)}
+
+def read_PhysicsPatch(value: object) -> PhysicsPatch:
+    if isinstance(value, PhysicsPatch): return value
+    r = record(value)
+    return PhysicsPatch(asset_id=string(r['asset_id']), asset_changes=tuple(read_PhysicsAssetProperty(v0) for v0 in sequence(r['asset_changes'])), rig=None if r.get('rig', None) is None else read_PhysicsRigPatch(r.get('rig', None)))
+
+def validate_PhysicsAssetProperty(value: PhysicsAssetProperty) -> None:
+    if isinstance(value, PhysicsAssetPropertyFps):
+        if value.value is not None:
+            if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+                raise ValueError("Expected f32")
+    else:
+        raise TypeError("Expected PhysicsAssetProperty")
+
+def encode_PhysicsAssetProperty(value: PhysicsAssetProperty) -> object:
+    if isinstance(value, PhysicsAssetPropertyFps):
+        return {'Fps': None if value.value is None else value.value}
+    raise TypeError("Expected PhysicsAssetProperty")
+
+def read_PhysicsAssetProperty(value: object) -> PhysicsAssetProperty:
+    if isinstance(value, (PhysicsAssetPropertyFps,)): return value
+    r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
+    tag = string(value) if isinstance(value, str) else next(iter(r))
+    if tag == 'Fps':
+        return PhysicsAssetPropertyFps(value=None if r['Fps'] is None else number(r['Fps']))
+    raise ValueError("Unknown PhysicsAssetProperty variant")
+
+def validate_PhysicsRigPatch(value: PhysicsRigPatch) -> None:
+    if not isinstance(value, PhysicsRigPatch):
+        raise TypeError("Expected PhysicsRigPatch")
+    if not isinstance(value.group_id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.changes, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.changes:
+        validate_PhysicsProperty(v0)
+
+def encode_PhysicsRigPatch(value: PhysicsRigPatch) -> object:
+    return {'group_id': value.group_id, 'changes': [encode_PhysicsProperty(v0) for v0 in value.changes]}
+
+def read_PhysicsRigPatch(value: object) -> PhysicsRigPatch:
+    if isinstance(value, PhysicsRigPatch): return value
+    r = record(value)
+    return PhysicsRigPatch(group_id=string(r['group_id']), changes=tuple(read_PhysicsProperty(v0) for v0 in sequence(r['changes'])))
+
+def validate_PhysicsProperty(value: PhysicsProperty) -> None:
+    if isinstance(value, PhysicsPropertyName):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PhysicsPropertyInputWeight):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PhysicsPropertyInputAxis):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_PhysicsAxis(value.value)
+    elif isinstance(value, PhysicsPropertyInputReflect):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if type(value.value) is not bool:
+            raise ValueError("Expected bool")
+    elif isinstance(value, PhysicsPropertyInputParameter):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_PhysicsTarget(value.target)
+    elif isinstance(value, PhysicsPropertyOutputWeight):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PhysicsPropertyOutputScale):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PhysicsPropertyOutputAxis):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_PhysicsAxis(value.value)
+    elif isinstance(value, PhysicsPropertyOutputReflect):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if type(value.value) is not bool:
+            raise ValueError("Expected bool")
+    elif isinstance(value, PhysicsPropertyOutputParameter):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_PhysicsTarget(value.target)
+    elif isinstance(value, PhysicsPropertyOutputNode):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.node_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PhysicsPropertyVertexPosition):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_PhysicsVector(value.value)
+    elif isinstance(value, PhysicsPropertyVertexRadius):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PhysicsPropertyVertexMobility):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PhysicsPropertyVertexDelay):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PhysicsPropertyVertexAcceleration):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PhysicsPropertyPositionNormalization):
+        validate_PhysicsRange(value.value)
+    elif isinstance(value, PhysicsPropertyAngleNormalization):
+        validate_PhysicsRange(value.value)
+    else:
+        raise TypeError("Expected PhysicsProperty")
+
+def encode_PhysicsProperty(value: PhysicsProperty) -> object:
+    if isinstance(value, PhysicsPropertyName):
+        return {'Name': value.value}
+    elif isinstance(value, PhysicsPropertyInputWeight):
+        return {'InputWeight': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyInputAxis):
+        return {'InputAxis': {'id': value.id, 'value': encode_PhysicsAxis(value.value)}}
+    elif isinstance(value, PhysicsPropertyInputReflect):
+        return {'InputReflect': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyInputParameter):
+        return {'InputParameter': {'id': value.id, 'target': encode_PhysicsTarget(value.target)}}
+    elif isinstance(value, PhysicsPropertyOutputWeight):
+        return {'OutputWeight': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyOutputScale):
+        return {'OutputScale': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyOutputAxis):
+        return {'OutputAxis': {'id': value.id, 'value': encode_PhysicsAxis(value.value)}}
+    elif isinstance(value, PhysicsPropertyOutputReflect):
+        return {'OutputReflect': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyOutputParameter):
+        return {'OutputParameter': {'id': value.id, 'target': encode_PhysicsTarget(value.target)}}
+    elif isinstance(value, PhysicsPropertyOutputNode):
+        return {'OutputNode': {'id': value.id, 'node_id': value.node_id}}
+    elif isinstance(value, PhysicsPropertyVertexPosition):
+        return {'VertexPosition': {'id': value.id, 'value': encode_PhysicsVector(value.value)}}
+    elif isinstance(value, PhysicsPropertyVertexRadius):
+        return {'VertexRadius': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyVertexMobility):
+        return {'VertexMobility': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyVertexDelay):
+        return {'VertexDelay': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyVertexAcceleration):
+        return {'VertexAcceleration': {'id': value.id, 'value': value.value}}
+    elif isinstance(value, PhysicsPropertyPositionNormalization):
+        return {'PositionNormalization': encode_PhysicsRange(value.value)}
+    elif isinstance(value, PhysicsPropertyAngleNormalization):
+        return {'AngleNormalization': encode_PhysicsRange(value.value)}
+    raise TypeError("Expected PhysicsProperty")
+
+def read_PhysicsProperty(value: object) -> PhysicsProperty:
+    if isinstance(value, (PhysicsPropertyName, PhysicsPropertyInputWeight, PhysicsPropertyInputAxis, PhysicsPropertyInputReflect, PhysicsPropertyInputParameter, PhysicsPropertyOutputWeight, PhysicsPropertyOutputScale, PhysicsPropertyOutputAxis, PhysicsPropertyOutputReflect, PhysicsPropertyOutputParameter, PhysicsPropertyOutputNode, PhysicsPropertyVertexPosition, PhysicsPropertyVertexRadius, PhysicsPropertyVertexMobility, PhysicsPropertyVertexDelay, PhysicsPropertyVertexAcceleration, PhysicsPropertyPositionNormalization, PhysicsPropertyAngleNormalization,)): return value
+    r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
+    tag = string(value) if isinstance(value, str) else next(iter(r))
+    if tag == 'Name':
+        return PhysicsPropertyName(value=string(r['Name']))
+    elif tag == 'InputWeight':
+        f = record(r['InputWeight'])
+        return PhysicsPropertyInputWeight(id=string(f['id']), value=number(f['value']))
+    elif tag == 'InputAxis':
+        f = record(r['InputAxis'])
+        return PhysicsPropertyInputAxis(id=string(f['id']), value=read_PhysicsAxis(f['value']))
+    elif tag == 'InputReflect':
+        f = record(r['InputReflect'])
+        return PhysicsPropertyInputReflect(id=string(f['id']), value=_boolean(f['value']))
+    elif tag == 'InputParameter':
+        f = record(r['InputParameter'])
+        return PhysicsPropertyInputParameter(id=string(f['id']), target=read_PhysicsTarget(f['target']))
+    elif tag == 'OutputWeight':
+        f = record(r['OutputWeight'])
+        return PhysicsPropertyOutputWeight(id=string(f['id']), value=number(f['value']))
+    elif tag == 'OutputScale':
+        f = record(r['OutputScale'])
+        return PhysicsPropertyOutputScale(id=string(f['id']), value=number(f['value']))
+    elif tag == 'OutputAxis':
+        f = record(r['OutputAxis'])
+        return PhysicsPropertyOutputAxis(id=string(f['id']), value=read_PhysicsAxis(f['value']))
+    elif tag == 'OutputReflect':
+        f = record(r['OutputReflect'])
+        return PhysicsPropertyOutputReflect(id=string(f['id']), value=_boolean(f['value']))
+    elif tag == 'OutputParameter':
+        f = record(r['OutputParameter'])
+        return PhysicsPropertyOutputParameter(id=string(f['id']), target=read_PhysicsTarget(f['target']))
+    elif tag == 'OutputNode':
+        f = record(r['OutputNode'])
+        return PhysicsPropertyOutputNode(id=string(f['id']), node_id=string(f['node_id']))
+    elif tag == 'VertexPosition':
+        f = record(r['VertexPosition'])
+        return PhysicsPropertyVertexPosition(id=string(f['id']), value=read_PhysicsVector(f['value']))
+    elif tag == 'VertexRadius':
+        f = record(r['VertexRadius'])
+        return PhysicsPropertyVertexRadius(id=string(f['id']), value=number(f['value']))
+    elif tag == 'VertexMobility':
+        f = record(r['VertexMobility'])
+        return PhysicsPropertyVertexMobility(id=string(f['id']), value=number(f['value']))
+    elif tag == 'VertexDelay':
+        f = record(r['VertexDelay'])
+        return PhysicsPropertyVertexDelay(id=string(f['id']), value=number(f['value']))
+    elif tag == 'VertexAcceleration':
+        f = record(r['VertexAcceleration'])
+        return PhysicsPropertyVertexAcceleration(id=string(f['id']), value=number(f['value']))
+    elif tag == 'PositionNormalization':
+        return PhysicsPropertyPositionNormalization(value=read_PhysicsRange(r['PositionNormalization']))
+    elif tag == 'AngleNormalization':
+        return PhysicsPropertyAngleNormalization(value=read_PhysicsRange(r['AngleNormalization']))
+    raise ValueError("Unknown PhysicsProperty variant")
+
+def validate_PhysicsAxis(value: PhysicsAxis) -> None:
+    if not isinstance(value, PhysicsAxis):
+        raise TypeError("Expected PhysicsAxis")
+
+def encode_PhysicsAxis(value: PhysicsAxis) -> object:
+    return value.value
+
+def read_PhysicsAxis(value: object) -> PhysicsAxis:
+    if isinstance(value, PhysicsAxis): return value
+    return PhysicsAxis(string(value))
+
+def validate_PhysicsTarget(value: PhysicsTarget) -> None:
+    if isinstance(value, PhysicsTargetUnspecified):
+        pass
+    elif isinstance(value, PhysicsTargetResolved):
+        if not isinstance(value.parameter_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PhysicsTargetUnresolved):
+        if not isinstance(value.runtime_id, str):
+            raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected PhysicsTarget")
+
+def encode_PhysicsTarget(value: PhysicsTarget) -> object:
+    if isinstance(value, PhysicsTargetUnspecified):
+        return {'kind': 'unspecified', **cast(Mapping[str, object], {})}
+    elif isinstance(value, PhysicsTargetResolved):
+        return {'kind': 'resolved', **cast(Mapping[str, object], {'parameter_id': value.parameter_id})}
+    elif isinstance(value, PhysicsTargetUnresolved):
+        return {'kind': 'unresolved', **cast(Mapping[str, object], {'runtime_id': value.runtime_id})}
+    raise TypeError("Expected PhysicsTarget")
+
+def read_PhysicsTarget(value: object) -> PhysicsTarget:
+    if isinstance(value, (PhysicsTargetUnspecified, PhysicsTargetResolved, PhysicsTargetUnresolved,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'unspecified':
+        return PhysicsTargetUnspecified()
+    elif tag == 'resolved':
+        f = record(r)
+        return PhysicsTargetResolved(parameter_id=string(f['parameter_id']))
+    elif tag == 'unresolved':
+        f = record(r)
+        return PhysicsTargetUnresolved(runtime_id=string(f['runtime_id']))
+    raise ValueError("Unknown PhysicsTarget variant")
+
+def validate_PhysicsRange(value: PhysicsRange) -> None:
+    if not isinstance(value, PhysicsRange):
+        raise TypeError("Expected PhysicsRange")
+    if isinstance(value.Minimum, bool) or not isinstance(value.Minimum, (float, int)) or not math.isfinite(value.Minimum) or abs(value.Minimum) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.Default, bool) or not isinstance(value.Default, (float, int)) or not math.isfinite(value.Default) or abs(value.Default) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.Maximum, bool) or not isinstance(value.Maximum, (float, int)) or not math.isfinite(value.Maximum) or abs(value.Maximum) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+
+def encode_PhysicsRange(value: PhysicsRange) -> object:
+    return {'Minimum': value.Minimum, 'Default': value.Default, 'Maximum': value.Maximum}
+
+def read_PhysicsRange(value: object) -> PhysicsRange:
+    if isinstance(value, PhysicsRange): return value
+    r = record(value)
+    return PhysicsRange(Minimum=number(r['Minimum']), Default=number(r['Default']), Maximum=number(r['Maximum']))
+
+def validate_PoseEdit(value: PoseEdit) -> None:
+    if isinstance(value, PoseEditCreate):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PoseEditCreateGroup):
+        if not isinstance(value.pose_id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PoseEditCreateEntry):
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PoseEditCreateLink):
+        if not isinstance(value.entry_id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PoseEditPatch):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        validate_PoseFields(value.expected)
+        validate_PoseFields(value.fields)
+    elif isinstance(value, PoseEditMove):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        validate_PoseCollection(value.destination)
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PoseEditDuplicate):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+        validate_PoseCollection(value.destination)
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PoseEditDelete):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    elif isinstance(value, PoseEditDissolveGroup):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if not isinstance(value.destination, str):
+            raise ValueError("Expected string")
+        if value.before is not None:
+            if not isinstance(value.before, str):
+                raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected PoseEdit")
+
+def encode_PoseEdit(value: PoseEdit) -> object:
+    if isinstance(value, PoseEditCreate):
+        return {'operation': 'create', **cast(Mapping[str, object], {'id': value.id})}
+    elif isinstance(value, PoseEditCreateGroup):
+        return {'operation': 'create_group', **cast(Mapping[str, object], {'pose_id': value.pose_id, 'id': value.id, 'name': value.name, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PoseEditCreateEntry):
+        return {'operation': 'create_entry', **cast(Mapping[str, object], {'group_id': value.group_id, 'id': value.id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PoseEditCreateLink):
+        return {'operation': 'create_link', **cast(Mapping[str, object], {'entry_id': value.entry_id, 'id': value.id, 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PoseEditPatch):
+        return {'operation': 'patch', **cast(Mapping[str, object], {'id': value.id, 'expected': encode_PoseFields(value.expected), 'fields': encode_PoseFields(value.fields)})}
+    elif isinstance(value, PoseEditMove):
+        return {'operation': 'move', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'destination': encode_PoseCollection(value.destination), 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PoseEditDuplicate):
+        return {'operation': 'duplicate', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids], 'destination': encode_PoseCollection(value.destination), 'before': None if value.before is None else value.before})}
+    elif isinstance(value, PoseEditDelete):
+        return {'operation': 'delete', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids]})}
+    elif isinstance(value, PoseEditDissolveGroup):
+        return {'operation': 'dissolve_group', **cast(Mapping[str, object], {'id': value.id, 'destination': value.destination, 'before': None if value.before is None else value.before})}
+    raise TypeError("Expected PoseEdit")
+
+def read_PoseEdit(value: object) -> PoseEdit:
+    if isinstance(value, (PoseEditCreate, PoseEditCreateGroup, PoseEditCreateEntry, PoseEditCreateLink, PoseEditPatch, PoseEditMove, PoseEditDuplicate, PoseEditDelete, PoseEditDissolveGroup,)): return value
+    r = record(value)
+    tag = string(r['operation'])
+    if tag == 'create':
+        f = record(r)
+        return PoseEditCreate(id=string(f['id']))
+    elif tag == 'create_group':
+        f = record(r)
+        return PoseEditCreateGroup(pose_id=string(f['pose_id']), id=string(f['id']), name=string(f['name']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'create_entry':
+        f = record(r)
+        return PoseEditCreateEntry(group_id=string(f['group_id']), id=string(f['id']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'create_link':
+        f = record(r)
+        return PoseEditCreateLink(entry_id=string(f['entry_id']), id=string(f['id']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'patch':
+        f = record(r)
+        return PoseEditPatch(id=string(f['id']), expected=read_PoseFields(f['expected']), fields=read_PoseFields(f['fields']))
+    elif tag == 'move':
+        f = record(r)
+        return PoseEditMove(ids=tuple(string(v0) for v0 in sequence(f['ids'])), destination=read_PoseCollection(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'duplicate':
+        f = record(r)
+        return PoseEditDuplicate(ids=tuple(string(v0) for v0 in sequence(f['ids'])), destination=read_PoseCollection(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    elif tag == 'delete':
+        f = record(r)
+        return PoseEditDelete(ids=tuple(string(v0) for v0 in sequence(f['ids'])))
+    elif tag == 'dissolve_group':
+        f = record(r)
+        return PoseEditDissolveGroup(id=string(f['id']), destination=string(f['destination']), before=None if f.get('before', None) is None else string(f.get('before', None)))
+    raise ValueError("Unknown PoseEdit variant")
+
+def validate_PoseFields(value: PoseFields) -> None:
+    if isinstance(value, PoseFieldsAsset):
+        if value.fade_in is not None:
+            if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
+                raise ValueError("Expected f32")
+    elif isinstance(value, PoseFieldsGroup):
+        if not isinstance(value.name, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PoseFieldsEntry):
+        validate_PosePartRef(value.part)
+    elif isinstance(value, PoseFieldsLink):
+        validate_PosePartRef(value.target)
+    else:
+        raise TypeError("Expected PoseFields")
+
+def encode_PoseFields(value: PoseFields) -> object:
+    if isinstance(value, PoseFieldsAsset):
+        return {'kind': 'asset', **cast(Mapping[str, object], {'fade_in': None if value.fade_in is None else value.fade_in})}
+    elif isinstance(value, PoseFieldsGroup):
+        return {'kind': 'group', **cast(Mapping[str, object], {'name': value.name})}
+    elif isinstance(value, PoseFieldsEntry):
+        return {'kind': 'entry', **cast(Mapping[str, object], {'part': encode_PosePartRef(value.part)})}
+    elif isinstance(value, PoseFieldsLink):
+        return {'kind': 'link', **cast(Mapping[str, object], {'target': encode_PosePartRef(value.target)})}
+    raise TypeError("Expected PoseFields")
+
+def read_PoseFields(value: object) -> PoseFields:
+    if isinstance(value, (PoseFieldsAsset, PoseFieldsGroup, PoseFieldsEntry, PoseFieldsLink,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'asset':
+        f = record(r)
+        return PoseFieldsAsset(fade_in=None if f.get('fade_in', None) is None else number(f.get('fade_in', None)))
+    elif tag == 'group':
+        f = record(r)
+        return PoseFieldsGroup(name=string(f['name']))
+    elif tag == 'entry':
+        f = record(r)
+        return PoseFieldsEntry(part=read_PosePartRef(f['part']))
+    elif tag == 'link':
+        f = record(r)
+        return PoseFieldsLink(target=read_PosePartRef(f['target']))
+    raise ValueError("Unknown PoseFields variant")
+
+def validate_PosePartRef(value: PosePartRef) -> None:
+    if isinstance(value, PosePartRefUnspecified):
+        pass
+    elif isinstance(value, PosePartRefResolved):
+        if not isinstance(value.part_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PosePartRefUnresolved):
+        if not isinstance(value.runtime_id, str):
+            raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected PosePartRef")
+
+def encode_PosePartRef(value: PosePartRef) -> object:
+    if isinstance(value, PosePartRefUnspecified):
+        return {'kind': 'unspecified', **cast(Mapping[str, object], {})}
+    elif isinstance(value, PosePartRefResolved):
+        return {'kind': 'resolved', **cast(Mapping[str, object], {'part_id': value.part_id})}
+    elif isinstance(value, PosePartRefUnresolved):
+        return {'kind': 'unresolved', **cast(Mapping[str, object], {'runtime_id': value.runtime_id})}
+    raise TypeError("Expected PosePartRef")
+
+def read_PosePartRef(value: object) -> PosePartRef:
+    if isinstance(value, (PosePartRefUnspecified, PosePartRefResolved, PosePartRefUnresolved,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'unspecified':
+        return PosePartRefUnspecified()
+    elif tag == 'resolved':
+        f = record(r)
+        return PosePartRefResolved(part_id=string(f['part_id']))
+    elif tag == 'unresolved':
+        f = record(r)
+        return PosePartRefUnresolved(runtime_id=string(f['runtime_id']))
+    raise ValueError("Unknown PosePartRef variant")
+
+def validate_PoseCollection(value: PoseCollection) -> None:
+    if isinstance(value, PoseCollectionGroups):
+        pass
+    elif isinstance(value, PoseCollectionEntries):
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PoseCollectionLinks):
+        if not isinstance(value.entry_id, str):
+            raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected PoseCollection")
+
+def encode_PoseCollection(value: PoseCollection) -> object:
+    if isinstance(value, PoseCollectionGroups):
+        return {'kind': 'groups', **cast(Mapping[str, object], {})}
+    elif isinstance(value, PoseCollectionEntries):
+        return {'kind': 'entries', **cast(Mapping[str, object], {'group_id': value.group_id})}
+    elif isinstance(value, PoseCollectionLinks):
+        return {'kind': 'links', **cast(Mapping[str, object], {'entry_id': value.entry_id})}
+    raise TypeError("Expected PoseCollection")
+
+def read_PoseCollection(value: object) -> PoseCollection:
+    if isinstance(value, (PoseCollectionGroups, PoseCollectionEntries, PoseCollectionLinks,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'groups':
+        return PoseCollectionGroups()
+    elif tag == 'entries':
+        f = record(r)
+        return PoseCollectionEntries(group_id=string(f['group_id']))
+    elif tag == 'links':
+        f = record(r)
+        return PoseCollectionLinks(entry_id=string(f['entry_id']))
+    raise ValueError("Unknown PoseCollection variant")
+
+def validate_MotionClip(value: MotionClip) -> None:
+    if not isinstance(value, MotionClip):
+        raise TypeError("Expected MotionClip")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.name, str):
+        raise ValueError("Expected string")
+    if isinstance(value.duration, bool) or not isinstance(value.duration, (float, int)) or not math.isfinite(value.duration) or abs(value.duration) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.fps, bool) or not isinstance(value.fps, (float, int)) or not math.isfinite(value.fps) or abs(value.fps) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if type(value.looping) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.restricted_beziers) is not bool:
+        raise ValueError("Expected bool")
+    if value.fade_in is not None:
+        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if value.fade_out is not None:
+        if isinstance(value.fade_out, bool) or not isinstance(value.fade_out, (float, int)) or not math.isfinite(value.fade_out) or abs(value.fade_out) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if not isinstance(value.track_order, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.track_order:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.tracks, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.tracks:
+        validate_MotionTrack(v0)
+    if not isinstance(value.events, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.events:
+        validate_MotionEvent(v0)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    for key0, v0 in value.meta_extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if value.opaque_source_ids is not None:
+        for key0, v0 in value.opaque_source_ids.items():
+            if not isinstance(key0, str):
+                raise ValueError("Expected string")
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    if value.opaque_source_content_hash is not None:
+        if not isinstance(value.opaque_source_content_hash, str):
+            raise ValueError("Expected string")
+
+def encode_MotionClip(value: MotionClip) -> object:
+    return {'id': value.id, 'name': value.name, 'duration': value.duration, 'fps': value.fps, 'looping': value.looping, 'restricted_beziers': value.restricted_beziers, 'fade_in': None if value.fade_in is None else value.fade_in, 'fade_out': None if value.fade_out is None else value.fade_out, 'track_order': [v0 for v0 in value.track_order], 'tracks': [encode_MotionTrack(v0) for v0 in value.tracks], 'events': [encode_MotionEvent(v0) for v0 in value.events], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}, 'meta_extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.meta_extensions.items()}, 'opaque_source_ids': None if value.opaque_source_ids is None else {str(key0): v0 for key0, v0 in value.opaque_source_ids.items()}, 'opaque_source_content_hash': None if value.opaque_source_content_hash is None else value.opaque_source_content_hash}
+
+def read_MotionClip(value: object) -> MotionClip:
+    if isinstance(value, MotionClip): return value
+    r = record(value)
+    return MotionClip(id=string(r['id']), name=string(r['name']), duration=number(r['duration']), fps=number(r['fps']), looping=_boolean(r['looping']), restricted_beziers=_boolean(r['restricted_beziers']), fade_in=None if r.get('fade_in', None) is None else number(r.get('fade_in', None)), fade_out=None if r.get('fade_out', None) is None else number(r.get('fade_out', None)), track_order=tuple(string(v0) for v0 in sequence(r['track_order'])), tracks=tuple(read_MotionTrack(v0) for v0 in sequence(r['tracks'])), events=tuple(read_MotionEvent(v0) for v0 in sequence(r['events'])), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()}, meta_extensions={key0: _read_extension(v0) for key0, v0 in record(r['meta_extensions']).items()}, opaque_source_ids=None if r.get('opaque_source_ids', None) is None else {key0: string(v0) for key0, v0 in record(r.get('opaque_source_ids', None)).items()}, opaque_source_content_hash=None if r.get('opaque_source_content_hash', None) is None else string(r.get('opaque_source_content_hash', None)))
+
+def validate_MotionTrack(value: MotionTrack) -> None:
+    if not isinstance(value, MotionTrack):
+        raise TypeError("Expected MotionTrack")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    validate_MotionTrackTarget(value.target)
+    validate_MotionKey(value.initial)
+    if not isinstance(value.segments, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.segments:
+        validate_MotionSegment(v0)
+    if value.fade_in is not None:
+        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if value.fade_out is not None:
+        if isinstance(value.fade_out, bool) or not isinstance(value.fade_out, (float, int)) or not math.isfinite(value.fade_out) or abs(value.fade_out) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_MotionTrack(value: MotionTrack) -> object:
+    return {'id': value.id, 'target': encode_MotionTrackTarget(value.target), 'initial': encode_MotionKey(value.initial), 'segments': [encode_MotionSegment(v0) for v0 in value.segments], 'fade_in': None if value.fade_in is None else value.fade_in, 'fade_out': None if value.fade_out is None else value.fade_out, 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_MotionTrack(value: object) -> MotionTrack:
+    if isinstance(value, MotionTrack): return value
+    r = record(value)
+    return MotionTrack(id=string(r['id']), target=read_MotionTrackTarget(r['target']), initial=read_MotionKey(r['initial']), segments=tuple(read_MotionSegment(v0) for v0 in sequence(r['segments'])), fade_in=None if r.get('fade_in', None) is None else number(r.get('fade_in', None)), fade_out=None if r.get('fade_out', None) is None else number(r.get('fade_out', None)), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_MotionKey(value: MotionKey) -> None:
+    if not isinstance(value, MotionKey):
+        raise TypeError("Expected MotionKey")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+
+def encode_MotionKey(value: MotionKey) -> object:
+    return {'id': value.id, 'time': value.time, 'value': value.value}
+
+def read_MotionKey(value: object) -> MotionKey:
+    if isinstance(value, MotionKey): return value
+    r = record(value)
+    return MotionKey(id=string(r['id']), time=number(r['time']), value=number(r['value']))
+
+def validate_MotionSegment(value: MotionSegment) -> None:
+    if isinstance(value, MotionSegmentLinear):
+        validate_MotionKey(value.end)
+    elif isinstance(value, MotionSegmentBezier):
+        validate_MotionPoint(value.control1)
+        validate_MotionPoint(value.control2)
+        validate_MotionKey(value.end)
+    elif isinstance(value, MotionSegmentStepped):
+        validate_MotionKey(value.end)
+    elif isinstance(value, MotionSegmentInverseStepped):
+        validate_MotionKey(value.end)
+    else:
+        raise TypeError("Expected MotionSegment")
+
+def encode_MotionSegment(value: MotionSegment) -> object:
+    if isinstance(value, MotionSegmentLinear):
+        return {'kind': 'linear', **cast(Mapping[str, object], {'end': encode_MotionKey(value.end)})}
+    elif isinstance(value, MotionSegmentBezier):
+        return {'kind': 'bezier', **cast(Mapping[str, object], {'control1': encode_MotionPoint(value.control1), 'control2': encode_MotionPoint(value.control2), 'end': encode_MotionKey(value.end)})}
+    elif isinstance(value, MotionSegmentStepped):
+        return {'kind': 'stepped', **cast(Mapping[str, object], {'end': encode_MotionKey(value.end)})}
+    elif isinstance(value, MotionSegmentInverseStepped):
+        return {'kind': 'inverse_stepped', **cast(Mapping[str, object], {'end': encode_MotionKey(value.end)})}
+    raise TypeError("Expected MotionSegment")
+
+def read_MotionSegment(value: object) -> MotionSegment:
+    if isinstance(value, (MotionSegmentLinear, MotionSegmentBezier, MotionSegmentStepped, MotionSegmentInverseStepped,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'linear':
+        f = record(r)
+        return MotionSegmentLinear(end=read_MotionKey(f['end']))
+    elif tag == 'bezier':
+        f = record(r)
+        return MotionSegmentBezier(control1=read_MotionPoint(f['control1']), control2=read_MotionPoint(f['control2']), end=read_MotionKey(f['end']))
+    elif tag == 'stepped':
+        f = record(r)
+        return MotionSegmentStepped(end=read_MotionKey(f['end']))
+    elif tag == 'inverse_stepped':
+        f = record(r)
+        return MotionSegmentInverseStepped(end=read_MotionKey(f['end']))
+    raise ValueError("Unknown MotionSegment variant")
+
+def validate_MotionPoint(value: MotionPoint) -> None:
+    if not isinstance(value, MotionPoint):
+        raise TypeError("Expected MotionPoint")
+    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+
+def encode_MotionPoint(value: MotionPoint) -> object:
+    return {'time': value.time, 'value': value.value}
+
+def read_MotionPoint(value: object) -> MotionPoint:
+    if isinstance(value, MotionPoint): return value
+    r = record(value)
+    return MotionPoint(time=number(r['time']), value=number(r['value']))
+
+def validate_ExpressionAsset(value: ExpressionAsset) -> None:
+    if not isinstance(value, ExpressionAsset):
+        raise TypeError("Expected ExpressionAsset")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.name, str):
+        raise ValueError("Expected string")
+    if value.file_type is not None:
+        if not isinstance(value.file_type, str):
+            raise ValueError("Expected string")
+    if value.fade_in is not None:
+        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if value.fade_out is not None:
+        if isinstance(value.fade_out, bool) or not isinstance(value.fade_out, (float, int)) or not math.isfinite(value.fade_out) or abs(value.fade_out) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if not isinstance(value.entries, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.entries:
+        validate_ExpressionEntry(v0)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if value.opaque_source_ids is not None:
+        for key0, v0 in value.opaque_source_ids.items():
+            if not isinstance(key0, str):
+                raise ValueError("Expected string")
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    if value.opaque_source_content_hash is not None:
+        if not isinstance(value.opaque_source_content_hash, str):
+            raise ValueError("Expected string")
+
+def encode_ExpressionAsset(value: ExpressionAsset) -> object:
+    return {'id': value.id, 'name': value.name, 'file_type': None if value.file_type is None else value.file_type, 'fade_in': None if value.fade_in is None else value.fade_in, 'fade_out': None if value.fade_out is None else value.fade_out, 'entries': [encode_ExpressionEntry(v0) for v0 in value.entries], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}, 'opaque_source_ids': None if value.opaque_source_ids is None else {str(key0): v0 for key0, v0 in value.opaque_source_ids.items()}, 'opaque_source_content_hash': None if value.opaque_source_content_hash is None else value.opaque_source_content_hash}
+
+def read_ExpressionAsset(value: object) -> ExpressionAsset:
+    if isinstance(value, ExpressionAsset): return value
+    r = record(value)
+    return ExpressionAsset(id=string(r['id']), name=string(r['name']), file_type=None if r.get('file_type', None) is None else string(r.get('file_type', None)), fade_in=None if r.get('fade_in', None) is None else number(r.get('fade_in', None)), fade_out=None if r.get('fade_out', None) is None else number(r.get('fade_out', None)), entries=tuple(read_ExpressionEntry(v0) for v0 in sequence(r['entries'])), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()}, opaque_source_ids=None if r.get('opaque_source_ids', None) is None else {key0: string(v0) for key0, v0 in record(r.get('opaque_source_ids', None)).items()}, opaque_source_content_hash=None if r.get('opaque_source_content_hash', None) is None else string(r.get('opaque_source_content_hash', None)))
+
+def validate_ExpressionEntry(value: ExpressionEntry) -> None:
+    if not isinstance(value, ExpressionEntry):
+        raise TypeError("Expected ExpressionEntry")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    validate_ExpressionTarget(value.target)
+    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if value.blend is not None:
+        validate_ExpressionBlend(value.blend)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_ExpressionEntry(value: ExpressionEntry) -> object:
+    return {'id': value.id, 'target': encode_ExpressionTarget(value.target), 'value': value.value, 'blend': None if value.blend is None else encode_ExpressionBlend(value.blend), 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_ExpressionEntry(value: object) -> ExpressionEntry:
+    if isinstance(value, ExpressionEntry): return value
+    r = record(value)
+    return ExpressionEntry(id=string(r['id']), target=read_ExpressionTarget(r['target']), value=number(r['value']), blend=None if r.get('blend', None) is None else read_ExpressionBlend(r.get('blend', None)), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_PhysicsAsset(value: PhysicsAsset) -> None:
+    if not isinstance(value, PhysicsAsset):
+        raise TypeError("Expected PhysicsAsset")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    validate_PhysicsDefinition(value.data)
+    if value.opaque_source_ids is not None:
+        for key0, v0 in value.opaque_source_ids.items():
+            if not isinstance(key0, str):
+                raise ValueError("Expected string")
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    if value.opaque_source_content_hash is not None:
+        if not isinstance(value.opaque_source_content_hash, str):
+            raise ValueError("Expected string")
+
+def encode_PhysicsAsset(value: PhysicsAsset) -> object:
+    return {'id': value.id, 'data': encode_PhysicsDefinition(value.data), 'opaque_source_ids': None if value.opaque_source_ids is None else {str(key0): v0 for key0, v0 in value.opaque_source_ids.items()}, 'opaque_source_content_hash': None if value.opaque_source_content_hash is None else value.opaque_source_content_hash}
+
+def read_PhysicsAsset(value: object) -> PhysicsAsset:
+    if isinstance(value, PhysicsAsset): return value
+    r = record(value)
+    return PhysicsAsset(id=string(r['id']), data=read_PhysicsDefinition(r['data']), opaque_source_ids=None if r.get('opaque_source_ids', None) is None else {key0: string(v0) for key0, v0 in record(r.get('opaque_source_ids', None)).items()}, opaque_source_content_hash=None if r.get('opaque_source_content_hash', None) is None else string(r.get('opaque_source_content_hash', None)))
+
+def validate_PhysicsDefinition(value: PhysicsDefinition) -> None:
+    if not isinstance(value, PhysicsDefinition):
+        raise TypeError("Expected PhysicsDefinition")
+    if type(value.version) is not int or not 0 <= value.version < 4294967296:
+        raise ValueError("Expected u32")
+    validate_PhysicsMeta(value.meta)
+    if not isinstance(value.settings, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.settings:
+        validate_PhysicsSetting(v0)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_PhysicsDefinition(value: PhysicsDefinition) -> object:
+    return {'version': value.version, 'meta': encode_PhysicsMeta(value.meta), 'settings': [encode_PhysicsSetting(v0) for v0 in value.settings], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsDefinition(value: object) -> PhysicsDefinition:
+    if isinstance(value, PhysicsDefinition): return value
+    r = record(value)
+    return PhysicsDefinition(version=integer(r['version']), meta=read_PhysicsMeta(r['meta']), settings=tuple(read_PhysicsSetting(v0) for v0 in sequence(r['settings'])), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_PhysicsMeta(value: PhysicsMeta) -> None:
+    if not isinstance(value, PhysicsMeta):
+        raise TypeError("Expected PhysicsMeta")
+    if type(value.PhysicsSettingCount) is not int or not 0 <= value.PhysicsSettingCount < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if type(value.TotalInputCount) is not int or not 0 <= value.TotalInputCount < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if type(value.TotalOutputCount) is not int or not 0 <= value.TotalOutputCount < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if type(value.VertexCount) is not int or not 0 <= value.VertexCount < 18446744073709551616:
+        raise ValueError("Expected usize")
+    validate_PhysicsForces(value.EffectiveForces)
+    if not isinstance(value.PhysicsDictionary, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.PhysicsDictionary:
+        validate_PhysicsDictionaryEntry(v0)
+    if value.Fps is not None:
+        if isinstance(value.Fps, bool) or not isinstance(value.Fps, (float, int)) or not math.isfinite(value.Fps) or abs(value.Fps) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if set(value.extensions).intersection(('EffectiveForces', 'Fps', 'PhysicsDictionary', 'PhysicsSettingCount', 'TotalInputCount', 'TotalOutputCount', 'VertexCount')):
+        raise ValueError("Extension keys overlap declared fields")
+
+def encode_PhysicsMeta(value: PhysicsMeta) -> object:
+    return {'PhysicsSettingCount': value.PhysicsSettingCount, 'TotalInputCount': value.TotalInputCount, 'TotalOutputCount': value.TotalOutputCount, 'VertexCount': value.VertexCount, 'EffectiveForces': encode_PhysicsForces(value.EffectiveForces), 'PhysicsDictionary': [encode_PhysicsDictionaryEntry(v0) for v0 in value.PhysicsDictionary], 'Fps': None if value.Fps is None else value.Fps, **{str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsMeta(value: object) -> PhysicsMeta:
+    if isinstance(value, PhysicsMeta): return value
+    r = record(value)
+    return PhysicsMeta(PhysicsSettingCount=integer(r['PhysicsSettingCount']), TotalInputCount=integer(r['TotalInputCount']), TotalOutputCount=integer(r['TotalOutputCount']), VertexCount=integer(r['VertexCount']), EffectiveForces=read_PhysicsForces(r['EffectiveForces']), PhysicsDictionary=tuple(read_PhysicsDictionaryEntry(v0) for v0 in sequence(r['PhysicsDictionary'])), Fps=None if r.get('Fps', None) is None else number(r.get('Fps', None)), extensions={key0: _read_extension(v0) for key0, v0 in record({key: item for key, item in r.items() if key not in ('PhysicsSettingCount', 'TotalInputCount', 'TotalOutputCount', 'VertexCount', 'EffectiveForces', 'PhysicsDictionary', 'Fps')}).items()})
+
+def validate_PhysicsForces(value: PhysicsForces) -> None:
+    if not isinstance(value, PhysicsForces):
+        raise TypeError("Expected PhysicsForces")
+    validate_PhysicsVector(value.Gravity)
+    validate_PhysicsVector(value.Wind)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if set(value.extensions).intersection(('Gravity', 'Wind')):
+        raise ValueError("Extension keys overlap declared fields")
+
+def encode_PhysicsForces(value: PhysicsForces) -> object:
+    return {'Gravity': encode_PhysicsVector(value.Gravity), 'Wind': encode_PhysicsVector(value.Wind), **{str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsForces(value: object) -> PhysicsForces:
+    if isinstance(value, PhysicsForces): return value
+    r = record(value)
+    return PhysicsForces(Gravity=read_PhysicsVector(r['Gravity']), Wind=read_PhysicsVector(r['Wind']), extensions={key0: _read_extension(v0) for key0, v0 in record({key: item for key, item in r.items() if key not in ('Gravity', 'Wind')}).items()})
+
+def validate_PhysicsDictionaryEntry(value: PhysicsDictionaryEntry) -> None:
+    if not isinstance(value, PhysicsDictionaryEntry):
+        raise TypeError("Expected PhysicsDictionaryEntry")
+    if not isinstance(value.Id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.Name, str):
+        raise ValueError("Expected string")
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if set(value.extensions).intersection(('Id', 'Name')):
+        raise ValueError("Extension keys overlap declared fields")
+
+def encode_PhysicsDictionaryEntry(value: PhysicsDictionaryEntry) -> object:
+    return {'Id': value.Id, 'Name': value.Name, **{str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsDictionaryEntry(value: object) -> PhysicsDictionaryEntry:
+    if isinstance(value, PhysicsDictionaryEntry): return value
+    r = record(value)
+    return PhysicsDictionaryEntry(Id=string(r['Id']), Name=string(r['Name']), extensions={key0: _read_extension(v0) for key0, v0 in record({key: item for key, item in r.items() if key not in ('Id', 'Name')}).items()})
+
+def validate_PhysicsSetting(value: PhysicsSetting) -> None:
+    if not isinstance(value, PhysicsSetting):
+        raise TypeError("Expected PhysicsSetting")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.external_id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.inputs, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.inputs:
+        validate_PhysicsInput(v0)
+    if not isinstance(value.outputs, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.outputs:
+        validate_PhysicsOutput(v0)
+    if not isinstance(value.vertices, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.vertices:
+        validate_PhysicsNode(v0)
+    validate_PhysicsNormalization(value.normalization)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_PhysicsSetting(value: PhysicsSetting) -> object:
+    return {'id': value.id, 'external_id': value.external_id, 'inputs': [encode_PhysicsInput(v0) for v0 in value.inputs], 'outputs': [encode_PhysicsOutput(v0) for v0 in value.outputs], 'vertices': [encode_PhysicsNode(v0) for v0 in value.vertices], 'normalization': encode_PhysicsNormalization(value.normalization), 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsSetting(value: object) -> PhysicsSetting:
+    if isinstance(value, PhysicsSetting): return value
+    r = record(value)
+    return PhysicsSetting(id=string(r['id']), external_id=string(r['external_id']), inputs=tuple(read_PhysicsInput(v0) for v0 in sequence(r['inputs'])), outputs=tuple(read_PhysicsOutput(v0) for v0 in sequence(r['outputs'])), vertices=tuple(read_PhysicsNode(v0) for v0 in sequence(r['vertices'])), normalization=read_PhysicsNormalization(r['normalization']), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_PhysicsInput(value: PhysicsInput) -> None:
+    if not isinstance(value, PhysicsInput):
+        raise TypeError("Expected PhysicsInput")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    validate_PhysicsTarget(value.source)
+    for key0, v0 in value.reference_extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if isinstance(value.weight, bool) or not isinstance(value.weight, (float, int)) or not math.isfinite(value.weight) or abs(value.weight) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    validate_PhysicsAxis(value.kind)
+    if type(value.reflect) is not bool:
+        raise ValueError("Expected bool")
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_PhysicsInput(value: PhysicsInput) -> object:
+    return {'id': value.id, 'source': encode_PhysicsTarget(value.source), 'reference_extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.reference_extensions.items()}, 'weight': value.weight, 'kind': encode_PhysicsAxis(value.kind), 'reflect': value.reflect, 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsInput(value: object) -> PhysicsInput:
+    if isinstance(value, PhysicsInput): return value
+    r = record(value)
+    return PhysicsInput(id=string(r['id']), source=read_PhysicsTarget(r['source']), reference_extensions={key0: _read_extension(v0) for key0, v0 in record(r['reference_extensions']).items()}, weight=number(r['weight']), kind=read_PhysicsAxis(r['kind']), reflect=_boolean(r['reflect']), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_PhysicsOutput(value: PhysicsOutput) -> None:
+    if not isinstance(value, PhysicsOutput):
+        raise TypeError("Expected PhysicsOutput")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    validate_PhysicsTarget(value.destination)
+    for key0, v0 in value.reference_extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if not isinstance(value.node_id, str):
+        raise ValueError("Expected string")
+    if isinstance(value.scale, bool) or not isinstance(value.scale, (float, int)) or not math.isfinite(value.scale) or abs(value.scale) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.weight, bool) or not isinstance(value.weight, (float, int)) or not math.isfinite(value.weight) or abs(value.weight) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    validate_PhysicsAxis(value.kind)
+    if type(value.reflect) is not bool:
+        raise ValueError("Expected bool")
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_PhysicsOutput(value: PhysicsOutput) -> object:
+    return {'id': value.id, 'destination': encode_PhysicsTarget(value.destination), 'reference_extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.reference_extensions.items()}, 'node_id': value.node_id, 'scale': value.scale, 'weight': value.weight, 'kind': encode_PhysicsAxis(value.kind), 'reflect': value.reflect, 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsOutput(value: object) -> PhysicsOutput:
+    if isinstance(value, PhysicsOutput): return value
+    r = record(value)
+    return PhysicsOutput(id=string(r['id']), destination=read_PhysicsTarget(r['destination']), reference_extensions={key0: _read_extension(v0) for key0, v0 in record(r['reference_extensions']).items()}, node_id=string(r['node_id']), scale=number(r['scale']), weight=number(r['weight']), kind=read_PhysicsAxis(r['kind']), reflect=_boolean(r['reflect']), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_PhysicsNormalization(value: PhysicsNormalization) -> None:
+    if not isinstance(value, PhysicsNormalization):
+        raise TypeError("Expected PhysicsNormalization")
+    validate_PhysicsRange(value.Position)
+    validate_PhysicsRange(value.Angle)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if set(value.extensions).intersection(('Angle', 'Position')):
+        raise ValueError("Extension keys overlap declared fields")
+
+def encode_PhysicsNormalization(value: PhysicsNormalization) -> object:
+    return {'Position': encode_PhysicsRange(value.Position), 'Angle': encode_PhysicsRange(value.Angle), **{str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PhysicsNormalization(value: object) -> PhysicsNormalization:
+    if isinstance(value, PhysicsNormalization): return value
+    r = record(value)
+    return PhysicsNormalization(Position=read_PhysicsRange(r['Position']), Angle=read_PhysicsRange(r['Angle']), extensions={key0: _read_extension(v0) for key0, v0 in record({key: item for key, item in r.items() if key not in ('Position', 'Angle')}).items()})
+
+def validate_PoseAsset(value: PoseAsset) -> None:
+    if not isinstance(value, PoseAsset):
+        raise TypeError("Expected PoseAsset")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if value.file_type is not None:
+        if not isinstance(value.file_type, str):
+            raise ValueError("Expected string")
+    if value.fade_in is not None:
+        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if not isinstance(value.groups, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.groups:
+        validate_PoseGroup(v0)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+    if value.opaque_source_ids is not None:
+        for key0, v0 in value.opaque_source_ids.items():
+            if not isinstance(key0, str):
+                raise ValueError("Expected string")
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    if value.opaque_source_content_hash is not None:
+        if not isinstance(value.opaque_source_content_hash, str):
+            raise ValueError("Expected string")
+
+def encode_PoseAsset(value: PoseAsset) -> object:
+    return {'id': value.id, 'file_type': None if value.file_type is None else value.file_type, 'fade_in': None if value.fade_in is None else value.fade_in, 'groups': [encode_PoseGroup(v0) for v0 in value.groups], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}, 'opaque_source_ids': None if value.opaque_source_ids is None else {str(key0): v0 for key0, v0 in value.opaque_source_ids.items()}, 'opaque_source_content_hash': None if value.opaque_source_content_hash is None else value.opaque_source_content_hash}
+
+def read_PoseAsset(value: object) -> PoseAsset:
+    if isinstance(value, PoseAsset): return value
+    r = record(value)
+    return PoseAsset(id=string(r['id']), file_type=None if r.get('file_type', None) is None else string(r.get('file_type', None)), fade_in=None if r.get('fade_in', None) is None else number(r.get('fade_in', None)), groups=tuple(read_PoseGroup(v0) for v0 in sequence(r['groups'])), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()}, opaque_source_ids=None if r.get('opaque_source_ids', None) is None else {key0: string(v0) for key0, v0 in record(r.get('opaque_source_ids', None)).items()}, opaque_source_content_hash=None if r.get('opaque_source_content_hash', None) is None else string(r.get('opaque_source_content_hash', None)))
+
+def validate_PoseGroup(value: PoseGroup) -> None:
+    if not isinstance(value, PoseGroup):
+        raise TypeError("Expected PoseGroup")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.name, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.entries, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.entries:
+        validate_PoseEntry(v0)
+
+def encode_PoseGroup(value: PoseGroup) -> object:
+    return {'id': value.id, 'name': value.name, 'entries': [encode_PoseEntry(v0) for v0 in value.entries]}
+
+def read_PoseGroup(value: object) -> PoseGroup:
+    if isinstance(value, PoseGroup): return value
+    r = record(value)
+    return PoseGroup(id=string(r['id']), name=string(r['name']), entries=tuple(read_PoseEntry(v0) for v0 in sequence(r['entries'])))
+
+def validate_PoseEntry(value: PoseEntry) -> None:
+    if not isinstance(value, PoseEntry):
+        raise TypeError("Expected PoseEntry")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    validate_PosePartRef(value.part)
+    if value.links is not None:
+        if not isinstance(value.links, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.links:
+            validate_PoseLink(v0)
+    for key0, v0 in value.extensions.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        _validate_extension(v0)
+
+def encode_PoseEntry(value: PoseEntry) -> object:
+    return {'id': value.id, 'part': encode_PosePartRef(value.part), 'links': None if value.links is None else [encode_PoseLink(v0) for v0 in value.links], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
+
+def read_PoseEntry(value: object) -> PoseEntry:
+    if isinstance(value, PoseEntry): return value
+    r = record(value)
+    return PoseEntry(id=string(r['id']), part=read_PosePartRef(r['part']), links=None if r.get('links', None) is None else tuple(read_PoseLink(v0) for v0 in sequence(r.get('links', None))), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
+
+def validate_PoseLink(value: PoseLink) -> None:
+    if not isinstance(value, PoseLink):
+        raise TypeError("Expected PoseLink")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    validate_PosePartRef(value.target)
+
+def encode_PoseLink(value: PoseLink) -> object:
+    return {'id': value.id, 'target': encode_PosePartRef(value.target)}
+
+def read_PoseLink(value: object) -> PoseLink:
+    if isinstance(value, PoseLink): return value
+    r = record(value)
+    return PoseLink(id=string(r['id']), target=read_PosePartRef(r['target']))
+
 def validate_ModelSetup(value: ModelSetup) -> None:
     if not isinstance(value, ModelSetup):
         raise TypeError("Expected ModelSetup")
@@ -9444,14 +13589,38 @@ def validate_ModelingQuery(value: ModelingQuery) -> None:
     for v0 in value.attachments:
         if not isinstance(v0, str):
             raise ValueError("Expected string")
+    if not isinstance(value.motions, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.motions:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.motion_groups, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.motion_groups:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.motion_registrations, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.motion_registrations:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.expressions, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.expressions:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if type(value.physics) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.pose) is not bool:
+        raise ValueError("Expected bool")
 
 def encode_ModelingQuery(value: ModelingQuery) -> object:
-    return {'assets': [v0 for v0 in value.assets], 'meshes': [v0 for v0 in value.meshes], 'parameters': [v0 for v0 in value.parameters], 'parts': [v0 for v0 in value.parts], 'transforms': [v0 for v0 in value.transforms], 'bindings': [v0 for v0 in value.bindings], 'scene_bindings': [v0 for v0 in value.scene_bindings], 'blend_key_tables': [v0 for v0 in value.blend_key_tables], 'blend_constraints': [v0 for v0 in value.blend_constraints], 'blend_bindings': [v0 for v0 in value.blend_bindings], 'glues': [v0 for v0 in value.glues], 'offscreens': [v0 for v0 in value.offscreens], 'parameter_groups': [v0 for v0 in value.parameter_groups], 'attachments': [v0 for v0 in value.attachments]}
+    return {'assets': [v0 for v0 in value.assets], 'meshes': [v0 for v0 in value.meshes], 'parameters': [v0 for v0 in value.parameters], 'parts': [v0 for v0 in value.parts], 'transforms': [v0 for v0 in value.transforms], 'bindings': [v0 for v0 in value.bindings], 'scene_bindings': [v0 for v0 in value.scene_bindings], 'blend_key_tables': [v0 for v0 in value.blend_key_tables], 'blend_constraints': [v0 for v0 in value.blend_constraints], 'blend_bindings': [v0 for v0 in value.blend_bindings], 'glues': [v0 for v0 in value.glues], 'offscreens': [v0 for v0 in value.offscreens], 'parameter_groups': [v0 for v0 in value.parameter_groups], 'attachments': [v0 for v0 in value.attachments], 'motions': [v0 for v0 in value.motions], 'motion_groups': [v0 for v0 in value.motion_groups], 'motion_registrations': [v0 for v0 in value.motion_registrations], 'expressions': [v0 for v0 in value.expressions], 'physics': value.physics, 'pose': value.pose}
 
 def read_ModelingQuery(value: object) -> ModelingQuery:
     if isinstance(value, ModelingQuery): return value
     r = record(value)
-    return ModelingQuery(assets=tuple(string(v0) for v0 in sequence(r.get('assets', []))), meshes=tuple(string(v0) for v0 in sequence(r.get('meshes', []))), parameters=tuple(string(v0) for v0 in sequence(r.get('parameters', []))), parts=tuple(string(v0) for v0 in sequence(r.get('parts', []))), transforms=tuple(string(v0) for v0 in sequence(r.get('transforms', []))), bindings=tuple(string(v0) for v0 in sequence(r.get('bindings', []))), scene_bindings=tuple(string(v0) for v0 in sequence(r.get('scene_bindings', []))), blend_key_tables=tuple(string(v0) for v0 in sequence(r.get('blend_key_tables', []))), blend_constraints=tuple(string(v0) for v0 in sequence(r.get('blend_constraints', []))), blend_bindings=tuple(string(v0) for v0 in sequence(r.get('blend_bindings', []))), glues=tuple(string(v0) for v0 in sequence(r.get('glues', []))), offscreens=tuple(string(v0) for v0 in sequence(r.get('offscreens', []))), parameter_groups=tuple(string(v0) for v0 in sequence(r.get('parameter_groups', []))), attachments=tuple(string(v0) for v0 in sequence(r.get('attachments', []))))
+    return ModelingQuery(assets=tuple(string(v0) for v0 in sequence(r.get('assets', []))), meshes=tuple(string(v0) for v0 in sequence(r.get('meshes', []))), parameters=tuple(string(v0) for v0 in sequence(r.get('parameters', []))), parts=tuple(string(v0) for v0 in sequence(r.get('parts', []))), transforms=tuple(string(v0) for v0 in sequence(r.get('transforms', []))), bindings=tuple(string(v0) for v0 in sequence(r.get('bindings', []))), scene_bindings=tuple(string(v0) for v0 in sequence(r.get('scene_bindings', []))), blend_key_tables=tuple(string(v0) for v0 in sequence(r.get('blend_key_tables', []))), blend_constraints=tuple(string(v0) for v0 in sequence(r.get('blend_constraints', []))), blend_bindings=tuple(string(v0) for v0 in sequence(r.get('blend_bindings', []))), glues=tuple(string(v0) for v0 in sequence(r.get('glues', []))), offscreens=tuple(string(v0) for v0 in sequence(r.get('offscreens', []))), parameter_groups=tuple(string(v0) for v0 in sequence(r.get('parameter_groups', []))), attachments=tuple(string(v0) for v0 in sequence(r.get('attachments', []))), motions=tuple(string(v0) for v0 in sequence(r.get('motions', []))), motion_groups=tuple(string(v0) for v0 in sequence(r.get('motion_groups', []))), motion_registrations=tuple(string(v0) for v0 in sequence(r.get('motion_registrations', []))), expressions=tuple(string(v0) for v0 in sequence(r.get('expressions', []))), physics=_boolean(r.get('physics', False)), pose=_boolean(r.get('pose', False)))
 
 def validate_OwnedModelingRecords(value: OwnedModelingRecords) -> None:
     if not isinstance(value, OwnedModelingRecords):
@@ -9546,14 +13715,38 @@ def validate_OwnedModelingRecords(value: OwnedModelingRecords) -> None:
     for v0 in value.attachments:
         if v0 is not None:
             validate_PackageAttachment(v0)
+    if not isinstance(value.motions, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.motions:
+        if v0 is not None:
+            validate_MotionClip(v0)
+    if not isinstance(value.motion_groups, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.motion_groups:
+        if v0 is not None:
+            validate_MotionGroup(v0)
+    if not isinstance(value.motion_registrations, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.motion_registrations:
+        if v0 is not None:
+            validate_MotionRegistration(v0)
+    if not isinstance(value.expressions, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.expressions:
+        if v0 is not None:
+            validate_ExpressionAsset(v0)
+    if value.physics is not None:
+        validate_PhysicsAsset(value.physics)
+    if value.pose is not None:
+        validate_PoseAsset(value.pose)
 
 def encode_OwnedModelingRecords(value: OwnedModelingRecords) -> object:
-    return {'document_id': value.document_id, 'setup': encode_ModelSetup(value.setup), 'hierarchy_order': encode_HierarchyOrder(value.hierarchy_order), 'editor_state': encode_EditorState(value.editor_state), 'display_info': encode_DisplayInfo(value.display_info), 'model3_settings': encode_Model3Settings(value.model3_settings), 'draw_order_groups': None if value.draw_order_groups is None else [encode_DrawOrderGroup(v0) for v0 in value.draw_order_groups], 'ids': {str(key0): [v1 for v1 in v0] for key0, v0 in value.ids.items()}, 'assets': [None if v0 is None else encode_ImageAsset(v0) for v0 in value.assets], 'meshes': [None if v0 is None else encode_Mesh(v0) for v0 in value.meshes], 'parameters': [None if v0 is None else encode_Parameter(v0) for v0 in value.parameters], 'parts': [None if v0 is None else encode_Part(v0) for v0 in value.parts], 'transforms': [None if v0 is None else encode_Transform(v0) for v0 in value.transforms], 'bindings': [None if v0 is None else encode_MeshBinding(v0) for v0 in value.bindings], 'scene_bindings': [None if v0 is None else encode_SceneBinding(v0) for v0 in value.scene_bindings], 'blend_key_tables': [None if v0 is None else encode_BlendShapeKeyTable(v0) for v0 in value.blend_key_tables], 'blend_constraints': [None if v0 is None else encode_BlendShapeConstraint(v0) for v0 in value.blend_constraints], 'blend_bindings': [None if v0 is None else encode_BlendShapeBinding(v0) for v0 in value.blend_bindings], 'glues': [None if v0 is None else encode_Glue(v0) for v0 in value.glues], 'offscreens': [None if v0 is None else encode_Offscreen(v0) for v0 in value.offscreens], 'parameter_groups': [None if v0 is None else encode_CdiParameterGroup(v0) for v0 in value.parameter_groups], 'attachments': [None if v0 is None else encode_PackageAttachment(v0) for v0 in value.attachments]}
+    return {'document_id': value.document_id, 'setup': encode_ModelSetup(value.setup), 'hierarchy_order': encode_HierarchyOrder(value.hierarchy_order), 'editor_state': encode_EditorState(value.editor_state), 'display_info': encode_DisplayInfo(value.display_info), 'model3_settings': encode_Model3Settings(value.model3_settings), 'draw_order_groups': None if value.draw_order_groups is None else [encode_DrawOrderGroup(v0) for v0 in value.draw_order_groups], 'ids': {str(key0): [v1 for v1 in v0] for key0, v0 in value.ids.items()}, 'assets': [None if v0 is None else encode_ImageAsset(v0) for v0 in value.assets], 'meshes': [None if v0 is None else encode_Mesh(v0) for v0 in value.meshes], 'parameters': [None if v0 is None else encode_Parameter(v0) for v0 in value.parameters], 'parts': [None if v0 is None else encode_Part(v0) for v0 in value.parts], 'transforms': [None if v0 is None else encode_Transform(v0) for v0 in value.transforms], 'bindings': [None if v0 is None else encode_MeshBinding(v0) for v0 in value.bindings], 'scene_bindings': [None if v0 is None else encode_SceneBinding(v0) for v0 in value.scene_bindings], 'blend_key_tables': [None if v0 is None else encode_BlendShapeKeyTable(v0) for v0 in value.blend_key_tables], 'blend_constraints': [None if v0 is None else encode_BlendShapeConstraint(v0) for v0 in value.blend_constraints], 'blend_bindings': [None if v0 is None else encode_BlendShapeBinding(v0) for v0 in value.blend_bindings], 'glues': [None if v0 is None else encode_Glue(v0) for v0 in value.glues], 'offscreens': [None if v0 is None else encode_Offscreen(v0) for v0 in value.offscreens], 'parameter_groups': [None if v0 is None else encode_CdiParameterGroup(v0) for v0 in value.parameter_groups], 'attachments': [None if v0 is None else encode_PackageAttachment(v0) for v0 in value.attachments], 'motions': [None if v0 is None else encode_MotionClip(v0) for v0 in value.motions], 'motion_groups': [None if v0 is None else encode_MotionGroup(v0) for v0 in value.motion_groups], 'motion_registrations': [None if v0 is None else encode_MotionRegistration(v0) for v0 in value.motion_registrations], 'expressions': [None if v0 is None else encode_ExpressionAsset(v0) for v0 in value.expressions], 'physics': None if value.physics is None else encode_PhysicsAsset(value.physics), 'pose': None if value.pose is None else encode_PoseAsset(value.pose)}
 
 def read_OwnedModelingRecords(value: object) -> OwnedModelingRecords:
     if isinstance(value, OwnedModelingRecords): return value
     r = record(value)
-    return OwnedModelingRecords(document_id=string(r['document_id']), setup=read_ModelSetup(r['setup']), hierarchy_order=read_HierarchyOrder(r['hierarchy_order']), editor_state=read_EditorState(r['editor_state']), display_info=read_DisplayInfo(r['display_info']), model3_settings=read_Model3Settings(r['model3_settings']), draw_order_groups=None if r.get('draw_order_groups', None) is None else tuple(read_DrawOrderGroup(v0) for v0 in sequence(r.get('draw_order_groups', None))), ids={key0: tuple(string(v1) for v1 in sequence(v0)) for key0, v0 in record(r['ids']).items()}, assets=tuple(None if v0 is None else read_ImageAsset(v0) for v0 in sequence(r['assets'])), meshes=tuple(None if v0 is None else read_Mesh(v0) for v0 in sequence(r['meshes'])), parameters=tuple(None if v0 is None else read_Parameter(v0) for v0 in sequence(r['parameters'])), parts=tuple(None if v0 is None else read_Part(v0) for v0 in sequence(r['parts'])), transforms=tuple(None if v0 is None else read_Transform(v0) for v0 in sequence(r['transforms'])), bindings=tuple(None if v0 is None else read_MeshBinding(v0) for v0 in sequence(r['bindings'])), scene_bindings=tuple(None if v0 is None else read_SceneBinding(v0) for v0 in sequence(r['scene_bindings'])), blend_key_tables=tuple(None if v0 is None else read_BlendShapeKeyTable(v0) for v0 in sequence(r['blend_key_tables'])), blend_constraints=tuple(None if v0 is None else read_BlendShapeConstraint(v0) for v0 in sequence(r['blend_constraints'])), blend_bindings=tuple(None if v0 is None else read_BlendShapeBinding(v0) for v0 in sequence(r['blend_bindings'])), glues=tuple(None if v0 is None else read_Glue(v0) for v0 in sequence(r['glues'])), offscreens=tuple(None if v0 is None else read_Offscreen(v0) for v0 in sequence(r['offscreens'])), parameter_groups=tuple(None if v0 is None else read_CdiParameterGroup(v0) for v0 in sequence(r['parameter_groups'])), attachments=tuple(None if v0 is None else read_PackageAttachment(v0) for v0 in sequence(r['attachments'])))
+    return OwnedModelingRecords(document_id=string(r['document_id']), setup=read_ModelSetup(r['setup']), hierarchy_order=read_HierarchyOrder(r['hierarchy_order']), editor_state=read_EditorState(r['editor_state']), display_info=read_DisplayInfo(r['display_info']), model3_settings=read_Model3Settings(r['model3_settings']), draw_order_groups=None if r.get('draw_order_groups', None) is None else tuple(read_DrawOrderGroup(v0) for v0 in sequence(r.get('draw_order_groups', None))), ids={key0: tuple(string(v1) for v1 in sequence(v0)) for key0, v0 in record(r['ids']).items()}, assets=tuple(None if v0 is None else read_ImageAsset(v0) for v0 in sequence(r['assets'])), meshes=tuple(None if v0 is None else read_Mesh(v0) for v0 in sequence(r['meshes'])), parameters=tuple(None if v0 is None else read_Parameter(v0) for v0 in sequence(r['parameters'])), parts=tuple(None if v0 is None else read_Part(v0) for v0 in sequence(r['parts'])), transforms=tuple(None if v0 is None else read_Transform(v0) for v0 in sequence(r['transforms'])), bindings=tuple(None if v0 is None else read_MeshBinding(v0) for v0 in sequence(r['bindings'])), scene_bindings=tuple(None if v0 is None else read_SceneBinding(v0) for v0 in sequence(r['scene_bindings'])), blend_key_tables=tuple(None if v0 is None else read_BlendShapeKeyTable(v0) for v0 in sequence(r['blend_key_tables'])), blend_constraints=tuple(None if v0 is None else read_BlendShapeConstraint(v0) for v0 in sequence(r['blend_constraints'])), blend_bindings=tuple(None if v0 is None else read_BlendShapeBinding(v0) for v0 in sequence(r['blend_bindings'])), glues=tuple(None if v0 is None else read_Glue(v0) for v0 in sequence(r['glues'])), offscreens=tuple(None if v0 is None else read_Offscreen(v0) for v0 in sequence(r['offscreens'])), parameter_groups=tuple(None if v0 is None else read_CdiParameterGroup(v0) for v0 in sequence(r['parameter_groups'])), attachments=tuple(None if v0 is None else read_PackageAttachment(v0) for v0 in sequence(r['attachments'])), motions=tuple(None if v0 is None else read_MotionClip(v0) for v0 in sequence(r['motions'])), motion_groups=tuple(None if v0 is None else read_MotionGroup(v0) for v0 in sequence(r['motion_groups'])), motion_registrations=tuple(None if v0 is None else read_MotionRegistration(v0) for v0 in sequence(r['motion_registrations'])), expressions=tuple(None if v0 is None else read_ExpressionAsset(v0) for v0 in sequence(r['expressions'])), physics=None if r.get('physics', None) is None else read_PhysicsAsset(r.get('physics', None)), pose=None if r.get('pose', None) is None else read_PoseAsset(r.get('pose', None)))
 
 def validate_DisplayInfo(value: DisplayInfo) -> None:
     if not isinstance(value, DisplayInfo):
@@ -9852,6 +14045,26 @@ def read_ModelHitArea(value: object) -> ModelHitArea:
     r = record(value)
     return ModelHitArea(id=string(r['id']), name=string(r['name']), mesh=read_ModelTargetRef(r['mesh']), extensions={key0: _read_extension(v0) for key0, v0 in record(r.get('extensions', {})).items()})
 
+def validate_MotionGroup(value: MotionGroup) -> None:
+    if not isinstance(value, MotionGroup):
+        raise TypeError("Expected MotionGroup")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.name, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.entries, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.entries:
+        validate_MotionRegistration(v0)
+
+def encode_MotionGroup(value: MotionGroup) -> object:
+    return {'id': value.id, 'name': value.name, 'entries': [encode_MotionRegistration(v0) for v0 in value.entries]}
+
+def read_MotionGroup(value: object) -> MotionGroup:
+    if isinstance(value, MotionGroup): return value
+    r = record(value)
+    return MotionGroup(id=string(r['id']), name=string(r['name']), entries=tuple(read_MotionRegistration(v0) for v0 in sequence(r['entries'])))
+
 def validate_AddressSelector(value: AddressSelector) -> None:
     if isinstance(value, AddressSelectorScene):
         if not isinstance(value.id, str):
@@ -9885,6 +14098,18 @@ def validate_AddressSelector(value: AddressSelector) -> None:
             raise ValueError("Expected string")
     elif isinstance(value, AddressSelectorDocument):
         validate_DocumentField(value.field)
+    elif isinstance(value, AddressSelectorMotionRegistration):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, AddressSelectorExpressionEntry):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, AddressSelectorPhysics):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, AddressSelectorPose):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
     else:
         raise TypeError("Expected AddressSelector")
 
@@ -9909,10 +14134,18 @@ def encode_AddressSelector(value: AddressSelector) -> object:
         return {'kind': 'attachment_path', **cast(Mapping[str, object], {'id': value.id})}
     elif isinstance(value, AddressSelectorDocument):
         return {'kind': 'document', **cast(Mapping[str, object], {'field': encode_DocumentField(value.field)})}
+    elif isinstance(value, AddressSelectorMotionRegistration):
+        return {'kind': 'motion_registration', **cast(Mapping[str, object], {'id': value.id})}
+    elif isinstance(value, AddressSelectorExpressionEntry):
+        return {'kind': 'expression_entry', **cast(Mapping[str, object], {'id': value.id})}
+    elif isinstance(value, AddressSelectorPhysics):
+        return {'kind': 'physics', **cast(Mapping[str, object], {'id': value.id})}
+    elif isinstance(value, AddressSelectorPose):
+        return {'kind': 'pose', **cast(Mapping[str, object], {'id': value.id})}
     raise TypeError("Expected AddressSelector")
 
 def read_AddressSelector(value: object) -> AddressSelector:
-    if isinstance(value, (AddressSelectorScene, AddressSelectorDrawingGroup, AddressSelectorBinding, AddressSelectorOrganization, AddressSelectorContent, AddressSelectorReference, AddressSelectorSelection, AddressSelectorResourceName, AddressSelectorAttachmentPath, AddressSelectorDocument,)): return value
+    if isinstance(value, (AddressSelectorScene, AddressSelectorDrawingGroup, AddressSelectorBinding, AddressSelectorOrganization, AddressSelectorContent, AddressSelectorReference, AddressSelectorSelection, AddressSelectorResourceName, AddressSelectorAttachmentPath, AddressSelectorDocument, AddressSelectorMotionRegistration, AddressSelectorExpressionEntry, AddressSelectorPhysics, AddressSelectorPose,)): return value
     r = record(value)
     tag = string(r['kind'])
     if tag == 'scene':
@@ -9945,6 +14178,18 @@ def read_AddressSelector(value: object) -> AddressSelector:
     elif tag == 'document':
         f = record(r)
         return AddressSelectorDocument(field=read_DocumentField(f['field']))
+    elif tag == 'motion_registration':
+        f = record(r)
+        return AddressSelectorMotionRegistration(id=string(f['id']))
+    elif tag == 'expression_entry':
+        f = record(r)
+        return AddressSelectorExpressionEntry(id=string(f['id']))
+    elif tag == 'physics':
+        f = record(r)
+        return AddressSelectorPhysics(id=string(f['id']))
+    elif tag == 'pose':
+        f = record(r)
+        return AddressSelectorPose(id=string(f['id']))
     raise ValueError("Unknown AddressSelector variant")
 
 def validate_SceneField(value: SceneField) -> None:
@@ -10087,6 +14332,17 @@ def validate_AddressPatch(value: AddressPatch) -> None:
             raise ValueError("Expected string")
     elif isinstance(value, AddressPatchDocument):
         validate_DocumentValue(value.value)
+    elif isinstance(value, AddressPatchMotionRegistration):
+        validate_MotionRegistration(value.entry)
+    elif isinstance(value, AddressPatchExpressionEntry):
+        validate_ExpressionEntryFields(value.fields)
+    elif isinstance(value, AddressPatchPhysics):
+        if not isinstance(value.changes, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.changes:
+            validate_PhysicsProperty(v0)
+    elif isinstance(value, AddressPatchPose):
+        validate_PoseFields(value.fields)
     else:
         raise TypeError("Expected AddressPatch")
 
@@ -10111,10 +14367,18 @@ def encode_AddressPatch(value: AddressPatch) -> object:
         return {'kind': 'attachment_path', **cast(Mapping[str, object], {'path': value.path})}
     elif isinstance(value, AddressPatchDocument):
         return {'kind': 'document', **cast(Mapping[str, object], {'value': encode_DocumentValue(value.value)})}
+    elif isinstance(value, AddressPatchMotionRegistration):
+        return {'kind': 'motion_registration', **cast(Mapping[str, object], {'entry': encode_MotionRegistration(value.entry)})}
+    elif isinstance(value, AddressPatchExpressionEntry):
+        return {'kind': 'expression_entry', **cast(Mapping[str, object], {'fields': encode_ExpressionEntryFields(value.fields)})}
+    elif isinstance(value, AddressPatchPhysics):
+        return {'kind': 'physics', **cast(Mapping[str, object], {'changes': [encode_PhysicsProperty(v0) for v0 in value.changes]})}
+    elif isinstance(value, AddressPatchPose):
+        return {'kind': 'pose', **cast(Mapping[str, object], {'fields': encode_PoseFields(value.fields)})}
     raise TypeError("Expected AddressPatch")
 
 def read_AddressPatch(value: object) -> AddressPatch:
-    if isinstance(value, (AddressPatchScene, AddressPatchDrawingRange, AddressPatchBinding, AddressPatchOrganization, AddressPatchContent, AddressPatchReference, AddressPatchSelection, AddressPatchResourceName, AddressPatchAttachmentPath, AddressPatchDocument,)): return value
+    if isinstance(value, (AddressPatchScene, AddressPatchDrawingRange, AddressPatchBinding, AddressPatchOrganization, AddressPatchContent, AddressPatchReference, AddressPatchSelection, AddressPatchResourceName, AddressPatchAttachmentPath, AddressPatchDocument, AddressPatchMotionRegistration, AddressPatchExpressionEntry, AddressPatchPhysics, AddressPatchPose,)): return value
     r = record(value)
     tag = string(r['kind'])
     if tag == 'scene':
@@ -10147,6 +14411,18 @@ def read_AddressPatch(value: object) -> AddressPatch:
     elif tag == 'document':
         f = record(r)
         return AddressPatchDocument(value=read_DocumentValue(f['value']))
+    elif tag == 'motion_registration':
+        f = record(r)
+        return AddressPatchMotionRegistration(entry=read_MotionRegistration(f['entry']))
+    elif tag == 'expression_entry':
+        f = record(r)
+        return AddressPatchExpressionEntry(fields=read_ExpressionEntryFields(f['fields']))
+    elif tag == 'physics':
+        f = record(r)
+        return AddressPatchPhysics(changes=tuple(read_PhysicsProperty(v0) for v0 in sequence(f['changes'])))
+    elif tag == 'pose':
+        f = record(r)
+        return AddressPatchPose(fields=read_PoseFields(f['fields']))
     raise ValueError("Unknown AddressPatch variant")
 
 def validate_BindingFieldPatch(value: BindingFieldPatch) -> None:
@@ -10263,6 +14539,21 @@ def validate_CollectionQuery(value: CollectionQuery) -> None:
         pass
     elif isinstance(value, CollectionQueryDocument):
         validate_DocumentField(value.field)
+    elif isinstance(value, CollectionQueryMotion):
+        validate_MotionContainer(value.collection)
+    elif isinstance(value, CollectionQueryMotionGroups):
+        pass
+    elif isinstance(value, CollectionQueryClips):
+        pass
+    elif isinstance(value, CollectionQueryExpressions):
+        pass
+    elif isinstance(value, CollectionQueryExpressionEntries):
+        if not isinstance(value.expression_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, CollectionQueryPhysics):
+        validate_PhysicsCollection(value.collection)
+    elif isinstance(value, CollectionQueryPose):
+        validate_PoseCollection(value.collection)
     else:
         raise TypeError("Expected CollectionQuery")
 
@@ -10279,10 +14570,24 @@ def encode_CollectionQuery(value: CollectionQuery) -> object:
         return {'kind': 'attachments', **cast(Mapping[str, object], {})}
     elif isinstance(value, CollectionQueryDocument):
         return {'kind': 'document', **cast(Mapping[str, object], {'field': encode_DocumentField(value.field)})}
+    elif isinstance(value, CollectionQueryMotion):
+        return {'kind': 'motion', **cast(Mapping[str, object], {'collection': encode_MotionContainer(value.collection)})}
+    elif isinstance(value, CollectionQueryMotionGroups):
+        return {'kind': 'motion_groups', **cast(Mapping[str, object], {})}
+    elif isinstance(value, CollectionQueryClips):
+        return {'kind': 'clips', **cast(Mapping[str, object], {})}
+    elif isinstance(value, CollectionQueryExpressions):
+        return {'kind': 'expressions', **cast(Mapping[str, object], {})}
+    elif isinstance(value, CollectionQueryExpressionEntries):
+        return {'kind': 'expression_entries', **cast(Mapping[str, object], {'expression_id': value.expression_id})}
+    elif isinstance(value, CollectionQueryPhysics):
+        return {'kind': 'physics', **cast(Mapping[str, object], {'collection': encode_PhysicsCollection(value.collection)})}
+    elif isinstance(value, CollectionQueryPose):
+        return {'kind': 'pose', **cast(Mapping[str, object], {'collection': encode_PoseCollection(value.collection)})}
     raise TypeError("Expected CollectionQuery")
 
 def read_CollectionQuery(value: object) -> CollectionQuery:
-    if isinstance(value, (CollectionQueryScene, CollectionQueryOrganization, CollectionQueryReferences, CollectionQueryResources, CollectionQueryAttachments, CollectionQueryDocument,)): return value
+    if isinstance(value, (CollectionQueryScene, CollectionQueryOrganization, CollectionQueryReferences, CollectionQueryResources, CollectionQueryAttachments, CollectionQueryDocument, CollectionQueryMotion, CollectionQueryMotionGroups, CollectionQueryClips, CollectionQueryExpressions, CollectionQueryExpressionEntries, CollectionQueryPhysics, CollectionQueryPose,)): return value
     r = record(value)
     tag = string(r['kind'])
     if tag == 'scene':
@@ -10301,7 +14606,68 @@ def read_CollectionQuery(value: object) -> CollectionQuery:
     elif tag == 'document':
         f = record(r)
         return CollectionQueryDocument(field=read_DocumentField(f['field']))
+    elif tag == 'motion':
+        f = record(r)
+        return CollectionQueryMotion(collection=read_MotionContainer(f['collection']))
+    elif tag == 'motion_groups':
+        return CollectionQueryMotionGroups()
+    elif tag == 'clips':
+        return CollectionQueryClips()
+    elif tag == 'expressions':
+        return CollectionQueryExpressions()
+    elif tag == 'expression_entries':
+        f = record(r)
+        return CollectionQueryExpressionEntries(expression_id=string(f['expression_id']))
+    elif tag == 'physics':
+        f = record(r)
+        return CollectionQueryPhysics(collection=read_PhysicsCollection(f['collection']))
+    elif tag == 'pose':
+        f = record(r)
+        return CollectionQueryPose(collection=read_PoseCollection(f['collection']))
     raise ValueError("Unknown CollectionQuery variant")
+
+def validate_PhysicsCollection(value: PhysicsCollection) -> None:
+    if isinstance(value, PhysicsCollectionGroups):
+        pass
+    elif isinstance(value, PhysicsCollectionInputs):
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PhysicsCollectionOutputs):
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, PhysicsCollectionNodes):
+        if not isinstance(value.group_id, str):
+            raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected PhysicsCollection")
+
+def encode_PhysicsCollection(value: PhysicsCollection) -> object:
+    if isinstance(value, PhysicsCollectionGroups):
+        return {'kind': 'groups', **cast(Mapping[str, object], {})}
+    elif isinstance(value, PhysicsCollectionInputs):
+        return {'kind': 'inputs', **cast(Mapping[str, object], {'group_id': value.group_id})}
+    elif isinstance(value, PhysicsCollectionOutputs):
+        return {'kind': 'outputs', **cast(Mapping[str, object], {'group_id': value.group_id})}
+    elif isinstance(value, PhysicsCollectionNodes):
+        return {'kind': 'nodes', **cast(Mapping[str, object], {'group_id': value.group_id})}
+    raise TypeError("Expected PhysicsCollection")
+
+def read_PhysicsCollection(value: object) -> PhysicsCollection:
+    if isinstance(value, (PhysicsCollectionGroups, PhysicsCollectionInputs, PhysicsCollectionOutputs, PhysicsCollectionNodes,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'groups':
+        return PhysicsCollectionGroups()
+    elif tag == 'inputs':
+        f = record(r)
+        return PhysicsCollectionInputs(group_id=string(f['group_id']))
+    elif tag == 'outputs':
+        f = record(r)
+        return PhysicsCollectionOutputs(group_id=string(f['group_id']))
+    elif tag == 'nodes':
+        f = record(r)
+        return PhysicsCollectionNodes(group_id=string(f['group_id']))
+    raise ValueError("Unknown PhysicsCollection variant")
 
 def validate_Capabilities(value: Capabilities) -> None:
     if isinstance(value, CapabilitiesScene):
@@ -10322,6 +14688,14 @@ def validate_Capabilities(value: Capabilities) -> None:
         validate_CollectionCapabilities(value.value)
     elif isinstance(value, CapabilitiesDocument):
         validate_CapabilityState(value.value)
+    elif isinstance(value, CapabilitiesMotion):
+        validate_MotionCapabilities(value.value)
+    elif isinstance(value, CapabilitiesExpression):
+        validate_ExpressionCapabilities(value.value)
+    elif isinstance(value, CapabilitiesPhysics):
+        validate_PhysicsCapabilities(value.value)
+    elif isinstance(value, CapabilitiesPose):
+        validate_PoseCapabilities(value.value)
     else:
         raise TypeError("Expected Capabilities")
 
@@ -10344,10 +14718,18 @@ def encode_Capabilities(value: Capabilities) -> object:
         return {'domain': 'collection', 'values': encode_CollectionCapabilities(value.value)}
     elif isinstance(value, CapabilitiesDocument):
         return {'domain': 'document', 'values': encode_CapabilityState(value.value)}
+    elif isinstance(value, CapabilitiesMotion):
+        return {'domain': 'motion', 'values': encode_MotionCapabilities(value.value)}
+    elif isinstance(value, CapabilitiesExpression):
+        return {'domain': 'expression', 'values': encode_ExpressionCapabilities(value.value)}
+    elif isinstance(value, CapabilitiesPhysics):
+        return {'domain': 'physics', 'values': encode_PhysicsCapabilities(value.value)}
+    elif isinstance(value, CapabilitiesPose):
+        return {'domain': 'pose', 'values': encode_PoseCapabilities(value.value)}
     raise TypeError("Expected Capabilities")
 
 def read_Capabilities(value: object) -> Capabilities:
-    if isinstance(value, (CapabilitiesScene, CapabilitiesOrganization, CapabilitiesBinding, CapabilitiesContent, CapabilitiesReferences, CapabilitiesResource, CapabilitiesAttachment, CapabilitiesCollection, CapabilitiesDocument,)): return value
+    if isinstance(value, (CapabilitiesScene, CapabilitiesOrganization, CapabilitiesBinding, CapabilitiesContent, CapabilitiesReferences, CapabilitiesResource, CapabilitiesAttachment, CapabilitiesCollection, CapabilitiesDocument, CapabilitiesMotion, CapabilitiesExpression, CapabilitiesPhysics, CapabilitiesPose,)): return value
     r = record(value)
     tag = string(r['domain'])
     if tag == 'scene':
@@ -10368,6 +14750,14 @@ def read_Capabilities(value: object) -> Capabilities:
         return CapabilitiesCollection(value=read_CollectionCapabilities(r['values']))
     elif tag == 'document':
         return CapabilitiesDocument(value=read_CapabilityState(r['values']))
+    elif tag == 'motion':
+        return CapabilitiesMotion(value=read_MotionCapabilities(r['values']))
+    elif tag == 'expression':
+        return CapabilitiesExpression(value=read_ExpressionCapabilities(r['values']))
+    elif tag == 'physics':
+        return CapabilitiesPhysics(value=read_PhysicsCapabilities(r['values']))
+    elif tag == 'pose':
+        return CapabilitiesPose(value=read_PoseCapabilities(r['values']))
     raise ValueError("Unknown Capabilities variant")
 
 def validate_SceneCapabilities(value: SceneCapabilities) -> None:
@@ -10547,6 +14937,91 @@ def read_CollectionCapabilities(value: object) -> CollectionCapabilities:
     if isinstance(value, CollectionCapabilities): return value
     r = record(value)
     return CollectionCapabilities(create=read_CapabilityState(r['create']), move_into=read_CapabilityState(r['move_into']), reorder=read_CapabilityState(r['reorder']))
+
+def validate_MotionCapabilities(value: MotionCapabilities) -> None:
+    if not isinstance(value, MotionCapabilities):
+        raise TypeError("Expected MotionCapabilities")
+    validate_CapabilityState(value.inspect)
+    validate_CapabilityState(value.patch)
+    validate_CapabilityState(value.duplicate)
+    validate_CapabilityState(value.delete)
+    validate_CapabilityState(value.move_object)
+    validate_CapabilityState(value.preview)
+    validate_CapabilityState(value.create_child)
+    validate_CapabilityState(value.reorder)
+    validate_CapabilityState(value.repair)
+    validate_CapabilityState(value.edit_content)
+
+def encode_MotionCapabilities(value: MotionCapabilities) -> object:
+    return {'inspect': encode_CapabilityState(value.inspect), 'patch': encode_CapabilityState(value.patch), 'duplicate': encode_CapabilityState(value.duplicate), 'delete': encode_CapabilityState(value.delete), 'move_object': encode_CapabilityState(value.move_object), 'preview': encode_CapabilityState(value.preview), 'create_child': encode_CapabilityState(value.create_child), 'reorder': encode_CapabilityState(value.reorder), 'repair': encode_CapabilityState(value.repair), 'edit_content': encode_CapabilityState(value.edit_content)}
+
+def read_MotionCapabilities(value: object) -> MotionCapabilities:
+    if isinstance(value, MotionCapabilities): return value
+    r = record(value)
+    return MotionCapabilities(inspect=read_CapabilityState(r['inspect']), patch=read_CapabilityState(r['patch']), duplicate=read_CapabilityState(r['duplicate']), delete=read_CapabilityState(r['delete']), move_object=read_CapabilityState(r['move_object']), preview=read_CapabilityState(r['preview']), create_child=read_CapabilityState(r['create_child']), reorder=read_CapabilityState(r['reorder']), repair=read_CapabilityState(r['repair']), edit_content=read_CapabilityState(r['edit_content']))
+
+def validate_ExpressionCapabilities(value: ExpressionCapabilities) -> None:
+    if not isinstance(value, ExpressionCapabilities):
+        raise TypeError("Expected ExpressionCapabilities")
+    validate_CapabilityState(value.inspect)
+    validate_CapabilityState(value.create_entry)
+    validate_CapabilityState(value.patch)
+    validate_CapabilityState(value.move_entry)
+    validate_CapabilityState(value.duplicate)
+    validate_CapabilityState(value.delete)
+    validate_CapabilityState(value.repair)
+    validate_CapabilityState(value.preview)
+
+def encode_ExpressionCapabilities(value: ExpressionCapabilities) -> object:
+    return {'inspect': encode_CapabilityState(value.inspect), 'create_entry': encode_CapabilityState(value.create_entry), 'patch': encode_CapabilityState(value.patch), 'move_entry': encode_CapabilityState(value.move_entry), 'duplicate': encode_CapabilityState(value.duplicate), 'delete': encode_CapabilityState(value.delete), 'repair': encode_CapabilityState(value.repair), 'preview': encode_CapabilityState(value.preview)}
+
+def read_ExpressionCapabilities(value: object) -> ExpressionCapabilities:
+    if isinstance(value, ExpressionCapabilities): return value
+    r = record(value)
+    return ExpressionCapabilities(inspect=read_CapabilityState(r['inspect']), create_entry=read_CapabilityState(r['create_entry']), patch=read_CapabilityState(r['patch']), move_entry=read_CapabilityState(r['move_entry']), duplicate=read_CapabilityState(r['duplicate']), delete=read_CapabilityState(r['delete']), repair=read_CapabilityState(r['repair']), preview=read_CapabilityState(r['preview']))
+
+def validate_PhysicsCapabilities(value: PhysicsCapabilities) -> None:
+    if not isinstance(value, PhysicsCapabilities):
+        raise TypeError("Expected PhysicsCapabilities")
+    validate_CapabilityState(value.inspect)
+    validate_CapabilityState(value.patch)
+    validate_CapabilityState(value.create_child)
+    validate_CapabilityState(value.duplicate)
+    validate_CapabilityState(value.delete)
+    validate_CapabilityState(value.move_object)
+    validate_CapabilityState(value.reorder)
+    validate_CapabilityState(value.repair)
+    validate_CapabilityState(value.preview)
+
+def encode_PhysicsCapabilities(value: PhysicsCapabilities) -> object:
+    return {'inspect': encode_CapabilityState(value.inspect), 'patch': encode_CapabilityState(value.patch), 'create_child': encode_CapabilityState(value.create_child), 'duplicate': encode_CapabilityState(value.duplicate), 'delete': encode_CapabilityState(value.delete), 'move_object': encode_CapabilityState(value.move_object), 'reorder': encode_CapabilityState(value.reorder), 'repair': encode_CapabilityState(value.repair), 'preview': encode_CapabilityState(value.preview)}
+
+def read_PhysicsCapabilities(value: object) -> PhysicsCapabilities:
+    if isinstance(value, PhysicsCapabilities): return value
+    r = record(value)
+    return PhysicsCapabilities(inspect=read_CapabilityState(r['inspect']), patch=read_CapabilityState(r['patch']), create_child=read_CapabilityState(r['create_child']), duplicate=read_CapabilityState(r['duplicate']), delete=read_CapabilityState(r['delete']), move_object=read_CapabilityState(r['move_object']), reorder=read_CapabilityState(r['reorder']), repair=read_CapabilityState(r['repair']), preview=read_CapabilityState(r['preview']))
+
+def validate_PoseCapabilities(value: PoseCapabilities) -> None:
+    if not isinstance(value, PoseCapabilities):
+        raise TypeError("Expected PoseCapabilities")
+    validate_CapabilityState(value.inspect)
+    validate_CapabilityState(value.patch)
+    validate_CapabilityState(value.create_child)
+    validate_CapabilityState(value.duplicate)
+    validate_CapabilityState(value.delete)
+    validate_CapabilityState(value.move_object)
+    validate_CapabilityState(value.reorder)
+    validate_CapabilityState(value.repair)
+    validate_CapabilityState(value.dissolve)
+    validate_CapabilityState(value.preview)
+
+def encode_PoseCapabilities(value: PoseCapabilities) -> object:
+    return {'inspect': encode_CapabilityState(value.inspect), 'patch': encode_CapabilityState(value.patch), 'create_child': encode_CapabilityState(value.create_child), 'duplicate': encode_CapabilityState(value.duplicate), 'delete': encode_CapabilityState(value.delete), 'move_object': encode_CapabilityState(value.move_object), 'reorder': encode_CapabilityState(value.reorder), 'repair': encode_CapabilityState(value.repair), 'dissolve': encode_CapabilityState(value.dissolve), 'preview': encode_CapabilityState(value.preview)}
+
+def read_PoseCapabilities(value: object) -> PoseCapabilities:
+    if isinstance(value, PoseCapabilities): return value
+    r = record(value)
+    return PoseCapabilities(inspect=read_CapabilityState(r['inspect']), patch=read_CapabilityState(r['patch']), create_child=read_CapabilityState(r['create_child']), duplicate=read_CapabilityState(r['duplicate']), delete=read_CapabilityState(r['delete']), move_object=read_CapabilityState(r['move_object']), reorder=read_CapabilityState(r['reorder']), repair=read_CapabilityState(r['repair']), dissolve=read_CapabilityState(r['dissolve']), preview=read_CapabilityState(r['preview']))
 
 def validate_ObjectKind(value: ObjectKind) -> None:
     if not isinstance(value, ObjectKind):
@@ -11043,6 +15518,6 @@ def read_EditorContext(value: object) -> EditorContext:
     r = record(value)
     return EditorContext(version=read_Version(r['version']), view_id=string(r['view_id']), selected_ids=tuple(string(v0) for v0 in sequence(r['selected_ids'])), workspace=string(r['workspace']), editing_context=string(r['editing_context']), active_tool=string(r['active_tool']), pending_interaction=_boolean(r['pending_interaction']))
 
-OPERATION_TYPES = (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology,)
+OPERATION_TYPES = (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandMotion, ModelingCommandExpression, ModelingCommandPhysics, ModelingCommandPose, ModelingCommandCreateMotion, ModelingCommandReplaceMotion, ModelingCommandCreateExpression, ModelingCommandReplaceExpression, ModelingCommandSetPhysics, ModelingCommandSetPose, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology,)
 
-__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentStrategy', 'ReparentPlacement', 'ReparentContext', 'ConversionDomain', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'SceneKeyform', 'GeometrySpace', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'ExtensionValue']
+__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandMotion', 'ModelingCommandExpression', 'ModelingCommandPhysics', 'ModelingCommandPose', 'ModelingCommandCreateMotion', 'ModelingCommandReplaceMotion', 'ModelingCommandCreateExpression', 'ModelingCommandReplaceExpression', 'ModelingCommandSetPhysics', 'ModelingCommandSetPose', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentStrategy', 'ReparentPlacement', 'ReparentContext', 'ConversionDomain', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionContainerRoot', 'MotionContainerGroup', 'MotionRegistration', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved', 'MotionEvent', 'ExpressionEditCreate', 'ExpressionEditCreateEntry', 'ExpressionEditPatchEntry', 'ExpressionEditMoveEntries', 'ExpressionEditDuplicateEntries', 'ExpressionEditDeleteEntries', 'ExpressionEditDuplicate', 'ExpressionEditDelete', 'ExpressionEditReorder', 'ExpressionEntryFields', 'ExpressionTargetUnspecified', 'ExpressionTargetResolved', 'ExpressionTargetUnresolved', 'ExpressionBlend', 'PhysicsEditCreateGroup', 'PhysicsEditCreateInput', 'PhysicsEditCreateOutput', 'PhysicsEditInsertNode', 'PhysicsEditMoveNode', 'PhysicsEditDuplicateNode', 'PhysicsEditPatch', 'PhysicsEditMoveInputs', 'PhysicsEditMoveOutputs', 'PhysicsEditReorderGroups', 'PhysicsEditDuplicate', 'PhysicsEditDelete', 'PhysicsNode', 'PhysicsVector', 'PhysicsPatch', 'PhysicsAssetPropertyFps', 'PhysicsRigPatch', 'PhysicsPropertyName', 'PhysicsPropertyInputWeight', 'PhysicsPropertyInputAxis', 'PhysicsPropertyInputReflect', 'PhysicsPropertyInputParameter', 'PhysicsPropertyOutputWeight', 'PhysicsPropertyOutputScale', 'PhysicsPropertyOutputAxis', 'PhysicsPropertyOutputReflect', 'PhysicsPropertyOutputParameter', 'PhysicsPropertyOutputNode', 'PhysicsPropertyVertexPosition', 'PhysicsPropertyVertexRadius', 'PhysicsPropertyVertexMobility', 'PhysicsPropertyVertexDelay', 'PhysicsPropertyVertexAcceleration', 'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsAxis', 'PhysicsTargetUnspecified', 'PhysicsTargetResolved', 'PhysicsTargetUnresolved', 'PhysicsRange', 'PoseEditCreate', 'PoseEditCreateGroup', 'PoseEditCreateEntry', 'PoseEditCreateLink', 'PoseEditPatch', 'PoseEditMove', 'PoseEditDuplicate', 'PoseEditDelete', 'PoseEditDissolveGroup', 'PoseFieldsAsset', 'PoseFieldsGroup', 'PoseFieldsEntry', 'PoseFieldsLink', 'PosePartRefUnspecified', 'PosePartRefResolved', 'PosePartRefUnresolved', 'PoseCollectionGroups', 'PoseCollectionEntries', 'PoseCollectionLinks', 'MotionClip', 'MotionTrack', 'MotionKey', 'MotionSegmentLinear', 'MotionSegmentBezier', 'MotionSegmentStepped', 'MotionSegmentInverseStepped', 'MotionPoint', 'ExpressionAsset', 'ExpressionEntry', 'PhysicsAsset', 'PhysicsDefinition', 'PhysicsMeta', 'PhysicsForces', 'PhysicsDictionaryEntry', 'PhysicsSetting', 'PhysicsInput', 'PhysicsOutput', 'PhysicsNormalization', 'PoseAsset', 'PoseGroup', 'PoseEntry', 'PoseLink', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'MotionGroup', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'AddressSelectorMotionRegistration', 'AddressSelectorExpressionEntry', 'AddressSelectorPhysics', 'AddressSelectorPose', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'AddressPatchMotionRegistration', 'AddressPatchExpressionEntry', 'AddressPatchPhysics', 'AddressPatchPose', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CollectionQueryMotion', 'CollectionQueryMotionGroups', 'CollectionQueryClips', 'CollectionQueryExpressions', 'CollectionQueryExpressionEntries', 'CollectionQueryPhysics', 'CollectionQueryPose', 'PhysicsCollectionGroups', 'PhysicsCollectionInputs', 'PhysicsCollectionOutputs', 'PhysicsCollectionNodes', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'CapabilitiesMotion', 'CapabilitiesExpression', 'CapabilitiesPhysics', 'CapabilitiesPose', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'MotionCapabilities', 'ExpressionCapabilities', 'PhysicsCapabilities', 'PoseCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'MotionEdit', 'MotionContainer', 'MotionTrackTarget', 'ExpressionEdit', 'ExpressionTarget', 'PhysicsEdit', 'PhysicsAssetProperty', 'PhysicsProperty', 'PhysicsTarget', 'PoseEdit', 'PoseFields', 'PosePartRef', 'PoseCollection', 'MotionSegment', 'SceneKeyform', 'GeometrySpace', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'PhysicsCollection', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'ExtensionValue']

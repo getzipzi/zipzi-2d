@@ -3,10 +3,21 @@
 use super::*;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct ExpressionEntryFields {
+    /// Typed target reference; unresolved imported runtime labels remain explicit.
     pub target: ExpressionTarget,
+    /// Channel value or replacement payload in the domain declared by this field type.
     pub value: f32,
+    /// Optional expression blend mode; None uses the native Add default.
     pub blend: Option<ExpressionBlend>,
 }
 impl From<&ExpressionEntry> for ExpressionEntryFields {
@@ -20,46 +31,70 @@ impl From<&ExpressionEntry> for ExpressionEntryFields {
 }
 
 /// All positions use stable entry IDs; None appends to the destination.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ExpressionEdit {
     Create {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Human-readable display or registration name; distinct from persistent object identity.
         name: String,
     },
     CreateEntry {
+        /// Stable expression asset ID owning the selected entries.
         owner: String,
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     PatchEntry {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Exact current field values required by the optimistic edit; stale values reject it.
         expected: ExpressionEntryFields,
+        /// Typed replacement fields for the addressed object, applied atomically.
         fields: ExpressionEntryFields,
     },
     MoveEntries {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
+        /// Explicit destination owner/container; order is controlled separately by before.
         destination: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     DuplicateEntries {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
+        /// New stable identities paired with the selected source objects.
         new_ids: Vec<String>,
+        /// Explicit destination owner/container; order is controlled separately by before.
         destination: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     DeleteEntries {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
     },
     Duplicate {
+        /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
         source: String,
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Human-readable display or registration name; distinct from persistent object identity.
         name: String,
+        /// New stable entry IDs paired with the source expression entries.
         entry_ids: Vec<String>,
     },
     Delete {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
     },
     Reorder {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
     },
 }
@@ -323,7 +358,7 @@ impl Document {
                 return Err(Status::error(
                     "OBJECT_LOCKED",
                     "A copied entry or its owner is locked",
-                ))
+                ));
             }
             ExpressionEdit::Duplicate { source, .. }
                 if locked_source(source)
@@ -334,7 +369,7 @@ impl Document {
                         .iter()
                         .any(|e| locked_source(&e.id)) =>
             {
-                return Err(Status::error("OBJECT_LOCKED", source))
+                return Err(Status::error("OBJECT_LOCKED", source));
             }
             ExpressionEdit::Reorder { ids }
                 if ids.iter().enumerate().any(|(index, id)| {
@@ -344,7 +379,7 @@ impl Document {
                 return Err(Status::error(
                     "OBJECT_LOCKED",
                     "A reordered expression is locked",
-                ))
+                ));
             }
             _ => {}
         }

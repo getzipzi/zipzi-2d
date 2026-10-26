@@ -96,6 +96,31 @@ is not a document write. Accept or replace through an Edit. Prepared images,
 Buffers, Plans, references and pixel leases have explicit ownership; close them.
 Candidate/formal/history owners retain accepted image data independently.
 
+Animation authoring uses typed canonical commands through the same Edit and
+Plan contract. Motion clips, registrations, tracks/keys/events, expressions,
+Physics and Pose records can be selected without changing playback or history:
+
+```python
+from uuid import uuid4
+from zipzi import modeling as m
+
+group_id = str(uuid4())
+with session.edit("Animation group") as edit:
+    edit.apply(m.ModelingCommandMotion(
+        intent=m.MotionEditCreateGroup(id=group_id, name="Idle")))
+snapshot = session.modeling.records(m.ModelingQuery(motion_groups=(group_id,)))
+assert snapshot.value.motion_groups[0].name == "Idle"
+```
+
+Empty animation ID lists request no payloads; missing selected IDs produce None
+slots. Set `physics=True` or `pose=True` to select those singleton payloads.
+`session.plan/plan_async` and `edit.plan/plan_async` accept the four domain edit
+commands. Field addresses retain native identity/context/field epochs: editing a
+field and undoing it does not revive the old address. Large curves use the same
+bounded binary transfer and original-call recovery as mesh data. Independent
+animation Preview/playback and GPU observation are not available in this slice;
+native object preview eligibility does not imply a host Preview API is present.
+
 Save with `session.project.save(absolute_host_path).wait()` and inspect `durable`
 and the receipt version. Paths refer to the execution host, not the client machine.
 A client-side file existence check does not prove a remote host saved durably.

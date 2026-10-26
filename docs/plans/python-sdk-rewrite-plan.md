@@ -1,6 +1,6 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25，2026-10-26 收尾。状态：**P3A-0–6、Runtime R4、P3B 与 P4 资源/工程范围已完成；见 [P3B](python-sdk-rewrite/p3b.md)和 [P4](python-sdk-rewrite/p4.md) 核销记录。P3A 本轮 P0 稳定性沿用用户明确豁免，模型/服务修订身份门禁按用户决定移除。P5–P7 按本文依赖推进。** 结果见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+日期：2026-10-25，2026-10-26 更新。状态：**P3A-0–6、Runtime R4、P3B 与 P4 资源/工程范围已完成；见 [P3B](python-sdk-rewrite/p3b.md)和 [P4](python-sdk-rewrite/p4.md) 核销记录。P5 与 Runtime R5 同步实施中，首批动画创作已接通，独立 Preview/Observer 等待交付。P3A 本轮 P0 稳定性沿用用户明确豁免，模型/服务修订身份门禁按用户决定移除。** 结果见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
 **2026-10-26 收尾完成：**正式分发、生成摘要、当前文档及受影响验证已收敛。用户确认验收运行配置为 `gpt-6.1-sol/high`，明确删除模型/服务身份门禁；配置与可选服务元数据只记录，不参与通过或停止派发判定。固定功能门禁原评分 38/42、补充复核 41/42 和已有确定性/安装/Editor 证据保留。具体结果见 [P3A-6 完成决定](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。
 
@@ -15,6 +15,8 @@
 **P3B 原定范围已核销。** 对已有 R4 实现补齐保形换父级、网格轴转换、三类场景绑定、集合关系与嵌套身份失效的公共 Python recipe；六项两后端定向回归、类型及正常 wheel 隔离安装均通过。具体范围见 [P3B 记录](python-sdk-rewrite/p3b.md)。
 
 **P4 资源与工程范围已核销。** 独立 worktree 中补齐大附件/图片的保存、另存、重开和包往返，确认 Save As 的磁盘历史路径规则；九项定向回归、类型和两后端隔离安装通过。复用 R4 产品实现，独立附件便利子集合仍按需另列；见 [P4 记录](python-sdk-rewrite/p4.md)。
+
+**P5 与 Runtime R5 同步推进中。** P4 提交 `e1401632` 后，首批接通四个动画创作领域及选取式 records、SDK Plan、地址和能力查询；使用已有两后端、Snapshot/Job 和完整调用恢复。具体实现、验证和剩余范围见 [R5/P5 动画创作记录](sdk-runtime/python2-r5-authoring.md)，整体阶段尚未完成。
 
 当前 `zipzi-python2` 也没有兼容包袱：允许删除、重命名及改变返回类型，不保留旧别名、双入口、弃用期或迁移层；共享领域语义、资源正确性和独立行为预期继续保留。历史验收只证明当时的接口，不自动证明新契约通过。
 
@@ -167,7 +169,7 @@ zipzi-python2/
 | **P3A API 与 agent 契约重构** | **P3A-0–6 已通过** | [P3A-6 完成决定](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)：D/C、安装、Editor 和固定功能门禁已有证据；本轮 P0 稳定性沿用用户豁免；模型/服务身份改为记录信息，无此验收门禁 |
 | **P3B Modeling 剩余能力** | **已完成原定范围核销与补验** | [P3B 记录](python-sdk-rewrite/p3b.md)：复用 R4，实现不重复；新增公共 recipe、类型与隔离安装验证均通过 |
 | **P4 资源与工程** | **资源/工程范围核销和补验完成** | [P4 记录](python-sdk-rewrite/p4.md)：复用 R4；补大附件/图片保存/另存/包往返、generation 与失败验证；独立附件便利子集合按需另列，平台/app 总验收归 P6/Runtime R7 |
-| **P5 动画与观察** | 未开始 | Motion/Expression/Physics/Pose、独立 Preview、空间/观察和 inspection；已有 CPU 建模采样归 P3A/P3B，不重复延期 |
+| **P5 动画与观察** | **实施中；首批动画创作已接通** | [R5/P5 记录](sdk-runtime/python2-r5-authoring.md)：Motion/Expression/Physics/Pose、records/Plan/地址已接通；独立 Preview、动画采样、空间/观察和 inspection 待交付 |
 | **P6 分发与使用** | 双 wheel、配对 sdist 和真实宿主选定链路已有证据 | 每阶段同步安装、文档/agent 验收；最后补齐平台、发行 app 位置与全能力组合 |
 | **P7 全量收尾** | 未开始 | 汇总新契约全部承诺、性能/资源、生成/手写边界、agent 任务及发行证据 |
 
@@ -297,6 +299,6 @@ C01–C08 确定性回归、G01–G08 安装包 agent 任务、42 次运行的�
 
 `zipzi-python2` 完成需要：本项目明确承诺的能力均接线且独立验证；两后端共用 Rust 领域路径；公开签名、返回、恢复、来源、事务、资源和 Job 规则一致；生成与手写职责可从唯一目录追踪；随包文档、自省和 agent 任务达标；所有阶段有实际源码/安装/宿主/性能证据。
 
-**P3A、R4 收尾、P3B 与 P4 资源/工程范围已完成，下一步推进 R5/P5。** 沿用已通过的公共契约；新增领域继续补实际实现和独立证据。Runtime R0–R7 编号及状态独立维护，P3A 完成不等于 Runtime R4 完成。P0/P6 持续跟随，P7 汇总完整发布范围。
+**P3A、R4 收尾、P3B 与 P4 资源/工程范围已完成，R5/P5 正在实施。** 首批动画创作接通，独立 Preview/Observer、调度和 Editor 验收仍待交付。沿用已通过的公共契约；新增领域继续补实际实现和独立证据。Runtime R0–R7 编号及状态独立维护。P0/P6 持续跟随，P7 汇总完整发布范围。
 
 每完成一个切片，更新能力清单和实施记录，只保留简明验收结果：改动范围、必要检查及结果、未满足项和用户明确豁免项。临时日志、JSON 清单、哈希和测量报告不写入计划目录；不为重建已删除的历史产物反复验收。不因删除旧 API 而删除独立行为预期。阶段结论留在[实施记录](python-sdk-rewrite/README.md)，计划据此调整状态与下一步，不把目标改写为完成结果。

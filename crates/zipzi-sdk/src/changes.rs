@@ -120,6 +120,10 @@ pub struct ChangeSet {
     pub scene_references: Vec<SceneReferenceChange>,
     pub organization_references: Vec<OrganizationReferenceChange>,
     pub pose_references: Vec<PoseReferenceChange>,
+    // Root `modified` also describes child payload changes; only actual Pose
+    // fields retire field addresses. Keep this publication metadata off wire.
+    #[serde(skip)]
+    pub(crate) pose_field_changes: Vec<String>,
     pub physics_references: Vec<PhysicsReferenceChange>,
     pub binding_references: Vec<BindingReferenceChange>,
     pub resource_content: Vec<EntityRef>,
@@ -312,6 +316,7 @@ impl ChangeSet {
             + vec_bytes(&self.created, EntityRef::extra_bytes)
             + vec_bytes(&self.deleted, EntityRef::extra_bytes)
             + vec_bytes(&self.modified, EntityRef::extra_bytes)
+            + vec_bytes(&self.pose_field_changes, String::capacity)
             + vec_bytes(&self.collections, CollectionRef::extra_bytes)
             + vec_bytes(&self.references, |r| {
                 r.entry.extra_bytes() + target_bytes(&r.before) + target_bytes(&r.after)

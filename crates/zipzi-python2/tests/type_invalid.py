@@ -1,4 +1,4 @@
-"""The runner requires eighteen precise diagnostics, without suppressions."""
+"""The runner requires twenty precise diagnostics, without suppressions."""
 import zipzi
 from zipzi import meshes, resources
 from zipzi import bindings, parameters
@@ -23,6 +23,11 @@ def bad_resources(edit: zipzi.Edit) -> None:
     edit.apply(resources.CreateImage(7, "image-token"))  # error: reportArgumentType
 
 from zipzi import scene
+from zipzi import modeling
+
+def bad_animation(session: zipzi.Session, edit: zipzi.Edit) -> None:
+    edit.apply(modeling.ModelingCommandMotion(intent=modeling.PoseEditCreate(id="id")))  # error: reportArgumentType
+    session.modeling.records(modeling.ModelingQuery(motions=(7,)))  # error: reportArgumentType
 
 def bad_scene(session: zipzi.Session, edit: zipzi.Edit) -> None:
     session.reference("mesh", 7)  # error: reportArgumentType

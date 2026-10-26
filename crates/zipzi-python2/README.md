@@ -69,10 +69,11 @@ For focused regressions, run from the repository root:
 ./tools/test-sdk.sh python2 --discovery
 ```
 
-Animation authoring, independent Preview and GPU observer/inspection remain later
-Runtime capabilities. Full platform/app distribution acceptance is also pending.
-See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence;
-implementation does not by itself mean that every R4/P4 exit gate has passed.
+[Typed animation authoring](../../docs/plans/sdk-runtime/python2-r5-authoring.md)
+is connected in the first R5/P5 slice. Independent Preview, animation sampling,
+Observer/inspection, scheduling and Editor acceptance remain pending in R5/P5.
+Full platform/app distribution acceptance is also pending.
+See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence.
 
 [P3B scope reconciliation](../../docs/plans/python-sdk-rewrite/p3b.md) is complete:
 the earlier R4 implementation supplies the modeling routes, and public source and
@@ -390,7 +391,7 @@ release their tables. Every create/read/plan/close retains its own recovery owne
 
 ## Complete Runtime R4 routes
 
-The native pairing contract is `zipzi-python2-14`; IPC is `zipzi-runtime-p3a-345-1`.
+The native pairing contract is `zipzi-python2-15`; IPC is `zipzi-runtime-r5-authoring-1`.
 Rebuild both adapters and hosts after contract changes. Compiled Rust serde
 shapes generate `zipzi.modeling`, native constructors/writers and the binary
 array codec. `edit.apply` accepts the full `ModelingCommand` family, including
@@ -435,6 +436,30 @@ The Python [P3A public-contract refactor](../../docs/plans/python-sdk-rewrite/p3
 applies to these routes; its overall acceptance and Runtime R4 exit gates are
 tracked separately.
 
+## R5/P5 animation authoring
+
+`ModelingCommandMotion/Expression/Physics/Pose` apply the existing SDK edits in
+the same atomic candidate as modeling operations. Whole-asset create/replace
+commands and `ModelingIntentMotion/Expression/Physics/Pose` use the SDK planners.
+`ModelingQuery` selects motion clips, groups, registrations and expressions by ID;
+`physics=True` and `pose=True` request the singleton payloads. Empty selections
+still expose collection identities without copying those payloads.
+
+Motion registration, expression entry, Physics channel and Pose field addresses
+keep SDK owner/incarnation/field epochs. Field changes and Undo retire old field
+addresses; unrelated edits and sibling reorders preserve them. Plans carry the
+exact formal/candidate source. Large curves and selected records reuse binary
+transfer and complete-call recovery. Local conversion uses concrete generated
+types without a Python JSON round trip.
+
+The [shared source/installed recipe](tests/r5_authoring_recipe.py) checks four
+domains, plans, addresses, exports and save/reopen. Current scope and remaining
+Preview/Observer work are recorded in the [R5/P5 record](../../docs/plans/sdk-runtime/python2-r5-authoring.md).
+
+```sh
+./tools/test-sdk.sh python2 PythonSdk.test_r5_animation_authoring_plans_addresses_and_sidecars
+```
+
 ## P0 measurements
 
 ```sh
@@ -456,7 +481,7 @@ allocator overhead and realloc transient storage. Connected probes retain an
 empty control-window calibration. Noise and regression policies are recorded;
 CPU fixture numbers do not claim Editor latency.
 
-Animation, independent Preview and observer/inspection remain later Runtime capabilities. See the
+Independent animation Preview and observer/inspection remain later Runtime capabilities. See the
 [construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).
 

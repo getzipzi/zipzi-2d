@@ -120,6 +120,38 @@ pub fn read_modelingcommand(
         "attachment" => Ok(zipzi_runtime::modeling::ModelingCommand::Attachment {
             intent: read_attachmentedit(&value.getattr("intent")?)?,
         }),
+        "motion" => Ok(zipzi_runtime::modeling::ModelingCommand::Motion {
+            intent: read_motionedit(&value.getattr("intent")?)?,
+        }),
+        "expression" => Ok(zipzi_runtime::modeling::ModelingCommand::Expression {
+            intent: read_expressionedit(&value.getattr("intent")?)?,
+        }),
+        "physics" => Ok(zipzi_runtime::modeling::ModelingCommand::Physics {
+            intent: read_physicsedit(&value.getattr("intent")?)?,
+        }),
+        "pose" => Ok(zipzi_runtime::modeling::ModelingCommand::Pose {
+            intent: read_poseedit(&value.getattr("intent")?)?,
+        }),
+        "create_motion" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateMotion {
+            clip: read_motionclip(&value.getattr("clip")?)?,
+        }),
+        "replace_motion" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceMotion {
+            clip: read_motionclip(&value.getattr("clip")?)?,
+        }),
+        "create_expression" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateExpression {
+            expression: read_expressionasset(&value.getattr("expression")?)?,
+        }),
+        "replace_expression" => Ok(
+            zipzi_runtime::modeling::ModelingCommand::ReplaceExpression {
+                expression: read_expressionasset(&value.getattr("expression")?)?,
+            },
+        ),
+        "set_physics" => Ok(zipzi_runtime::modeling::ModelingCommand::SetPhysics {
+            physics: read_physicsasset(&value.getattr("physics")?)?,
+        }),
+        "set_pose" => Ok(zipzi_runtime::modeling::ModelingCommand::SetPose {
+            pose: read_poseasset(&value.getattr("pose")?)?,
+        }),
         "replace_model_setup" => Ok(
             zipzi_runtime::modeling::ModelingCommand::ReplaceModelSetup {
                 setup: read_modelsetup(&value.getattr("setup")?)?,
@@ -144,7 +176,8 @@ pub fn read_modelingcommand(
                         let item0 = item?;
                         Ok(read_drawordergroup(&item0)?)
                     })
-                    .collect::<PyResult<Vec<_>>>()?,
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
             },
         ),
         "erase_object" => Ok(zipzi_runtime::modeling::ModelingCommand::EraseObject {
@@ -163,7 +196,8 @@ pub fn read_modelingcommand(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             positions: value
                 .getattr("positions")?
                 .try_iter()?
@@ -171,7 +205,8 @@ pub fn read_modelingcommand(
                     let item0 = item?;
                     Ok(read_vec2(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "set_mesh_keyform" => Ok(zipzi_runtime::modeling::ModelingCommand::SetMeshKeyform {
             id: value.getattr("id")?.extract()?,
@@ -485,6 +520,92 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
+        zipzi_runtime::modeling::ModelingCommand::Motion { intent: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("intent", write_motionedit_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandMotion")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::Expression { intent: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("intent", write_expressionedit_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandExpression")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::Physics { intent: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("intent", write_physicsedit_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandPhysics")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::Pose { intent: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("intent", write_poseedit_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandPose")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::CreateMotion { clip: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("clip", write_motionclip_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandCreateMotion")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::ReplaceMotion { clip: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("clip", write_motionclip_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandReplaceMotion")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::CreateExpression { expression: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "expression",
+                write_expressionasset_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("ModelingCommandCreateExpression")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::ReplaceExpression { expression: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "expression",
+                write_expressionasset_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("ModelingCommandReplaceExpression")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::SetPhysics { physics: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("physics", write_physicsasset_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandSetPhysics")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::SetPose { pose: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("pose", write_poseasset_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandSetPose")?
+                .call((), Some(&content))?
+                .unbind())
+        }
         zipzi_runtime::modeling::ModelingCommand::ReplaceModelSetup { setup: field0 } => {
             let content = PyDict::new(py);
             content.set_item("setup", write_modelsetup_in(py, (field0), classes)?)?;
@@ -788,7 +909,8 @@ pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Mesh> 
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         base_positions: value
             .getattr("base_positions")?
             .try_iter()?
@@ -796,7 +918,8 @@ pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Mesh> 
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         uvs: value
             .getattr("uvs")?
             .try_iter()?
@@ -804,7 +927,8 @@ pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Mesh> 
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         triangles: value
             .getattr("triangles")?
             .try_iter()?
@@ -822,7 +946,8 @@ pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Mesh> 
                         pyo3::exceptions::PyValueError::new_err("Invalid fixed array length")
                     })?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         meshing: if value.getattr("meshing")?.is_none() {
             None
         } else {
@@ -848,7 +973,8 @@ pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Mesh> 
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         raw_blend_mode: if value.getattr("raw_blend_mode")?.is_none() {
             None
         } else {
@@ -1090,7 +1216,8 @@ pub fn read_meshmeshing(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         constraints: value
             .getattr("constraints")?
             .try_iter()?
@@ -1098,7 +1225,8 @@ pub fn read_meshmeshing(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(read_meshconstraint(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
     })
 }
 
@@ -1715,7 +1843,8 @@ pub fn read_warptransform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
     })
 }
 
@@ -1786,7 +1915,8 @@ pub fn read_warpbezier(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::warp_be
                 let item0 = item?;
                 Ok(read_warpbeziernode(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
     })
 }
 
@@ -2015,7 +2145,8 @@ pub fn read_meshbinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(read_bindingaxis(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         keyforms: value
             .getattr("keyforms")?
             .try_iter()?
@@ -2023,7 +2154,8 @@ pub fn read_meshbinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(read_meshkeyform(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
     })
 }
 
@@ -2086,7 +2218,8 @@ pub fn read_bindingaxis(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(read_bindingsample(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         parameter_id: value.getattr("parameter_id")?.extract()?,
         keys: Default::default(),
     })
@@ -2186,7 +2319,8 @@ pub fn read_meshkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         positions: value
             .getattr("positions")?
             .try_iter()?
@@ -2194,7 +2328,8 @@ pub fn read_meshkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         appearance: read_appearance(&value.getattr("appearance")?)?,
         draw_order: if value.getattr("draw_order")?.is_none() {
             None
@@ -2257,7 +2392,8 @@ pub fn read_scenebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types
                 let item0 = item?;
                 Ok(read_bindingaxis(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         track: read_scenetrack(&value.getattr("track")?)?,
     })
 }
@@ -2308,7 +2444,8 @@ pub fn read_scenetrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
                     let item0 = item?;
                     Ok(read_warpkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "Rotation" => Ok(zipzi_core::types::SceneTrack::Rotation {
             target_id: read_transformid(&value.getattr("target_id")?)?,
@@ -2319,7 +2456,8 @@ pub fn read_scenetrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
                     let item0 = item?;
                     Ok(read_rotationkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "Part" => Ok(zipzi_core::types::SceneTrack::Part {
             target_id: read_partid(&value.getattr("target_id")?)?,
@@ -2330,7 +2468,8 @@ pub fn read_scenetrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
                     let item0 = item?;
                     Ok(read_partkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -2423,7 +2562,8 @@ pub fn read_warpkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         positions: value
             .getattr("positions")?
             .try_iter()?
@@ -2431,7 +2571,8 @@ pub fn read_warpkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         appearance: read_appearance(&value.getattr("appearance")?)?,
     })
 }
@@ -2491,7 +2632,8 @@ pub fn read_rotationkeyform(
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         rotation: read_rotationpose(&value.getattr("rotation")?)?,
         appearance: read_appearance(&value.getattr("appearance")?)?,
     })
@@ -2541,7 +2683,8 @@ pub fn read_partkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         draw_order: value.getattr("draw_order")?.extract()?,
     })
 }
@@ -2591,7 +2734,8 @@ pub fn read_blendshapekeytable(
                 let item0 = item?;
                 Ok(read_bindingsample(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         base_sample_id: value.getattr("base_sample_id")?.extract()?,
         id: value.getattr("id")?.extract()?,
         parameter_id: value.getattr("parameter_id")?.extract()?,
@@ -2661,7 +2805,8 @@ pub fn read_blendshapeconstraint(
                 let item0 = item?;
                 Ok(read_constraintsample(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         id: value.getattr("id")?.extract()?,
         parameter_id: value.getattr("parameter_id")?.extract()?,
         keys: Default::default(),
@@ -2779,7 +2924,8 @@ pub fn read_blendshapebinding(
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         keyforms: read_deltakeyforms(&value.getattr("keyforms")?)?,
     })
 }
@@ -2894,7 +3040,8 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                     let item0 = item?;
                     Ok(read_deltameshkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         )),
         "warp" => Ok(zipzi_core::types::DeltaKeyforms::Warp(
             value
@@ -2904,7 +3051,8 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                     let item0 = item?;
                     Ok(read_deltawarpkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         )),
         "rotation" => Ok(zipzi_core::types::DeltaKeyforms::Rotation(
             value
@@ -2914,7 +3062,8 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                     let item0 = item?;
                     Ok(read_deltarotationkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         )),
         "part" => Ok(zipzi_core::types::DeltaKeyforms::Part(
             value
@@ -2924,7 +3073,8 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                     let item0 = item?;
                     Ok(read_deltapartkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         )),
         "glue" => Ok(zipzi_core::types::DeltaKeyforms::Glue(
             value
@@ -2934,7 +3084,8 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                     let item0 = item?;
                     Ok(read_deltagluekeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         )),
         "offscreen" => Ok(zipzi_core::types::DeltaKeyforms::Offscreen(
             value
@@ -2944,7 +3095,8 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                     let item0 = item?;
                     Ok(read_deltaoffscreenkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         )),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -3064,7 +3216,8 @@ pub fn read_deltameshkeyform(
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         opacity: if value.getattr("opacity")?.is_none() {
             None
         } else {
@@ -3196,7 +3349,8 @@ pub fn read_deltawarpkeyform(
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         opacity: if value.getattr("opacity")?.is_none() {
             None
         } else {
@@ -3650,7 +3804,8 @@ pub fn read_glue(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Glue> 
                 let item0 = item?;
                 Ok(read_gluevertexpair(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         intensity: value.getattr("intensity")?.extract()?,
         binding: if value.getattr("binding")?.is_none() {
             None
@@ -3810,7 +3965,8 @@ pub fn read_gluebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(read_bindingaxis(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         keyforms: value
             .getattr("keyforms")?
             .try_iter()?
@@ -3818,7 +3974,8 @@ pub fn read_gluebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(read_gluekeyform(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
     })
 }
 
@@ -3864,7 +4021,8 @@ pub fn read_gluekeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         intensity: value.getattr("intensity")?.extract()?,
     })
 }
@@ -3919,7 +4077,8 @@ pub fn read_offscreen(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::O
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         part_keyform_indices: value
             .getattr("part_keyform_indices")?
             .try_iter()?
@@ -3927,7 +4086,8 @@ pub fn read_offscreen(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::O
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         keyforms: value
             .getattr("keyforms")?
             .try_iter()?
@@ -3935,7 +4095,8 @@ pub fn read_offscreen(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::O
                 let item0 = item?;
                 Ok(read_offscreenkeyform(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
     })
 }
 
@@ -4168,7 +4329,8 @@ pub fn read_sceneedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             destination: read_scenecollection(&value.getattr("destination")?)?,
             before: if value.getattr("before")?.is_none() {
                 None
@@ -4187,7 +4349,8 @@ pub fn read_sceneedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             scope: read_scenecopyscope(&value.getattr("scope")?)?,
             destination: if value.getattr("destination")?.is_none() {
                 None
@@ -4208,7 +4371,8 @@ pub fn read_sceneedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             scope: read_scenecopyscope(&value.getattr("scope")?)?,
         }),
         "transfer_offscreen" => Ok(zipzi_core::document::SceneEdit::TransferOffscreen {
@@ -4221,7 +4385,8 @@ pub fn read_sceneedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "ensure_drawing_group" => Ok(zipzi_core::document::SceneEdit::EnsureDrawingGroup {
             owner: value.getattr("owner")?.extract()?,
@@ -4680,7 +4845,8 @@ pub fn read_scenefieldvalue(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         )),
         "mesh_drawing" => Ok(zipzi_core::document::SceneFieldValue::MeshDrawing {
             draw_order: if value.getattr("draw_order")?.is_none() {
@@ -4720,7 +4886,8 @@ pub fn read_scenefieldvalue(
                     let item0 = item?;
                     Ok(read_offscreenkeyform(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             part_keyform_indices: value
                 .getattr("part_keyform_indices")?
                 .try_iter()?
@@ -4728,7 +4895,8 @@ pub fn read_scenefieldvalue(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "context" => Ok(zipzi_core::document::SceneFieldValue::Context {
             part_id: if value.getattr("part_id")?.is_none() {
@@ -5054,7 +5222,8 @@ pub fn read_reparentedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::docum
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         parent_id: value.getattr("parent_id")?.extract()?,
         strategy: read_reparentstrategy(&value.getattr("strategy")?)?,
         placement: if value.getattr("placement")?.is_none() {
@@ -5235,7 +5404,8 @@ pub fn read_reparentcontext(
                 let item0 = item?;
                 Ok(read_conversiondomain(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         edit_time_seconds: value.getattr("edit_time_seconds")?.extract()?,
     })
 }
@@ -5509,7 +5679,8 @@ pub fn read_organizationedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             destination: read_organizationcollection(&value.getattr("destination")?)?,
             before: if value.getattr("before")?.is_none() {
                 None
@@ -5525,7 +5696,8 @@ pub fn read_organizationedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             destination: read_organizationcollection(&value.getattr("destination")?)?,
             before: if value.getattr("before")?.is_none() {
                 None
@@ -5541,7 +5713,8 @@ pub fn read_organizationedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             policy: read_organizationdeletepolicy(&value.getattr("policy")?)?,
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
@@ -6109,7 +6282,8 @@ pub fn read_gridoperation(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "InsertSample" => Ok(zipzi_core::document::GridOperation::InsertSample {
             axis_id: value.getattr("axis_id")?.extract()?,
@@ -6419,7 +6593,8 @@ pub fn read_blendauthoringedit(
                     let item0 = item?;
                     Ok(read_constraintsample(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "SetBindingTable" => Ok(zipzi_core::document::BlendAuthoringEdit::SetBindingTable {
             id: value.getattr("id")?.extract()?,
@@ -6720,7 +6895,8 @@ pub fn read_meshgridedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::docum
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "InsertSample" => Ok(zipzi_core::document::MeshGridEdit::InsertSample {
             binding_id: value.getattr("binding_id")?.extract()?,
@@ -6994,7 +7170,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(read_vertexcontentpatch(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "insert_mesh_vertices" => Ok(zipzi_core::document::SceneContentEdit::InsertMeshVertices {
             mesh_id: value.getattr("mesh_id")?.extract()?,
@@ -7005,7 +7182,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(read_newmeshvertex(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             before: if value.getattr("before")?.is_none() {
                 None
             } else {
@@ -7021,7 +7199,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             policy: read_vertexdeletepolicy(&value.getattr("policy")?)?,
         }),
         "reorder_mesh_vertices" => Ok(
@@ -7034,7 +7213,8 @@ pub fn read_scenecontentedit(
                         let item0 = item?;
                         Ok(item0.extract()?)
                     })
-                    .collect::<PyResult<Vec<_>>>()?,
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
             },
         ),
         "insert_triangle" => Ok(zipzi_core::document::SceneContentEdit::InsertTriangle {
@@ -7082,7 +7262,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "replace_triangles" => Ok(zipzi_core::document::SceneContentEdit::ReplaceTriangles {
             mesh_id: value.getattr("mesh_id")?.extract()?,
@@ -7103,7 +7284,8 @@ pub fn read_scenecontentedit(
                             pyo3::exceptions::PyValueError::new_err("Invalid fixed array length")
                         })?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "warp_points" => Ok(zipzi_core::document::SceneContentEdit::WarpPoints {
             transform_id: value.getattr("transform_id")?.extract()?,
@@ -7115,7 +7297,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(read_warppointpatch(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             clear_bezier: value.getattr("clear_bezier")?.extract()?,
         }),
         "warp_bezier" => Ok(zipzi_core::document::SceneContentEdit::WarpBezier {
@@ -7155,7 +7338,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             before: if value.getattr("before")?.is_none() {
                 None
             } else {
@@ -7172,7 +7356,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(read_gluevertexpair(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             before: if value.getattr("before")?.is_none() {
                 None
             } else {
@@ -7188,7 +7373,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             before: if value.getattr("before")?.is_none() {
                 None
             } else {
@@ -7204,7 +7390,8 @@ pub fn read_scenecontentedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "insert_offscreen_keyform" => Ok(
             zipzi_core::document::SceneContentEdit::InsertOffscreenKeyform {
@@ -7234,7 +7421,8 @@ pub fn read_scenecontentedit(
                         let item0 = item?;
                         Ok(item0.extract()?)
                     })
-                    .collect::<PyResult<Vec<_>>>()?,
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
                 before: if value.getattr("before")?.is_none() {
                     None
                 } else {
@@ -7252,7 +7440,8 @@ pub fn read_scenecontentedit(
                         let item0 = item?;
                         Ok(item0.extract()?)
                     })
-                    .collect::<PyResult<Vec<_>>>()?,
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
             },
         ),
         "delete_offscreen_keyforms" => Ok(
@@ -7265,7 +7454,8 @@ pub fn read_scenecontentedit(
                         let item0 = item?;
                         Ok(item0.extract()?)
                     })
-                    .collect::<PyResult<Vec<_>>>()?,
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
                 policy: read_offscreendeletepolicy(&value.getattr("policy")?)?,
             },
         ),
@@ -7279,7 +7469,8 @@ pub fn read_scenecontentedit(
                         let item0 = item?;
                         Ok(read_offscreenmappingpatch(&item0)?)
                     })
-                    .collect::<PyResult<Vec<_>>>()?,
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
             },
         ),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
@@ -7881,7 +8072,8 @@ pub fn read_shapetarget(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::docume
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "blend" => Ok(zipzi_core::document::ShapeTarget::Blend {
             binding_id: value.getattr("binding_id")?.extract()?,
@@ -8060,7 +8252,8 @@ pub fn read_vertexseed(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::documen
                     let item0 = item?;
                     Ok(read_vertexweight(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -8357,7 +8550,8 @@ pub fn read_partkeyformslot(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -8454,7 +8648,8 @@ pub fn read_referenceedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             destination: read_referencecollection(&value.getattr("destination")?)?,
             before: if value.getattr("before")?.is_none() {
                 None
@@ -8470,7 +8665,8 @@ pub fn read_referenceedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             destination: read_referencecollection(&value.getattr("destination")?)?,
             before: if value.getattr("before")?.is_none() {
                 None
@@ -8486,7 +8682,8 @@ pub fn read_referenceedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "dissolve" => Ok(zipzi_core::document::ReferenceEdit::Dissolve {
             id: value.getattr("id")?.extract()?,
@@ -8507,7 +8704,8 @@ pub fn read_referenceedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             targets: value
                 .getattr("targets")?
                 .try_iter()?
@@ -8515,7 +8713,8 @@ pub fn read_referenceedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -9131,7 +9330,8 @@ pub fn read_resourceedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::docum
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             before: if value.getattr("before")?.is_none() {
                 None
             } else {
@@ -9738,7 +9938,8 @@ pub fn read_attachmentedit(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
             before: if value.getattr("before")?.is_none() {
                 None
             } else {
@@ -10041,6 +10242,5080 @@ fn write_attachmentref_in(
     }
 }
 
+pub fn read_motionedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::MotionEdit> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => Ok(zipzi_core::document::MotionEdit::Create {
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+            registration_id: value.getattr("registration_id")?.extract()?,
+            destination: read_motioncontainer(&value.getattr("destination")?)?,
+        }),
+        "create_group" => Ok(zipzi_core::document::MotionEdit::CreateGroup {
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+        }),
+        "rename_group" => Ok(zipzi_core::document::MotionEdit::RenameGroup {
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+        }),
+        "reorder_groups" => Ok(zipzi_core::document::MotionEdit::ReorderGroups {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "register" => Ok(zipzi_core::document::MotionEdit::Register {
+            entry: read_motionregistration(&value.getattr("entry")?)?,
+            destination: read_motioncontainer(&value.getattr("destination")?)?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "patch_registration" => Ok(zipzi_core::document::MotionEdit::PatchRegistration {
+            id: value.getattr("id")?.extract()?,
+            expected: read_motionregistration(&value.getattr("expected")?)?,
+            entry: read_motionregistration(&value.getattr("entry")?)?,
+        }),
+        "move_registrations" => Ok(zipzi_core::document::MotionEdit::MoveRegistrations {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination: read_motioncontainer(&value.getattr("destination")?)?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "duplicate_registrations" => Ok(zipzi_core::document::MotionEdit::DuplicateRegistrations {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination: read_motioncontainer(&value.getattr("destination")?)?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "delete_registrations" => Ok(zipzi_core::document::MotionEdit::DeleteRegistrations {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "dissolve_group" => Ok(zipzi_core::document::MotionEdit::DissolveGroup {
+            id: value.getattr("id")?.extract()?,
+        }),
+        "delete_group" => Ok(zipzi_core::document::MotionEdit::DeleteGroup {
+            id: value.getattr("id")?.extract()?,
+        }),
+        "duplicate_group" => Ok(zipzi_core::document::MotionEdit::DuplicateGroup {
+            source: value.getattr("source")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+        }),
+        "duplicate_clip" => Ok(zipzi_core::document::MotionEdit::DuplicateClip {
+            source: value.getattr("source")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+            registration_id: value.getattr("registration_id")?.extract()?,
+            destination: read_motioncontainer(&value.getattr("destination")?)?,
+        }),
+        "delete_clip" => Ok(zipzi_core::document::MotionEdit::DeleteClip {
+            id: value.getattr("id")?.extract()?,
+        }),
+        "reorder_tracks" => Ok(zipzi_core::document::MotionEdit::ReorderTracks {
+            clip: value.getattr("clip")?.extract()?,
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "create_track" => Ok(zipzi_core::document::MotionEdit::CreateTrack {
+            clip: value.getattr("clip")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            key_id: value.getattr("key_id")?.extract()?,
+            time: value.getattr("time")?.extract()?,
+        }),
+        "set_track_target" => Ok(zipzi_core::document::MotionEdit::SetTrackTarget {
+            id: value.getattr("id")?.extract()?,
+            target: read_motiontracktarget(&value.getattr("target")?)?,
+        }),
+        "move_tracks" => Ok(zipzi_core::document::MotionEdit::MoveTracks {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination: value.getattr("destination")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+            copy: value.getattr("copy")?.extract()?,
+        }),
+        "delete_tracks" => Ok(zipzi_core::document::MotionEdit::DeleteTracks {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "transfer_keys" => Ok(zipzi_core::document::MotionEdit::TransferKeys {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination_track: value.getattr("destination_track")?.extract()?,
+            time_offset: value.getattr("time_offset")?.extract()?,
+            copy: value.getattr("copy")?.extract()?,
+        }),
+        "set_event" => Ok(zipzi_core::document::MotionEdit::SetEvent {
+            clip: value.getattr("clip")?.extract()?,
+            event: read_motionevent(&value.getattr("event")?)?,
+        }),
+        "delete_events" => Ok(zipzi_core::document::MotionEdit::DeleteEvents {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "move_events" => Ok(zipzi_core::document::MotionEdit::MoveEvents {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination: value.getattr("destination")?.extract()?,
+            time_offset: value.getattr("time_offset")?.extract()?,
+            copy: value.getattr("copy")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_motionedit(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionEdit,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionedit_in(py, value, &classes)
+}
+fn write_motionedit_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionEdit,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::MotionEdit::Create {
+            id: field0,
+            name: field1,
+            registration_id: field2,
+            destination: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "registration_id",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "destination",
+                write_motioncontainer_in(py, (field3), classes)?,
+            )?;
+            Ok(classes
+                .getattr("MotionEditCreate")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::CreateGroup {
+            id: field0,
+            name: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditCreateGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::RenameGroup {
+            id: field0,
+            name: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditRenameGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::ReorderGroups { ids: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("MotionEditReorderGroups")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::Register {
+            entry: field0,
+            destination: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("entry", write_motionregistration_in(py, (field0), classes)?)?;
+            content.set_item(
+                "destination",
+                write_motioncontainer_in(py, (field1), classes)?,
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("MotionEditRegister")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::PatchRegistration {
+            id: field0,
+            expected: field1,
+            entry: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "expected",
+                write_motionregistration_in(py, (field1), classes)?,
+            )?;
+            content.set_item("entry", write_motionregistration_in(py, (field2), classes)?)?;
+            Ok(classes
+                .getattr("MotionEditPatchRegistration")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::MoveRegistrations {
+            ids: field0,
+            destination: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination",
+                write_motioncontainer_in(py, (field1), classes)?,
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("MotionEditMoveRegistrations")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DuplicateRegistrations {
+            ids: field0,
+            destination: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination",
+                write_motioncontainer_in(py, (field1), classes)?,
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("MotionEditDuplicateRegistrations")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DeleteRegistrations { ids: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("MotionEditDeleteRegistrations")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DissolveGroup { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditDissolveGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DeleteGroup { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditDeleteGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DuplicateGroup {
+            source: field0,
+            id: field1,
+            name: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "source",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditDuplicateGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DuplicateClip {
+            source: field0,
+            id: field1,
+            name: field2,
+            registration_id: field3,
+            destination: field4,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "source",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "registration_id",
+                (field3).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "destination",
+                write_motioncontainer_in(py, (field4), classes)?,
+            )?;
+            Ok(classes
+                .getattr("MotionEditDuplicateClip")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DeleteClip { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditDeleteClip")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::ReorderTracks {
+            clip: field0,
+            ids: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "clip",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field1) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("MotionEditReorderTracks")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::CreateTrack {
+            clip: field0,
+            id: field1,
+            key_id: field2,
+            time: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "clip",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "key_id",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "time",
+                (field3).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditCreateTrack")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::SetTrackTarget {
+            id: field0,
+            target: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("target", write_motiontracktarget_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("MotionEditSetTrackTarget")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::MoveTracks {
+            ids: field0,
+            destination: field1,
+            before: field2,
+            copy: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            content.set_item(
+                "copy",
+                (field3).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditMoveTracks")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DeleteTracks { ids: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("MotionEditDeleteTracks")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::TransferKeys {
+            ids: field0,
+            destination_track: field1,
+            time_offset: field2,
+            copy: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination_track",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "time_offset",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "copy",
+                (field3).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditTransferKeys")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::SetEvent {
+            clip: field0,
+            event: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "clip",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("event", write_motionevent_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("MotionEditSetEvent")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::DeleteEvents { ids: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("MotionEditDeleteEvents")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionEdit::MoveEvents {
+            ids: field0,
+            destination: field1,
+            time_offset: field2,
+            copy: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "time_offset",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "copy",
+                (field3).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionEditMoveEvents")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_motioncontainer(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::MotionContainer> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "root" => Ok(zipzi_core::document::MotionContainer::Root),
+        "group" => Ok(zipzi_core::document::MotionContainer::Group(
+            value.getattr("value")?.extract()?,
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_motioncontainer(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionContainer,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motioncontainer_in(py, value, &classes)
+}
+fn write_motioncontainer_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionContainer,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::MotionContainer::Root => {
+            Ok(classes.getattr("MotionContainerRoot")?.call0()?.unbind())
+        }
+        zipzi_core::document::MotionContainer::Group(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionContainerGroup")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_motionregistration(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::MotionRegistration> {
+    Ok(zipzi_core::document::MotionRegistration {
+        id: value.getattr("id")?.extract()?,
+        clip_id: value.getattr("clip_id")?.extract()?,
+        fade_in: if value.getattr("fade_in")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_in")?.extract()?)
+        },
+        fade_out: if value.getattr("fade_out")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_out")?.extract()?)
+        },
+        sound: if value.getattr("sound")?.is_none() {
+            None
+        } else {
+            Some(read_attachmentref(&value.getattr("sound")?)?)
+        },
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_motionregistration(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionRegistration,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionregistration_in(py, value, &classes)
+}
+fn write_motionregistration_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionRegistration,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "clip_id",
+        (&value.clip_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("fade_in", {
+        match (&value.fade_in).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("fade_out", {
+        match (&value.fade_out).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("sound", {
+        match (&value.sound).as_ref() {
+            Some(item) => write_attachmentref_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("MotionRegistration")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_motiontracktarget(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::MotionTrackTarget> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "unspecified" => Ok(zipzi_core::document::MotionTrackTarget::Unspecified),
+        "model" => Ok(zipzi_core::document::MotionTrackTarget::Model {
+            runtime_id: value.getattr("runtime_id")?.extract()?,
+        }),
+        "parameter" => Ok(zipzi_core::document::MotionTrackTarget::Parameter {
+            parameter_id: value.getattr("parameter_id")?.extract()?,
+        }),
+        "part_opacity" => Ok(zipzi_core::document::MotionTrackTarget::PartOpacity {
+            part_id: value.getattr("part_id")?.extract()?,
+        }),
+        "unresolved" => Ok(zipzi_core::document::MotionTrackTarget::Unresolved {
+            category: value.getattr("category")?.extract()?,
+            runtime_id: value.getattr("runtime_id")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_motiontracktarget(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionTrackTarget,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motiontracktarget_in(py, value, &classes)
+}
+fn write_motiontracktarget_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionTrackTarget,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::MotionTrackTarget::Unspecified => Ok(classes
+            .getattr("MotionTrackTargetUnspecified")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::MotionTrackTarget::Model { runtime_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "runtime_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionTrackTargetModel")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionTrackTarget::Parameter {
+            parameter_id: field0,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "parameter_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionTrackTargetParameter")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionTrackTarget::PartOpacity { part_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "part_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionTrackTargetPartOpacity")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionTrackTarget::Unresolved {
+            category: field0,
+            runtime_id: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "category",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "runtime_id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("MotionTrackTargetUnresolved")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_motionevent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::MotionEvent> {
+    Ok(zipzi_core::document::MotionEvent {
+        id: value.getattr("id")?.extract()?,
+        time: value.getattr("time")?.extract()?,
+        value: value.getattr("value")?.extract()?,
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_motionevent(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionEvent,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionevent_in(py, value, &classes)
+}
+fn write_motionevent_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionEvent,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "time",
+        (&value.time)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "value",
+        (&value.value)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("MotionEvent")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_expressionedit(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ExpressionEdit> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => Ok(zipzi_core::document::ExpressionEdit::Create {
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+        }),
+        "create_entry" => Ok(zipzi_core::document::ExpressionEdit::CreateEntry {
+            owner: value.getattr("owner")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "patch_entry" => Ok(zipzi_core::document::ExpressionEdit::PatchEntry {
+            id: value.getattr("id")?.extract()?,
+            expected: read_expressionentryfields(&value.getattr("expected")?)?,
+            fields: read_expressionentryfields(&value.getattr("fields")?)?,
+        }),
+        "move_entries" => Ok(zipzi_core::document::ExpressionEdit::MoveEntries {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination: value.getattr("destination")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "duplicate_entries" => Ok(zipzi_core::document::ExpressionEdit::DuplicateEntries {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            new_ids: value
+                .getattr("new_ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination: value.getattr("destination")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "delete_entries" => Ok(zipzi_core::document::ExpressionEdit::DeleteEntries {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "duplicate" => Ok(zipzi_core::document::ExpressionEdit::Duplicate {
+            source: value.getattr("source")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+            entry_ids: value
+                .getattr("entry_ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "delete" => Ok(zipzi_core::document::ExpressionEdit::Delete {
+            id: value.getattr("id")?.extract()?,
+        }),
+        "reorder" => Ok(zipzi_core::document::ExpressionEdit::Reorder {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_expressionedit(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionEdit,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_expressionedit_in(py, value, &classes)
+}
+fn write_expressionedit_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionEdit,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::ExpressionEdit::Create {
+            id: field0,
+            name: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ExpressionEditCreate")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionEdit::CreateEntry {
+            owner: field0,
+            id: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "owner",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("ExpressionEditCreateEntry")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionEdit::PatchEntry {
+            id: field0,
+            expected: field1,
+            fields: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "expected",
+                write_expressionentryfields_in(py, (field1), classes)?,
+            )?;
+            content.set_item(
+                "fields",
+                write_expressionentryfields_in(py, (field2), classes)?,
+            )?;
+            Ok(classes
+                .getattr("ExpressionEditPatchEntry")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionEdit::MoveEntries {
+            ids: field0,
+            destination: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("ExpressionEditMoveEntries")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionEdit::DuplicateEntries {
+            ids: field0,
+            new_ids: field1,
+            destination: field2,
+            before: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item("new_ids", {
+                let out = PyList::empty(py);
+                for item0 in (field1) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field3).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("ExpressionEditDuplicateEntries")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionEdit::DeleteEntries { ids: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("ExpressionEditDeleteEntries")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionEdit::Duplicate {
+            source: field0,
+            id: field1,
+            name: field2,
+            entry_ids: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "source",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("entry_ids", {
+                let out = PyList::empty(py);
+                for item0 in (field3) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("ExpressionEditDuplicate")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionEdit::Delete { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ExpressionEditDelete")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionEdit::Reorder { ids: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("ExpressionEditReorder")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_expressionentryfields(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ExpressionEntryFields> {
+    Ok(zipzi_core::document::ExpressionEntryFields {
+        target: read_expressiontarget(&value.getattr("target")?)?,
+        value: value.getattr("value")?.extract()?,
+        blend: if value.getattr("blend")?.is_none() {
+            None
+        } else {
+            Some(read_expressionblend(&value.getattr("blend")?)?)
+        },
+    })
+}
+
+pub fn write_expressionentryfields(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionEntryFields,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_expressionentryfields_in(py, value, &classes)
+}
+fn write_expressionentryfields_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionEntryFields,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "target",
+        write_expressiontarget_in(py, (&value.target), classes)?,
+    )?;
+    out.set_item(
+        "value",
+        (&value.value)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("blend", {
+        match (&value.blend).as_ref() {
+            Some(item) => write_expressionblend_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("ExpressionEntryFields")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_expressiontarget(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ExpressionTarget> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "unspecified" => Ok(zipzi_core::document::ExpressionTarget::Unspecified),
+        "resolved" => Ok(zipzi_core::document::ExpressionTarget::Resolved {
+            parameter_id: value.getattr("parameter_id")?.extract()?,
+        }),
+        "unresolved" => Ok(zipzi_core::document::ExpressionTarget::Unresolved {
+            runtime_id: value.getattr("runtime_id")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_expressiontarget(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionTarget,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_expressiontarget_in(py, value, &classes)
+}
+fn write_expressiontarget_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionTarget,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::ExpressionTarget::Unspecified => Ok(classes
+            .getattr("ExpressionTargetUnspecified")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::ExpressionTarget::Resolved {
+            parameter_id: field0,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "parameter_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ExpressionTargetResolved")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::ExpressionTarget::Unresolved { runtime_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "runtime_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ExpressionTargetUnresolved")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_expressionblend(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ExpressionBlend> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "add" => Ok(zipzi_core::document::ExpressionBlend::Add),
+        "multiply" => Ok(zipzi_core::document::ExpressionBlend::Multiply),
+        "overwrite" => Ok(zipzi_core::document::ExpressionBlend::Overwrite),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
+        )),
+    }
+}
+
+pub fn write_expressionblend(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionBlend,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_expressionblend_in(py, value, &classes)
+}
+fn write_expressionblend_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionBlend,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::document::ExpressionBlend::Add => "add",
+        zipzi_core::document::ExpressionBlend::Multiply => "multiply",
+        zipzi_core::document::ExpressionBlend::Overwrite => "overwrite",
+    };
+    Ok(classes.getattr("ExpressionBlend")?.call1((name,))?.unbind())
+}
+
+pub fn read_physicsedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PhysicsEdit> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create_group" => Ok(zipzi_core::document::PhysicsEdit::CreateGroup {
+            asset_id: value.getattr("asset_id")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "create_input" => Ok(zipzi_core::document::PhysicsEdit::CreateInput {
+            group_id: value.getattr("group_id")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "create_output" => Ok(zipzi_core::document::PhysicsEdit::CreateOutput {
+            group_id: value.getattr("group_id")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            node_id: value.getattr("node_id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "insert_node" => Ok(zipzi_core::document::PhysicsEdit::InsertNode {
+            group_id: value.getattr("group_id")?.extract()?,
+            node: read_physicsnode(&value.getattr("node")?)?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "move_node" => Ok(zipzi_core::document::PhysicsEdit::MoveNode {
+            id: value.getattr("id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "duplicate_node" => Ok(zipzi_core::document::PhysicsEdit::DuplicateNode {
+            id: value.getattr("id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "patch" => Ok(zipzi_core::document::PhysicsEdit::Patch {
+            patch: read_physicspatch(&value.getattr("patch")?)?,
+        }),
+        "move_inputs" => Ok(zipzi_core::document::PhysicsEdit::MoveInputs {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            group_id: value.getattr("group_id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "move_outputs" => Ok(zipzi_core::document::PhysicsEdit::MoveOutputs {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            group_id: value.getattr("group_id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+            node_replacements: value
+                .getattr("node_replacements")?
+                .call_method0("items")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+                })
+                .collect::<PyResult<_>>()?,
+        }),
+        "reorder_groups" => Ok(zipzi_core::document::PhysicsEdit::ReorderGroups {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "duplicate" => Ok(zipzi_core::document::PhysicsEdit::Duplicate {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            group_id: if value.getattr("group_id")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("group_id")?.extract()?)
+            },
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "delete" => Ok(zipzi_core::document::PhysicsEdit::Delete {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            node_replacements: value
+                .getattr("node_replacements")?
+                .call_method0("items")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+                })
+                .collect::<PyResult<_>>()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_physicsedit(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsEdit,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsedit_in(py, value, &classes)
+}
+fn write_physicsedit_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsEdit,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::PhysicsEdit::CreateGroup {
+            asset_id: field0,
+            id: field1,
+            name: field2,
+            before: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "asset_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field3).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditCreateGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::CreateInput {
+            group_id: field0,
+            id: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "group_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditCreateInput")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::CreateOutput {
+            group_id: field0,
+            id: field1,
+            node_id: field2,
+            before: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "group_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "node_id",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field3).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditCreateOutput")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::InsertNode {
+            group_id: field0,
+            node: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "group_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("node", write_physicsnode_in(py, (field1), classes)?)?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditInsertNode")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::MoveNode {
+            id: field0,
+            before: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field1).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditMoveNode")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::DuplicateNode {
+            id: field0,
+            before: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field1).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditDuplicateNode")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::Patch { patch: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("patch", write_physicspatch_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("PhysicsEditPatch")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::MoveInputs {
+            ids: field0,
+            group_id: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "group_id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditMoveInputs")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::MoveOutputs {
+            ids: field0,
+            group_id: field1,
+            before: field2,
+            node_replacements: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "group_id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            content.set_item("node_replacements", {
+                let out = PyDict::new(py);
+                for (key, item0) in (field3) {
+                    out.set_item(
+                        key.to_string(),
+                        (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditMoveOutputs")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::ReorderGroups {
+            ids: field0,
+            before: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item("before", {
+                match (field1).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditReorderGroups")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::Duplicate {
+            ids: field0,
+            group_id: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item("group_id", {
+                match (field1).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditDuplicate")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsEdit::Delete {
+            ids: field0,
+            node_replacements: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item("node_replacements", {
+                let out = PyDict::new(py);
+                for (key, item0) in (field1) {
+                    out.set_item(
+                        key.to_string(),
+                        (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("PhysicsEditDelete")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_physicsnode(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PhysicsNode> {
+    Ok(zipzi_core::document::PhysicsNode {
+        id: value.getattr("id")?.extract()?,
+        position: read_physicsvector(&value.getattr("position")?)?,
+        mobility: value.getattr("mobility")?.extract()?,
+        delay: value.getattr("delay")?.extract()?,
+        acceleration: value.getattr("acceleration")?.extract()?,
+        radius: value.getattr("radius")?.extract()?,
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicsnode(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsNode,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsnode_in(py, value, &classes)
+}
+fn write_physicsnode_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsNode,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "position",
+        write_physicsvector_in(py, (&value.position), classes)?,
+    )?;
+    out.set_item(
+        "mobility",
+        (&value.mobility)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "delay",
+        (&value.delay)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "acceleration",
+        (&value.acceleration)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "radius",
+        (&value.radius)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsNode")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsvector(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::physics::PhysicsVector> {
+    Ok(zipzi_core::physics::PhysicsVector {
+        x: value.getattr("X")?.extract()?,
+        y: value.getattr("Y")?.extract()?,
+    })
+}
+
+pub fn write_physicsvector(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsVector,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsvector_in(py, value, &classes)
+}
+fn write_physicsvector_in(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsVector,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "X",
+        (&value.x)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "Y",
+        (&value.y)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("PhysicsVector")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicspatch(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PhysicsPatch> {
+    Ok(zipzi_core::document::PhysicsPatch {
+        asset_id: value.getattr("asset_id")?.extract()?,
+        asset_changes: value
+            .getattr("asset_changes")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_physicsassetproperty(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        rig: if value.getattr("rig")?.is_none() {
+            None
+        } else {
+            Some(read_physicsrigpatch(&value.getattr("rig")?)?)
+        },
+    })
+}
+
+pub fn write_physicspatch(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsPatch,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicspatch_in(py, value, &classes)
+}
+fn write_physicspatch_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsPatch,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "asset_id",
+        (&value.asset_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("asset_changes", {
+        let out = PyList::empty(py);
+        for item0 in (&value.asset_changes) {
+            out.append(write_physicsassetproperty_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("rig", {
+        match (&value.rig).as_ref() {
+            Some(item) => write_physicsrigpatch_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("PhysicsPatch")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsassetproperty(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::PhysicsAssetProperty> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "Fps" => Ok(zipzi_core::document::PhysicsAssetProperty::Fps(
+            if value.getattr("value")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("value")?.extract()?)
+            },
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_physicsassetproperty(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsAssetProperty,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsassetproperty_in(py, value, &classes)
+}
+fn write_physicsassetproperty_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsAssetProperty,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::PhysicsAssetProperty::Fps(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", {
+                match (field0).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PhysicsAssetPropertyFps")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_physicsrigpatch(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::PhysicsRigPatch> {
+    Ok(zipzi_core::document::PhysicsRigPatch {
+        group_id: value.getattr("group_id")?.extract()?,
+        changes: value
+            .getattr("changes")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_physicsproperty(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+    })
+}
+
+pub fn write_physicsrigpatch(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsRigPatch,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsrigpatch_in(py, value, &classes)
+}
+fn write_physicsrigpatch_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsRigPatch,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "group_id",
+        (&value.group_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("changes", {
+        let out = PyList::empty(py);
+        for item0 in (&value.changes) {
+            out.append(write_physicsproperty_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsRigPatch")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsproperty(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::PhysicsProperty> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "Name" => Ok(zipzi_core::document::PhysicsProperty::Name(
+            value.getattr("value")?.extract()?,
+        )),
+        "InputWeight" => Ok(zipzi_core::document::PhysicsProperty::InputWeight {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "InputAxis" => Ok(zipzi_core::document::PhysicsProperty::InputAxis {
+            id: value.getattr("id")?.extract()?,
+            value: read_physicsaxis(&value.getattr("value")?)?,
+        }),
+        "InputReflect" => Ok(zipzi_core::document::PhysicsProperty::InputReflect {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "InputParameter" => Ok(zipzi_core::document::PhysicsProperty::InputParameter {
+            id: value.getattr("id")?.extract()?,
+            target: read_physicstarget(&value.getattr("target")?)?,
+        }),
+        "OutputWeight" => Ok(zipzi_core::document::PhysicsProperty::OutputWeight {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "OutputScale" => Ok(zipzi_core::document::PhysicsProperty::OutputScale {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "OutputAxis" => Ok(zipzi_core::document::PhysicsProperty::OutputAxis {
+            id: value.getattr("id")?.extract()?,
+            value: read_physicsaxis(&value.getattr("value")?)?,
+        }),
+        "OutputReflect" => Ok(zipzi_core::document::PhysicsProperty::OutputReflect {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "OutputParameter" => Ok(zipzi_core::document::PhysicsProperty::OutputParameter {
+            id: value.getattr("id")?.extract()?,
+            target: read_physicstarget(&value.getattr("target")?)?,
+        }),
+        "OutputNode" => Ok(zipzi_core::document::PhysicsProperty::OutputNode {
+            id: value.getattr("id")?.extract()?,
+            node_id: value.getattr("node_id")?.extract()?,
+        }),
+        "VertexPosition" => Ok(zipzi_core::document::PhysicsProperty::VertexPosition {
+            id: value.getattr("id")?.extract()?,
+            value: read_physicsvector(&value.getattr("value")?)?,
+        }),
+        "VertexRadius" => Ok(zipzi_core::document::PhysicsProperty::VertexRadius {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "VertexMobility" => Ok(zipzi_core::document::PhysicsProperty::VertexMobility {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "VertexDelay" => Ok(zipzi_core::document::PhysicsProperty::VertexDelay {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "VertexAcceleration" => Ok(zipzi_core::document::PhysicsProperty::VertexAcceleration {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "PositionNormalization" => Ok(
+            zipzi_core::document::PhysicsProperty::PositionNormalization(read_physicsrange(
+                &value.getattr("value")?,
+            )?),
+        ),
+        "AngleNormalization" => Ok(zipzi_core::document::PhysicsProperty::AngleNormalization(
+            read_physicsrange(&value.getattr("value")?)?,
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_physicsproperty(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsProperty,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsproperty_in(py, value, &classes)
+}
+fn write_physicsproperty_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsProperty,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::PhysicsProperty::Name(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyName")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::InputWeight {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyInputWeight")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::InputAxis {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("value", write_physicsaxis_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("PhysicsPropertyInputAxis")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::InputReflect {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyInputReflect")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::InputParameter {
+            id: field0,
+            target: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("target", write_physicstarget_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("PhysicsPropertyInputParameter")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::OutputWeight {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyOutputWeight")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::OutputScale {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyOutputScale")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::OutputAxis {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("value", write_physicsaxis_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("PhysicsPropertyOutputAxis")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::OutputReflect {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyOutputReflect")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::OutputParameter {
+            id: field0,
+            target: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("target", write_physicstarget_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("PhysicsPropertyOutputParameter")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::OutputNode {
+            id: field0,
+            node_id: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "node_id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyOutputNode")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::VertexPosition {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("value", write_physicsvector_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("PhysicsPropertyVertexPosition")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::VertexRadius {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyVertexRadius")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::VertexMobility {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyVertexMobility")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::VertexDelay {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyVertexDelay")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::VertexAcceleration {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsPropertyVertexAcceleration")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::PositionNormalization(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_physicsrange_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("PhysicsPropertyPositionNormalization")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsProperty::AngleNormalization(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_physicsrange_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("PhysicsPropertyAngleNormalization")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_physicsaxis(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::physics::PhysicsAxis> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "X" => Ok(zipzi_core::physics::PhysicsAxis::X),
+        "Y" => Ok(zipzi_core::physics::PhysicsAxis::Y),
+        "Angle" => Ok(zipzi_core::physics::PhysicsAxis::Angle),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
+        )),
+    }
+}
+
+pub fn write_physicsaxis(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsAxis,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsaxis_in(py, value, &classes)
+}
+fn write_physicsaxis_in(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsAxis,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::physics::PhysicsAxis::X => "X",
+        zipzi_core::physics::PhysicsAxis::Y => "Y",
+        zipzi_core::physics::PhysicsAxis::Angle => "Angle",
+    };
+    Ok(classes.getattr("PhysicsAxis")?.call1((name,))?.unbind())
+}
+
+pub fn read_physicstarget(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::PhysicsTarget> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "unspecified" => Ok(zipzi_core::document::PhysicsTarget::Unspecified),
+        "resolved" => Ok(zipzi_core::document::PhysicsTarget::Resolved {
+            parameter_id: value.getattr("parameter_id")?.extract()?,
+        }),
+        "unresolved" => Ok(zipzi_core::document::PhysicsTarget::Unresolved {
+            runtime_id: value.getattr("runtime_id")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_physicstarget(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsTarget,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicstarget_in(py, value, &classes)
+}
+fn write_physicstarget_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsTarget,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::PhysicsTarget::Unspecified => Ok(classes
+            .getattr("PhysicsTargetUnspecified")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::PhysicsTarget::Resolved {
+            parameter_id: field0,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "parameter_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsTargetResolved")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PhysicsTarget::Unresolved { runtime_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "runtime_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsTargetUnresolved")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_physicsrange(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::physics::PhysicsRange> {
+    Ok(zipzi_core::physics::PhysicsRange {
+        minimum: value.getattr("Minimum")?.extract()?,
+        default: value.getattr("Default")?.extract()?,
+        maximum: value.getattr("Maximum")?.extract()?,
+    })
+}
+
+pub fn write_physicsrange(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsRange,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsrange_in(py, value, &classes)
+}
+fn write_physicsrange_in(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsRange,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "Minimum",
+        (&value.minimum)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "Default",
+        (&value.default)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "Maximum",
+        (&value.maximum)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("PhysicsRange")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_poseedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PoseEdit> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => Ok(zipzi_core::document::PoseEdit::Create {
+            id: value.getattr("id")?.extract()?,
+        }),
+        "create_group" => Ok(zipzi_core::document::PoseEdit::CreateGroup {
+            pose_id: value.getattr("pose_id")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            name: value.getattr("name")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "create_entry" => Ok(zipzi_core::document::PoseEdit::CreateEntry {
+            group_id: value.getattr("group_id")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "create_link" => Ok(zipzi_core::document::PoseEdit::CreateLink {
+            entry_id: value.getattr("entry_id")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "patch" => Ok(zipzi_core::document::PoseEdit::Patch {
+            id: value.getattr("id")?.extract()?,
+            expected: read_posefields(&value.getattr("expected")?)?,
+            fields: read_posefields(&value.getattr("fields")?)?,
+        }),
+        "move" => Ok(zipzi_core::document::PoseEdit::Move {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination: read_posecollection(&value.getattr("destination")?)?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "duplicate" => Ok(zipzi_core::document::PoseEdit::Duplicate {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            destination: read_posecollection(&value.getattr("destination")?)?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        "delete" => Ok(zipzi_core::document::PoseEdit::Delete {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "dissolve_group" => Ok(zipzi_core::document::PoseEdit::DissolveGroup {
+            id: value.getattr("id")?.extract()?,
+            destination: value.getattr("destination")?.extract()?,
+            before: if value.getattr("before")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("before")?.extract()?)
+            },
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_poseedit(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseEdit,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_poseedit_in(py, value, &classes)
+}
+fn write_poseedit_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseEdit,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::PoseEdit::Create { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PoseEditCreate")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseEdit::CreateGroup {
+            pose_id: field0,
+            id: field1,
+            name: field2,
+            before: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "pose_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "name",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field3).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PoseEditCreateGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseEdit::CreateEntry {
+            group_id: field0,
+            id: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "group_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PoseEditCreateEntry")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseEdit::CreateLink {
+            entry_id: field0,
+            id: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "entry_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PoseEditCreateLink")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseEdit::Patch {
+            id: field0,
+            expected: field1,
+            fields: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("expected", write_posefields_in(py, (field1), classes)?)?;
+            content.set_item("fields", write_posefields_in(py, (field2), classes)?)?;
+            Ok(classes
+                .getattr("PoseEditPatch")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseEdit::Move {
+            ids: field0,
+            destination: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination",
+                write_posecollection_in(py, (field1), classes)?,
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PoseEditMove")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseEdit::Duplicate {
+            ids: field0,
+            destination: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "destination",
+                write_posecollection_in(py, (field1), classes)?,
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PoseEditDuplicate")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseEdit::Delete { ids: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("PoseEditDelete")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseEdit::DissolveGroup {
+            id: field0,
+            destination: field1,
+            before: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "destination",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("before", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PoseEditDissolveGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_posefields(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PoseFields> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "asset" => Ok(zipzi_core::document::PoseFields::Asset {
+            fade_in: if value.getattr("fade_in")?.is_none() {
+                None
+            } else {
+                Some(value.getattr("fade_in")?.extract()?)
+            },
+        }),
+        "group" => Ok(zipzi_core::document::PoseFields::Group {
+            name: value.getattr("name")?.extract()?,
+        }),
+        "entry" => Ok(zipzi_core::document::PoseFields::Entry {
+            part: read_posepartref(&value.getattr("part")?)?,
+        }),
+        "link" => Ok(zipzi_core::document::PoseFields::Link {
+            target: read_posepartref(&value.getattr("target")?)?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_posefields(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseFields,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_posefields_in(py, value, &classes)
+}
+fn write_posefields_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseFields,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::PoseFields::Asset { fade_in: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("fade_in", {
+                match (field0).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("PoseFieldsAsset")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseFields::Group { name: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "name",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PoseFieldsGroup")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseFields::Entry { part: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("part", write_posepartref_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("PoseFieldsEntry")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseFields::Link { target: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("target", write_posepartref_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("PoseFieldsLink")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_posepartref(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PosePartRef> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "unspecified" => Ok(zipzi_core::document::PosePartRef::Unspecified),
+        "resolved" => Ok(zipzi_core::document::PosePartRef::Resolved {
+            part_id: value.getattr("part_id")?.extract()?,
+        }),
+        "unresolved" => Ok(zipzi_core::document::PosePartRef::Unresolved {
+            runtime_id: value.getattr("runtime_id")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_posepartref(
+    py: Python<'_>,
+    value: &zipzi_core::document::PosePartRef,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_posepartref_in(py, value, &classes)
+}
+fn write_posepartref_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PosePartRef,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::PosePartRef::Unspecified => {
+            Ok(classes.getattr("PosePartRefUnspecified")?.call0()?.unbind())
+        }
+        zipzi_core::document::PosePartRef::Resolved { part_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "part_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PosePartRefResolved")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PosePartRef::Unresolved { runtime_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "runtime_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PosePartRefUnresolved")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_posecollection(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::PoseCollection> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "groups" => Ok(zipzi_core::document::PoseCollection::Groups),
+        "entries" => Ok(zipzi_core::document::PoseCollection::Entries {
+            group_id: value.getattr("group_id")?.extract()?,
+        }),
+        "links" => Ok(zipzi_core::document::PoseCollection::Links {
+            entry_id: value.getattr("entry_id")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_posecollection(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseCollection,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_posecollection_in(py, value, &classes)
+}
+fn write_posecollection_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseCollection,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::PoseCollection::Groups => {
+            Ok(classes.getattr("PoseCollectionGroups")?.call0()?.unbind())
+        }
+        zipzi_core::document::PoseCollection::Entries { group_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "group_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PoseCollectionEntries")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::PoseCollection::Links { entry_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "entry_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PoseCollectionLinks")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_motionclip(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::MotionClip> {
+    Ok(zipzi_core::document::MotionClip {
+        id: value.getattr("id")?.extract()?,
+        name: value.getattr("name")?.extract()?,
+        duration: value.getattr("duration")?.extract()?,
+        fps: value.getattr("fps")?.extract()?,
+        looping: value.getattr("looping")?.extract()?,
+        restricted_beziers: value.getattr("restricted_beziers")?.extract()?,
+        fade_in: if value.getattr("fade_in")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_in")?.extract()?)
+        },
+        fade_out: if value.getattr("fade_out")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_out")?.extract()?)
+        },
+        track_order: value
+            .getattr("track_order")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        tracks: value
+            .getattr("tracks")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_motiontrack(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        events: value
+            .getattr("events")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_motionevent(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+        meta_extensions: value
+            .getattr("meta_extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+        opaque_source_ids: if value.getattr("opaque_source_ids")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("opaque_source_ids")?
+                    .call_method0("items")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+                    })
+                    .collect::<PyResult<_>>()?,
+            )
+        },
+        opaque_source_content_hash: if value.getattr("opaque_source_content_hash")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("opaque_source_content_hash")?.extract()?)
+        },
+    })
+}
+
+pub fn write_motionclip(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionClip,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionclip_in(py, value, &classes)
+}
+fn write_motionclip_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionClip,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "name",
+        (&value.name)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "duration",
+        (&value.duration)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "fps",
+        (&value.fps)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "looping",
+        (&value.looping)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "restricted_beziers",
+        (&value.restricted_beziers)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("fade_in", {
+        match (&value.fade_in).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("fade_out", {
+        match (&value.fade_out).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("track_order", {
+        let out = PyList::empty(py);
+        for item0 in (&value.track_order) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("tracks", {
+        let out = PyList::empty(py);
+        for item0 in (&value.tracks) {
+            out.append(write_motiontrack_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("events", {
+        let out = PyList::empty(py);
+        for item0 in (&value.events) {
+            out.append(write_motionevent_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("meta_extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.meta_extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("opaque_source_ids", {
+        match (&value.opaque_source_ids).as_ref() {
+            Some(item) => {
+                let out = PyDict::new(py);
+                for (key, item1) in (item) {
+                    out.set_item(
+                        key.to_string(),
+                        (item1).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    out.set_item("opaque_source_content_hash", {
+        match (&value.opaque_source_content_hash).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("MotionClip")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_motiontrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::MotionTrack> {
+    Ok(zipzi_core::document::MotionTrack {
+        id: value.getattr("id")?.extract()?,
+        target: read_motiontracktarget(&value.getattr("target")?)?,
+        initial: read_motionkey(&value.getattr("initial")?)?,
+        segments: std::sync::Arc::new(
+            value
+                .getattr("segments")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(read_motionsegment(&item0)?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        ),
+        fade_in: if value.getattr("fade_in")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_in")?.extract()?)
+        },
+        fade_out: if value.getattr("fade_out")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_out")?.extract()?)
+        },
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_motiontrack(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionTrack,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motiontrack_in(py, value, &classes)
+}
+fn write_motiontrack_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionTrack,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "target",
+        write_motiontracktarget_in(py, (&value.target), classes)?,
+    )?;
+    out.set_item(
+        "initial",
+        write_motionkey_in(py, (&value.initial), classes)?,
+    )?;
+    out.set_item("segments", {
+        let out = PyList::empty(py);
+        for item0 in ((&value.segments).as_ref()) {
+            out.append(write_motionsegment_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("fade_in", {
+        match (&value.fade_in).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("fade_out", {
+        match (&value.fade_out).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("MotionTrack")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_motionkey(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::MotionKey> {
+    Ok(zipzi_core::document::MotionKey {
+        id: value.getattr("id")?.extract()?,
+        time: value.getattr("time")?.extract()?,
+        value: value.getattr("value")?.extract()?,
+    })
+}
+
+pub fn write_motionkey(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionKey,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionkey_in(py, value, &classes)
+}
+fn write_motionkey_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionKey,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "time",
+        (&value.time)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "value",
+        (&value.value)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes.getattr("MotionKey")?.call((), Some(&out))?.unbind())
+}
+
+pub fn read_motionsegment(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::MotionSegment> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "linear" => Ok(zipzi_core::document::MotionSegment::Linear {
+            end: read_motionkey(&value.getattr("end")?)?,
+        }),
+        "bezier" => Ok(zipzi_core::document::MotionSegment::Bezier {
+            control1: read_motionpoint(&value.getattr("control1")?)?,
+            control2: read_motionpoint(&value.getattr("control2")?)?,
+            end: read_motionkey(&value.getattr("end")?)?,
+        }),
+        "stepped" => Ok(zipzi_core::document::MotionSegment::Stepped {
+            end: read_motionkey(&value.getattr("end")?)?,
+        }),
+        "inverse_stepped" => Ok(zipzi_core::document::MotionSegment::InverseStepped {
+            end: read_motionkey(&value.getattr("end")?)?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_motionsegment(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionSegment,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionsegment_in(py, value, &classes)
+}
+fn write_motionsegment_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionSegment,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::MotionSegment::Linear { end: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("end", write_motionkey_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("MotionSegmentLinear")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionSegment::Bezier {
+            control1: field0,
+            control2: field1,
+            end: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("control1", write_motionpoint_in(py, (field0), classes)?)?;
+            content.set_item("control2", write_motionpoint_in(py, (field1), classes)?)?;
+            content.set_item("end", write_motionkey_in(py, (field2), classes)?)?;
+            Ok(classes
+                .getattr("MotionSegmentBezier")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionSegment::Stepped { end: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("end", write_motionkey_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("MotionSegmentStepped")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::MotionSegment::InverseStepped { end: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("end", write_motionkey_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("MotionSegmentInverseStepped")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_motionpoint(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::MotionPoint> {
+    Ok(zipzi_core::document::MotionPoint {
+        time: value.getattr("time")?.extract()?,
+        value: value.getattr("value")?.extract()?,
+    })
+}
+
+pub fn write_motionpoint(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionPoint,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionpoint_in(py, value, &classes)
+}
+fn write_motionpoint_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionPoint,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "time",
+        (&value.time)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "value",
+        (&value.value)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("MotionPoint")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_expressionasset(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ExpressionAsset> {
+    Ok(zipzi_core::document::ExpressionAsset {
+        id: value.getattr("id")?.extract()?,
+        name: value.getattr("name")?.extract()?,
+        file_type: if value.getattr("file_type")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("file_type")?.extract()?)
+        },
+        fade_in: if value.getattr("fade_in")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_in")?.extract()?)
+        },
+        fade_out: if value.getattr("fade_out")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_out")?.extract()?)
+        },
+        entries: value
+            .getattr("entries")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_expressionentry(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+        opaque_source_ids: if value.getattr("opaque_source_ids")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("opaque_source_ids")?
+                    .call_method0("items")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+                    })
+                    .collect::<PyResult<_>>()?,
+            )
+        },
+        opaque_source_content_hash: if value.getattr("opaque_source_content_hash")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("opaque_source_content_hash")?.extract()?)
+        },
+    })
+}
+
+pub fn write_expressionasset(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionAsset,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_expressionasset_in(py, value, &classes)
+}
+fn write_expressionasset_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionAsset,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "name",
+        (&value.name)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("file_type", {
+        match (&value.file_type).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("fade_in", {
+        match (&value.fade_in).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("fade_out", {
+        match (&value.fade_out).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("entries", {
+        let out = PyList::empty(py);
+        for item0 in (&value.entries) {
+            out.append(write_expressionentry_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("opaque_source_ids", {
+        match (&value.opaque_source_ids).as_ref() {
+            Some(item) => {
+                let out = PyDict::new(py);
+                for (key, item1) in (item) {
+                    out.set_item(
+                        key.to_string(),
+                        (item1).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    out.set_item("opaque_source_content_hash", {
+        match (&value.opaque_source_content_hash).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("ExpressionAsset")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_expressionentry(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ExpressionEntry> {
+    Ok(zipzi_core::document::ExpressionEntry {
+        id: value.getattr("id")?.extract()?,
+        target: read_expressiontarget(&value.getattr("target")?)?,
+        value: value.getattr("value")?.extract()?,
+        blend: if value.getattr("blend")?.is_none() {
+            None
+        } else {
+            Some(read_expressionblend(&value.getattr("blend")?)?)
+        },
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_expressionentry(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionEntry,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_expressionentry_in(py, value, &classes)
+}
+fn write_expressionentry_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ExpressionEntry,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "target",
+        write_expressiontarget_in(py, (&value.target), classes)?,
+    )?;
+    out.set_item(
+        "value",
+        (&value.value)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("blend", {
+        match (&value.blend).as_ref() {
+            Some(item) => write_expressionblend_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("ExpressionEntry")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsasset(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PhysicsAsset> {
+    Ok(zipzi_core::document::PhysicsAsset {
+        id: value.getattr("id")?.extract()?,
+        data: read_physicsdefinition(&value.getattr("data")?)?,
+        opaque_source_ids: if value.getattr("opaque_source_ids")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("opaque_source_ids")?
+                    .call_method0("items")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+                    })
+                    .collect::<PyResult<_>>()?,
+            )
+        },
+        opaque_source_content_hash: if value.getattr("opaque_source_content_hash")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("opaque_source_content_hash")?.extract()?)
+        },
+    })
+}
+
+pub fn write_physicsasset(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsAsset,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsasset_in(py, value, &classes)
+}
+fn write_physicsasset_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsAsset,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "data",
+        write_physicsdefinition_in(py, (&value.data), classes)?,
+    )?;
+    out.set_item("opaque_source_ids", {
+        match (&value.opaque_source_ids).as_ref() {
+            Some(item) => {
+                let out = PyDict::new(py);
+                for (key, item1) in (item) {
+                    out.set_item(
+                        key.to_string(),
+                        (item1).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    out.set_item("opaque_source_content_hash", {
+        match (&value.opaque_source_content_hash).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("PhysicsAsset")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsdefinition(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::PhysicsDefinition> {
+    Ok(zipzi_core::document::PhysicsDefinition {
+        version: value.getattr("version")?.extract()?,
+        meta: read_physicsmeta(&value.getattr("meta")?)?,
+        settings: value
+            .getattr("settings")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(std::sync::Arc::new(read_physicssetting(&item0)?))
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicsdefinition(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsDefinition,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsdefinition_in(py, value, &classes)
+}
+fn write_physicsdefinition_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsDefinition,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "version",
+        (&value.version)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("meta", write_physicsmeta_in(py, (&value.meta), classes)?)?;
+    out.set_item("settings", {
+        let out = PyList::empty(py);
+        for item0 in (&value.settings) {
+            out.append(write_physicssetting_in(py, ((item0).as_ref()), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsDefinition")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsmeta(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::physics::PhysicsMeta> {
+    Ok(zipzi_core::physics::PhysicsMeta {
+        setting_count: value.getattr("PhysicsSettingCount")?.extract()?,
+        input_count: value.getattr("TotalInputCount")?.extract()?,
+        output_count: value.getattr("TotalOutputCount")?.extract()?,
+        vertex_count: value.getattr("VertexCount")?.extract()?,
+        forces: read_physicsforces(&value.getattr("EffectiveForces")?)?,
+        dictionary: value
+            .getattr("PhysicsDictionary")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_physicsdictionaryentry(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        fps: if value.getattr("Fps")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("Fps")?.extract()?)
+        },
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicsmeta(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsMeta,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsmeta_in(py, value, &classes)
+}
+fn write_physicsmeta_in(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsMeta,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "PhysicsSettingCount",
+        (&value.setting_count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "TotalInputCount",
+        (&value.input_count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "TotalOutputCount",
+        (&value.output_count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "VertexCount",
+        (&value.vertex_count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "EffectiveForces",
+        write_physicsforces_in(py, (&value.forces), classes)?,
+    )?;
+    out.set_item("PhysicsDictionary", {
+        let out = PyList::empty(py);
+        for item0 in (&value.dictionary) {
+            out.append(write_physicsdictionaryentry_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("Fps", {
+        match (&value.fps).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsMeta")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsforces(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::physics::PhysicsForces> {
+    Ok(zipzi_core::physics::PhysicsForces {
+        gravity: read_physicsvector(&value.getattr("Gravity")?)?,
+        wind: read_physicsvector(&value.getattr("Wind")?)?,
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicsforces(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsForces,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsforces_in(py, value, &classes)
+}
+fn write_physicsforces_in(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsForces,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "Gravity",
+        write_physicsvector_in(py, (&value.gravity), classes)?,
+    )?;
+    out.set_item("Wind", write_physicsvector_in(py, (&value.wind), classes)?)?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsForces")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsdictionaryentry(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::physics::PhysicsDictionaryEntry> {
+    Ok(zipzi_core::physics::PhysicsDictionaryEntry {
+        id: value.getattr("Id")?.extract()?,
+        name: value.getattr("Name")?.extract()?,
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicsdictionaryentry(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsDictionaryEntry,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsdictionaryentry_in(py, value, &classes)
+}
+fn write_physicsdictionaryentry_in(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsDictionaryEntry,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "Id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "Name",
+        (&value.name)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsDictionaryEntry")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicssetting(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::PhysicsSetting> {
+    Ok(zipzi_core::document::PhysicsSetting {
+        id: value.getattr("id")?.extract()?,
+        external_id: value.getattr("external_id")?.extract()?,
+        inputs: value
+            .getattr("inputs")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_physicsinput(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        outputs: value
+            .getattr("outputs")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_physicsoutput(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        vertices: value
+            .getattr("vertices")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_physicsnode(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        normalization: read_physicsnormalization(&value.getattr("normalization")?)?,
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicssetting(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsSetting,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicssetting_in(py, value, &classes)
+}
+fn write_physicssetting_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsSetting,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "external_id",
+        (&value.external_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("inputs", {
+        let out = PyList::empty(py);
+        for item0 in (&value.inputs) {
+            out.append(write_physicsinput_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("outputs", {
+        let out = PyList::empty(py);
+        for item0 in (&value.outputs) {
+            out.append(write_physicsoutput_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("vertices", {
+        let out = PyList::empty(py);
+        for item0 in (&value.vertices) {
+            out.append(write_physicsnode_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "normalization",
+        write_physicsnormalization_in(py, (&value.normalization), classes)?,
+    )?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsSetting")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsinput(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PhysicsInput> {
+    Ok(zipzi_core::document::PhysicsInput {
+        id: value.getattr("id")?.extract()?,
+        source: read_physicstarget(&value.getattr("source")?)?,
+        reference_extensions: value
+            .getattr("reference_extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+        weight: value.getattr("weight")?.extract()?,
+        kind: read_physicsaxis(&value.getattr("kind")?)?,
+        reflect: value.getattr("reflect")?.extract()?,
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicsinput(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsInput,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsinput_in(py, value, &classes)
+}
+fn write_physicsinput_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsInput,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "source",
+        write_physicstarget_in(py, (&value.source), classes)?,
+    )?;
+    out.set_item("reference_extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.reference_extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "weight",
+        (&value.weight)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("kind", write_physicsaxis_in(py, (&value.kind), classes)?)?;
+    out.set_item(
+        "reflect",
+        (&value.reflect)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsInput")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsoutput(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::PhysicsOutput> {
+    Ok(zipzi_core::document::PhysicsOutput {
+        id: value.getattr("id")?.extract()?,
+        destination: read_physicstarget(&value.getattr("destination")?)?,
+        reference_extensions: value
+            .getattr("reference_extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+        node_id: value.getattr("node_id")?.extract()?,
+        scale: value.getattr("scale")?.extract()?,
+        weight: value.getattr("weight")?.extract()?,
+        kind: read_physicsaxis(&value.getattr("kind")?)?,
+        reflect: value.getattr("reflect")?.extract()?,
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicsoutput(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsOutput,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsoutput_in(py, value, &classes)
+}
+fn write_physicsoutput_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PhysicsOutput,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "destination",
+        write_physicstarget_in(py, (&value.destination), classes)?,
+    )?;
+    out.set_item("reference_extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.reference_extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "node_id",
+        (&value.node_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "scale",
+        (&value.scale)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "weight",
+        (&value.weight)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("kind", write_physicsaxis_in(py, (&value.kind), classes)?)?;
+    out.set_item(
+        "reflect",
+        (&value.reflect)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsOutput")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_physicsnormalization(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::physics::PhysicsNormalization> {
+    Ok(zipzi_core::physics::PhysicsNormalization {
+        position: read_physicsrange(&value.getattr("Position")?)?,
+        angle: read_physicsrange(&value.getattr("Angle")?)?,
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_physicsnormalization(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsNormalization,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsnormalization_in(py, value, &classes)
+}
+fn write_physicsnormalization_in(
+    py: Python<'_>,
+    value: &zipzi_core::physics::PhysicsNormalization,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "Position",
+        write_physicsrange_in(py, (&value.position), classes)?,
+    )?;
+    out.set_item("Angle", write_physicsrange_in(py, (&value.angle), classes)?)?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsNormalization")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_poseasset(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PoseAsset> {
+    Ok(zipzi_core::document::PoseAsset {
+        id: value.getattr("id")?.extract()?,
+        file_type: if value.getattr("file_type")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("file_type")?.extract()?)
+        },
+        fade_in: if value.getattr("fade_in")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("fade_in")?.extract()?)
+        },
+        groups: value
+            .getattr("groups")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_posegroup(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+        opaque_source_ids: if value.getattr("opaque_source_ids")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("opaque_source_ids")?
+                    .call_method0("items")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+                    })
+                    .collect::<PyResult<_>>()?,
+            )
+        },
+        opaque_source_content_hash: if value.getattr("opaque_source_content_hash")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("opaque_source_content_hash")?.extract()?)
+        },
+    })
+}
+
+pub fn write_poseasset(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseAsset,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_poseasset_in(py, value, &classes)
+}
+fn write_poseasset_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseAsset,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("file_type", {
+        match (&value.file_type).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("fade_in", {
+        match (&value.fade_in).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("groups", {
+        let out = PyList::empty(py);
+        for item0 in (&value.groups) {
+            out.append(write_posegroup_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("opaque_source_ids", {
+        match (&value.opaque_source_ids).as_ref() {
+            Some(item) => {
+                let out = PyDict::new(py);
+                for (key, item1) in (item) {
+                    out.set_item(
+                        key.to_string(),
+                        (item1).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    out.set_item("opaque_source_content_hash", {
+        match (&value.opaque_source_content_hash).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes.getattr("PoseAsset")?.call((), Some(&out))?.unbind())
+}
+
+pub fn read_posegroup(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PoseGroup> {
+    Ok(zipzi_core::document::PoseGroup {
+        id: value.getattr("id")?.extract()?,
+        name: value.getattr("name")?.extract()?,
+        entries: value
+            .getattr("entries")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_poseentry(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+    })
+}
+
+pub fn write_posegroup(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseGroup,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_posegroup_in(py, value, &classes)
+}
+fn write_posegroup_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseGroup,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "name",
+        (&value.name)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("entries", {
+        let out = PyList::empty(py);
+        for item0 in (&value.entries) {
+            out.append(write_poseentry_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes.getattr("PoseGroup")?.call((), Some(&out))?.unbind())
+}
+
+pub fn read_poseentry(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PoseEntry> {
+    Ok(zipzi_core::document::PoseEntry {
+        id: value.getattr("id")?.extract()?,
+        part: read_posepartref(&value.getattr("part")?)?,
+        links: if value.getattr("links")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("links")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok(read_poselink(&item0)?)
+                    })
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
+            )
+        },
+        extensions: value
+            .getattr("extensions")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_extension(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+    })
+}
+
+pub fn write_poseentry(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseEntry,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_poseentry_in(py, value, &classes)
+}
+fn write_poseentry_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseEntry,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("part", write_posepartref_in(py, (&value.part), classes)?)?;
+    out.set_item("links", {
+        match (&value.links).as_ref() {
+            Some(item) => {
+                let out = PyList::empty(py);
+                for item1 in (item) {
+                    out.append(write_poselink_in(py, (item1), classes)?)?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    out.set_item("extensions", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.extensions) {
+            out.set_item(key.to_string(), write_extension(py, (item0))?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes.getattr("PoseEntry")?.call((), Some(&out))?.unbind())
+}
+
+pub fn read_poselink(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::PoseLink> {
+    Ok(zipzi_core::document::PoseLink {
+        id: value.getattr("id")?.extract()?,
+        target: read_posepartref(&value.getattr("target")?)?,
+    })
+}
+
+pub fn write_poselink(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseLink,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_poselink_in(py, value, &classes)
+}
+fn write_poselink_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::PoseLink,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "target",
+        write_posepartref_in(py, (&value.target), classes)?,
+    )?;
+    Ok(classes.getattr("PoseLink")?.call((), Some(&out))?.unbind())
+}
+
 pub fn read_modelsetup(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::ModelSetup> {
     Ok(zipzi_core::types::ModelSetup {
         source_canvas: if value.getattr("source_canvas")?.is_none() {
@@ -10092,7 +15367,8 @@ pub fn read_hierarchyorder(
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         deformation: value
             .getattr("deformation")?
             .try_iter()?
@@ -10100,7 +15376,8 @@ pub fn read_hierarchyorder(
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         glues: value
             .getattr("glues")?
             .try_iter()?
@@ -10108,7 +15385,8 @@ pub fn read_hierarchyorder(
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
     })
 }
 
@@ -10254,7 +15532,8 @@ pub fn read_drawordergroup(
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         min_order: value.getattr("min_order")?.extract()?,
         max_order: value.getattr("max_order")?.extract()?,
     })
@@ -10378,7 +15657,8 @@ pub fn read_geometrysnapshot(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Ge
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         positions: value
             .getattr("positions")?
             .try_iter()?
@@ -10386,7 +15666,8 @@ pub fn read_geometrysnapshot(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Ge
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         uvs: value
             .getattr("uvs")?
             .try_iter()?
@@ -10394,7 +15675,8 @@ pub fn read_geometrysnapshot(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Ge
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         triangles: value
             .getattr("triangles")?
             .try_iter()?
@@ -10412,7 +15694,8 @@ pub fn read_geometrysnapshot(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Ge
                         pyo3::exceptions::PyValueError::new_err("Invalid fixed array length")
                     })?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         meshing: if value.getattr("meshing")?.is_none() {
             None
         } else {
@@ -10580,7 +15863,8 @@ pub fn read_topologyreplacement(
                 let item0 = item?;
                 Ok(read_blendshapebinding(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         glues: value
             .getattr("glues")?
             .try_iter()?
@@ -10588,7 +15872,8 @@ pub fn read_topologyreplacement(
                 let item0 = item?;
                 Ok(read_glue(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         vertex_mapping: value
             .getattr("vertex_mapping")?
             .call_method0("items")?
@@ -10686,6 +15971,18 @@ pub fn read_modelingintent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Mode
         "attachment" => Ok(zipzi_sdk::ModelingIntent::Attachment(read_attachmentedit(
             &value.getattr("intent")?,
         )?)),
+        "motion" => Ok(zipzi_sdk::ModelingIntent::Motion(read_motionedit(
+            &value.getattr("intent")?,
+        )?)),
+        "expression" => Ok(zipzi_sdk::ModelingIntent::Expression(read_expressionedit(
+            &value.getattr("intent")?,
+        )?)),
+        "physics" => Ok(zipzi_sdk::ModelingIntent::Physics(read_physicsedit(
+            &value.getattr("intent")?,
+        )?)),
+        "pose" => Ok(zipzi_sdk::ModelingIntent::Pose(read_poseedit(
+            &value.getattr("intent")?,
+        )?)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -10701,7 +15998,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         meshes: value
             .getattr("meshes")?
             .try_iter()?
@@ -10709,7 +16007,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         parameters: value
             .getattr("parameters")?
             .try_iter()?
@@ -10717,7 +16016,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         parts: value
             .getattr("parts")?
             .try_iter()?
@@ -10725,7 +16025,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         transforms: value
             .getattr("transforms")?
             .try_iter()?
@@ -10733,7 +16034,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         bindings: value
             .getattr("bindings")?
             .try_iter()?
@@ -10741,7 +16043,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         scene_bindings: value
             .getattr("scene_bindings")?
             .try_iter()?
@@ -10749,7 +16052,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         blend_key_tables: value
             .getattr("blend_key_tables")?
             .try_iter()?
@@ -10757,7 +16061,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         blend_constraints: value
             .getattr("blend_constraints")?
             .try_iter()?
@@ -10765,7 +16070,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         blend_bindings: value
             .getattr("blend_bindings")?
             .try_iter()?
@@ -10773,7 +16079,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         glues: value
             .getattr("glues")?
             .try_iter()?
@@ -10781,7 +16088,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         offscreens: value
             .getattr("offscreens")?
             .try_iter()?
@@ -10789,7 +16097,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         parameter_groups: value
             .getattr("parameter_groups")?
             .try_iter()?
@@ -10797,7 +16106,8 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         attachments: value
             .getattr("attachments")?
             .try_iter()?
@@ -10805,7 +16115,46 @@ pub fn read_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Model
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        motions: value
+            .getattr("motions")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        motion_groups: value
+            .getattr("motion_groups")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        motion_registrations: value
+            .getattr("motion_registrations")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        expressions: value
+            .getattr("expressions")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        physics: value.getattr("physics")?.extract()?,
+        pose: value.getattr("pose")?.extract()?,
     })
 }
 
@@ -10920,6 +16269,50 @@ fn write_modelingquery_in(
         }
         out.into_any().unbind()
     })?;
+    out.set_item("motions", {
+        let out = PyList::empty(py);
+        for item0 in (&value.motions) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("motion_groups", {
+        let out = PyList::empty(py);
+        for item0 in (&value.motion_groups) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("motion_registrations", {
+        let out = PyList::empty(py);
+        for item0 in (&value.motion_registrations) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("expressions", {
+        let out = PyList::empty(py);
+        for item0 in (&value.expressions) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "physics",
+        (&value.physics)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "pose",
+        (&value.pose)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
     Ok(classes
         .getattr("ModelingQuery")?
         .call((), Some(&out))?
@@ -11156,6 +16549,66 @@ fn write_ownedmodelingrecords_in(
             })?;
         }
         out.into_any().unbind()
+    })?;
+    out.set_item("motions", {
+        let out = PyList::empty(py);
+        for item0 in (&value.motions) {
+            out.append({
+                match (item0).as_ref() {
+                    Some(item) => write_motionclip_in(py, (item), classes)?,
+                    None => py.None(),
+                }
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("motion_groups", {
+        let out = PyList::empty(py);
+        for item0 in (&value.motion_groups) {
+            out.append({
+                match (item0).as_ref() {
+                    Some(item) => write_motiongroup_in(py, (item), classes)?,
+                    None => py.None(),
+                }
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("motion_registrations", {
+        let out = PyList::empty(py);
+        for item0 in (&value.motion_registrations) {
+            out.append({
+                match (item0).as_ref() {
+                    Some(item) => write_motionregistration_in(py, (item), classes)?,
+                    None => py.None(),
+                }
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("expressions", {
+        let out = PyList::empty(py);
+        for item0 in (&value.expressions) {
+            out.append({
+                match (item0).as_ref() {
+                    Some(item) => write_expressionasset_in(py, (item), classes)?,
+                    None => py.None(),
+                }
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("physics", {
+        match (&value.physics).as_ref() {
+            Some(item) => write_physicsasset_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    out.set_item("pose", {
+        match (&value.pose).as_ref() {
+            Some(item) => write_poseasset_in(py, (item), classes)?,
+            None => py.None(),
+        }
     })?;
     Ok(classes
         .getattr("OwnedModelingRecords")?
@@ -11742,6 +17195,48 @@ fn write_modelhitarea_in(
         .unbind())
 }
 
+pub fn write_motiongroup(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionGroup,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motiongroup_in(py, value, &classes)
+}
+fn write_motiongroup_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::MotionGroup,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "name",
+        (&value.name)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("entries", {
+        let out = PyList::empty(py);
+        for item0 in (&value.entries) {
+            out.append(write_motionregistration_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("MotionGroup")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
 pub fn read_addressselector(
     value: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_runtime::addressing::AddressSelector> {
@@ -11778,6 +17273,22 @@ pub fn read_addressselector(
         }),
         "document" => Ok(zipzi_runtime::addressing::AddressSelector::Document {
             field: read_documentfield(&value.getattr("field")?)?,
+        }),
+        "motion_registration" => Ok(
+            zipzi_runtime::addressing::AddressSelector::MotionRegistration {
+                id: value.getattr("id")?.extract()?,
+            },
+        ),
+        "expression_entry" => Ok(
+            zipzi_runtime::addressing::AddressSelector::ExpressionEntry {
+                id: value.getattr("id")?.extract()?,
+            },
+        ),
+        "physics" => Ok(zipzi_runtime::addressing::AddressSelector::Physics {
+            id: value.getattr("id")?.extract()?,
+        }),
+        "pose" => Ok(zipzi_runtime::addressing::AddressSelector::Pose {
+            id: value.getattr("id")?.extract()?,
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -11920,6 +17431,50 @@ fn write_addressselector_in(
             content.set_item("field", write_documentfield_in(py, (field0), classes)?)?;
             Ok(classes
                 .getattr("AddressSelectorDocument")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::AddressSelector::MotionRegistration { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("AddressSelectorMotionRegistration")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::AddressSelector::ExpressionEntry { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("AddressSelectorExpressionEntry")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::AddressSelector::Physics { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("AddressSelectorPhysics")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::AddressSelector::Pose { id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("AddressSelectorPose")?
                 .call((), Some(&content))?
                 .unbind())
         }
@@ -12222,7 +17777,8 @@ pub fn read_addresspatch(
                     let item0 = item?;
                     Ok(item0.extract()?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "resource_name" => Ok(zipzi_runtime::addressing::AddressPatch::ResourceName {
             name: value.getattr("name")?.extract()?,
@@ -12232,6 +17788,28 @@ pub fn read_addresspatch(
         }),
         "document" => Ok(zipzi_runtime::addressing::AddressPatch::Document {
             value: read_documentvalue(&value.getattr("value")?)?,
+        }),
+        "motion_registration" => Ok(
+            zipzi_runtime::addressing::AddressPatch::MotionRegistration {
+                entry: read_motionregistration(&value.getattr("entry")?)?,
+            },
+        ),
+        "expression_entry" => Ok(zipzi_runtime::addressing::AddressPatch::ExpressionEntry {
+            fields: read_expressionentryfields(&value.getattr("fields")?)?,
+        }),
+        "physics" => Ok(zipzi_runtime::addressing::AddressPatch::Physics {
+            changes: value
+                .getattr("changes")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(read_physicsproperty(&item0)?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "pose" => Ok(zipzi_runtime::addressing::AddressPatch::Pose {
+            fields: read_posefields(&value.getattr("fields")?)?,
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -12354,6 +17932,47 @@ fn write_addresspatch_in(
             content.set_item("value", write_documentvalue_in(py, (field0), classes)?)?;
             Ok(classes
                 .getattr("AddressPatchDocument")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::AddressPatch::MotionRegistration { entry: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("entry", write_motionregistration_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("AddressPatchMotionRegistration")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::AddressPatch::ExpressionEntry { fields: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "fields",
+                write_expressionentryfields_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("AddressPatchExpressionEntry")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::AddressPatch::Physics { changes: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("changes", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append(write_physicsproperty_in(py, (item0), classes)?)?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("AddressPatchPhysics")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::AddressPatch::Pose { fields: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("fields", write_posefields_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("AddressPatchPose")?
                 .call((), Some(&content))?
                 .unbind())
         }
@@ -12560,6 +18179,10 @@ pub fn read_capabilitydomain(
         "references" => Ok(zipzi_runtime::addressing::CapabilityDomain::References),
         "resource" => Ok(zipzi_runtime::addressing::CapabilityDomain::Resource),
         "attachment" => Ok(zipzi_runtime::addressing::CapabilityDomain::Attachment),
+        "motion" => Ok(zipzi_runtime::addressing::CapabilityDomain::Motion),
+        "expression" => Ok(zipzi_runtime::addressing::CapabilityDomain::Expression),
+        "physics" => Ok(zipzi_runtime::addressing::CapabilityDomain::Physics),
+        "pose" => Ok(zipzi_runtime::addressing::CapabilityDomain::Pose),
         _ => Err(pyo3::exceptions::PyValueError::new_err(
             "Unknown enum value",
         )),
@@ -12586,6 +18209,10 @@ fn write_capabilitydomain_in(
         zipzi_runtime::addressing::CapabilityDomain::References => "references",
         zipzi_runtime::addressing::CapabilityDomain::Resource => "resource",
         zipzi_runtime::addressing::CapabilityDomain::Attachment => "attachment",
+        zipzi_runtime::addressing::CapabilityDomain::Motion => "motion",
+        zipzi_runtime::addressing::CapabilityDomain::Expression => "expression",
+        zipzi_runtime::addressing::CapabilityDomain::Physics => "physics",
+        zipzi_runtime::addressing::CapabilityDomain::Pose => "pose",
     };
     Ok(classes
         .getattr("CapabilityDomain")?
@@ -12610,6 +18237,23 @@ pub fn read_collectionquery(
         "attachments" => Ok(zipzi_runtime::addressing::CollectionQuery::Attachments),
         "document" => Ok(zipzi_runtime::addressing::CollectionQuery::Document {
             field: read_documentfield(&value.getattr("field")?)?,
+        }),
+        "motion" => Ok(zipzi_runtime::addressing::CollectionQuery::Motion {
+            collection: read_motioncontainer(&value.getattr("collection")?)?,
+        }),
+        "motion_groups" => Ok(zipzi_runtime::addressing::CollectionQuery::MotionGroups),
+        "clips" => Ok(zipzi_runtime::addressing::CollectionQuery::Clips),
+        "expressions" => Ok(zipzi_runtime::addressing::CollectionQuery::Expressions),
+        "expression_entries" => Ok(
+            zipzi_runtime::addressing::CollectionQuery::ExpressionEntries {
+                expression_id: value.getattr("expression_id")?.extract()?,
+            },
+        ),
+        "physics" => Ok(zipzi_runtime::addressing::CollectionQuery::Physics {
+            collection: read_physicscollection(&value.getattr("collection")?)?,
+        }),
+        "pose" => Ok(zipzi_runtime::addressing::CollectionQuery::Pose {
+            collection: read_posecollection(&value.getattr("collection")?)?,
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
@@ -12676,6 +18320,134 @@ fn write_collectionquery_in(
             content.set_item("field", write_documentfield_in(py, (field0), classes)?)?;
             Ok(classes
                 .getattr("CollectionQueryDocument")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::CollectionQuery::Motion { collection: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "collection",
+                write_motioncontainer_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("CollectionQueryMotion")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::CollectionQuery::MotionGroups => Ok(classes
+            .getattr("CollectionQueryMotionGroups")?
+            .call0()?
+            .unbind()),
+        zipzi_runtime::addressing::CollectionQuery::Clips => {
+            Ok(classes.getattr("CollectionQueryClips")?.call0()?.unbind())
+        }
+        zipzi_runtime::addressing::CollectionQuery::Expressions => Ok(classes
+            .getattr("CollectionQueryExpressions")?
+            .call0()?
+            .unbind()),
+        zipzi_runtime::addressing::CollectionQuery::ExpressionEntries {
+            expression_id: field0,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "expression_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("CollectionQueryExpressionEntries")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::CollectionQuery::Physics { collection: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "collection",
+                write_physicscollection_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("CollectionQueryPhysics")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::CollectionQuery::Pose { collection: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "collection",
+                write_posecollection_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("CollectionQueryPose")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_physicscollection(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::PhysicsCollection> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "groups" => Ok(zipzi_sdk::PhysicsCollection::Groups),
+        "inputs" => Ok(zipzi_sdk::PhysicsCollection::Inputs {
+            group_id: value.getattr("group_id")?.extract()?,
+        }),
+        "outputs" => Ok(zipzi_sdk::PhysicsCollection::Outputs {
+            group_id: value.getattr("group_id")?.extract()?,
+        }),
+        "nodes" => Ok(zipzi_sdk::PhysicsCollection::Nodes {
+            group_id: value.getattr("group_id")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_physicscollection(
+    py: Python<'_>,
+    value: &zipzi_sdk::PhysicsCollection,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicscollection_in(py, value, &classes)
+}
+fn write_physicscollection_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::PhysicsCollection,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_sdk::PhysicsCollection::Groups => Ok(classes
+            .getattr("PhysicsCollectionGroups")?
+            .call0()?
+            .unbind()),
+        zipzi_sdk::PhysicsCollection::Inputs { group_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "group_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsCollectionInputs")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::PhysicsCollection::Outputs { group_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "group_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsCollectionOutputs")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::PhysicsCollection::Nodes { group_id: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "group_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PhysicsCollectionNodes")?
                 .call((), Some(&content))?
                 .unbind())
         }
@@ -12785,6 +18557,44 @@ fn write_capabilities_in(
             kwargs.set_item("value", write_capabilitystate_in(py, (field0), classes)?)?;
             Ok(classes
                 .getattr("CapabilitiesDocument")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::Capabilities::Motion(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_motioncapabilities_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("CapabilitiesMotion")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::Capabilities::Expression(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                write_expressioncapabilities_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("CapabilitiesExpression")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::Capabilities::Physics(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                write_physicscapabilities_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("CapabilitiesPhysics")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_runtime::addressing::Capabilities::Pose(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_posecapabilities_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("CapabilitiesPose")?
                 .call((), Some(&kwargs))?
                 .unbind())
         }
@@ -13169,6 +18979,230 @@ fn write_collectioncapabilities_in(
     )?;
     Ok(classes
         .getattr("CollectionCapabilities")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_motioncapabilities(
+    py: Python<'_>,
+    value: &zipzi_sdk::MotionCapabilities,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motioncapabilities_in(py, value, &classes)
+}
+fn write_motioncapabilities_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::MotionCapabilities,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "inspect",
+        write_capabilitystate_in(py, (&value.inspect), classes)?,
+    )?;
+    out.set_item(
+        "patch",
+        write_capabilitystate_in(py, (&value.patch), classes)?,
+    )?;
+    out.set_item(
+        "duplicate",
+        write_capabilitystate_in(py, (&value.duplicate), classes)?,
+    )?;
+    out.set_item(
+        "delete",
+        write_capabilitystate_in(py, (&value.delete), classes)?,
+    )?;
+    out.set_item(
+        "move_object",
+        write_capabilitystate_in(py, (&value.move_object), classes)?,
+    )?;
+    out.set_item(
+        "preview",
+        write_capabilitystate_in(py, (&value.preview), classes)?,
+    )?;
+    out.set_item(
+        "create_child",
+        write_capabilitystate_in(py, (&value.create_child), classes)?,
+    )?;
+    out.set_item(
+        "reorder",
+        write_capabilitystate_in(py, (&value.reorder), classes)?,
+    )?;
+    out.set_item(
+        "repair",
+        write_capabilitystate_in(py, (&value.repair), classes)?,
+    )?;
+    out.set_item(
+        "edit_content",
+        write_capabilitystate_in(py, (&value.edit_content), classes)?,
+    )?;
+    Ok(classes
+        .getattr("MotionCapabilities")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_expressioncapabilities(
+    py: Python<'_>,
+    value: &zipzi_sdk::ExpressionCapabilities,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_expressioncapabilities_in(py, value, &classes)
+}
+fn write_expressioncapabilities_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::ExpressionCapabilities,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "inspect",
+        write_capabilitystate_in(py, (&value.inspect), classes)?,
+    )?;
+    out.set_item(
+        "create_entry",
+        write_capabilitystate_in(py, (&value.create_entry), classes)?,
+    )?;
+    out.set_item(
+        "patch",
+        write_capabilitystate_in(py, (&value.patch), classes)?,
+    )?;
+    out.set_item(
+        "move_entry",
+        write_capabilitystate_in(py, (&value.move_entry), classes)?,
+    )?;
+    out.set_item(
+        "duplicate",
+        write_capabilitystate_in(py, (&value.duplicate), classes)?,
+    )?;
+    out.set_item(
+        "delete",
+        write_capabilitystate_in(py, (&value.delete), classes)?,
+    )?;
+    out.set_item(
+        "repair",
+        write_capabilitystate_in(py, (&value.repair), classes)?,
+    )?;
+    out.set_item(
+        "preview",
+        write_capabilitystate_in(py, (&value.preview), classes)?,
+    )?;
+    Ok(classes
+        .getattr("ExpressionCapabilities")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_physicscapabilities(
+    py: Python<'_>,
+    value: &zipzi_sdk::PhysicsCapabilities,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicscapabilities_in(py, value, &classes)
+}
+fn write_physicscapabilities_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::PhysicsCapabilities,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "inspect",
+        write_capabilitystate_in(py, (&value.inspect), classes)?,
+    )?;
+    out.set_item(
+        "patch",
+        write_capabilitystate_in(py, (&value.patch), classes)?,
+    )?;
+    out.set_item(
+        "create_child",
+        write_capabilitystate_in(py, (&value.create_child), classes)?,
+    )?;
+    out.set_item(
+        "duplicate",
+        write_capabilitystate_in(py, (&value.duplicate), classes)?,
+    )?;
+    out.set_item(
+        "delete",
+        write_capabilitystate_in(py, (&value.delete), classes)?,
+    )?;
+    out.set_item(
+        "move_object",
+        write_capabilitystate_in(py, (&value.move_object), classes)?,
+    )?;
+    out.set_item(
+        "reorder",
+        write_capabilitystate_in(py, (&value.reorder), classes)?,
+    )?;
+    out.set_item(
+        "repair",
+        write_capabilitystate_in(py, (&value.repair), classes)?,
+    )?;
+    out.set_item(
+        "preview",
+        write_capabilitystate_in(py, (&value.preview), classes)?,
+    )?;
+    Ok(classes
+        .getattr("PhysicsCapabilities")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_posecapabilities(
+    py: Python<'_>,
+    value: &zipzi_sdk::PoseCapabilities,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_posecapabilities_in(py, value, &classes)
+}
+fn write_posecapabilities_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::PoseCapabilities,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "inspect",
+        write_capabilitystate_in(py, (&value.inspect), classes)?,
+    )?;
+    out.set_item(
+        "patch",
+        write_capabilitystate_in(py, (&value.patch), classes)?,
+    )?;
+    out.set_item(
+        "create_child",
+        write_capabilitystate_in(py, (&value.create_child), classes)?,
+    )?;
+    out.set_item(
+        "duplicate",
+        write_capabilitystate_in(py, (&value.duplicate), classes)?,
+    )?;
+    out.set_item(
+        "delete",
+        write_capabilitystate_in(py, (&value.delete), classes)?,
+    )?;
+    out.set_item(
+        "move_object",
+        write_capabilitystate_in(py, (&value.move_object), classes)?,
+    )?;
+    out.set_item(
+        "reorder",
+        write_capabilitystate_in(py, (&value.reorder), classes)?,
+    )?;
+    out.set_item(
+        "repair",
+        write_capabilitystate_in(py, (&value.repair), classes)?,
+    )?;
+    out.set_item(
+        "dissolve",
+        write_capabilitystate_in(py, (&value.dissolve), classes)?,
+    )?;
+    out.set_item(
+        "preview",
+        write_capabilitystate_in(py, (&value.preview), classes)?,
+    )?;
+    Ok(classes
+        .getattr("PoseCapabilities")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -13904,7 +19938,8 @@ pub fn read_projectrequest(
                     let item0 = item?;
                     Ok(read_textureslot(&item0)?)
                 })
-                .collect::<PyResult<Vec<_>>>()?,
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
         }),
         "open" => Ok(zipzi_runtime::project_io::ProjectRequest::Open {
             path: value.getattr("path")?.extract()?,
@@ -14469,7 +20504,8 @@ pub fn read_meshbindingcreatespec(
                 let item0 = item?;
                 Ok(read_meshbindingaxisspec(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         keyforms: value
             .getattr("keyforms")?
             .try_iter()?
@@ -14477,7 +20513,8 @@ pub fn read_meshbindingcreatespec(
                 let item0 = item?;
                 Ok(read_meshkeyformspec(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         id: if value.getattr("id")?.is_none() {
             None
         } else {
@@ -14498,7 +20535,8 @@ pub fn read_meshbindingaxisspec(
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
     })
 }
 
@@ -14511,7 +20549,8 @@ pub fn read_meshkeyformspec(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Mes
                 let item0 = item?;
                 Ok(item0.extract()?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         positions: value
             .getattr("positions")?
             .try_iter()?
@@ -14519,7 +20558,8 @@ pub fn read_meshkeyformspec(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Mes
                 let item0 = item?;
                 Ok(read_vec2(&item0)?)
             })
-            .collect::<PyResult<Vec<_>>>()?,
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
         opacity: if value.getattr("opacity")?.is_none() {
             None
         } else {
@@ -14671,6 +20711,28 @@ pub fn measure_modelingcommand(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         "attachment" => {
             Ok(256usize.saturating_add(measure_attachmentedit(&(value.getattr("intent")?))?))
         }
+        "motion" => Ok(256usize.saturating_add(measure_motionedit(&(value.getattr("intent")?))?)),
+        "expression" => {
+            Ok(256usize.saturating_add(measure_expressionedit(&(value.getattr("intent")?))?))
+        }
+        "physics" => Ok(256usize.saturating_add(measure_physicsedit(&(value.getattr("intent")?))?)),
+        "pose" => Ok(256usize.saturating_add(measure_poseedit(&(value.getattr("intent")?))?)),
+        "create_motion" => {
+            Ok(256usize.saturating_add(measure_motionclip(&(value.getattr("clip")?))?))
+        }
+        "replace_motion" => {
+            Ok(256usize.saturating_add(measure_motionclip(&(value.getattr("clip")?))?))
+        }
+        "create_expression" => {
+            Ok(256usize.saturating_add(measure_expressionasset(&(value.getattr("expression")?))?))
+        }
+        "replace_expression" => {
+            Ok(256usize.saturating_add(measure_expressionasset(&(value.getattr("expression")?))?))
+        }
+        "set_physics" => {
+            Ok(256usize.saturating_add(measure_physicsasset(&(value.getattr("physics")?))?))
+        }
+        "set_pose" => Ok(256usize.saturating_add(measure_poseasset(&(value.getattr("pose")?))?)),
         "replace_model_setup" => {
             Ok(256usize.saturating_add(measure_modelsetup(&(value.getattr("setup")?))?))
         }
@@ -18248,6 +24310,2354 @@ pub fn measure_attachmentref(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     }
 }
 
+pub fn measure_motionedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("registration_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_motioncontainer(&(value.getattr("destination")?))?)),
+        "create_group" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )),
+        "rename_group" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )),
+        "reorder_groups" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("ids")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })),
+        "register" => Ok(256usize
+            .saturating_add(measure_motionregistration(&(value.getattr("entry")?))?)
+            .saturating_add(measure_motioncontainer(&(value.getattr("destination")?))?)
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "patch_registration" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_motionregistration(&(value.getattr("expected")?))?)
+            .saturating_add(measure_motionregistration(&(value.getattr("entry")?))?)),
+        "move_registrations" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(measure_motioncontainer(&(value.getattr("destination")?))?)
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "duplicate_registrations" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(measure_motioncontainer(&(value.getattr("destination")?))?)
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "delete_registrations" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("ids")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })),
+        "dissolve_group" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "delete_group" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "duplicate_group" => Ok(256usize
+            .saturating_add(
+                (value.getattr("source")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )),
+        "duplicate_clip" => Ok(256usize
+            .saturating_add(
+                (value.getattr("source")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("registration_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_motioncontainer(&(value.getattr("destination")?))?)),
+        "delete_clip" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "reorder_tracks" => Ok(256usize
+            .saturating_add(
+                (value.getattr("clip")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })),
+        "create_track" => Ok(256usize
+            .saturating_add(
+                (value.getattr("clip")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("key_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "set_track_target" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_motiontracktarget(&(value.getattr("target")?))?)),
+        "move_tracks" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(
+                (value.getattr("destination")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })
+            .saturating_add(16usize)),
+        "delete_tracks" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("ids")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })),
+        "transfer_keys" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(
+                (value.getattr("destination_track")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)
+            .saturating_add(16usize)),
+        "set_event" => Ok(256usize
+            .saturating_add(
+                (value.getattr("clip")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_motionevent(&(value.getattr("event")?))?)),
+        "delete_events" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("ids")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })),
+        "move_events" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(
+                (value.getattr("destination")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)
+            .saturating_add(16usize)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_motioncontainer(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "root" => Ok(256usize),
+        "group" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_motionregistration(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(
+            (value.getattr("clip_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(if (value.getattr("fade_in")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("fade_out")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("sound")?).is_none() {
+            0usize
+        } else {
+            measure_attachmentref(&(value.getattr("sound")?))?
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_motiontracktarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "unspecified" => Ok(256usize),
+        "model" => Ok(256usize.saturating_add(
+            (value.getattr("runtime_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "parameter" => Ok(256usize.saturating_add(
+            (value.getattr("parameter_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "part_opacity" => Ok(256usize.saturating_add(
+            (value.getattr("part_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "unresolved" => Ok(256usize
+            .saturating_add(
+                (value.getattr("category")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("runtime_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_motionevent(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(16usize)
+        .saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_expressionedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )),
+        "create_entry" => Ok(256usize
+            .saturating_add(
+                (value.getattr("owner")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "patch_entry" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_expressionentryfields(
+                &(value.getattr("expected")?),
+            )?)
+            .saturating_add(measure_expressionentryfields(&(value.getattr("fields")?))?)),
+        "move_entries" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(
+                (value.getattr("destination")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "duplicate_entries" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("new_ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(
+                (value.getattr("destination")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "delete_entries" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("ids")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })),
+        "duplicate" => Ok(256usize
+            .saturating_add(
+                (value.getattr("source")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("entry_ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })),
+        "delete" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "reorder" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("ids")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_expressionentryfields(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(measure_expressiontarget(&(value.getattr("target")?))?)
+        .saturating_add(16usize)
+        .saturating_add(if (value.getattr("blend")?).is_none() {
+            0usize
+        } else {
+            measure_expressionblend(&(value.getattr("blend")?))?
+        }))
+}
+
+pub fn measure_expressiontarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "unspecified" => Ok(256usize),
+        "resolved" => Ok(256usize.saturating_add(
+            (value.getattr("parameter_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "unresolved" => Ok(256usize.saturating_add(
+            (value.getattr("runtime_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_expressionblend(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
+}
+
+pub fn measure_physicsedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create_group" => Ok(256usize
+            .saturating_add(
+                (value.getattr("asset_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "create_input" => Ok(256usize
+            .saturating_add(
+                (value.getattr("group_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "create_output" => Ok(256usize
+            .saturating_add(
+                (value.getattr("group_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("node_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "insert_node" => Ok(256usize
+            .saturating_add(
+                (value.getattr("group_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_physicsnode(&(value.getattr("node")?))?)
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "move_node" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "duplicate_node" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "patch" => Ok(256usize.saturating_add(measure_physicspatch(&(value.getattr("patch")?))?)),
+        "move_inputs" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(
+                (value.getattr("group_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "move_outputs" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(
+                (value.getattr("group_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("node_replacements")?)
+                    .call_method0("items")?
+                    .try_iter()?
+                {
+                    let v0 = value?;
+                    bytes = bytes
+                        .saturating_add(128)
+                        .saturating_add(
+                            (v0.get_item(0)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        )
+                        .saturating_add(
+                            (v0.get_item(1)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        );
+                }
+                bytes
+            })),
+        "reorder_groups" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "duplicate" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(if (value.getattr("group_id")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("group_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "delete" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("node_replacements")?)
+                    .call_method0("items")?
+                    .try_iter()?
+                {
+                    let v0 = value?;
+                    bytes = bytes
+                        .saturating_add(128)
+                        .saturating_add(
+                            (v0.get_item(0)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        )
+                        .saturating_add(
+                            (v0.get_item(1)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        );
+                }
+                bytes
+            })),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_physicsnode(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(measure_physicsvector(&(value.getattr("position")?))?)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsvector(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize.saturating_add(16usize).saturating_add(16usize))
+}
+
+pub fn measure_physicspatch(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("asset_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("asset_changes")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_physicsassetproperty(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("rig")?).is_none() {
+            0usize
+        } else {
+            measure_physicsrigpatch(&(value.getattr("rig")?))?
+        }))
+}
+
+pub fn measure_physicsassetproperty(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "Fps" => Ok(
+            256usize.saturating_add(if (value.getattr("value")?).is_none() {
+                0usize
+            } else {
+                16usize
+            }),
+        ),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_physicsrigpatch(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("group_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("changes")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_physicsproperty(&(v0))?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsproperty(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "Name" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "InputWeight" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "InputAxis" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_physicsaxis(&(value.getattr("value")?))?)),
+        "InputReflect" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "InputParameter" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_physicstarget(&(value.getattr("target")?))?)),
+        "OutputWeight" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "OutputScale" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "OutputAxis" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_physicsaxis(&(value.getattr("value")?))?)),
+        "OutputReflect" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "OutputParameter" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_physicstarget(&(value.getattr("target")?))?)),
+        "OutputNode" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("node_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )),
+        "VertexPosition" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_physicsvector(&(value.getattr("value")?))?)),
+        "VertexRadius" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "VertexMobility" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "VertexDelay" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "VertexAcceleration" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "PositionNormalization" => {
+            Ok(256usize.saturating_add(measure_physicsrange(&(value.getattr("value")?))?))
+        }
+        "AngleNormalization" => {
+            Ok(256usize.saturating_add(measure_physicsrange(&(value.getattr("value")?))?))
+        }
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_physicsaxis(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
+}
+
+pub fn measure_physicstarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "unspecified" => Ok(256usize),
+        "resolved" => Ok(256usize.saturating_add(
+            (value.getattr("parameter_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "unresolved" => Ok(256usize.saturating_add(
+            (value.getattr("runtime_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_physicsrange(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize))
+}
+
+pub fn measure_poseedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "create" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "create_group" => Ok(256usize
+            .saturating_add(
+                (value.getattr("pose_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("name")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "create_entry" => Ok(256usize
+            .saturating_add(
+                (value.getattr("group_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "create_link" => Ok(256usize
+            .saturating_add(
+                (value.getattr("entry_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "patch" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_posefields(&(value.getattr("expected")?))?)
+            .saturating_add(measure_posefields(&(value.getattr("fields")?))?)),
+        "move" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(measure_posecollection(&(value.getattr("destination")?))?)
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "duplicate" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("ids")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+                }
+                bytes
+            })
+            .saturating_add(measure_posecollection(&(value.getattr("destination")?))?)
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        "delete" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("ids")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })),
+        "dissolve_group" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(
+                (value.getattr("destination")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(if (value.getattr("before")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("before")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            })),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_posefields(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "asset" => Ok(
+            256usize.saturating_add(if (value.getattr("fade_in")?).is_none() {
+                0usize
+            } else {
+                16usize
+            }),
+        ),
+        "group" => Ok(256usize.saturating_add(
+            (value.getattr("name")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "entry" => Ok(256usize.saturating_add(measure_posepartref(&(value.getattr("part")?))?)),
+        "link" => Ok(256usize.saturating_add(measure_posepartref(&(value.getattr("target")?))?)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_posepartref(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "unspecified" => Ok(256usize),
+        "resolved" => Ok(256usize.saturating_add(
+            (value.getattr("part_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "unresolved" => Ok(256usize.saturating_add(
+            (value.getattr("runtime_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_posecollection(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "groups" => Ok(256usize),
+        "entries" => Ok(256usize.saturating_add(
+            (value.getattr("group_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "links" => Ok(256usize.saturating_add(
+            (value.getattr("entry_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_motionclip(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(
+            (value.getattr("name")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(if (value.getattr("fade_in")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("fade_out")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("track_order")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("tracks")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_motiontrack(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("events")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_motionevent(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("meta_extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("opaque_source_ids")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("opaque_source_ids")?)
+                    .call_method0("items")?
+                    .try_iter()?
+                {
+                    let v0 = value?;
+                    bytes = bytes
+                        .saturating_add(128)
+                        .saturating_add(
+                            (v0.get_item(0)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        )
+                        .saturating_add(
+                            (v0.get_item(1)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        );
+                }
+                bytes
+            }
+        })
+        .saturating_add(
+            if (value.getattr("opaque_source_content_hash")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("opaque_source_content_hash")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            },
+        ))
+}
+
+pub fn measure_motiontrack(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(measure_motiontracktarget(&(value.getattr("target")?))?)
+        .saturating_add(measure_motionkey(&(value.getattr("initial")?))?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("segments")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_motionsegment(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("fade_in")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("fade_out")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_motionkey(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(16usize)
+        .saturating_add(16usize))
+}
+
+pub fn measure_motionsegment(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "linear" => Ok(256usize.saturating_add(measure_motionkey(&(value.getattr("end")?))?)),
+        "bezier" => Ok(256usize
+            .saturating_add(measure_motionpoint(&(value.getattr("control1")?))?)
+            .saturating_add(measure_motionpoint(&(value.getattr("control2")?))?)
+            .saturating_add(measure_motionkey(&(value.getattr("end")?))?)),
+        "stepped" => Ok(256usize.saturating_add(measure_motionkey(&(value.getattr("end")?))?)),
+        "inverse_stepped" => {
+            Ok(256usize.saturating_add(measure_motionkey(&(value.getattr("end")?))?))
+        }
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_motionpoint(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize.saturating_add(16usize).saturating_add(16usize))
+}
+
+pub fn measure_expressionasset(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(
+            (value.getattr("name")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(if (value.getattr("file_type")?).is_none() {
+            0usize
+        } else {
+            (value.getattr("file_type")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32)
+        })
+        .saturating_add(if (value.getattr("fade_in")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add(if (value.getattr("fade_out")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("entries")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_expressionentry(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("opaque_source_ids")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("opaque_source_ids")?)
+                    .call_method0("items")?
+                    .try_iter()?
+                {
+                    let v0 = value?;
+                    bytes = bytes
+                        .saturating_add(128)
+                        .saturating_add(
+                            (v0.get_item(0)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        )
+                        .saturating_add(
+                            (v0.get_item(1)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        );
+                }
+                bytes
+            }
+        })
+        .saturating_add(
+            if (value.getattr("opaque_source_content_hash")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("opaque_source_content_hash")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            },
+        ))
+}
+
+pub fn measure_expressionentry(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(measure_expressiontarget(&(value.getattr("target")?))?)
+        .saturating_add(16usize)
+        .saturating_add(if (value.getattr("blend")?).is_none() {
+            0usize
+        } else {
+            measure_expressionblend(&(value.getattr("blend")?))?
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsasset(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(measure_physicsdefinition(&(value.getattr("data")?))?)
+        .saturating_add(if (value.getattr("opaque_source_ids")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("opaque_source_ids")?)
+                    .call_method0("items")?
+                    .try_iter()?
+                {
+                    let v0 = value?;
+                    bytes = bytes
+                        .saturating_add(128)
+                        .saturating_add(
+                            (v0.get_item(0)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        )
+                        .saturating_add(
+                            (v0.get_item(1)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        );
+                }
+                bytes
+            }
+        })
+        .saturating_add(
+            if (value.getattr("opaque_source_content_hash")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("opaque_source_content_hash")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            },
+        ))
+}
+
+pub fn measure_physicsdefinition(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(measure_physicsmeta(&(value.getattr("meta")?))?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("settings")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_physicssetting(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsmeta(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(measure_physicsforces(&(value.getattr("EffectiveForces")?))?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("PhysicsDictionary")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_physicsdictionaryentry(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("Fps")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsforces(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(measure_physicsvector(&(value.getattr("Gravity")?))?)
+        .saturating_add(measure_physicsvector(&(value.getattr("Wind")?))?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsdictionaryentry(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("Id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(
+            (value.getattr("Name")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicssetting(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(
+            (value.getattr("external_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("inputs")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_physicsinput(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("outputs")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_physicsoutput(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("vertices")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_physicsnode(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add(measure_physicsnormalization(
+            &(value.getattr("normalization")?),
+        )?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsinput(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(measure_physicstarget(&(value.getattr("source")?))?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("reference_extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        })
+        .saturating_add(16usize)
+        .saturating_add(measure_physicsaxis(&(value.getattr("kind")?))?)
+        .saturating_add(16usize)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsoutput(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(measure_physicstarget(&(value.getattr("destination")?))?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("reference_extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        })
+        .saturating_add(
+            (value.getattr("node_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(measure_physicsaxis(&(value.getattr("kind")?))?)
+        .saturating_add(16usize)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_physicsnormalization(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(measure_physicsrange(&(value.getattr("Position")?))?)
+        .saturating_add(measure_physicsrange(&(value.getattr("Angle")?))?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_poseasset(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(if (value.getattr("file_type")?).is_none() {
+            0usize
+        } else {
+            (value.getattr("file_type")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32)
+        })
+        .saturating_add(if (value.getattr("fade_in")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("groups")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_posegroup(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("opaque_source_ids")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("opaque_source_ids")?)
+                    .call_method0("items")?
+                    .try_iter()?
+                {
+                    let v0 = value?;
+                    bytes = bytes
+                        .saturating_add(128)
+                        .saturating_add(
+                            (v0.get_item(0)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        )
+                        .saturating_add(
+                            (v0.get_item(1)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        );
+                }
+                bytes
+            }
+        })
+        .saturating_add(
+            if (value.getattr("opaque_source_content_hash")?).is_none() {
+                0usize
+            } else {
+                (value.getattr("opaque_source_content_hash")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32)
+            },
+        ))
+}
+
+pub fn measure_posegroup(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(
+            (value.getattr("name")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("entries")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_poseentry(&(v0))?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_poseentry(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(measure_posepartref(&(value.getattr("part")?))?)
+        .saturating_add(if (value.getattr("links")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("links")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(measure_poselink(&(v0))?);
+                }
+                bytes
+            }
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("extensions")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(crate::extension_bridge::measure_extension(
+                        &(v0.get_item(1)?),
+                    )?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_poselink(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(measure_posepartref(&(value.getattr("target")?))?))
+}
+
 pub fn measure_modelsetup(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(256usize
         .saturating_add(if (value.getattr("source_canvas")?).is_none() {
@@ -18494,6 +26904,12 @@ pub fn measure_modelingintent(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         "attachment" => {
             Ok(256usize.saturating_add(measure_attachmentedit(&(value.getattr("intent")?))?))
         }
+        "motion" => Ok(256usize.saturating_add(measure_motionedit(&(value.getattr("intent")?))?)),
+        "expression" => {
+            Ok(256usize.saturating_add(measure_expressionedit(&(value.getattr("intent")?))?))
+        }
+        "physics" => Ok(256usize.saturating_add(measure_physicsedit(&(value.getattr("intent")?))?)),
+        "pose" => Ok(256usize.saturating_add(measure_poseedit(&(value.getattr("intent")?))?)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -18613,7 +27029,41 @@ pub fn measure_modelingquery(value: &Bound<'_, PyAny>) -> PyResult<usize> {
                 bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
             }
             bytes
-        }))
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("motions")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("motion_groups")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("motion_registrations")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("expressions")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add((v0).len()?.saturating_mul(4).saturating_add(32));
+            }
+            bytes
+        })
+        .saturating_add(16usize)
+        .saturating_add(16usize))
 }
 
 pub fn measure_addressselector(value: &Bound<'_, PyAny>) -> PyResult<usize> {
@@ -18681,6 +27131,30 @@ pub fn measure_addressselector(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         "document" => {
             Ok(256usize.saturating_add(measure_documentfield(&(value.getattr("field")?))?))
         }
+        "motion_registration" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "expression_entry" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "physics" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "pose" => Ok(256usize.saturating_add(
+            (value.getattr("id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -18774,6 +27248,21 @@ pub fn measure_addresspatch(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         "document" => {
             Ok(256usize.saturating_add(measure_documentvalue(&(value.getattr("value")?))?))
         }
+        "motion_registration" => {
+            Ok(256usize.saturating_add(measure_motionregistration(&(value.getattr("entry")?))?))
+        }
+        "expression_entry" => Ok(
+            256usize.saturating_add(measure_expressionentryfields(&(value.getattr("fields")?))?)
+        ),
+        "physics" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("changes")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_physicsproperty(&(v0))?);
+            }
+            bytes
+        })),
+        "pose" => Ok(256usize.saturating_add(measure_posefields(&(value.getattr("fields")?))?)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -18846,6 +27335,51 @@ pub fn measure_collectionquery(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         "document" => {
             Ok(256usize.saturating_add(measure_documentfield(&(value.getattr("field")?))?))
         }
+        "motion" => {
+            Ok(256usize.saturating_add(measure_motioncontainer(&(value.getattr("collection")?))?))
+        }
+        "motion_groups" => Ok(256usize),
+        "clips" => Ok(256usize),
+        "expressions" => Ok(256usize),
+        "expression_entries" => Ok(256usize.saturating_add(
+            (value.getattr("expression_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "physics" => Ok(
+            256usize.saturating_add(measure_physicscollection(&(value.getattr("collection")?))?)
+        ),
+        "pose" => {
+            Ok(256usize.saturating_add(measure_posecollection(&(value.getattr("collection")?))?))
+        }
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_physicscollection(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "groups" => Ok(256usize),
+        "inputs" => Ok(256usize.saturating_add(
+            (value.getattr("group_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "outputs" => Ok(256usize.saturating_add(
+            (value.getattr("group_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "nodes" => Ok(256usize.saturating_add(
+            (value.getattr("group_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),

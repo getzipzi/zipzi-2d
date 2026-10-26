@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-p3a-345-1; client source SHA-256 b7d7e3d76a2c6828fcf5c2f1584785ca8e1435eff28912e9f6e4de2f8085854d.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-authoring-1; client source SHA-256 a00c21b756f438e4cf357c2379fe7d9cb9528e339b053a567812604ff6ffb325.
 
 
 ## zipzi.ApiDescription
@@ -3320,6 +3320,62 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.AddressPatchExpressionEntry
+
+`(fields: ExpressionEntryFields)`
+
+Immutable owned AddressPatchExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+fields: Replacement expression target/value/blend fields, under captured owner epochs.
+
+- `fields`: Replacement expression target/value/blend fields, under captured owner epochs.
+
+## zipzi.modeling.AddressPatchExpressionEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.AddressPatchExpressionEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.AddressPatchMotionRegistration
+
+`(entry: MotionRegistration)`
+
+Immutable owned AddressPatchMotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+entry: Complete replacement registration with its existing stable identity.
+
+- `entry`: Complete replacement registration with its existing stable identity.
+
+## zipzi.modeling.AddressPatchMotionRegistration.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.AddressPatchMotionRegistration.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.AddressPatchOrganization
 
 `(intent: OrganizationEdit)`
@@ -3344,6 +3400,62 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.AddressPatchOrganization.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.AddressPatchPhysics
+
+`(changes: tuple[PhysicsProperty, ...])`
+
+Immutable owned AddressPatchPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+changes: Atomic property changes targeting only the captured Physics entity.
+
+- `changes`: Atomic property changes targeting only the captured Physics entity.
+
+## zipzi.modeling.AddressPatchPhysics.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.AddressPatchPhysics.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.AddressPatchPose
+
+`(fields: PoseFields)`
+
+Immutable owned AddressPatchPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+fields: Replacement fields for the captured Pose singleton/group/entry/link.
+
+- `fields`: Replacement fields for the captured Pose singleton/group/entry/link.
+
+## zipzi.modeling.AddressPatchPose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.AddressPatchPose.summary
 
 `() -> str`
 
@@ -3623,6 +3735,62 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.AddressSelectorExpressionEntry
+
+`(id: str)`
+
+Immutable owned AddressSelectorExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity of the addressed native animation object.
+
+- `id`: Stable identity of the addressed native animation object.
+
+## zipzi.modeling.AddressSelectorExpressionEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.AddressSelectorExpressionEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.AddressSelectorMotionRegistration
+
+`(id: str)`
+
+Immutable owned AddressSelectorMotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity of the addressed native animation object.
+
+- `id`: Stable identity of the addressed native animation object.
+
+## zipzi.modeling.AddressSelectorMotionRegistration.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.AddressSelectorMotionRegistration.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.AddressSelectorOrganization
 
 `(id: str)`
@@ -3647,6 +3815,62 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.AddressSelectorOrganization.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.AddressSelectorPhysics
+
+`(id: str)`
+
+Immutable owned AddressSelectorPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity of the addressed native animation object.
+
+- `id`: Stable identity of the addressed native animation object.
+
+## zipzi.modeling.AddressSelectorPhysics.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.AddressSelectorPhysics.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.AddressSelectorPose
+
+`(id: str)`
+
+Immutable owned AddressSelectorPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity of the addressed native animation object.
+
+- `id`: Stable identity of the addressed native animation object.
+
+## zipzi.modeling.AddressSelectorPose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.AddressSelectorPose.summary
 
 `() -> str`
 
@@ -5509,6 +5733,62 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.CapabilitiesExpression
+
+`(value: ExpressionCapabilities)`
+
+Immutable owned CapabilitiesExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Current native expression eligibility; host Preview support is advertised separately.
+
+- `value`: Current native expression eligibility; host Preview support is advertised separately.
+
+## zipzi.modeling.CapabilitiesExpression.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CapabilitiesExpression.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.CapabilitiesMotion
+
+`(value: MotionCapabilities)`
+
+Immutable owned CapabilitiesMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Current native motion eligibility; host Preview support is advertised separately.
+
+- `value`: Current native motion eligibility; host Preview support is advertised separately.
+
+## zipzi.modeling.CapabilitiesMotion.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CapabilitiesMotion.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.CapabilitiesOrganization
 
 `(value: OrganizationCapabilities)`
@@ -5533,6 +5813,62 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.CapabilitiesOrganization.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.CapabilitiesPhysics
+
+`(value: PhysicsCapabilities)`
+
+Immutable owned CapabilitiesPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Current native physics eligibility; host Preview support is advertised separately.
+
+- `value`: Current native physics eligibility; host Preview support is advertised separately.
+
+## zipzi.modeling.CapabilitiesPhysics.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CapabilitiesPhysics.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.CapabilitiesPose
+
+`(value: PoseCapabilities)`
+
+Immutable owned CapabilitiesPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Current native pose eligibility; host Preview support is advertised separately.
+
+- `value`: Current native pose eligibility; host Preview support is advertised separately.
+
+## zipzi.modeling.CapabilitiesPose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CapabilitiesPose.summary
 
 `() -> str`
 
@@ -6143,6 +6479,30 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.CollectionQueryClips
+
+`()`
+
+Immutable owned CollectionQueryClips value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.CollectionQueryClips.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CollectionQueryClips.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.CollectionQueryDocument
 
 `(field: DocumentField)`
@@ -6171,6 +6531,110 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.CollectionQueryExpressionEntries
+
+`(expression_id: str)`
+
+Immutable owned CollectionQueryExpressionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+expression_id: Stable expression asset ID owning the entry collection.
+
+- `expression_id`: Stable expression asset ID owning the entry collection.
+
+## zipzi.modeling.CollectionQueryExpressionEntries.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CollectionQueryExpressionEntries.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.CollectionQueryExpressions
+
+`()`
+
+Immutable owned CollectionQueryExpressions value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.CollectionQueryExpressions.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CollectionQueryExpressions.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.CollectionQueryMotion
+
+`(collection: MotionContainer)`
+
+Immutable owned CollectionQueryMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+collection: Root or stable motion-group container for library registrations.
+
+- `collection`: Root or stable motion-group container for library registrations.
+
+## zipzi.modeling.CollectionQueryMotion.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CollectionQueryMotion.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.CollectionQueryMotionGroups
+
+`()`
+
+Immutable owned CollectionQueryMotionGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.CollectionQueryMotionGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CollectionQueryMotionGroups.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.CollectionQueryOrganization
 
 `(collection: OrganizationCollection)`
@@ -6193,6 +6657,62 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.CollectionQueryOrganization.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.CollectionQueryPhysics
+
+`(collection: PhysicsCollection)`
+
+Immutable owned CollectionQueryPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+collection: Native Physics group/input/output/node collection selector.
+
+- `collection`: Native Physics group/input/output/node collection selector.
+
+## zipzi.modeling.CollectionQueryPhysics.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CollectionQueryPhysics.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.CollectionQueryPose
+
+`(collection: PoseCollection)`
+
+Immutable owned CollectionQueryPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+collection: Native Pose group/entry/link collection selector.
+
+- `collection`: Native Pose group/entry/link collection selector.
+
+## zipzi.modeling.CollectionQueryPose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.CollectionQueryPose.summary
 
 `() -> str`
 
@@ -7377,6 +7897,541 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ExportSettings.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionAsset
+
+`(id: str, name: str, file_type: str | None = None, fade_in: float | None = None, fade_out: float | None = None, entries: tuple[ExpressionEntry, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
+
+Immutable owned ExpressionAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Registration name in model3; independent of parameter display names.
+file_type: Optional format type label retained from the imported expression or Pose asset.
+fade_in: Optional fade-in duration in seconds; None retains the format/runtime default.
+fade_out: Optional fade-out duration in seconds; None retains the format/runtime default.
+entries: Ordered owned registrations or expression/Pose entries, with stable identities.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+opaque_source_ids: Full Parameter UUID-to-runtime-ID namespace when opaque fields exist.
+opaque_source_content_hash: Hash of imported content when opaque fields exist; known-field edits
+cannot silently change the meaning of those fields.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Registration name in model3; independent of parameter display names.
+- `file_type`: Optional format type label retained from the imported expression or Pose asset.
+- `fade_in`: Optional fade-in duration in seconds; None retains the format/runtime default.
+- `fade_out`: Optional fade-out duration in seconds; None retains the format/runtime default.
+- `entries`: Ordered owned registrations or expression/Pose entries, with stable identities.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+- `opaque_source_ids`: Full Parameter UUID-to-runtime-ID namespace when opaque fields exist.
+- `opaque_source_content_hash`: Hash of imported content when opaque fields exist; known-field edits
+cannot silently change the meaning of those fields.
+
+## zipzi.modeling.ExpressionAsset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionAsset.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionBlend
+
+`()`
+
+Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.modeling.ExpressionCapabilities
+
+`(inspect: CapabilityState, create_entry: CapabilityState, patch: CapabilityState, move_entry: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+
+Immutable owned ExpressionCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+inspect: Read this object while its identity/context remains valid.
+create_entry: Create an owned expression entry.
+patch: Modify typed fields through a validated native intent/address.
+move_entry: Transfer expression entries between compatible owners.
+duplicate: Duplicate the selected object while allocating fresh owned identities.
+delete: Delete the selected object subject to native reference and lock rules.
+repair: Repair an explicitly unresolved native reference.
+preview: Native preview eligibility; host preview API availability is advertised separately.
+
+- `inspect`: Read this object while its identity/context remains valid.
+- `create_entry`: Create an owned expression entry.
+- `patch`: Modify typed fields through a validated native intent/address.
+- `move_entry`: Transfer expression entries between compatible owners.
+- `duplicate`: Duplicate the selected object while allocating fresh owned identities.
+- `delete`: Delete the selected object subject to native reference and lock rules.
+- `repair`: Repair an explicitly unresolved native reference.
+- `preview`: Native preview eligibility; host preview API availability is advertised separately.
+
+## zipzi.modeling.ExpressionCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionCapabilities.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEdit
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.ExpressionEditCreate
+
+`(id: str, name: str)`
+
+Immutable owned ExpressionEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+
+## zipzi.modeling.ExpressionEditCreate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditCreate.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEditCreateEntry
+
+`(owner: str, id: str, before: str | None = None)`
+
+Immutable owned ExpressionEditCreateEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+owner: Stable expression asset ID owning the selected entries.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `owner`: Stable expression asset ID owning the selected entries.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.ExpressionEditCreateEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditCreateEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEditDelete
+
+`(id: str)`
+
+Immutable owned ExpressionEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+## zipzi.modeling.ExpressionEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditDelete.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEditDeleteEntries
+
+`(ids: tuple[str, ...])`
+
+Immutable owned ExpressionEditDeleteEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+## zipzi.modeling.ExpressionEditDeleteEntries.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditDeleteEntries.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEditDuplicate
+
+`(source: str, id: str, name: str, entry_ids: tuple[str, ...])`
+
+Immutable owned ExpressionEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+source: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+entry_ids: New stable entry IDs paired with the source expression entries.
+
+- `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+- `entry_ids`: New stable entry IDs paired with the source expression entries.
+
+## zipzi.modeling.ExpressionEditDuplicate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditDuplicate.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEditDuplicateEntries
+
+`(ids: tuple[str, ...], new_ids: tuple[str, ...], destination: str, before: str | None = None)`
+
+Immutable owned ExpressionEditDuplicateEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+new_ids: New stable identities paired with the selected source objects.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `new_ids`: New stable identities paired with the selected source objects.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.ExpressionEditDuplicateEntries.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditDuplicateEntries.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEditMoveEntries
+
+`(ids: tuple[str, ...], destination: str, before: str | None = None)`
+
+Immutable owned ExpressionEditMoveEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.ExpressionEditMoveEntries.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditMoveEntries.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEditPatchEntry
+
+`(id: str, expected: ExpressionEntryFields, fields: ExpressionEntryFields)`
+
+Immutable owned ExpressionEditPatchEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+expected: Exact current field values required by the optimistic edit; stale values reject it.
+fields: Typed replacement fields for the addressed object, applied atomically.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `expected`: Exact current field values required by the optimistic edit; stale values reject it.
+- `fields`: Typed replacement fields for the addressed object, applied atomically.
+
+## zipzi.modeling.ExpressionEditPatchEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditPatchEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEditReorder
+
+`(ids: tuple[str, ...])`
+
+Immutable owned ExpressionEditReorder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+## zipzi.modeling.ExpressionEditReorder.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEditReorder.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEntry
+
+`(id: str, target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned ExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+target: Typed target reference; unresolved imported runtime labels remain explicit.
+value: Channel value or replacement payload in the domain declared by this field type.
+blend: Missing means Framework's default Add blend.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `target`: Typed target reference; unresolved imported runtime labels remain explicit.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `blend`: Missing means Framework's default Add blend.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.ExpressionEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionEntryFields
+
+`(target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None)`
+
+Immutable owned ExpressionEntryFields value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+target: Typed target reference; unresolved imported runtime labels remain explicit.
+value: Channel value or replacement payload in the domain declared by this field type.
+blend: Optional expression blend mode; None uses the native Add default.
+
+- `target`: Typed target reference; unresolved imported runtime labels remain explicit.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `blend`: Optional expression blend mode; None uses the native Add default.
+
+## zipzi.modeling.ExpressionEntryFields.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionEntryFields.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionTarget
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.ExpressionTargetResolved
+
+`(parameter_id: str)`
+
+Immutable owned ExpressionTargetResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+parameter_id: Stable document parameter UUID; evaluation uses its declared range and default.
+
+- `parameter_id`: Stable document parameter UUID; evaluation uses its declared range and default.
+
+## zipzi.modeling.ExpressionTargetResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionTargetResolved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionTargetUnresolved
+
+`(runtime_id: str)`
+
+Immutable owned ExpressionTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+runtime_id: Imported/exported runtime label, distinct from the document object UUID.
+
+- `runtime_id`: Imported/exported runtime label, distinct from the document object UUID.
+
+## zipzi.modeling.ExpressionTargetUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionTargetUnresolved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExpressionTargetUnspecified
+
+`()`
+
+Immutable owned ExpressionTargetUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.ExpressionTargetUnspecified.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ExpressionTargetUnspecified.summary
 
 `() -> str`
 
@@ -9016,6 +10071,36 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.ModelingCommandCreateExpression
+
+`(expression: ExpressionAsset)`
+
+Immutable owned ModelingCommandCreateExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+expression: Complete expression asset with ordered owned entries.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `expression`: Complete expression asset with ordered owned entries.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandCreateExpression.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandCreateExpression.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.ModelingCommandCreateGlue
 
 `(glue: Glue)`
@@ -9074,6 +10159,36 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ModelingCommandCreateMesh.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ModelingCommandCreateMotion
+
+`(clip: MotionClip)`
+
+Immutable owned ModelingCommandCreateMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+clip: Complete owned clip with stable track/key/event identities.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `clip`: Complete owned clip with stable track/key/event identities.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandCreateMotion.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandCreateMotion.summary
 
 `() -> str`
 
@@ -9304,6 +10419,66 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.ModelingCommandExpression
+
+`(intent: ExpressionEdit)`
+
+Immutable owned ModelingCommandExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+intent: Expression asset/entry intent, validated by the shared SDK planner.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Expression asset/entry intent, validated by the shared SDK planner.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandExpression.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandExpression.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ModelingCommandMotion
+
+`(intent: MotionEdit)`
+
+Immutable owned ModelingCommandMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+intent: Motion library/track/key/event intent; use a Plan or apply to an Edit.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Motion library/track/key/event intent; use a Plan or apply to an Edit.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandMotion.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandMotion.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.ModelingCommandOrganization
 
 `(intent: OrganizationEdit)`
@@ -9330,6 +10505,66 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ModelingCommandOrganization.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ModelingCommandPhysics
+
+`(intent: PhysicsEdit)`
+
+Immutable owned ModelingCommandPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+intent: Physics rig/row/node intent with native ownership and reference checks.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Physics rig/row/node intent with native ownership and reference checks.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandPhysics.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandPhysics.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ModelingCommandPose
+
+`(intent: PoseEdit)`
+
+Immutable owned ModelingCommandPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+intent: Pose singleton/group/entry/link intent, independent of playback state.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Pose singleton/group/entry/link intent, independent of playback state.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandPose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandPose.summary
 
 `() -> str`
 
@@ -9664,6 +10899,36 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.ModelingCommandReplaceExpression
+
+`(expression: ExpressionAsset)`
+
+Immutable owned ModelingCommandReplaceExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+expression: Complete replacement expression preserving its object ID.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `expression`: Complete replacement expression preserving its object ID.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceExpression.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandReplaceExpression.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.ModelingCommandReplaceGlue
 
 `(glue: Glue)`
@@ -9782,6 +11047,36 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ModelingCommandReplaceModelSetup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ModelingCommandReplaceMotion
+
+`(clip: MotionClip)`
+
+Immutable owned ModelingCommandReplaceMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+clip: Complete replacement clip preserving its stable object ID.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `clip`: Complete replacement clip preserving its stable object ID.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceMotion.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandReplaceMotion.summary
 
 `() -> str`
 
@@ -10082,6 +11377,66 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.ModelingCommandSetPhysics
+
+`(physics: PhysicsAsset)`
+
+Immutable owned ModelingCommandSetPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+physics: Complete Physics singleton and ordered rig data.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `physics`: Complete Physics singleton and ordered rig data.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandSetPhysics.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandSetPhysics.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ModelingCommandSetPose
+
+`(pose: PoseAsset)`
+
+Immutable owned ModelingCommandSetPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+pose: Complete Pose singleton and owned part/link references.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `pose`: Complete Pose singleton and owned part/link references.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandSetPose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandSetPose.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.ModelingCommandSetSceneKeyform
 
 `(id: str, keyform: SceneKeyform)`
@@ -10156,7 +11511,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ModelingQuery
 
-`(assets: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), meshes: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parameters: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parts: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), transforms: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), scene_bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_key_tables: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_constraints: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), glues: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), offscreens: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parameter_groups: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), attachments: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))))`
+`(assets: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), meshes: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parameters: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parts: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), transforms: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), scene_bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_key_tables: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_constraints: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), glues: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), offscreens: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parameter_groups: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), attachments: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), motions: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), motion_groups: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), motion_registrations: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), expressions: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), physics: bool = field(default_factory=lambda: _boolean(False)), pose: bool = field(default_factory=lambda: _boolean(False)))`
 
 Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -10189,6 +11544,12 @@ parameter_groups: Explicit IDs of CDI parameter groups to read, in result-slot o
 requests no payloads, while collection IDs remain discoverable.
 attachments: Explicit IDs of package attachments to read, in result-slot order; an empty list
 requests no payloads, while collection IDs remain discoverable.
+motions: Explicit motion clip IDs; payload slots follow order and retain missing IDs.
+motion_groups: Explicit motion registration-group IDs; group payloads include their ordered entries.
+motion_registrations: Explicit registration IDs, including root and grouped registrations.
+expressions: Explicit expression asset IDs; entries are owned by the selected asset.
+physics: Request the Physics singleton payload; false requests no Physics content.
+pose: Request the Pose singleton payload; false requests no Pose content.
 
 - `assets`: Explicit IDs of image assets to read, in result-slot order; an empty list requests no
 payloads, while collection IDs remain discoverable.
@@ -10218,6 +11579,12 @@ no payloads, while collection IDs remain discoverable.
 requests no payloads, while collection IDs remain discoverable.
 - `attachments`: Explicit IDs of package attachments to read, in result-slot order; an empty list
 requests no payloads, while collection IDs remain discoverable.
+- `motions`: Explicit motion clip IDs; payload slots follow order and retain missing IDs.
+- `motion_groups`: Explicit motion registration-group IDs; group payloads include their ordered entries.
+- `motion_registrations`: Explicit registration IDs, including root and grouped registrations.
+- `expressions`: Explicit expression asset IDs; entries are owned by the selected asset.
+- `physics`: Request the Physics singleton payload; false requests no Physics content.
+- `pose`: Request the Pose singleton payload; false requests no Pose content.
 
 ## zipzi.modeling.ModelingQuery.__repr__
 
@@ -10266,6 +11633,1360 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ModelingSamples.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionCapabilities
+
+`(inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, preview: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, repair: CapabilityState, edit_content: CapabilityState)`
+
+Immutable owned MotionCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+inspect: Read this object while its identity/context remains valid.
+patch: Modify typed fields through a validated native intent/address.
+duplicate: Duplicate the selected object while allocating fresh owned identities.
+delete: Delete the selected object subject to native reference and lock rules.
+move_object: Move the selected object between compatible native owners.
+preview: Native preview eligibility; host preview API availability is advertised separately.
+create_child: Create owned child rows in this object.
+reorder: Change ordered sibling membership without changing identity.
+repair: Repair an explicitly unresolved native reference.
+edit_content: Edit the owning clip content, preserving stable track/key/event identities.
+
+- `inspect`: Read this object while its identity/context remains valid.
+- `patch`: Modify typed fields through a validated native intent/address.
+- `duplicate`: Duplicate the selected object while allocating fresh owned identities.
+- `delete`: Delete the selected object subject to native reference and lock rules.
+- `move_object`: Move the selected object between compatible native owners.
+- `preview`: Native preview eligibility; host preview API availability is advertised separately.
+- `create_child`: Create owned child rows in this object.
+- `reorder`: Change ordered sibling membership without changing identity.
+- `repair`: Repair an explicitly unresolved native reference.
+- `edit_content`: Edit the owning clip content, preserving stable track/key/event identities.
+
+## zipzi.modeling.MotionCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionCapabilities.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionClip
+
+`(id: str, name: str, duration: float, fps: float, looping: bool, restricted_beziers: bool, fade_in: float | None = None, fade_out: float | None = None, track_order: tuple[str, ...], tracks: tuple[MotionTrack, ...], events: tuple[MotionEvent, ...], extensions: _Mapping[str, ExtensionValue], meta_extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
+
+Immutable owned MotionClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+duration: Motion playback duration in seconds; authoring keys may retain source-range provenance.
+fps: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.
+looping: Whether motion playback repeats after its duration.
+restricted_beziers: Whether motion Bezier export follows the restricted control-time convention.
+fade_in: Optional fade-in duration in seconds; None retains the format/runtime default.
+fade_out: Optional fade-out duration in seconds; None retains the format/runtime default.
+track_order: Display order only; tracks retain their execution order. Empty uses execution order.
+tracks: Ordered persistent motion tracks; playback state is owned separately.
+events: Ordered owned events in the motion clip; reading them does not advance playback.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+meta_extensions: Owned opaque motion metadata fields preserved for format roundtrips.
+opaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.
+opaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+- `duration`: Motion playback duration in seconds; authoring keys may retain source-range provenance.
+- `fps`: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.
+- `looping`: Whether motion playback repeats after its duration.
+- `restricted_beziers`: Whether motion Bezier export follows the restricted control-time convention.
+- `fade_in`: Optional fade-in duration in seconds; None retains the format/runtime default.
+- `fade_out`: Optional fade-out duration in seconds; None retains the format/runtime default.
+- `track_order`: Display order only; tracks retain their execution order. Empty uses execution order.
+- `tracks`: Ordered persistent motion tracks; playback state is owned separately.
+- `events`: Ordered owned events in the motion clip; reading them does not advance playback.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+- `meta_extensions`: Owned opaque motion metadata fields preserved for format roundtrips.
+- `opaque_source_ids`: Original runtime-ID namespace used to validate preservation of opaque imported fields.
+- `opaque_source_content_hash`: Original imported-content hash used to detect unsupported changes to opaque fields.
+
+## zipzi.modeling.MotionClip.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionClip.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionContainer
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.MotionContainerGroup
+
+`(value: str)`
+
+Immutable owned MotionContainerGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Destination motion-group identity; Root selects ungrouped registrations.
+
+- `value`: Destination motion-group identity; Root selects ungrouped registrations.
+
+## zipzi.modeling.MotionContainerGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionContainerGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionContainerRoot
+
+`()`
+
+Immutable owned MotionContainerRoot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.MotionContainerRoot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionContainerRoot.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEdit
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.MotionEditCreate
+
+`(id: str, name: str, registration_id: str, destination: MotionContainer)`
+
+Immutable owned MotionEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+registration_id: Stable ID allocated for the new motion library registration.
+destination: Explicit destination owner/container; order is controlled separately by before.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+- `registration_id`: Stable ID allocated for the new motion library registration.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+
+## zipzi.modeling.MotionEditCreate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditCreate.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditCreateGroup
+
+`(id: str, name: str)`
+
+Immutable owned MotionEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+
+## zipzi.modeling.MotionEditCreateGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditCreateGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditCreateTrack
+
+`(clip: str, id: str, key_id: str, time: float)`
+
+Immutable owned MotionEditCreateTrack value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+clip: Stable ID of the motion clip owning the affected track or event.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+key_id: Stable identity allocated for the initial key of a new track.
+time: Absolute time in seconds within the owning motion clip.
+
+- `clip`: Stable ID of the motion clip owning the affected track or event.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `key_id`: Stable identity allocated for the initial key of a new track.
+- `time`: Absolute time in seconds within the owning motion clip.
+
+## zipzi.modeling.MotionEditCreateTrack.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditCreateTrack.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDeleteClip
+
+`(id: str)`
+
+Immutable owned MotionEditDeleteClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+## zipzi.modeling.MotionEditDeleteClip.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDeleteClip.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDeleteEvents
+
+`(ids: tuple[str, ...])`
+
+Immutable owned MotionEditDeleteEvents value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+## zipzi.modeling.MotionEditDeleteEvents.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDeleteEvents.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDeleteGroup
+
+`(id: str)`
+
+Immutable owned MotionEditDeleteGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+## zipzi.modeling.MotionEditDeleteGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDeleteGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDeleteRegistrations
+
+`(ids: tuple[str, ...])`
+
+Immutable owned MotionEditDeleteRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+## zipzi.modeling.MotionEditDeleteRegistrations.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDeleteRegistrations.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDeleteTracks
+
+`(ids: tuple[str, ...])`
+
+Immutable owned MotionEditDeleteTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+## zipzi.modeling.MotionEditDeleteTracks.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDeleteTracks.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDissolveGroup
+
+`(id: str)`
+
+Immutable owned MotionEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+## zipzi.modeling.MotionEditDissolveGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDissolveGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDuplicateClip
+
+`(source: str, id: str, name: str, registration_id: str, destination: MotionContainer)`
+
+Immutable owned MotionEditDuplicateClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+source: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+registration_id: Stable ID allocated for the new motion library registration.
+destination: Explicit destination owner/container; order is controlled separately by before.
+
+- `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+- `registration_id`: Stable ID allocated for the new motion library registration.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+
+## zipzi.modeling.MotionEditDuplicateClip.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDuplicateClip.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDuplicateGroup
+
+`(source: str, id: str, name: str)`
+
+Immutable owned MotionEditDuplicateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+source: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+
+- `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+
+## zipzi.modeling.MotionEditDuplicateGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDuplicateGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditDuplicateRegistrations
+
+`(ids: tuple[str, ...], destination: MotionContainer, before: str | None = None)`
+
+Immutable owned MotionEditDuplicateRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.MotionEditDuplicateRegistrations.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditDuplicateRegistrations.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditMoveEvents
+
+`(ids: tuple[str, ...], destination: str, time_offset: float, copy: bool)`
+
+Immutable owned MotionEditMoveEvents value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+destination: Explicit destination owner/container; order is controlled separately by before.
+time_offset: Offset in seconds added when moving or copying keys/events.
+copy: True allocates copied identities; false transfers the existing identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `time_offset`: Offset in seconds added when moving or copying keys/events.
+- `copy`: True allocates copied identities; false transfers the existing identities.
+
+## zipzi.modeling.MotionEditMoveEvents.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditMoveEvents.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditMoveRegistrations
+
+`(ids: tuple[str, ...], destination: MotionContainer, before: str | None = None)`
+
+Immutable owned MotionEditMoveRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.MotionEditMoveRegistrations.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditMoveRegistrations.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditMoveTracks
+
+`(ids: tuple[str, ...], destination: str, before: str | None = None, copy: bool)`
+
+Immutable owned MotionEditMoveTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+copy: True allocates copied identities; false transfers the existing identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+- `copy`: True allocates copied identities; false transfers the existing identities.
+
+## zipzi.modeling.MotionEditMoveTracks.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditMoveTracks.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditPatchRegistration
+
+`(id: str, expected: MotionRegistration, entry: MotionRegistration)`
+
+Immutable owned MotionEditPatchRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+expected: Exact current field values required by the optimistic edit; stale values reject it.
+entry: Complete replacement motion registration; its owner is selected separately.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `expected`: Exact current field values required by the optimistic edit; stale values reject it.
+- `entry`: Complete replacement motion registration; its owner is selected separately.
+
+## zipzi.modeling.MotionEditPatchRegistration.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditPatchRegistration.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditRegister
+
+`(entry: MotionRegistration, destination: MotionContainer, before: str | None = None)`
+
+Immutable owned MotionEditRegister value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+entry: Complete replacement motion registration; its owner is selected separately.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `entry`: Complete replacement motion registration; its owner is selected separately.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.MotionEditRegister.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditRegister.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditRenameGroup
+
+`(id: str, name: str)`
+
+Immutable owned MotionEditRenameGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+
+## zipzi.modeling.MotionEditRenameGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditRenameGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditReorderGroups
+
+`(ids: tuple[str, ...])`
+
+Immutable owned MotionEditReorderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+## zipzi.modeling.MotionEditReorderGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditReorderGroups.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditReorderTracks
+
+`(clip: str, ids: tuple[str, ...])`
+
+Immutable owned MotionEditReorderTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+clip: Stable ID of the motion clip owning the affected track or event.
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+- `clip`: Stable ID of the motion clip owning the affected track or event.
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+## zipzi.modeling.MotionEditReorderTracks.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditReorderTracks.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditSetEvent
+
+`(clip: str, event: MotionEvent)`
+
+Immutable owned MotionEditSetEvent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+clip: Stable ID of the motion clip owning the affected track or event.
+event: Owned motion event with a stable ID, time in seconds and string payload.
+
+- `clip`: Stable ID of the motion clip owning the affected track or event.
+- `event`: Owned motion event with a stable ID, time in seconds and string payload.
+
+## zipzi.modeling.MotionEditSetEvent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditSetEvent.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditSetTrackTarget
+
+`(id: str, target: MotionTrackTarget)`
+
+Immutable owned MotionEditSetTrackTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+target: Typed target reference; unresolved imported runtime labels remain explicit.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `target`: Typed target reference; unresolved imported runtime labels remain explicit.
+
+## zipzi.modeling.MotionEditSetTrackTarget.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditSetTrackTarget.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEditTransferKeys
+
+`(ids: tuple[str, ...], destination_track: str, time_offset: float, copy: bool)`
+
+Immutable owned MotionEditTransferKeys value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+destination_track: Stable receiving track ID for transferred keys.
+time_offset: Offset in seconds added when moving or copying keys/events.
+copy: True allocates copied identities; false transfers the existing identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `destination_track`: Stable receiving track ID for transferred keys.
+- `time_offset`: Offset in seconds added when moving or copying keys/events.
+- `copy`: True allocates copied identities; false transfers the existing identities.
+
+## zipzi.modeling.MotionEditTransferKeys.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEditTransferKeys.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionEvent
+
+`(id: str, time: float, value: str, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned MotionEvent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+time: Absolute time in seconds within the owning motion clip.
+value: Channel value or replacement payload in the domain declared by this field type.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `time`: Absolute time in seconds within the owning motion clip.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.MotionEvent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEvent.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionGroup
+
+`(id: str, name: str, entries: tuple[MotionRegistration, ...])`
+
+Immutable owned MotionGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+entries: Ordered owned registrations or expression/Pose entries, with stable identities.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+- `entries`: Ordered owned registrations or expression/Pose entries, with stable identities.
+
+## zipzi.modeling.MotionGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionKey
+
+`(id: str, time: float, value: float)`
+
+Immutable owned MotionKey value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+time: Absolute time in seconds within the owning motion clip.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `time`: Absolute time in seconds within the owning motion clip.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.MotionKey.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionKey.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionPoint
+
+`(time: float, value: float)`
+
+Immutable owned MotionPoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+time: Absolute time in seconds within the owning motion clip.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `time`: Absolute time in seconds within the owning motion clip.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.MotionPoint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionPoint.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionRegistration
+
+`(id: str, clip_id: str, fade_in: float | None = None, fade_out: float | None = None, sound: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned MotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+clip_id: Stable motion clip ID referenced by this registration.
+fade_in: Optional fade-in duration in seconds; None retains the format/runtime default.
+fade_out: Optional fade-out duration in seconds; None retains the format/runtime default.
+sound: Optional attachment reference for the registered motion sound.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `clip_id`: Stable motion clip ID referenced by this registration.
+- `fade_in`: Optional fade-in duration in seconds; None retains the format/runtime default.
+- `fade_out`: Optional fade-out duration in seconds; None retains the format/runtime default.
+- `sound`: Optional attachment reference for the registered motion sound.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.MotionRegistration.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionRegistration.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionSegment
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.MotionSegmentBezier
+
+`(control1: MotionPoint, control2: MotionPoint, end: MotionKey)`
+
+Immutable owned MotionSegmentBezier value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+control1: First Bezier control point in seconds/channel-value coordinates; it has no key identity.
+control2: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.
+end: Segment endpoint key or source-range end time, as declared by the enclosing type.
+
+- `control1`: First Bezier control point in seconds/channel-value coordinates; it has no key identity.
+- `control2`: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.
+- `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
+
+## zipzi.modeling.MotionSegmentBezier.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionSegmentBezier.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionSegmentInverseStepped
+
+`(end: MotionKey)`
+
+Immutable owned MotionSegmentInverseStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+end: Segment endpoint key or source-range end time, as declared by the enclosing type.
+
+- `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
+
+## zipzi.modeling.MotionSegmentInverseStepped.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionSegmentInverseStepped.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionSegmentLinear
+
+`(end: MotionKey)`
+
+Immutable owned MotionSegmentLinear value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+end: Segment endpoint key or source-range end time, as declared by the enclosing type.
+
+- `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
+
+## zipzi.modeling.MotionSegmentLinear.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionSegmentLinear.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionSegmentStepped
+
+`(end: MotionKey)`
+
+Immutable owned MotionSegmentStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+end: Segment endpoint key or source-range end time, as declared by the enclosing type.
+
+- `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
+
+## zipzi.modeling.MotionSegmentStepped.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionSegmentStepped.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionTrack
+
+`(id: str, target: MotionTrackTarget, initial: MotionKey, segments: tuple[MotionSegment, ...], fade_in: float | None = None, fade_out: float | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned MotionTrack value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+target: Typed target reference; unresolved imported runtime labels remain explicit.
+initial: First persistent key of the track; following segment endpoints carry their own key IDs.
+segments: Ordered interpolation segments after the initial key, with stable endpoint identities.
+fade_in: Optional fade-in duration in seconds; None retains the format/runtime default.
+fade_out: Optional fade-out duration in seconds; None retains the format/runtime default.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `target`: Typed target reference; unresolved imported runtime labels remain explicit.
+- `initial`: First persistent key of the track; following segment endpoints carry their own key IDs.
+- `segments`: Ordered interpolation segments after the initial key, with stable endpoint identities.
+- `fade_in`: Optional fade-in duration in seconds; None retains the format/runtime default.
+- `fade_out`: Optional fade-out duration in seconds; None retains the format/runtime default.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.MotionTrack.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionTrack.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionTrackTarget
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.MotionTrackTargetModel
+
+`(runtime_id: str)`
+
+Immutable owned MotionTrackTargetModel value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+runtime_id: Imported/exported runtime label, distinct from the document object UUID.
+
+- `runtime_id`: Imported/exported runtime label, distinct from the document object UUID.
+
+## zipzi.modeling.MotionTrackTargetModel.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionTrackTargetModel.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionTrackTargetParameter
+
+`(parameter_id: str)`
+
+Immutable owned MotionTrackTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+parameter_id: Stable document parameter UUID; evaluation uses its declared range and default.
+
+- `parameter_id`: Stable document parameter UUID; evaluation uses its declared range and default.
+
+## zipzi.modeling.MotionTrackTargetParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionTrackTargetParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionTrackTargetPartOpacity
+
+`(part_id: str)`
+
+Immutable owned MotionTrackTargetPartOpacity value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+part_id: Stable document Part UUID for this opacity or visibility reference.
+
+- `part_id`: Stable document Part UUID for this opacity or visibility reference.
+
+## zipzi.modeling.MotionTrackTargetPartOpacity.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionTrackTargetPartOpacity.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionTrackTargetUnresolved
+
+`(category: str, runtime_id: str)`
+
+Immutable owned MotionTrackTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+category: Imported Physics target category retained by this wire metadata record.
+runtime_id: Imported/exported runtime label, distinct from the document object UUID.
+
+- `category`: Imported Physics target category retained by this wire metadata record.
+- `runtime_id`: Imported/exported runtime label, distinct from the document object UUID.
+
+## zipzi.modeling.MotionTrackTargetUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionTrackTargetUnresolved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionTrackTargetUnspecified
+
+`()`
+
+Immutable owned MotionTrackTargetUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.MotionTrackTargetUnspecified.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionTrackTargetUnspecified.summary
 
 `() -> str`
 
@@ -11041,7 +13762,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.OwnedModelingRecords
 
-`(document_id: str, setup: ModelSetup, hierarchy_order: HierarchyOrder, editor_state: EditorState, display_info: DisplayInfo, model3_settings: Model3Settings, draw_order_groups: tuple[DrawOrderGroup, ...] | None = None, ids: _Mapping[str, tuple[str, ...]], assets: tuple[ImageAsset | None, ...], meshes: tuple[Mesh | None, ...], parameters: tuple[Parameter | None, ...], parts: tuple[Part | None, ...], transforms: tuple[Transform | None, ...], bindings: tuple[MeshBinding | None, ...], scene_bindings: tuple[SceneBinding | None, ...], blend_key_tables: tuple[BlendShapeKeyTable | None, ...], blend_constraints: tuple[BlendShapeConstraint | None, ...], blend_bindings: tuple[BlendShapeBinding | None, ...], glues: tuple[Glue | None, ...], offscreens: tuple[Offscreen | None, ...], parameter_groups: tuple[CdiParameterGroup | None, ...], attachments: tuple[PackageAttachment | None, ...])`
+`(document_id: str, setup: ModelSetup, hierarchy_order: HierarchyOrder, editor_state: EditorState, display_info: DisplayInfo, model3_settings: Model3Settings, draw_order_groups: tuple[DrawOrderGroup, ...] | None = None, ids: _Mapping[str, tuple[str, ...]], assets: tuple[ImageAsset | None, ...], meshes: tuple[Mesh | None, ...], parameters: tuple[Parameter | None, ...], parts: tuple[Part | None, ...], transforms: tuple[Transform | None, ...], bindings: tuple[MeshBinding | None, ...], scene_bindings: tuple[SceneBinding | None, ...], blend_key_tables: tuple[BlendShapeKeyTable | None, ...], blend_constraints: tuple[BlendShapeConstraint | None, ...], blend_bindings: tuple[BlendShapeBinding | None, ...], glues: tuple[Glue | None, ...], offscreens: tuple[Offscreen | None, ...], parameter_groups: tuple[CdiParameterGroup | None, ...], attachments: tuple[PackageAttachment | None, ...], motions: tuple[MotionClip | None, ...], motion_groups: tuple[MotionGroup | None, ...], motion_registrations: tuple[MotionRegistration | None, ...], expressions: tuple[ExpressionAsset | None, ...], physics: PhysicsAsset | None = None, pose: PoseAsset | None = None)`
 
 Immutable owned OwnedModelingRecords value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -11084,6 +13805,12 @@ parameter_groups: Owned CDI parameter groups aligned with the corresponding quer
 missing requested ID and an empty query returns no payloads.
 attachments: Owned package attachments aligned with the corresponding query ID list; None marks a
 missing requested ID and an empty query returns no payloads.
+motions: Owned selected motions aligned with query IDs; None marks a missing ID.
+motion_groups: Owned selected motion_groups aligned with query IDs; None marks a missing ID.
+motion_registrations: Owned selected motion_registrations aligned with query IDs; None marks a missing ID.
+expressions: Owned selected expressions aligned with query IDs; None marks a missing ID.
+physics: Owned Physics singleton when requested and present; None otherwise.
+pose: Owned Pose singleton when requested and present; None otherwise.
 
 - `document_id`: Stable document UUID; not a Runtime Session handle.
 - `setup`: Model source-canvas and export-frame configuration.
@@ -11123,6 +13850,12 @@ missing requested ID and an empty query returns no payloads.
 missing requested ID and an empty query returns no payloads.
 - `attachments`: Owned package attachments aligned with the corresponding query ID list; None marks a
 missing requested ID and an empty query returns no payloads.
+- `motions`: Owned selected motions aligned with query IDs; None marks a missing ID.
+- `motion_groups`: Owned selected motion_groups aligned with query IDs; None marks a missing ID.
+- `motion_registrations`: Owned selected motion_registrations aligned with query IDs; None marks a missing ID.
+- `expressions`: Owned selected expressions aligned with query IDs; None marks a missing ID.
+- `physics`: Owned Physics singleton when requested and present; None otherwise.
+- `pose`: Owned Pose singleton when requested and present; None otherwise.
 
 ## zipzi.modeling.OwnedModelingRecords.__repr__
 
@@ -11420,6 +14153,2499 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.PartKeyformSlotStatic.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsAsset
+
+`(id: str, data: PhysicsDefinition, opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
+
+Immutable owned PhysicsAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+data: Complete persistent Physics definition; simulation state lives outside the document.
+opaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.
+opaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `data`: Complete persistent Physics definition; simulation state lives outside the document.
+- `opaque_source_ids`: Original runtime-ID namespace used to validate preservation of opaque imported fields.
+- `opaque_source_content_hash`: Original imported-content hash used to detect unsupported changes to opaque fields.
+
+## zipzi.modeling.PhysicsAsset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsAsset.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsAssetProperty
+
+`(value: float | None = None)`
+
+Immutable owned PhysicsAssetPropertyFps value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Optional Physics fixed-step frequency; None follows the evaluation delta.
+
+- `value`: Optional Physics fixed-step frequency; None follows the evaluation delta.
+
+## zipzi.modeling.PhysicsAssetProperty.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsAssetProperty.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsAssetPropertyFps
+
+`(value: float | None = None)`
+
+Immutable owned PhysicsAssetPropertyFps value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Optional Physics fixed-step frequency; None follows the evaluation delta.
+
+- `value`: Optional Physics fixed-step frequency; None follows the evaluation delta.
+
+## zipzi.modeling.PhysicsAssetPropertyFps.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsAssetPropertyFps.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsAxis
+
+`()`
+
+Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.modeling.PhysicsCapabilities
+
+`(inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+
+Immutable owned PhysicsCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+inspect: Read this object while its identity/context remains valid.
+patch: Modify typed fields through a validated native intent/address.
+create_child: Create owned child rows in this object.
+duplicate: Duplicate the selected object while allocating fresh owned identities.
+delete: Delete the selected object subject to native reference and lock rules.
+move_object: Move the selected object between compatible native owners.
+reorder: Change ordered sibling membership without changing identity.
+repair: Repair an explicitly unresolved native reference.
+preview: Native preview eligibility; host preview API availability is advertised separately.
+
+- `inspect`: Read this object while its identity/context remains valid.
+- `patch`: Modify typed fields through a validated native intent/address.
+- `create_child`: Create owned child rows in this object.
+- `duplicate`: Duplicate the selected object while allocating fresh owned identities.
+- `delete`: Delete the selected object subject to native reference and lock rules.
+- `move_object`: Move the selected object between compatible native owners.
+- `reorder`: Change ordered sibling membership without changing identity.
+- `repair`: Repair an explicitly unresolved native reference.
+- `preview`: Native preview eligibility; host preview API availability is advertised separately.
+
+## zipzi.modeling.PhysicsCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsCapabilities.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsCollection
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PhysicsCollectionGroups
+
+`()`
+
+Immutable owned PhysicsCollectionGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.PhysicsCollectionGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsCollectionGroups.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsCollectionInputs
+
+`(group_id: str)`
+
+Immutable owned PhysicsCollectionInputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable Physics rig ID owning the selected rows.
+
+- `group_id`: Stable Physics rig ID owning the selected rows.
+
+## zipzi.modeling.PhysicsCollectionInputs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsCollectionInputs.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsCollectionNodes
+
+`(group_id: str)`
+
+Immutable owned PhysicsCollectionNodes value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable Physics rig ID owning the selected rows.
+
+- `group_id`: Stable Physics rig ID owning the selected rows.
+
+## zipzi.modeling.PhysicsCollectionNodes.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsCollectionNodes.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsCollectionOutputs
+
+`(group_id: str)`
+
+Immutable owned PhysicsCollectionOutputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable Physics rig ID owning the selected rows.
+
+- `group_id`: Stable Physics rig ID owning the selected rows.
+
+## zipzi.modeling.PhysicsCollectionOutputs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsCollectionOutputs.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsDefinition
+
+`(version: int, meta: PhysicsMeta, settings: tuple[PhysicsSetting, ...], extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsDefinition value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+version: Native Physics format version number.
+meta: Physics format metadata and counts maintained by native authoring validation.
+settings: Ordered shared Physics rig definitions.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `version`: Native Physics format version number.
+- `meta`: Physics format metadata and counts maintained by native authoring validation.
+- `settings`: Ordered shared Physics rig definitions.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsDefinition.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsDefinition.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsDictionaryEntry
+
+`(Id: str, Name: str, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsDictionaryEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+Id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+Name: Human-readable display or registration name; distinct from persistent object identity.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `Id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `Name`: Human-readable display or registration name; distinct from persistent object identity.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsDictionaryEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsDictionaryEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEdit
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PhysicsEditCreateGroup
+
+`(asset_id: str, id: str, name: str, before: str | None = None)`
+
+Immutable owned PhysicsEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+asset_id: Stable Physics singleton ID owning these changes.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `asset_id`: Stable Physics singleton ID owning these changes.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditCreateGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditCreateGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditCreateInput
+
+`(group_id: str, id: str, before: str | None = None)`
+
+Immutable owned PhysicsEditCreateInput value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable ID of the group owning the affected rows or node chain.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditCreateInput.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditCreateInput.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditCreateOutput
+
+`(group_id: str, id: str, node_id: str, before: str | None = None)`
+
+Immutable owned PhysicsEditCreateOutput value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable ID of the group owning the affected rows or node chain.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+node_id: Stable node identity, independent of the node index used by exported Physics JSON.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `node_id`: Stable node identity, independent of the node index used by exported Physics JSON.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditCreateOutput.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditCreateOutput.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditDelete
+
+`(ids: tuple[str, ...], node_replacements: _Mapping[str, str])`
+
+Immutable owned PhysicsEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+node_replacements: Explicit old-node to replacement-node identities used when repairing output references.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `node_replacements`: Explicit old-node to replacement-node identities used when repairing output references.
+
+## zipzi.modeling.PhysicsEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditDelete.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditDuplicate
+
+`(ids: tuple[str, ...], group_id: str | None = None, before: str | None = None)`
+
+Immutable owned PhysicsEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+group_id: Stable ID of the group owning the affected rows or node chain.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditDuplicate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditDuplicate.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditDuplicateNode
+
+`(id: str, before: str | None = None)`
+
+Immutable owned PhysicsEditDuplicateNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditDuplicateNode.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditDuplicateNode.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditInsertNode
+
+`(group_id: str, node: PhysicsNode, before: str | None = None)`
+
+Immutable owned PhysicsEditInsertNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable ID of the group owning the affected rows or node chain.
+node: Complete Physics node to insert, including its stable identity and authored dynamics.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `node`: Complete Physics node to insert, including its stable identity and authored dynamics.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditInsertNode.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditInsertNode.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditMoveInputs
+
+`(ids: tuple[str, ...], group_id: str, before: str | None = None)`
+
+Immutable owned PhysicsEditMoveInputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+group_id: Stable ID of the group owning the affected rows or node chain.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditMoveInputs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditMoveInputs.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditMoveNode
+
+`(id: str, before: str | None = None)`
+
+Immutable owned PhysicsEditMoveNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditMoveNode.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditMoveNode.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditMoveOutputs
+
+`(ids: tuple[str, ...], group_id: str, before: str | None = None, node_replacements: _Mapping[str, str])`
+
+Immutable owned PhysicsEditMoveOutputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+group_id: Stable ID of the group owning the affected rows or node chain.
+before: Optional stable sibling ID before which to insert; None appends.
+node_replacements: Explicit old-node to replacement-node identities used when repairing output references.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+- `node_replacements`: Explicit old-node to replacement-node identities used when repairing output references.
+
+## zipzi.modeling.PhysicsEditMoveOutputs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditMoveOutputs.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditPatch
+
+`(patch: PhysicsPatch)`
+
+Immutable owned PhysicsEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+patch: Typed atomic Physics changes validated against the current candidate.
+
+- `patch`: Typed atomic Physics changes validated against the current candidate.
+
+## zipzi.modeling.PhysicsEditPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditPatch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsEditReorderGroups
+
+`(ids: tuple[str, ...], before: str | None = None)`
+
+Immutable owned PhysicsEditReorderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PhysicsEditReorderGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsEditReorderGroups.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsForces
+
+`(Gravity: PhysicsVector, Wind: PhysicsVector, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsForces value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+Gravity: Effective gravity vector in the native Physics coordinate convention.
+Wind: Effective wind vector in the native Physics coordinate convention.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `Gravity`: Effective gravity vector in the native Physics coordinate convention.
+- `Wind`: Effective wind vector in the native Physics coordinate convention.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsForces.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsForces.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsInput
+
+`(id: str, source: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsInput value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+source: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+reference_extensions: Owned opaque fields attached to an imported Physics parameter reference.
+weight: Native Physics influence weight, expressed as a percentage.
+kind: Native Physics axis/channel discriminator; distinct from an object identity.
+reflect: Whether the native Physics mapping reflects the selected axis.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+- `reference_extensions`: Owned opaque fields attached to an imported Physics parameter reference.
+- `weight`: Native Physics influence weight, expressed as a percentage.
+- `kind`: Native Physics axis/channel discriminator; distinct from an object identity.
+- `reflect`: Whether the native Physics mapping reflects the selected axis.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsInput.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsInput.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsMeta
+
+`(PhysicsSettingCount: int, TotalInputCount: int, TotalOutputCount: int, VertexCount: int, EffectiveForces: PhysicsForces, PhysicsDictionary: tuple[PhysicsDictionaryEntry, ...], Fps: float | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsMeta value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+PhysicsSettingCount: Exported count of Physics settings, maintained by native validation.
+TotalInputCount: Exported count of Physics inputs, maintained by native validation.
+TotalOutputCount: Exported count of Physics outputs, maintained by native validation.
+VertexCount: Exported count of Physics nodes, maintained by native validation.
+EffectiveForces: Native effective gravity and wind vectors.
+PhysicsDictionary: Ordered exported Physics rig ID/name metadata.
+Fps: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `PhysicsSettingCount`: Exported count of Physics settings, maintained by native validation.
+- `TotalInputCount`: Exported count of Physics inputs, maintained by native validation.
+- `TotalOutputCount`: Exported count of Physics outputs, maintained by native validation.
+- `VertexCount`: Exported count of Physics nodes, maintained by native validation.
+- `EffectiveForces`: Native effective gravity and wind vectors.
+- `PhysicsDictionary`: Ordered exported Physics rig ID/name metadata.
+- `Fps`: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsMeta.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsMeta.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsNode
+
+`(id: str, position: PhysicsVector, mobility: float, delay: float, acceleration: float, radius: float, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+position: Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+mobility: Native Physics node mobility coefficient.
+delay: Native Physics node delay coefficient.
+acceleration: Native Physics node acceleration coefficient.
+radius: Native Physics node segment length/radius.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `position`: Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+- `mobility`: Native Physics node mobility coefficient.
+- `delay`: Native Physics node delay coefficient.
+- `acceleration`: Native Physics node acceleration coefficient.
+- `radius`: Native Physics node segment length/radius.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsNode.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsNode.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsNormalization
+
+`(Position: PhysicsRange, Angle: PhysicsRange, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+Position: Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+Angle: Angle normalization range, in the native Physics coordinate convention.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `Position`: Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+- `Angle`: Angle normalization range, in the native Physics coordinate convention.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsNormalization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsNormalization.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsOutput
+
+`(id: str, destination: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], node_id: str, scale: float, weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsOutput value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+destination: Explicit destination owner/container; order is controlled separately by before.
+reference_extensions: Owned opaque fields attached to an imported Physics parameter reference.
+node_id: Stable node identity, independent of the node index used by exported Physics JSON.
+scale: Native Physics output multiplier applied to the selected axis.
+weight: Native Physics influence weight, expressed as a percentage.
+kind: Native Physics axis/channel discriminator; distinct from an object identity.
+reflect: Whether the native Physics mapping reflects the selected axis.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `reference_extensions`: Owned opaque fields attached to an imported Physics parameter reference.
+- `node_id`: Stable node identity, independent of the node index used by exported Physics JSON.
+- `scale`: Native Physics output multiplier applied to the selected axis.
+- `weight`: Native Physics influence weight, expressed as a percentage.
+- `kind`: Native Physics axis/channel discriminator; distinct from an object identity.
+- `reflect`: Whether the native Physics mapping reflects the selected axis.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsOutput.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsOutput.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPatch
+
+`(asset_id: str, asset_changes: tuple[PhysicsAssetProperty, ...], rig: PhysicsRigPatch | None = None)`
+
+Immutable owned PhysicsPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+asset_id: Stable Physics singleton ID owning these changes.
+asset_changes: Ordered changes to Physics asset metadata; rig-local changes are separate.
+rig: Optional atomic changes to one owned Physics rig/group.
+
+- `asset_id`: Stable Physics singleton ID owning these changes.
+- `asset_changes`: Ordered changes to Physics asset metadata; rig-local changes are separate.
+- `rig`: Optional atomic changes to one owned Physics rig/group.
+
+## zipzi.modeling.PhysicsPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPatch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsProperty
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PhysicsPropertyAngleNormalization
+
+`(value: PhysicsRange)`
+
+Immutable owned PhysicsPropertyAngleNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Replacement minimum/default/maximum range for angle normalization.
+
+- `value`: Replacement minimum/default/maximum range for angle normalization.
+
+## zipzi.modeling.PhysicsPropertyAngleNormalization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyAngleNormalization.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyInputAxis
+
+`(id: str, value: PhysicsAxis)`
+
+Immutable owned PhysicsPropertyInputAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyInputAxis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyInputAxis.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyInputParameter
+
+`(id: str, target: PhysicsTarget)`
+
+Immutable owned PhysicsPropertyInputParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+target: Typed target reference; unresolved imported runtime labels remain explicit.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `target`: Typed target reference; unresolved imported runtime labels remain explicit.
+
+## zipzi.modeling.PhysicsPropertyInputParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyInputParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyInputReflect
+
+`(id: str, value: bool)`
+
+Immutable owned PhysicsPropertyInputReflect value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyInputReflect.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyInputReflect.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyInputWeight
+
+`(id: str, value: float)`
+
+Immutable owned PhysicsPropertyInputWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyInputWeight.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyInputWeight.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyName
+
+`(value: str)`
+
+Immutable owned PhysicsPropertyName value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Replacement display name of the Physics group.
+
+- `value`: Replacement display name of the Physics group.
+
+## zipzi.modeling.PhysicsPropertyName.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyName.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyOutputAxis
+
+`(id: str, value: PhysicsAxis)`
+
+Immutable owned PhysicsPropertyOutputAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyOutputAxis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyOutputAxis.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyOutputNode
+
+`(id: str, node_id: str)`
+
+Immutable owned PhysicsPropertyOutputNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+node_id: Stable node identity, independent of the node index used by exported Physics JSON.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `node_id`: Stable node identity, independent of the node index used by exported Physics JSON.
+
+## zipzi.modeling.PhysicsPropertyOutputNode.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyOutputNode.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyOutputParameter
+
+`(id: str, target: PhysicsTarget)`
+
+Immutable owned PhysicsPropertyOutputParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+target: Typed target reference; unresolved imported runtime labels remain explicit.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `target`: Typed target reference; unresolved imported runtime labels remain explicit.
+
+## zipzi.modeling.PhysicsPropertyOutputParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyOutputParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyOutputReflect
+
+`(id: str, value: bool)`
+
+Immutable owned PhysicsPropertyOutputReflect value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyOutputReflect.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyOutputReflect.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyOutputScale
+
+`(id: str, value: float)`
+
+Immutable owned PhysicsPropertyOutputScale value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyOutputScale.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyOutputScale.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyOutputWeight
+
+`(id: str, value: float)`
+
+Immutable owned PhysicsPropertyOutputWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyOutputWeight.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyOutputWeight.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyPositionNormalization
+
+`(value: PhysicsRange)`
+
+Immutable owned PhysicsPropertyPositionNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Replacement minimum/default/maximum range for position normalization.
+
+- `value`: Replacement minimum/default/maximum range for position normalization.
+
+## zipzi.modeling.PhysicsPropertyPositionNormalization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyPositionNormalization.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyVertexAcceleration
+
+`(id: str, value: float)`
+
+Immutable owned PhysicsPropertyVertexAcceleration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyVertexAcceleration.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyVertexAcceleration.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyVertexDelay
+
+`(id: str, value: float)`
+
+Immutable owned PhysicsPropertyVertexDelay value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyVertexDelay.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyVertexDelay.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyVertexMobility
+
+`(id: str, value: float)`
+
+Immutable owned PhysicsPropertyVertexMobility value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyVertexMobility.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyVertexMobility.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyVertexPosition
+
+`(id: str, value: PhysicsVector)`
+
+Immutable owned PhysicsPropertyVertexPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyVertexPosition.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyVertexPosition.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsPropertyVertexRadius
+
+`(id: str, value: float)`
+
+Immutable owned PhysicsPropertyVertexRadius value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+value: Channel value or replacement payload in the domain declared by this field type.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `value`: Channel value or replacement payload in the domain declared by this field type.
+
+## zipzi.modeling.PhysicsPropertyVertexRadius.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsPropertyVertexRadius.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsRange
+
+`(Minimum: float, Default: float, Maximum: float)`
+
+Immutable owned PhysicsRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+Minimum: Lower normalization bound in the declared position or angle domain.
+Default: Neutral normalization coordinate between the declared bounds.
+Maximum: Upper normalization bound in the declared position or angle domain.
+
+- `Minimum`: Lower normalization bound in the declared position or angle domain.
+- `Default`: Neutral normalization coordinate between the declared bounds.
+- `Maximum`: Upper normalization bound in the declared position or angle domain.
+
+## zipzi.modeling.PhysicsRange.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsRange.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsRigPatch
+
+`(group_id: str, changes: tuple[PhysicsProperty, ...])`
+
+Immutable owned PhysicsRigPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable ID of the group owning the affected rows or node chain.
+changes: Ordered typed property changes validated as one native operation.
+
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `changes`: Ordered typed property changes validated as one native operation.
+
+## zipzi.modeling.PhysicsRigPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsRigPatch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsSetting
+
+`(id: str, external_id: str, inputs: tuple[PhysicsInput, ...], outputs: tuple[PhysicsOutput, ...], vertices: tuple[PhysicsNode, ...], normalization: PhysicsNormalization, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PhysicsSetting value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+external_id: Imported/exported Physics rig label, distinct from its persistent group UUID.
+inputs: Ordered Physics input rows, each with a stable identity and typed parameter source.
+outputs: Ordered Physics output rows, each with a stable identity and node reference.
+vertices: Ordered Physics node chain; outputs refer to stable node IDs.
+normalization: Native position and angle normalization ranges for this Physics rig.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `external_id`: Imported/exported Physics rig label, distinct from its persistent group UUID.
+- `inputs`: Ordered Physics input rows, each with a stable identity and typed parameter source.
+- `outputs`: Ordered Physics output rows, each with a stable identity and node reference.
+- `vertices`: Ordered Physics node chain; outputs refer to stable node IDs.
+- `normalization`: Native position and angle normalization ranges for this Physics rig.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PhysicsSetting.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsSetting.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsTarget
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PhysicsTargetResolved
+
+`(parameter_id: str)`
+
+Immutable owned PhysicsTargetResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+parameter_id: Stable document parameter UUID; evaluation uses its declared range and default.
+
+- `parameter_id`: Stable document parameter UUID; evaluation uses its declared range and default.
+
+## zipzi.modeling.PhysicsTargetResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsTargetResolved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsTargetUnresolved
+
+`(runtime_id: str)`
+
+Immutable owned PhysicsTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+runtime_id: Imported/exported runtime label, distinct from the document object UUID.
+
+- `runtime_id`: Imported/exported runtime label, distinct from the document object UUID.
+
+## zipzi.modeling.PhysicsTargetUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsTargetUnresolved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsTargetUnspecified
+
+`()`
+
+Immutable owned PhysicsTargetUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.PhysicsTargetUnspecified.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsTargetUnspecified.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsVector
+
+`(X: float, Y: float)`
+
+Immutable owned PhysicsVector value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+X: Horizontal component in the native Physics coordinate convention.
+Y: Vertical component in the native Physics coordinate convention.
+
+- `X`: Horizontal component in the native Physics coordinate convention.
+- `Y`: Vertical component in the native Physics coordinate convention.
+
+## zipzi.modeling.PhysicsVector.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsVector.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseAsset
+
+`(id: str, file_type: str | None = None, fade_in: float | None = None, groups: tuple[PoseGroup, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
+
+Immutable owned PoseAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+file_type: Optional format type label retained from the imported expression or Pose asset.
+fade_in: Optional fade-in duration in seconds; None retains the format/runtime default.
+groups: Ordered owned Pose groups; each owns its entries and link rows.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+opaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.
+opaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `file_type`: Optional format type label retained from the imported expression or Pose asset.
+- `fade_in`: Optional fade-in duration in seconds; None retains the format/runtime default.
+- `groups`: Ordered owned Pose groups; each owns its entries and link rows.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+- `opaque_source_ids`: Original runtime-ID namespace used to validate preservation of opaque imported fields.
+- `opaque_source_content_hash`: Original imported-content hash used to detect unsupported changes to opaque fields.
+
+## zipzi.modeling.PoseAsset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseAsset.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseCapabilities
+
+`(inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, dissolve: CapabilityState, preview: CapabilityState)`
+
+Immutable owned PoseCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+inspect: Read this object while its identity/context remains valid.
+patch: Modify typed fields through a validated native intent/address.
+create_child: Create owned child rows in this object.
+duplicate: Duplicate the selected object while allocating fresh owned identities.
+delete: Delete the selected object subject to native reference and lock rules.
+move_object: Move the selected object between compatible native owners.
+reorder: Change ordered sibling membership without changing identity.
+repair: Repair an explicitly unresolved native reference.
+dissolve: Remove this container while moving owned content to an explicit destination.
+preview: Native preview eligibility; host preview API availability is advertised separately.
+
+- `inspect`: Read this object while its identity/context remains valid.
+- `patch`: Modify typed fields through a validated native intent/address.
+- `create_child`: Create owned child rows in this object.
+- `duplicate`: Duplicate the selected object while allocating fresh owned identities.
+- `delete`: Delete the selected object subject to native reference and lock rules.
+- `move_object`: Move the selected object between compatible native owners.
+- `reorder`: Change ordered sibling membership without changing identity.
+- `repair`: Repair an explicitly unresolved native reference.
+- `dissolve`: Remove this container while moving owned content to an explicit destination.
+- `preview`: Native preview eligibility; host preview API availability is advertised separately.
+
+## zipzi.modeling.PoseCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseCapabilities.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseCollection
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PoseCollectionEntries
+
+`(group_id: str)`
+
+Immutable owned PoseCollectionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable ID of the group owning the affected rows or node chain.
+
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+
+## zipzi.modeling.PoseCollectionEntries.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseCollectionEntries.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseCollectionGroups
+
+`()`
+
+Immutable owned PoseCollectionGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.PoseCollectionGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseCollectionGroups.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseCollectionLinks
+
+`(entry_id: str)`
+
+Immutable owned PoseCollectionLinks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+entry_id: Stable ID of the owning entry; links remain owned by that entry.
+
+- `entry_id`: Stable ID of the owning entry; links remain owned by that entry.
+
+## zipzi.modeling.PoseCollectionLinks.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseCollectionLinks.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEdit
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PoseEditCreate
+
+`(id: str)`
+
+Immutable owned PoseEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+
+## zipzi.modeling.PoseEditCreate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditCreate.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEditCreateEntry
+
+`(group_id: str, id: str, before: str | None = None)`
+
+Immutable owned PoseEditCreateEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+group_id: Stable ID of the group owning the affected rows or node chain.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PoseEditCreateEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditCreateEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEditCreateGroup
+
+`(pose_id: str, id: str, name: str, before: str | None = None)`
+
+Immutable owned PoseEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+pose_id: Stable Pose singleton ID; the operation may create it when absent.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `pose_id`: Stable Pose singleton ID; the operation may create it when absent.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PoseEditCreateGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditCreateGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEditCreateLink
+
+`(entry_id: str, id: str, before: str | None = None)`
+
+Immutable owned PoseEditCreateLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+entry_id: Stable ID of the owning entry; links remain owned by that entry.
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `entry_id`: Stable ID of the owning entry; links remain owned by that entry.
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PoseEditCreateLink.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditCreateLink.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEditDelete
+
+`(ids: tuple[str, ...])`
+
+Immutable owned PoseEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+
+## zipzi.modeling.PoseEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditDelete.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEditDissolveGroup
+
+`(id: str, destination: str, before: str | None = None)`
+
+Immutable owned PoseEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PoseEditDissolveGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditDissolveGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEditDuplicate
+
+`(ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
+
+Immutable owned PoseEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PoseEditDuplicate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditDuplicate.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEditMove
+
+`(ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
+
+Immutable owned PoseEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+destination: Explicit destination owner/container; order is controlled separately by before.
+before: Optional stable sibling ID before which to insert; None appends.
+
+- `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
+- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `before`: Optional stable sibling ID before which to insert; None appends.
+
+## zipzi.modeling.PoseEditMove.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditMove.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEditPatch
+
+`(id: str, expected: PoseFields, fields: PoseFields)`
+
+Immutable owned PoseEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+expected: Exact current field values required by the optimistic edit; stale values reject it.
+fields: Typed replacement fields for the addressed object, applied atomically.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `expected`: Exact current field values required by the optimistic edit; stale values reject it.
+- `fields`: Typed replacement fields for the addressed object, applied atomically.
+
+## zipzi.modeling.PoseEditPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEditPatch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseEntry
+
+`(id: str, part: PosePartRef, links: tuple[PoseLink, ...] | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Immutable owned PoseEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+part: Typed resolved/unresolved Part reference retained by the Pose entry or link.
+links: Optional ordered Pose links; None retains absence rather than an explicit empty list.
+extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `part`: Typed resolved/unresolved Part reference retained by the Pose entry or link.
+- `links`: Optional ordered Pose links; None retains absence rather than an explicit empty list.
+- `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+
+## zipzi.modeling.PoseEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseFields
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PoseFieldsAsset
+
+`(fade_in: float | None = None)`
+
+Immutable owned PoseFieldsAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+fade_in: Optional fade-in duration in seconds; None retains the format/runtime default.
+
+- `fade_in`: Optional fade-in duration in seconds; None retains the format/runtime default.
+
+## zipzi.modeling.PoseFieldsAsset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseFieldsAsset.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseFieldsEntry
+
+`(part: PosePartRef)`
+
+Immutable owned PoseFieldsEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+part: Typed resolved/unresolved Part reference retained by the Pose entry or link.
+
+- `part`: Typed resolved/unresolved Part reference retained by the Pose entry or link.
+
+## zipzi.modeling.PoseFieldsEntry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseFieldsEntry.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseFieldsGroup
+
+`(name: str)`
+
+Immutable owned PoseFieldsGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+name: Human-readable display or registration name; distinct from persistent object identity.
+
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+
+## zipzi.modeling.PoseFieldsGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseFieldsGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseFieldsLink
+
+`(target: PosePartRef)`
+
+Immutable owned PoseFieldsLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+target: Typed target reference; unresolved imported runtime labels remain explicit.
+
+- `target`: Typed target reference; unresolved imported runtime labels remain explicit.
+
+## zipzi.modeling.PoseFieldsLink.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseFieldsLink.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseGroup
+
+`(id: str, name: str, entries: tuple[PoseEntry, ...])`
+
+Immutable owned PoseGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+name: Human-readable display or registration name; distinct from persistent object identity.
+entries: Ordered owned registrations or expression/Pose entries, with stable identities.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `name`: Human-readable display or registration name; distinct from persistent object identity.
+- `entries`: Ordered owned registrations or expression/Pose entries, with stable identities.
+
+## zipzi.modeling.PoseGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseGroup.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PoseLink
+
+`(id: str, target: PosePartRef)`
+
+Immutable owned PoseLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+target: Typed target reference; unresolved imported runtime labels remain explicit.
+
+- `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+- `target`: Typed target reference; unresolved imported runtime labels remain explicit.
+
+## zipzi.modeling.PoseLink.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PoseLink.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PosePartRef
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PosePartRefResolved
+
+`(part_id: str)`
+
+Immutable owned PosePartRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+part_id: Stable document Part UUID for this opacity or visibility reference.
+
+- `part_id`: Stable document Part UUID for this opacity or visibility reference.
+
+## zipzi.modeling.PosePartRefResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PosePartRefResolved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PosePartRefUnresolved
+
+`(runtime_id: str)`
+
+Immutable owned PosePartRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+runtime_id: Imported/exported runtime label, distinct from the document object UUID.
+
+- `runtime_id`: Imported/exported runtime label, distinct from the document object UUID.
+
+## zipzi.modeling.PosePartRefUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PosePartRefUnresolved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PosePartRefUnspecified
+
+`()`
+
+Immutable owned PosePartRefUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.PosePartRefUnspecified.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PosePartRefUnspecified.summary
 
 `() -> str`
 

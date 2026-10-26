@@ -164,6 +164,46 @@ pub enum ModelingCommand {
         /// mutate or publish.
         intent: zipzi_core::document::AttachmentEdit,
     },
+    Motion {
+        /// Motion library/track/key/event intent; use a Plan or apply to an Edit.
+        intent: zipzi_core::document::MotionEdit,
+    },
+    Expression {
+        /// Expression asset/entry intent, validated by the shared SDK planner.
+        intent: zipzi_core::document::ExpressionEdit,
+    },
+    Physics {
+        /// Physics rig/row/node intent with native ownership and reference checks.
+        intent: zipzi_core::document::PhysicsEdit,
+    },
+    Pose {
+        /// Pose singleton/group/entry/link intent, independent of playback state.
+        intent: zipzi_core::document::PoseEdit,
+    },
+    CreateMotion {
+        /// Complete owned clip with stable track/key/event identities.
+        clip: zipzi_core::document::MotionClip,
+    },
+    ReplaceMotion {
+        /// Complete replacement clip preserving its stable object ID.
+        clip: zipzi_core::document::MotionClip,
+    },
+    CreateExpression {
+        /// Complete expression asset with ordered owned entries.
+        expression: zipzi_core::document::ExpressionAsset,
+    },
+    ReplaceExpression {
+        /// Complete replacement expression preserving its object ID.
+        expression: zipzi_core::document::ExpressionAsset,
+    },
+    SetPhysics {
+        /// Complete Physics singleton and ordered rig data.
+        physics: zipzi_core::document::PhysicsAsset,
+    },
+    SetPose {
+        /// Complete Pose singleton and owned part/link references.
+        pose: zipzi_core::document::PoseAsset,
+    },
     ReplaceModelSetup {
         /// Model source-canvas and export-frame configuration.
         setup: zipzi_core::ModelSetup,
@@ -274,6 +314,16 @@ impl ModelingCommand {
             Self::Resource { intent } => edit.edit_resource(intent),
             Self::Document { intent } => edit.edit_document(intent),
             Self::Attachment { intent } => edit.edit_attachment(intent),
+            Self::Motion { intent } => edit.edit_motion(intent),
+            Self::Expression { intent } => edit.edit_expression(intent),
+            Self::Physics { intent } => edit.edit_physics(intent),
+            Self::Pose { intent } => edit.edit_pose(intent),
+            Self::CreateMotion { clip } => edit.create_motion(clip),
+            Self::ReplaceMotion { clip } => edit.replace_motion(clip),
+            Self::CreateExpression { expression } => edit.create_expression(expression),
+            Self::ReplaceExpression { expression } => edit.replace_expression(expression),
+            Self::SetPhysics { physics } => edit.set_physics(physics),
+            Self::SetPose { pose } => edit.set_pose(pose),
             Self::ReplaceModelSetup { setup } => edit.replace_model_setup(setup),
             Self::ReplaceHierarchyOrder { order } => edit.replace_hierarchy_order(order),
             Self::ReplaceEditorState { state } => edit.replace_editor_state(state),

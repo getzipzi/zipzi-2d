@@ -3,62 +3,96 @@ use super::*;
 use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum PhysicsEdit {
     CreateGroup {
+        /// Stable Physics singleton ID owning these changes.
         asset_id: String,
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Human-readable display or registration name; distinct from persistent object identity.
         name: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     CreateInput {
+        /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     CreateOutput {
+        /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Stable node identity, independent of the node index used by exported Physics JSON.
         node_id: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     InsertNode {
+        /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
+        /// Complete Physics node to insert, including its stable identity and authored dynamics.
         node: PhysicsNode,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     MoveNode {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     DuplicateNode {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     Patch {
+        /// Typed atomic Physics changes validated against the current candidate.
         patch: PhysicsPatch,
     },
     MoveInputs {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
+        /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     MoveOutputs {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
+        /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
+        /// Explicit old-node to replacement-node identities used when repairing output references.
         node_replacements: BTreeMap<String, String>,
     },
     ReorderGroups {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     Duplicate {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
+        /// Stable ID of the group owning the affected rows or node chain.
         group_id: Option<String>,
+        /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
     Delete {
+        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
+        /// Explicit old-node to replacement-node identities used when repairing output references.
         node_replacements: BTreeMap<String, String>,
     },
 }

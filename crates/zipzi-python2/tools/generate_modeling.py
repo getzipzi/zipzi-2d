@@ -190,6 +190,13 @@ def render_modeling(contract, header, rust_header):
         else:
             py+=['    if not isinstance(value, '+n+'):','        raise TypeError("Expected '+n+'")']
             for f in fs:py+=check(f['shape'],'value.'+pn(f),4)
+            known=tuple(sorted(f['name'] for f in fs if not f.get('flatten')))
+            for f in fs:
+                if f.get('flatten'):
+                    if f['shape']['kind']!='string_map' or f['shape']['value']['kind']!='json':
+                        raise ValueError('Only finite extension maps may be flattened')
+                    py+=['    if set(value.'+pn(f)+').intersection('+repr(known)+'):',
+                         '        raise ValueError("Extension keys overlap declared fields")']
             py.append('')
         py+=['def encode_'+n+'(value: '+n+') -> object:']
         if unit(s):py+=['    return value.value','']
@@ -207,7 +214,7 @@ def render_modeling(contract, header, rust_header):
                 py.append('        return '+out)
             py+=['    raise TypeError("Expected '+n+'")','']
         else:
-            out='{'+', '.join(repr(f['name'])+': '+encode(f['shape'],'value.'+pn(f)) for f in fs)+'}'
+            out='{'+', '.join(('**'+encode(f['shape'],'value.'+pn(f)) if f.get('flatten') else repr(f['name'])+': '+encode(f['shape'],'value.'+pn(f))) for f in fs)+'}'
             if s.get('transparent'):out=encode(fs[0]['shape'],'value.'+fs[0]['name'])
             py+=['    return '+out,'']
         py+=['def read_'+n+'(value: object) -> '+n+':']
@@ -230,7 +237,11 @@ def render_modeling(contract, header, rust_header):
             py+=['    raise ValueError("Unknown '+n+' variant")','']
         else:
             if not s.get('transparent'):py.append('    r = record(value)')
-            py+=['    return '+n+'('+', '.join(pn(f)+'='+decode(f['shape'],'value' if s.get('transparent') else ('r.get('+repr(f['name'])+', '+repr(f['default'])+')' if 'default' in f and s['kind']=='serde_record' else 'r['+repr(f['name'])+']')) for f in fs)+')','']
+            known=tuple(f['name'] for f in fs if not f.get('flatten'))
+            def field_input(f):
+                if f.get('flatten'):return '{key: item for key, item in r.items() if key not in '+repr(known)+'}'
+                return 'value' if s.get('transparent') else ('r.get('+repr(f['name'])+', '+repr(f['default'])+')' if 'default' in f and s['kind']=='serde_record' else 'r['+repr(f['name'])+']')
+            py+=['    return '+n+'('+', '.join(pn(f)+'='+decode(f['shape'],field_input(f)) for f in fs)+')','']
     root=contract['roots'][0]
     py+=['OPERATION_TYPES = ('+', '.join(vn(root,v) for v in variants(root))+',)','']
     def rn(s):return 'read_'+nm(s).lower()
@@ -243,7 +254,7 @@ def render_modeling(contract, header, rust_header):
         if k in {'sequence','array'}:
             v='item'+str(d)
             out=e+'.try_iter()?.map(|item| -> PyResult<_> { let '+v+' = item?; Ok('+nr(s['item'],v,d+1)+') }).collect::<PyResult<Vec<_>>>()?'
-            return out+'.try_into().map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid fixed array length"))?' if k=='array' else out
+            return out+'.try_into().map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid fixed array length"))?' if k=='array' else out+'.into()'
         if k in {'string_map','index_map'}:
             v='item'+str(d);return e+'.call_method0("items")?.try_iter()?.map(|item| -> PyResult<_> { let '+v+' = item?; Ok(('+v+'.get_item(0)?.extract()?, '+nr(s['value'],v+'.get_item(1)?',d+1)+')) }).collect::<PyResult<_>>()?'
         if k=='json':return 'read_extension(&'+e+')?'
