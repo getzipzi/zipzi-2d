@@ -32,7 +32,7 @@ class ObjectSummary(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class RuntimeCapabilities(CompactValue):
-    'Immutable owned RuntimeCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ndomains: Finite domain names supported by this host; absence means the domain is unavailable.\npagination: Whether this host supports source-bound bounded collection pagination.\nsource_checked_reads: Whether selected reads accept an exact expected Source.\nsession_close: Whether this host supports explicit Session detach/close.\nbinary_arrays: Whether this host supports the paired binary array transport.\neditor_windows: Whether Session window display is supported by this host.\ngpu: Whether GPU operations are available from this host; CPU sampling is independent.'
+    "Immutable owned RuntimeCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ndomains: Finite domain names supported by this host; absence means the domain is unavailable.\npagination: Whether this host supports source-bound bounded collection pagination.\nsource_checked_reads: Whether selected reads accept an exact expected Source.\nsession_close: Whether this host supports explicit Session detach/close.\nbinary_arrays: Whether this host supports the paired binary array transport.\neditor_windows: Whether Session window display is supported by this host.\ngpu: Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.\nThis cached observation is not a guarantee for a later render; CPU sampling is independent.\ngpu_backend: Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.\ngpu_error: Last adapter/device failure code, or None before probing or after a successful render."
     __module__ = "zipzi"
     domains: tuple[str, ...]
     pagination: bool
@@ -40,13 +40,15 @@ class RuntimeCapabilities(CompactValue):
     session_close: bool
     binary_arrays: bool
     editor_windows: bool
-    gpu: bool
+    gpu: bool | None
+    gpu_backend: str
+    gpu_error: str | None
 
     @classmethod
     def _read(cls, value: object) -> "RuntimeCapabilities":
         if isinstance(value,cls): return value
         r=record(value)
-        return cls(tuple(string(item) for item in sequence(r['domains'])), _flag(r['pagination']), _flag(r['source_checked_reads']), _flag(r['session_close']), _flag(r['binary_arrays']), _flag(r['editor_windows']), _flag(r['gpu']))
+        return cls(tuple(string(item) for item in sequence(r['domains'])), _flag(r['pagination']), _flag(r['source_checked_reads']), _flag(r['session_close']), _flag(r['binary_arrays']), _flag(r['editor_windows']), None if r['gpu'] is None else _flag(r['gpu']), string(r['gpu_backend']), None if r['gpu_error'] is None else string(r['gpu_error']))
 
 @dataclass(frozen=True, repr=False)
 class RuntimeLimits(CompactValue):

@@ -18,6 +18,7 @@ mod addresses;
 mod references;
 pub(crate) mod resources;
 pub use references::{LabelAddressInfo, ObjectRefInfo};
+mod observation;
 pub(crate) mod previews;
 mod sampling;
 mod spatial;
@@ -85,6 +86,8 @@ pub struct RegistrySubscription {
 }
 
 pub struct Runtime {
+    gpu_available: Option<bool>,
+    gpu_error: Option<String>,
     previews: HashMap<PreviewId, previews::PreviewEntry>,
     editor_contexts: HashMap<SessionId, crate::editor_context::EditorContext>,
     #[cfg(feature = "test-support")]
@@ -125,6 +128,8 @@ impl Runtime {
         let image_budget = zipzi_project::ImageMemoryBudget::new(limits.image_bytes);
         image_budget.bind_host_budget(0, limits.accounted_bytes);
         Self {
+            gpu_available: None,
+            gpu_error: None,
             previews: HashMap::new(),
             #[cfg(feature = "test-support")]
             control: Arc::default(),

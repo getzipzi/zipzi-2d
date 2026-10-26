@@ -63,6 +63,7 @@ commands from the repository root; inspect available modes with
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |
 | Editor UI (macOS/Metal) | `./tools/test-editor.sh ui <filter>` |
 | Runtime Python SDK (`zipzi-python2`), Local/Connected and types | `./tools/test-sdk.sh python2` ([scope](crates/zipzi-python2/README.md)) |
+| Runtime GPU observation / inspection (usable GPU required) | `./tools/test-sdk.sh python2 --observation`; [scope and evidence](docs/plans/sdk-runtime/python2-r5-observation.md) |
 | Python complete-call recovery, Edit state and Job timeout | `./tools/test-sdk.sh python2 --recovery` (optional `P3ARecovery.test_name`) |
 | Python collection pages, Session detach/close and offline catalog | `./tools/test-sdk.sh python2 --discovery` ([P3A-6 results and remaining gates](docs/plans/python-sdk-rewrite/p3a-6.md)) |
 | Installed new client, host discovery and session binding | `./tools/test-sdk.sh python2-connected` (optional `--editor-host /absolute/path/to/zipzi-editor`) |

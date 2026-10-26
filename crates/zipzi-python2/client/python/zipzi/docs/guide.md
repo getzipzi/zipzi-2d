@@ -146,8 +146,8 @@ Pending work refuses changes to that Preview. An interrupted SDK seek preserves 
 prior state; cancellation after a completed batch reports its success, while a cancelled batch can retain completed targets, and incremental
 advance can retain completed steps. Cancelled output is discarded. Close the
 Preview to release its lease and cancel pending work, then wait/close the Job.
-Other clients/views and authored history are unaffected. GPU observation and
-Editor per-view playback integration remain pending.
+Other clients/views and authored history are unaffected. Editor per-view playback
+integration remains pending.
 
 Use `modeling.spatial` for frozen formal/candidate geometry, or pass `queries` to
 Preview sampling to query its exact animated frame, even with `geometry=False`:
@@ -167,6 +167,25 @@ candidates; textures, masks and occlusion are not pixel-tested. Hidden/disabled
 objects require `include_hidden=True`. Up to 64 poses and 64 queries, 4096 total
 target selectors and 4096 retained hit candidates per query are accepted, subject
 to Runtime byte budgets. Order and duplicate poses/queries are preserved.
+
+GPU observation runs explicitly on workers; imports and CPU queries never probe
+a device. Use a model-space ROI with `observation.View`:
+
+```python
+from zipzi import observation, inspection
+
+view = observation.View(width=256, height=256, roi=(0., 0., 1., 1.))
+images = session.modeling.observe(({},), view).wait()
+report = inspection.save(images, output_directory)
+```
+
+Preview sampling accepts `view=view` and applies SDK Model opacity. Each batch
+resolves textures once and returns RGBA8, PNG, source/texture hashes and actual
+view mapping. Missing/changed resources fail explicitly. Cancellation is checked
+between capture/render units; entered decoding/GPU work can finish. Images need
+no close. `capabilities().gpu` is None before probing, then caches success or
+adapter/device failure; later renders can still fail. `inspection.save` writes
+PNG and JSON locally into a new directory, even after Runtime closure.
 
 Save with `session.project.save(absolute_host_path).wait()` and inspect `durable`
 and the receipt version. Paths refer to the execution host, not the client machine.

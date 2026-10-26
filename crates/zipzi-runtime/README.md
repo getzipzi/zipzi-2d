@@ -1,8 +1,10 @@
 # zipzi-runtime
 
-CPU-only, single-owner host for `zipzi-sdk` authoring sessions. It owns the sole
-formal session and history, client/edit/job tables, project path reservations,
-bounded event streams and executor handoffs. There is no GPUI, PyO3 or GPU dependency. SDK does not depend on Runtime.
+Single-owner host for `zipzi-sdk` authoring sessions and independent CPU/GPU
+observation jobs. It owns the sole formal session and history, client/edit/job
+tables, project path reservations, bounded event streams and executor handoffs.
+There is no GPUI or PyO3 dependency. GPU observation uses `zipzi-sdk-observe` and
+initializes a device only on an explicit render worker. SDK does not depend on Runtime.
 
 The desktop Editor uses the same application-owned Runtime. Windows and tabs
 attach views. Closing a tab retains resident sessions and history; closing the last
@@ -186,7 +188,7 @@ continue via `Executor` and completion delivery. Terminal Job queries atomically
 transfer their results into the deduplicated request window and release Job slots.
 Request status queries do not advance the monotonic admission watermark.
 
-The current contract is `zipzi-runtime-r5-spatial-1`: big-endian u32 length, UTF-8 JSON control
+The current contract is `zipzi-runtime-r5-observation-1`: big-endian u32 length, UTF-8 JSON control
 frames (16 MiB maximum), strict handshake and runtime-scoped IDs. The high length
 bit selects binary framing: a bounded JSON header (16 KiB) plus at most 1 MiB raw
 payload. Each immutable blob is at most 256 MiB and SHA256 checked before use.
@@ -264,7 +266,7 @@ whole-asset commands, selected canonical records, SDK plans, field addresses and
 capability queries use the same Runtime handlers on Local and Connected. The
 host advertises `animation_authoring`; this does not advertise independent
 Preview or Observer support. Large animation values reuse binary admission and
-recovery. Native/IPC pairing is `zipzi-python2-17` / `zipzi-runtime-r5-spatial-1`.
+recovery. Native/IPC pairing is `zipzi-python2-18` / `zipzi-runtime-r5-observation-1`.
 
 The SDK now retains animation field epochs across edits and Undo. Physics change
 summaries compare stable row IDs so a sibling reorder preserves field addresses.
@@ -275,5 +277,6 @@ seek/advance Jobs. Preview controls never borrow the formal session or its
 default preview. One running read worker slot remains reserved for publication.
 [CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md) now reuse
 SDK geometry on frozen formal/candidate poses and exact Preview states, with
-cancellable workers, admission and binary results. Observer, full fair batch scheduling and Editor playback
+cancellable workers, admission and binary results. [GPU observation](../../docs/plans/sdk-runtime/python2-r5-observation.md)
+adds explicit-view image Jobs and actual texture provenance. Full fair batch scheduling and Editor playback
 integration remain pending; R5 as a whole remains in progress.

@@ -29434,6 +29434,350 @@
       "name": "zipzi_runtime::authoring::MeshSnapshot"
     },
     "mesh_signature": "6f011cf86dfd4d3f0ee05751e6a6cc13",
+    "observation": {
+      "fields": [
+        {
+          "doc": "Owned explicit view shared by these ordered frames.",
+          "name": "view",
+          "rust_name": "view",
+          "shape": {
+            "fields": [
+              {
+                "doc": "Output width in pixels, 1..4096, subject to device and Runtime budgets.",
+                "name": "width",
+                "rust_name": "width",
+                "shape": {
+                  "kind": "u32"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Output height in pixels, 1..4096, subject to device and Runtime budgets.",
+                "name": "height",
+                "rust_name": "height",
+                "shape": {
+                  "kind": "u32"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.",
+                "name": "roi",
+                "rust_name": "roi",
+                "shape": {
+                  "item": {
+                    "kind": "f32"
+                  },
+                  "kind": "array",
+                  "length": 4
+                },
+                "skip": false
+              },
+              {
+                "default": 0.0,
+                "doc": "Nonnegative padding around the ROI in model units; aspect ratio is preserved.",
+                "name": "padding_model",
+                "rust_name": "padding_model",
+                "shape": {
+                  "kind": "f32"
+                },
+                "skip": false
+              }
+            ],
+            "kind": "serde_record",
+            "name": "zipzi_runtime::observation::ObservationView",
+            "transparent": false,
+            "tuple": false
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned requested parameter maps in input order, including duplicates.",
+          "name": "requested",
+          "rust_name": "requested",
+          "shape": {
+            "item": {
+              "kind": "string_map",
+              "value": {
+                "kind": "f32"
+              }
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Rendered frames in requested pose order, sharing one resolved texture acquisition.",
+          "name": "frames",
+          "rust_name": "frames",
+          "shape": {
+            "item": {
+              "fields": [
+                {
+                  "doc": "Output image width in pixels.",
+                  "name": "width",
+                  "rust_name": "width",
+                  "shape": {
+                    "kind": "u32"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Output image height in pixels.",
+                  "name": "height",
+                  "rust_name": "height",
+                  "shape": {
+                    "kind": "u32"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.",
+                  "name": "rgba",
+                  "rust_name": "rgba",
+                  "shape": {
+                    "item": {
+                      "kind": "u8"
+                    },
+                    "kind": "sequence"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.",
+                  "name": "png",
+                  "rust_name": "png",
+                  "shape": {
+                    "item": {
+                      "kind": "u8"
+                    },
+                    "kind": "sequence"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Captured authoring document UUID.",
+                  "name": "document_id",
+                  "rust_name": "document_id",
+                  "shape": {
+                    "kind": "string"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Captured geometry evaluation revision, distinct from the outer formal/candidate Source.",
+                  "name": "evaluation_revision",
+                  "rust_name": "evaluation_revision",
+                  "shape": {
+                    "kind": "u64"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Shared acquisition UUID for this batch's once-resolved immutable texture set.",
+                  "name": "capture_id",
+                  "rust_name": "capture_id",
+                  "shape": {
+                    "kind": "string"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Digest of captured evaluated geometry, authoring records and resolved texture content.",
+                  "name": "scene_digest",
+                  "rust_name": "scene_digest",
+                  "shape": {
+                    "kind": "string"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Digest of the exact source scene and explicit rendering settings.",
+                  "name": "render_digest",
+                  "rust_name": "render_digest",
+                  "shape": {
+                    "kind": "string"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Renderer hash of evaluated input, texture content and output view.",
+                  "name": "input_sha256",
+                  "rust_name": "input_sha256",
+                  "shape": {
+                    "kind": "string"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Actual GPU adapter name, obtained only when a render executes.",
+                  "name": "adapter_name",
+                  "rust_name": "adapter_name",
+                  "shape": {
+                    "kind": "string"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.",
+                  "name": "adapter_backend",
+                  "rust_name": "adapter_backend",
+                  "shape": {
+                    "kind": "string"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Effective evaluated parameters keyed by stable document UUID.",
+                  "name": "parameters",
+                  "rust_name": "parameters",
+                  "shape": {
+                    "kind": "string_map",
+                    "value": {
+                      "kind": "f32"
+                    }
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.",
+                  "name": "visible_roi",
+                  "rust_name": "visible_roi",
+                  "shape": {
+                    "item": {
+                      "kind": "f32"
+                    },
+                    "kind": "array",
+                    "length": 4
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].",
+                  "name": "scale",
+                  "rust_name": "scale",
+                  "shape": {
+                    "kind": "f32"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Translation in top-left image pixels, parallel to the documented scale formula.",
+                  "name": "offset",
+                  "rust_name": "offset",
+                  "shape": {
+                    "item": {
+                      "kind": "f32"
+                    },
+                    "kind": "array",
+                    "length": 2
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Source texture identities and exact content hashes shared across this batch.",
+                  "name": "textures",
+                  "rust_name": "textures",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "doc": "Stable asset UUID resolved from the frozen authoring source.",
+                          "name": "asset_id",
+                          "rust_name": "asset_id",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "SHA256 of the exact immutable texture content uploaded by this capture.",
+                          "name": "sha256",
+                          "rust_name": "sha256",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_runtime::observation::ObservedTexture",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "kind": "sequence"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.",
+                  "name": "drawable_bounds",
+                  "rust_name": "drawable_bounds",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "doc": "Stable authoring drawable UUID.",
+                          "name": "id",
+                          "rust_name": "id",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.",
+                          "name": "visible",
+                          "rust_name": "visible",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": null,
+                          "doc": "Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.",
+                          "name": "bounds",
+                          "rust_name": "bounds",
+                          "shape": {
+                            "item": {
+                              "item": {
+                                "kind": "u32"
+                              },
+                              "kind": "array",
+                              "length": 4
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_runtime::observation::ObservedBounds",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "kind": "sequence"
+                  },
+                  "skip": false
+                }
+              ],
+              "kind": "serde_record",
+              "name": "zipzi_runtime::observation::ObservationImage",
+              "transparent": false,
+              "tuple": false
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_runtime::observation::ObservationBatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "observation_signature": "926baacbaf017dc3d303ff29b6291edd",
     "output": {
       "fields": [
         {
@@ -36740,6 +37084,65 @@
     "preview": {
       "fields": [
         {
+          "default": null,
+          "doc": "Explicit image view when GPU observation was requested; None keeps CPU-only behavior.",
+          "name": "view",
+          "rust_name": "view",
+          "shape": {
+            "item": {
+              "fields": [
+                {
+                  "doc": "Output width in pixels, 1..4096, subject to device and Runtime budgets.",
+                  "name": "width",
+                  "rust_name": "width",
+                  "shape": {
+                    "kind": "u32"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Output height in pixels, 1..4096, subject to device and Runtime budgets.",
+                  "name": "height",
+                  "rust_name": "height",
+                  "shape": {
+                    "kind": "u32"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.",
+                  "name": "roi",
+                  "rust_name": "roi",
+                  "shape": {
+                    "item": {
+                      "kind": "f32"
+                    },
+                    "kind": "array",
+                    "length": 4
+                  },
+                  "skip": false
+                },
+                {
+                  "default": 0.0,
+                  "doc": "Nonnegative padding around the ROI in model units; aspect ratio is preserved.",
+                  "name": "padding_model",
+                  "rust_name": "padding_model",
+                  "shape": {
+                    "kind": "f32"
+                  },
+                  "skip": false
+                }
+              ],
+              "kind": "serde_record",
+              "name": "zipzi_runtime::observation::ObservationView",
+              "transparent": false,
+              "tuple": false
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
           "doc": "Owned geometric query descriptors aligned with every frame.spatial slot.",
           "name": "queries",
           "rust_name": "queries",
@@ -36888,6 +37291,272 @@
           "shape": {
             "item": {
               "fields": [
+                {
+                  "default": null,
+                  "doc": "Optional GPU image from this exact animation state and once-resolved batch textures.",
+                  "name": "observation",
+                  "rust_name": "observation",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "doc": "Output image width in pixels.",
+                          "name": "width",
+                          "rust_name": "width",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Output image height in pixels.",
+                          "name": "height",
+                          "rust_name": "height",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.",
+                          "name": "rgba",
+                          "rust_name": "rgba",
+                          "shape": {
+                            "item": {
+                              "kind": "u8"
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.",
+                          "name": "png",
+                          "rust_name": "png",
+                          "shape": {
+                            "item": {
+                              "kind": "u8"
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Captured authoring document UUID.",
+                          "name": "document_id",
+                          "rust_name": "document_id",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Captured geometry evaluation revision, distinct from the outer formal/candidate Source.",
+                          "name": "evaluation_revision",
+                          "rust_name": "evaluation_revision",
+                          "shape": {
+                            "kind": "u64"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Shared acquisition UUID for this batch's once-resolved immutable texture set.",
+                          "name": "capture_id",
+                          "rust_name": "capture_id",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Digest of captured evaluated geometry, authoring records and resolved texture content.",
+                          "name": "scene_digest",
+                          "rust_name": "scene_digest",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Digest of the exact source scene and explicit rendering settings.",
+                          "name": "render_digest",
+                          "rust_name": "render_digest",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Renderer hash of evaluated input, texture content and output view.",
+                          "name": "input_sha256",
+                          "rust_name": "input_sha256",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Actual GPU adapter name, obtained only when a render executes.",
+                          "name": "adapter_name",
+                          "rust_name": "adapter_name",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.",
+                          "name": "adapter_backend",
+                          "rust_name": "adapter_backend",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Effective evaluated parameters keyed by stable document UUID.",
+                          "name": "parameters",
+                          "rust_name": "parameters",
+                          "shape": {
+                            "kind": "string_map",
+                            "value": {
+                              "kind": "f32"
+                            }
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.",
+                          "name": "visible_roi",
+                          "rust_name": "visible_roi",
+                          "shape": {
+                            "item": {
+                              "kind": "f32"
+                            },
+                            "kind": "array",
+                            "length": 4
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].",
+                          "name": "scale",
+                          "rust_name": "scale",
+                          "shape": {
+                            "kind": "f32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Translation in top-left image pixels, parallel to the documented scale formula.",
+                          "name": "offset",
+                          "rust_name": "offset",
+                          "shape": {
+                            "item": {
+                              "kind": "f32"
+                            },
+                            "kind": "array",
+                            "length": 2
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Source texture identities and exact content hashes shared across this batch.",
+                          "name": "textures",
+                          "rust_name": "textures",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Stable asset UUID resolved from the frozen authoring source.",
+                                  "name": "asset_id",
+                                  "rust_name": "asset_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "SHA256 of the exact immutable texture content uploaded by this capture.",
+                                  "name": "sha256",
+                                  "rust_name": "sha256",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_runtime::observation::ObservedTexture",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.",
+                          "name": "drawable_bounds",
+                          "rust_name": "drawable_bounds",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Stable authoring drawable UUID.",
+                                  "name": "id",
+                                  "rust_name": "id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.",
+                                  "name": "visible",
+                                  "rust_name": "visible",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.",
+                                  "name": "bounds",
+                                  "rust_name": "bounds",
+                                  "shape": {
+                                    "item": {
+                                      "item": {
+                                        "kind": "u32"
+                                      },
+                                      "kind": "array",
+                                      "length": 4
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_runtime::observation::ObservedBounds",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_runtime::observation::ObservationImage",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "kind": "optional"
+                  },
+                  "skip": false
+                },
                 {
                   "doc": "Geometric query results in the corresponding request order, from this exact SDK state.",
                   "name": "spatial",
@@ -38288,7 +38957,7 @@
       "transparent": false,
       "tuple": false
     },
-    "preview_signature": "fd19a1fe9c78455a311facdf8a592938",
+    "preview_signature": "06c25ac3ad39aea68174b152489be38a",
     "sample_signature": "33cfb73ff96616c25d9d5f06db944d7e",
     "samples": {
       "fields": [
@@ -55750,7 +56419,8 @@
       9,
       11,
       14,
-      17
+      17,
+      19
     ],
     "native_only_roots": [
       {
@@ -115411,6 +116081,65 @@
       {
         "fields": [
           {
+            "default": null,
+            "doc": "Explicit image view when GPU observation was requested; None keeps CPU-only behavior.",
+            "name": "view",
+            "rust_name": "view",
+            "shape": {
+              "item": {
+                "fields": [
+                  {
+                    "doc": "Output width in pixels, 1..4096, subject to device and Runtime budgets.",
+                    "name": "width",
+                    "rust_name": "width",
+                    "shape": {
+                      "kind": "u32"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Output height in pixels, 1..4096, subject to device and Runtime budgets.",
+                    "name": "height",
+                    "rust_name": "height",
+                    "shape": {
+                      "kind": "u32"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.",
+                    "name": "roi",
+                    "rust_name": "roi",
+                    "shape": {
+                      "item": {
+                        "kind": "f32"
+                      },
+                      "kind": "array",
+                      "length": 4
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": 0.0,
+                    "doc": "Nonnegative padding around the ROI in model units; aspect ratio is preserved.",
+                    "name": "padding_model",
+                    "rust_name": "padding_model",
+                    "shape": {
+                      "kind": "f32"
+                    },
+                    "skip": false
+                  }
+                ],
+                "kind": "serde_record",
+                "name": "zipzi_runtime::observation::ObservationView",
+                "transparent": false,
+                "tuple": false
+              },
+              "kind": "optional"
+            },
+            "skip": false
+          },
+          {
             "doc": "Owned geometric query descriptors aligned with every frame.spatial slot.",
             "name": "queries",
             "rust_name": "queries",
@@ -115559,6 +116288,272 @@
             "shape": {
               "item": {
                 "fields": [
+                  {
+                    "default": null,
+                    "doc": "Optional GPU image from this exact animation state and once-resolved batch textures.",
+                    "name": "observation",
+                    "rust_name": "observation",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "doc": "Output image width in pixels.",
+                            "name": "width",
+                            "rust_name": "width",
+                            "shape": {
+                              "kind": "u32"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Output image height in pixels.",
+                            "name": "height",
+                            "rust_name": "height",
+                            "shape": {
+                              "kind": "u32"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.",
+                            "name": "rgba",
+                            "rust_name": "rgba",
+                            "shape": {
+                              "item": {
+                                "kind": "u8"
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.",
+                            "name": "png",
+                            "rust_name": "png",
+                            "shape": {
+                              "item": {
+                                "kind": "u8"
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Captured authoring document UUID.",
+                            "name": "document_id",
+                            "rust_name": "document_id",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Captured geometry evaluation revision, distinct from the outer formal/candidate Source.",
+                            "name": "evaluation_revision",
+                            "rust_name": "evaluation_revision",
+                            "shape": {
+                              "kind": "u64"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Shared acquisition UUID for this batch's once-resolved immutable texture set.",
+                            "name": "capture_id",
+                            "rust_name": "capture_id",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Digest of captured evaluated geometry, authoring records and resolved texture content.",
+                            "name": "scene_digest",
+                            "rust_name": "scene_digest",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Digest of the exact source scene and explicit rendering settings.",
+                            "name": "render_digest",
+                            "rust_name": "render_digest",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Renderer hash of evaluated input, texture content and output view.",
+                            "name": "input_sha256",
+                            "rust_name": "input_sha256",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Actual GPU adapter name, obtained only when a render executes.",
+                            "name": "adapter_name",
+                            "rust_name": "adapter_name",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.",
+                            "name": "adapter_backend",
+                            "rust_name": "adapter_backend",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Effective evaluated parameters keyed by stable document UUID.",
+                            "name": "parameters",
+                            "rust_name": "parameters",
+                            "shape": {
+                              "kind": "string_map",
+                              "value": {
+                                "kind": "f32"
+                              }
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.",
+                            "name": "visible_roi",
+                            "rust_name": "visible_roi",
+                            "shape": {
+                              "item": {
+                                "kind": "f32"
+                              },
+                              "kind": "array",
+                              "length": 4
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].",
+                            "name": "scale",
+                            "rust_name": "scale",
+                            "shape": {
+                              "kind": "f32"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Translation in top-left image pixels, parallel to the documented scale formula.",
+                            "name": "offset",
+                            "rust_name": "offset",
+                            "shape": {
+                              "item": {
+                                "kind": "f32"
+                              },
+                              "kind": "array",
+                              "length": 2
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Source texture identities and exact content hashes shared across this batch.",
+                            "name": "textures",
+                            "rust_name": "textures",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Stable asset UUID resolved from the frozen authoring source.",
+                                    "name": "asset_id",
+                                    "rust_name": "asset_id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "SHA256 of the exact immutable texture content uploaded by this capture.",
+                                    "name": "sha256",
+                                    "rust_name": "sha256",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_runtime::observation::ObservedTexture",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.",
+                            "name": "drawable_bounds",
+                            "rust_name": "drawable_bounds",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Stable authoring drawable UUID.",
+                                    "name": "id",
+                                    "rust_name": "id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.",
+                                    "name": "visible",
+                                    "rust_name": "visible",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.",
+                                    "name": "bounds",
+                                    "rust_name": "bounds",
+                                    "shape": {
+                                      "item": {
+                                        "item": {
+                                          "kind": "u32"
+                                        },
+                                        "kind": "array",
+                                        "length": 4
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_runtime::observation::ObservedBounds",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "kind": "serde_record",
+                        "name": "zipzi_runtime::observation::ObservationImage",
+                        "transparent": false,
+                        "tuple": false
+                      },
+                      "kind": "optional"
+                    },
+                    "skip": false
+                  },
                   {
                     "doc": "Geometric query results in the corresponding request order, from this exact SDK state.",
                     "name": "spatial",
@@ -117577,6 +118572,398 @@
         "name": "zipzi_sdk::spatial::SpatialSamples",
         "transparent": false,
         "tuple": false
+      },
+      {
+        "fields": [
+          {
+            "doc": "Output width in pixels, 1..4096, subject to device and Runtime budgets.",
+            "name": "width",
+            "rust_name": "width",
+            "shape": {
+              "kind": "u32"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Output height in pixels, 1..4096, subject to device and Runtime budgets.",
+            "name": "height",
+            "rust_name": "height",
+            "shape": {
+              "kind": "u32"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.",
+            "name": "roi",
+            "rust_name": "roi",
+            "shape": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 4
+            },
+            "skip": false
+          },
+          {
+            "default": 0.0,
+            "doc": "Nonnegative padding around the ROI in model units; aspect ratio is preserved.",
+            "name": "padding_model",
+            "rust_name": "padding_model",
+            "shape": {
+              "kind": "f32"
+            },
+            "skip": false
+          }
+        ],
+        "kind": "serde_record",
+        "name": "zipzi_runtime::observation::ObservationView",
+        "transparent": false,
+        "tuple": false
+      },
+      {
+        "fields": [
+          {
+            "doc": "Owned explicit view shared by these ordered frames.",
+            "name": "view",
+            "rust_name": "view",
+            "shape": {
+              "fields": [
+                {
+                  "doc": "Output width in pixels, 1..4096, subject to device and Runtime budgets.",
+                  "name": "width",
+                  "rust_name": "width",
+                  "shape": {
+                    "kind": "u32"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Output height in pixels, 1..4096, subject to device and Runtime budgets.",
+                  "name": "height",
+                  "rust_name": "height",
+                  "shape": {
+                    "kind": "u32"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.",
+                  "name": "roi",
+                  "rust_name": "roi",
+                  "shape": {
+                    "item": {
+                      "kind": "f32"
+                    },
+                    "kind": "array",
+                    "length": 4
+                  },
+                  "skip": false
+                },
+                {
+                  "default": 0.0,
+                  "doc": "Nonnegative padding around the ROI in model units; aspect ratio is preserved.",
+                  "name": "padding_model",
+                  "rust_name": "padding_model",
+                  "shape": {
+                    "kind": "f32"
+                  },
+                  "skip": false
+                }
+              ],
+              "kind": "serde_record",
+              "name": "zipzi_runtime::observation::ObservationView",
+              "transparent": false,
+              "tuple": false
+            },
+            "skip": false
+          },
+          {
+            "doc": "Owned requested parameter maps in input order, including duplicates.",
+            "name": "requested",
+            "rust_name": "requested",
+            "shape": {
+              "item": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "f32"
+                }
+              },
+              "kind": "sequence"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Rendered frames in requested pose order, sharing one resolved texture acquisition.",
+            "name": "frames",
+            "rust_name": "frames",
+            "shape": {
+              "item": {
+                "fields": [
+                  {
+                    "doc": "Output image width in pixels.",
+                    "name": "width",
+                    "rust_name": "width",
+                    "shape": {
+                      "kind": "u32"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Output image height in pixels.",
+                    "name": "height",
+                    "rust_name": "height",
+                    "shape": {
+                      "kind": "u32"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.",
+                    "name": "rgba",
+                    "rust_name": "rgba",
+                    "shape": {
+                      "item": {
+                        "kind": "u8"
+                      },
+                      "kind": "sequence"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.",
+                    "name": "png",
+                    "rust_name": "png",
+                    "shape": {
+                      "item": {
+                        "kind": "u8"
+                      },
+                      "kind": "sequence"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Captured authoring document UUID.",
+                    "name": "document_id",
+                    "rust_name": "document_id",
+                    "shape": {
+                      "kind": "string"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Captured geometry evaluation revision, distinct from the outer formal/candidate Source.",
+                    "name": "evaluation_revision",
+                    "rust_name": "evaluation_revision",
+                    "shape": {
+                      "kind": "u64"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Shared acquisition UUID for this batch's once-resolved immutable texture set.",
+                    "name": "capture_id",
+                    "rust_name": "capture_id",
+                    "shape": {
+                      "kind": "string"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Digest of captured evaluated geometry, authoring records and resolved texture content.",
+                    "name": "scene_digest",
+                    "rust_name": "scene_digest",
+                    "shape": {
+                      "kind": "string"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Digest of the exact source scene and explicit rendering settings.",
+                    "name": "render_digest",
+                    "rust_name": "render_digest",
+                    "shape": {
+                      "kind": "string"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Renderer hash of evaluated input, texture content and output view.",
+                    "name": "input_sha256",
+                    "rust_name": "input_sha256",
+                    "shape": {
+                      "kind": "string"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Actual GPU adapter name, obtained only when a render executes.",
+                    "name": "adapter_name",
+                    "rust_name": "adapter_name",
+                    "shape": {
+                      "kind": "string"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.",
+                    "name": "adapter_backend",
+                    "rust_name": "adapter_backend",
+                    "shape": {
+                      "kind": "string"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Effective evaluated parameters keyed by stable document UUID.",
+                    "name": "parameters",
+                    "rust_name": "parameters",
+                    "shape": {
+                      "kind": "string_map",
+                      "value": {
+                        "kind": "f32"
+                      }
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.",
+                    "name": "visible_roi",
+                    "rust_name": "visible_roi",
+                    "shape": {
+                      "item": {
+                        "kind": "f32"
+                      },
+                      "kind": "array",
+                      "length": 4
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].",
+                    "name": "scale",
+                    "rust_name": "scale",
+                    "shape": {
+                      "kind": "f32"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Translation in top-left image pixels, parallel to the documented scale formula.",
+                    "name": "offset",
+                    "rust_name": "offset",
+                    "shape": {
+                      "item": {
+                        "kind": "f32"
+                      },
+                      "kind": "array",
+                      "length": 2
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Source texture identities and exact content hashes shared across this batch.",
+                    "name": "textures",
+                    "rust_name": "textures",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "doc": "Stable asset UUID resolved from the frozen authoring source.",
+                            "name": "asset_id",
+                            "rust_name": "asset_id",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "SHA256 of the exact immutable texture content uploaded by this capture.",
+                            "name": "sha256",
+                            "rust_name": "sha256",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "kind": "serde_record",
+                        "name": "zipzi_runtime::observation::ObservedTexture",
+                        "transparent": false,
+                        "tuple": false
+                      },
+                      "kind": "sequence"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.",
+                    "name": "drawable_bounds",
+                    "rust_name": "drawable_bounds",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "doc": "Stable authoring drawable UUID.",
+                            "name": "id",
+                            "rust_name": "id",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.",
+                            "name": "visible",
+                            "rust_name": "visible",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.",
+                            "name": "bounds",
+                            "rust_name": "bounds",
+                            "shape": {
+                              "item": {
+                                "item": {
+                                  "kind": "u32"
+                                },
+                                "kind": "array",
+                                "length": 4
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "kind": "serde_record",
+                        "name": "zipzi_runtime::observation::ObservedBounds",
+                        "transparent": false,
+                        "tuple": false
+                      },
+                      "kind": "sequence"
+                    },
+                    "skip": false
+                  }
+                ],
+                "kind": "serde_record",
+                "name": "zipzi_runtime::observation::ObservationImage",
+                "transparent": false,
+                "tuple": false
+              },
+              "kind": "sequence"
+            },
+            "skip": false
+          }
+        ],
+        "kind": "serde_record",
+        "name": "zipzi_runtime::observation::ObservationBatch",
+        "transparent": false,
+        "tuple": false
       }
     ],
     "version": 1
@@ -117841,6 +119228,7 @@
       }
     }
   ],
+  "protocol": "zipzi-runtime-r5-observation-1",
   "resources": {
     "binary": null,
     "bindings": [
@@ -118400,6 +119788,7 @@
         }
       }
     ],
+    "protocol": "zipzi-runtime-r5-observation-1",
     "roots": [
       {
         "kind": "union",
@@ -119646,11 +121035,37 @@
           "skip": false
         },
         {
-          "doc": "Whether GPU operations are available from this host; CPU sampling is independent.",
+          "default": null,
+          "doc": "Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.\nThis cached observation is not a guarantee for a later render; CPU sampling is independent.",
           "name": "gpu",
           "rust_name": "gpu",
           "shape": {
-            "kind": "bool"
+            "item": {
+              "kind": "bool"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.",
+          "name": "gpu_backend",
+          "rust_name": "gpu_backend",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Last adapter/device failure code, or None before probing or after a successful render.",
+          "name": "gpu_error",
+          "rust_name": "gpu_error",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
           },
           "skip": false
         }

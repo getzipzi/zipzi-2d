@@ -42,6 +42,12 @@ def bad_preview(preview: animation.Preview) -> None:
     preview.seek("time")  # error: reportArgumentType
 
 from zipzi import spatial
+from zipzi import observation,inspection
+
+def bad_observation(session:zipzi.Session,preview:animation.Preview)->None:
+    session.modeling.observe(({},),{"width":64})  # error: reportArgumentType
+    preview.seek(.5,view=observation.View(width="64",height=32,roi=(0.,0.,2.,1.)))  # error: reportArgumentType
+    inspection.save("result","path")  # error: reportArgumentType, reportArgumentType
 
 def bad_spatial(session: zipzi.Session, preview: animation.Preview) -> None:
     session.modeling.spatial(({},),({"kind":"hits","point":(0.,0.)},))  # error: reportArgumentType

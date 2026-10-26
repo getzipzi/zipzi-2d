@@ -272,3 +272,130 @@ fn cancellation_after_sdk_completion_reports_the_completed_state() {
     assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Succeeded);
     assert_eq!(rt.preview_state(c, p).unwrap().1.time, 0.5);
 }
+
+fn event_fixture(limits: RuntimeLimits, payload: usize) -> (Runtime, ClientId, SessionId) {
+    use zipzi_core::document::{MotionClip, MotionEvent};
+    let mut rt = Runtime::new(limits);
+    let c = rt.register_client().unwrap();
+    let s = rt
+        .create_session(c, &id(1), zipzi_core::ModelSetup::default())
+        .unwrap();
+    let e = rt.begin_edit(c, s, "events", None).unwrap();
+    rt.apply_edit(c, e, |edit| {
+        edit.create_motion(MotionClip {
+            id: id(2),
+            name: "Events".into(),
+            duration: 1.,
+            fps: 60.,
+            looping: false,
+            restricted_beziers: false,
+            fade_in: Some(1.),
+            fade_out: Some(1.),
+            track_order: vec![],
+            tracks: vec![].into(),
+            events: vec![MotionEvent {
+                id: id(3),
+                time: 0.01,
+                value: "x".repeat(payload),
+                extensions: Default::default(),
+            }]
+            .into(),
+            extensions: Default::default(),
+            meta_extensions: Default::default(),
+            opaque_source_ids: None,
+            opaque_source_content_hash: None,
+        })
+    })
+    .unwrap();
+    rt.commit_edit(c, e).unwrap();
+    (rt, c, s)
+}
+
+#[test]
+fn repeated_motion_events_are_admitted_before_advancing_or_allocating_results() {
+    let ceiling = 20 << 20;
+    let (mut rt, c, s) = event_fixture(
+        RuntimeLimits {
+            accounted_bytes: ceiling,
+            ..Default::default()
+        },
+        64 << 10,
+    );
+    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
+    for _ in 0..512 {
+        rt.apply_preview(
+            c,
+            p,
+            C::ScheduleMotion {
+                id: id(2),
+                time: 0.,
+            },
+        )
+        .unwrap();
+    }
+    let before = rt.preview_state(c, p).unwrap();
+    let accounted = rt.accounted_bytes();
+    for view in [
+        None,
+        Some(observation::ObservationView {
+            width: 8,
+            height: 8,
+            roi: [0., 0., 1., 1.],
+            padding_model: 0.,
+        }),
+    ] {
+        for incremental in [false, true] {
+            assert!(matches!(
+                rt.request_preview_frames(c, p, vec![2. / 60.], false, incremental, vec![], view),
+                Err(RuntimeError::Budget(_))
+            ));
+            assert_eq!(
+                rt.preview_state(c, p).unwrap().1.sequence,
+                before.1.sequence
+            );
+            assert_eq!(rt.preview_state(c, p).unwrap().1.time, 0.);
+            assert_eq!(rt.accounted_bytes(), accounted);
+        }
+    }
+    let mut workers = Manual::default();
+    rt.dispatch(&mut workers);
+    assert!(workers.0.is_empty());
+    rt.apply_preview(c, p, C::Reset).unwrap();
+}
+
+#[test]
+fn sampled_events_remain_charged_until_the_preview_is_released() {
+    let (mut rt, c, s) = event_fixture(RuntimeLimits::default(), 16 << 10);
+    let base = rt.accounted_bytes();
+    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
+    for _ in 0..4 {
+        rt.apply_preview(
+            c,
+            p,
+            C::ScheduleMotion {
+                id: id(2),
+                time: 0.,
+            },
+        )
+        .unwrap();
+    }
+    let before = rt.accounted_bytes();
+    let job = rt
+        .request_preview_samples(c, p, vec![2. / 60., 2. / 60.], false, false)
+        .unwrap();
+    let admitted = rt.accounted_bytes();
+    let result = finish(&mut rt, c, job);
+    for frame in &result.samples.frames {
+        assert_eq!(frame.motion.fired_events.len(), 4);
+        assert!(frame
+            .motion
+            .fired_events
+            .iter()
+            .all(|e| e.value.len() == 16 << 10));
+    }
+    assert!(rt.accounted_bytes() > before);
+    assert!(rt.accounted_bytes() < admitted);
+    drop(result);
+    rt.release_preview(c, p).unwrap();
+    assert_eq!(rt.accounted_bytes(), base);
+}

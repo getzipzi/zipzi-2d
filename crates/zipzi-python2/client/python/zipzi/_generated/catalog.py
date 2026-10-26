@@ -9,10 +9,10 @@ class _Entry(TypedDict):
     fields: NotRequired[Sequence[tuple[str,str]]]
     children: tuple[str,...]
     example: NotRequired[str]
-CONTRACT = "zipzi-runtime-r5-spatial-1"
+CONTRACT = 'zipzi-runtime-r5-observation-1'
 PACKAGE_VERSION = '0.1.0a1'
-CLIENT_SOURCE_SHA256 = '49864787785fb79213f07216ef71d5ce67383a3c885319d629b3accb5d93f58f'
-CONTRACT_SHA256 = '0d3353b938231e80613d726f4b2816a8591d51a8a4532627045fe821658f1a33'
+CLIENT_SOURCE_SHA256 = 'baae0203d5e39a0ccaf515d4ef7a4f02e874890ce033b27d208499280e01bfc6'
+CONTRACT_SHA256 = '389bbb7bc0142db02f34b4f350b27cdf47e24340a358ccaee94dbcb6a97f422e'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -53,8 +53,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.recover_call'),
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
-                            'then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-spatial-1; client '
-                            'source SHA-256 49864787785fb79213f07216ef71d5ce67383a3c885319d629b3accb5d93f58f.',
+                            'then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-observation-1; client '
+                            'source SHA-256 baae0203d5e39a0ccaf515d4ef7a4f02e874890ce033b27d208499280e01bfc6.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -601,7 +601,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                      'kind': 'callable',
                                      'signature': '(id: str, *, vertex_ids: Sequence[int], positions: '
                                                   'Sequence[meshes.Point]) -> WriteResult'},
- 'zipzi.Edit.modeling': {'children': ('zipzi.Edit.modeling.records',
+ 'zipzi.Edit.modeling': {'children': ('zipzi.Edit.modeling.observe',
+                                      'zipzi.Edit.modeling.records',
                                       'zipzi.Edit.modeling.sample',
                                       'zipzi.Edit.modeling.sample_async',
                                       'zipzi.Edit.modeling.spatial'),
@@ -610,6 +611,23 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                          'fields': [],
                          'kind': 'type',
                          'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+ 'zipzi.Edit.modeling.observe': {'children': (),
+                                 'documentation': 'Render 1..64 explicit parameter poses from an exact frozen Source. '
+                                                  'The explicit Y-up model ROI preserves aspect ratio; frames contain '
+                                                  'GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and '
+                                                  'texture hashes. Rendering resolves one immutable texture set per '
+                                                  'batch, never publishes history and does not abort an Edit on '
+                                                  'failure. Device initialization occurs on the worker; missing GPU '
+                                                  'produces a structured failure, independently of CPU operations. '
+                                                  'Runtime count/byte/device budgets apply. Recover a lost submission '
+                                                  'or result through its original Call; wait/close the Job to release '
+                                                  'its result slot.',
+                                 'example': 'docs/recipes.py',
+                                 'fields': [],
+                                 'kind': 'callable',
+                                 'signature': '(poses: Sequence[Mapping[str, float]], view: observation.View, *, '
+                                              'expected: Source | None=None) -> '
+                                              "'_lifecycle.Job[Snapshot[observation.Batch]]'"},
  'zipzi.Edit.modeling.records': {'children': (),
                                  'documentation': 'Read selected canonical records from one exact source without '
                                                   'editing. query lists stable IDs per domain; empty lists request no '
@@ -1788,8 +1806,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                 'transport.\n'
                                                 'editor_windows: Whether Session window display is supported by this '
                                                 'host.\n'
-                                                'gpu: Whether GPU operations are available from this host; CPU '
-                                                'sampling is independent.',
+                                                "gpu: Last render's GPU availability: None before probing, true after "
+                                                'rendering, false after adapter/device failure.\n'
+                                                'This cached observation is not a guarantee for a later render; CPU '
+                                                'sampling is independent.\n'
+                                                'gpu_backend: Compiled observation backend family: Metal on macOS, '
+                                                'WGPU elsewhere. No device is initialized by this read.\n'
+                                                'gpu_error: Last adapter/device failure code, or None before probing '
+                                                'or after a successful render.',
                                'example': 'docs/recipes.py',
                                'fields': [('domains',
                                            'Finite domain names supported by this host; absence means the domain is '
@@ -1805,12 +1829,20 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           ('editor_windows',
                                            'Whether Session window display is supported by this host.'),
                                           ('gpu',
-                                           'Whether GPU operations are available from this host; CPU sampling is '
-                                           'independent.')],
+                                           "Last render's GPU availability: None before probing, true after rendering, "
+                                           'false after adapter/device failure.\n'
+                                           'This cached observation is not a guarantee for a later render; CPU '
+                                           'sampling is independent.'),
+                                          ('gpu_backend',
+                                           'Compiled observation backend family: Metal on macOS, WGPU elsewhere. No '
+                                           'device is initialized by this read.'),
+                                          ('gpu_error',
+                                           'Last adapter/device failure code, or None before probing or after a '
+                                           'successful render.')],
                                'kind': 'type',
                                'signature': '(domains: tuple[str, ...], pagination: bool, source_checked_reads: bool, '
-                                            'session_close: bool, binary_arrays: bool, editor_windows: bool, gpu: '
-                                            'bool)'},
+                                            'session_close: bool, binary_arrays: bool, editor_windows: bool, gpu: bool '
+                                            '| None, gpu_backend: str, gpu_error: str | None)'},
  'zipzi.RuntimeCapabilities.__repr__': {'children': (),
                                         'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                          'RPC/full scan.\n'
@@ -2275,7 +2307,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                'kind': 'callable',
                                'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | '
                                             'None=None) -> Page[meshes.Summary]'},
- 'zipzi.Session.modeling': {'children': ('zipzi.Session.modeling.records',
+ 'zipzi.Session.modeling': {'children': ('zipzi.Session.modeling.observe',
+                                         'zipzi.Session.modeling.records',
                                          'zipzi.Session.modeling.sample',
                                          'zipzi.Session.modeling.sample_async',
                                          'zipzi.Session.modeling.spatial'),
@@ -2284,6 +2317,23 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                             'fields': [],
                             'kind': 'type',
                             'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+ 'zipzi.Session.modeling.observe': {'children': (),
+                                    'documentation': 'Render 1..64 explicit parameter poses from an exact frozen '
+                                                     'Source. The explicit Y-up model ROI preserves aspect ratio; '
+                                                     'frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual '
+                                                     'adapter and texture hashes. Rendering resolves one immutable '
+                                                     'texture set per batch, never publishes history and does not '
+                                                     'abort an Edit on failure. Device initialization occurs on the '
+                                                     'worker; missing GPU produces a structured failure, independently '
+                                                     'of CPU operations. Runtime count/byte/device budgets apply. '
+                                                     'Recover a lost submission or result through its original Call; '
+                                                     'wait/close the Job to release its result slot.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [],
+                                    'kind': 'callable',
+                                    'signature': '(poses: Sequence[Mapping[str, float]], view: observation.View, *, '
+                                                 'expected: Source | None=None) -> '
+                                                 "'_lifecycle.Job[Snapshot[observation.Batch]]'"},
  'zipzi.Session.modeling.records': {'children': (),
                                     'documentation': 'Read selected canonical records from one exact source without '
                                                      'editing. query lists stable IDs per domain; empty lists request '
@@ -2947,6 +2997,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'collections; reading fields, repr and summary performs no IO.\n'
                                             '\n'
                                             'Fields:\n'
+                                            'view: Explicit image view when GPU observation was requested; None keeps '
+                                            'CPU-only behavior.\n'
                                             'queries: Owned geometric query descriptors aligned with every '
                                             'frame.spatial slot.\n'
                                             'sequence: Accepted sample request ordinal shared by these ordered '
@@ -2954,15 +3006,18 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'frames: Owned frames in requested target order, retaining duplicate and '
                                             'backward targets.',
                            'example': 'docs/recipes.py',
-                           'fields': [('queries',
+                           'fields': [('view',
+                                       'Explicit image view when GPU observation was requested; None keeps CPU-only '
+                                       'behavior.'),
+                                      ('queries',
                                        'Owned geometric query descriptors aligned with every frame.spatial slot.'),
                                       ('sequence', 'Accepted sample request ordinal shared by these ordered frames.'),
                                       ('frames',
                                        'Owned frames in requested target order, retaining duplicate and backward '
                                        'targets.')],
                            'kind': 'type',
-                           'signature': '(queries: tuple[SpatialQuery, ...], sequence: int, frames: '
-                                        'tuple[PreviewFrame, ...])'},
+                           'signature': '(view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], '
+                                        'sequence: int, frames: tuple[PreviewFrame, ...])'},
  'zipzi.animation.Batch.__repr__': {'children': (),
                                     'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                      'RPC/full scan.\n'
@@ -2993,6 +3048,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'collections; reading fields, repr and summary performs no IO.\n'
                                             '\n'
                                             'Fields:\n'
+                                            'observation: Optional GPU image from this exact animation state and '
+                                            'once-resolved batch textures.\n'
                                             'spatial: Geometric query results in the corresponding request order, from '
                                             'this exact SDK state.\n'
                                             'preview_id: Runtime-wide Preview serial; pair with the outer '
@@ -3005,7 +3062,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'geometry: Evaluated CPU geometry when requested; model_opacity remains a '
                                             'separate SDK channel.',
                            'example': 'docs/recipes.py',
-                           'fields': [('spatial',
+                           'fields': [('observation',
+                                       'Optional GPU image from this exact animation state and once-resolved batch '
+                                       'textures.'),
+                                      ('spatial',
                                        'Geometric query results in the corresponding request order, from this exact '
                                        'SDK state.'),
                                       ('preview_id',
@@ -3021,8 +3081,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        'Evaluated CPU geometry when requested; model_opacity remains a separate SDK '
                                        'channel.')],
                            'kind': 'type',
-                           'signature': '(spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: '
-                                        'int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)'},
+                           'signature': '(observation: ObservationImage | None = None, spatial: tuple[SpatialResult, '
+                                        '...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, '
+                                        'geometry: DrawableFrame | None = None)'},
  'zipzi.animation.Frame.__repr__': {'children': (),
                                     'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                      'RPC/full scan.\n'
@@ -3100,7 +3161,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '(time: float, *, geometry: bool=True, queries: '
-                                                     'Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]'},
+                                                     'Sequence[m.SpatialQuery]=(), view: m.ObservationView | '
+                                                     'None=None) -> Job[Snapshot[m.PreviewBatch]]'},
  'zipzi.animation.Preview.apply': {'children': (),
                                    'documentation': 'Apply one typed animation control in this Preview. SDK validation '
                                                     'errors preserve its usable state; commands never publish model '
@@ -3146,6 +3208,12 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                      '\n'
                                                      'Duplicates/backward times are retained. CPU geometry is '
                                                      'optional.\n'
+                                                     'view requests GPU RGBA/PNG from each exact state using '
+                                                     'once-resolved batch\n'
+                                                     'textures and applies SDK Model opacity. Missing devices fail '
+                                                     'explicitly;\n'
+                                                     'image/capture failure may retain completed seeks. No view keeps '
+                                                     'CPU-only work.\n'
                                                      'queries returns geometric results from the same SDK frame, '
                                                      'including hidden\n'
                                                      'objects when requested; textures, masks and occlusion are not '
@@ -3161,7 +3229,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                     'fields': [],
                                     'kind': 'callable',
                                     'signature': '(times: Sequence[float], *, geometry: bool=True, queries: '
-                                                 'Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]'},
+                                                 'Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> '
+                                                 'Job[Snapshot[m.PreviewBatch]]'},
  'zipzi.animation.Preview.seek': {'children': (),
                                   'documentation': 'Submit one canonical seek and return a one-frame batch Job; an '
                                                    'interrupted SDK seek preserves its prior state; late cancellation '
@@ -3170,7 +3239,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '(time: float, *, geometry: bool=True, queries: '
-                                               'Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]'},
+                                               'Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> '
+                                               'Job[Snapshot[m.PreviewBatch]]'},
  'zipzi.animation.Preview.source': {'children': (),
                                     'documentation': 'Read the cached exact frozen Source without IO or refreshing the '
                                                      'model.',
@@ -4488,6 +4558,71 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        'fields': [],
                                        'kind': 'callable',
                                        'signature': '() -> str'},
+ 'zipzi.inspection': {'children': ('zipzi.inspection.Report', 'zipzi.inspection.save'),
+                      'documentation': 'Organize completed GPU observations as local PNG files and a provenance '
+                                       'manifest.\n'
+                                       '\n'
+                                       'No device or Runtime is consulted; this module does not compute image or '
+                                       'geometry algorithms.',
+                      'kind': 'module',
+                      'signature': ''},
+ 'zipzi.inspection.Report': {'children': ('zipzi.inspection.Report.__repr__', 'zipzi.inspection.Report.summary'),
+                             'documentation': 'Paths to an exported local inspection, readable without a live SDK '
+                                              'host.\n'
+                                              '\n'
+                                              'Fields:\n'
+                                              'directory: Client-side output directory created by save; not a remote '
+                                              'host path.\n'
+                                              'manifest: JSON provenance document containing Source, view, texture '
+                                              'hashes and frame identities.\n'
+                                              'images: PNG paths in input frame order; the original Rust PNG bytes are '
+                                              'preserved.',
+                             'example': 'docs/recipes.py',
+                             'fields': [('directory',
+                                         'Client-side output directory created by save; not a remote host path.'),
+                                        ('manifest',
+                                         'JSON provenance document containing Source, view, texture hashes and frame '
+                                         'identities.'),
+                                        ('images',
+                                         'PNG paths in input frame order; the original Rust PNG bytes are preserved.')],
+                             'kind': 'type',
+                             'signature': '(directory: Path, manifest: Path, images: tuple[Path, ...])'},
+ 'zipzi.inspection.Report.__repr__': {'children': (),
+                                      'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                       'RPC/full scan.\n'
+                                                       '\n'
+                                                       'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                       'field access\n'
+                                                       'still exposes the owned full value; no host resource is '
+                                                       'created/released.',
+                                      'example': 'docs/recipes.py',
+                                      'fields': [],
+                                      'kind': 'callable',
+                                      'signature': '() -> str'},
+ 'zipzi.inspection.Report.summary': {'children': (),
+                                     'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                      'accessible.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [],
+                                     'kind': 'callable',
+                                     'signature': '() -> str'},
+ 'zipzi.inspection.save': {'children': (),
+                           'documentation': 'Write completed observation/Preview images and JSON metadata into a fresh '
+                                            'client-side directory.\n'
+                                            '\n'
+                                            'This performs local file IO only and preserves Rust PNG bytes. Preview '
+                                            'batches\n'
+                                            'require an image on every frame. Existing directories raise '
+                                            'FileExistsError;\n'
+                                            'IO errors can leave partial output. No host write, device probing, image\n'
+                                            'recomputation or implicit request recovery occurs. Retain the original '
+                                            'result\n'
+                                            'if file IO needs to be retried into a new directory.',
+                           'example': 'docs/recipes.py',
+                           'fields': [],
+                           'kind': 'callable',
+                           'signature': '(result: Snapshot[m.ObservationBatch] | Snapshot[m.PreviewBatch], directory: '
+                                        'Path) -> Report'},
  'zipzi.local': {'children': (),
                  'documentation': 'Explicitly create an owned in-process Runtime with the paired optional native '
                                   'wheel. Importing zipzi alone does not start it. Use as a context manager; close '
@@ -5292,6 +5427,11 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.ObjectTarget',
                                  'zipzi.modeling.ObjectTargetMesh',
                                  'zipzi.modeling.ObjectTargetPart',
+                                 'zipzi.modeling.ObservationBatch',
+                                 'zipzi.modeling.ObservationImage',
+                                 'zipzi.modeling.ObservationView',
+                                 'zipzi.modeling.ObservedBounds',
+                                 'zipzi.modeling.ObservedTexture',
                                  'zipzi.modeling.Offscreen',
                                  'zipzi.modeling.OffscreenDeletePolicy',
                                  'zipzi.modeling.OffscreenDeletePolicyNeutral',
@@ -19112,6 +19252,288 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                              'fields': [],
                                              'kind': 'callable',
                                              'signature': '() -> str'},
+ 'zipzi.modeling.ObservationBatch': {'children': ('zipzi.modeling.ObservationBatch.__repr__',
+                                                  'zipzi.modeling.ObservationBatch.summary'),
+                                     'documentation': 'Immutable owned ObservationBatch value. Construction owns '
+                                                      'declared collections; reading fields, repr and summary performs '
+                                                      'no IO.\n'
+                                                      '\n'
+                                                      'Fields:\n'
+                                                      'view: Owned explicit view shared by these ordered frames.\n'
+                                                      'requested: Owned requested parameter maps in input order, '
+                                                      'including duplicates.\n'
+                                                      'frames: Rendered frames in requested pose order, sharing one '
+                                                      'resolved texture acquisition.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [('view', 'Owned explicit view shared by these ordered frames.'),
+                                                ('requested',
+                                                 'Owned requested parameter maps in input order, including '
+                                                 'duplicates.'),
+                                                ('frames',
+                                                 'Rendered frames in requested pose order, sharing one resolved '
+                                                 'texture acquisition.')],
+                                     'kind': 'type',
+                                     'signature': '(view: ObservationView, requested: tuple[_Mapping[str, float], '
+                                                  '...], frames: tuple[ObservationImage, ...])'},
+ 'zipzi.modeling.ObservationBatch.__repr__': {'children': (),
+                                              'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                               'with no RPC/full scan.\n'
+                                                               '\n'
+                                                               'Large arrays and bytes show bounded samples/counts. '
+                                                               'Explicit field access\n'
+                                                               'still exposes the owned full value; no host resource '
+                                                               'is created/released.',
+                                              'example': 'docs/recipes.py',
+                                              'fields': [],
+                                              'kind': 'callable',
+                                              'signature': '() -> str'},
+ 'zipzi.modeling.ObservationBatch.summary': {'children': (),
+                                             'documentation': 'Return a bounded, local summary; full fields remain '
+                                                              'explicitly accessible.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.modeling.ObservationImage': {'children': ('zipzi.modeling.ObservationImage.__repr__',
+                                                  'zipzi.modeling.ObservationImage.summary'),
+                                     'documentation': 'Immutable owned ObservationImage value. Construction owns '
+                                                      'declared collections; reading fields, repr and summary performs '
+                                                      'no IO.\n'
+                                                      '\n'
+                                                      'Fields:\n'
+                                                      'width: Output image width in pixels.\n'
+                                                      'height: Output image height in pixels.\n'
+                                                      'rgba: Raw renderer RGBA8, row-major, top-left image origin. '
+                                                      'Renderer alpha convention is preserved.\n'
+                                                      'png: PNG encoding of exactly the returned RGBA8; encoded by '
+                                                      'Rust, never by Python.\n'
+                                                      'document_id: Captured authoring document UUID.\n'
+                                                      'evaluation_revision: Captured geometry evaluation revision, '
+                                                      'distinct from the outer formal/candidate Source.\n'
+                                                      "capture_id: Shared acquisition UUID for this batch's "
+                                                      'once-resolved immutable texture set.\n'
+                                                      'scene_digest: Digest of captured evaluated geometry, authoring '
+                                                      'records and resolved texture content.\n'
+                                                      'render_digest: Digest of the exact source scene and explicit '
+                                                      'rendering settings.\n'
+                                                      'input_sha256: Renderer hash of evaluated input, texture content '
+                                                      'and output view.\n'
+                                                      'adapter_name: Actual GPU adapter name, obtained only when a '
+                                                      'render executes.\n'
+                                                      'adapter_backend: Actual renderer backend, Metal on macOS or the '
+                                                      'selected WGPU backend elsewhere.\n'
+                                                      'parameters: Effective evaluated parameters keyed by stable '
+                                                      'document UUID.\n'
+                                                      'visible_roi: Actual viewport model extent '
+                                                      '[min_x,min_y,max_x,max_y], including aspect-ratio expansion.\n'
+                                                      'scale: Model-to-image scale. Image X=x*scale+offset[0], '
+                                                      'Y=-y*scale+offset[1].\n'
+                                                      'offset: Translation in top-left image pixels, parallel to the '
+                                                      'documented scale formula.\n'
+                                                      'textures: Source texture identities and exact content hashes '
+                                                      'shared across this batch.\n'
+                                                      'drawable_bounds: Drawable geometric image bounds in evaluated '
+                                                      'order; masks/occlusion are not pixel-tested here.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [('width', 'Output image width in pixels.'),
+                                                ('height', 'Output image height in pixels.'),
+                                                ('rgba',
+                                                 'Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha '
+                                                 'convention is preserved.'),
+                                                ('png',
+                                                 'PNG encoding of exactly the returned RGBA8; encoded by Rust, never '
+                                                 'by Python.'),
+                                                ('document_id', 'Captured authoring document UUID.'),
+                                                ('evaluation_revision',
+                                                 'Captured geometry evaluation revision, distinct from the outer '
+                                                 'formal/candidate Source.'),
+                                                ('capture_id',
+                                                 "Shared acquisition UUID for this batch's once-resolved immutable "
+                                                 'texture set.'),
+                                                ('scene_digest',
+                                                 'Digest of captured evaluated geometry, authoring records and '
+                                                 'resolved texture content.'),
+                                                ('render_digest',
+                                                 'Digest of the exact source scene and explicit rendering settings.'),
+                                                ('input_sha256',
+                                                 'Renderer hash of evaluated input, texture content and output view.'),
+                                                ('adapter_name',
+                                                 'Actual GPU adapter name, obtained only when a render executes.'),
+                                                ('adapter_backend',
+                                                 'Actual renderer backend, Metal on macOS or the selected WGPU backend '
+                                                 'elsewhere.'),
+                                                ('parameters',
+                                                 'Effective evaluated parameters keyed by stable document UUID.'),
+                                                ('visible_roi',
+                                                 'Actual viewport model extent [min_x,min_y,max_x,max_y], including '
+                                                 'aspect-ratio expansion.'),
+                                                ('scale',
+                                                 'Model-to-image scale. Image X=x*scale+offset[0], '
+                                                 'Y=-y*scale+offset[1].'),
+                                                ('offset',
+                                                 'Translation in top-left image pixels, parallel to the documented '
+                                                 'scale formula.'),
+                                                ('textures',
+                                                 'Source texture identities and exact content hashes shared across '
+                                                 'this batch.'),
+                                                ('drawable_bounds',
+                                                 'Drawable geometric image bounds in evaluated order; masks/occlusion '
+                                                 'are not pixel-tested here.')],
+                                     'kind': 'type',
+                                     'signature': '(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: '
+                                                  'str, evaluation_revision: int, capture_id: str, scene_digest: str, '
+                                                  'render_digest: str, input_sha256: str, adapter_name: str, '
+                                                  'adapter_backend: str, parameters: _Mapping[str, float], '
+                                                  'visible_roi: tuple[float, float, float, float], scale: float, '
+                                                  'offset: tuple[float, float], textures: tuple[ObservedTexture, ...], '
+                                                  'drawable_bounds: tuple[ObservedBounds, ...])'},
+ 'zipzi.modeling.ObservationImage.__repr__': {'children': (),
+                                              'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                               'with no RPC/full scan.\n'
+                                                               '\n'
+                                                               'Large arrays and bytes show bounded samples/counts. '
+                                                               'Explicit field access\n'
+                                                               'still exposes the owned full value; no host resource '
+                                                               'is created/released.',
+                                              'example': 'docs/recipes.py',
+                                              'fields': [],
+                                              'kind': 'callable',
+                                              'signature': '() -> str'},
+ 'zipzi.modeling.ObservationImage.summary': {'children': (),
+                                             'documentation': 'Return a bounded, local summary; full fields remain '
+                                                              'explicitly accessible.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.modeling.ObservationView': {'children': ('zipzi.modeling.ObservationView.__repr__',
+                                                 'zipzi.modeling.ObservationView.summary'),
+                                    'documentation': 'Immutable owned ObservationView value. Construction owns '
+                                                     'declared collections; reading fields, repr and summary performs '
+                                                     'no IO.\n'
+                                                     '\n'
+                                                     'Fields:\n'
+                                                     'width: Output width in pixels, 1..4096, subject to device and '
+                                                     'Runtime budgets.\n'
+                                                     'height: Output height in pixels, 1..4096, subject to device and '
+                                                     'Runtime budgets.\n'
+                                                     'roi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model '
+                                                     'coordinates.\n'
+                                                     'padding_model: Nonnegative padding around the ROI in model '
+                                                     'units; aspect ratio is preserved.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [('width',
+                                                'Output width in pixels, 1..4096, subject to device and Runtime '
+                                                'budgets.'),
+                                               ('height',
+                                                'Output height in pixels, 1..4096, subject to device and Runtime '
+                                                'budgets.'),
+                                               ('roi',
+                                                'Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.'),
+                                               ('padding_model',
+                                                'Nonnegative padding around the ROI in model units; aspect ratio is '
+                                                'preserved.')],
+                                    'kind': 'type',
+                                    'signature': '(width: int, height: int, roi: tuple[float, float, float, float], '
+                                                 'padding_model: float = field(default_factory=lambda: number(0.0)))'},
+ 'zipzi.modeling.ObservationView.__repr__': {'children': (),
+                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                              'no RPC/full scan.\n'
+                                                              '\n'
+                                                              'Large arrays and bytes show bounded samples/counts. '
+                                                              'Explicit field access\n'
+                                                              'still exposes the owned full value; no host resource is '
+                                                              'created/released.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.modeling.ObservationView.summary': {'children': (),
+                                            'documentation': 'Return a bounded, local summary; full fields remain '
+                                                             'explicitly accessible.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
+ 'zipzi.modeling.ObservedBounds': {'children': ('zipzi.modeling.ObservedBounds.__repr__',
+                                                'zipzi.modeling.ObservedBounds.summary'),
+                                   'documentation': 'Immutable owned ObservedBounds value. Construction owns declared '
+                                                    'collections; reading fields, repr and summary performs no IO.\n'
+                                                    '\n'
+                                                    'Fields:\n'
+                                                    'id: Stable authoring drawable UUID.\n'
+                                                    'visible: Evaluated visibility; geometric bounds do not prove '
+                                                    'unoccluded painted pixels.\n'
+                                                    'bounds: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive '
+                                                    'maximum; None if empty.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [('id', 'Stable authoring drawable UUID.'),
+                                              ('visible',
+                                               'Evaluated visibility; geometric bounds do not prove unoccluded painted '
+                                               'pixels.'),
+                                              ('bounds',
+                                               'Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; '
+                                               'None if empty.')],
+                                   'kind': 'type',
+                                   'signature': '(id: str, visible: bool, bounds: tuple[int, int, int, int] | None = '
+                                                'None)'},
+ 'zipzi.modeling.ObservedBounds.__repr__': {'children': (),
+                                            'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                             'no RPC/full scan.\n'
+                                                             '\n'
+                                                             'Large arrays and bytes show bounded samples/counts. '
+                                                             'Explicit field access\n'
+                                                             'still exposes the owned full value; no host resource is '
+                                                             'created/released.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
+ 'zipzi.modeling.ObservedBounds.summary': {'children': (),
+                                           'documentation': 'Return a bounded, local summary; full fields remain '
+                                                            'explicitly accessible.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
+ 'zipzi.modeling.ObservedTexture': {'children': ('zipzi.modeling.ObservedTexture.__repr__',
+                                                 'zipzi.modeling.ObservedTexture.summary'),
+                                    'documentation': 'Immutable owned ObservedTexture value. Construction owns '
+                                                     'declared collections; reading fields, repr and summary performs '
+                                                     'no IO.\n'
+                                                     '\n'
+                                                     'Fields:\n'
+                                                     'asset_id: Stable asset UUID resolved from the frozen authoring '
+                                                     'source.\n'
+                                                     'sha256: SHA256 of the exact immutable texture content uploaded '
+                                                     'by this capture.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [('asset_id',
+                                                'Stable asset UUID resolved from the frozen authoring source.'),
+                                               ('sha256',
+                                                'SHA256 of the exact immutable texture content uploaded by this '
+                                                'capture.')],
+                                    'kind': 'type',
+                                    'signature': '(asset_id: str, sha256: str)'},
+ 'zipzi.modeling.ObservedTexture.__repr__': {'children': (),
+                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                              'no RPC/full scan.\n'
+                                                              '\n'
+                                                              'Large arrays and bytes show bounded samples/counts. '
+                                                              'Explicit field access\n'
+                                                              'still exposes the owned full value; no host resource is '
+                                                              'created/released.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.modeling.ObservedTexture.summary': {'children': (),
+                                            'documentation': 'Return a bounded, local summary; full fields remain '
+                                                             'explicitly accessible.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
  'zipzi.modeling.Offscreen': {'children': ('zipzi.modeling.Offscreen.__repr__', 'zipzi.modeling.Offscreen.summary'),
                               'documentation': 'Immutable owned Offscreen value. Construction owns declared '
                                                'collections; reading fields, repr and summary performs no IO.\n'
@@ -24061,6 +24483,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   'collections; reading fields, repr and summary performs no IO.\n'
                                                   '\n'
                                                   'Fields:\n'
+                                                  'view: Explicit image view when GPU observation was requested; None '
+                                                  'keeps CPU-only behavior.\n'
                                                   'queries: Owned geometric query descriptors aligned with every '
                                                   'frame.spatial slot.\n'
                                                   'sequence: Accepted sample request ordinal shared by these ordered '
@@ -24068,7 +24492,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   'frames: Owned frames in requested target order, retaining duplicate '
                                                   'and backward targets.',
                                  'example': 'docs/recipes.py',
-                                 'fields': [('queries',
+                                 'fields': [('view',
+                                             'Explicit image view when GPU observation was requested; None keeps '
+                                             'CPU-only behavior.'),
+                                            ('queries',
                                              'Owned geometric query descriptors aligned with every frame.spatial '
                                              'slot.'),
                                             ('sequence',
@@ -24077,8 +24504,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                              'Owned frames in requested target order, retaining duplicate and backward '
                                              'targets.')],
                                  'kind': 'type',
-                                 'signature': '(queries: tuple[SpatialQuery, ...], sequence: int, frames: '
-                                              'tuple[PreviewFrame, ...])'},
+                                 'signature': '(view: ObservationView | None = None, queries: tuple[SpatialQuery, '
+                                              '...], sequence: int, frames: tuple[PreviewFrame, ...])'},
  'zipzi.modeling.PreviewBatch.__repr__': {'children': (),
                                           'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                            'RPC/full scan.\n'
@@ -24374,6 +24801,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   'collections; reading fields, repr and summary performs no IO.\n'
                                                   '\n'
                                                   'Fields:\n'
+                                                  'observation: Optional GPU image from this exact animation state and '
+                                                  'once-resolved batch textures.\n'
                                                   'spatial: Geometric query results in the corresponding request '
                                                   'order, from this exact SDK state.\n'
                                                   'preview_id: Runtime-wide Preview serial; pair with the outer '
@@ -24386,7 +24815,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   'geometry: Evaluated CPU geometry when requested; model_opacity '
                                                   'remains a separate SDK channel.',
                                  'example': 'docs/recipes.py',
-                                 'fields': [('spatial',
+                                 'fields': [('observation',
+                                             'Optional GPU image from this exact animation state and once-resolved '
+                                             'batch textures.'),
+                                            ('spatial',
                                              'Geometric query results in the corresponding request order, from this '
                                              'exact SDK state.'),
                                             ('preview_id',
@@ -24403,9 +24835,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                              'Evaluated CPU geometry when requested; model_opacity remains a separate '
                                              'SDK channel.')],
                                  'kind': 'type',
-                                 'signature': '(spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, '
-                                              'index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = '
-                                              'None)'},
+                                 'signature': '(observation: ObservationImage | None = None, spatial: '
+                                              'tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, '
+                                              'motion: MotionSnapshot, geometry: DrawableFrame | None = None)'},
  'zipzi.modeling.PreviewFrame.__repr__': {'children': (),
                                           'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                            'RPC/full scan.\n'
@@ -31190,6 +31622,278 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'fields': [],
                                           'kind': 'callable',
                                           'signature': '() -> str'},
+ 'zipzi.observation': {'children': ('zipzi.observation.Batch',
+                                    'zipzi.observation.Bounds',
+                                    'zipzi.observation.Image',
+                                    'zipzi.observation.Texture',
+                                    'zipzi.observation.View'),
+                       'documentation': 'GPU images and source metadata rendered by Rust from frozen authoring or '
+                                        'Preview states.',
+                       'kind': 'module',
+                       'signature': ''},
+ 'zipzi.observation.Batch': {'children': ('zipzi.observation.Batch.__repr__', 'zipzi.observation.Batch.summary'),
+                             'documentation': 'Immutable owned ObservationBatch value. Construction owns declared '
+                                              'collections; reading fields, repr and summary performs no IO.\n'
+                                              '\n'
+                                              'Fields:\n'
+                                              'view: Owned explicit view shared by these ordered frames.\n'
+                                              'requested: Owned requested parameter maps in input order, including '
+                                              'duplicates.\n'
+                                              'frames: Rendered frames in requested pose order, sharing one resolved '
+                                              'texture acquisition.',
+                             'example': 'docs/recipes.py',
+                             'fields': [('view', 'Owned explicit view shared by these ordered frames.'),
+                                        ('requested',
+                                         'Owned requested parameter maps in input order, including duplicates.'),
+                                        ('frames',
+                                         'Rendered frames in requested pose order, sharing one resolved texture '
+                                         'acquisition.')],
+                             'kind': 'type',
+                             'signature': '(view: ObservationView, requested: tuple[_Mapping[str, float], ...], '
+                                          'frames: tuple[ObservationImage, ...])'},
+ 'zipzi.observation.Batch.__repr__': {'children': (),
+                                      'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                       'RPC/full scan.\n'
+                                                       '\n'
+                                                       'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                       'field access\n'
+                                                       'still exposes the owned full value; no host resource is '
+                                                       'created/released.',
+                                      'example': 'docs/recipes.py',
+                                      'fields': [],
+                                      'kind': 'callable',
+                                      'signature': '() -> str'},
+ 'zipzi.observation.Batch.summary': {'children': (),
+                                     'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                      'accessible.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [],
+                                     'kind': 'callable',
+                                     'signature': '() -> str'},
+ 'zipzi.observation.Bounds': {'children': ('zipzi.observation.Bounds.__repr__', 'zipzi.observation.Bounds.summary'),
+                              'documentation': 'Immutable owned ObservedBounds value. Construction owns declared '
+                                               'collections; reading fields, repr and summary performs no IO.\n'
+                                               '\n'
+                                               'Fields:\n'
+                                               'id: Stable authoring drawable UUID.\n'
+                                               'visible: Evaluated visibility; geometric bounds do not prove '
+                                               'unoccluded painted pixels.\n'
+                                               'bounds: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive '
+                                               'maximum; None if empty.',
+                              'example': 'docs/recipes.py',
+                              'fields': [('id', 'Stable authoring drawable UUID.'),
+                                         ('visible',
+                                          'Evaluated visibility; geometric bounds do not prove unoccluded painted '
+                                          'pixels.'),
+                                         ('bounds',
+                                          'Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if '
+                                          'empty.')],
+                              'kind': 'type',
+                              'signature': '(id: str, visible: bool, bounds: tuple[int, int, int, int] | None = None)'},
+ 'zipzi.observation.Bounds.__repr__': {'children': (),
+                                       'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                        'RPC/full scan.\n'
+                                                        '\n'
+                                                        'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                        'field access\n'
+                                                        'still exposes the owned full value; no host resource is '
+                                                        'created/released.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [],
+                                       'kind': 'callable',
+                                       'signature': '() -> str'},
+ 'zipzi.observation.Bounds.summary': {'children': (),
+                                      'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                       'accessible.',
+                                      'example': 'docs/recipes.py',
+                                      'fields': [],
+                                      'kind': 'callable',
+                                      'signature': '() -> str'},
+ 'zipzi.observation.Image': {'children': ('zipzi.observation.Image.__repr__', 'zipzi.observation.Image.summary'),
+                             'documentation': 'Immutable owned ObservationImage value. Construction owns declared '
+                                              'collections; reading fields, repr and summary performs no IO.\n'
+                                              '\n'
+                                              'Fields:\n'
+                                              'width: Output image width in pixels.\n'
+                                              'height: Output image height in pixels.\n'
+                                              'rgba: Raw renderer RGBA8, row-major, top-left image origin. Renderer '
+                                              'alpha convention is preserved.\n'
+                                              'png: PNG encoding of exactly the returned RGBA8; encoded by Rust, never '
+                                              'by Python.\n'
+                                              'document_id: Captured authoring document UUID.\n'
+                                              'evaluation_revision: Captured geometry evaluation revision, distinct '
+                                              'from the outer formal/candidate Source.\n'
+                                              "capture_id: Shared acquisition UUID for this batch's once-resolved "
+                                              'immutable texture set.\n'
+                                              'scene_digest: Digest of captured evaluated geometry, authoring records '
+                                              'and resolved texture content.\n'
+                                              'render_digest: Digest of the exact source scene and explicit rendering '
+                                              'settings.\n'
+                                              'input_sha256: Renderer hash of evaluated input, texture content and '
+                                              'output view.\n'
+                                              'adapter_name: Actual GPU adapter name, obtained only when a render '
+                                              'executes.\n'
+                                              'adapter_backend: Actual renderer backend, Metal on macOS or the '
+                                              'selected WGPU backend elsewhere.\n'
+                                              'parameters: Effective evaluated parameters keyed by stable document '
+                                              'UUID.\n'
+                                              'visible_roi: Actual viewport model extent [min_x,min_y,max_x,max_y], '
+                                              'including aspect-ratio expansion.\n'
+                                              'scale: Model-to-image scale. Image X=x*scale+offset[0], '
+                                              'Y=-y*scale+offset[1].\n'
+                                              'offset: Translation in top-left image pixels, parallel to the '
+                                              'documented scale formula.\n'
+                                              'textures: Source texture identities and exact content hashes shared '
+                                              'across this batch.\n'
+                                              'drawable_bounds: Drawable geometric image bounds in evaluated order; '
+                                              'masks/occlusion are not pixel-tested here.',
+                             'example': 'docs/recipes.py',
+                             'fields': [('width', 'Output image width in pixels.'),
+                                        ('height', 'Output image height in pixels.'),
+                                        ('rgba',
+                                         'Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha '
+                                         'convention is preserved.'),
+                                        ('png',
+                                         'PNG encoding of exactly the returned RGBA8; encoded by Rust, never by '
+                                         'Python.'),
+                                        ('document_id', 'Captured authoring document UUID.'),
+                                        ('evaluation_revision',
+                                         'Captured geometry evaluation revision, distinct from the outer '
+                                         'formal/candidate Source.'),
+                                        ('capture_id',
+                                         "Shared acquisition UUID for this batch's once-resolved immutable texture "
+                                         'set.'),
+                                        ('scene_digest',
+                                         'Digest of captured evaluated geometry, authoring records and resolved '
+                                         'texture content.'),
+                                        ('render_digest',
+                                         'Digest of the exact source scene and explicit rendering settings.'),
+                                        ('input_sha256',
+                                         'Renderer hash of evaluated input, texture content and output view.'),
+                                        ('adapter_name',
+                                         'Actual GPU adapter name, obtained only when a render executes.'),
+                                        ('adapter_backend',
+                                         'Actual renderer backend, Metal on macOS or the selected WGPU backend '
+                                         'elsewhere.'),
+                                        ('parameters', 'Effective evaluated parameters keyed by stable document UUID.'),
+                                        ('visible_roi',
+                                         'Actual viewport model extent [min_x,min_y,max_x,max_y], including '
+                                         'aspect-ratio expansion.'),
+                                        ('scale',
+                                         'Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].'),
+                                        ('offset',
+                                         'Translation in top-left image pixels, parallel to the documented scale '
+                                         'formula.'),
+                                        ('textures',
+                                         'Source texture identities and exact content hashes shared across this '
+                                         'batch.'),
+                                        ('drawable_bounds',
+                                         'Drawable geometric image bounds in evaluated order; masks/occlusion are not '
+                                         'pixel-tested here.')],
+                             'kind': 'type',
+                             'signature': '(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, '
+                                          'evaluation_revision: int, capture_id: str, scene_digest: str, '
+                                          'render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: '
+                                          'str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, '
+                                          'float, float], scale: float, offset: tuple[float, float], textures: '
+                                          'tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...])'},
+ 'zipzi.observation.Image.__repr__': {'children': (),
+                                      'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                       'RPC/full scan.\n'
+                                                       '\n'
+                                                       'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                       'field access\n'
+                                                       'still exposes the owned full value; no host resource is '
+                                                       'created/released.',
+                                      'example': 'docs/recipes.py',
+                                      'fields': [],
+                                      'kind': 'callable',
+                                      'signature': '() -> str'},
+ 'zipzi.observation.Image.summary': {'children': (),
+                                     'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                      'accessible.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [],
+                                     'kind': 'callable',
+                                     'signature': '() -> str'},
+ 'zipzi.observation.Texture': {'children': ('zipzi.observation.Texture.__repr__', 'zipzi.observation.Texture.summary'),
+                               'documentation': 'Immutable owned ObservedTexture value. Construction owns declared '
+                                                'collections; reading fields, repr and summary performs no IO.\n'
+                                                '\n'
+                                                'Fields:\n'
+                                                'asset_id: Stable asset UUID resolved from the frozen authoring '
+                                                'source.\n'
+                                                'sha256: SHA256 of the exact immutable texture content uploaded by '
+                                                'this capture.',
+                               'example': 'docs/recipes.py',
+                               'fields': [('asset_id', 'Stable asset UUID resolved from the frozen authoring source.'),
+                                          ('sha256',
+                                           'SHA256 of the exact immutable texture content uploaded by this capture.')],
+                               'kind': 'type',
+                               'signature': '(asset_id: str, sha256: str)'},
+ 'zipzi.observation.Texture.__repr__': {'children': (),
+                                        'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                         'RPC/full scan.\n'
+                                                         '\n'
+                                                         'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                         'field access\n'
+                                                         'still exposes the owned full value; no host resource is '
+                                                         'created/released.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'callable',
+                                        'signature': '() -> str'},
+ 'zipzi.observation.Texture.summary': {'children': (),
+                                       'documentation': 'Return a bounded, local summary; full fields remain '
+                                                        'explicitly accessible.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [],
+                                       'kind': 'callable',
+                                       'signature': '() -> str'},
+ 'zipzi.observation.View': {'children': ('zipzi.observation.View.__repr__', 'zipzi.observation.View.summary'),
+                            'documentation': 'Immutable owned ObservationView value. Construction owns declared '
+                                             'collections; reading fields, repr and summary performs no IO.\n'
+                                             '\n'
+                                             'Fields:\n'
+                                             'width: Output width in pixels, 1..4096, subject to device and Runtime '
+                                             'budgets.\n'
+                                             'height: Output height in pixels, 1..4096, subject to device and Runtime '
+                                             'budgets.\n'
+                                             'roi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model '
+                                             'coordinates.\n'
+                                             'padding_model: Nonnegative padding around the ROI in model units; aspect '
+                                             'ratio is preserved.',
+                            'example': 'docs/recipes.py',
+                            'fields': [('width',
+                                        'Output width in pixels, 1..4096, subject to device and Runtime budgets.'),
+                                       ('height',
+                                        'Output height in pixels, 1..4096, subject to device and Runtime budgets.'),
+                                       ('roi', 'Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.'),
+                                       ('padding_model',
+                                        'Nonnegative padding around the ROI in model units; aspect ratio is '
+                                        'preserved.')],
+                            'kind': 'type',
+                            'signature': '(width: int, height: int, roi: tuple[float, float, float, float], '
+                                         'padding_model: float = field(default_factory=lambda: number(0.0)))'},
+ 'zipzi.observation.View.__repr__': {'children': (),
+                                     'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                      'RPC/full scan.\n'
+                                                      '\n'
+                                                      'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                      'field access\n'
+                                                      'still exposes the owned full value; no host resource is '
+                                                      'created/released.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [],
+                                     'kind': 'callable',
+                                     'signature': '() -> str'},
+ 'zipzi.observation.View.summary': {'children': (),
+                                    'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                     'accessible.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [],
+                                    'kind': 'callable',
+                                    'signature': '() -> str'},
  'zipzi.ops': {'children': ('zipzi.ops.Operation', 'zipzi.ops.PlannableOperation'),
                'documentation': 'Static operation unions; construct operations in their owning domain.',
                'kind': 'module',

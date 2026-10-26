@@ -10,6 +10,7 @@ pub(super) struct PreviewEntry {
     pub sequence: u64,
     pub busy: Option<JobId>,
     bytes: usize,
+    motion_output_bytes: usize,
     schedule_entries: usize,
 }
 impl Runtime {
@@ -91,6 +92,7 @@ impl Runtime {
                 sequence: 0,
                 busy: None,
                 bytes,
+                motion_output_bytes: 0,
                 schedule_entries: 0,
             },
         );
@@ -197,6 +199,18 @@ impl Runtime {
         incremental: bool,
         queries: Vec<zipzi_sdk::SpatialQuery>,
     ) -> Result<JobId> {
+        self.request_preview_frames(client, id, times, geometry, incremental, queries, None)
+    }
+    pub fn request_preview_frames(
+        &mut self,
+        client: ClientId,
+        id: PreviewId,
+        times: Vec<f32>,
+        geometry: bool,
+        incremental: bool,
+        queries: Vec<zipzi_sdk::SpatialQuery>,
+        view: Option<crate::observation::ObservationView>,
+    ) -> Result<JobId> {
         self.check_job_slot(client)?;
         if times.is_empty()
             || times.len() > 64
@@ -211,7 +225,33 @@ impl Runtime {
             .sequence
             .checked_add(1)
             .ok_or(RuntimeError::Budget("preview sequence"))?;
+        let motion_output = entry
+            .state
+            .try_lock()
+            .map_err(|_| RuntimeError::WorkerPanic("preview state unavailable".into()))?
+            .canonical_motion_output_bytes();
+        // Keep the live snapshot and fractional checkpoint charged after the
+        // Job is released. A failed/cancelled replay may retain completed state.
+        let retained_output = motion_output
+            .saturating_mul(2)
+            .max(entry.motion_output_bytes);
+        let output_growth = retained_output.saturating_sub(entry.motion_output_bytes);
+        if self.preview_bytes().saturating_add(output_growth) > self.limits.preview_bytes {
+            return Err(RuntimeError::Budget("preview motion output bytes"));
+        }
         let bytes = Self::spatial_bytes(entry.source.snapshot.document(), times.len(), &queries)?
+            .saturating_add(if let Some(view) = view {
+                Self::observation_bytes(entry.source.snapshot.document(), times.len(), view)?
+            } else {
+                0
+            })
+            // Output, transactional replay, observation captures and digest
+            // serialization can all own copies of the same Motion output strings.
+            .saturating_add(
+                motion_output
+                    .saturating_mul(times.len().saturating_add(1))
+                    .saturating_mul(4),
+            )
             .saturating_add(
                 entry
                     .schedule_entries
@@ -219,7 +259,11 @@ impl Runtime {
                     .saturating_mul(times.len()),
             );
         let document = entry.source.snapshot.document().estimated_content_bytes();
-        self.check_bytes(bytes.saturating_add(document), 0, document)?;
+        self.check_bytes(
+            bytes.saturating_add(document).saturating_add(output_growth),
+            0,
+            document,
+        )?;
         let source = entry.source.clone();
         let task = ReadTask::Preview {
             preview_id: id.serial(),
@@ -230,11 +274,15 @@ impl Runtime {
             geometry,
             incremental,
             queries,
+            view,
         };
         let job = self.queue_read(client, source, task, bytes, false)?;
         let entry = self.previews.get_mut(&id).unwrap();
+        entry.bytes = entry.bytes.saturating_add(output_growth);
+        entry.motion_output_bytes = retained_output;
         entry.sequence = sequence;
         entry.busy = Some(job);
+        self.refresh_memory_budget();
         Ok(job)
     }
     pub fn release_preview(&mut self, client: ClientId, id: PreviewId) -> Result<()> {
@@ -282,11 +330,14 @@ pub(crate) fn sample_preview(
     cancel: &AtomicBool,
     queries: &[zipzi_sdk::SpatialQuery],
     control: &zipzi_sdk::ConversionControl,
+    view: Option<crate::observation::ObservationView>,
 ) -> Result<crate::JobValue> {
     let mut state = state
         .lock()
         .map_err(|_| RuntimeError::WorkerPanic("preview worker panicked".into()))?;
     zipzi_sdk::validate_spatial_queries(source.snapshot.document(), queries, control)?;
+    let mut observer = view.map(crate::observation::observer).transpose()?;
+    let mut inputs = Vec::new();
     let mut frames = Vec::with_capacity(times.len());
     for (index, time) in times.into_iter().enumerate() {
         let progress = |_, _| !cancel.load(Ordering::Acquire);
@@ -305,6 +356,7 @@ pub(crate) fn sample_preview(
             zipzi_sdk::query_spatial_frame(source.snapshot.document(), &frame, queries, control)?
         };
         frames.push(PreviewFrame {
+            observation: None,
             spatial,
             preview_id,
             sequence,
@@ -316,10 +368,36 @@ pub(crate) fn sample_preview(
                 None
             },
         });
+        if view.is_some() {
+            crate::observation::check(cancel)?;
+            inputs.push(
+                zipzi_sdk_observe::ObservationInput::capture_motion_from_snapshot(
+                    &source.snapshot,
+                    &state,
+                    true,
+                )
+                .map_err(crate::observation::error)?,
+            );
+        }
+    }
+    if let Some(view) = view {
+        crate::observation::check(cancel)?;
+        let captures =
+            zipzi_sdk_observe::ResolvedObservation::capture_many_with_control(inputs, control)
+                .map_err(crate::observation::error)?;
+        for (frame, capture) in frames.iter_mut().zip(captures.iter()) {
+            crate::observation::check(cancel)?;
+            frame.observation = Some(crate::observation::render(
+                observer.as_mut().unwrap(),
+                capture,
+                view,
+            )?);
+        }
     }
     Ok(JobValue::Previewed(Arc::new(PreviewSampleBatch {
         source: source.source,
         samples: PreviewBatch {
+            view,
             sequence,
             frames,
             queries: queries.to_vec(),

@@ -55,6 +55,8 @@ pub struct PreviewState {
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct PreviewFrame {
+    /// Optional GPU image from this exact animation state and once-resolved batch textures.
+    pub observation: Option<crate::observation::ObservationImage>,
     /// Geometric query results in the corresponding request order, from this exact SDK state.
     pub spatial: Vec<zipzi_sdk::SpatialResult>,
     /// Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
@@ -71,6 +73,8 @@ pub struct PreviewFrame {
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct PreviewBatch {
+    /// Explicit image view when GPU observation was requested; None keeps CPU-only behavior.
+    pub view: Option<crate::observation::ObservationView>,
     /// Owned geometric query descriptors aligned with every frame.spatial slot.
     pub queries: Vec<zipzi_sdk::SpatialQuery>,
     /// Accepted sample request ordinal shared by these ordered frames.

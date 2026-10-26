@@ -65,10 +65,13 @@ class Preview(Owned):
         m.validate_PreviewCommand(command)
         return self._request("apply",lambda:self._backend.apply_preview(self._token,command,self),self._state)
 
-    def _sample(self, times: Sequence[float], geometry: bool, incremental: bool, queries: Sequence[m.SpatialQuery]) -> Job[Snapshot[m.PreviewBatch]]:
+    def _sample(self, times: Sequence[float], geometry: bool, incremental: bool, queries: Sequence[m.SpatialQuery], view: m.ObservationView | None) -> Job[Snapshot[m.PreviewBatch]]:
         self._check(self._backend)
         from ._spatial import inputs
         selected=inputs(queries)
+        if view is not None:
+            from ._observation import view_input
+            view=view_input(view)
         targets=tuple(times)
         import math
         if not targets or len(targets)>64 or any(isinstance(t,bool) or not isinstance(t,(float,int)) or not math.isfinite(t) or not 0<=t<=1_000_000/60 for t in targets):
@@ -80,12 +83,15 @@ class Preview(Owned):
             batch=samples if isinstance(samples,m.PreviewBatch) else m.read_PreviewBatch(samples)
             return Snapshot(Source._read(value["source"]),batch)
         return Job[Snapshot[m.PreviewBatch]]._start(self._backend,
-            lambda owner:self._backend.sample_preview(self._token,targets,geometry,incremental,selected,owner),"preview",decode)
+            lambda owner:self._backend.sample_preview(self._token,targets,geometry,incremental,selected,view,owner),"preview",decode)
 
-    def sample(self, times: Sequence[float], *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = ()) -> Job[Snapshot[m.PreviewBatch]]:
+    def sample(self, times: Sequence[float], *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = (), view: m.ObservationView | None = None) -> Job[Snapshot[m.PreviewBatch]]:
         """Submit 1..64 canonical seeks in target order; wait for a frozen-source batch.
 
         Duplicates/backward times are retained. CPU geometry is optional.
+        view requests GPU RGBA/PNG from each exact state using once-resolved batch
+        textures and applies SDK Model opacity. Missing devices fail explicitly;
+        image/capture failure may retain completed seeks. No view keeps CPU-only work.
         queries returns geometric results from the same SDK frame, including hidden
         objects when requested; textures, masks and occlusion are not pixel-tested. A cancelled
         batch discards output and retains completed targets; each individual SDK
@@ -93,15 +99,15 @@ class Preview(Owned):
         completes reports success. Close/wait the Job to release its
         result slot. Cancellation never changes authored content or another view.
         """
-        return self._sample(times,geometry,False,queries)
+        return self._sample(times,geometry,False,queries,view)
 
-    def seek(self, time: float, *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = ()) -> Job[Snapshot[m.PreviewBatch]]:
+    def seek(self, time: float, *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = (), view: m.ObservationView | None = None) -> Job[Snapshot[m.PreviewBatch]]:
         """Submit one canonical seek and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome."""
-        return self._sample((time,),geometry,False,queries)
+        return self._sample((time,),geometry,False,queries,view)
 
-    def advance_to(self, time: float, *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = ()) -> Job[Snapshot[m.PreviewBatch]]:
+    def advance_to(self, time: float, *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = (), view: m.ObservationView | None = None) -> Job[Snapshot[m.PreviewBatch]]:
         """Submit SDK canonical incremental playback. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek."""
-        return self._sample((time,),geometry,True,queries)
+        return self._sample((time,),geometry,True,queries,view)
 
     def __enter__(self) -> Preview:
         """Validate this owned Preview and return it; scope exit closes it and cancels pending playback work."""

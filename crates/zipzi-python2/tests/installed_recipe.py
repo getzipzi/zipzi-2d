@@ -149,7 +149,10 @@ def main():
                 r5=runpy.run_path(str(Path(__file__).with_name("r5_authoring_recipe.py")))["run"](runtime,folder/"r5")
                 preview=runpy.run_path(str(Path(__file__).with_name("r5_preview_recipe.py")))["run"](runtime,folder/"r5-preview")
                 spatial=runpy.run_path(str(Path(__file__).with_name("r5_spatial_recipe.py")))["run"](runtime,folder/"r5-spatial")
-                print(json.dumps(dict(r4=r4,p3b=p3b,p4=p4,r5=r5,preview=preview,spatial=spatial),sort_keys=True))
+                report=dict(r4=r4,p3b=p3b,p4=p4,r5=r5,preview=preview,spatial=spatial)
+                if "--observation" in sys.argv[2:]:
+                    report["observation"]=runpy.run_path(str(Path(__file__).with_name("r5_observation_recipe.py")))["run"](runtime,folder/"r5-observation")
+                print(json.dumps(report,sort_keys=True))
             if child is not None:
                 child.terminate()
                 child.wait(timeout=5)

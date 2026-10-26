@@ -20595,6 +20595,12 @@ fn write_previewbatch_in(
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
+    out.set_item("view", {
+        match (&value.view).as_ref() {
+            Some(item) => write_observationview_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
     out.set_item("queries", {
         let out = PyList::empty(py);
         for item0 in (&value.queries) {
@@ -20619,6 +20625,76 @@ fn write_previewbatch_in(
     })?;
     Ok(classes
         .getattr("PreviewBatch")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_observationview(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_runtime::observation::ObservationView> {
+    Ok(zipzi_runtime::observation::ObservationView {
+        width: value.getattr("width")?.extract()?,
+        height: value.getattr("height")?.extract()?,
+        roi: value
+            .getattr("roi")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .try_into()
+            .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid fixed array length"))?,
+        padding_model: value.getattr("padding_model")?.extract()?,
+    })
+}
+
+pub fn write_observationview(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservationView,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_observationview_in(py, value, &classes)
+}
+fn write_observationview_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservationView,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "width",
+        (&value.width)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "height",
+        (&value.height)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("roi", {
+        let out = PyList::empty(py);
+        for item0 in (&value.roi) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "padding_model",
+        (&value.padding_model)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("ObservationView")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -20787,6 +20863,12 @@ fn write_previewframe_in(
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
+    out.set_item("observation", {
+        match (&value.observation).as_ref() {
+            Some(item) => write_observationimage_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
     out.set_item("spatial", {
         let out = PyList::empty(py);
         for item0 in (&value.spatial) {
@@ -20830,6 +20912,235 @@ fn write_previewframe_in(
     })?;
     Ok(classes
         .getattr("PreviewFrame")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationimage(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservationImage,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_observationimage_in(py, value, &classes)
+}
+fn write_observationimage_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservationImage,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "width",
+        (&value.width)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "height",
+        (&value.height)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("rgba", PyBytes::new(py, (&value.rgba)).into_any().unbind())?;
+    out.set_item("png", PyBytes::new(py, (&value.png)).into_any().unbind())?;
+    out.set_item(
+        "document_id",
+        (&value.document_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "evaluation_revision",
+        (&value.evaluation_revision)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "capture_id",
+        (&value.capture_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "scene_digest",
+        (&value.scene_digest)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "render_digest",
+        (&value.render_digest)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "input_sha256",
+        (&value.input_sha256)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "adapter_name",
+        (&value.adapter_name)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "adapter_backend",
+        (&value.adapter_backend)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("parameters", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.parameters) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("visible_roi", {
+        let out = PyList::empty(py);
+        for item0 in (&value.visible_roi) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "scale",
+        (&value.scale)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("offset", {
+        let out = PyList::empty(py);
+        for item0 in (&value.offset) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("textures", {
+        let out = PyList::empty(py);
+        for item0 in (&value.textures) {
+            out.append(write_observedtexture_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("drawable_bounds", {
+        let out = PyList::empty(py);
+        for item0 in (&value.drawable_bounds) {
+            out.append(write_observedbounds_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("ObservationImage")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observedtexture(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservedTexture,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_observedtexture_in(py, value, &classes)
+}
+fn write_observedtexture_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservedTexture,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "asset_id",
+        (&value.asset_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "sha256",
+        (&value.sha256)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("ObservedTexture")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observedbounds(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservedBounds,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_observedbounds_in(py, value, &classes)
+}
+fn write_observedbounds_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservedBounds,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "visible",
+        (&value.visible)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("bounds", {
+        match (&value.bounds).as_ref() {
+            Some(item) => {
+                let out = PyList::empty(py);
+                for item1 in (item) {
+                    out.append((item1).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("ObservedBounds")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -21523,6 +21834,52 @@ fn write_spatialframe_in(
     })?;
     Ok(classes
         .getattr("SpatialFrame")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationbatch(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservationBatch,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_observationbatch_in(py, value, &classes)
+}
+fn write_observationbatch_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::observation::ObservationBatch,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "view",
+        write_observationview_in(py, (&value.view), classes)?,
+    )?;
+    out.set_item("requested", {
+        let out = PyList::empty(py);
+        for item0 in (&value.requested) {
+            out.append({
+                let out = PyDict::new(py);
+                for (key, item1) in (item0) {
+                    out.set_item(
+                        key.to_string(),
+                        (item1).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("frames", {
+        let out = PyList::empty(py);
+        for item0 in (&value.frames) {
+            out.append(write_observationimage_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("ObservationBatch")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -28670,6 +29027,21 @@ pub fn measure_previewcommand(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             "Unexpected modeling variant",
         )),
     }
+}
+
+pub fn measure_observationview(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("roi")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(16usize);
+            }
+            bytes
+        })
+        .saturating_add(16usize))
 }
 
 pub fn measure_spatialquery(value: &Bound<'_, PyAny>) -> PyResult<usize> {

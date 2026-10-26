@@ -12,6 +12,7 @@ mod input_budget;
 use input_budget::input_lease;
 mod discovery_bridge;
 mod modeling_bridge;
+mod observation_bridge;
 mod parameter_bridge;
 mod preview_bridge;
 mod project_bridge;
@@ -312,7 +313,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-17"
+        "zipzi-python2-18"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
@@ -748,6 +749,7 @@ impl NativeRuntime {
                 }
                 JobValue::Previewed(value) => preview_bridge::samples(py, &value)?,
                 JobValue::Spatial(value) => spatial_bridge::samples(py, &value)?,
+                JobValue::Observed(value) => observation_bridge::samples(py, &value)?,
                 JobValue::Sampled(value) => modeling_bridge::sample_batch(py, &value)?,
                 JobValue::Planned(value) => {
                     generated::resources::write_plansnapshot(py, value.as_ref().clone())?

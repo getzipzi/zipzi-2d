@@ -58,6 +58,12 @@ class Python2Codegen(unittest.TestCase):
         version=tomllib.loads((PACKAGE/'client/pyproject.toml').read_text())['project']['version']
         self.assertEqual(namespace['PACKAGE_VERSION'],version)
         self.assertIn('Package '+version+';',namespace['CATALOG']['zipzi']['documentation'])
+        self.assertEqual(namespace['CONTRACT'],self.contract()['protocol'])
+        changed_protocol=deepcopy(self.contract());changed_protocol['protocol']='test-runtime-contract'
+        protocol_output=gen.render(changed_protocol)
+        exec(protocol_output['client/python/zipzi/_generated/catalog.py'],namespace)
+        self.assertEqual(namespace['CONTRACT'],'test-runtime-contract')
+        self.assertIn('protocol test-runtime-contract;',namespace['CATALOG']['zipzi']['documentation'])
         with patch.object(gen._catalog_codegen.tomllib,'loads',return_value={'project':{'version':'9.8.7a6'}}):
             changed=gen.render(self.contract())
         exec(changed['client/python/zipzi/_generated/catalog.py'],namespace)

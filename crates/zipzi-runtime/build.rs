@@ -9,7 +9,10 @@ fn sources(path: &Path, files: &mut Vec<PathBuf>) {
         let path = entry.expect("source entry").path();
         if path.is_dir() {
             sources(&path, files);
-        } else if path.extension().is_some_and(|ext| ext == "rs") {
+        } else if path
+            .extension()
+            .is_some_and(|ext| ext == "rs" || ext == "metal" || ext == "wgsl")
+        {
             files.push(path);
         }
     }
@@ -24,6 +27,10 @@ fn main() {
     ];
     for name in [
         "zipzi-runtime",
+        "zipzi-sdk-observe",
+        "zipzi-render",
+        "zipzi-render-metal",
+        "zipzi-render-wgpu",
         "zipzi-sdk",
         "zipzi-api-derive",
         "zipzi-core",
@@ -39,6 +46,11 @@ fn main() {
         println!("cargo:rerun-if-changed={}", path.join("src").display());
         files.push(path.join("Cargo.toml"));
         sources(&path.join("src"), &mut files);
+        let shaders = path.join("shaders");
+        if shaders.exists() {
+            println!("cargo:rerun-if-changed={}", shaders.display());
+            sources(&shaders, &mut files);
+        }
     }
     files.sort();
     let mut hash = Sha256::new();

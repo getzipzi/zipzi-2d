@@ -21,7 +21,7 @@ CHUNK = 1 << 20
 
 class Transfer:
     def __init__(self, backend: TransferBackend, owner: object,
-        kind: Literal["image", "buffer", "pixels", "snapshot", "read", "authoring", "records", "samples", "meshes", "bindings", "images", "preview", "spatial"], *, data: bytes = b"",
+        kind: Literal["image", "buffer", "pixels", "snapshot", "read", "authoring", "records", "samples", "meshes", "bindings", "images", "preview", "spatial", "observation"], *, data: bytes = b"",
         width: int = 0, height: int = 0, selector: dict[str, object] | None = None,
         blob: object = None, offset: int = 0, length: int = 0, edit: object = None):
         self.backend, self.owner, self.kind = backend, owner, kind
@@ -82,7 +82,7 @@ class Transfer:
                 elif self.phase == "select":
                     assert self.selector is not None
                     self.value = self._invoke(self.selector)
-                    if self.kind in {"samples","preview","spatial"} and self.selector["op"]=="job":
+                    if self.kind in {"samples","preview","spatial","observation"} and self.selector["op"]=="job":
                         result=record(self.value)["result"]
                         if result is None: return None
                         self.value=unwrap(result)
@@ -91,7 +91,7 @@ class Transfer:
                     if "blob" not in value:
                         return self.value
                     self.blob = value["blob"]
-                    if self.kind in {"records","samples","meshes","bindings","images","preview","spatial"}:
+                    if self.kind in {"records","samples","meshes","bindings","images","preview","spatial","observation"}:
                         self.end = integer(value["length"])
                     else:
                         pixels = record(value["pixels"]) if self.kind == "snapshot" else value
@@ -107,8 +107,10 @@ class Transfer:
                             return content
                         value = dict(record(self.value))
                         value.pop("blob", None)
-                        if self.kind in {"records","samples","meshes","bindings","images","preview","spatial"}:
-                            if self.kind=="spatial":
+                        if self.kind in {"records","samples","meshes","bindings","images","preview","spatial","observation"}:
+                            if self.kind=="observation":
+                                self.value=dict(source=value["source"],samples=typed_binary.decode_observation(content,string(value["signature"])))
+                            elif self.kind=="spatial":
                                 self.value=dict(source=value["source"],samples=typed_binary.decode_spatial(content,string(value["signature"])))
                             elif self.kind=="preview":
                                 self.value=dict(source=value["source"],samples=typed_binary.decode_preview(content,string(value["signature"])))

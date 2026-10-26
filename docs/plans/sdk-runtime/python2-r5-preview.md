@@ -82,3 +82,15 @@ cargo test --locked -p zipzi-animation --test motion_preview basic_playback::
 持续批任务公平调度，以及 Editor Timeline/双视口/人工播放钟与 Physics 的视图隔离、
 旧候选帧拒绝、Metal 和 UI 性能验收。本轮没有重跑 Editor、GPU、固定 agent 矩阵或
 性能基准，没有新增模型/服务身份门禁；CPU 配对通过不能替代这些后续范围。
+
+## 2026-10-26 Review 修复
+
+重复 Motion 激活会复制每次触发的事件和未解析 Track 诊断，不能仅按激活条数收取固定字节。
+SDK 现在提供规范采样的 Motion 输出上界（含短周期循环）；Runtime 在启动 Job 前同时
+预留输出、事务回放及观察捕获的副本，并在 Job 释放后继续计入 Preview 保留的状态。
+预算拒绝不推进时钟或操作序号、不入队。新增回归覆盖 20 MiB 上限下的重复大事件拒绝、
+正常事件采样/释放，以及短循环和大诊断字段。GPU 观察沿用相同的采样准入。
+
+定向验证：Runtime Preview/Observation 九项、SDK 动画 basic_playback 六项、
+sdk-observe capture 十一项，以及 Python Local/Connected 六项 GPU/inspection
+用例和正反静态类型检查通过。预算回归同时覆盖无 view 与 GPU view 的拒绝路径。

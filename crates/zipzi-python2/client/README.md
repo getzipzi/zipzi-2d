@@ -15,7 +15,7 @@ again. `job.wait(timeout=None)` waits until terminal; a finite timeout raises
 `JobTimeout` while the accepted Job remains usable. Close an unresolved Runtime
 only after recovery or with explicit `abandon_pending=True`.
 
-The native/host pairing is `zipzi-python2-17` / `zipzi-runtime-r5-spatial-1`; rebuild
+The native/host pairing is `zipzi-python2-18` / `zipzi-runtime-r5-observation-1`; rebuild
 adapters and hosts together after a contract change.
 
 See the [package source](https://github.com/getzipzi/zipzi-2d/tree/main/crates/zipzi-python2)
@@ -58,5 +58,7 @@ addresses are connected through the canonical modeling API. Geometric bounds/hit
 use `session/edit.modeling.spatial(poses, queries)` or Preview sampling `queries`;
 both use frozen Rust sources and return explicit Jobs. Independent CPU animation Preview uses `session.preview()` or `edit.preview()`;
 controls and ordered sample/seek/advance Jobs leave authored history and other
-views unchanged. Sources stay frozen until release. Observer/inspection and
-Editor playback integration remain pending.
+views unchanged. Sources stay frozen until release. GPU image Jobs use
+`modeling.observe(poses, observation.View(...))` or Preview sampling `view=...`.
+`inspection.save` exports completed PNG/JSON evidence on the client without a
+live Runtime. Full batch fairness and Editor playback integration remain pending.

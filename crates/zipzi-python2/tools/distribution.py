@@ -23,12 +23,19 @@ PACKAGE = ROOT / 'crates/zipzi-python2'
 def extract(archive, target):
     with tarfile.open(archive) as source:
         source.extractall(target, filter='data')
-    return target / archive.name.removesuffix('.tar.gz')
+    root=target / archive.name.removesuffix('.tar.gz')
+    # Reproducible sdists normalize mtimes to zero. Refresh materialized inputs
+    # so an explicitly reused Cargo cache cannot consider old dependency rmeta
+    # fresh after source bytes change. Archive contents remain untouched.
+    for path in root.rglob('*'):
+        if path.is_file():os.utime(path,None)
+    return root
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--observation',action='store_true',help='Also run installed GPU/inspection recipe; requires a usable device')
     parser.add_argument('--cargo-target', type=Path,
                         help='Optional isolated SDK build cache; never the workspace target')
     args = parser.parse_args()
@@ -80,7 +87,7 @@ def main():
             run(mode+'-venv',['uv','venv','--python','3.14',venv])
             python=venv/'bin/python'
             run(mode+'-install',['uv','pip','install','--python',python,pure,*([extension] if mode=='local' else [])])
-            run(mode+'-recipe',[python,'-I',archived/'tests/installed_recipe.py',mode],cwd=output,
+            run(mode+'-recipe',[python,'-I',archived/'tests/installed_recipe.py',mode,*(['--observation'] if args.observation else [])],cwd=output,
                 env=dict(environment,ZIPZI_PYTHON2_HOST=str(host)))
         artifacts=[*sorted((output/'sdists').glob('*')),*sorted((output/'wheels').glob('*')),host]
         report=dict(schema=1,status='passed',base_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),

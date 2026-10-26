@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-spatial-1; client source SHA-256 49864787785fb79213f07216ef71d5ce67383a3c885319d629b3accb5d93f58f.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-observation-1; client source SHA-256 baae0203d5e39a0ccaf515d4ef7a4f02e874890ce033b27d208499280e01bfc6.
 
 
 ## zipzi.ApiDescription
@@ -399,6 +399,13 @@ Arguments have the semantics of meshes.SetPositions; inspect that operation and 
 `(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)`
 
 Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.Edit.modeling.observe
+
+`(poses: Sequence[Mapping[str, float]], view: observation.View, *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[observation.Batch]]'`
+
+Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
 
 
 ## zipzi.Edit.modeling.records
@@ -1263,7 +1270,7 @@ Capture current registry metadata and an independent cursor. Poll bounded pages;
 
 ## zipzi.RuntimeCapabilities
 
-`(domains: tuple[str, ...], pagination: bool, source_checked_reads: bool, session_close: bool, binary_arrays: bool, editor_windows: bool, gpu: bool)`
+`(domains: tuple[str, ...], pagination: bool, source_checked_reads: bool, session_close: bool, binary_arrays: bool, editor_windows: bool, gpu: bool | None, gpu_backend: str, gpu_error: str | None)`
 
 Immutable owned RuntimeCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -1274,7 +1281,10 @@ source_checked_reads: Whether selected reads accept an exact expected Source.
 session_close: Whether this host supports explicit Session detach/close.
 binary_arrays: Whether this host supports the paired binary array transport.
 editor_windows: Whether Session window display is supported by this host.
-gpu: Whether GPU operations are available from this host; CPU sampling is independent.
+gpu: Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.
+This cached observation is not a guarantee for a later render; CPU sampling is independent.
+gpu_backend: Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.
+gpu_error: Last adapter/device failure code, or None before probing or after a successful render.
 
 - `domains`: Finite domain names supported by this host; absence means the domain is unavailable.
 - `pagination`: Whether this host supports source-bound bounded collection pagination.
@@ -1282,7 +1292,10 @@ gpu: Whether GPU operations are available from this host; CPU sampling is indepe
 - `session_close`: Whether this host supports explicit Session detach/close.
 - `binary_arrays`: Whether this host supports the paired binary array transport.
 - `editor_windows`: Whether Session window display is supported by this host.
-- `gpu`: Whether GPU operations are available from this host; CPU sampling is independent.
+- `gpu`: Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.
+This cached observation is not a guarantee for a later render; CPU sampling is independent.
+- `gpu_backend`: Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.
+- `gpu_error`: Last adapter/device failure code, or None before probing or after a successful render.
 
 ## zipzi.RuntimeCapabilities.__repr__
 
@@ -1585,6 +1598,13 @@ name=None disables filtering; a string matches exactly and case-sensitively, pre
 `(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)`
 
 Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.Session.modeling.observe
+
+`(poses: Sequence[Mapping[str, float]], view: observation.View, *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[observation.Batch]]'`
+
+Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
 
 
 ## zipzi.Session.modeling.records
@@ -2040,15 +2060,17 @@ Independent frozen animation controls and CPU playback results.
 
 ## zipzi.animation.Batch
 
-`(queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
+`(view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
 
 Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+view: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.
 queries: Owned geometric query descriptors aligned with every frame.spatial slot.
 sequence: Accepted sample request ordinal shared by these ordered frames.
 frames: Owned frames in requested target order, retaining duplicate and backward targets.
 
+- `view`: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.
 - `queries`: Owned geometric query descriptors aligned with every frame.spatial slot.
 - `sequence`: Accepted sample request ordinal shared by these ordered frames.
 - `frames`: Owned frames in requested target order, retaining duplicate and backward targets.
@@ -2079,11 +2101,12 @@ Typed public API entry.
 
 ## zipzi.animation.Frame
 
-`(spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+`(observation: ObservationImage | None = None, spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
 
 Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+observation: Optional GPU image from this exact animation state and once-resolved batch textures.
 spatial: Geometric query results in the corresponding request order, from this exact SDK state.
 preview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
 sequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.
@@ -2091,6 +2114,7 @@ index: Zero-based target slot in the ordered sample request.
 motion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
 geometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
 
+- `observation`: Optional GPU image from this exact animation state and once-resolved batch textures.
 - `spatial`: Geometric query results in the corresponding request order, from this exact SDK state.
 - `preview_id`: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
 - `sequence`: Accepted sample request ordinal; pair with the outer Source and Preview identity.
@@ -2148,7 +2172,7 @@ Retain the handle for pending cleanup. No formal document write occurs.
 
 ## zipzi.animation.Preview.advance_to
 
-`(time: float, *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]`
+`(time: float, *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> Job[Snapshot[m.PreviewBatch]]`
 
 Submit SDK canonical incremental playback. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek.
 
@@ -2190,11 +2214,14 @@ Return cached metadata for this owner's original pending request, or None. Readi
 
 ## zipzi.animation.Preview.sample
 
-`(times: Sequence[float], *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]`
+`(times: Sequence[float], *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> Job[Snapshot[m.PreviewBatch]]`
 
 Submit 1..64 canonical seeks in target order; wait for a frozen-source batch.
 
 Duplicates/backward times are retained. CPU geometry is optional.
+view requests GPU RGBA/PNG from each exact state using once-resolved batch
+textures and applies SDK Model opacity. Missing devices fail explicitly;
+image/capture failure may retain completed seeks. No view keeps CPU-only work.
 queries returns geometric results from the same SDK frame, including hidden
 objects when requested; textures, masks and occlusion are not pixel-tested. A cancelled
 batch discards output and retains completed targets; each individual SDK
@@ -2205,7 +2232,7 @@ result slot. Cancellation never changes authored content or another view.
 
 ## zipzi.animation.Preview.seek
 
-`(time: float, *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]`
+`(time: float, *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> Job[Snapshot[m.PreviewBatch]]`
 
 Submit one canonical seek and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome.
 
@@ -3259,6 +3286,60 @@ still exposes the owned full value; no host resource is created/released.
 `() -> str`
 
 Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.inspection
+
+``
+
+Organize completed GPU observations as local PNG files and a provenance manifest.
+
+No device or Runtime is consulted; this module does not compute image or geometry algorithms.
+
+
+## zipzi.inspection.Report
+
+`(directory: Path, manifest: Path, images: tuple[Path, ...])`
+
+Paths to an exported local inspection, readable without a live SDK host.
+
+Fields:
+directory: Client-side output directory created by save; not a remote host path.
+manifest: JSON provenance document containing Source, view, texture hashes and frame identities.
+images: PNG paths in input frame order; the original Rust PNG bytes are preserved.
+
+- `directory`: Client-side output directory created by save; not a remote host path.
+- `manifest`: JSON provenance document containing Source, view, texture hashes and frame identities.
+- `images`: PNG paths in input frame order; the original Rust PNG bytes are preserved.
+
+## zipzi.inspection.Report.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.inspection.Report.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.inspection.save
+
+`(result: Snapshot[m.ObservationBatch] | Snapshot[m.PreviewBatch], directory: Path) -> Report`
+
+Write completed observation/Preview images and JSON metadata into a fresh client-side directory.
+
+This performs local file IO only and preserves Rust PNG bytes. Preview batches
+require an image on every frame. Existing directories raise FileExistsError;
+IO errors can leave partial output. No host write, device probing, image
+recomputation or implicit request recovery occurs. Retain the original result
+if file IO needs to be retried into a new directory.
 
 
 ## zipzi.local
@@ -13823,6 +13904,196 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.ObservationBatch
+
+`(view: ObservationView, requested: tuple[_Mapping[str, float], ...], frames: tuple[ObservationImage, ...])`
+
+Immutable owned ObservationBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+view: Owned explicit view shared by these ordered frames.
+requested: Owned requested parameter maps in input order, including duplicates.
+frames: Rendered frames in requested pose order, sharing one resolved texture acquisition.
+
+- `view`: Owned explicit view shared by these ordered frames.
+- `requested`: Owned requested parameter maps in input order, including duplicates.
+- `frames`: Rendered frames in requested pose order, sharing one resolved texture acquisition.
+
+## zipzi.modeling.ObservationBatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ObservationBatch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ObservationImage
+
+`(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...])`
+
+Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+width: Output image width in pixels.
+height: Output image height in pixels.
+rgba: Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.
+png: PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.
+document_id: Captured authoring document UUID.
+evaluation_revision: Captured geometry evaluation revision, distinct from the outer formal/candidate Source.
+capture_id: Shared acquisition UUID for this batch's once-resolved immutable texture set.
+scene_digest: Digest of captured evaluated geometry, authoring records and resolved texture content.
+render_digest: Digest of the exact source scene and explicit rendering settings.
+input_sha256: Renderer hash of evaluated input, texture content and output view.
+adapter_name: Actual GPU adapter name, obtained only when a render executes.
+adapter_backend: Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.
+parameters: Effective evaluated parameters keyed by stable document UUID.
+visible_roi: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.
+scale: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].
+offset: Translation in top-left image pixels, parallel to the documented scale formula.
+textures: Source texture identities and exact content hashes shared across this batch.
+drawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
+
+- `width`: Output image width in pixels.
+- `height`: Output image height in pixels.
+- `rgba`: Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.
+- `png`: PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.
+- `document_id`: Captured authoring document UUID.
+- `evaluation_revision`: Captured geometry evaluation revision, distinct from the outer formal/candidate Source.
+- `capture_id`: Shared acquisition UUID for this batch's once-resolved immutable texture set.
+- `scene_digest`: Digest of captured evaluated geometry, authoring records and resolved texture content.
+- `render_digest`: Digest of the exact source scene and explicit rendering settings.
+- `input_sha256`: Renderer hash of evaluated input, texture content and output view.
+- `adapter_name`: Actual GPU adapter name, obtained only when a render executes.
+- `adapter_backend`: Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.
+- `parameters`: Effective evaluated parameters keyed by stable document UUID.
+- `visible_roi`: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.
+- `scale`: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].
+- `offset`: Translation in top-left image pixels, parallel to the documented scale formula.
+- `textures`: Source texture identities and exact content hashes shared across this batch.
+- `drawable_bounds`: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
+
+## zipzi.modeling.ObservationImage.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ObservationImage.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ObservationView
+
+`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = field(default_factory=lambda: number(0.0)))`
+
+Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+width: Output width in pixels, 1..4096, subject to device and Runtime budgets.
+height: Output height in pixels, 1..4096, subject to device and Runtime budgets.
+roi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
+padding_model: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
+
+- `width`: Output width in pixels, 1..4096, subject to device and Runtime budgets.
+- `height`: Output height in pixels, 1..4096, subject to device and Runtime budgets.
+- `roi`: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
+- `padding_model`: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
+
+## zipzi.modeling.ObservationView.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ObservationView.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ObservedBounds
+
+`(id: str, visible: bool, bounds: tuple[int, int, int, int] | None = None)`
+
+Immutable owned ObservedBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable authoring drawable UUID.
+visible: Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.
+bounds: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.
+
+- `id`: Stable authoring drawable UUID.
+- `visible`: Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.
+- `bounds`: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.
+
+## zipzi.modeling.ObservedBounds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ObservedBounds.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ObservedTexture
+
+`(asset_id: str, sha256: str)`
+
+Immutable owned ObservedTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+asset_id: Stable asset UUID resolved from the frozen authoring source.
+sha256: SHA256 of the exact immutable texture content uploaded by this capture.
+
+- `asset_id`: Stable asset UUID resolved from the frozen authoring source.
+- `sha256`: SHA256 of the exact immutable texture content uploaded by this capture.
+
+## zipzi.modeling.ObservedTexture.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ObservedTexture.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.Offscreen
 
 `(id: str, runtime_id: str, name: str, part_id: str, enabled: bool = field(default_factory=lambda: _boolean(True)), blend_mode: int, flags: int, masks: tuple[str, ...], part_keyform_indices: tuple[int, ...], keyforms: tuple[OffscreenKeyform, ...])`
@@ -17503,15 +17774,17 @@ pose.
 
 ## zipzi.modeling.PreviewBatch
 
-`(queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
+`(view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
 
 Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+view: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.
 queries: Owned geometric query descriptors aligned with every frame.spatial slot.
 sequence: Accepted sample request ordinal shared by these ordered frames.
 frames: Owned frames in requested target order, retaining duplicate and backward targets.
 
+- `view`: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.
 - `queries`: Owned geometric query descriptors aligned with every frame.spatial slot.
 - `sequence`: Accepted sample request ordinal shared by these ordered frames.
 - `frames`: Owned frames in requested target order, retaining duplicate and backward targets.
@@ -17748,11 +18021,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.PreviewFrame
 
-`(spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+`(observation: ObservationImage | None = None, spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
 
 Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+observation: Optional GPU image from this exact animation state and once-resolved batch textures.
 spatial: Geometric query results in the corresponding request order, from this exact SDK state.
 preview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
 sequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.
@@ -17760,6 +18034,7 @@ index: Zero-based target slot in the ordered sample request.
 motion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
 geometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
 
+- `observation`: Optional GPU image from this exact animation state and once-resolved batch textures.
 - `spatial`: Geometric query results in the corresponding request order, from this exact SDK state.
 - `preview_id`: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
 - `sequence`: Accepted sample request ordinal; pair with the outer Source and Preview identity.
@@ -22916,6 +23191,203 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.WarpTransform.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation
+
+``
+
+GPU images and source metadata rendered by Rust from frozen authoring or Preview states.
+
+
+## zipzi.observation.Batch
+
+`(view: ObservationView, requested: tuple[_Mapping[str, float], ...], frames: tuple[ObservationImage, ...])`
+
+Immutable owned ObservationBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+view: Owned explicit view shared by these ordered frames.
+requested: Owned requested parameter maps in input order, including duplicates.
+frames: Rendered frames in requested pose order, sharing one resolved texture acquisition.
+
+- `view`: Owned explicit view shared by these ordered frames.
+- `requested`: Owned requested parameter maps in input order, including duplicates.
+- `frames`: Rendered frames in requested pose order, sharing one resolved texture acquisition.
+
+## zipzi.observation.Batch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.Batch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.Bounds
+
+`(id: str, visible: bool, bounds: tuple[int, int, int, int] | None = None)`
+
+Immutable owned ObservedBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable authoring drawable UUID.
+visible: Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.
+bounds: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.
+
+- `id`: Stable authoring drawable UUID.
+- `visible`: Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.
+- `bounds`: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.
+
+## zipzi.observation.Bounds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.Bounds.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.Image
+
+`(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...])`
+
+Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+width: Output image width in pixels.
+height: Output image height in pixels.
+rgba: Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.
+png: PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.
+document_id: Captured authoring document UUID.
+evaluation_revision: Captured geometry evaluation revision, distinct from the outer formal/candidate Source.
+capture_id: Shared acquisition UUID for this batch's once-resolved immutable texture set.
+scene_digest: Digest of captured evaluated geometry, authoring records and resolved texture content.
+render_digest: Digest of the exact source scene and explicit rendering settings.
+input_sha256: Renderer hash of evaluated input, texture content and output view.
+adapter_name: Actual GPU adapter name, obtained only when a render executes.
+adapter_backend: Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.
+parameters: Effective evaluated parameters keyed by stable document UUID.
+visible_roi: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.
+scale: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].
+offset: Translation in top-left image pixels, parallel to the documented scale formula.
+textures: Source texture identities and exact content hashes shared across this batch.
+drawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
+
+- `width`: Output image width in pixels.
+- `height`: Output image height in pixels.
+- `rgba`: Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.
+- `png`: PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.
+- `document_id`: Captured authoring document UUID.
+- `evaluation_revision`: Captured geometry evaluation revision, distinct from the outer formal/candidate Source.
+- `capture_id`: Shared acquisition UUID for this batch's once-resolved immutable texture set.
+- `scene_digest`: Digest of captured evaluated geometry, authoring records and resolved texture content.
+- `render_digest`: Digest of the exact source scene and explicit rendering settings.
+- `input_sha256`: Renderer hash of evaluated input, texture content and output view.
+- `adapter_name`: Actual GPU adapter name, obtained only when a render executes.
+- `adapter_backend`: Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.
+- `parameters`: Effective evaluated parameters keyed by stable document UUID.
+- `visible_roi`: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.
+- `scale`: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].
+- `offset`: Translation in top-left image pixels, parallel to the documented scale formula.
+- `textures`: Source texture identities and exact content hashes shared across this batch.
+- `drawable_bounds`: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
+
+## zipzi.observation.Image.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.Image.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.Texture
+
+`(asset_id: str, sha256: str)`
+
+Immutable owned ObservedTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+asset_id: Stable asset UUID resolved from the frozen authoring source.
+sha256: SHA256 of the exact immutable texture content uploaded by this capture.
+
+- `asset_id`: Stable asset UUID resolved from the frozen authoring source.
+- `sha256`: SHA256 of the exact immutable texture content uploaded by this capture.
+
+## zipzi.observation.Texture.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.Texture.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.View
+
+`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = field(default_factory=lambda: number(0.0)))`
+
+Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+width: Output width in pixels, 1..4096, subject to device and Runtime budgets.
+height: Output height in pixels, 1..4096, subject to device and Runtime budgets.
+roi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
+padding_model: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
+
+- `width`: Output width in pixels, 1..4096, subject to device and Runtime budgets.
+- `height`: Output height in pixels, 1..4096, subject to device and Runtime budgets.
+- `roi`: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
+- `padding_model`: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
+
+## zipzi.observation.View.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.View.summary
 
 `() -> str`
 

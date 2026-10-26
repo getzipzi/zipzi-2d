@@ -195,3 +195,78 @@ fn event_cursor_and_virtual_target_coverage_are_explicit() {
         .unwrap();
     assert!(!preview.advance(0.5).unwrap().coverage.is_empty());
 }
+
+#[test]
+fn canonical_output_bound_covers_repeated_short_loops_and_large_diagnostics() {
+    use zipzi_core::binary_wire::WireWrite;
+    use zipzi_core::document::{
+        MotionClip, MotionEvent, MotionKey, MotionTrack, MotionTrackTarget,
+    };
+    let mut doc = document();
+    assert!(doc
+        .create_motion(MotionClip {
+            id: MOTION.into(),
+            name: "Short loop".into(),
+            duration: 0.001,
+            fps: 1000.,
+            looping: true,
+            restricted_beziers: false,
+            fade_in: Some(1.),
+            fade_out: Some(1.),
+            track_order: vec![],
+            tracks: vec![MotionTrack {
+                id: "00000000-0000-4000-8000-000000000d04".into(),
+                target: MotionTrackTarget::Unresolved {
+                    category: "Parameter".into(),
+                    runtime_id: "r".repeat(8192)
+                },
+                initial: MotionKey {
+                    id: "00000000-0000-4000-8000-000000000d05".into(),
+                    time: 0.,
+                    value: 0.
+                },
+                segments: Default::default(),
+                fade_in: None,
+                fade_out: None,
+                extensions: Default::default(),
+            }]
+            .into(),
+            events: vec![MotionEvent {
+                id: "00000000-0000-4000-8000-000000000d06".into(),
+                time: 0.0005,
+                value: "x".repeat(1024),
+                extensions: Default::default()
+            }]
+            .into(),
+            extensions: Default::default(),
+            meta_extensions: Default::default(),
+            opaque_source_ids: None,
+            opaque_source_content_hash: None,
+        })
+        .status
+        .is_ok());
+    let mut preview = MotionPreview::new(&doc);
+    for _ in 0..4 {
+        preview.schedule_motion(MOTION, 0.).unwrap();
+    }
+    let bound = preview.canonical_motion_output_bytes();
+    for incremental in [false, true] {
+        preview.reset();
+        for time in [1. / 60., 2. / 60., 0.1, 0.105, 0.2] {
+            let frame = if incremental {
+                preview.advance_to_with_progress(time, |_, _| true).unwrap()
+            } else {
+                preview.seek(time).unwrap()
+            };
+            assert_eq!(frame.coverage.len(), 1);
+            assert!(
+                frame
+                    .fired_events
+                    .expansion_bytes()
+                    .saturating_add(frame.coverage.expansion_bytes())
+                    .saturating_add(frame.motion_positions.expansion_bytes())
+                    <= bound
+            );
+        }
+    }
+}

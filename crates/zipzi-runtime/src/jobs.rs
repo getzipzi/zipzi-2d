@@ -236,6 +236,11 @@ impl Completion {
 }
 
 pub(crate) enum ReadTask {
+    Observe {
+        source: crate::SourceSnapshot,
+        parameters: Vec<zipzi_core::PreviewValues>,
+        view: crate::observation::ObservationView,
+    },
     Spatial {
         source: crate::SourceSnapshot,
         parameters: Vec<zipzi_core::PreviewValues>,
@@ -250,6 +255,7 @@ pub(crate) enum ReadTask {
         geometry: bool,
         incremental: bool,
         queries: Vec<zipzi_sdk::SpatialQuery>,
+        view: Option<crate::observation::ObservationView>,
     },
     Image {
         path: Option<PathBuf>,
@@ -295,6 +301,11 @@ impl Work {
             }
             before();
             let value = match task {
+                ReadTask::Observe {
+                    source,
+                    parameters,
+                    view,
+                } => crate::observation::sample(&source, parameters, view, &cancel, &control)?,
                 ReadTask::Spatial {
                     source,
                     parameters,
@@ -314,6 +325,7 @@ impl Work {
                     geometry,
                     incremental,
                     queries,
+                    view,
                 } => crate::runtime::previews::sample_preview(
                     preview_id,
                     &source,
@@ -325,6 +337,7 @@ impl Work {
                     &cancel,
                     &queries,
                     &control,
+                    view,
                 )?,
                 ReadTask::Image {
                     path,

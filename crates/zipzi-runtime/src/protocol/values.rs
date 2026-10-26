@@ -55,6 +55,7 @@ pub(super) fn job_info(j: &JobInfo) -> Value {
             JobValue::Sampled(value)=>json!(value),
             JobValue::Previewed(value)=>json!(value),
             JobValue::Spatial(value)=>json!(value),
+            JobValue::Observed(value)=>json!(value),
             JobValue::Planned(value)=>json!(value),
             JobValue::PreparedPlan(_)=>unreachable!("unpublished plan"),
             JobValue::Opened(s) => json!({"session": s}),

@@ -186,6 +186,17 @@ def animation_authoring(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zi
     return snapshot
 
 from zipzi import animation
+from zipzi import observation,inspection
+
+def gpu_observation(session:zipzi.Session,edit:zipzi.Edit,path:Path)->inspection.Report:
+    view=observation.View(width=64,height=32,roi=(0.,0.,2.,1.))
+    assert_type(session.modeling.observe(({},),view),zipzi.Job[zipzi.Snapshot[observation.Batch]])
+    result=zipzi.recover_call(edit.modeling.observe,({},),view).wait()
+    assert_type(result.value.frames[0].rgba,bytes)
+    with session.preview() as preview:
+        frame=preview.seek(.5,view=view).wait().value.frames[0]
+        assert_type(frame.observation,observation.Image|None)
+    return inspection.save(result,path)
 from zipzi import spatial
 
 def spatial_queries(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi.Snapshot[spatial.Batch]:

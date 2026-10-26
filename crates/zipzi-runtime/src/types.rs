@@ -119,6 +119,7 @@ impl JobState {
 
 #[derive(Debug, Clone)]
 pub enum JobValue {
+    Observed(std::sync::Arc<crate::observation::ObservationSampleBatch>),
     Spatial(std::sync::Arc<crate::spatial::SpatialSampleBatch>),
     Previewed(std::sync::Arc<crate::preview::PreviewSampleBatch>),
     PreparedImage(std::sync::Arc<zipzi_sdk::PreparedImageContent>),
@@ -278,6 +279,7 @@ impl JobValue {
         match self {
             Self::Project { report, .. } => report.expansion_bytes(),
             Self::Spatial(value) => value.samples.expansion_bytes(),
+            Self::Observed(value) => value.samples.expansion_bytes(),
             Self::Previewed(value) => value.samples.expansion_bytes(),
             Self::Sampled(samples) => samples.samples.expansion_bytes(),
             Self::Planned(plan) => plan.report.expansion_bytes(),

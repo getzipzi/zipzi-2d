@@ -171,10 +171,30 @@ impl Runtime {
             result = Err(RuntimeError::Cancelled);
         }
         let expected = record.read_source.as_ref().map(|s| s.source);
+        match &result {
+            Ok(JobValue::Observed(_)) => {
+                self.gpu_available = Some(true);
+                self.gpu_error = None;
+            }
+            Ok(JobValue::Previewed(value))
+                if value.samples.frames.iter().any(|f| f.observation.is_some()) =>
+            {
+                self.gpu_available = Some(true);
+                self.gpu_error = None;
+            }
+            Err(RuntimeError::Sdk(e))
+                if matches!(e.code.as_ref(), "GPU_ADAPTER" | "GPU_DEVICE") =>
+            {
+                self.gpu_available = Some(false);
+                self.gpu_error = Some(e.code.to_string());
+            }
+            _ => {}
+        }
         if let Ok(value) = &result {
             let actual = match value {
                 JobValue::Sampled(value) => Some(value.source),
                 JobValue::Spatial(value) => Some(value.source),
+                JobValue::Observed(value) => Some(value.source),
                 JobValue::Previewed(value) => Some(value.source),
                 JobValue::PreparedPlan(value) => Some(value.source.source),
                 _ => None,

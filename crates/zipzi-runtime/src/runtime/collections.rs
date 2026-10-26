@@ -136,8 +136,13 @@ pub struct RuntimeCapabilities {
     pub binary_arrays: bool,
     /// Whether Session window display is supported by this host.
     pub editor_windows: bool,
-    /// Whether GPU operations are available from this host; CPU sampling is independent.
-    pub gpu: bool,
+    /// Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.
+    /// This cached observation is not a guarantee for a later render; CPU sampling is independent.
+    pub gpu: Option<bool>,
+    /// Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.
+    pub gpu_backend: String,
+    /// Last adapter/device failure code, or None before probing or after a successful render.
+    pub gpu_error: Option<String>,
 }
 
 pub enum Selection {
@@ -174,6 +179,7 @@ impl Runtime {
                 "animation_authoring",
                 "animation_preview",
                 "spatial",
+                "observation",
                 "sampling",
                 "events",
                 "references",
@@ -186,7 +192,14 @@ impl Runtime {
             session_close: true,
             binary_arrays: true,
             editor_windows: false,
-            gpu: false,
+            gpu: self.gpu_available,
+            gpu_backend: if cfg!(target_os = "macos") {
+                "Metal"
+            } else {
+                "WGPU"
+            }
+            .into(),
+            gpu_error: self.gpu_error.clone(),
         }
     }
     pub fn check_authoring_source(

@@ -30,6 +30,8 @@ pub(crate) fn write_runtimecapabilities<'py>(
     d.set_item("binary_arrays", &v.binary_arrays)?;
     d.set_item("editor_windows", &v.editor_windows)?;
     d.set_item("gpu", &v.gpu)?;
+    d.set_item("gpu_backend", &v.gpu_backend)?;
+    d.set_item("gpu_error", &v.gpu_error)?;
     Ok(d)
 }
 pub(crate) fn write_runtimelimits<'py>(
