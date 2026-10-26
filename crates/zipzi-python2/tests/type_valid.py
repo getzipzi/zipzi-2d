@@ -153,3 +153,21 @@ def unified_planning(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi
     assert_type(zipzi.recover_call(session.plan, operation), zipzi.Plan)
     assert_type(zipzi.recover_call(edit.apply, meshes.Rename(id, "Again")), zipzi.WriteResult)
     return plan.report
+
+
+def resource_project_jobs(runtime: zipzi.Runtime, session: zipzi.Session, path: Path,
+                          png: bytes) -> modeling.ProjectReport:
+    with runtime.resources.prepare_buffer(png) as buffer:
+        assert_type(buffer, zipzi.Buffer)
+        assert_type(buffer.read(0, 8), bytes)
+        with runtime.resources.prepare_png(buffer) as job:
+            assert_type(job, zipzi.Job[resources.PreparedImage])
+            with job.wait() as image:
+                assert_type(image.pixels(), resources.ImagePixels)
+    assert_type(session.project.save(path), zipzi.Job[zipzi.SaveReceipt])
+    assert_type(session.project.open(path), zipzi.Job[modeling.ProjectReport])
+    assert_type(session.project.replace(path, modeling.ImportFormat.MODEL3), zipzi.Job[modeling.ProjectReport])
+    assert_type(session.project.diagnose(), zipzi.Job[modeling.ProjectReport])
+    export = zipzi.recover_call(session.project.export, path, modeling.ExportFormat.PACKAGE)
+    assert_type(export, zipzi.Job[modeling.ProjectReport])
+    return zipzi.recover_call(export.wait)

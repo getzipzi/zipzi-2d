@@ -64,6 +64,16 @@ class PythonSdk(unittest.TestCase):
                 reopened = self.runtime(mode).sessions.open(saved.manifest).wait()
                 self.assertEqual(reopened.meshes.get(mesh).value.geometry, expected)
 
+    def test_p4_large_attachments_resource_relocation_and_package_roundtrip(self):
+        import runpy
+        recipe = runpy.run_path(str(Path(__file__).with_name("p4_recipe.py")))["run"]
+        results = []
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                results.append(recipe(self.runtime(mode), self.folder / (mode + "-p4")))
+        if len(results) == 2:
+            self.assertEqual(results[0], results[1])
+
     def test_p3b_conversions_scene_bindings_and_independent_collections(self):
         import runpy
         recipe = runpy.run_path(str(Path(__file__).with_name("p3b_recipe.py")))["run"]
@@ -397,7 +407,8 @@ class PythonSdk(unittest.TestCase):
 
     def test_large_binary_authoring_records_sampling_and_attachment(self):
         # SDK rectangle-grid helper's exact 65536-vertex boundary, with a
-        # concrete keyform dependency and an attachment larger than JSON frames.
+        # concrete keyform dependency. Attachment transfer/persistence has its
+        # own recovery tests and p4_recipe.py scenario.
         n=256
         positions=tuple((float(x),float(y)) for y in range(n) for x in range(n))
         ids=tuple(range(n*n))

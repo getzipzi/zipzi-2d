@@ -84,6 +84,18 @@ The focused check also runs positive/negative static types:
 ./tools/test-sdk.sh python2 PythonSdk.test_p3b_conversions_scene_bindings_and_independent_collections
 ```
 
+[P4 resource/project acceptance](../../docs/plans/python-sdk-rewrite/p4.md) covers
+large attachments and RGBA images through save, Save As, reopen and package
+export/import, including empty/unavailable attachments, disk captures, generation
+expiry and failures. Save As copies current resources; old disk-backed Undo
+content retains its original absolute path. Explicit image leases pin their bytes.
+Attachments use the typed canonical modeling route; an independent attachment
+collection remains an optional convenience. Focused regression:
+
+```sh
+./tools/test-sdk.sh python2 PythonSdk.test_p4_large_attachments_resource_relocation_and_package_roundtrip
+```
+
 ## Selected code generation
 
 Generation derives registered mesh, image, Plan, parameter, binding, scene,
