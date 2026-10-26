@@ -156,7 +156,7 @@ fn test_project_encode_decode_roundtrip() {
     assert_eq!(encoded.bytes().filter(|&byte| byte == b'\n').count(), 1);
     let root: serde_json::Value = serde_json::from_str(&encoded).unwrap();
     assert_eq!(root["format"], "zipzi-directory-project");
-    assert_eq!(root["format_version"], 20);
+    assert_eq!(root["format_version"], 21);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
     assert!(before.same_content(&decoded));

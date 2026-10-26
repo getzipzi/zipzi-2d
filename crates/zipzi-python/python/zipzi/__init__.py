@@ -1,4 +1,7 @@
-"""Zipzi 2D authoring SDK public API.
+"""Deprecated Zipzi Python adapter, retained for historical tests and experiments.
+
+Use the maintained zipzi / zipzi-native distributions from zipzi-python2.
+This adapter no longer receives feature or compatibility fixes.
 
 Paths passed to native IO must be absolute. Coordinates are ordinary ``(x, y)``
 tuples; ``Point`` is a type alias, not a two-argument constructor.
@@ -27,6 +30,7 @@ from ._types import (
     MeshProperties,
     MeshPropertiesSnapshot,
     MeshGeometryData,
+    MeshMeshingData,
     MeshDrawingData,
     MeshRecordSpec,
     MeshRecordSnapshot,
@@ -247,6 +251,7 @@ __all__ = [
     "EvaluatedOffscreenSnapshot",
     "MeshSnapshot",
     "MeshGeometryData",
+    "MeshMeshingData",
     "MeshDrawingData",
     "MeshRecordSpec",
     "MeshRecordSnapshot",

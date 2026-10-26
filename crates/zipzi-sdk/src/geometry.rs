@@ -9,12 +9,16 @@ zipzi_core::api_record! {
 pub struct MeshGeometry {
     /// Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
     pub vertex_ids: Vec<VertexId>,
-    /// Model-space XY coordinates ordered by vertex_ids.
+    /// Absolute XY coordinates in the mesh authoring space (model space without a deformation
+    /// parent, otherwise the parent's local/parameter space), ordered by vertex_ids.
     pub positions: Vec<Vec2>,
     /// Texture UV coordinates ordered by vertex_ids.
     pub uvs: Vec<Vec2>,
     /// Triangle entries reference vertex_ids values, never offsets into positions.
     pub triangles: Vec<[VertexId; 3]>,
+    /// Optional canonical UV boundary and retained internal structure edges.
+    #[serde(default)]
+    pub meshing: Option<zipzi_core::MeshMeshing>,
 }
 }
 
@@ -59,6 +63,11 @@ pub fn rectangle_grid_geometry(
     columns: usize,
     rows: usize,
 ) -> Result<MeshGeometry, SdkError> {
+    if source.meshing.is_some() {
+        return Err(invalid(
+            "rectangle grid cannot discard existing modeling topology",
+        ));
+    }
     let count = columns
         .checked_add(1)
         .and_then(|c| rows.checked_add(1).and_then(|r| c.checked_mul(r)));
@@ -158,6 +167,7 @@ pub fn rectangle_grid_geometry(
         positions: sample(&source.positions, columns, rows)?,
         uvs: sample(&source.uvs, columns, rows)?,
         triangles,
+        meshing: None,
     })
 }
 
@@ -220,6 +230,7 @@ impl crate::EditSession<'_> {
                 positions: mesh.base_positions.clone(),
                 uvs: mesh.uvs.clone(),
                 triangles: mesh.triangles.clone(),
+                meshing: mesh.meshing.clone(),
                 space,
             };
             let geometry = rectangle_grid_geometry(
@@ -228,6 +239,7 @@ impl crate::EditSession<'_> {
                     positions: mesh.base_positions.clone(),
                     uvs: mesh.uvs.clone(),
                     triangles: mesh.triangles.clone(),
+                    meshing: mesh.meshing.clone(),
                 },
                 columns,
                 rows,
@@ -277,6 +289,7 @@ impl crate::EditSession<'_> {
             mesh.base_positions = geometry.positions;
             mesh.uvs = geometry.uvs;
             mesh.triangles = geometry.triangles;
+            mesh.meshing = geometry.meshing;
             let replacement = TopologyReplacement {
                 mesh,
                 binding,

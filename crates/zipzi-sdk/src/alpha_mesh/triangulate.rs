@@ -533,6 +533,7 @@ pub(super) fn generate(
         positions,
         uvs,
         triangles: output,
+        meshing: None,
     })
 }
 

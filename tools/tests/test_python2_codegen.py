@@ -227,7 +227,7 @@ class Python2Codegen(unittest.TestCase):
             lambda c: c['roots'][0]['fields'][0].update(shape={'kind': 'any'}),
             lambda c: c['roots'][0]['fields'][0].update(name='read'),
             lambda c: c['roots'][0]['fields'][0].update(default={'kind': 'empty_string'}),
-            lambda c: c['roots'][0]['fields'][0].update(shape={'kind': 'array', 'length': 2, 'item': {'kind': 'u32'}}),
+            lambda c: c['roots'][0]['fields'][0].update(shape={'kind': 'array', 'length': 4, 'item': {'kind': 'u32'}}),
         )
         for mutate in mutations:
             contract = self.contract()
@@ -235,13 +235,28 @@ class Python2Codegen(unittest.TestCase):
             with self.assertRaises(ValueError):
                 gen.render(contract)
 
+    def test_union_fields_cannot_shadow_operation_kind_but_records_can_use_it(self):
+        contract = self.contract()
+        # MeshConstraint.kind is ordinary data and must remain supported.
+        model = gen.Model(contract)
+        self.assertTrue(any(f['name'] == 'kind'
+                            for s in model.records for f in s['fields']))
+        operation = next(s for s in contract['roots'] if s['kind'] == 'union')
+        operation['variants'][0]['fields'].append(dict(
+            name='kind', shape={'kind': 'string'}, default=None,
+            doc='A domain field that collides with the generated discriminator.',
+        ))
+        with self.assertRaisesRegex(ValueError, 'Field shadows generated API'):
+            gen.Model(contract)
+
     def test_rust_field_change_updates_python_wire_and_native_shapes_together(self):
         contract = self.contract()
         def change(node):
             if isinstance(node, dict):
                 if node.get('kind') == 'record' and node.get('name', '').endswith('::MeshGeometry'):
-                    node['fields'].append(dict(name='segments', shape=dict(kind='u32'), default=None,
-                                              doc='Number of generated geometry segments.'))
+                    index = next((i for i, f in enumerate(node['fields']) if f.get('default')), len(node['fields']))
+                    node['fields'].insert(index, dict(name='segments', shape=dict(kind='u32'), default=None,
+                                                     doc='Number of generated geometry segments.'))
                 for value in node.values():
                     change(value)
             elif isinstance(node, list):

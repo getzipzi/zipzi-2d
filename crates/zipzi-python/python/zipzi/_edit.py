@@ -681,7 +681,7 @@ class Edit:
         self._call(lambda: self._native.replace_topology(
             (source.version, source.mesh_id, list(source.vertex_ids),
              list(source.positions), list(source.uvs), list(source.triangles),
-             source.space, source.parent_id),
+             source.space, source.parent_id, source.meshing),
             _mesh_record_data(mesh), binding_data,
             [_blend_binding_data(item) for item in blend_bindings],
             [_glue_data(item) for item in glues],

@@ -17,7 +17,11 @@ fn bind<T: ApiShape>(
     form: &'static str,
 ) -> Binding {
     let rust = match T::api_shape() {
-        Shape::Record { name, .. } | Shape::Union { name, .. } | Shape::Opaque { name } => name,
+        Shape::Record { name, .. }
+        | Shape::Union { name, .. }
+        | Shape::Opaque { name }
+        | Shape::SerdeRecord { name, .. }
+        | Shape::SerdeEnum { name, .. } => name,
         _ => panic!("Binding must name a Rust type"),
     };
     Binding {
@@ -91,6 +95,19 @@ fn main() {
         })),
         bindings: vec![
             binding!(zipzi_core::Vec2, "meshes", "Point", "point"),
+            binding!(
+                zipzi_core::MeshConstraintKind,
+                "meshes",
+                "ConstraintKind",
+                "enum"
+            ),
+            binding!(
+                zipzi_core::MeshConstraint,
+                "meshes",
+                "Constraint",
+                "owned_record"
+            ),
+            binding!(zipzi_core::MeshMeshing, "meshes", "Meshing", "owned_record"),
             binding!(
                 zipzi_sdk::MeshGeometry,
                 "meshes",

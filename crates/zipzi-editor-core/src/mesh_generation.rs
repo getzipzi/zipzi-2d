@@ -219,6 +219,7 @@ impl Document {
                 positions: mesh.base_positions,
                 uvs: mesh.uvs,
                 triangles: mesh.triangles,
+                meshing: mesh.meshing,
             },
         })
     }
@@ -251,6 +252,7 @@ impl Document {
                 mesh.base_positions = g.positions.clone();
                 mesh.uvs = g.uvs.clone();
                 mesh.triangles = g.triangles.clone();
+                mesh.meshing = g.meshing.clone();
                 let replacement = TopologyReplacement {
                     mesh,
                     binding: None,
@@ -313,6 +315,7 @@ impl Document {
             positions: mesh.base_positions,
             uvs: mesh.uvs,
             triangles: mesh.triangles,
+            meshing: mesh.meshing,
         })
     }
 
@@ -330,6 +333,10 @@ impl Document {
         let mesh = self
             .mesh(&object.id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
+        ensure!(
+            mesh.meshing.is_none(),
+            "Regenerating modeling topology requires an explicit full replacement of its boundary and constraints"
+        );
         ensure!(
             self.textures.contains(&mesh.texture_asset_id),
             "Missing source texture"
@@ -371,6 +378,7 @@ impl Document {
                 positions: mesh.base_positions,
                 uvs: mesh.uvs,
                 triangles: mesh.triangles,
+                meshing: mesh.meshing,
             },
             1,
             1,

@@ -131,7 +131,7 @@ pub(crate) fn mesh_binding_from_tuple(data: MeshBindingDataTuple) -> MeshBinding
 }
 
 pub(crate) fn geometry_from_tuple(value: GeometryTuple) -> PyResult<GeometrySnapshot> {
-    let (version, mesh_id, vertex_ids, positions, uvs, triangles, space, parent) = value;
+    let (version, mesh_id, vertex_ids, positions, uvs, triangles, space, parent, meshing) = value;
     let space = match (space.as_str(), parent) {
         ("model", None) => GeometrySpace::Model,
         ("rotation_local", Some(parent)) => GeometrySpace::RotationLocal(parent),
@@ -149,6 +149,7 @@ pub(crate) fn geometry_from_tuple(value: GeometryTuple) -> PyResult<GeometrySnap
         uvs: uvs.into_iter().map(|(x, y)| Vec2::new(x, y)).collect(),
         triangles: triangles.into_iter().map(|(a, b, c)| [a, b, c]).collect(),
         space,
+        meshing: meshing_from_tuple(meshing)?,
     })
 }
 pub(crate) type DrawOrderTuple = (String, Vec<String>, i32, i32);
@@ -177,6 +178,7 @@ pub(crate) type GeometryTuple = (
     Vec<(u32, u32, u32)>,
     String,
     Option<String>,
+    MeshMeshingTuple,
 );
 pub(crate) type EventTuple = (
     String,
@@ -296,7 +298,9 @@ pub(crate) type MeshGeometryDataTuple = (
     Vec<PointTuple>,
     Vec<PointTuple>,
     Vec<(u32, u32, u32)>,
+    MeshMeshingTuple,
 );
+pub(crate) type MeshMeshingTuple = Option<(Vec<u32>, Vec<([u32; 2], String)>)>;
 pub(crate) type MeshDrawingDataTuple = (
     Option<f32>,
     String,

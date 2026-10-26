@@ -201,6 +201,7 @@ pub(super) fn mesh_update_is_tracked(a: &Mesh, b: &Mesh) -> bool {
         base_positions,
         uvs,
         triangles,
+        meshing,
         runtime_id,
         part_id,
         deformer_id,
@@ -219,6 +220,7 @@ pub(super) fn mesh_update_is_tracked(a: &Mesh, b: &Mesh) -> bool {
         && base_positions == &b.base_positions
         && uvs == &b.uvs
         && triangles == &b.triangles
+        && meshing == &b.meshing
         && runtime_id == &b.runtime_id
         && part_id == &b.part_id
         && deformer_id == &b.deformer_id

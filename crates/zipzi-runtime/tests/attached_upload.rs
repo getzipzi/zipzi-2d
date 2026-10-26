@@ -46,6 +46,7 @@ fn sdk_limit_grid_uses_typed_binary_and_pending_upload_blocks_other_writes() {
         positions: points.clone(),
         uvs: points,
         triangles: vec![[0, 1, 2], [0, 2, 3]],
+        meshing: None,
     };
     let geometry = zipzi_sdk::rectangle_grid_geometry(&base, 255, 255).unwrap();
     assert_eq!(geometry.vertex_ids.len(), 65536);

@@ -1,5 +1,5 @@
-use zipzi_core::types::{BlendMode, DeltaKeyforms, Status, TransformKind};
 use zipzi_core::Document;
+use zipzi_core::types::{BlendMode, DeltaKeyforms, Status, TransformKind};
 
 use super::types::*;
 
@@ -40,6 +40,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
             base_positions,
             uvs,
             triangles: triangles_flat,
+            meshing: m.meshing.clone(),
             properties: MeshPropertiesWire {
                 part_id: m.part_id.clone(),
                 deformer_id: m.deformer_id.clone(),
@@ -302,7 +303,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
 
     let project = ProjectWire {
         format: "zipzi-directory-project".to_string(),
-        format_version: 20,
+        format_version: 21,
         document: DocumentWire {
             id: document.id().to_string(),
             export_settings: document.export_settings(),

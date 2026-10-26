@@ -42,7 +42,7 @@ arguments and output paths.
 | `test_tools.py` | Repository tooling tests; accepts unittest discovery flags (`-p`, `-k`, `-v`) |
 | `test-sdk.sh` | SDK fast, mesh, regression, stress, Python, wheel and full gates |
 | `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
-| `python/test_python.py` | Refresh Debug Python extension or build/validate an isolated Release wheel |
+| `python/test_python.py` | Deprecated `zipzi-python` adapter: historical Debug extension / Release wheel runner |
 | `python/python2_contract.py` | P3A inventory, source/artifact freeze, complete target map/signatures, agent configuration and P3A-0 exit gate |
 | `python/python2_pairs.py` | Counterbalanced comparisons of frozen Python2 clients/Release binaries with the unchanged P0 workload and thresholds |
 | `python/python2_p0_migration.py` | Freeze an explicit shared P3A API adapter for both generations; guard original inputs, operations, assertions, measurement core and policy |
@@ -83,10 +83,10 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | --- | --- |
 | SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
 | SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic, events, protocol/framing and retention contracts; optional filter |
-| `python tools/python/test_connected.py` | Build a CPU socket host fixture and pure wheel; isolated installed Python subprocess/cold-start/fault/recovery acceptance; optional unittest names |
+| `python tools/python/test_connected.py` | Deprecated legacy Connected tests; the old client protocol is incompatible with the current Runtime. Use `python2-connected` for maintained acceptance |
 | SDK `mesh` / `regression` | Daily alpha mesh / all 17 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
-| SDK `python` / `wheel` | Rebuilt Debug extension / isolated Release wheel gates |
+| SDK `python` / `wheel` | Deprecated `zipzi-python` historical Debug extension / Release wheel gates; use `python2` / `python2-connected` for maintained Python SDK checks |
 | SDK `python2` | New Runtime-backed package: refreshed native adapter, Local/Connected behavior, strict positive/negative types and generation drift |
 | SDK `python2-connected` | New pure wheel in an isolated environment; real cold-start/ownership/recovery; optional `--editor-host /absolute/path/to/zipzi-editor` adds production desktop acceptance |
 | SDK `full` or no argument | SDK formatting, complete 16-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
@@ -181,8 +181,10 @@ client. Acceptance/full prepares its installed pure wheel unless
 distribution without `zipzi_native`; the acceptance test checks this explicitly.
 
 See [test layout and prerequisites](tests/README.md). These tests exercise
-tooling, not the built SDK extension. For the latter use `test-sdk.sh python`:
-each invocation rebuilds the current Debug extension, checks GPU capabilities and
+tooling, not the built SDK extension. Maintained Python SDK checks use
+`test-sdk.sh python2` or `test-sdk.sh python2-connected`.
+The deprecated adapter's historical `test-sdk.sh python` runner
+rebuilds its Debug extension, checks GPU capabilities and
 starts fresh test processes. CPU and observe runs share one locked editable
 environment in `target/python-tests/`; wheel runs use separate environments and
 isolated installed packages. `python -- -k history` filters development tests;

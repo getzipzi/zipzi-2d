@@ -514,7 +514,7 @@ fn identity_collisions_and_missing_resolved_targets_cannot_be_saved() {
     assert_eq!(s.version(), v);
     let mut wire: serde_json::Value =
         serde_json::from_str(&zipzi_project::encode_project(s.document()).unwrap()).unwrap();
-    assert_eq!(wire["format_version"], 20);
+    assert_eq!(wire["format_version"], 21);
     wire["format_version"] = 15.into();
     assert_eq!(
         zipzi_project::decode_project(&wire.to_string())

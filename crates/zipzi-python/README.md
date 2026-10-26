@@ -1,15 +1,21 @@
-# Zipzi Python SDK
+# Zipzi Python SDK (deprecated)
 
-This is the legacy adapter retained for repository tests and experiments. The
-formal `zipzi` / `zipzi-native` release sources are in
+**Deprecated: this package is no longer maintained.** It is retained only for
+historical tests and experiments; new features and compatibility fixes belong in
+[`zipzi-python2`](../zipzi-python2/README.md). Its Connected client is incompatible
+with the current Runtime protocol.
+
+The maintained `zipzi` / `zipzi-native` release sources are in
 [`../zipzi-python2`](../zipzi-python2/README.md). Do not upload this legacy wheel
 to the public `zipzi` project; see the [release guide](../../docs/RELEASING.md).
 
-`zipzi` is the distributable Python interface for Zipzi 2D authoring. It
+The remaining documentation describes the deprecated adapter and is retained
+for historical reference, not as current installation or compatibility guidance.
+
+This adapter provided a Python interface for Zipzi 2D authoring. It
 creates and edits 2D model projects, evaluates parameterized geometry, imports
 model3/MOC3 input, and exports MOC3 packages. The optional `observe` build adds
-offscreen WGPU rendering. The Rust crates remain available for Rust callers;
-the Python package is the wheel intended for Python SDK users.
+offscreen WGPU rendering. Use `zipzi-python2` for current Python SDK development.
 
 The current wheel targets **CPython 3.14** (`>=3.14,<3.15`). The repository
 builds and validates wheels, but does not contain a package publication
@@ -175,7 +181,7 @@ from the runtime grid. Activating the first axis copies the latest base shape.
 Clearing/removing an active axis requires an explicit `Slice` or `Resample`
 reduction. Shared table base changes compensate every representable user;
 constrained or discrete cases that cannot preserve behavior are rejected.
-Native projects use directory-project version 20; older experimental native
+Native projects use directory-project version 21; older experimental native
 schemas require reimporting the original source.
 
 ## Import and export

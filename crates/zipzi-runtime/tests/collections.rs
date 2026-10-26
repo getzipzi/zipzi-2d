@@ -16,6 +16,7 @@ fn spec(n: usize, name: &str) -> MeshCreateSpec {
             positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
             uvs: vec![Vec2::new(0., 0.); 3],
             triangles: vec![[42, 7, 99]],
+            meshing: None,
         },
     }
 }

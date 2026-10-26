@@ -47,8 +47,23 @@ pub(super) fn summarize_content(
         if before.get_mesh(id).is_some() || after.get_mesh(id).is_some() {
             let a = before.get_mesh(id);
             let b = after.get_mesh(id);
-            let topology = a.map(|m| (&m.vertex_ids, &m.triangles, &m.part_id, &m.deformer_id))
-                != b.map(|m| (&m.vertex_ids, &m.triangles, &m.part_id, &m.deformer_id));
+            let topology = a.map(|m| {
+                (
+                    &m.vertex_ids,
+                    &m.triangles,
+                    &m.meshing,
+                    &m.part_id,
+                    &m.deformer_id,
+                )
+            }) != b.map(|m| {
+                (
+                    &m.vertex_ids,
+                    &m.triangles,
+                    &m.meshing,
+                    &m.part_id,
+                    &m.deformer_id,
+                )
+            });
             if topology
                 || a.map(|m| (&m.base_positions, &m.uvs)) != b.map(|m| (&m.base_positions, &m.uvs))
                 || before.binding_for_mesh(id) != after.binding_for_mesh(id)

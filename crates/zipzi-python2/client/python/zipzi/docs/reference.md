@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-p3a-345-1; client source SHA-256 b1eed9772d081bd092734c078f1aecdd878f5ba89379168276367eb6c7eed5c8.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-p3a-345-1; client source SHA-256 b7d7e3d76a2c6828fcf5c2f1584785ca8e1435eff28912e9f6e4de2f8085854d.
 
 
 ## zipzi.ApiDescription
@@ -2817,6 +2817,43 @@ Explicitly create an owned in-process Runtime with the paired optional native wh
 Mesh values are generated; selected Plan intents are generated.
 
 
+## zipzi.meshes.Constraint
+
+`(endpoints: Sequence[int], kind: ConstraintKind) -> None`
+
+Immutable owned Constraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+endpoints: Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.
+kind: Whether this edge was fixed by the user or supplied by the edge-layout generator.
+
+- `endpoints`: Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.
+- `kind`: Whether this edge was fixed by the user or supplied by the edge-layout generator.
+
+## zipzi.meshes.Constraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.meshes.Constraint.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.meshes.ConstraintKind
+
+`()`
+
+Immutable typed value. See field semantics and the linked workflow.
+
+
 ## zipzi.meshes.Create
 
 `(spec: MeshSpec, kind: Literal['create'] = field(default='create', init=False))`
@@ -2851,20 +2888,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.meshes.Geometry
 
-`(vertex_ids: Sequence[int], positions: Sequence[Sequence[float]], uvs: Sequence[Sequence[float]], triangles: Sequence[Sequence[int]]) -> None`
+`(vertex_ids: Sequence[int], positions: Sequence[Sequence[float]], uvs: Sequence[Sequence[float]], triangles: Sequence[Sequence[int]], meshing: Meshing | None=None) -> None`
 
 Immutable owned Geometry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
 vertex_ids: Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
-positions: Model-space XY coordinates ordered by vertex_ids.
+positions: Absolute XY coordinates in the mesh authoring space (model space without a deformation
+parent, otherwise the parent's local/parameter space), ordered by vertex_ids.
 uvs: Texture UV coordinates ordered by vertex_ids.
 triangles: Triangle entries reference vertex_ids values, never offsets into positions.
+meshing: Optional canonical UV boundary and retained internal structure edges.
 
 - `vertex_ids`: Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
-- `positions`: Model-space XY coordinates ordered by vertex_ids.
+- `positions`: Absolute XY coordinates in the mesh authoring space (model space without a deformation
+parent, otherwise the parent's local/parameter space), ordered by vertex_ids.
 - `uvs`: Texture UV coordinates ordered by vertex_ids.
 - `triangles`: Triangle entries reference vertex_ids values, never offsets into positions.
+- `meshing`: Optional canonical UV boundary and retained internal structure edges.
 
 ## zipzi.meshes.Geometry.__repr__
 
@@ -2951,6 +2992,36 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.meshes.MeshSpec.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.meshes.Meshing
+
+`(boundary: Sequence[int], constraints: Sequence[Constraint]) -> None`
+
+Immutable owned Meshing value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+boundary: Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.
+constraints: Internal constraints sorted by their canonical endpoint pairs; excludes boundary edges.
+
+- `boundary`: Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.
+- `constraints`: Internal constraints sorted by their canonical endpoint pairs; excludes boundary edges.
+
+## zipzi.meshes.Meshing.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.meshes.Meshing.summary
 
 `() -> str`
 
@@ -7362,7 +7433,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.GeometrySnapshot
 
-`(version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], space: GeometrySpace)`
+`(version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, space: GeometrySpace)`
 
 Immutable owned GeometrySnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -7374,6 +7445,7 @@ positions: Absolute XY vertices in the explicitly recorded GeometrySpace, aligne
 uvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
 triangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
 array offsets.
+meshing: Optional canonical UV boundary and retained internal structure edges.
 space: Coordinate space of positions; local-space variants carry the controlling transform ID.
 
 - `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
@@ -7383,6 +7455,7 @@ space: Coordinate space of positions; local-space variants carry the controlling
 - `uvs`: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
 - `triangles`: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
 array offsets.
+- `meshing`: Optional canonical UV boundary and retained internal structure edges.
 - `space`: Coordinate space of positions; local-space variants carry the controlling transform ID.
 
 ## zipzi.modeling.GeometrySnapshot.__repr__
@@ -7999,7 +8072,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.Mesh
 
-`(id: str, name: str, texture_asset_id: SceneReference, vertex_ids: tuple[int, ...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], runtime_id: str, part_id: str, deformer_id: str, appearance: Appearance, draw_order: float | None = None, blend_mode: BlendMode, enabled: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...], raw_blend_mode: int | None = None)`
+`(id: str, name: str, texture_asset_id: SceneReference, vertex_ids: tuple[int, ...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, runtime_id: str, part_id: str, deformer_id: str, appearance: Appearance, draw_order: float | None = None, blend_mode: BlendMode, enabled: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...], raw_blend_mode: int | None = None)`
 
 Immutable owned Mesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -8013,6 +8086,7 @@ base_positions: Absolute base-shape XY positions in the mesh authoring space, or
 uvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
 triangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
 array offsets.
+meshing: Optional single-region modeling topology in UV space; independent of posed positions.
 runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
 part_id: Organizational Part owner ID; independent of the deformation parent. An empty string
 represents the root/unassigned container.
@@ -8036,6 +8110,7 @@ preserve an external texture identifier.
 - `uvs`: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
 - `triangles`: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
 array offsets.
+- `meshing`: Optional single-region modeling topology in UV space; independent of posed positions.
 - `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
 - `part_id`: Organizational Part owner ID; independent of the deformation parent. An empty string
 represents the root/unassigned container.
@@ -8103,6 +8178,43 @@ still exposes the owned full value; no host resource is created/released.
 `() -> str`
 
 Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MeshConstraint
+
+`(endpoints: tuple[int, int], kind: MeshConstraintKind)`
+
+Immutable owned MeshConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+endpoints: Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.
+kind: Whether this edge was fixed by the user or supplied by the edge-layout generator.
+
+- `endpoints`: Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.
+- `kind`: Whether this edge was fixed by the user or supplied by the edge-layout generator.
+
+## zipzi.modeling.MeshConstraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MeshConstraint.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MeshConstraintKind
+
+`()`
+
+Immutable typed value. See field semantics and the linked workflow.
 
 
 ## zipzi.modeling.MeshGridEdit
@@ -8366,6 +8478,36 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.MeshKeyform.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MeshMeshing
+
+`(boundary: tuple[int, ...], constraints: tuple[MeshConstraint, ...])`
+
+Immutable owned MeshMeshing value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+boundary: Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.
+constraints: Internal constraints sorted by their canonical endpoint pairs; excludes boundary edges.
+
+- `boundary`: Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.
+- `constraints`: Internal constraints sorted by their canonical endpoint pairs; excludes boundary edges.
+
+## zipzi.modeling.MeshMeshing.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MeshMeshing.summary
 
 `() -> str`
 
@@ -15692,14 +15834,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned TopologyReplacement value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-mesh: Complete replacement mesh geometry and metadata.
+mesh: Complete replacement mesh geometry and metadata. Setting meshing to None explicitly
+discards previous modeling topology; ordinary mesh replacements must preserve it.
 binding: Optional replacement ordinary mesh binding; None supplies no ordinary binding.
 blend_bindings: Complete replacement BlendShape bindings for the remeshed object.
 glues: Complete replacement Glue records affected by the remesh.
 vertex_mapping: Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly
 removes it.
 
-- `mesh`: Complete replacement mesh geometry and metadata.
+- `mesh`: Complete replacement mesh geometry and metadata. Setting meshing to None explicitly
+discards previous modeling topology; ordinary mesh replacements must preserve it.
 - `binding`: Optional replacement ordinary mesh binding; None supplies no ordinary binding.
 - `blend_bindings`: Complete replacement BlendShape bindings for the remeshed object.
 - `glues`: Complete replacement Glue records affected by the remesh.

@@ -1,7 +1,7 @@
 //! Candidate-document edits and atomic publication.
 use std::collections::HashSet;
 
-use crate::session::{keys_in, object_exists_in, AuthoringSession};
+use crate::session::{AuthoringSession, keys_in, object_exists_in};
 use crate::types::*;
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::{
@@ -955,6 +955,11 @@ impl EditSession<'_> {
             if !changes.deleted.contains(&entity) {
                 changes.deleted.push(entity);
             }
+        }
+        if identity_changed {
+            changes
+                .categories
+                .insert(crate::ChangeCategory::EvaluationInputs);
         }
         let previous = changed.then(|| session.project.document().checkpoint());
         let mut evict_count = 0usize;

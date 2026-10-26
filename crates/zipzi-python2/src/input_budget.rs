@@ -66,11 +66,20 @@ fn attr_text(value: &Bound<'_, PyAny>, name: &str) -> PyResult<usize> {
     text(&value.getattr(name)?)
 }
 fn geometry(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    let meshing = value.getattr("meshing")?;
+    let meshing_bytes = if meshing.is_none() {
+        0
+    } else {
+        256usize
+            .saturating_add(meshing.getattr("boundary")?.len()?.saturating_mul(8))
+            .saturating_add(meshing.getattr("constraints")?.len()?.saturating_mul(512))
+    };
     Ok(256usize
         .saturating_add(value.getattr("vertex_ids")?.len()?.saturating_mul(8))
         .saturating_add(value.getattr("positions")?.len()?.saturating_mul(32))
         .saturating_add(value.getattr("uvs")?.len()?.saturating_mul(32))
-        .saturating_add(value.getattr("triangles")?.len()?.saturating_mul(48)))
+        .saturating_add(value.getattr("triangles")?.len()?.saturating_mul(48))
+        .saturating_add(meshing_bytes))
 }
 pub fn operations(values: &Bound<'_, PyAny>) -> PyResult<usize> {
     if values.len()? > 1024 {

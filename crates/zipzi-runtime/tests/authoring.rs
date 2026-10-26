@@ -6,6 +6,201 @@ use zipzi_sdk::{MeshCreateSpec, MeshGeometry, MeshOperation};
 use zipzi_sdk::{ParameterCreateSpec, ParameterOperation, ParameterPatch};
 
 #[test]
+fn manual_mesh_candidate_and_formal_reads_preserve_constraints_in_borrowed_output() {
+    use zipzi_core::{MeshConstraint, MeshConstraintKind, MeshMeshing};
+    let mut rt = Runtime::default();
+    let client = rt.register_client().unwrap();
+    let session = rt
+        .create_session(client, &id(1), ModelSetup::default())
+        .unwrap();
+    let edit = rt.begin_edit(client, session, "manual mesh", None).unwrap();
+    let structure = MeshMeshing {
+        boundary: vec![7, 99, 42],
+        constraints: vec![],
+    };
+    let geometry = MeshGeometry {
+        vertex_ids: vec![42, 7, 99],
+        positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+        uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+        triangles: vec![[42, 7, 99]],
+        meshing: Some(structure.clone()),
+    };
+    rt.apply_authoring(
+        client,
+        edit,
+        vec![EditOperation::Mesh {
+            operation: MeshOperation::Create {
+                spec: MeshCreateSpec {
+                    name: "mesh".repeat(4096),
+                    geometry,
+                    texture_asset_id: String::new(),
+                    id: Some(id(2)),
+                },
+            },
+        }],
+    )
+    .unwrap();
+    let preview = rt
+        .mesh_snapshot(client, session, Some(edit), &id(2))
+        .unwrap();
+    assert_eq!(preview.geometry.meshing, Some(structure));
+    let borrowed = rt
+        .mesh_response(client, session, Some(edit), vec![id(2)], true)
+        .unwrap()
+        .unwrap();
+    let blob = serde_json::from_value(borrowed["blob"].clone()).unwrap();
+    assert_eq!(
+        &*rt.blob(client, blob).unwrap(),
+        zipzi_core::binary_wire::encode(&vec![preview]).unwrap()
+    );
+    rt.release_blob(client, blob).unwrap();
+    rt.commit_edit(client, edit).unwrap();
+    let formal = rt.mesh_snapshot(client, session, None, &id(2)).unwrap();
+    let edit = rt
+        .begin_edit(client, session, "invalid constraint", None)
+        .unwrap();
+    let mut mesh = rt.session(session).unwrap().mesh(&id(2)).unwrap();
+    mesh.meshing
+        .as_mut()
+        .unwrap()
+        .constraints
+        .push(MeshConstraint {
+            endpoints: [7, 99],
+            kind: MeshConstraintKind::User,
+        });
+    assert!(
+        rt.apply_authoring(
+            client,
+            edit,
+            vec![EditOperation::Modeling {
+                operation: Box::new(modeling::ModelingCommand::ReplaceMesh { mesh })
+            }]
+        )
+        .is_err()
+    );
+    assert_eq!(
+        rt.mesh_snapshot(client, session, None, &id(2))
+            .unwrap()
+            .geometry,
+        formal.geometry
+    );
+}
+
+#[test]
+fn manual_mesh_constraint_only_publication_has_history_and_source_sequence() {
+    use zipzi_core::{Mesh, MeshConstraint, MeshConstraintKind, MeshMeshing};
+    let mut rt = Runtime::default();
+    let client = rt.register_client().unwrap();
+    let session = rt
+        .create_session(client, &id(1), ModelSetup::default())
+        .unwrap();
+    let mut mesh = Mesh {
+        id: id(2),
+        name: "mesh".repeat(4096),
+        vertex_ids: vec![0, 1, 2, 3],
+        base_positions: vec![
+            Vec2::new(0., 0.),
+            Vec2::new(1., 0.),
+            Vec2::new(1., 1.),
+            Vec2::new(0., 1.),
+        ],
+        uvs: vec![
+            Vec2::new(0., 0.),
+            Vec2::new(1., 0.),
+            Vec2::new(1., 1.),
+            Vec2::new(0., 1.),
+        ],
+        triangles: vec![[0, 1, 2], [0, 2, 3]],
+        meshing: Some(MeshMeshing {
+            boundary: vec![0, 1, 2, 3],
+            constraints: vec![],
+        }),
+        ..Default::default()
+    };
+    let edit = rt.begin_edit(client, session, "create", None).unwrap();
+    rt.apply_authoring(
+        client,
+        edit,
+        vec![EditOperation::Modeling {
+            operation: Box::new(modeling::ModelingCommand::CreateMesh { mesh: mesh.clone() }),
+        }],
+    )
+    .unwrap();
+    rt.commit_edit(client, edit).unwrap();
+    let evaluation = rt.session(session).unwrap().evaluation_revision();
+    mesh = rt.session(session).unwrap().mesh(&id(2)).unwrap();
+    let bytes_before = rt.mesh_read_bytes(client, session, None, &[id(2)]).unwrap();
+    let edit = rt.begin_edit(client, session, "constrain", None).unwrap();
+    mesh.meshing
+        .as_mut()
+        .unwrap()
+        .constraints
+        .push(MeshConstraint {
+            endpoints: [0, 2],
+            kind: MeshConstraintKind::EdgeSupport,
+        });
+    rt.apply_authoring(
+        client,
+        edit,
+        vec![EditOperation::Modeling {
+            operation: Box::new(modeling::ModelingCommand::ReplaceMesh { mesh }),
+        }],
+    )
+    .unwrap();
+    let support = rt
+        .mesh_snapshot(client, session, Some(edit), &id(2))
+        .unwrap();
+    let mut mesh = rt
+        .edit_snapshot(client, edit)
+        .unwrap()
+        .snapshot
+        .document()
+        .get_mesh(&id(2))
+        .unwrap()
+        .clone();
+    mesh.meshing.as_mut().unwrap().constraints[0].kind = MeshConstraintKind::User;
+    rt.apply_authoring(
+        client,
+        edit,
+        vec![EditOperation::Modeling {
+            operation: Box::new(modeling::ModelingCommand::ReplaceMesh { mesh }),
+        }],
+    )
+    .unwrap();
+    let user = rt
+        .mesh_snapshot(client, session, Some(edit), &id(2))
+        .unwrap();
+    assert_ne!(user.source, support.source);
+    assert!(
+        rt.mesh_read_bytes(client, session, Some(edit), &[id(2)])
+            .unwrap()
+            > bytes_before
+    );
+    let borrowed = rt
+        .mesh_response(client, session, Some(edit), vec![id(2)], true)
+        .unwrap()
+        .unwrap();
+    let blob = serde_json::from_value(borrowed["blob"].clone()).unwrap();
+    assert_eq!(
+        &*rt.blob(client, blob).unwrap(),
+        zipzi_core::binary_wire::encode(&vec![user.clone()]).unwrap()
+    );
+    rt.release_blob(client, blob).unwrap();
+    rt.commit_edit(client, edit).unwrap();
+    assert_eq!(rt.session(session).unwrap().history_lengths(), (2, 0));
+    assert_eq!(
+        rt.session(session).unwrap().evaluation_revision(),
+        evaluation
+    );
+    assert_eq!(
+        rt.mesh_snapshot(client, session, None, &id(2))
+            .unwrap()
+            .geometry,
+        user.geometry
+    );
+}
+
+#[test]
 fn modeling_sample_admission_checks_exact_source_before_snapshot_and_keeps_edit_usable() {
     let mut rt = Runtime::default();
     let client = rt.register_client().unwrap();
@@ -387,6 +582,7 @@ fn selected_mesh_batch_admits_total_expansion_before_any_snapshot_copy() {
         positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
         uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
         triangles: vec![[0, 1, 2]],
+        meshing: None,
     };
     rt.edit_meshes(
         client,
@@ -480,6 +676,7 @@ fn selected_mesh_query_checks_exact_session_and_admits_before_copy_without_poiso
             Vec2::new(0., 1.),
         ],
         triangles: vec![[0, 1, 2], [0, 2, 3]],
+        meshing: None,
     };
     let geometry = zipzi_sdk::rectangle_grid_geometry(&base, 100, 100).unwrap();
     rt.edit_meshes(

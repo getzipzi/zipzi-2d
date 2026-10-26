@@ -79,7 +79,7 @@ def _mesh_record_data(value: MeshRecordSpec | MeshRecordSnapshot):
     return (
         value.id, value.name, drawing.texture_asset_id,
         (list(geometry.vertex_ids), list(geometry.positions), list(geometry.uvs),
-         list(geometry.triangles)),
+         list(geometry.triangles), geometry.meshing),
         (value.part_id, value.deformer_id), tuple(drawing.appearance),
         (drawing.draw_order, drawing.blend_mode, drawing.enabled, drawing.double_sided,
          drawing.inverted_mask, list(drawing.masks), drawing.raw_blend_mode),

@@ -8,6 +8,7 @@ struct BorrowedGeometry<'a> {
     positions: &'a [Vec2],
     uvs: &'a [Vec2],
     triangles: &'a [[u32; 3]],
+    meshing: Option<&'a zipzi_core::MeshMeshing>,
 }
 struct GeometryRef<'a>(BorrowedGeometry<'a>);
 impl WireWrite for GeometryRef<'_> {
@@ -63,6 +64,12 @@ impl Runtime {
                     )
                     .saturating_add(mesh.triangles.len().saturating_mul(256))
                     .saturating_add(mesh.vertex_ids.len().saturating_mul(64))
+                    .saturating_add(mesh.meshing.as_ref().map_or(0, |m| {
+                        m.boundary
+                            .len()
+                            .saturating_mul(64)
+                            .saturating_add(m.constraints.len().saturating_mul(512))
+                    }))
                     .saturating_add(
                         mesh.id
                             .len()
@@ -98,6 +105,7 @@ impl Runtime {
                             positions: &m.base_positions,
                             uvs: &m.uvs,
                             triangles: &m.triangles,
+                            meshing: m.meshing.as_ref(),
                         }),
                     }
                 })

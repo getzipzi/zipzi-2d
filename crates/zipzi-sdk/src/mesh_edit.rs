@@ -102,6 +102,7 @@ impl EditSession<'_> {
             base_positions: spec.geometry.positions,
             uvs: spec.geometry.uvs,
             triangles: spec.geometry.triangles,
+            meshing: spec.geometry.meshing,
             ..Default::default()
         })?;
         Ok(id)

@@ -17,6 +17,8 @@ png = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+robust = "1.2.0"
+rstar = "0.12.2"
 
 [dev-dependencies]
 serde_json = { workspace = true }

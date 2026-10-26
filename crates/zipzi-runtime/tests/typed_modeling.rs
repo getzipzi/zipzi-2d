@@ -21,6 +21,7 @@ fn integer_vertex_maps_roundtrip_inside_buffered_tagged_authoring_commands() {
                 uvs: vec![],
                 triangles: vec![],
                 space: GeometrySpace::Model,
+                meshing: None,
             },
             replacement: TopologyReplacement {
                 mesh,

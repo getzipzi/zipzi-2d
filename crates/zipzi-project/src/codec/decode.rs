@@ -1,3 +1,4 @@
+use zipzi_core::Document;
 use zipzi_core::types::{
     Appearance, BindingAxis, BlendMode, BlendShapeBinding, BlendShapeConstraint,
     BlendShapeKeyTable, DeltaGlueKeyform, DeltaKeyforms, DeltaMeshKeyform, DeltaOffscreenKeyform,
@@ -5,7 +6,6 @@ use zipzi_core::types::{
     MeshBinding, MeshKeyform, Offscreen, OffscreenKeyform, RotationPose, SceneBinding, Status,
     Transform, TransformKind, Vec2,
 };
-use zipzi_core::Document;
 use zipzi_core::{PartKeyform, RotationKeyform, SceneTrack, WarpKeyform};
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 
@@ -90,6 +90,7 @@ fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh, Status> {
             .collect(),
         uvs: mesh.uvs.iter().map(|p| Vec2::new(p[0], p[1])).collect(),
         triangles: mesh.triangles.as_chunks::<3>().0.to_vec(),
+        meshing: mesh.meshing.clone(),
         draw_order: mesh.properties.draw_order,
         raw_blend_mode: mesh.properties.raw_blend_mode,
         appearance: mesh.properties.appearance.clone().into(),
@@ -107,11 +108,11 @@ pub fn decode_project(text: &str) -> Result<Document, Status> {
     let header: serde_json::Value =
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
     if header.get("format").and_then(|v| v.as_str()) == Some("zipzi-directory-project")
-        && header.get("format_version").and_then(|v| v.as_u64()) != Some(20)
+        && header.get("format_version").and_then(|v| v.as_u64()) != Some(21)
     {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
-            "Only directory-project version 20 is supported; reimport the source asset",
+            "Only directory-project version 21 is supported; reimport the source asset",
         ));
     }
     let root: ProjectWire = match serde_json::from_str(text) {
@@ -127,7 +128,9 @@ pub fn decode_project(text: &str) -> Result<Document, Status> {
                             .unwrap_or_else(|| "\"missing\"".to_string());
                         return Err(Status::error(
                             "LEGACY_PROJECT",
-                            format!("Experimental zipzi-project version {ver} is unsupported; no automatic migration"),
+                            format!(
+                                "Experimental zipzi-project version {ver} is unsupported; no automatic migration"
+                            ),
                         ));
                     }
                 }
@@ -151,7 +154,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
     }
 
-    if root.format_version != 20 {
+    if root.format_version != 21 {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             format!(
@@ -173,7 +176,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
             return Err(Status::error(
                 "INVALID_PROJECT",
                 "Project requires non-null display_info",
-            ))
+            ));
         }
     };
     let animation_assets = match &root.document.animation_assets {
@@ -182,7 +185,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
             return Err(Status::error(
                 "INVALID_PROJECT",
                 "Project requires non-null animation_assets",
-            ))
+            ));
         }
     };
 

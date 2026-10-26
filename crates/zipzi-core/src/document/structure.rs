@@ -467,7 +467,19 @@ impl Document {
                 indices.push(*slot as u32);
             }
         }
-        validate_render_mesh(&mesh.base_positions, &mesh.uvs, &indices)
+        let status = validate_render_mesh(&mesh.base_positions, &mesh.uvs, &indices);
+        if !status.is_ok() {
+            return status;
+        }
+        match &mesh.meshing {
+            Some(meshing) => crate::geometry::validate_mesh_meshing(
+                &mesh.vertex_ids,
+                &mesh.uvs,
+                &mesh.triangles,
+                meshing,
+            ),
+            None => Status::ok(),
+        }
     }
 }
 

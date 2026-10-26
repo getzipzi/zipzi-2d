@@ -26,6 +26,8 @@ mod handles;
 mod hierarchy_order;
 #[path = "history_budget.rs"]
 mod history_budget;
+#[path = "manual_mesh.rs"]
+mod manual_mesh;
 #[path = "mesh_binding_editing.rs"]
 mod mesh_binding_editing;
 #[path = "mesh_editing.rs"]

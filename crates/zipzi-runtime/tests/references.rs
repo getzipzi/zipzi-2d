@@ -28,6 +28,7 @@ fn setup(rt: &mut Runtime) -> (zipzi_runtime::ClientId, zipzi_runtime::SessionId
                     zipzi_core::Vec2::new(0., 1.),
                 ],
                 triangles: vec![[1, 2, 3]],
+                meshing: None,
             },
         })?;
         SceneOperation::CreatePart {

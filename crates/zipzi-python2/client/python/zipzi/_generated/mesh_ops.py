@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Literal
 import math
-from .meshes import MeshSpec, Point
+from .meshes import MeshSpec, Point, ConstraintKind
 
 @dataclass(frozen=True, repr=False)
 class Create(CompactValue):
@@ -84,6 +84,24 @@ def validate(op: MeshOperation) -> None:
                 for value5 in value4:
                     if type(value5) is not int or not 0 <= value5 <= 0xffffffff:
                         raise ValueError("Vertex IDs must be u32 integers")
+            if op.spec.geometry.meshing is not None:
+                if not isinstance(op.spec.geometry.meshing.boundary, tuple):
+                    raise TypeError("Arrays must be owned tuples")
+                for value6 in op.spec.geometry.meshing.boundary:
+                    if type(value6) is not int or not 0 <= value6 <= 0xffffffff:
+                        raise ValueError("Vertex IDs must be u32 integers")
+                if not isinstance(op.spec.geometry.meshing.constraints, tuple):
+                    raise TypeError("Arrays must be owned tuples")
+                for value7 in op.spec.geometry.meshing.constraints:
+                    if not isinstance(value7.endpoints, tuple):
+                        raise TypeError("Arrays must be owned tuples")
+                    if len(value7.endpoints) != 2:
+                        raise TypeError("Invalid fixed array length")
+                    for value8 in value7.endpoints:
+                        if type(value8) is not int or not 0 <= value8 <= 0xffffffff:
+                            raise ValueError("Vertex IDs must be u32 integers")
+                    if not isinstance(value7.kind, ConstraintKind):
+                        raise TypeError("Invalid constraint kind")
             if not isinstance(op.spec.texture_asset_id, str):
                 raise TypeError("Expected text")
             if op.spec.id is not None:
@@ -122,7 +140,7 @@ def validate(op: MeshOperation) -> None:
 def wire(op: MeshOperation) -> dict[str, object]:
     match op:
         case Create():
-            return dict(op="create", spec=dict(name=op.spec.name, geometry=dict(vertex_ids=op.spec.geometry.vertex_ids, positions=[dict(x=item[0], y=item[1]) for item in op.spec.geometry.positions], uvs=[dict(x=item[0], y=item[1]) for item in op.spec.geometry.uvs], triangles=op.spec.geometry.triangles), texture_asset_id=op.spec.texture_asset_id, id=None if op.spec.id is None else op.spec.id))
+            return dict(op="create", spec=dict(name=op.spec.name, geometry=dict(vertex_ids=op.spec.geometry.vertex_ids, positions=[dict(x=item[0], y=item[1]) for item in op.spec.geometry.positions], uvs=[dict(x=item[0], y=item[1]) for item in op.spec.geometry.uvs], triangles=op.spec.geometry.triangles, meshing=None if op.spec.geometry.meshing is None else dict(boundary=op.spec.geometry.meshing.boundary, constraints=[dict(endpoints=item.endpoints, kind=item.kind.value) for item in op.spec.geometry.meshing.constraints])), texture_asset_id=op.spec.texture_asset_id, id=None if op.spec.id is None else op.spec.id))
         case Rename():
             return dict(op="rename", id=op.id, name=op.name, expected_name=None if op.expected_name is None else op.expected_name)
         case SetPositions():

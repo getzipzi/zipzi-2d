@@ -1,5 +1,8 @@
 use crate::types::{Canvas, Status, Vec2};
 
+mod meshing;
+pub use meshing::validate_mesh_meshing;
+
 pub fn validate_positions(positions: &[Vec2]) -> Status {
     for p in positions {
         if !p.x.is_finite() || !p.y.is_finite() {

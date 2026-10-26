@@ -77,6 +77,16 @@ cargo test --locked -p zipzi-sdk --test integration physics_editing::
 
 ## Alpha mesh generation
 
+Native `Mesh`, `MeshGeometry` and `GeometrySnapshot` optionally carry `MeshMeshing`:
+a canonical counterclockwise UV boundary and sorted internal `User` / `EdgeSupport`
+constraints. Core validates the complete UV triangulation when this metadata exists;
+ordinary meshes retain their previous render-only rules. Position/pose edits preserve
+this structure, and invalid raw UV/topology edits fail atomically. Ordinary replacement
+cannot discard it; a complete `TopologyReplacement` explicitly permits `meshing: None`.
+Constraint-only edits publish topology notifications, dirty state and history without
+refreshing evaluation inputs. Undo/redo and native JSON/CBOR preserve the exact triangles.
+External model exports use the actual triangles and do not preserve modeling constraints.
+
 `alpha_mesh_geometry(AlphaMask { width, height, alpha }, &AlphaMeshOptions)`
 is a deterministic, CPU-only geometry operation. `alpha` contains one byte per
 pixel, in top-down rows; retained pixels above `alpha_threshold` are included.

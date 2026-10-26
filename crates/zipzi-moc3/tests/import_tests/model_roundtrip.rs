@@ -794,6 +794,7 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
         inverted_mask: false,
         masks: vec![],
         raw_blend_mode: None,
+        meshing: None,
     };
     assert!(doc.create_mesh(base_mesh.clone()).status.is_ok());
 

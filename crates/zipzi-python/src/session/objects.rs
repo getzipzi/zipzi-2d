@@ -282,6 +282,7 @@ impl NativeSession {
                         .collect(),
                     space,
                     parent,
+                    meshing_tuple(geometry.meshing),
                 )
             }))
     }

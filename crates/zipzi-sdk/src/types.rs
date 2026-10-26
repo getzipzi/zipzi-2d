@@ -162,6 +162,9 @@ pub struct GeometrySnapshot {
     /// Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
     /// array offsets.
     pub triangles: Vec<[VertexId; 3]>,
+    /// Optional canonical UV boundary and retained internal structure edges.
+    #[serde(default)]
+    pub meshing: Option<zipzi_core::MeshMeshing>,
     /// Coordinate space of positions; local-space variants carry the controlling transform ID.
     pub space: GeometrySpace,
 }
@@ -284,7 +287,8 @@ impl From<&Mesh> for MeshProperties {
     zipzi_api_derive::BinaryWire,
 )]
 pub struct TopologyReplacement {
-    /// Complete replacement mesh geometry and metadata.
+    /// Complete replacement mesh geometry and metadata. Setting meshing to None explicitly
+    /// discards previous modeling topology; ordinary mesh replacements must preserve it.
     pub mesh: Mesh,
     /// Optional replacement ordinary mesh binding; None supplies no ordinary binding.
     pub binding: Option<MeshBinding>,
