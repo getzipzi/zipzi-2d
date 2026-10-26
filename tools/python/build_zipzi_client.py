@@ -10,15 +10,17 @@ import csv
 import hashlib
 import io
 import subprocess
+import sys
 from pathlib import Path
-import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools/packaging'))
+from release import metadata
 
 
 def build(out: Path) -> Path:
-    version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+    version = metadata()["python_version"]
     package = ROOT / "crates/zipzi-python"
     info = f"zipzi-{version}.dist-info"
     files = {f"zipzi/{p.name}": p.read_bytes() for p in (package / "python/zipzi").iterdir()
