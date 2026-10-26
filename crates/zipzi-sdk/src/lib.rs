@@ -18,8 +18,9 @@ pub use diagnostics::{GeometryBounds, GeometryChecks, GeometryDiagnostic, Geomet
 pub use edit::EditSession;
 pub use session::{AuthoringSession, AuthoringSnapshot};
 pub use spatial::{
-    hit_test_geometry, object_bounds, resolve_mesh_ids, GeometryHit, GeometryQuery, ObjectBounds,
-    ObjectTarget, SpatialError, TriangleHit,
+    hit_test_geometry, object_bounds, query_spatial_frame, resolve_mesh_ids,
+    validate_spatial_queries, GeometryHit, GeometryQuery, ObjectBounds, ObjectTarget, SpatialError,
+    SpatialFrame, SpatialQuery, SpatialResult, SpatialSamples, TriangleHit,
 };
 pub use types::{
     EditReceipt, GeometrySnapshot, GeometrySpace, HistoryLimits, HistoryState, ImportReceipt,
@@ -45,8 +46,8 @@ mod geometry;
 pub use geometry::{rectangle_grid_geometry, MeshGeometry};
 mod manual_mesh;
 pub use manual_mesh::{
-    edit_manual_mesh, extract_manual_meshing, AffineUvMap, ManualMeshOperation,
-    ManualMeshResult, ManualVertexIdAllocator,
+    edit_manual_mesh, extract_manual_meshing, AffineUvMap, ManualMeshOperation, ManualMeshResult,
+    ManualVertexIdAllocator,
 };
 mod mesh_binding_edit;
 mod mesh_edit;

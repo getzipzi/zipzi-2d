@@ -97,8 +97,8 @@ def main() -> None:
         expected = {("type_invalid.py", line, rule.strip()) for line, value in
             enumerate((ROOT / "crates/zipzi-python2/tests/type_invalid.py").read_text().splitlines()) if "# error: " in value
             for rule in value.split("# error: ", 1)[1].split(",")}
-        if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 22 or actual != expected:
-            raise RuntimeError(f"Expected twenty-two precise public typing diagnostics: {invalid.stdout}\n{invalid.stderr}")
+        if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 24 or actual != expected:
+            raise RuntimeError(f"Expected twenty-four precise public typing diagnostics: {invalid.stdout}\n{invalid.stderr}")
         recovery_types = ROOT / "crates/zipzi-python2/tests/type_recovery_invalid.py"
         invalid = subprocess.run(["uv", "run", "--locked", "pyright", "--project",
             str(ROOT / "crates/zipzi-python2/pyrightconfig.json"), "--outputjson", str(recovery_types)],

@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-preview-1; client source SHA-256 fac8b762de929ba4721cf98c16e63b05b833ebca489d45bef94506331da678c9.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-spatial-1; client source SHA-256 49864787785fb79213f07216ef71d5ce67383a3c885319d629b3accb5d93f58f.
 
 
 ## zipzi.ApiDescription
@@ -420,6 +420,13 @@ Synchronously evaluate CPU poses without editing or GPU work. poses is an ordere
 `(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> '_lifecycle.Job[Snapshot[sampling.Result]]'`
 
 Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().
+
+
+## zipzi.Edit.modeling.spatial
+
+`(poses: Sequence[Mapping[str, float]], queries: Sequence[_spatial.Query], *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[_spatial.Batch]]'`
+
+Submit frozen CPU geometry queries for explicit parameter poses. Returns Job[Snapshot[spatial.Batch]] with effective parameters, exact Source, requested queries and ordered bounds/hit results. Coordinates are Y-up model units, never screen pixels; hidden geometry is explicitly selectable. Candidate reads do not publish or abort an Edit. A lost submission/result recovers the original call rather than querying newer content. No textures, masks, occlusion or GPU are used.
 
 
 ## zipzi.Edit.parameters
@@ -1601,6 +1608,13 @@ Synchronously evaluate CPU poses without editing or GPU work. poses is an ordere
 Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().
 
 
+## zipzi.Session.modeling.spatial
+
+`(poses: Sequence[Mapping[str, float]], queries: Sequence[_spatial.Query], *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[_spatial.Batch]]'`
+
+Submit frozen CPU geometry queries for explicit parameter poses. Returns Job[Snapshot[spatial.Batch]] with effective parameters, exact Source, requested queries and ordered bounds/hit results. Coordinates are Y-up model units, never screen pixels; hidden geometry is explicitly selectable. Candidate reads do not publish or abort an Edit. A lost submission/result recovers the original call rather than querying newer content. No textures, masks, occlusion or GPU are used.
+
+
 ## zipzi.Session.parameters
 
 `(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)`
@@ -2026,14 +2040,16 @@ Independent frozen animation controls and CPU playback results.
 
 ## zipzi.animation.Batch
 
-`(sequence: int, frames: tuple[PreviewFrame, ...])`
+`(queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
 
 Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+queries: Owned geometric query descriptors aligned with every frame.spatial slot.
 sequence: Accepted sample request ordinal shared by these ordered frames.
 frames: Owned frames in requested target order, retaining duplicate and backward targets.
 
+- `queries`: Owned geometric query descriptors aligned with every frame.spatial slot.
 - `sequence`: Accepted sample request ordinal shared by these ordered frames.
 - `frames`: Owned frames in requested target order, retaining duplicate and backward targets.
 
@@ -2063,17 +2079,19 @@ Typed public API entry.
 
 ## zipzi.animation.Frame
 
-`(preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+`(spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
 
 Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+spatial: Geometric query results in the corresponding request order, from this exact SDK state.
 preview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
 sequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.
 index: Zero-based target slot in the ordered sample request.
 motion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
 geometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
 
+- `spatial`: Geometric query results in the corresponding request order, from this exact SDK state.
 - `preview_id`: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
 - `sequence`: Accepted sample request ordinal; pair with the outer Source and Preview identity.
 - `index`: Zero-based target slot in the ordered sample request.
@@ -2130,7 +2148,7 @@ Retain the handle for pending cleanup. No formal document write occurs.
 
 ## zipzi.animation.Preview.advance_to
 
-`(time: float, *, geometry: bool=True) -> Job[Snapshot[m.PreviewBatch]]`
+`(time: float, *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]`
 
 Submit SDK canonical incremental playback. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek.
 
@@ -2172,11 +2190,13 @@ Return cached metadata for this owner's original pending request, or None. Readi
 
 ## zipzi.animation.Preview.sample
 
-`(times: Sequence[float], *, geometry: bool=True) -> Job[Snapshot[m.PreviewBatch]]`
+`(times: Sequence[float], *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]`
 
 Submit 1..64 canonical seeks in target order; wait for a frozen-source batch.
 
-Duplicates/backward times are retained. CPU geometry is optional. A cancelled
+Duplicates/backward times are retained. CPU geometry is optional.
+queries returns geometric results from the same SDK frame, including hidden
+objects when requested; textures, masks and occlusion are not pixel-tested. A cancelled
 batch discards output and retains completed targets; each individual SDK
 seek is transactional when interrupted; cancellation after the whole batch
 completes reports success. Close/wait the Job to release its
@@ -2185,7 +2205,7 @@ result slot. Cancellation never changes authored content or another view.
 
 ## zipzi.animation.Preview.seek
 
-`(time: float, *, geometry: bool=True) -> Job[Snapshot[m.PreviewBatch]]`
+`(time: float, *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=()) -> Job[Snapshot[m.PreviewBatch]]`
 
 Submit one canonical seek and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome.
 
@@ -8924,6 +8944,84 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable typed value. See field semantics and the linked workflow.
 
 
+## zipzi.modeling.GeometryHit
+
+`(mesh_id: str, name: str, part_path: tuple[str, ...], part_names: tuple[str, ...], enabled: bool, visible: bool, opacity: float, render_order: int, triangles: tuple[TriangleHit, ...])`
+
+Immutable owned GeometryHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+mesh_id: Stable authoring mesh ID.
+name: Authoring mesh display name.
+part_path: Ancestor Part IDs, from root to leaf.
+part_names: Ancestor Part display names, parallel to `part_path`.
+enabled: Evaluated drawable enabled state.
+visible: Evaluated drawable visibility state.
+opacity: Evaluated drawable opacity.
+render_order: Evaluated draw order, used for stable descending candidate ordering.
+This is not a visibility ranking across offscreen composition groups.
+triangles: Containing triangles; populated only when `details` was requested.
+
+- `mesh_id`: Stable authoring mesh ID.
+- `name`: Authoring mesh display name.
+- `part_path`: Ancestor Part IDs, from root to leaf.
+- `part_names`: Ancestor Part display names, parallel to `part_path`.
+- `enabled`: Evaluated drawable enabled state.
+- `visible`: Evaluated drawable visibility state.
+- `opacity`: Evaluated drawable opacity.
+- `render_order`: Evaluated draw order, used for stable descending candidate ordering.
+This is not a visibility ranking across offscreen composition groups.
+- `triangles`: Containing triangles; populated only when `details` was requested.
+
+## zipzi.modeling.GeometryHit.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.GeometryHit.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.GeometryQuery
+
+`(hits: tuple[GeometryHit, ...], total: int, truncated: bool)`
+
+Immutable owned GeometryQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+hits: Candidates retained after applying `max_candidates`.
+total: Number of candidates before applying the limit.
+truncated: Whether any candidates were omitted by the limit.
+
+- `hits`: Candidates retained after applying `max_candidates`.
+- `total`: Number of candidates before applying the limit.
+- `truncated`: Whether any candidates were omitted by the limit.
+
+## zipzi.modeling.GeometryQuery.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.GeometryQuery.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.GeometrySnapshot
 
 `(version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, space: GeometrySpace)`
@@ -13587,6 +13685,44 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.ObjectBounds
+
+`(mesh_ids: tuple[str, ...], model_bounds: tuple[float, float, float, float] | None = None, empty_reason: str | None = None)`
+
+Immutable owned ObjectBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+mesh_ids: Resolved mesh IDs in authoring order, including meshes filtered from the bounds.
+model_bounds: `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.
+Evaluated Y-up model units, independent of source canvas or export padding.
+Geometric bounds only: textures, masks and occlusion are not applied.
+empty_reason: Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or
+`no_evaluated_positions`.
+
+- `mesh_ids`: Resolved mesh IDs in authoring order, including meshes filtered from the bounds.
+- `model_bounds`: `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.
+Evaluated Y-up model units, independent of source canvas or export padding.
+Geometric bounds only: textures, masks and occlusion are not applied.
+- `empty_reason`: Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or
+`no_evaluated_positions`.
+
+## zipzi.modeling.ObjectBounds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ObjectBounds.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.ObjectEditorState
 
 `(hidden_in_editor: bool = field(default_factory=lambda: _boolean(False)), locked: bool = field(default_factory=lambda: _boolean(False)))`
@@ -13622,6 +13758,69 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.modeling.ObjectTarget
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.ObjectTargetMesh
+
+`(value: str)`
+
+Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Persistent authoring mesh UUID.
+
+- `value`: Persistent authoring mesh UUID.
+
+## zipzi.modeling.ObjectTargetMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ObjectTargetMesh.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ObjectTargetPart
+
+`(value: str)`
+
+Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Persistent Part UUID selecting descendant meshes.
+
+- `value`: Persistent Part UUID selecting descendant meshes.
+
+## zipzi.modeling.ObjectTargetPart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ObjectTargetPart.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
 
 
 ## zipzi.modeling.Offscreen
@@ -17304,14 +17503,16 @@ pose.
 
 ## zipzi.modeling.PreviewBatch
 
-`(sequence: int, frames: tuple[PreviewFrame, ...])`
+`(queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
 
 Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+queries: Owned geometric query descriptors aligned with every frame.spatial slot.
 sequence: Accepted sample request ordinal shared by these ordered frames.
 frames: Owned frames in requested target order, retaining duplicate and backward targets.
 
+- `queries`: Owned geometric query descriptors aligned with every frame.spatial slot.
 - `sequence`: Accepted sample request ordinal shared by these ordered frames.
 - `frames`: Owned frames in requested target order, retaining duplicate and backward targets.
 
@@ -17547,17 +17748,19 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.PreviewFrame
 
-`(preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+`(spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
 
 Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+spatial: Geometric query results in the corresponding request order, from this exact SDK state.
 preview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
 sequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.
 index: Zero-based target slot in the ordered sample request.
 motion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
 geometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
 
+- `spatial`: Geometric query results in the corresponding request order, from this exact SDK state.
 - `preview_id`: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
 - `sequence`: Accepted sample request ordinal; pair with the outer Source and Preview identity.
 - `index`: Zero-based target slot in the ordered sample request.
@@ -21972,6 +22175,204 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.SpatialFrame
+
+`(parameters: _Mapping[str, float], results: tuple[SpatialResult, ...])`
+
+Immutable owned SpatialFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+parameters: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
+results: Query results in input order, including repeated queries and empty results.
+
+- `parameters`: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
+- `results`: Query results in input order, including repeated queries and empty results.
+
+## zipzi.modeling.SpatialFrame.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.SpatialFrame.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.SpatialQuery
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.SpatialQueryBounds
+
+`(targets: tuple[ObjectTarget, ...], include_hidden: bool = field(default_factory=lambda: _boolean(False)))`
+
+Immutable owned SpatialQueryBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+targets: Mesh/Part UUID selectors; an empty selection selects no meshes.
+include_hidden: Include disabled, hidden and zero-opacity geometry in the union.
+
+- `targets`: Mesh/Part UUID selectors; an empty selection selects no meshes.
+- `include_hidden`: Include disabled, hidden and zero-opacity geometry in the union.
+
+## zipzi.modeling.SpatialQueryBounds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.SpatialQueryBounds.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.SpatialQueryHits
+
+`(point: tuple[float, float], include_hidden: bool = field(default_factory=lambda: _boolean(False)), details: bool = field(default_factory=lambda: _boolean(False)), max_candidates: int = field(default_factory=lambda: integer(32)))`
+
+Immutable owned SpatialQueryHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+point: Finite XY point in evaluated Y-up model coordinates, not screen pixels.
+include_hidden: Include disabled, hidden and zero-opacity geometric candidates.
+details: Include every containing triangle, stable vertex IDs, barycentric weights and UV.
+max_candidates: Maximum mesh candidates retained in descending draw order; total remains untruncated.
+
+- `point`: Finite XY point in evaluated Y-up model coordinates, not screen pixels.
+- `include_hidden`: Include disabled, hidden and zero-opacity geometric candidates.
+- `details`: Include every containing triangle, stable vertex IDs, barycentric weights and UV.
+- `max_candidates`: Maximum mesh candidates retained in descending draw order; total remains untruncated.
+
+## zipzi.modeling.SpatialQueryHits.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.SpatialQueryHits.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.SpatialResult
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.SpatialResultBounds
+
+`(value: ObjectBounds)`
+
+Immutable owned SpatialResultBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Bounds and resolved mesh IDs for the corresponding selector request.
+
+- `value`: Bounds and resolved mesh IDs for the corresponding selector request.
+
+## zipzi.modeling.SpatialResultBounds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.SpatialResultBounds.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.SpatialResultHits
+
+`(value: GeometryQuery)`
+
+Immutable owned SpatialResultHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Geometric candidates in SDK order, including total and truncation metadata.
+
+- `value`: Geometric candidates in SDK order, including total and truncation metadata.
+
+## zipzi.modeling.SpatialResultHits.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.SpatialResultHits.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.SpatialSamples
+
+`(version: _Version, requested: tuple[_Mapping[str, float], ...], queries: tuple[SpatialQuery, ...], frames: tuple[SpatialFrame, ...])`
+
+Immutable owned SpatialSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+version: Exact SDK version of the immutable formal or candidate snapshot.
+requested: Owned requested parameter maps, preserving pose order and duplicates.
+queries: Owned geometric queries shared by every returned frame.
+frames: Effective poses and query results, aligned with requested parameter maps.
+
+- `version`: Exact SDK version of the immutable formal or candidate snapshot.
+- `requested`: Owned requested parameter maps, preserving pose order and duplicates.
+- `queries`: Owned geometric queries shared by every returned frame.
+- `frames`: Effective poses and query results, aligned with requested parameter maps.
+
+## zipzi.modeling.SpatialSamples.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.SpatialSamples.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.TextureSlot
 
 `(slot: int, path: str)`
@@ -22175,6 +22576,42 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.TransformId.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.TriangleHit
+
+`(triangle_index: int, vertex_indices: tuple[int, int, int], vertex_ids: tuple[int, int, int] | None = None, barycentric: tuple[float, float, float], uv: tuple[float, float] | None = None)`
+
+Immutable owned TriangleHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+triangle_index: The triangle's zero-based position in the drawable's index buffer.
+vertex_indices: Offsets into the evaluated drawable's vertex arrays.
+vertex_ids: Stable authoring vertex IDs, when present.
+barycentric: Interpolation weights corresponding to `vertex_indices`.
+uv: UV coordinate interpolated from the triangle's evaluated UVs.
+
+- `triangle_index`: The triangle's zero-based position in the drawable's index buffer.
+- `vertex_indices`: Offsets into the evaluated drawable's vertex arrays.
+- `vertex_ids`: Stable authoring vertex IDs, when present.
+- `barycentric`: Interpolation weights corresponding to `vertex_indices`.
+- `uv`: UV coordinate interpolated from the triangle's evaluated UVs.
+
+## zipzi.modeling.TriangleHit.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.TriangleHit.summary
 
 `() -> str`
 
@@ -25312,6 +25749,426 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.scene.VertexWeight.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial
+
+``
+
+CPU model-space geometric bounds and hits; textures, masks and occlusion are not tested.
+
+
+## zipzi.spatial.Batch
+
+`(version: _Version, requested: tuple[_Mapping[str, float], ...], queries: tuple[SpatialQuery, ...], frames: tuple[SpatialFrame, ...])`
+
+Immutable owned SpatialSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+version: Exact SDK version of the immutable formal or candidate snapshot.
+requested: Owned requested parameter maps, preserving pose order and duplicates.
+queries: Owned geometric queries shared by every returned frame.
+frames: Effective poses and query results, aligned with requested parameter maps.
+
+- `version`: Exact SDK version of the immutable formal or candidate snapshot.
+- `requested`: Owned requested parameter maps, preserving pose order and duplicates.
+- `queries`: Owned geometric queries shared by every returned frame.
+- `frames`: Effective poses and query results, aligned with requested parameter maps.
+
+## zipzi.spatial.Batch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.Batch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.Bounds
+
+`(targets: tuple[ObjectTarget, ...], include_hidden: bool = field(default_factory=lambda: _boolean(False)))`
+
+Immutable owned SpatialQueryBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+targets: Mesh/Part UUID selectors; an empty selection selects no meshes.
+include_hidden: Include disabled, hidden and zero-opacity geometry in the union.
+
+- `targets`: Mesh/Part UUID selectors; an empty selection selects no meshes.
+- `include_hidden`: Include disabled, hidden and zero-opacity geometry in the union.
+
+## zipzi.spatial.Bounds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.Bounds.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.BoundsResult
+
+`(value: ObjectBounds)`
+
+Immutable owned SpatialResultBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Bounds and resolved mesh IDs for the corresponding selector request.
+
+- `value`: Bounds and resolved mesh IDs for the corresponding selector request.
+
+## zipzi.spatial.BoundsResult.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.BoundsResult.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.Frame
+
+`(parameters: _Mapping[str, float], results: tuple[SpatialResult, ...])`
+
+Immutable owned SpatialFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+parameters: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
+results: Query results in input order, including repeated queries and empty results.
+
+- `parameters`: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
+- `results`: Query results in input order, including repeated queries and empty results.
+
+## zipzi.spatial.Frame.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.Frame.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.GeometryQuery
+
+`(hits: tuple[GeometryHit, ...], total: int, truncated: bool)`
+
+Immutable owned GeometryQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+hits: Candidates retained after applying `max_candidates`.
+total: Number of candidates before applying the limit.
+truncated: Whether any candidates were omitted by the limit.
+
+- `hits`: Candidates retained after applying `max_candidates`.
+- `total`: Number of candidates before applying the limit.
+- `truncated`: Whether any candidates were omitted by the limit.
+
+## zipzi.spatial.GeometryQuery.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.GeometryQuery.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.Hit
+
+`(mesh_id: str, name: str, part_path: tuple[str, ...], part_names: tuple[str, ...], enabled: bool, visible: bool, opacity: float, render_order: int, triangles: tuple[TriangleHit, ...])`
+
+Immutable owned GeometryHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+mesh_id: Stable authoring mesh ID.
+name: Authoring mesh display name.
+part_path: Ancestor Part IDs, from root to leaf.
+part_names: Ancestor Part display names, parallel to `part_path`.
+enabled: Evaluated drawable enabled state.
+visible: Evaluated drawable visibility state.
+opacity: Evaluated drawable opacity.
+render_order: Evaluated draw order, used for stable descending candidate ordering.
+This is not a visibility ranking across offscreen composition groups.
+triangles: Containing triangles; populated only when `details` was requested.
+
+- `mesh_id`: Stable authoring mesh ID.
+- `name`: Authoring mesh display name.
+- `part_path`: Ancestor Part IDs, from root to leaf.
+- `part_names`: Ancestor Part display names, parallel to `part_path`.
+- `enabled`: Evaluated drawable enabled state.
+- `visible`: Evaluated drawable visibility state.
+- `opacity`: Evaluated drawable opacity.
+- `render_order`: Evaluated draw order, used for stable descending candidate ordering.
+This is not a visibility ranking across offscreen composition groups.
+- `triangles`: Containing triangles; populated only when `details` was requested.
+
+## zipzi.spatial.Hit.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.Hit.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.Hits
+
+`(point: tuple[float, float], include_hidden: bool = field(default_factory=lambda: _boolean(False)), details: bool = field(default_factory=lambda: _boolean(False)), max_candidates: int = field(default_factory=lambda: integer(32)))`
+
+Immutable owned SpatialQueryHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+point: Finite XY point in evaluated Y-up model coordinates, not screen pixels.
+include_hidden: Include disabled, hidden and zero-opacity geometric candidates.
+details: Include every containing triangle, stable vertex IDs, barycentric weights and UV.
+max_candidates: Maximum mesh candidates retained in descending draw order; total remains untruncated.
+
+- `point`: Finite XY point in evaluated Y-up model coordinates, not screen pixels.
+- `include_hidden`: Include disabled, hidden and zero-opacity geometric candidates.
+- `details`: Include every containing triangle, stable vertex IDs, barycentric weights and UV.
+- `max_candidates`: Maximum mesh candidates retained in descending draw order; total remains untruncated.
+
+## zipzi.spatial.Hits.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.Hits.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.HitsResult
+
+`(value: GeometryQuery)`
+
+Immutable owned SpatialResultHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Geometric candidates in SDK order, including total and truncation metadata.
+
+- `value`: Geometric candidates in SDK order, including total and truncation metadata.
+
+## zipzi.spatial.HitsResult.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.HitsResult.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.MeshTarget
+
+`(value: str)`
+
+Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Persistent authoring mesh UUID.
+
+- `value`: Persistent authoring mesh UUID.
+
+## zipzi.spatial.MeshTarget.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.MeshTarget.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.ObjectBounds
+
+`(mesh_ids: tuple[str, ...], model_bounds: tuple[float, float, float, float] | None = None, empty_reason: str | None = None)`
+
+Immutable owned ObjectBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+mesh_ids: Resolved mesh IDs in authoring order, including meshes filtered from the bounds.
+model_bounds: `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.
+Evaluated Y-up model units, independent of source canvas or export padding.
+Geometric bounds only: textures, masks and occlusion are not applied.
+empty_reason: Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or
+`no_evaluated_positions`.
+
+- `mesh_ids`: Resolved mesh IDs in authoring order, including meshes filtered from the bounds.
+- `model_bounds`: `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.
+Evaluated Y-up model units, independent of source canvas or export padding.
+Geometric bounds only: textures, masks and occlusion are not applied.
+- `empty_reason`: Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or
+`no_evaluated_positions`.
+
+## zipzi.spatial.ObjectBounds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.ObjectBounds.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.PartTarget
+
+`(value: str)`
+
+Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Persistent Part UUID selecting descendant meshes.
+
+- `value`: Persistent Part UUID selecting descendant meshes.
+
+## zipzi.spatial.PartTarget.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.PartTarget.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.spatial.Query
+
+``
+
+Typed public API entry.
+
+
+## zipzi.spatial.Result
+
+``
+
+Typed public API entry.
+
+
+## zipzi.spatial.Target
+
+``
+
+Typed public API entry.
+
+
+## zipzi.spatial.Triangle
+
+`(triangle_index: int, vertex_indices: tuple[int, int, int], vertex_ids: tuple[int, int, int] | None = None, barycentric: tuple[float, float, float], uv: tuple[float, float] | None = None)`
+
+Immutable owned TriangleHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+triangle_index: The triangle's zero-based position in the drawable's index buffer.
+vertex_indices: Offsets into the evaluated drawable's vertex arrays.
+vertex_ids: Stable authoring vertex IDs, when present.
+barycentric: Interpolation weights corresponding to `vertex_indices`.
+uv: UV coordinate interpolated from the triangle's evaluated UVs.
+
+- `triangle_index`: The triangle's zero-based position in the drawable's index buffer.
+- `vertex_indices`: Offsets into the evaluated drawable's vertex arrays.
+- `vertex_ids`: Stable authoring vertex IDs, when present.
+- `barycentric`: Interpolation weights corresponding to `vertex_indices`.
+- `uv`: UV coordinate interpolated from the triangle's evaluated UVs.
+
+## zipzi.spatial.Triangle.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.spatial.Triangle.summary
 
 `() -> str`
 

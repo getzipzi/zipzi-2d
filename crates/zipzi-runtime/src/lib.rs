@@ -16,6 +16,7 @@ pub mod preview;
 pub mod project_io;
 pub mod protocol;
 mod runtime;
+pub mod spatial;
 mod types;
 
 pub use config::RuntimeLimits;

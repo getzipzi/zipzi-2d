@@ -18,9 +18,10 @@ R4 completed its [final recheck](../plans/sdk-runtime/python2-r4-complete.md#202
 on 2026-10-26. The [R4 coverage](r4-coverage.json) retains that pairing and scope.
 R5/P5 is now in progress: [typed animation authoring](../plans/sdk-runtime/python2-r5-authoring.md)
 and [independent CPU Preview](../plans/sdk-runtime/python2-r5-preview.md) are connected,
-while Observer, spatial queries, fair scheduling and Editor playback acceptance
-remain pending. The active IPC protocol is `zipzi-runtime-r5-preview-1`, paired
-with native `zipzi-python2-16`; earlier records retain their historical contracts.
+along with [CPU spatial queries](../plans/sdk-runtime/python2-r5-spatial.md),
+while Observer, fair scheduling and Editor playback acceptance
+remain pending. The active IPC protocol is `zipzi-runtime-r5-spatial-1`, paired
+with native `zipzi-python2-17`; earlier records retain their historical contracts.
 
 ## Active Python implementation
 

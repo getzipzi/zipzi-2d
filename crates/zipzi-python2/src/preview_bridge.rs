@@ -85,19 +85,31 @@ impl NativeRuntime {
         times: &Bound<'_, PyAny>,
         geometry: bool,
         incremental: bool,
+        queries: &Bound<'_, PyAny>,
     ) -> PyResult<Py<PyDict>> {
         let _lease = input_lease!(
             self,
             py,
-            times.len()?.saturating_mul(16).saturating_add(1024),
+            times
+                .len()?
+                .saturating_mul(16)
+                .saturating_add(spatial_bridge::measure_queries(queries)?),
             "preview.sample",
             None
         );
         let times = times.extract::<Vec<f32>>()?;
+        let queries = spatial_bridge::read_queries(queries)?;
         let (client, id) = (self.client, preview.id);
         let result = py.detach(|| {
             self.host.call(move |rt| {
-                rt.request_preview_samples(client, id, times, geometry, incremental)
+                rt.request_preview_samples_with_queries(
+                    client,
+                    id,
+                    times,
+                    geometry,
+                    incremental,
+                    queries,
+                )
             })
         });
         reply(py, result, "preview.sample", |id| {

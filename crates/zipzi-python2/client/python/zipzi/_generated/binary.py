@@ -4627,10 +4627,46 @@ def _read_geometrydiagnostickind(r: Reader) -> m.GeometryDiagnosticKind:
     raise ValueError("Unknown binary GeometryDiagnosticKind variant")
 
 def _read_previewbatch(r: Reader) -> m.PreviewBatch:
-    return m.PreviewBatch(sequence=integer(r.scalar('Q')), frames=tuple(_read_previewframe(r) for _ in range(r.count())))
+    return m.PreviewBatch(queries=tuple(_read_spatialquery(r) for _ in range(r.count())), sequence=integer(r.scalar('Q')), frames=tuple(_read_previewframe(r) for _ in range(r.count())))
+
+def _read_spatialquery(r: Reader) -> m.SpatialQuery:
+    tag=r.u32()
+    if tag==0:
+        return m.SpatialQueryBounds(targets=tuple(_read_objecttarget(r) for _ in range(r.count())), include_hidden=r.boolean())
+    elif tag==1:
+        return m.SpatialQueryHits(point=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('d', 2))), include_hidden=r.boolean(), details=r.boolean(), max_candidates=integer(r.scalar('Q')))
+    raise ValueError("Unknown binary SpatialQuery variant")
+
+def _read_objecttarget(r: Reader) -> m.ObjectTarget:
+    tag=r.u32()
+    if tag==0:
+        return m.ObjectTargetMesh(value=r.text())
+    elif tag==1:
+        return m.ObjectTargetPart(value=r.text())
+    raise ValueError("Unknown binary ObjectTarget variant")
 
 def _read_previewframe(r: Reader) -> m.PreviewFrame:
-    return m.PreviewFrame(preview_id=integer(r.scalar('Q')), sequence=integer(r.scalar('Q')), index=integer(r.scalar('Q')), motion=_read_motionsnapshot(r), geometry=(_read_drawableframe(r) if r.optional() else None))
+    return m.PreviewFrame(spatial=tuple(_read_spatialresult(r) for _ in range(r.count())), preview_id=integer(r.scalar('Q')), sequence=integer(r.scalar('Q')), index=integer(r.scalar('Q')), motion=_read_motionsnapshot(r), geometry=(_read_drawableframe(r) if r.optional() else None))
+
+def _read_spatialresult(r: Reader) -> m.SpatialResult:
+    tag=r.u32()
+    if tag==0:
+        return m.SpatialResultBounds(value=_read_objectbounds(r))
+    elif tag==1:
+        return m.SpatialResultHits(value=_read_geometryquery(r))
+    raise ValueError("Unknown binary SpatialResult variant")
+
+def _read_objectbounds(r: Reader) -> m.ObjectBounds:
+    return m.ObjectBounds(mesh_ids=tuple(r.text() for _ in range(r.count())), model_bounds=(cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('d', 4))) if r.optional() else None), empty_reason=(r.text() if r.optional() else None))
+
+def _read_geometryquery(r: Reader) -> m.GeometryQuery:
+    return m.GeometryQuery(hits=tuple(_read_geometryhit(r) for _ in range(r.count())), total=integer(r.scalar('Q')), truncated=r.boolean())
+
+def _read_geometryhit(r: Reader) -> m.GeometryHit:
+    return m.GeometryHit(mesh_id=r.text(), name=r.text(), part_path=tuple(r.text() for _ in range(r.count())), part_names=tuple(r.text() for _ in range(r.count())), enabled=r.boolean(), visible=r.boolean(), opacity=number(r.scalar('f')), render_order=integer(r.scalar('i')), triangles=tuple(_read_trianglehit(r) for _ in range(r.count())))
+
+def _read_trianglehit(r: Reader) -> m.TriangleHit:
+    return m.TriangleHit(triangle_index=integer(r.scalar('Q')), vertex_indices=cast('tuple[int, int, int]', tuple(v[0] for v in r.numeric('I', 3))), vertex_ids=(cast('tuple[int, int, int]', tuple(v[0] for v in r.numeric('I', 3))) if r.optional() else None), barycentric=cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('d', 3))), uv=(cast('tuple[float, float]', tuple(v[0] for v in r.numeric('d', 2))) if r.optional() else None))
 
 def _read_motionsnapshot(r: Reader) -> m.MotionSnapshot:
     return m.MotionSnapshot(physics=tuple(_read_physicsrigsnapshot(r) for _ in range(r.count())), time=number(r.scalar('f')), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, part_opacity_channels={r.text(): number(r.scalar('f')) for _ in range(r.count())}, part_opacities={r.text(): number(r.scalar('f')) for _ in range(r.count())}, model_opacity=number(r.scalar('f')), active_motions=tuple(r.text() for _ in range(r.count())), active_expressions=tuple(r.text() for _ in range(r.count())), fired_events=tuple(_read_motioneventfired(r) for _ in range(r.count())), coverage=tuple(r.text() for _ in range(r.count())), motion_positions=tuple(_read_motionplaybackposition(r) for _ in range(r.count())))
@@ -4646,6 +4682,12 @@ def _read_motioneventfired(r: Reader) -> m.MotionEventFired:
 
 def _read_motionplaybackposition(r: Reader) -> m.MotionPlaybackPosition:
     return m.MotionPlaybackPosition(motion_id=r.text(), local_time=number(r.scalar('f')), period=number(r.scalar('f')), loop_index=integer(r.scalar('Q')), cycle_origin=number(r.scalar('f')))
+
+def _read_spatialsamples(r: Reader) -> m.SpatialSamples:
+    return m.SpatialSamples(version=_read_version(r), requested=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), queries=tuple(_read_spatialquery(r) for _ in range(r.count())), frames=tuple(_read_spatialframe(r) for _ in range(r.count())))
+
+def _read_spatialframe(r: Reader) -> m.SpatialFrame:
+    return m.SpatialFrame(parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, results=tuple(_read_spatialresult(r) for _ in range(r.count())))
 
 def _read_meshsnapshot(r: Reader) -> Snapshot[meshes.Mesh]:
     return Snapshot(_read_sourceref(r), meshes.Mesh(id=r.text(), name=r.text(), geometry=_read_meshgeometry(r)))
@@ -4724,8 +4766,15 @@ def decode_records(value: bytes, signature: str) -> m.OwnedModelingRecords:
     r.finish()
     return result
 
+def decode_spatial(value: bytes, signature: str) -> m.SpatialSamples:
+    if signature!='ba2052a3db49636e40cd87d49098a564': raise ValueError("Binary spatial contract differs")
+    r=Reader(value)
+    result=_read_spatialsamples(r)
+    r.finish()
+    return result
+
 def decode_preview(value: bytes, signature: str) -> m.PreviewBatch:
-    if signature!='471663b0658d2b2a11201a3eeee7d6f3': raise ValueError("Binary preview contract differs")
+    if signature!='fd19a1fe9c78455a311facdf8a592938': raise ValueError("Binary preview contract differs")
     r=Reader(value)
     result=_read_previewbatch(r)
     r.finish()

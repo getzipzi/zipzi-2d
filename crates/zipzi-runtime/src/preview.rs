@@ -55,6 +55,8 @@ pub struct PreviewState {
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct PreviewFrame {
+    /// Geometric query results in the corresponding request order, from this exact SDK state.
+    pub spatial: Vec<zipzi_sdk::SpatialResult>,
     /// Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
     pub preview_id: u64,
     /// Accepted sample request ordinal; pair with the outer Source and Preview identity.
@@ -69,6 +71,8 @@ pub struct PreviewFrame {
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct PreviewBatch {
+    /// Owned geometric query descriptors aligned with every frame.spatial slot.
+    pub queries: Vec<zipzi_sdk::SpatialQuery>,
     /// Accepted sample request ordinal shared by these ordered frames.
     pub sequence: u64,
     /// Owned frames in requested target order, retaining duplicate and backward targets.

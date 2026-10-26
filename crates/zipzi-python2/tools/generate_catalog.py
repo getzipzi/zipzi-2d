@@ -212,7 +212,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
             for child in public_methods(node).values():
                 add(path+'.'+child.name,child);catalog[path]['children'].append(path+'.'+child.name)
     # Public paths are explicit reexports in domain modules, plus canonical modeling DTO types/unions.
-    domains=('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops','animation')
+    domains=('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops','animation','spatial')
     for module in ('',*domains):
         public='zipzi'+('.'+module if module else '')
         if module:catalog[public]=dict(kind='module',signature='',documentation=ast.get_docstring(trees[module]) or '',children=[])
@@ -263,14 +263,14 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
     fingerprint.update((package/guide_path).read_text().encode())
     source_sha=fingerprint.hexdigest()
     package_version=tomllib.loads((package/'client/pyproject.toml').read_text())['project']['version']
-    catalog['zipzi']['documentation']+=' Package '+package_version+'; protocol zipzi-runtime-r5-preview-1; client source SHA-256 '+source_sha+'.'
+    catalog['zipzi']['documentation']+=' Package '+package_version+'; protocol zipzi-runtime-r5-spatial-1; client source SHA-256 '+source_sha+'.'
     for row in catalog.values():row['children']=tuple(sorted(set(row.get('children',()))))
     reference=[header.rstrip(),'# Installed Python API reference','','Generated from the compiled authoring contract, the finite binding directory and lifecycle source docs.','']
     for path,row in sorted(catalog.items()):
         reference+=['## '+path,'', '`'+row.get('signature','')+'`','',row.get('documentation',''),'']
         for field,text in row.get('fields',()):reference+=['- `'+field+'`: '+text]
         reference+=['']
-    result={'client/python/zipzi/_generated/catalog.py':header+'"""Offline API directory; no imports or host probes."""\nfrom typing import TypedDict, NotRequired\nfrom collections.abc import Sequence\nclass _Entry(TypedDict):\n    kind: str\n    signature: str\n    documentation: str\n    fields: NotRequired[Sequence[tuple[str,str]]]\n    children: tuple[str,...]\n    example: NotRequired[str]\nCONTRACT = "zipzi-runtime-r5-preview-1"\nPACKAGE_VERSION = '+repr(package_version)+'\nCONTRACT_SHA256 = '+repr(hashlib.sha256(__import__('json').dumps(contract,sort_keys=True).encode()).hexdigest())+'\nCATALOG: dict[str,_Entry] = '+pprint.pformat(catalog,width=120,sort_dicts=True)+'\n', 'client/python/zipzi/docs/reference.md':'\n'.join(reference)+'\n'}
+    result={'client/python/zipzi/_generated/catalog.py':header+'"""Offline API directory; no imports or host probes."""\nfrom typing import TypedDict, NotRequired\nfrom collections.abc import Sequence\nclass _Entry(TypedDict):\n    kind: str\n    signature: str\n    documentation: str\n    fields: NotRequired[Sequence[tuple[str,str]]]\n    children: tuple[str,...]\n    example: NotRequired[str]\nCONTRACT = "zipzi-runtime-r5-spatial-1"\nPACKAGE_VERSION = '+repr(package_version)+'\nCONTRACT_SHA256 = '+repr(hashlib.sha256(__import__('json').dumps(contract,sort_keys=True).encode()).hexdigest())+'\nCATALOG: dict[str,_Entry] = '+pprint.pformat(catalog,width=120,sort_dicts=True)+'\n', 'client/python/zipzi/docs/reference.md':'\n'.join(reference)+'\n'}
     result['client/python/zipzi/_generated/catalog.py']=result['client/python/zipzi/_generated/catalog.py'].replace(
         'CONTRACT_SHA256 = ', 'CLIENT_SOURCE_SHA256 = '+repr(source_sha)+'\nCONTRACT_SHA256 = ',1)
     return result

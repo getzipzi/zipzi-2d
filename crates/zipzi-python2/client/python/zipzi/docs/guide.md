@@ -149,6 +149,25 @@ Preview to release its lease and cancel pending work, then wait/close the Job.
 Other clients/views and authored history are unaffected. GPU observation and
 Editor per-view playback integration remain pending.
 
+Use `modeling.spatial` for frozen formal/candidate geometry, or pass `queries` to
+Preview sampling to query its exact animated frame, even with `geometry=False`:
+
+```python
+from zipzi import spatial
+
+queries = (spatial.Hits(point=(0., 0.), details=True),)
+result = session.modeling.spatial(({},), queries).wait()
+hits = result.value.frames[0].results[0].value
+```
+
+Bounds select Mesh/Part UUIDs (Parts include descendants). Coordinates are Y-up
+model units. Hits return descending SDK draw order, total/truncation, and optional
+triangle indices, stable vertex IDs, barycentric weights and UVs. These are geometric
+candidates; textures, masks and occlusion are not pixel-tested. Hidden/disabled
+objects require `include_hidden=True`. Up to 64 poses and 64 queries, 4096 total
+target selectors and 4096 retained hit candidates per query are accepted, subject
+to Runtime byte budgets. Order and duplicate poses/queries are preserved.
+
 Save with `session.project.save(absolute_host_path).wait()` and inspect `durable`
 and the receipt version. Paths refer to the execution host, not the client machine.
 A client-side file existence check does not prove a remote host saved durably.

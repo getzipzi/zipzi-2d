@@ -122,6 +122,9 @@ PUBLIC_EXPORTS['animation'] = ('Independent frozen animation controls and CPU pl
      'from ._generated.modeling import PreviewCommand as Command, PreviewCommandSetParameter as SetParameter, PreviewCommandScheduleMotion as ScheduleMotion, PreviewCommandScheduleRegistration as ScheduleRegistration, PreviewCommandScheduleExpression as ScheduleExpression, PreviewCommandScheduleParameter as ScheduleParameter, PreviewCommandSetPhysics as SetPhysics, PreviewCommandReset as Reset, PreviewState as State, PreviewFrame as Frame, PreviewBatch as Batch'],
     ['Preview','Command','SetParameter','ScheduleMotion','ScheduleRegistration','ScheduleExpression','ScheduleParameter','SetPhysics','Reset','State','Frame','Batch'])
 
+PUBLIC_EXPORTS['spatial'] = ('CPU model-space geometric bounds and hits; textures, masks and occlusion are not tested.',
+    ['from ._generated.modeling import SpatialQuery as Query, SpatialQueryBounds as Bounds, SpatialQueryHits as Hits, ObjectTargetMesh as MeshTarget, ObjectTargetPart as PartTarget, ObjectTarget as Target, SpatialResult as Result, SpatialResultBounds as BoundsResult, SpatialResultHits as HitsResult, ObjectBounds as ObjectBounds, GeometryQuery as GeometryQuery, GeometryHit as Hit, TriangleHit as Triangle, SpatialFrame as Frame, SpatialSamples as Batch'],
+    ['Query','Bounds','Hits','MeshTarget','PartTarget','Target','Result','BoundsResult','HitsResult','ObjectBounds','GeometryQuery','Hit','Triangle','Frame','Batch'])
 TARGETS=frozenset('client/python/zipzi/'+n+'.py' for n in PUBLIC_EXPORTS) | frozenset({'client/python/zipzi/_generated/facades.py','client/python/zipzi/_generated/discovery.py','src/generated/discovery.rs','client/python/zipzi/_generated/request_directory.py','client/python/zipzi/_generated/backend_bindings.py'})
 
 DOMAINS=(('Meshes','meshes','Mesh','items'),('Parameters','parameters','Parameter','parameters'),('Bindings','bindings','MeshBinding','bindings'),('Images','resources','Image','items'),('Scene','scene','Summary','items'))
@@ -167,7 +170,7 @@ LIFECYCLE_REQUESTS={
  'Runtime':'close events_since capabilities limits', 'Sessions':'create list attach open import_ subscribe',
  'Session':'preview edit plan plan_async info editor_context capabilities address reference show_window subscribe undo redo detach close',
  'Project':'save run diagnose export replace open', 'Edit':'preview apply apply_many plan plan_async commit cancel', 'Job':'wait close state cancel',
- 'Modeling':'records sample sample_async',
+ 'Modeling':'records sample sample_async spatial',
 }
 OWNED_REQUESTS={'resources.Resources':'prepare_image prepare_buffer load_png prepare_png usage','resources.PreparedImage':'pixels','Buffer':'read','Owned':'close','animation.Preview':'info apply sample seek advance_to','references.ObjectRef':'resolve label capabilities scene_capabilities','references.LabelAddress':'plan','references.FieldAddress':'plan','events.SessionSubscription':'poll resync','events.RegistrySubscription':'poll resync'}
 
@@ -236,7 +239,7 @@ def render_api(contract,header,rust_header):
         rs+=['pub(crate) fn write_'+name.lower()+"<'py>(py:Python<'py>,v:&"+'zipzi_runtime::'+name+")->PyResult<Bound<'py,PyDict>> {",'let d=PyDict::new(py);']
         for f in fs:rs+=['d.set_item("'+f['name']+'", &v.'+f['name']+')?;']
         rs+=['Ok(d)','}']
-    facade=[header.rstrip(),'"""Uniform, typed domain calls. Only registered hooks own execution policy."""','from collections.abc import Sequence, Mapping','from .. import meshes, parameters, bindings, resources, scene, sampling, modeling','from .. import _lifecycle','from .._results import Snapshot, Batch, Page, PageCursor','from .._values import Source, WriteResult','from .._calls import project, single_id','from .._facade_support import Collection, records, sample','']
+    facade=[header.rstrip(),'"""Uniform, typed domain calls. Only registered hooks own execution policy."""','from collections.abc import Sequence, Mapping','from .. import meshes, parameters, bindings, resources, scene, sampling, modeling','from .. import spatial as _spatial','from .. import _lifecycle','from .._results import Snapshot, Batch, Page, PageCursor','from .._values import Source, WriteResult','from .._calls import project, single_id','from .._facade_support import Collection, records, sample','from .._spatial import sample as spatial_sample','']
     for cls,domain,value,key in DOMAINS:
         summary='scene.Summary' if domain=='scene' else domain+'.Summary'
         facade+=['class '+cls+'(Collection['+domain+'.'+value+']):','    def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):','        super().__init__(session,edit,'+repr(domain)+','+domain+'.'+value+'.read,'+repr(key)+')',
@@ -304,6 +307,9 @@ def render_api(contract,header,rust_header):
      '    def sample_async(self, poses: Sequence[Mapping[str,float]], *, checks: sampling.Checks = sampling.Checks(), expected: Source | None = None) -> "_lifecycle.Job[Snapshot[sampling.Result]]":',
      '        '+repr('Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().'),
      '        return sample(self,poses,checks,expected,True)','']
+    facade += ['    def spatial(self, poses: Sequence[Mapping[str,float]], queries: Sequence[_spatial.Query], *, expected: Source | None = None) -> "_lifecycle.Job[Snapshot[_spatial.Batch]]":',
+        '        '+repr('Submit frozen CPU geometry queries for explicit parameter poses. Returns Job[Snapshot[spatial.Batch]] with effective parameters, exact Source, requested queries and ordered bounds/hit results. Coordinates are Y-up model units, never screen pixels; hidden geometry is explicitly selectable. Candidate reads do not publish or abort an Edit. A lost submission/result recovers the original call rather than querying newer content. No textures, masks, occlusion or GPU are used.'),
+        '        return spatial_sample(self,poses,queries,expected)', '']
     directory=[header.rstrip(),'from .._calls import register_request','', 'def register() -> None:','    from .. import _lifecycle as lifecycle, resources, references, events, animation','    from ..buffers import Buffer','    from .._owned import Owned']
     registrations={**{'lifecycle.'+k:v for k,v in LIFECYCLE_REQUESTS.items()},**OWNED_REQUESTS}
     for cls,domain,_,_ in DOMAINS:

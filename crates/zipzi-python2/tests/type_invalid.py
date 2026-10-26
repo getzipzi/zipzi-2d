@@ -40,3 +40,9 @@ from zipzi import animation
 def bad_preview(preview: animation.Preview) -> None:
     preview.apply({"kind":"reset"})  # error: reportArgumentType
     preview.seek("time")  # error: reportArgumentType
+
+from zipzi import spatial
+
+def bad_spatial(session: zipzi.Session, preview: animation.Preview) -> None:
+    session.modeling.spatial(({},),({"kind":"hits","point":(0.,0.)},))  # error: reportArgumentType
+    preview.seek(.5,queries=(spatial.Hits(point=(0.,"y")),))  # error: reportArgumentType

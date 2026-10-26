@@ -16,7 +16,7 @@ mod binary;
 pub use binary::{BinaryReply, BinarySlice, MAX_BINARY_CHUNK, MAX_BINARY_HEADER};
 mod values;
 use values::*;
-pub const CONTRACT: &str = "zipzi-runtime-r5-preview-1";
+pub const CONTRACT: &str = "zipzi-runtime-r5-spatial-1";
 pub const SDK_BUILD: &str = env!("ZIPZI_RUNTIME_SDK_BUILD");
 pub const MAX_FRAME: usize = 16 << 20;
 
@@ -64,6 +64,13 @@ pub struct Request {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 enum Operation {
+    RequestSpatialSamples {
+        session: SessionId,
+        edit: Option<EditId>,
+        parameters: Vec<zipzi_core::PreviewValues>,
+        queries: Vec<zipzi_sdk::SpatialQuery>,
+        expected: Option<SourceRef>,
+    },
     CreatePreview {
         session: SessionId,
         edit: Option<EditId>,
@@ -77,6 +84,8 @@ enum Operation {
         command: crate::preview::PreviewCommand,
     },
     SamplePreview {
+        #[serde(default)]
+        queries: Vec<zipzi_sdk::SpatialQuery>,
         preview: PreviewId,
         times: Vec<f32>,
         geometry: bool,
@@ -1126,6 +1135,15 @@ impl Protocol {
             Operation::RequestModelingSamples { input } => {
                 json!({"job":rt.request_modeling_samples(client,input)?})
             }
+            Operation::RequestSpatialSamples {
+                session,
+                edit,
+                parameters,
+                queries,
+                expected,
+            } => {
+                json!({"job":rt.request_spatial_samples(client,session,edit,parameters,queries,expected)?})
+            }
             Operation::CreatePreview {
                 session,
                 edit,
@@ -1143,12 +1161,13 @@ impl Protocol {
                 json!({"source":source,"value":value})
             }
             Operation::SamplePreview {
+                queries,
                 preview,
                 times,
                 geometry,
                 incremental,
             } => {
-                json!({"job":rt.request_preview_samples(client,preview,times,geometry,incremental)?})
+                json!({"job":rt.request_preview_samples_with_queries(client,preview,times,geometry,incremental,queries)?})
             }
             Operation::ReleasePreview { preview } => {
                 rt.release_preview(client, preview)?;
@@ -1431,7 +1450,10 @@ impl Protocol {
             Operation::Job { job } => {
                 let info = rt.job_info(client, job)?;
                 if let Some(Ok(value)) = &info.result {
-                    if !matches!(value, JobValue::Sampled(_) | JobValue::Previewed(_)) {
+                    if !matches!(
+                        value,
+                        JobValue::Sampled(_) | JobValue::Previewed(_) | JobValue::Spatial(_)
+                    ) {
                         self.execution_leases.push(
                             rt.reserve_transfer(value.retained_bytes().saturating_mul(32))
                                 .map_err(|_| RuntimeError::Busy)?,
@@ -1450,6 +1472,12 @@ impl Protocol {
                     metadata.result = None;
                     let mut value = job_info(&metadata);
                     value["result"] = success(rt.preview_response(client, samples)?);
+                    value
+                } else if let Some(Ok(JobValue::Spatial(samples))) = &info.result {
+                    let mut metadata = info.clone();
+                    metadata.result = None;
+                    let mut value = job_info(&metadata);
+                    value["result"] = success(rt.spatial_response(client, samples)?);
                     value
                 } else {
                     job_info(&info)

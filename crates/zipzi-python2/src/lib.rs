@@ -17,6 +17,7 @@ mod preview_bridge;
 mod project_bridge;
 mod reference_bridge;
 mod scene_bridge;
+mod spatial_bridge;
 mod streams;
 use generated::mesh::read_mesh_operation;
 use zipzi_runtime::authoring::{EditOperation, MAX_IMAGE_BYTES};
@@ -311,7 +312,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-16"
+        "zipzi-python2-17"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
@@ -746,6 +747,7 @@ impl NativeRuntime {
                     d
                 }
                 JobValue::Previewed(value) => preview_bridge::samples(py, &value)?,
+                JobValue::Spatial(value) => spatial_bridge::samples(py, &value)?,
                 JobValue::Sampled(value) => modeling_bridge::sample_batch(py, &value)?,
                 JobValue::Planned(value) => {
                     generated::resources::write_plansnapshot(py, value.as_ref().clone())?

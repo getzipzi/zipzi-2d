@@ -186,6 +186,16 @@ def animation_authoring(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zi
     return snapshot
 
 from zipzi import animation
+from zipzi import spatial
+
+def spatial_queries(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi.Snapshot[spatial.Batch]:
+    query=spatial.Bounds(targets=(spatial.MeshTarget(value=id),))
+    assert_type(session.modeling.spatial(({},),(query,)),zipzi.Job[zipzi.Snapshot[spatial.Batch]])
+    assert_type(edit.modeling.spatial(({},),(query,)),zipzi.Job[zipzi.Snapshot[spatial.Batch]])
+    with session.preview() as preview:
+        result=preview.seek(.5,geometry=False,queries=(spatial.Hits(point=(0.,0.)),)).wait()
+        assert_type(result.value.frames[0].spatial,tuple[spatial.Result,...])
+    return zipzi.recover_call(session.modeling.spatial,({},),(query,)).wait()
 
 def animation_preview(session: zipzi.Session, edit: zipzi.Edit) -> zipzi.Snapshot[animation.Batch]:
     with session.preview() as preview:

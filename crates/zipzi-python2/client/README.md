@@ -15,7 +15,7 @@ again. `job.wait(timeout=None)` waits until terminal; a finite timeout raises
 `JobTimeout` while the accepted Job remains usable. Close an unresolved Runtime
 only after recovery or with explicit `abandon_pending=True`.
 
-The native/host pairing is `zipzi-python2-16` / `zipzi-runtime-r5-preview-1`; rebuild
+The native/host pairing is `zipzi-python2-17` / `zipzi-runtime-r5-spatial-1`; rebuild
 adapters and hosts together after a contract change.
 
 See the [package source](https://github.com/getzipzi/zipzi-2d/tree/main/crates/zipzi-python2)
@@ -54,7 +54,9 @@ agent functional gate passed. P3A is accepted after the user removed the
 model/service identity gate; `gpt-6.1-sol/high` is recorded as the configured
 model/effort. The P0 stability waiver applies only to its recorded 2026-10-26 round.
 Typed Motion/Expression/Physics/Pose authoring, selected records, plans and stable
-addresses are connected through the canonical modeling API. Independent CPU animation Preview uses `session.preview()` or `edit.preview()`;
+addresses are connected through the canonical modeling API. Geometric bounds/hits
+use `session/edit.modeling.spatial(poses, queries)` or Preview sampling `queries`;
+both use frozen Rust sources and return explicit Jobs. Independent CPU animation Preview uses `session.preview()` or `edit.preview()`;
 controls and ordered sample/seek/advance Jobs leave authored history and other
 views unchanged. Sources stay frozen until release. Observer/inspection and
 Editor playback integration remain pending.

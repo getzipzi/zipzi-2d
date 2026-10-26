@@ -27,6 +27,71 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_r5_spatial_frozen_sources_hidden_geometry_and_animated_numerics(self):
+        import runpy
+        recipe=runpy.run_path(str(Path(__file__).with_name("r5_spatial_recipe.py")))["run"]
+        results=[recipe(self.runtime(mode),self.folder/(mode+"-spatial")) for mode in ("local","connected")]
+        self.assertEqual(results[0],results[1])
+
+    def test_r5_spatial_complete_call_recovery(self):
+        from zipzi import spatial as s
+        for phase in ("request_spatial_samples","job","read_blob_binary"):
+            with self.subTest(phase=phase):
+                runtime=self.runtime("connected",drop=phase)
+                session=runtime.sessions.create(uid(1))
+                job=zipzi.recover_call(session.modeling.spatial,({},{}),(s.Hits(point=(0.,0.)),))
+                result=zipzi.recover_call(job.wait)
+                self.assertEqual(len(result.value.frames),2)
+                self.assertEqual(tuple(f.results[0].value.total for f in result.value.frames),(0,0))
+                self.assertEqual(session.info().history,(0,0))
+
+    def test_r5_spatial_worker_cancellation_and_local_direct_values(self):
+        from zipzi import spatial as s
+        for mode in ("local","connected"):
+            with self.subTest(mode=mode):
+                runtime=self.runtime(mode)
+                session=runtime.sessions.create(uid(1))
+                before=session.info()
+                backend=runtime._backend
+                backend._test_control("hold_io")
+                job=session.modeling.spatial(({},),(s.Hits(point=(0.,0.)),))
+                deadline=time.monotonic()+3
+                while not backend._test_control("entered"):
+                    self.assertLess(time.monotonic(),deadline);time.sleep(.005)
+                job.cancel();backend._test_control("release_io")
+                with self.assertRaises(zipzi.SdkFailure) as cancelled:job.wait()
+                self.assertEqual(cancelled.exception.code,"CANCELLED")
+                self.assertEqual(session.info(),before)
+        runtime=self.runtime("local");session=runtime.sessions.create(uid(1))
+        with patch("json.dumps",side_effect=AssertionError("Spatial Python JSON encode")), \
+             patch("json.loads",side_effect=AssertionError("Spatial Python JSON decode")):
+            result=session.modeling.spatial(({},),(s.Hits(point=(.25,.25)),)).wait()
+            self.assertEqual(result.value.frames[0].results[0].value.total,0)
+            with session.preview() as preview:
+                result=preview.seek(.25,geometry=False,queries=(s.Hits(point=(.25,.25)),)).wait()
+                self.assertEqual(result.value.frames[0].spatial[0].value.total,0)
+
+    def test_r5_large_spatial_details_binary_recovery(self):
+        from zipzi import spatial as s
+        for mode in ("local","connected"):
+            runtime=self.runtime(mode,drop="read_blob_binary" if mode=="connected" else None,drop_after=1)
+            session=runtime.sessions.create(uid(1))
+            # Every triangle contributes independently; the result exceeds one Blob chunk.
+            geometry=replace(GEOMETRY,triangles=GEOMETRY.triangles*2048)
+            with session.edit("Overlapping triangles") as edit:
+                edit.meshes.create(meshes.MeshSpec("Overlap",geometry,id=uid(2)))
+            before=session.info()
+            job=session.modeling.spatial(tuple({} for _ in range(8)),(s.Hits(point=(.25,.25),details=True),))
+            result=zipzi.recover_call(job.wait)
+            self.assertEqual(len(result.value.frames),8)
+            for frame in result.value.frames:
+                triangles=frame.results[0].value.hits[0].triangles
+                self.assertEqual(len(triangles),2048)
+                self.assertEqual(triangles[-1].triangle_index,2047)
+                self.assertEqual(triangles[-1].vertex_ids,(42,7,99))
+                self.assertEqual(triangles[-1].barycentric,(.5,.25,.25))
+            self.assertEqual(session.info(),before)
+
     def test_r5_independent_previews_numeric_geometry_and_candidate_sources(self):
         import runpy
         recipe=runpy.run_path(str(Path(__file__).with_name("r5_preview_recipe.py")))["run"]

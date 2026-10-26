@@ -173,6 +173,7 @@ impl Runtime {
                 "modeling",
                 "animation_authoring",
                 "animation_preview",
+                "spatial",
                 "sampling",
                 "events",
                 "references",

@@ -20595,6 +20595,13 @@ fn write_previewbatch_in(
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
+    out.set_item("queries", {
+        let out = PyList::empty(py);
+        for item0 in (&value.queries) {
+            out.append(write_spatialquery_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
     out.set_item(
         "sequence",
         (&value.sequence)
@@ -20616,6 +20623,157 @@ fn write_previewbatch_in(
         .unbind())
 }
 
+pub fn read_spatialquery(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::SpatialQuery> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "bounds" => Ok(zipzi_sdk::SpatialQuery::Bounds {
+            targets: value
+                .getattr("targets")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(read_objecttarget(&item0)?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+            include_hidden: value.getattr("include_hidden")?.extract()?,
+        }),
+        "hits" => Ok(zipzi_sdk::SpatialQuery::Hits {
+            point: value
+                .getattr("point")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .try_into()
+                .map_err(|_| {
+                    pyo3::exceptions::PyValueError::new_err("Invalid fixed array length")
+                })?,
+            include_hidden: value.getattr("include_hidden")?.extract()?,
+            details: value.getattr("details")?.extract()?,
+            max_candidates: value.getattr("max_candidates")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_spatialquery(py: Python<'_>, value: &zipzi_sdk::SpatialQuery) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_spatialquery_in(py, value, &classes)
+}
+fn write_spatialquery_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::SpatialQuery,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_sdk::SpatialQuery::Bounds {
+            targets: field0,
+            include_hidden: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("targets", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append(write_objecttarget_in(py, (item0), classes)?)?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "include_hidden",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("SpatialQueryBounds")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::SpatialQuery::Hits {
+            point: field0,
+            include_hidden: field1,
+            details: field2,
+            max_candidates: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("point", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "include_hidden",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "details",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "max_candidates",
+                (field3).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("SpatialQueryHits")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_objecttarget(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::ObjectTarget> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "mesh" => Ok(zipzi_sdk::ObjectTarget::Mesh(
+            value.getattr("value")?.extract()?,
+        )),
+        "part" => Ok(zipzi_sdk::ObjectTarget::Part(
+            value.getattr("value")?.extract()?,
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_objecttarget(py: Python<'_>, value: &zipzi_sdk::ObjectTarget) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_objecttarget_in(py, value, &classes)
+}
+fn write_objecttarget_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::ObjectTarget,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_sdk::ObjectTarget::Mesh(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ObjectTargetMesh")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_sdk::ObjectTarget::Part(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ObjectTargetPart")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+    }
+}
+
 pub fn write_previewframe(
     py: Python<'_>,
     value: &zipzi_runtime::preview::PreviewFrame,
@@ -20629,6 +20787,13 @@ fn write_previewframe_in(
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
+    out.set_item("spatial", {
+        let out = PyList::empty(py);
+        for item0 in (&value.spatial) {
+            out.append(write_spatialresult_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
     out.set_item(
         "preview_id",
         (&value.preview_id)
@@ -20665,6 +20830,268 @@ fn write_previewframe_in(
     })?;
     Ok(classes
         .getattr("PreviewFrame")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_spatialresult(
+    py: Python<'_>,
+    value: &zipzi_sdk::SpatialResult,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_spatialresult_in(py, value, &classes)
+}
+fn write_spatialresult_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::SpatialResult,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_sdk::SpatialResult::Bounds(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_objectbounds_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("SpatialResultBounds")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_sdk::SpatialResult::Hits(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_geometryquery_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("SpatialResultHits")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+    }
+}
+
+pub fn write_objectbounds(py: Python<'_>, value: &zipzi_sdk::ObjectBounds) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_objectbounds_in(py, value, &classes)
+}
+fn write_objectbounds_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::ObjectBounds,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("mesh_ids", {
+        let out = PyList::empty(py);
+        for item0 in (&value.mesh_ids) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("model_bounds", {
+        match (&value.model_bounds).as_ref() {
+            Some(item) => {
+                let out = PyList::empty(py);
+                for item1 in (item) {
+                    out.append((item1).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    out.set_item("empty_reason", {
+        match (&value.empty_reason).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("ObjectBounds")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_geometryquery(
+    py: Python<'_>,
+    value: &zipzi_sdk::GeometryQuery,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_geometryquery_in(py, value, &classes)
+}
+fn write_geometryquery_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::GeometryQuery,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("hits", {
+        let out = PyList::empty(py);
+        for item0 in (&value.hits) {
+            out.append(write_geometryhit_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "total",
+        (&value.total)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "truncated",
+        (&value.truncated)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("GeometryQuery")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_geometryhit(py: Python<'_>, value: &zipzi_sdk::GeometryHit) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_geometryhit_in(py, value, &classes)
+}
+fn write_geometryhit_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::GeometryHit,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "mesh_id",
+        (&value.mesh_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "name",
+        (&value.name)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("part_path", {
+        let out = PyList::empty(py);
+        for item0 in (&value.part_path) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("part_names", {
+        let out = PyList::empty(py);
+        for item0 in (&value.part_names) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "enabled",
+        (&value.enabled)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "visible",
+        (&value.visible)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "opacity",
+        (&value.opacity)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "render_order",
+        (&value.render_order)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("triangles", {
+        let out = PyList::empty(py);
+        for item0 in (&value.triangles) {
+            out.append(write_trianglehit_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("GeometryHit")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_trianglehit(py: Python<'_>, value: &zipzi_sdk::TriangleHit) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_trianglehit_in(py, value, &classes)
+}
+fn write_trianglehit_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::TriangleHit,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "triangle_index",
+        (&value.triangle_index)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("vertex_indices", {
+        let out = PyList::empty(py);
+        for item0 in (&value.vertex_indices) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("vertex_ids", {
+        match (&value.vertex_ids).as_ref() {
+            Some(item) => {
+                let out = PyList::empty(py);
+                for item1 in (item) {
+                    out.append((item1).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    out.set_item("barycentric", {
+        let out = PyList::empty(py);
+        for item0 in (&value.barycentric) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("uv", {
+        match (&value.uv).as_ref() {
+            Some(item) => {
+                let out = PyList::empty(py);
+                for item1 in (item) {
+                    out.append((item1).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("TriangleHit")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -21013,6 +21440,89 @@ fn write_motionplaybackposition_in(
     )?;
     Ok(classes
         .getattr("MotionPlaybackPosition")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_spatialsamples(
+    py: Python<'_>,
+    value: &zipzi_sdk::SpatialSamples,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_spatialsamples_in(py, value, &classes)
+}
+fn write_spatialsamples_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::SpatialSamples,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("version", write_version(py, (&value.version))?)?;
+    out.set_item("requested", {
+        let out = PyList::empty(py);
+        for item0 in (&value.requested) {
+            out.append({
+                let out = PyDict::new(py);
+                for (key, item1) in (item0) {
+                    out.set_item(
+                        key.to_string(),
+                        (item1).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("queries", {
+        let out = PyList::empty(py);
+        for item0 in (&value.queries) {
+            out.append(write_spatialquery_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("frames", {
+        let out = PyList::empty(py);
+        for item0 in (&value.frames) {
+            out.append(write_spatialframe_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("SpatialSamples")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_spatialframe(py: Python<'_>, value: &zipzi_sdk::SpatialFrame) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_spatialframe_in(py, value, &classes)
+}
+fn write_spatialframe_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::SpatialFrame,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("parameters", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.parameters) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("results", {
+        let out = PyList::empty(py);
+        for item0 in (&value.results) {
+            out.append(write_spatialresult_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("SpatialFrame")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -28156,6 +28666,56 @@ pub fn measure_previewcommand(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             .saturating_add(16usize)),
         "set_physics" => Ok(256usize.saturating_add(16usize).saturating_add(16usize)),
         "reset" => Ok(256usize),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_spatialquery(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "bounds" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("targets")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(measure_objecttarget(&(v0))?);
+                }
+                bytes
+            })
+            .saturating_add(16usize)),
+        "hits" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("point")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(16usize);
+                }
+                bytes
+            })
+            .saturating_add(16usize)
+            .saturating_add(16usize)
+            .saturating_add(16usize)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_objecttarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "mesh" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "part" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),

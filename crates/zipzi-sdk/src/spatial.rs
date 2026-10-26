@@ -3,18 +3,35 @@
 
 use std::collections::{HashMap, HashSet};
 
-use serde::Serialize;
+use crate::{ConversionControl, SdkError};
+use serde::{Deserialize, Serialize};
 use zipzi_core::{DrawableFrame, Mesh, Part, Vec2};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
+#[serde(tag = "kind", content = "id", rename_all = "snake_case")]
 /// A mesh or Part selected by its stable authoring ID.
 ///
 /// A Part selects every descendant mesh, including meshes in nested Parts.
 pub enum ObjectTarget {
     /// Select exactly one mesh.
-    Mesh(String),
+    Mesh(
+        /// Persistent authoring mesh UUID.
+        String,
+    ),
     /// Select all descendant meshes of a Part.
-    Part(String),
+    Part(
+        /// Persistent Part UUID selecting descendant meshes.
+        String,
+    ),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -28,6 +45,8 @@ pub enum SpatialError {
     InvalidPoint,
     /// The candidate limit is zero.
     InvalidLimit,
+    /// Cooperative query cancellation; no authoring state was changed.
+    Cancelled,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -35,6 +54,7 @@ pub enum SpatialError {
 ///
 /// These geometric bounds can extend outside the canvas and do not account for
 /// textures, masks, or occlusion.
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObjectBounds {
     /// Resolved mesh IDs in authoring order, including meshes filtered from the bounds.
     pub mesh_ids: Vec<String>,
@@ -49,6 +69,7 @@ pub struct ObjectBounds {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 /// One evaluated triangle containing the query point.
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct TriangleHit {
     /// The triangle's zero-based position in the drawable's index buffer.
     pub triangle_index: usize,
@@ -67,6 +88,7 @@ pub struct TriangleHit {
 ///
 /// A hit is a geometric candidate, not proof that the mesh painted a visible
 /// pixel. `part_path` and `part_names` run from root to leaf.
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct GeometryHit {
     /// Stable authoring mesh ID.
     pub mesh_id: String,
@@ -91,6 +113,7 @@ pub struct GeometryHit {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 /// Mesh candidates for a model-space point, ordered by descending draw order.
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct GeometryQuery {
     /// Candidates retained after applying `max_candidates`.
     pub hits: Vec<GeometryHit>,
@@ -100,6 +123,238 @@ pub struct GeometryQuery {
     pub truncated: bool,
 }
 
+/// CPU geometric queries; masks, textures and occlusion are not pixel-tested.
+#[derive(
+    Clone, Debug, Serialize, Deserialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire,
+)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum SpatialQuery {
+    Bounds {
+        /// Mesh/Part UUID selectors; an empty selection selects no meshes.
+        targets: Vec<ObjectTarget>,
+        /// Include disabled, hidden and zero-opacity geometry in the union.
+        #[serde(default)]
+        include_hidden: bool,
+    },
+    Hits {
+        /// Finite XY point in evaluated Y-up model coordinates, not screen pixels.
+        point: [f64; 2],
+        /// Include disabled, hidden and zero-opacity geometric candidates.
+        #[serde(default)]
+        include_hidden: bool,
+        /// Include every containing triangle, stable vertex IDs, barycentric weights and UV.
+        #[serde(default)]
+        details: bool,
+        /// Maximum mesh candidates retained in descending draw order; total remains untruncated.
+        #[serde(default = "default_candidates")]
+        max_candidates: usize,
+    },
+}
+fn default_candidates() -> usize {
+    32
+}
+
+#[derive(Clone, Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
+pub enum SpatialResult {
+    Bounds(
+        /// Bounds and resolved mesh IDs for the corresponding selector request.
+        ObjectBounds,
+    ),
+    Hits(
+        /// Geometric candidates in SDK order, including total and truncation metadata.
+        GeometryQuery,
+    ),
+}
+
+#[derive(Clone, Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+pub struct SpatialFrame {
+    /// Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
+    pub parameters: zipzi_core::PreviewValues,
+    /// Query results in input order, including repeated queries and empty results.
+    pub results: Vec<SpatialResult>,
+}
+
+#[derive(Clone, Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+pub struct SpatialSamples {
+    /// Exact SDK version of the immutable formal or candidate snapshot.
+    pub version: crate::Version,
+    /// Owned requested parameter maps, preserving pose order and duplicates.
+    pub requested: Vec<zipzi_core::PreviewValues>,
+    /// Owned geometric queries shared by every returned frame.
+    pub queries: Vec<SpatialQuery>,
+    /// Effective poses and query results, aligned with requested parameter maps.
+    pub frames: Vec<SpatialFrame>,
+}
+
+pub(crate) fn spatial_error(error: SpatialError) -> SdkError {
+    let (code, message, id) = match error {
+        SpatialError::MissingMesh(id) => (
+            "MISSING_MESH",
+            "Spatial target mesh does not exist",
+            Some(id),
+        ),
+        SpatialError::MissingPart(id) => (
+            "MISSING_PART",
+            "Spatial target Part does not exist",
+            Some(id),
+        ),
+        SpatialError::InvalidPoint => (
+            "INVALID_SPATIAL_POINT",
+            "Point must contain finite model coordinates",
+            None,
+        ),
+        SpatialError::InvalidLimit => (
+            "INVALID_SPATIAL_LIMIT",
+            "Candidate limit must be nonzero",
+            None,
+        ),
+        SpatialError::Cancelled => ("CANCELLED", "Spatial query cancelled", None),
+    };
+    let mut error = SdkError::new(code, message, "spatial");
+    error.object_ids.extend(id);
+    error
+}
+
+/// Query a frame using borrowed object tables from its exact authoring source.
+/// No mesh geometry or binding payload is cloned to construct those tables.
+pub fn query_spatial_frame(
+    document: &zipzi_core::Document,
+    frame: &DrawableFrame,
+    queries: &[SpatialQuery],
+    control: &ConversionControl,
+) -> Result<Vec<SpatialResult>, SdkError> {
+    let meshes = document
+        .mesh_order()
+        .iter()
+        .filter_map(|id| document.get_mesh(id));
+    let parts = document
+        .part_order()
+        .iter()
+        .filter_map(|id| document.get_part(id));
+    queries
+        .iter()
+        .map(|query| {
+            cancelled(control).map_err(spatial_error)?;
+            match query {
+                SpatialQuery::Bounds {
+                    targets,
+                    include_hidden,
+                } => object_bounds_from(
+                    frame,
+                    meshes.clone(),
+                    parts.clone(),
+                    targets,
+                    *include_hidden,
+                    control,
+                )
+                .map(SpatialResult::Bounds),
+                SpatialQuery::Hits {
+                    point,
+                    include_hidden,
+                    details,
+                    max_candidates,
+                } => hit_test_geometry_from(
+                    frame,
+                    meshes.clone(),
+                    parts.clone(),
+                    *point,
+                    *include_hidden,
+                    *details,
+                    *max_candidates,
+                    control,
+                )
+                .map(SpatialResult::Hits),
+            }
+            .map_err(spatial_error)
+        })
+        .collect()
+}
+
+/// Validate selections and scalar options before evaluating or advancing a Preview.
+pub fn validate_spatial_queries(
+    document: &zipzi_core::Document,
+    queries: &[SpatialQuery],
+    control: &ConversionControl,
+) -> Result<(), SdkError> {
+    for query in queries {
+        cancelled(control).map_err(spatial_error)?;
+        match query {
+            SpatialQuery::Bounds { targets, .. } => {
+                for target in targets {
+                    let error = match target {
+                        ObjectTarget::Mesh(id) if document.get_mesh(id).is_none() => {
+                            Some(SpatialError::MissingMesh(id.clone()))
+                        }
+                        ObjectTarget::Part(id) if document.get_part(id).is_none() => {
+                            Some(SpatialError::MissingPart(id.clone()))
+                        }
+                        _ => None,
+                    };
+                    if let Some(error) = error {
+                        return Err(spatial_error(error));
+                    }
+                }
+            }
+            SpatialQuery::Hits {
+                point,
+                max_candidates,
+                ..
+            } => {
+                if !point.iter().all(|v| v.is_finite()) {
+                    return Err(spatial_error(SpatialError::InvalidPoint));
+                }
+                if *max_candidates == 0 {
+                    return Err(spatial_error(SpatialError::InvalidLimit));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+impl crate::AuthoringSnapshot {
+    /// Frozen explicit-parameter spatial evaluation; never reads the session's mutable Preview.
+    pub fn sample_spatial_with_control(
+        &self,
+        requested: Vec<zipzi_core::PreviewValues>,
+        queries: Vec<SpatialQuery>,
+        control: &ConversionControl,
+    ) -> Result<SpatialSamples, SdkError> {
+        validate_spatial_queries(self.document(), &queries, control)?;
+        let mut frames = Vec::with_capacity(requested.len());
+        for values in &requested {
+            cancelled(control).map_err(spatial_error)?;
+            let mut frame = DrawableFrame::default();
+            let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
+                self.document(),
+                values,
+                &mut frame,
+            );
+            if !status.is_ok() {
+                return Err(SdkError::from_status(status, "spatial", vec![]));
+            }
+            let results = query_spatial_frame(self.document(), &frame, &queries, control)?;
+            let parameters = frame
+                .parameters
+                .iter()
+                .map(|p| (p.id.clone(), p.value))
+                .collect();
+            frames.push(SpatialFrame {
+                parameters,
+                results,
+            });
+        }
+        cancelled(control).map_err(spatial_error)?;
+        Ok(SpatialSamples {
+            version: self.version(),
+            requested,
+            queries,
+            frames,
+        })
+    }
+}
+
 /// Resolve target IDs in authoring mesh order. Missing IDs are errors; an
 /// existing Part without descendant meshes resolves to an empty vector.
 pub fn resolve_mesh_ids(
@@ -107,11 +362,26 @@ pub fn resolve_mesh_ids(
     parts: &[Part],
     targets: &[ObjectTarget],
 ) -> Result<Vec<String>, SpatialError> {
-    let mesh_by_id: HashSet<_> = meshes.iter().map(|mesh| mesh.id.as_str()).collect();
-    let part_by_id: HashSet<_> = parts.iter().map(|part| part.id.as_str()).collect();
+    resolve_mesh_ids_from(
+        meshes.iter(),
+        parts.iter(),
+        targets,
+        &ConversionControl::default(),
+    )
+}
+
+fn resolve_mesh_ids_from<'a>(
+    meshes: impl Iterator<Item = &'a Mesh> + Clone,
+    parts: impl Iterator<Item = &'a Part> + Clone,
+    targets: &[ObjectTarget],
+    control: &ConversionControl,
+) -> Result<Vec<String>, SpatialError> {
+    let mesh_by_id: HashSet<_> = meshes.clone().map(|mesh| mesh.id.as_str()).collect();
+    let part_by_id: HashSet<_> = parts.clone().map(|part| part.id.as_str()).collect();
     let mut selected: HashSet<&str> = HashSet::new();
     let mut descendants: HashSet<&str> = HashSet::new();
     for target in targets {
+        cancelled(control)?;
         match target {
             ObjectTarget::Mesh(id) => {
                 if !mesh_by_id.contains(id.as_str()) {
@@ -128,8 +398,9 @@ pub fn resolve_mesh_ids(
         }
     }
     loop {
+        cancelled(control)?;
         let before = descendants.len();
-        for part in parts {
+        for part in parts.clone() {
             if descendants.contains(part.parent_id.as_str()) {
                 descendants.insert(part.id.as_str());
             }
@@ -138,16 +409,20 @@ pub fn resolve_mesh_ids(
             break;
         }
     }
-    for mesh in meshes {
+    for mesh in meshes.clone() {
         if descendants.contains(mesh.part_id.as_str()) {
             selected.insert(mesh.id.as_str());
         }
     }
     Ok(meshes
-        .iter()
+        .clone()
         .filter(|mesh| selected.contains(mesh.id.as_str()))
         .map(|mesh| mesh.id.clone())
         .collect())
+}
+
+fn cancelled(control: &ConversionControl) -> Result<(), SpatialError> {
+    control.check().map_err(|_| SpatialError::Cancelled)
 }
 
 fn draws(drawable: &zipzi_core::Drawable) -> bool {
@@ -166,16 +441,38 @@ pub fn object_bounds(
     targets: &[ObjectTarget],
     include_hidden: bool,
 ) -> Result<ObjectBounds, SpatialError> {
-    let mesh_ids = resolve_mesh_ids(meshes, parts, targets)?;
+    object_bounds_from(
+        frame,
+        meshes.iter(),
+        parts.iter(),
+        targets,
+        include_hidden,
+        &ConversionControl::default(),
+    )
+}
+
+fn object_bounds_from<'a>(
+    frame: &DrawableFrame,
+    meshes: impl Iterator<Item = &'a Mesh> + Clone,
+    parts: impl Iterator<Item = &'a Part> + Clone,
+    targets: &[ObjectTarget],
+    include_hidden: bool,
+    control: &ConversionControl,
+) -> Result<ObjectBounds, SpatialError> {
+    let mesh_ids = resolve_mesh_ids_from(meshes, parts, targets, control)?;
     let selected: HashSet<_> = mesh_ids.iter().map(String::as_str).collect();
     let mut bounds = None::<[f64; 4]>;
     let mut filtered = false;
     for drawable in &frame.drawables {
+        cancelled(control)?;
         if !selected.contains(drawable.id.as_str()) {
             continue;
         }
         if include_hidden || draws(drawable) {
-            for position in &drawable.positions {
+            for (slot, position) in drawable.positions.iter().enumerate() {
+                if slot % 1024 == 0 {
+                    cancelled(control)?;
+                }
                 let (x, y) = (f64::from(position.x), f64::from(position.y));
                 bounds = Some(match bounds {
                     Some([x0, y0, x1, y1]) => [x0.min(x), y0.min(y), x1.max(x), y1.max(y)],
@@ -271,22 +568,51 @@ pub fn hit_test_geometry(
     details: bool,
     max_candidates: usize,
 ) -> Result<GeometryQuery, SpatialError> {
+    hit_test_geometry_from(
+        frame,
+        meshes.iter(),
+        parts.iter(),
+        point,
+        include_hidden,
+        details,
+        max_candidates,
+        &ConversionControl::default(),
+    )
+}
+
+fn hit_test_geometry_from<'a>(
+    frame: &DrawableFrame,
+    meshes: impl Iterator<Item = &'a Mesh> + Clone,
+    parts: impl Iterator<Item = &'a Part> + Clone,
+    point: [f64; 2],
+    include_hidden: bool,
+    details: bool,
+    max_candidates: usize,
+    control: &ConversionControl,
+) -> Result<GeometryQuery, SpatialError> {
     if !point.into_iter().all(f64::is_finite) {
         return Err(SpatialError::InvalidPoint);
     }
     if max_candidates == 0 {
         return Err(SpatialError::InvalidLimit);
     }
-    let mesh_by_id: HashMap<_, _> = meshes.iter().map(|mesh| (mesh.id.as_str(), mesh)).collect();
-    let part_by_id: HashMap<_, _> = parts.iter().map(|part| (part.id.as_str(), part)).collect();
+    let mesh_by_id: HashMap<_, _> = meshes
+        .clone()
+        .map(|mesh| (mesh.id.as_str(), mesh))
+        .collect();
+    let part_by_id: HashMap<_, _> = parts.clone().map(|part| (part.id.as_str(), part)).collect();
     let mut found = Vec::new();
     for (sequence, drawable) in frame.drawables.iter().enumerate() {
+        cancelled(control)?;
         if !include_hidden && !draws(drawable) {
             continue;
         }
         let mesh = mesh_by_id.get(drawable.id.as_str()).copied();
         let mut triangles = Vec::new();
         for (index, triple) in drawable.indices.as_chunks::<3>().0.iter().enumerate() {
+            if index % 1024 == 0 {
+                cancelled(control)?;
+            }
             let indices = [triple[0], triple[1], triple[2]];
             if let Some(hit) = triangle_hit(
                 &drawable.positions,
@@ -305,34 +631,11 @@ pub fn hit_test_geometry(
         if triangles.is_empty() {
             continue;
         }
-        let mut part_path = Vec::new();
-        let mut part_names = Vec::new();
-        let mut part_id = drawable.part_id.as_str();
-        let mut seen = HashSet::new();
-        while let Some(part) = part_by_id.get(part_id).copied() {
-            if !seen.insert(part_id) {
-                break;
-            }
-            part_path.push(part.id.clone());
-            part_names.push(part.name.clone());
-            part_id = part.parent_id.as_str();
-        }
-        part_path.reverse();
-        part_names.reverse();
         found.push((
             drawable.render_order,
             sequence,
-            GeometryHit {
-                mesh_id: drawable.id.clone(),
-                name: mesh.map_or_else(String::new, |mesh| mesh.name.clone()),
-                part_path,
-                part_names,
-                enabled: drawable.enabled,
-                visible: drawable.visible,
-                opacity: drawable.opacity,
-                render_order: drawable.render_order,
-                triangles: if details { triangles } else { Vec::new() },
-            },
+            drawable,
+            if details { triangles } else { Vec::new() },
         ));
     }
     found.sort_by_key(|item| std::cmp::Reverse((item.0, item.1)));
@@ -341,8 +644,37 @@ pub fn hit_test_geometry(
         hits: found
             .into_iter()
             .take(max_candidates)
-            .map(|(_, _, hit)| hit)
-            .collect(),
+            .map(|(_, _, drawable, triangles)| {
+                cancelled(control)?;
+                let mesh = mesh_by_id.get(drawable.id.as_str()).copied();
+                let mut part_path = Vec::new();
+                let mut part_names = Vec::new();
+                let mut part_id = drawable.part_id.as_str();
+                let mut seen = HashSet::new();
+                while let Some(part) = part_by_id.get(part_id).copied() {
+                    cancelled(control)?;
+                    if !seen.insert(part_id) {
+                        break;
+                    }
+                    part_path.push(part.id.clone());
+                    part_names.push(part.name.clone());
+                    part_id = part.parent_id.as_str();
+                }
+                part_path.reverse();
+                part_names.reverse();
+                Ok(GeometryHit {
+                    mesh_id: drawable.id.clone(),
+                    name: mesh.map_or_else(String::new, |m| m.name.clone()),
+                    part_path,
+                    part_names,
+                    enabled: drawable.enabled,
+                    visible: drawable.visible,
+                    opacity: drawable.opacity,
+                    render_order: drawable.render_order,
+                    triangles,
+                })
+            })
+            .collect::<Result<Vec<_>, SpatialError>>()?,
         total,
         truncated: total > max_candidates,
     })

@@ -32,7 +32,7 @@ class LocalBackend(LocalBindings):
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-16":
+        if self._native.contract != "zipzi-python2-17":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 

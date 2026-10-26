@@ -174,6 +174,7 @@ impl Runtime {
         if let Ok(value) = &result {
             let actual = match value {
                 JobValue::Sampled(value) => Some(value.source),
+                JobValue::Spatial(value) => Some(value.source),
                 JobValue::Previewed(value) => Some(value.source),
                 JobValue::PreparedPlan(value) => Some(value.source.source),
                 _ => None,

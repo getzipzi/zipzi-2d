@@ -50,6 +50,7 @@ def register() -> None:
     register_request(lifecycle.Modeling.records)
     register_request(lifecycle.Modeling.sample)
     register_request(lifecycle.Modeling.sample_async)
+    register_request(lifecycle.Modeling.spatial)
     register_request(resources.Resources.prepare_image)
     register_request(resources.Resources.prepare_buffer)
     register_request(resources.Resources.load_png)

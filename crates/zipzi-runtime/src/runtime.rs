@@ -20,6 +20,7 @@ pub(crate) mod resources;
 pub use references::{LabelAddressInfo, ObjectRefInfo};
 pub(crate) mod previews;
 mod sampling;
+mod spatial;
 mod typed;
 use crate::events::EventLog;
 use crate::jobs::Task;

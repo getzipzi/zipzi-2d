@@ -18,7 +18,7 @@ from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
 from ._transfers import Transfer
 
-CONTRACT = "zipzi-runtime-r5-preview-1"
+CONTRACT = "zipzi-runtime-r5-spatial-1"
 MAX_FRAME = 16 << 20
 MAX_BINARY_CHUNK = 1 << 20
 MAX_BINARY_HEADER = 16 << 10
@@ -249,9 +249,9 @@ class ConnectedBackend(ConnectedBindings):
     def _transport_wait(self, job: object, kind: JobKind, owner: object, *, timeout: float | None = None) -> object:
         deadline = None if timeout is None else time.monotonic() + timeout
         while True:
-            if kind in {"sampled","preview"}:
+            if kind in {"sampled","preview","spatial"}:
                 selector=dict(op="job",job=job)
-                raw=self._drive_transfer(Transfer(self,owner,"samples" if kind=="sampled" else "preview",selector=selector))
+                raw=self._drive_transfer(Transfer(self,owner,"samples" if kind=="sampled" else "preview" if kind=="preview" else "spatial",selector=selector))
                 if raw is not None: return raw
                 if deadline is not None and time.monotonic() >= deadline:
                     raise JobTimeout()

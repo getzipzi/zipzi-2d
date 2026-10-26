@@ -36740,6 +36740,139 @@
     "preview": {
       "fields": [
         {
+          "doc": "Owned geometric query descriptors aligned with every frame.spatial slot.",
+          "name": "queries",
+          "rust_name": "queries",
+          "shape": {
+            "item": {
+              "content": null,
+              "kind": "serde_enum",
+              "name": "zipzi_sdk::spatial::SpatialQuery",
+              "tag": "kind",
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "doc": "Mesh/Part UUID selectors; an empty selection selects no meshes.",
+                      "name": "targets",
+                      "rust_name": "targets",
+                      "shape": {
+                        "item": {
+                          "content": "id",
+                          "kind": "serde_enum",
+                          "name": "zipzi_sdk::spatial::ObjectTarget",
+                          "tag": "kind",
+                          "variants": [
+                            {
+                              "fields": [
+                                {
+                                  "doc": "Persistent authoring mesh UUID.",
+                                  "name": "value",
+                                  "rust_name": "0",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "form": "newtype",
+                              "name": "mesh",
+                              "rust_name": "Mesh"
+                            },
+                            {
+                              "fields": [
+                                {
+                                  "doc": "Persistent Part UUID selecting descendant meshes.",
+                                  "name": "value",
+                                  "rust_name": "0",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "form": "newtype",
+                              "name": "part",
+                              "rust_name": "Part"
+                            }
+                          ]
+                        },
+                        "kind": "sequence"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": false,
+                      "doc": "Include disabled, hidden and zero-opacity geometry in the union.",
+                      "name": "include_hidden",
+                      "rust_name": "include_hidden",
+                      "shape": {
+                        "kind": "bool"
+                      },
+                      "skip": false
+                    }
+                  ],
+                  "form": "record",
+                  "name": "bounds",
+                  "rust_name": "Bounds"
+                },
+                {
+                  "fields": [
+                    {
+                      "doc": "Finite XY point in evaluated Y-up model coordinates, not screen pixels.",
+                      "name": "point",
+                      "rust_name": "point",
+                      "shape": {
+                        "item": {
+                          "kind": "f64"
+                        },
+                        "kind": "array",
+                        "length": 2
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": false,
+                      "doc": "Include disabled, hidden and zero-opacity geometric candidates.",
+                      "name": "include_hidden",
+                      "rust_name": "include_hidden",
+                      "shape": {
+                        "kind": "bool"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": false,
+                      "doc": "Include every containing triangle, stable vertex IDs, barycentric weights and UV.",
+                      "name": "details",
+                      "rust_name": "details",
+                      "shape": {
+                        "kind": "bool"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": 32,
+                      "doc": "Maximum mesh candidates retained in descending draw order; total remains untruncated.",
+                      "name": "max_candidates",
+                      "rust_name": "max_candidates",
+                      "shape": {
+                        "kind": "usize"
+                      },
+                      "skip": false
+                    }
+                  ],
+                  "form": "record",
+                  "name": "hits",
+                  "rust_name": "Hits"
+                }
+              ]
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
           "doc": "Accepted sample request ordinal shared by these ordered frames.",
           "name": "sequence",
           "rust_name": "sequence",
@@ -36755,6 +36888,306 @@
           "shape": {
             "item": {
               "fields": [
+                {
+                  "doc": "Geometric query results in the corresponding request order, from this exact SDK state.",
+                  "name": "spatial",
+                  "rust_name": "spatial",
+                  "shape": {
+                    "item": {
+                      "content": "value",
+                      "kind": "serde_enum",
+                      "name": "zipzi_sdk::spatial::SpatialResult",
+                      "tag": "kind",
+                      "variants": [
+                        {
+                          "fields": [
+                            {
+                              "doc": "Bounds and resolved mesh IDs for the corresponding selector request.",
+                              "name": "value",
+                              "rust_name": "0",
+                              "shape": {
+                                "fields": [
+                                  {
+                                    "doc": "Resolved mesh IDs in authoring order, including meshes filtered from the bounds.",
+                                    "name": "mesh_ids",
+                                    "rust_name": "mesh_ids",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "string"
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "`[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.\nEvaluated Y-up model units, independent of source canvas or export padding.\nGeometric bounds only: textures, masks and occlusion are not applied.",
+                                    "name": "model_bounds",
+                                    "rust_name": "model_bounds",
+                                    "shape": {
+                                      "item": {
+                                        "item": {
+                                          "kind": "f64"
+                                        },
+                                        "kind": "array",
+                                        "length": 4
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or\n`no_evaluated_positions`.",
+                                    "name": "empty_reason",
+                                    "rust_name": "empty_reason",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "string"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::spatial::ObjectBounds",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "form": "newtype",
+                          "name": "bounds",
+                          "rust_name": "Bounds"
+                        },
+                        {
+                          "fields": [
+                            {
+                              "doc": "Geometric candidates in SDK order, including total and truncation metadata.",
+                              "name": "value",
+                              "rust_name": "0",
+                              "shape": {
+                                "fields": [
+                                  {
+                                    "doc": "Candidates retained after applying `max_candidates`.",
+                                    "name": "hits",
+                                    "rust_name": "hits",
+                                    "shape": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "doc": "Stable authoring mesh ID.",
+                                            "name": "mesh_id",
+                                            "rust_name": "mesh_id",
+                                            "shape": {
+                                              "kind": "string"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Authoring mesh display name.",
+                                            "name": "name",
+                                            "rust_name": "name",
+                                            "shape": {
+                                              "kind": "string"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Ancestor Part IDs, from root to leaf.",
+                                            "name": "part_path",
+                                            "rust_name": "part_path",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "string"
+                                              },
+                                              "kind": "sequence"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Ancestor Part display names, parallel to `part_path`.",
+                                            "name": "part_names",
+                                            "rust_name": "part_names",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "string"
+                                              },
+                                              "kind": "sequence"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Evaluated drawable enabled state.",
+                                            "name": "enabled",
+                                            "rust_name": "enabled",
+                                            "shape": {
+                                              "kind": "bool"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Evaluated drawable visibility state.",
+                                            "name": "visible",
+                                            "rust_name": "visible",
+                                            "shape": {
+                                              "kind": "bool"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Evaluated drawable opacity.",
+                                            "name": "opacity",
+                                            "rust_name": "opacity",
+                                            "shape": {
+                                              "kind": "f32"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Evaluated draw order, used for stable descending candidate ordering.\nThis is not a visibility ranking across offscreen composition groups.",
+                                            "name": "render_order",
+                                            "rust_name": "render_order",
+                                            "shape": {
+                                              "kind": "i32"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Containing triangles; populated only when `details` was requested.",
+                                            "name": "triangles",
+                                            "rust_name": "triangles",
+                                            "shape": {
+                                              "item": {
+                                                "fields": [
+                                                  {
+                                                    "doc": "The triangle's zero-based position in the drawable's index buffer.",
+                                                    "name": "triangle_index",
+                                                    "rust_name": "triangle_index",
+                                                    "shape": {
+                                                      "kind": "usize"
+                                                    },
+                                                    "skip": false
+                                                  },
+                                                  {
+                                                    "doc": "Offsets into the evaluated drawable's vertex arrays.",
+                                                    "name": "vertex_indices",
+                                                    "rust_name": "vertex_indices",
+                                                    "shape": {
+                                                      "item": {
+                                                        "kind": "u32"
+                                                      },
+                                                      "kind": "array",
+                                                      "length": 3
+                                                    },
+                                                    "skip": false
+                                                  },
+                                                  {
+                                                    "default": null,
+                                                    "doc": "Stable authoring vertex IDs, when present.",
+                                                    "name": "vertex_ids",
+                                                    "rust_name": "vertex_ids",
+                                                    "shape": {
+                                                      "item": {
+                                                        "item": {
+                                                          "kind": "u32"
+                                                        },
+                                                        "kind": "array",
+                                                        "length": 3
+                                                      },
+                                                      "kind": "optional"
+                                                    },
+                                                    "skip": false
+                                                  },
+                                                  {
+                                                    "doc": "Interpolation weights corresponding to `vertex_indices`.",
+                                                    "name": "barycentric",
+                                                    "rust_name": "barycentric",
+                                                    "shape": {
+                                                      "item": {
+                                                        "kind": "f64"
+                                                      },
+                                                      "kind": "array",
+                                                      "length": 3
+                                                    },
+                                                    "skip": false
+                                                  },
+                                                  {
+                                                    "default": null,
+                                                    "doc": "UV coordinate interpolated from the triangle's evaluated UVs.",
+                                                    "name": "uv",
+                                                    "rust_name": "uv",
+                                                    "shape": {
+                                                      "item": {
+                                                        "item": {
+                                                          "kind": "f64"
+                                                        },
+                                                        "kind": "array",
+                                                        "length": 2
+                                                      },
+                                                      "kind": "optional"
+                                                    },
+                                                    "skip": false
+                                                  }
+                                                ],
+                                                "kind": "serde_record",
+                                                "name": "zipzi_sdk::spatial::TriangleHit",
+                                                "transparent": false,
+                                                "tuple": false
+                                              },
+                                              "kind": "sequence"
+                                            },
+                                            "skip": false
+                                          }
+                                        ],
+                                        "kind": "serde_record",
+                                        "name": "zipzi_sdk::spatial::GeometryHit",
+                                        "transparent": false,
+                                        "tuple": false
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Number of candidates before applying the limit.",
+                                    "name": "total",
+                                    "rust_name": "total",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether any candidates were omitted by the limit.",
+                                    "name": "truncated",
+                                    "rust_name": "truncated",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::spatial::GeometryQuery",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "form": "newtype",
+                          "name": "hits",
+                          "rust_name": "Hits"
+                        }
+                      ]
+                    },
+                    "kind": "sequence"
+                  },
+                  "skip": false
+                },
                 {
                   "doc": "Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.",
                   "name": "preview_id",
@@ -37855,7 +38288,7 @@
       "transparent": false,
       "tuple": false
     },
-    "preview_signature": "471663b0658d2b2a11201a3eeee7d6f3",
+    "preview_signature": "fd19a1fe9c78455a311facdf8a592938",
     "sample_signature": "33cfb73ff96616c25d9d5f06db944d7e",
     "samples": {
       "fields": [
@@ -38667,6 +39100,502 @@
       "Formal",
       "Edit"
     ],
+    "spatial": {
+      "fields": [
+        {
+          "doc": "Exact SDK version of the immutable formal or candidate snapshot.",
+          "name": "version",
+          "rust_name": "version",
+          "shape": {
+            "kind": "opaque",
+            "name": "zipzi_sdk::types::Version"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned requested parameter maps, preserving pose order and duplicates.",
+          "name": "requested",
+          "rust_name": "requested",
+          "shape": {
+            "item": {
+              "kind": "string_map",
+              "value": {
+                "kind": "f32"
+              }
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned geometric queries shared by every returned frame.",
+          "name": "queries",
+          "rust_name": "queries",
+          "shape": {
+            "item": {
+              "content": null,
+              "kind": "serde_enum",
+              "name": "zipzi_sdk::spatial::SpatialQuery",
+              "tag": "kind",
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "doc": "Mesh/Part UUID selectors; an empty selection selects no meshes.",
+                      "name": "targets",
+                      "rust_name": "targets",
+                      "shape": {
+                        "item": {
+                          "content": "id",
+                          "kind": "serde_enum",
+                          "name": "zipzi_sdk::spatial::ObjectTarget",
+                          "tag": "kind",
+                          "variants": [
+                            {
+                              "fields": [
+                                {
+                                  "doc": "Persistent authoring mesh UUID.",
+                                  "name": "value",
+                                  "rust_name": "0",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "form": "newtype",
+                              "name": "mesh",
+                              "rust_name": "Mesh"
+                            },
+                            {
+                              "fields": [
+                                {
+                                  "doc": "Persistent Part UUID selecting descendant meshes.",
+                                  "name": "value",
+                                  "rust_name": "0",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "form": "newtype",
+                              "name": "part",
+                              "rust_name": "Part"
+                            }
+                          ]
+                        },
+                        "kind": "sequence"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": false,
+                      "doc": "Include disabled, hidden and zero-opacity geometry in the union.",
+                      "name": "include_hidden",
+                      "rust_name": "include_hidden",
+                      "shape": {
+                        "kind": "bool"
+                      },
+                      "skip": false
+                    }
+                  ],
+                  "form": "record",
+                  "name": "bounds",
+                  "rust_name": "Bounds"
+                },
+                {
+                  "fields": [
+                    {
+                      "doc": "Finite XY point in evaluated Y-up model coordinates, not screen pixels.",
+                      "name": "point",
+                      "rust_name": "point",
+                      "shape": {
+                        "item": {
+                          "kind": "f64"
+                        },
+                        "kind": "array",
+                        "length": 2
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": false,
+                      "doc": "Include disabled, hidden and zero-opacity geometric candidates.",
+                      "name": "include_hidden",
+                      "rust_name": "include_hidden",
+                      "shape": {
+                        "kind": "bool"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": false,
+                      "doc": "Include every containing triangle, stable vertex IDs, barycentric weights and UV.",
+                      "name": "details",
+                      "rust_name": "details",
+                      "shape": {
+                        "kind": "bool"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": 32,
+                      "doc": "Maximum mesh candidates retained in descending draw order; total remains untruncated.",
+                      "name": "max_candidates",
+                      "rust_name": "max_candidates",
+                      "shape": {
+                        "kind": "usize"
+                      },
+                      "skip": false
+                    }
+                  ],
+                  "form": "record",
+                  "name": "hits",
+                  "rust_name": "Hits"
+                }
+              ]
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Effective poses and query results, aligned with requested parameter maps.",
+          "name": "frames",
+          "rust_name": "frames",
+          "shape": {
+            "item": {
+              "fields": [
+                {
+                  "doc": "Effective evaluated parameter values keyed by document UUID, including defaults/clamps.",
+                  "name": "parameters",
+                  "rust_name": "parameters",
+                  "shape": {
+                    "kind": "string_map",
+                    "value": {
+                      "kind": "f32"
+                    }
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Query results in input order, including repeated queries and empty results.",
+                  "name": "results",
+                  "rust_name": "results",
+                  "shape": {
+                    "item": {
+                      "content": "value",
+                      "kind": "serde_enum",
+                      "name": "zipzi_sdk::spatial::SpatialResult",
+                      "tag": "kind",
+                      "variants": [
+                        {
+                          "fields": [
+                            {
+                              "doc": "Bounds and resolved mesh IDs for the corresponding selector request.",
+                              "name": "value",
+                              "rust_name": "0",
+                              "shape": {
+                                "fields": [
+                                  {
+                                    "doc": "Resolved mesh IDs in authoring order, including meshes filtered from the bounds.",
+                                    "name": "mesh_ids",
+                                    "rust_name": "mesh_ids",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "string"
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "`[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.\nEvaluated Y-up model units, independent of source canvas or export padding.\nGeometric bounds only: textures, masks and occlusion are not applied.",
+                                    "name": "model_bounds",
+                                    "rust_name": "model_bounds",
+                                    "shape": {
+                                      "item": {
+                                        "item": {
+                                          "kind": "f64"
+                                        },
+                                        "kind": "array",
+                                        "length": 4
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or\n`no_evaluated_positions`.",
+                                    "name": "empty_reason",
+                                    "rust_name": "empty_reason",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "string"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::spatial::ObjectBounds",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "form": "newtype",
+                          "name": "bounds",
+                          "rust_name": "Bounds"
+                        },
+                        {
+                          "fields": [
+                            {
+                              "doc": "Geometric candidates in SDK order, including total and truncation metadata.",
+                              "name": "value",
+                              "rust_name": "0",
+                              "shape": {
+                                "fields": [
+                                  {
+                                    "doc": "Candidates retained after applying `max_candidates`.",
+                                    "name": "hits",
+                                    "rust_name": "hits",
+                                    "shape": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "doc": "Stable authoring mesh ID.",
+                                            "name": "mesh_id",
+                                            "rust_name": "mesh_id",
+                                            "shape": {
+                                              "kind": "string"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Authoring mesh display name.",
+                                            "name": "name",
+                                            "rust_name": "name",
+                                            "shape": {
+                                              "kind": "string"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Ancestor Part IDs, from root to leaf.",
+                                            "name": "part_path",
+                                            "rust_name": "part_path",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "string"
+                                              },
+                                              "kind": "sequence"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Ancestor Part display names, parallel to `part_path`.",
+                                            "name": "part_names",
+                                            "rust_name": "part_names",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "string"
+                                              },
+                                              "kind": "sequence"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Evaluated drawable enabled state.",
+                                            "name": "enabled",
+                                            "rust_name": "enabled",
+                                            "shape": {
+                                              "kind": "bool"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Evaluated drawable visibility state.",
+                                            "name": "visible",
+                                            "rust_name": "visible",
+                                            "shape": {
+                                              "kind": "bool"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Evaluated drawable opacity.",
+                                            "name": "opacity",
+                                            "rust_name": "opacity",
+                                            "shape": {
+                                              "kind": "f32"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Evaluated draw order, used for stable descending candidate ordering.\nThis is not a visibility ranking across offscreen composition groups.",
+                                            "name": "render_order",
+                                            "rust_name": "render_order",
+                                            "shape": {
+                                              "kind": "i32"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Containing triangles; populated only when `details` was requested.",
+                                            "name": "triangles",
+                                            "rust_name": "triangles",
+                                            "shape": {
+                                              "item": {
+                                                "fields": [
+                                                  {
+                                                    "doc": "The triangle's zero-based position in the drawable's index buffer.",
+                                                    "name": "triangle_index",
+                                                    "rust_name": "triangle_index",
+                                                    "shape": {
+                                                      "kind": "usize"
+                                                    },
+                                                    "skip": false
+                                                  },
+                                                  {
+                                                    "doc": "Offsets into the evaluated drawable's vertex arrays.",
+                                                    "name": "vertex_indices",
+                                                    "rust_name": "vertex_indices",
+                                                    "shape": {
+                                                      "item": {
+                                                        "kind": "u32"
+                                                      },
+                                                      "kind": "array",
+                                                      "length": 3
+                                                    },
+                                                    "skip": false
+                                                  },
+                                                  {
+                                                    "default": null,
+                                                    "doc": "Stable authoring vertex IDs, when present.",
+                                                    "name": "vertex_ids",
+                                                    "rust_name": "vertex_ids",
+                                                    "shape": {
+                                                      "item": {
+                                                        "item": {
+                                                          "kind": "u32"
+                                                        },
+                                                        "kind": "array",
+                                                        "length": 3
+                                                      },
+                                                      "kind": "optional"
+                                                    },
+                                                    "skip": false
+                                                  },
+                                                  {
+                                                    "doc": "Interpolation weights corresponding to `vertex_indices`.",
+                                                    "name": "barycentric",
+                                                    "rust_name": "barycentric",
+                                                    "shape": {
+                                                      "item": {
+                                                        "kind": "f64"
+                                                      },
+                                                      "kind": "array",
+                                                      "length": 3
+                                                    },
+                                                    "skip": false
+                                                  },
+                                                  {
+                                                    "default": null,
+                                                    "doc": "UV coordinate interpolated from the triangle's evaluated UVs.",
+                                                    "name": "uv",
+                                                    "rust_name": "uv",
+                                                    "shape": {
+                                                      "item": {
+                                                        "item": {
+                                                          "kind": "f64"
+                                                        },
+                                                        "kind": "array",
+                                                        "length": 2
+                                                      },
+                                                      "kind": "optional"
+                                                    },
+                                                    "skip": false
+                                                  }
+                                                ],
+                                                "kind": "serde_record",
+                                                "name": "zipzi_sdk::spatial::TriangleHit",
+                                                "transparent": false,
+                                                "tuple": false
+                                              },
+                                              "kind": "sequence"
+                                            },
+                                            "skip": false
+                                          }
+                                        ],
+                                        "kind": "serde_record",
+                                        "name": "zipzi_sdk::spatial::GeometryHit",
+                                        "transparent": false,
+                                        "tuple": false
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Number of candidates before applying the limit.",
+                                    "name": "total",
+                                    "rust_name": "total",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether any candidates were omitted by the limit.",
+                                    "name": "truncated",
+                                    "rust_name": "truncated",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::spatial::GeometryQuery",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "form": "newtype",
+                          "name": "hits",
+                          "rust_name": "Hits"
+                        }
+                      ]
+                    },
+                    "kind": "sequence"
+                  },
+                  "skip": false
+                }
+              ],
+              "kind": "serde_record",
+              "name": "zipzi_sdk::spatial::SpatialFrame",
+              "transparent": false,
+              "tuple": false
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_sdk::spatial::SpatialSamples",
+      "transparent": false,
+      "tuple": false
+    },
+    "spatial_signature": "ba2052a3db49636e40cd87d49098a564",
     "version": 1
   },
   "bindings": [
@@ -54820,7 +55749,8 @@
       7,
       9,
       11,
-      14
+      14,
+      17
     ],
     "native_only_roots": [
       {
@@ -114481,6 +115411,139 @@
       {
         "fields": [
           {
+            "doc": "Owned geometric query descriptors aligned with every frame.spatial slot.",
+            "name": "queries",
+            "rust_name": "queries",
+            "shape": {
+              "item": {
+                "content": null,
+                "kind": "serde_enum",
+                "name": "zipzi_sdk::spatial::SpatialQuery",
+                "tag": "kind",
+                "variants": [
+                  {
+                    "fields": [
+                      {
+                        "doc": "Mesh/Part UUID selectors; an empty selection selects no meshes.",
+                        "name": "targets",
+                        "rust_name": "targets",
+                        "shape": {
+                          "item": {
+                            "content": "id",
+                            "kind": "serde_enum",
+                            "name": "zipzi_sdk::spatial::ObjectTarget",
+                            "tag": "kind",
+                            "variants": [
+                              {
+                                "fields": [
+                                  {
+                                    "doc": "Persistent authoring mesh UUID.",
+                                    "name": "value",
+                                    "rust_name": "0",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "form": "newtype",
+                                "name": "mesh",
+                                "rust_name": "Mesh"
+                              },
+                              {
+                                "fields": [
+                                  {
+                                    "doc": "Persistent Part UUID selecting descendant meshes.",
+                                    "name": "value",
+                                    "rust_name": "0",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "form": "newtype",
+                                "name": "part",
+                                "rust_name": "Part"
+                              }
+                            ]
+                          },
+                          "kind": "sequence"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Include disabled, hidden and zero-opacity geometry in the union.",
+                        "name": "include_hidden",
+                        "rust_name": "include_hidden",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      }
+                    ],
+                    "form": "record",
+                    "name": "bounds",
+                    "rust_name": "Bounds"
+                  },
+                  {
+                    "fields": [
+                      {
+                        "doc": "Finite XY point in evaluated Y-up model coordinates, not screen pixels.",
+                        "name": "point",
+                        "rust_name": "point",
+                        "shape": {
+                          "item": {
+                            "kind": "f64"
+                          },
+                          "kind": "array",
+                          "length": 2
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Include disabled, hidden and zero-opacity geometric candidates.",
+                        "name": "include_hidden",
+                        "rust_name": "include_hidden",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Include every containing triangle, stable vertex IDs, barycentric weights and UV.",
+                        "name": "details",
+                        "rust_name": "details",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": 32,
+                        "doc": "Maximum mesh candidates retained in descending draw order; total remains untruncated.",
+                        "name": "max_candidates",
+                        "rust_name": "max_candidates",
+                        "shape": {
+                          "kind": "usize"
+                        },
+                        "skip": false
+                      }
+                    ],
+                    "form": "record",
+                    "name": "hits",
+                    "rust_name": "Hits"
+                  }
+                ]
+              },
+              "kind": "sequence"
+            },
+            "skip": false
+          },
+          {
             "doc": "Accepted sample request ordinal shared by these ordered frames.",
             "name": "sequence",
             "rust_name": "sequence",
@@ -114496,6 +115559,306 @@
             "shape": {
               "item": {
                 "fields": [
+                  {
+                    "doc": "Geometric query results in the corresponding request order, from this exact SDK state.",
+                    "name": "spatial",
+                    "rust_name": "spatial",
+                    "shape": {
+                      "item": {
+                        "content": "value",
+                        "kind": "serde_enum",
+                        "name": "zipzi_sdk::spatial::SpatialResult",
+                        "tag": "kind",
+                        "variants": [
+                          {
+                            "fields": [
+                              {
+                                "doc": "Bounds and resolved mesh IDs for the corresponding selector request.",
+                                "name": "value",
+                                "rust_name": "0",
+                                "shape": {
+                                  "fields": [
+                                    {
+                                      "doc": "Resolved mesh IDs in authoring order, including meshes filtered from the bounds.",
+                                      "name": "mesh_ids",
+                                      "rust_name": "mesh_ids",
+                                      "shape": {
+                                        "item": {
+                                          "kind": "string"
+                                        },
+                                        "kind": "sequence"
+                                      },
+                                      "skip": false
+                                    },
+                                    {
+                                      "default": null,
+                                      "doc": "`[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.\nEvaluated Y-up model units, independent of source canvas or export padding.\nGeometric bounds only: textures, masks and occlusion are not applied.",
+                                      "name": "model_bounds",
+                                      "rust_name": "model_bounds",
+                                      "shape": {
+                                        "item": {
+                                          "item": {
+                                            "kind": "f64"
+                                          },
+                                          "kind": "array",
+                                          "length": 4
+                                        },
+                                        "kind": "optional"
+                                      },
+                                      "skip": false
+                                    },
+                                    {
+                                      "default": null,
+                                      "doc": "Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or\n`no_evaluated_positions`.",
+                                      "name": "empty_reason",
+                                      "rust_name": "empty_reason",
+                                      "shape": {
+                                        "item": {
+                                          "kind": "string"
+                                        },
+                                        "kind": "optional"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "kind": "serde_record",
+                                  "name": "zipzi_sdk::spatial::ObjectBounds",
+                                  "transparent": false,
+                                  "tuple": false
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "form": "newtype",
+                            "name": "bounds",
+                            "rust_name": "Bounds"
+                          },
+                          {
+                            "fields": [
+                              {
+                                "doc": "Geometric candidates in SDK order, including total and truncation metadata.",
+                                "name": "value",
+                                "rust_name": "0",
+                                "shape": {
+                                  "fields": [
+                                    {
+                                      "doc": "Candidates retained after applying `max_candidates`.",
+                                      "name": "hits",
+                                      "rust_name": "hits",
+                                      "shape": {
+                                        "item": {
+                                          "fields": [
+                                            {
+                                              "doc": "Stable authoring mesh ID.",
+                                              "name": "mesh_id",
+                                              "rust_name": "mesh_id",
+                                              "shape": {
+                                                "kind": "string"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Authoring mesh display name.",
+                                              "name": "name",
+                                              "rust_name": "name",
+                                              "shape": {
+                                                "kind": "string"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Ancestor Part IDs, from root to leaf.",
+                                              "name": "part_path",
+                                              "rust_name": "part_path",
+                                              "shape": {
+                                                "item": {
+                                                  "kind": "string"
+                                                },
+                                                "kind": "sequence"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Ancestor Part display names, parallel to `part_path`.",
+                                              "name": "part_names",
+                                              "rust_name": "part_names",
+                                              "shape": {
+                                                "item": {
+                                                  "kind": "string"
+                                                },
+                                                "kind": "sequence"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Evaluated drawable enabled state.",
+                                              "name": "enabled",
+                                              "rust_name": "enabled",
+                                              "shape": {
+                                                "kind": "bool"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Evaluated drawable visibility state.",
+                                              "name": "visible",
+                                              "rust_name": "visible",
+                                              "shape": {
+                                                "kind": "bool"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Evaluated drawable opacity.",
+                                              "name": "opacity",
+                                              "rust_name": "opacity",
+                                              "shape": {
+                                                "kind": "f32"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Evaluated draw order, used for stable descending candidate ordering.\nThis is not a visibility ranking across offscreen composition groups.",
+                                              "name": "render_order",
+                                              "rust_name": "render_order",
+                                              "shape": {
+                                                "kind": "i32"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Containing triangles; populated only when `details` was requested.",
+                                              "name": "triangles",
+                                              "rust_name": "triangles",
+                                              "shape": {
+                                                "item": {
+                                                  "fields": [
+                                                    {
+                                                      "doc": "The triangle's zero-based position in the drawable's index buffer.",
+                                                      "name": "triangle_index",
+                                                      "rust_name": "triangle_index",
+                                                      "shape": {
+                                                        "kind": "usize"
+                                                      },
+                                                      "skip": false
+                                                    },
+                                                    {
+                                                      "doc": "Offsets into the evaluated drawable's vertex arrays.",
+                                                      "name": "vertex_indices",
+                                                      "rust_name": "vertex_indices",
+                                                      "shape": {
+                                                        "item": {
+                                                          "kind": "u32"
+                                                        },
+                                                        "kind": "array",
+                                                        "length": 3
+                                                      },
+                                                      "skip": false
+                                                    },
+                                                    {
+                                                      "default": null,
+                                                      "doc": "Stable authoring vertex IDs, when present.",
+                                                      "name": "vertex_ids",
+                                                      "rust_name": "vertex_ids",
+                                                      "shape": {
+                                                        "item": {
+                                                          "item": {
+                                                            "kind": "u32"
+                                                          },
+                                                          "kind": "array",
+                                                          "length": 3
+                                                        },
+                                                        "kind": "optional"
+                                                      },
+                                                      "skip": false
+                                                    },
+                                                    {
+                                                      "doc": "Interpolation weights corresponding to `vertex_indices`.",
+                                                      "name": "barycentric",
+                                                      "rust_name": "barycentric",
+                                                      "shape": {
+                                                        "item": {
+                                                          "kind": "f64"
+                                                        },
+                                                        "kind": "array",
+                                                        "length": 3
+                                                      },
+                                                      "skip": false
+                                                    },
+                                                    {
+                                                      "default": null,
+                                                      "doc": "UV coordinate interpolated from the triangle's evaluated UVs.",
+                                                      "name": "uv",
+                                                      "rust_name": "uv",
+                                                      "shape": {
+                                                        "item": {
+                                                          "item": {
+                                                            "kind": "f64"
+                                                          },
+                                                          "kind": "array",
+                                                          "length": 2
+                                                        },
+                                                        "kind": "optional"
+                                                      },
+                                                      "skip": false
+                                                    }
+                                                  ],
+                                                  "kind": "serde_record",
+                                                  "name": "zipzi_sdk::spatial::TriangleHit",
+                                                  "transparent": false,
+                                                  "tuple": false
+                                                },
+                                                "kind": "sequence"
+                                              },
+                                              "skip": false
+                                            }
+                                          ],
+                                          "kind": "serde_record",
+                                          "name": "zipzi_sdk::spatial::GeometryHit",
+                                          "transparent": false,
+                                          "tuple": false
+                                        },
+                                        "kind": "sequence"
+                                      },
+                                      "skip": false
+                                    },
+                                    {
+                                      "doc": "Number of candidates before applying the limit.",
+                                      "name": "total",
+                                      "rust_name": "total",
+                                      "shape": {
+                                        "kind": "usize"
+                                      },
+                                      "skip": false
+                                    },
+                                    {
+                                      "doc": "Whether any candidates were omitted by the limit.",
+                                      "name": "truncated",
+                                      "rust_name": "truncated",
+                                      "shape": {
+                                        "kind": "bool"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "kind": "serde_record",
+                                  "name": "zipzi_sdk::spatial::GeometryQuery",
+                                  "transparent": false,
+                                  "tuple": false
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "form": "newtype",
+                            "name": "hits",
+                            "rust_name": "Hits"
+                          }
+                        ]
+                      },
+                      "kind": "sequence"
+                    },
+                    "skip": false
+                  },
                   {
                     "doc": "Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.",
                     "name": "preview_id",
@@ -115593,6 +116956,625 @@
         ],
         "kind": "serde_record",
         "name": "zipzi_runtime::preview::PreviewBatch",
+        "transparent": false,
+        "tuple": false
+      },
+      {
+        "content": null,
+        "kind": "serde_enum",
+        "name": "zipzi_sdk::spatial::SpatialQuery",
+        "tag": "kind",
+        "variants": [
+          {
+            "fields": [
+              {
+                "doc": "Mesh/Part UUID selectors; an empty selection selects no meshes.",
+                "name": "targets",
+                "rust_name": "targets",
+                "shape": {
+                  "item": {
+                    "content": "id",
+                    "kind": "serde_enum",
+                    "name": "zipzi_sdk::spatial::ObjectTarget",
+                    "tag": "kind",
+                    "variants": [
+                      {
+                        "fields": [
+                          {
+                            "doc": "Persistent authoring mesh UUID.",
+                            "name": "value",
+                            "rust_name": "0",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "form": "newtype",
+                        "name": "mesh",
+                        "rust_name": "Mesh"
+                      },
+                      {
+                        "fields": [
+                          {
+                            "doc": "Persistent Part UUID selecting descendant meshes.",
+                            "name": "value",
+                            "rust_name": "0",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "form": "newtype",
+                        "name": "part",
+                        "rust_name": "Part"
+                      }
+                    ]
+                  },
+                  "kind": "sequence"
+                },
+                "skip": false
+              },
+              {
+                "default": false,
+                "doc": "Include disabled, hidden and zero-opacity geometry in the union.",
+                "name": "include_hidden",
+                "rust_name": "include_hidden",
+                "shape": {
+                  "kind": "bool"
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "bounds",
+            "rust_name": "Bounds"
+          },
+          {
+            "fields": [
+              {
+                "doc": "Finite XY point in evaluated Y-up model coordinates, not screen pixels.",
+                "name": "point",
+                "rust_name": "point",
+                "shape": {
+                  "item": {
+                    "kind": "f64"
+                  },
+                  "kind": "array",
+                  "length": 2
+                },
+                "skip": false
+              },
+              {
+                "default": false,
+                "doc": "Include disabled, hidden and zero-opacity geometric candidates.",
+                "name": "include_hidden",
+                "rust_name": "include_hidden",
+                "shape": {
+                  "kind": "bool"
+                },
+                "skip": false
+              },
+              {
+                "default": false,
+                "doc": "Include every containing triangle, stable vertex IDs, barycentric weights and UV.",
+                "name": "details",
+                "rust_name": "details",
+                "shape": {
+                  "kind": "bool"
+                },
+                "skip": false
+              },
+              {
+                "default": 32,
+                "doc": "Maximum mesh candidates retained in descending draw order; total remains untruncated.",
+                "name": "max_candidates",
+                "rust_name": "max_candidates",
+                "shape": {
+                  "kind": "usize"
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "hits",
+            "rust_name": "Hits"
+          }
+        ]
+      },
+      {
+        "fields": [
+          {
+            "doc": "Exact SDK version of the immutable formal or candidate snapshot.",
+            "name": "version",
+            "rust_name": "version",
+            "shape": {
+              "kind": "opaque",
+              "name": "zipzi_sdk::types::Version"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Owned requested parameter maps, preserving pose order and duplicates.",
+            "name": "requested",
+            "rust_name": "requested",
+            "shape": {
+              "item": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "f32"
+                }
+              },
+              "kind": "sequence"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Owned geometric queries shared by every returned frame.",
+            "name": "queries",
+            "rust_name": "queries",
+            "shape": {
+              "item": {
+                "content": null,
+                "kind": "serde_enum",
+                "name": "zipzi_sdk::spatial::SpatialQuery",
+                "tag": "kind",
+                "variants": [
+                  {
+                    "fields": [
+                      {
+                        "doc": "Mesh/Part UUID selectors; an empty selection selects no meshes.",
+                        "name": "targets",
+                        "rust_name": "targets",
+                        "shape": {
+                          "item": {
+                            "content": "id",
+                            "kind": "serde_enum",
+                            "name": "zipzi_sdk::spatial::ObjectTarget",
+                            "tag": "kind",
+                            "variants": [
+                              {
+                                "fields": [
+                                  {
+                                    "doc": "Persistent authoring mesh UUID.",
+                                    "name": "value",
+                                    "rust_name": "0",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "form": "newtype",
+                                "name": "mesh",
+                                "rust_name": "Mesh"
+                              },
+                              {
+                                "fields": [
+                                  {
+                                    "doc": "Persistent Part UUID selecting descendant meshes.",
+                                    "name": "value",
+                                    "rust_name": "0",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "form": "newtype",
+                                "name": "part",
+                                "rust_name": "Part"
+                              }
+                            ]
+                          },
+                          "kind": "sequence"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Include disabled, hidden and zero-opacity geometry in the union.",
+                        "name": "include_hidden",
+                        "rust_name": "include_hidden",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      }
+                    ],
+                    "form": "record",
+                    "name": "bounds",
+                    "rust_name": "Bounds"
+                  },
+                  {
+                    "fields": [
+                      {
+                        "doc": "Finite XY point in evaluated Y-up model coordinates, not screen pixels.",
+                        "name": "point",
+                        "rust_name": "point",
+                        "shape": {
+                          "item": {
+                            "kind": "f64"
+                          },
+                          "kind": "array",
+                          "length": 2
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Include disabled, hidden and zero-opacity geometric candidates.",
+                        "name": "include_hidden",
+                        "rust_name": "include_hidden",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Include every containing triangle, stable vertex IDs, barycentric weights and UV.",
+                        "name": "details",
+                        "rust_name": "details",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": 32,
+                        "doc": "Maximum mesh candidates retained in descending draw order; total remains untruncated.",
+                        "name": "max_candidates",
+                        "rust_name": "max_candidates",
+                        "shape": {
+                          "kind": "usize"
+                        },
+                        "skip": false
+                      }
+                    ],
+                    "form": "record",
+                    "name": "hits",
+                    "rust_name": "Hits"
+                  }
+                ]
+              },
+              "kind": "sequence"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Effective poses and query results, aligned with requested parameter maps.",
+            "name": "frames",
+            "rust_name": "frames",
+            "shape": {
+              "item": {
+                "fields": [
+                  {
+                    "doc": "Effective evaluated parameter values keyed by document UUID, including defaults/clamps.",
+                    "name": "parameters",
+                    "rust_name": "parameters",
+                    "shape": {
+                      "kind": "string_map",
+                      "value": {
+                        "kind": "f32"
+                      }
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Query results in input order, including repeated queries and empty results.",
+                    "name": "results",
+                    "rust_name": "results",
+                    "shape": {
+                      "item": {
+                        "content": "value",
+                        "kind": "serde_enum",
+                        "name": "zipzi_sdk::spatial::SpatialResult",
+                        "tag": "kind",
+                        "variants": [
+                          {
+                            "fields": [
+                              {
+                                "doc": "Bounds and resolved mesh IDs for the corresponding selector request.",
+                                "name": "value",
+                                "rust_name": "0",
+                                "shape": {
+                                  "fields": [
+                                    {
+                                      "doc": "Resolved mesh IDs in authoring order, including meshes filtered from the bounds.",
+                                      "name": "mesh_ids",
+                                      "rust_name": "mesh_ids",
+                                      "shape": {
+                                        "item": {
+                                          "kind": "string"
+                                        },
+                                        "kind": "sequence"
+                                      },
+                                      "skip": false
+                                    },
+                                    {
+                                      "default": null,
+                                      "doc": "`[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.\nEvaluated Y-up model units, independent of source canvas or export padding.\nGeometric bounds only: textures, masks and occlusion are not applied.",
+                                      "name": "model_bounds",
+                                      "rust_name": "model_bounds",
+                                      "shape": {
+                                        "item": {
+                                          "item": {
+                                            "kind": "f64"
+                                          },
+                                          "kind": "array",
+                                          "length": 4
+                                        },
+                                        "kind": "optional"
+                                      },
+                                      "skip": false
+                                    },
+                                    {
+                                      "default": null,
+                                      "doc": "Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or\n`no_evaluated_positions`.",
+                                      "name": "empty_reason",
+                                      "rust_name": "empty_reason",
+                                      "shape": {
+                                        "item": {
+                                          "kind": "string"
+                                        },
+                                        "kind": "optional"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "kind": "serde_record",
+                                  "name": "zipzi_sdk::spatial::ObjectBounds",
+                                  "transparent": false,
+                                  "tuple": false
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "form": "newtype",
+                            "name": "bounds",
+                            "rust_name": "Bounds"
+                          },
+                          {
+                            "fields": [
+                              {
+                                "doc": "Geometric candidates in SDK order, including total and truncation metadata.",
+                                "name": "value",
+                                "rust_name": "0",
+                                "shape": {
+                                  "fields": [
+                                    {
+                                      "doc": "Candidates retained after applying `max_candidates`.",
+                                      "name": "hits",
+                                      "rust_name": "hits",
+                                      "shape": {
+                                        "item": {
+                                          "fields": [
+                                            {
+                                              "doc": "Stable authoring mesh ID.",
+                                              "name": "mesh_id",
+                                              "rust_name": "mesh_id",
+                                              "shape": {
+                                                "kind": "string"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Authoring mesh display name.",
+                                              "name": "name",
+                                              "rust_name": "name",
+                                              "shape": {
+                                                "kind": "string"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Ancestor Part IDs, from root to leaf.",
+                                              "name": "part_path",
+                                              "rust_name": "part_path",
+                                              "shape": {
+                                                "item": {
+                                                  "kind": "string"
+                                                },
+                                                "kind": "sequence"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Ancestor Part display names, parallel to `part_path`.",
+                                              "name": "part_names",
+                                              "rust_name": "part_names",
+                                              "shape": {
+                                                "item": {
+                                                  "kind": "string"
+                                                },
+                                                "kind": "sequence"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Evaluated drawable enabled state.",
+                                              "name": "enabled",
+                                              "rust_name": "enabled",
+                                              "shape": {
+                                                "kind": "bool"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Evaluated drawable visibility state.",
+                                              "name": "visible",
+                                              "rust_name": "visible",
+                                              "shape": {
+                                                "kind": "bool"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Evaluated drawable opacity.",
+                                              "name": "opacity",
+                                              "rust_name": "opacity",
+                                              "shape": {
+                                                "kind": "f32"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Evaluated draw order, used for stable descending candidate ordering.\nThis is not a visibility ranking across offscreen composition groups.",
+                                              "name": "render_order",
+                                              "rust_name": "render_order",
+                                              "shape": {
+                                                "kind": "i32"
+                                              },
+                                              "skip": false
+                                            },
+                                            {
+                                              "doc": "Containing triangles; populated only when `details` was requested.",
+                                              "name": "triangles",
+                                              "rust_name": "triangles",
+                                              "shape": {
+                                                "item": {
+                                                  "fields": [
+                                                    {
+                                                      "doc": "The triangle's zero-based position in the drawable's index buffer.",
+                                                      "name": "triangle_index",
+                                                      "rust_name": "triangle_index",
+                                                      "shape": {
+                                                        "kind": "usize"
+                                                      },
+                                                      "skip": false
+                                                    },
+                                                    {
+                                                      "doc": "Offsets into the evaluated drawable's vertex arrays.",
+                                                      "name": "vertex_indices",
+                                                      "rust_name": "vertex_indices",
+                                                      "shape": {
+                                                        "item": {
+                                                          "kind": "u32"
+                                                        },
+                                                        "kind": "array",
+                                                        "length": 3
+                                                      },
+                                                      "skip": false
+                                                    },
+                                                    {
+                                                      "default": null,
+                                                      "doc": "Stable authoring vertex IDs, when present.",
+                                                      "name": "vertex_ids",
+                                                      "rust_name": "vertex_ids",
+                                                      "shape": {
+                                                        "item": {
+                                                          "item": {
+                                                            "kind": "u32"
+                                                          },
+                                                          "kind": "array",
+                                                          "length": 3
+                                                        },
+                                                        "kind": "optional"
+                                                      },
+                                                      "skip": false
+                                                    },
+                                                    {
+                                                      "doc": "Interpolation weights corresponding to `vertex_indices`.",
+                                                      "name": "barycentric",
+                                                      "rust_name": "barycentric",
+                                                      "shape": {
+                                                        "item": {
+                                                          "kind": "f64"
+                                                        },
+                                                        "kind": "array",
+                                                        "length": 3
+                                                      },
+                                                      "skip": false
+                                                    },
+                                                    {
+                                                      "default": null,
+                                                      "doc": "UV coordinate interpolated from the triangle's evaluated UVs.",
+                                                      "name": "uv",
+                                                      "rust_name": "uv",
+                                                      "shape": {
+                                                        "item": {
+                                                          "item": {
+                                                            "kind": "f64"
+                                                          },
+                                                          "kind": "array",
+                                                          "length": 2
+                                                        },
+                                                        "kind": "optional"
+                                                      },
+                                                      "skip": false
+                                                    }
+                                                  ],
+                                                  "kind": "serde_record",
+                                                  "name": "zipzi_sdk::spatial::TriangleHit",
+                                                  "transparent": false,
+                                                  "tuple": false
+                                                },
+                                                "kind": "sequence"
+                                              },
+                                              "skip": false
+                                            }
+                                          ],
+                                          "kind": "serde_record",
+                                          "name": "zipzi_sdk::spatial::GeometryHit",
+                                          "transparent": false,
+                                          "tuple": false
+                                        },
+                                        "kind": "sequence"
+                                      },
+                                      "skip": false
+                                    },
+                                    {
+                                      "doc": "Number of candidates before applying the limit.",
+                                      "name": "total",
+                                      "rust_name": "total",
+                                      "shape": {
+                                        "kind": "usize"
+                                      },
+                                      "skip": false
+                                    },
+                                    {
+                                      "doc": "Whether any candidates were omitted by the limit.",
+                                      "name": "truncated",
+                                      "rust_name": "truncated",
+                                      "shape": {
+                                        "kind": "bool"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "kind": "serde_record",
+                                  "name": "zipzi_sdk::spatial::GeometryQuery",
+                                  "transparent": false,
+                                  "tuple": false
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "form": "newtype",
+                            "name": "hits",
+                            "rust_name": "Hits"
+                          }
+                        ]
+                      },
+                      "kind": "sequence"
+                    },
+                    "skip": false
+                  }
+                ],
+                "kind": "serde_record",
+                "name": "zipzi_sdk::spatial::SpatialFrame",
+                "transparent": false,
+                "tuple": false
+              },
+              "kind": "sequence"
+            },
+            "skip": false
+          }
+        ],
+        "kind": "serde_record",
+        "name": "zipzi_sdk::spatial::SpatialSamples",
         "transparent": false,
         "tuple": false
       }

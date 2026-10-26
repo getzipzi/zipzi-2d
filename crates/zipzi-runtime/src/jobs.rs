@@ -236,14 +236,20 @@ impl Completion {
 }
 
 pub(crate) enum ReadTask {
+    Spatial {
+        source: crate::SourceSnapshot,
+        parameters: Vec<zipzi_core::PreviewValues>,
+        queries: Vec<zipzi_sdk::SpatialQuery>,
+    },
     Preview {
         preview_id: u64,
-        source: crate::SourceRef,
+        source: crate::SourceSnapshot,
         sequence: u64,
         state: Arc<std::sync::Mutex<zipzi_sdk::MotionPreview>>,
         times: Vec<f32>,
         geometry: bool,
         incremental: bool,
+        queries: Vec<zipzi_sdk::SpatialQuery>,
     },
     Image {
         path: Option<PathBuf>,
@@ -289,6 +295,16 @@ impl Work {
             }
             before();
             let value = match task {
+                ReadTask::Spatial {
+                    source,
+                    parameters,
+                    queries,
+                } => JobValue::Spatial(Arc::new(crate::spatial::SpatialSampleBatch {
+                    source: source.source,
+                    samples: source
+                        .snapshot
+                        .sample_spatial_with_control(parameters, queries, &control)?,
+                })),
                 ReadTask::Preview {
                     preview_id,
                     source,
@@ -297,15 +313,18 @@ impl Work {
                     times,
                     geometry,
                     incremental,
+                    queries,
                 } => crate::runtime::previews::sample_preview(
                     preview_id,
-                    source,
+                    &source,
                     sequence,
                     &state,
                     times,
                     geometry,
                     incremental,
                     &cancel,
+                    &queries,
+                    &control,
                 )?,
                 ReadTask::Image {
                     path,

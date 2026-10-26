@@ -186,6 +186,17 @@ impl Runtime {
         geometry: bool,
         incremental: bool,
     ) -> Result<JobId> {
+        self.request_preview_samples_with_queries(client, id, times, geometry, incremental, vec![])
+    }
+    pub fn request_preview_samples_with_queries(
+        &mut self,
+        client: ClientId,
+        id: PreviewId,
+        times: Vec<f32>,
+        geometry: bool,
+        incremental: bool,
+        queries: Vec<zipzi_sdk::SpatialQuery>,
+    ) -> Result<JobId> {
         self.check_job_slot(client)?;
         if times.is_empty()
             || times.len() > 64
@@ -200,8 +211,7 @@ impl Runtime {
             .sequence
             .checked_add(1)
             .ok_or(RuntimeError::Budget("preview sequence"))?;
-        let bytes = Self::sample_bytes(entry.source.snapshot.document(), times.len())
-            .saturating_mul(3)
+        let bytes = Self::spatial_bytes(entry.source.snapshot.document(), times.len(), &queries)?
             .saturating_add(
                 entry
                     .schedule_entries
@@ -213,12 +223,13 @@ impl Runtime {
         let source = entry.source.clone();
         let task = ReadTask::Preview {
             preview_id: id.serial(),
-            source: source.source,
+            source: source.clone(),
             sequence,
             state: entry.state.clone(),
             times,
             geometry,
             incremental,
+            queries,
         };
         let job = self.queue_read(client, source, task, bytes, false)?;
         let entry = self.previews.get_mut(&id).unwrap();
@@ -262,17 +273,20 @@ impl Runtime {
 
 pub(crate) fn sample_preview(
     preview_id: u64,
-    source: SourceRef,
+    source: &SourceSnapshot,
     sequence: u64,
     state: &Mutex<zipzi_sdk::MotionPreview>,
     times: Vec<f32>,
     geometry: bool,
     incremental: bool,
     cancel: &AtomicBool,
+    queries: &[zipzi_sdk::SpatialQuery],
+    control: &zipzi_sdk::ConversionControl,
 ) -> Result<crate::JobValue> {
     let mut state = state
         .lock()
         .map_err(|_| RuntimeError::WorkerPanic("preview worker panicked".into()))?;
+    zipzi_sdk::validate_spatial_queries(source.snapshot.document(), queries, control)?;
     let mut frames = Vec::with_capacity(times.len());
     for (index, time) in times.into_iter().enumerate() {
         let progress = |_, _| !cancel.load(Ordering::Acquire);
@@ -282,7 +296,16 @@ pub(crate) fn sample_preview(
             state.seek_with_progress(time, progress)
         }
         .map_err(animation_error)?;
+        let spatial = if queries.is_empty() {
+            vec![]
+        } else {
+            let frame = state
+                .evaluate_drawables_including_hidden()
+                .map_err(animation_error)?;
+            zipzi_sdk::query_spatial_frame(source.snapshot.document(), &frame, queries, control)?
+        };
         frames.push(PreviewFrame {
+            spatial,
             preview_id,
             sequence,
             index,
@@ -295,7 +318,11 @@ pub(crate) fn sample_preview(
         });
     }
     Ok(JobValue::Previewed(Arc::new(PreviewSampleBatch {
-        source,
-        samples: PreviewBatch { sequence, frames },
+        source: source.source,
+        samples: PreviewBatch {
+            sequence,
+            frames,
+            queries: queries.to_vec(),
+        },
     })))
 }

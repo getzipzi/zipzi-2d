@@ -186,7 +186,7 @@ continue via `Executor` and completion delivery. Terminal Job queries atomically
 transfer their results into the deduplicated request window and release Job slots.
 Request status queries do not advance the monotonic admission watermark.
 
-The current contract is `zipzi-runtime-r5-preview-1`: big-endian u32 length, UTF-8 JSON control
+The current contract is `zipzi-runtime-r5-spatial-1`: big-endian u32 length, UTF-8 JSON control
 frames (16 MiB maximum), strict handshake and runtime-scoped IDs. The high length
 bit selects binary framing: a bounded JSON header (16 KiB) plus at most 1 MiB raw
 payload. Each immutable blob is at most 256 MiB and SHA256 checked before use.
@@ -264,7 +264,7 @@ whole-asset commands, selected canonical records, SDK plans, field addresses and
 capability queries use the same Runtime handlers on Local and Connected. The
 host advertises `animation_authoring`; this does not advertise independent
 Preview or Observer support. Large animation values reuse binary admission and
-recovery. Native/IPC pairing is `zipzi-python2-16` / `zipzi-runtime-r5-preview-1`.
+recovery. Native/IPC pairing is `zipzi-python2-17` / `zipzi-runtime-r5-spatial-1`.
 
 The SDK now retains animation field epochs across edits and Undo. Physics change
 summaries compare stable row IDs so a sibling reorder preserves field addresses.
@@ -273,5 +273,7 @@ source/installed authoring evidence. The [CPU Preview slice](../../docs/plans/sd
 adds client-owned frozen SDK simulations, exact-source batches and cancellable
 seek/advance Jobs. Preview controls never borrow the formal session or its
 default preview. One running read worker slot remains reserved for publication.
-Observer, spatial queries, full fair batch scheduling and Editor playback
+[CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md) now reuse
+SDK geometry on frozen formal/candidate poses and exact Preview states, with
+cancellable workers, admission and binary results. Observer, full fair batch scheduling and Editor playback
 integration remain pending; R5 as a whole remains in progress.
