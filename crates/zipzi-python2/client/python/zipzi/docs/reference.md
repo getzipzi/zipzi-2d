@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0; protocol zipzi-runtime-p3a-345-1; client source SHA-256 1a63f11d22551af51b6745732714876d9d62bf6b4cb97989028b5c3bf65022c9.
 
 
 ## zipzi.ApiDescription
@@ -33,6 +33,16 @@ example: Package-relative workflow/example reference; empty when no example is a
 - `children`: Canonical child entry paths for further bounded describe queries.
 - `example`: Package-relative workflow/example reference; empty when no example is assigned.
 
+## zipzi.ApiDescription.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.ApiDescription.summary
 
 `() -> str`
@@ -53,6 +63,16 @@ items: Owned payloads in requested-ID order, preserving duplicates; a missing it
 - `source`: Exact source shared by the whole selection, including an empty batch.
 - `items`: Owned payloads in requested-ID order, preserving duplicates; a missing item rejects a selected read as a whole.
 
+## zipzi.Batch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.Batch.summary
 
 `() -> str`
@@ -65,6 +85,25 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `(factory-owned; use the documented public entry)`
 
 Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.Buffer.__enter__
+
+`() -> Buffer`
+
+Check the owning client/lease locally and return this Buffer without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+
+## zipzi.Buffer.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
 
 
 ## zipzi.Buffer.close
@@ -123,6 +162,16 @@ limits: Host transport/outcome-retention limits with explicit units.
 - `capabilities`: Finite capability names announced by the host handshake.
 - `limits`: Host transport/outcome-retention limits with explicit units.
 
+## zipzi.ConnectionInfo.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.ConnectionInfo.summary
 
 `() -> str`
@@ -155,6 +204,16 @@ binary_bytes_total: Maximum retained binary response bytes across the host.
 - `binary_bytes_per_client`: Maximum retained binary response bytes for one client.
 - `binary_bytes_total`: Maximum retained binary response bytes across the host.
 
+## zipzi.ConnectionLimits.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.ConnectionLimits.summary
 
 `() -> str`
@@ -167,6 +226,31 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `(factory-owned; use the documented public entry)`
 
 One mutable candidate owned by one sequential caller. Use session.edit. Successful writes advance sequence; publication is a separate Job and ordinary failures cannot be caught into a successful commit.
+
+
+## zipzi.Edit.__enter__
+
+`() -> 'Edit'`
+
+Return this active candidate after a local state check, without IO.
+
+A closed/aborted/unknown Edit is rejected. Normal scope exit commits and
+waits; an explicit cancel is the other successful exit state.
+
+
+## zipzi.Edit.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Confirm commit/cancel on normal exit, never turn an unknown into success.
+
+Python supplies the context arguments. Normal exit accepts only a
+confirmed committed or explicitly cancelled state; it may commit and
+wait synchronously. Caught ordinary write failures raise EDIT_ABORTED.
+Caught unknown outcomes raise their recoverable original exception again.
+An already propagating exception is preserved; ordinary candidates are
+cancelled, accepted work may be waited, and cleanup failures become notes.
+No unknown write is replayed or silently aborted. Returns None.
 
 
 ## zipzi.Edit.apply
@@ -194,35 +278,45 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(spec: bindings.MeshBindingSpec) -> str`
 
-Apply a typed bindings operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply bindings.Create synchronously to this Edit and return the stable object ID as str.
+
+Arguments have the semantics of bindings.Create; inspect that operation and its input DTO fields with zipzi.describe. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.bindings.create(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.bindings.get
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[bindings.MeshBinding]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.bindings.get(id); value = snapshot.value.
 
 
 ## zipzi.Edit.bindings.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[bindings.MeshBinding]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.bindings.get_many((id, id)).
 
 
 ## zipzi.Edit.bindings.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[bindings.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.bindings.list(name="Face", limit=128).
 
 
 ## zipzi.Edit.bindings.set_keyform
 
 `(id: str, keyform: bindings.Keyform) -> WriteResult`
 
-Apply a typed bindings operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply bindings.SetKeyform synchronously to this Edit and return WriteResult with the new candidate Source and ordered result IDs.
+
+Arguments have the semantics of bindings.SetKeyform; inspect that operation and its input DTO fields with zipzi.describe. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.bindings.set_keyform(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.cancel
@@ -250,42 +344,54 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(spec: meshes.MeshSpec) -> str`
 
-Apply a typed meshes operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply meshes.Create synchronously to this Edit and return the stable object ID as str.
+
+Arguments have the semantics of meshes.Create; inspect that operation and its input DTO fields with zipzi.describe. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.meshes.create(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.meshes.get
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[meshes.Mesh]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.meshes.get(id); value = snapshot.value.
 
 
 ## zipzi.Edit.meshes.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[meshes.Mesh]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.meshes.get_many((id, id)).
 
 
 ## zipzi.Edit.meshes.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[meshes.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.meshes.list(name="Face", limit=128).
 
 
 ## zipzi.Edit.meshes.rename
 
 `(id: str, name: str, *, expected_name: str | None=None) -> WriteResult`
 
-Apply a typed meshes operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply meshes.Rename synchronously to this Edit and return WriteResult with the new candidate Source and ordered result IDs.
+
+Arguments have the semantics of meshes.Rename; inspect that operation and its input DTO fields with zipzi.describe. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.meshes.rename(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.meshes.set_positions
 
 `(id: str, *, vertex_ids: Sequence[int], positions: Sequence[meshes.Point]) -> WriteResult`
 
-Apply a typed meshes operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply meshes.SetPositions synchronously to this Edit and return WriteResult with the new candidate Source and ordered result IDs.
+
+Arguments have the semantics of meshes.SetPositions; inspect that operation and its input DTO fields with zipzi.describe. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.meshes.set_positions(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.modeling
@@ -299,21 +405,21 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]`
 
-Read selected canonical records from one exact source; the complete result remains owned after later writes.
+Read selected canonical records from one exact source without editing. query lists stable IDs per domain; empty lists request no payloads, while the ids directory still exposes collection identities. Returns an owned Snapshot; payload slots follow query order and None marks a missing requested ID. This synchronous query may reject count/byte budgets but does not abort an Edit. Recover a lost response through its original Call; results need no close. Example: result = session.modeling.records(modeling.ModelingQuery(meshes=(id,))).
 
 
 ## zipzi.Edit.modeling.sample
 
 `(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> Snapshot[sampling.Result]`
 
-Evaluate CPU poses without editing. Values are copied before execution; expected rejects a changed source.
+Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies optional native geometry diagnostics, and expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).
 
 
 ## zipzi.Edit.modeling.sample_async
 
 `(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> '_lifecycle.Job[Snapshot[sampling.Result]]'`
 
-Submit CPU evaluation at the captured source; wait and close the accepted Job to release its result slot.
+Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().
 
 
 ## zipzi.Edit.parameters
@@ -327,35 +433,45 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(spec: parameters.ParameterSpec) -> str`
 
-Apply a typed parameters operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply parameters.Create synchronously to this Edit and return the stable object ID as str.
+
+Arguments have the semantics of parameters.Create; inspect that operation and its input DTO fields with zipzi.describe. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.parameters.create(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.parameters.get
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[parameters.Parameter]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.parameters.get(id); value = snapshot.value.
 
 
 ## zipzi.Edit.parameters.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[parameters.Parameter]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.parameters.get_many((id, id)).
 
 
 ## zipzi.Edit.parameters.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[parameters.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.parameters.list(name="Face", limit=128).
 
 
 ## zipzi.Edit.parameters.patch
 
 `(id: str, patch: parameters.ParameterPatch) -> WriteResult`
 
-Apply a typed parameters operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply parameters.Patch synchronously to this Edit and return WriteResult with the new candidate Source and ordered result IDs.
+
+Arguments have the semantics of parameters.Patch; inspect that operation and its input DTO fields with zipzi.describe. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.parameters.patch(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.pending_request
@@ -397,49 +513,61 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(name: str, image: resources.PreparedImage, *, id: str | None=None) -> str`
 
-Apply a typed resources operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply resources.CreateImage synchronously to this Edit and return the stable object ID as str.
+
+Arguments have the semantics of resources.CreateImage; inspect that operation and its input DTO fields with zipzi.describe. image must be a live PreparedImage from this Runtime; close that independent lease after acceptance, while native candidate/history owners retain the pixels. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.resources.create_image(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.resources.get
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[resources.Image]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.resources.get(id); value = snapshot.value.
 
 
 ## zipzi.Edit.resources.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[resources.Image]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.resources.get_many((id, id)).
 
 
 ## zipzi.Edit.resources.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[resources.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.resources.list(name="Face", limit=128).
 
 
 ## zipzi.Edit.resources.rename_image
 
 `(id: str, name: str, *, expected_name: str | None=None) -> WriteResult`
 
-Apply a typed resources operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply resources.RenameImage synchronously to this Edit and return WriteResult with the new candidate Source and ordered result IDs.
+
+Arguments have the semantics of resources.RenameImage; inspect that operation and its input DTO fields with zipzi.describe. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.resources.rename_image(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.resources.replace_image
 
 `(id: str, image: resources.PreparedImage) -> WriteResult`
 
-Apply a typed resources operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit.
+Apply resources.ReplaceImage synchronously to this Edit and return WriteResult with the new candidate Source and ordered result IDs.
+
+Arguments have the semantics of resources.ReplaceImage; inspect that operation and its input DTO fields with zipzi.describe. image must be a live PreparedImage from this Runtime; close that independent lease after acceptance, while native candidate/history owners retain the pixels. This changes candidate state only; commit publishes separately. Ordinary write failures abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write. Example: result = edit.resources.replace_image(...), using the arguments shown in its signature.
 
 
 ## zipzi.Edit.resources.snapshot
 
 `(id: str) -> resources.ImageLease`
 
-Pin immutable pixels with an explicit lease; close the lease when finished.
+Capture pixels of image id at this exact formal/candidate source into an independent ImageLease. This synchronous request can reject a missing image or lease/byte budget; queries do not abort an Edit. The lease pins pixels across replacement and history eviction: close it or use with. Its source is cached, and pixels() returns owned ImagePixels. Recover an unknown capture through its original Call. Example: with session.resources.snapshot(id) as lease: pixels = lease.pixels().
 
 
 ## zipzi.Edit.scene
@@ -453,21 +581,27 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[scene.Summary]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.scene.get(id); value = snapshot.value.
 
 
 ## zipzi.Edit.scene.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[scene.Summary]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.scene.get_many((id, id)).
 
 
 ## zipzi.Edit.scene.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[scene.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.scene.list(name="Face", limit=128).
 
 
 ## zipzi.Edit.state
@@ -488,7 +622,32 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(factory-owned; use the documented public entry)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Owned accepted work returned by submit/commit/IO calls; use those factories.
+
+wait returns the declared T and releases the bounded result slot; state does
+not consume it. cancel requests cancellation and close waits for the real
+outcome. A known JobTimeout keeps this Job pending. After OutcomeUnknown,
+retain and recover its original Call before issuing another Job action.
+Use with for close-on-exit; it waits rather than cancelling entered IO.
+
+
+## zipzi.Job.__enter__
+
+`() -> 'Job[T]'`
+
+Return this accepted Job without polling or IO; exit waits through close().
+
+
+## zipzi.Job.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Wait/close on scope exit without suppressing the body's exception.
+
+Context arguments are supplied by Python. Normal exit propagates a Job
+failure or OutcomeUnknown; during an existing exception cleanup failure
+is attached as a note and the owning Job retains pending recovery.
+Returns None and may block for entered work; it never implies cancel.
 
 
 ## zipzi.Job.cancel
@@ -579,6 +738,16 @@ vertex_count: Number of mesh vertices, without cloning vertex data.
 - `height`: Decoded image height in pixels when known, without reading pixels.
 - `vertex_count`: Number of mesh vertices, without cloning vertex data.
 
+## zipzi.ObjectSummary.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.ObjectSummary.summary
 
 `() -> str`
@@ -590,7 +759,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(pending: PendingRequest, message: str)`
 
-Immutable typed value. See field semantics and the linked workflow.
+The original public call has an unconfirmed outcome; retain this exception.
+
+pending identifies its immutable request, while the owning SDK wrapper keeps
+the complete result projection. recover returns that original runtime type;
+use recover_call for exact static typing. Further uncertainty raises another
+recoverable OutcomeUnknown. Never repeat a write under a new request ID.
+Recovery is synchronous, bounded by host retention/timeouts; expiration is a
+structured failure rather than proof the write did not happen.
 
 
 ## zipzi.OutcomeUnknown.recover
@@ -620,6 +796,16 @@ next_cursor: Opaque continuation for the same domain/filter/source; None ends th
 - `items`: Metadata records in native storage order; excludes geometry, keyforms and pixel payloads.
 - `next_cursor`: Opaque continuation for the same domain/filter/source; None ends the scan. Stale cursors require restarting discovery.
 
+## zipzi.Page.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.Page.summary
 
 `() -> str`
@@ -632,6 +818,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Opaque continuation issued by a Runtime collection query.
+
+
+## zipzi.PageCursor.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.PageCursor.summary
@@ -660,7 +856,32 @@ operation: Original protocol operation name used for diagnostics and recovery ow
 
 `(factory-owned; use the documented public entry)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Owned native plan returned by Session/Edit/address planning factories.
+
+report is cached and remains readable after close or invalidation. Applying
+through Edit requires the captured exact source and identity/context epochs;
+later writes, replacement or Undo can make it stale. Apply as the first and
+only Plan in a batch. Close the lease or use with after inspection/application;
+closing does not publish or revoke an already accepted document change.
+
+
+## zipzi.Plan.__enter__
+
+`() -> Plan`
+
+Check the owning client/lease locally and return this Plan without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+
+## zipzi.Plan.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
 
 
 ## zipzi.Plan.close
@@ -701,6 +922,16 @@ history_bytes: Includes the SDK's complete previous checkpoint and new candidate
 - `temporary_bytes`: Estimated temporary working storage in bytes; not total process RSS.
 - `history_bytes`: Includes the SDK's complete previous checkpoint and new candidate.
 
+## zipzi.PlanCost.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.PlanCost.summary
 
 `() -> str`
@@ -733,6 +964,16 @@ rewrite it.
 - `losses`: Explicit semantic losses predicted by conversion; empty means no losses were reported.
 - `no_op`: Whether applying the plan would leave the document unchanged.
 
+## zipzi.PlanReport.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.PlanReport.summary
 
 `() -> str`
@@ -744,7 +985,32 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(factory-owned; use the documented public entry)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Owned prepared-image lease from Runtime.resources preparation/loading.
+
+Preparation owns immutable pixels independently of any Edit. Accept/replace
+through edit.resources, then close this lease or use with; formal/candidate/
+history owners retain their own references. width/height are cached, while
+pixels() synchronously downloads owned bytes. A pending request must recover
+on this original owner. Handles cannot cross Runtime/client boundaries.
+
+
+## zipzi.PreparedImage.__enter__
+
+`() -> PreparedImage`
+
+Check the owning client/lease locally and return this PreparedImage without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+
+## zipzi.PreparedImage.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
 
 
 ## zipzi.PreparedImage.close
@@ -801,6 +1067,16 @@ object_ids: Stable document IDs reported as affected by this publication.
 - `label`: History label attached to the committed edit.
 - `object_ids`: Stable document IDs reported as affected by this publication.
 
+## zipzi.Receipt.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.Receipt.summary
 
 `() -> str`
@@ -820,6 +1096,25 @@ Typed public API entry.
 `(factory-owned; use the documented public entry)`
 
 Explicit client lifetime. Construct with zipzi.local() or zipzi.connect(); Connected keeps formal sessions resident after client close.
+
+
+## zipzi.Runtime.__enter__
+
+`() -> 'Runtime'`
+
+Return this factory-created Runtime; no new host/client or IO is started.
+
+
+## zipzi.Runtime.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close on scope exit without saving or suppressing the body exception.
+
+Python supplies the context arguments. close may block on entered work
+or raise Busy/OutcomeUnknown for pending ownership. With an existing
+exception, cleanup failure is added as a note. Connected documents stay
+resident; Local releases its Runtime sessions. Returns None.
 
 
 ## zipzi.Runtime.capabilities
@@ -921,7 +1216,7 @@ Bind this client to an existing Runtime-scoped SessionId without copying content
 
 `(document_id: str | None=None) -> 'Session'`
 
-Create a session with SDK defaults. None allocates a canonical document UUID in Rust. Returns the owned binding; a lost reply must recover this original call, never create another session.
+Synchronously create a resident document with SDK defaults and return its client Session binding. document_id=None allocates a canonical UUID in Rust; an explicit value must be a valid document UUID. Host Session/client-slot and memory budgets apply. A new document is unsaved and modified: save it or explicitly permit discard when closing. A lost reply must recover this original call, never create another Session. Use session.close() to free the host document, or detach() to keep it resident. Example: session = runtime.sessions.create().
 
 
 ## zipzi.Runtime.sessions.import_
@@ -974,6 +1269,16 @@ gpu: Whether GPU operations are available from this host; CPU sampling is indepe
 - `binary_arrays`: Whether this host supports the paired binary array transport.
 - `editor_windows`: Whether Session window display is supported by this host.
 - `gpu`: Whether GPU operations are available from this host; CPU sampling is independent.
+
+## zipzi.RuntimeCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.RuntimeCapabilities.summary
 
@@ -1043,6 +1348,16 @@ registry_event_bytes: Conservative byte limit for registry event payloads; not R
 - `registry_events`: Maximum retained events in the registry stream; this is a count, not a byte limit.
 - `registry_event_bytes`: Conservative byte limit for registry event payloads; not RSS or GPU memory.
 
+## zipzi.RuntimeLimits.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.RuntimeLimits.summary
 
 `() -> str`
@@ -1067,6 +1382,16 @@ after: SDK version reported after saving.
 - `before`: SDK version captured before saving.
 - `after`: SDK version reported after saving.
 
+## zipzi.SaveReceipt.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.SaveReceipt.summary
 
 `() -> str`
@@ -1078,7 +1403,19 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(code: str, message: str, *, operation: str='', object_ids: tuple[str, ...]=(), expected_version: Version | None=None, actual_version: Version | None=None, field_path: str | None=None, referrers: tuple[str, ...]=(), edit_state: str | None=None, project_report: ProjectReport | None=None, recovery_action: RecoveryAction | None=None, requested: int | None=None, allowed: int | None=None, limit_name: str | None=None)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Confirmed SDK/host refusal with structured recovery and ownership facts.
+
+code is the stable discriminator; message is human-readable. operation and
+object_ids identify the attempted domain action. expected_version,
+actual_version, field_path and referrers explain stale/invalid references.
+edit_state distinguishes aborted candidates from confirmed admission refusal.
+requested/allowed are counts or bytes named by limit_name; None means absent.
+project_report retains a failed IO report when available. recovery_action
+recommends a finite next action; it is not permission to replay unknown work.
+OutcomeUnknown has a separate retained request owner and recover method.
+This value alone performs no IO and owns no resource lease. Catch outside a
+failed Edit, inspect code/recovery_action, and start a fresh candidate when
+required. See docs/guide.md for the error/recovery workflow.
 
 
 ## zipzi.Session
@@ -1106,21 +1443,27 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[bindings.MeshBinding]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.bindings.get(id); value = snapshot.value.
 
 
 ## zipzi.Session.bindings.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[bindings.MeshBinding]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.bindings.get_many((id, id)).
 
 
 ## zipzi.Session.bindings.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[bindings.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.bindings.list(name="Face", limit=128).
 
 
 ## zipzi.Session.capabilities
@@ -1134,7 +1477,16 @@ Query selected collection capabilities at the captured formal Source. Results ex
 
 `(*, discard_modified: bool=False) -> SessionInfo`
 
-Close the host session and release its path/slot. Unsaved changes and other clients refuse closure without changes. Never saves implicitly.
+Close the host document and return its final SessionInfo, without saving.
+
+discard_modified=False protects unsaved changes, including a newly created
+document. True explicitly permits discarding them only; it does not bypass
+other clients, active candidates or work. Confirmed refusal preserves the
+document. This synchronous call frees the Session slot/path and invalidates
+this client's aliases and child references. Independent prepared resources
+keep their own leases. Confirmed close is cached/idempotent; a lost response
+must recover the original close and returns the same final metadata.
+Example: session.close(discard_modified=True) when discarding is intended.
 
 
 ## zipzi.Session.detach
@@ -1183,21 +1535,27 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[meshes.Mesh]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.meshes.get(id); value = snapshot.value.
 
 
 ## zipzi.Session.meshes.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[meshes.Mesh]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.meshes.get_many((id, id)).
 
 
 ## zipzi.Session.meshes.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[meshes.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.meshes.list(name="Face", limit=128).
 
 
 ## zipzi.Session.modeling
@@ -1211,21 +1569,21 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]`
 
-Read selected canonical records from one exact source; the complete result remains owned after later writes.
+Read selected canonical records from one exact source without editing. query lists stable IDs per domain; empty lists request no payloads, while the ids directory still exposes collection identities. Returns an owned Snapshot; payload slots follow query order and None marks a missing requested ID. This synchronous query may reject count/byte budgets but does not abort an Edit. Recover a lost response through its original Call; results need no close. Example: result = session.modeling.records(modeling.ModelingQuery(meshes=(id,))).
 
 
 ## zipzi.Session.modeling.sample
 
 `(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> Snapshot[sampling.Result]`
 
-Evaluate CPU poses without editing. Values are copied before execution; expected rejects a changed source.
+Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies optional native geometry diagnostics, and expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).
 
 
 ## zipzi.Session.modeling.sample_async
 
 `(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> '_lifecycle.Job[Snapshot[sampling.Result]]'`
 
-Submit CPU evaluation at the captured source; wait and close the accepted Job to release its result slot.
+Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().
 
 
 ## zipzi.Session.parameters
@@ -1239,21 +1597,27 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[parameters.Parameter]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.parameters.get(id); value = snapshot.value.
 
 
 ## zipzi.Session.parameters.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[parameters.Parameter]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.parameters.get_many((id, id)).
 
 
 ## zipzi.Session.parameters.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[parameters.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.parameters.list(name="Face", limit=128).
 
 
 ## zipzi.Session.plan
@@ -1316,7 +1680,7 @@ Submit one typed ProjectRequest and return Job[ProjectReport]. Input selects exp
 
 `(path: Path) -> Job[SaveReceipt]`
 
-Submit saving to a host-absolute project folder. Returns Job[SaveReceipt]; wait checks durable and before/after versions. A client-side Path.exists is not evidence of host persistence.
+Submit saving to host-absolute project folder path and return Job[SaveReceipt]. Wait for the receipt, then inspect durable and its before/after versions before claiming persistence. A client-side Path.exists is not evidence of host persistence. Recover an unknown submission/wait through its original Call; do not submit another save to probe its outcome. The Job owns a bounded result slot released by wait/close. Example: saved = session.project.save(absolute_folder).wait(); assert saved.durable.
 
 
 ## zipzi.Session.redo
@@ -1344,28 +1708,34 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[resources.Image]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.resources.get(id); value = snapshot.value.
 
 
 ## zipzi.Session.resources.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[resources.Image]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.resources.get_many((id, id)).
 
 
 ## zipzi.Session.resources.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[resources.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.resources.list(name="Face", limit=128).
 
 
 ## zipzi.Session.resources.snapshot
 
 `(id: str) -> resources.ImageLease`
 
-Pin immutable pixels with an explicit lease; close the lease when finished.
+Capture pixels of image id at this exact formal/candidate source into an independent ImageLease. This synchronous request can reject a missing image or lease/byte budget; queries do not abort an Edit. The lease pins pixels across replacement and history eviction: close it or use with. Its source is cached, and pixels() returns owned ImagePixels. Recover an unknown capture through its original Call. Example: with session.resources.snapshot(id) as lease: pixels = lease.pixels().
 
 
 ## zipzi.Session.scene
@@ -1379,28 +1749,40 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[scene.Summary]`
 
-Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss.
+Read one owned value at an exact formal or candidate Source.
+
+id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.scene.get(id); value = snapshot.value.
 
 
 ## zipzi.Session.scene.get_many
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[scene.Summary]`
 
-Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read.
+Read all selected IDs atomically from one formal or candidate Source.
+
+ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.scene.get_many((id, id)).
 
 
 ## zipzi.Session.scene.list
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[scene.Summary]`
 
-Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly.
+Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+
+name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.scene.list(name="Face", limit=128).
 
 
 ## zipzi.Session.show_window
 
 `() -> None`
 
-Display this resident session in its desktop host.
+Synchronously display this resident document in the connected desktop host.
+
+Requires runtime.capabilities().editor_windows; Local/CPU-only hosts can
+reject it with SdkFailure. Returns None, changes UI visibility rather
+than model/history, and owns no new client lease. Recover an unknown
+response through the original call before requesting another window.
+Example: session.show_window().
 
 
 ## zipzi.Session.subscribe
@@ -1430,6 +1812,16 @@ serial: Positive u64 Session serial within that Runtime; not the document UUID o
 - `runtime`: Canonical UUID of the Runtime instance that allocated the handle.
 - `serial`: Positive u64 Session serial within that Runtime; not the document UUID or SDK session_id.
 
+## zipzi.SessionId.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.SessionId.summary
 
 `() -> str`
@@ -1458,6 +1850,16 @@ path: Host project path; None means the Session has no associated project path.
 - `state`: Captured lifecycle state: ready, busy, faulted, closing or closed.
 - `path`: Host project path; None means the Session has no associated project path.
 
+## zipzi.SessionInfo.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.SessionInfo.summary
 
 `() -> str`
@@ -1477,6 +1879,16 @@ value: Owned immutable domain payload; retain source separately when planning or
 
 - `source`: Exact source captured atomically with the payload.
 - `value`: Owned immutable domain payload; retain source separately when planning or checking freshness.
+
+## zipzi.Snapshot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.Snapshot.summary
 
@@ -1504,6 +1916,16 @@ sequence: Exact candidate sequence; formal sources use the default 0. Later cand
 - `edit`: Candidate Edit serial; None means a formal document source.
 - `sequence`: Exact candidate sequence; formal sources use the default 0. Later candidate writes invalidate old sequences.
 
+## zipzi.Source.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.Source.summary
 
 `() -> str`
@@ -1526,6 +1948,16 @@ revision: Document revision within this generation; not a Runtime event cursor o
 - `generation`: Document incarnation within the SDK session; replacing/opening content invalidates older generations.
 - `revision`: Document revision within this generation; not a Runtime event cursor or Edit sequence.
 
+## zipzi.Version.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.Version.summary
 
 `() -> str`
@@ -1545,6 +1977,16 @@ ids: Operation result IDs in operation order; may name newly created or existing
 
 - `source`: Exact candidate source after the accepted write call.
 - `ids`: Operation result IDs in operation order; may name newly created or existing objects.
+
+## zipzi.WriteResult.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.WriteResult.summary
 
@@ -1577,6 +2019,16 @@ above 1 are retained without clamping.
 - `multiply`: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
 - `screen`: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
+## zipzi.bindings.Appearance.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.bindings.Appearance.summary
 
 `() -> str`
@@ -1598,6 +2050,16 @@ not sample indices.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 - `keys`: Strictly increasing finite parameter sample values for this axis, in parameter units;
 not sample indices.
+
+## zipzi.bindings.Axis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.bindings.Axis.summary
 
@@ -1623,6 +2085,16 @@ axis.
 - `parameter_id`: Document parameter ID driving the axis; an empty string represents a pending/unassigned
 axis.
 
+## zipzi.bindings.AxisSnapshot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.bindings.AxisSnapshot.summary
 
 `() -> str`
@@ -1643,6 +2115,16 @@ invalid input.
 - `spec`: Creation specification; native admission supplies identities/defaults and rejects
 invalid input.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.bindings.Create.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.bindings.Create.summary
 
@@ -1680,6 +2162,16 @@ Values above 1 are retained for import roundtrips.
 - `draw_order`: Optional keyform drawing-order coordinate; None leaves the order unspecified for native
 evaluation.
 
+## zipzi.bindings.Keyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.bindings.Keyform.summary
 
 `() -> str`
@@ -1707,6 +2199,16 @@ coordinates.
 - `appearance`: Opacity and multiply/screen color factors for this object or shape.
 - `draw_order`: Optional keyform drawing-order coordinate; None lets native evaluation use its
 unoverridden order.
+
+## zipzi.bindings.KeyformSnapshot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.bindings.KeyformSnapshot.summary
 
@@ -1736,6 +2238,16 @@ own identities.
 - `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
 table.
 
+## zipzi.bindings.MeshBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.bindings.MeshBinding.summary
 
 `() -> str`
@@ -1764,6 +2276,16 @@ own identities.
 table.
 - `id`: Optional new binding UUID; None allocates a fresh UUID when the create operation executes.
 
+## zipzi.bindings.MeshBindingSpec.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.bindings.MeshBindingSpec.summary
 
 `() -> str`
@@ -1785,6 +2307,16 @@ increasing.
 - `id`: Stable sample UUID within the binding axis; distinct from its numeric value.
 - `value`: Finite sample coordinate in the driving parameter domain; axis samples are strictly
 increasing.
+
+## zipzi.bindings.Sample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.bindings.Sample.summary
 
@@ -1808,6 +2340,16 @@ keyform: Complete shape sample to insert or replace; unrelated samples are retai
 runtime_id.
 - `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.bindings.SetKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.bindings.SetKeyform.summary
 
@@ -1847,6 +2389,16 @@ vertex_count: Number of mesh vertices, without cloning vertex data.
 - `height`: Decoded image height in pixels when known, without reading pixels.
 - `vertex_count`: Number of mesh vertices, without cloning vertex data.
 
+## zipzi.bindings.Summary.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.bindings.Summary.summary
 
 `() -> str`
@@ -1858,7 +2410,27 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(*, endpoint: Path | None=None, start: bool=False, host: Path | None=None, timeout: float=10.0, startup_timeout: float=15.0, sdk_build: str | None=None) -> Runtime`
 
-Discover a host, optionally start one, and bind a strictly checked client.
+Connect to an explicit/discovered host and return an owned Runtime client.
+
+endpoint is an absolute private Unix <profile>.sock path; None discovers it
+from ZIPZI_RUNTIME_DIR/ZIPZI_RUNTIME_PROFILE. start=False never launches a
+process. With start=True, host is an absolute executable, or discovery uses
+ZIPZI_EDITOR_HOST and the supported app locations. host requires start=True.
+timeout is the positive finite per-request socket timeout in seconds;
+startup_timeout is the positive finite total startup/handshake budget.
+sdk_build=None accepts the compatible host build; an explicit string also
+requires an exact build match. Protocol and required capabilities always
+match strictly; installing native never changes the selected execution host.
+
+This blocks for connection/startup, raising ValueError for invalid options,
+PermissionError for unsafe endpoint ownership, OS connection errors when
+no host is listening, or SdkFailure for pairing/startup refusal. Runtime
+resources are bounded by host limits. Close the returned client or use with;
+this releases its leases while formal Connected sessions remain resident.
+A request that later becomes unknown must recover on this original Runtime;
+calling connect again does not replay or resolve that request.
+
+Example: with zipzi.connect(endpoint=absolute_socket_path) as runtime: ...
 
 
 ## zipzi.describe
@@ -1900,6 +2472,16 @@ info: Final Session metadata captured when the document closed.
 - `operation`: Runtime operation identity used to correlate a published event with its original operation.
 - `info`: Final Session metadata captured when the document closed.
 
+## zipzi.events.Closed.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.events.Closed.summary
 
 `() -> str`
@@ -1927,6 +2509,16 @@ info: Session metadata captured when the Session was created.
 - `operation`: Runtime operation identity used to correlate a published event with its original operation.
 - `info`: Session metadata captured when the Session was created.
 
+## zipzi.events.Created.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.events.Created.summary
 
 `() -> str`
@@ -1949,6 +2541,16 @@ ordering is implied.
 - `runtime`: Runtime instance identity; handles and cursors from another instance cannot be substituted.
 - `session`: None is the registry stream; it has no cross-session ordering guarantee.
 - `sequence`: Monotonic sequence within the selected registry or Session stream; no cross-stream ordering is implied.
+
+## zipzi.events.Cursor.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.events.Cursor.summary
 
@@ -1977,6 +2579,16 @@ serial: Runtime-allocated serial, meaningful only together with the instance and
 - `runtime`: Runtime instance that allocated this handle; handles are invalid across instances.
 - `serial`: Runtime-allocated serial, meaningful only together with the instance and handle kind.
 
+## zipzi.events.Origin.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.events.Origin.summary
 
 `() -> str`
@@ -2003,6 +2615,16 @@ receipt: Confirmed edit publication receipt, including before/after versions and
 - `job`: Related Job identity; None means this event has no associated Job.
 - `operation`: Runtime operation identity used to correlate a published event with its original operation.
 - `receipt`: Confirmed edit publication receipt, including before/after versions and changes.
+
+## zipzi.events.Published.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.events.Published.summary
 
@@ -2050,7 +2672,13 @@ Read up to limit events after this independent cursor, with limit in 1..256. Adv
 
 `() -> T`
 
-Explicitly replace the initial metadata and cursor atomically.
+Atomically recapture metadata and reset this subscriber's cached cursor.
+
+Returns the new initial Session/registry metadata after RESYNC_REQUIRED;
+it does not replay missed events or drain another subscriber. This is a
+synchronous host read under event/response budgets. Recover a lost reply
+through its original Call before polling again. No model write occurs.
+Example: initial = subscription.resync().
 
 
 ## zipzi.events.Saved
@@ -2072,6 +2700,16 @@ receipt: Save receipt with persistence paths, warnings and durability status.
 - `job`: Related Job identity; None means this event has no associated Job.
 - `operation`: Runtime operation identity used to correlate a published event with its original operation.
 - `receipt`: Save receipt with persistence paths, warnings and durability status.
+
+## zipzi.events.Saved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.events.Saved.summary
 
@@ -2119,7 +2757,13 @@ Read up to limit events after this independent cursor, with limit in 1..256. Adv
 
 `() -> T`
 
-Explicitly replace the initial metadata and cursor atomically.
+Atomically recapture metadata and reset this subscriber's cached cursor.
+
+Returns the new initial Session/registry metadata after RESYNC_REQUIRED;
+it does not replay missed events or drain another subscriber. This is a
+synchronous host read under event/response budgets. Recover a lost reply
+through its original Call before polling again. No model write occurs.
+Example: initial = subscription.resync().
 
 
 ## zipzi.events.StateChanged
@@ -2141,6 +2785,16 @@ info: Session metadata captured at this lifecycle state transition.
 - `job`: Related Job identity; None means this event has no associated Job.
 - `operation`: Runtime operation identity used to correlate a published event with its original operation.
 - `info`: Session metadata captured at this lifecycle state transition.
+
+## zipzi.events.StateChanged.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.events.StateChanged.summary
 
@@ -2178,6 +2832,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 rejects invalid input.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.meshes.Create.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.meshes.Create.summary
 
 `() -> str`
@@ -2202,6 +2866,16 @@ triangles: Triangle entries reference vertex_ids values, never offsets into posi
 - `uvs`: Texture UV coordinates ordered by vertex_ids.
 - `triangles`: Triangle entries reference vertex_ids values, never offsets into positions.
 
+## zipzi.meshes.Geometry.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.meshes.Geometry.summary
 
 `() -> str`
@@ -2225,6 +2899,16 @@ position offsets.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `geometry`: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not
 position offsets.
+
+## zipzi.meshes.Mesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.meshes.Mesh.summary
 
@@ -2255,6 +2939,16 @@ position offsets.
 reference unassigned.
 - `id`: Optional new mesh UUID; None allocates a fresh UUID in the SDK when the create
 operation executes.
+
+## zipzi.meshes.MeshSpec.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.meshes.MeshSpec.summary
 
@@ -2291,6 +2985,16 @@ change.
 - `expected_name`: Required current display name; None disables this name precondition.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.meshes.Rename.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.meshes.Rename.summary
 
 `() -> str`
@@ -2320,6 +3024,16 @@ positions in the supplied order.
 - `positions`: Replacement absolute mesh-local XY positions aligned with the supplied
 vertex_ids selection.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.meshes.SetPositions.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.meshes.SetPositions.summary
 
@@ -2359,6 +3073,16 @@ vertex_count: Number of mesh vertices, without cloning vertex data.
 - `height`: Decoded image height in pixels when known, without reading pixels.
 - `vertex_count`: Number of mesh vertices, without cloning vertex data.
 
+## zipzi.meshes.Summary.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.meshes.Summary.summary
 
 `() -> str`
@@ -2396,6 +3120,16 @@ and .. components are invalid.
 - `path`: Normalized package-relative attachment path using forward slashes; absolute paths
 and .. components are invalid.
 
+## zipzi.modeling.AddressPatchAttachmentPath.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressPatchAttachmentPath.summary
 
 `() -> str`
@@ -2413,6 +3147,16 @@ Fields:
 patch: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
 
 - `patch`: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
+
+## zipzi.modeling.AddressPatchBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AddressPatchBinding.summary
 
@@ -2432,6 +3176,16 @@ value: Scalar value in the referenced parameter domain.
 
 - `value`: Scalar value in the referenced parameter domain.
 
+## zipzi.modeling.AddressPatchContent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressPatchContent.summary
 
 `() -> str`
@@ -2450,6 +3204,16 @@ value: Scalar value in the referenced parameter domain.
 
 - `value`: Scalar value in the referenced parameter domain.
 
+## zipzi.modeling.AddressPatchDocument.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressPatchDocument.summary
 
 `() -> str`
@@ -2467,6 +3231,16 @@ Fields:
 range: Inclusive lower and upper drawing-order bounds, in that order.
 
 - `range`: Inclusive lower and upper drawing-order bounds, in that order.
+
+## zipzi.modeling.AddressPatchDrawingRange.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AddressPatchDrawingRange.summary
 
@@ -2488,6 +3262,16 @@ mutate or publish.
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
 
+## zipzi.modeling.AddressPatchOrganization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressPatchOrganization.summary
 
 `() -> str`
@@ -2508,6 +3292,16 @@ kind.
 - `fields`: Typed replacement metadata fields; their variant must match the addressed reference
 kind.
 
+## zipzi.modeling.AddressPatchReference.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressPatchReference.summary
 
 `() -> str`
@@ -2525,6 +3319,16 @@ Fields:
 name: Human-readable display name; use the stable ID for identity because names can change.
 
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
+
+## zipzi.modeling.AddressPatchResourceName.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AddressPatchResourceName.summary
 
@@ -2546,6 +3350,16 @@ clear_glue_pairs: Explicitly clear existing Glue vertex pairs when changing Glue
 - `value`: Scalar value in the referenced parameter domain.
 - `clear_glue_pairs`: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.
 
+## zipzi.modeling.AddressPatchScene.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressPatchScene.summary
 
 `() -> str`
@@ -2563,6 +3377,16 @@ Fields:
 targets: Complete replacement ordered target-ID selection; an empty list explicitly clears it.
 
 - `targets`: Complete replacement ordered target-ID selection; an empty list explicitly clears it.
+
+## zipzi.modeling.AddressPatchSelection.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AddressPatchSelection.summary
 
@@ -2591,6 +3415,16 @@ runtime_id.
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 
+## zipzi.modeling.AddressSelectorAttachmentPath.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressSelectorAttachmentPath.summary
 
 `() -> str`
@@ -2610,6 +3444,16 @@ runtime_id.
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
+
+## zipzi.modeling.AddressSelectorBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AddressSelectorBinding.summary
 
@@ -2635,6 +3479,16 @@ runtime_id.
 - `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
 undeformed base shape.
 
+## zipzi.modeling.AddressSelectorContent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressSelectorContent.summary
 
 `() -> str`
@@ -2653,6 +3507,16 @@ field: Explicit field discriminator; must match the addressed object/domain.
 
 - `field`: Explicit field discriminator; must match the addressed object/domain.
 
+## zipzi.modeling.AddressSelectorDocument.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressSelectorDocument.summary
 
 `() -> str`
@@ -2670,6 +3534,16 @@ Fields:
 owner: Stable owner ID for the addressed drawing group, collection or reference selection.
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+
+## zipzi.modeling.AddressSelectorDrawingGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AddressSelectorDrawingGroup.summary
 
@@ -2691,6 +3565,16 @@ runtime_id.
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 
+## zipzi.modeling.AddressSelectorOrganization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressSelectorOrganization.summary
 
 `() -> str`
@@ -2711,6 +3595,16 @@ runtime_id.
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 
+## zipzi.modeling.AddressSelectorReference.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressSelectorReference.summary
 
 `() -> str`
@@ -2730,6 +3624,16 @@ runtime_id.
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
+
+## zipzi.modeling.AddressSelectorResourceName.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AddressSelectorResourceName.summary
 
@@ -2753,6 +3657,16 @@ field: Explicit field discriminator; must match the addressed object/domain.
 runtime_id.
 - `field`: Explicit field discriminator; must match the addressed object/domain.
 
+## zipzi.modeling.AddressSelectorScene.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AddressSelectorScene.summary
 
 `() -> str`
@@ -2772,6 +3686,16 @@ field: Explicit field discriminator; must match the addressed object/domain.
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
 - `field`: Explicit field discriminator; must match the addressed object/domain.
+
+## zipzi.modeling.AddressSelectorSelection.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AddressSelectorSelection.summary
 
@@ -2796,6 +3720,16 @@ screen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 above 1 are retained without clamping.
 - `multiply`: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
 - `screen`: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
+
+## zipzi.modeling.Appearance.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.Appearance.summary
 
@@ -2833,6 +3767,16 @@ operation.
 - `load_content`: Current capability to load the referenced resource contents; inspect its state/reason
 before invoking the operation.
 
+## zipzi.modeling.AttachmentCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AttachmentCapabilities.summary
 
 `() -> str`
@@ -2862,6 +3806,16 @@ and .. components are invalid.
 - `path`: Normalized package-relative attachment path using forward slashes; absolute paths
 and .. components are invalid.
 
+## zipzi.modeling.AttachmentEditCreate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AttachmentEditCreate.summary
 
 `() -> str`
@@ -2881,6 +3835,16 @@ runtime_id.
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
+
+## zipzi.modeling.AttachmentEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AttachmentEditDelete.summary
 
@@ -2906,6 +3870,16 @@ runtime_id.
 - `replacement`: Replacement attachment ID for existing references; None explicitly removes those
 references.
 
+## zipzi.modeling.AttachmentEditDeleteWithReplacement.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AttachmentEditDeleteWithReplacement.summary
 
 `() -> str`
@@ -2929,6 +3903,16 @@ and .. components are invalid.
 - `id`: New stable UUID for this object; it must not conflict with an existing identity.
 - `path`: Normalized package-relative attachment path using forward slashes; absolute paths
 and .. components are invalid.
+
+## zipzi.modeling.AttachmentEditDuplicate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AttachmentEditDuplicate.summary
 
@@ -2954,6 +3938,16 @@ are not identities.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.AttachmentEditReorder.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AttachmentEditReorder.summary
 
 `() -> str`
@@ -2976,6 +3970,16 @@ attachment: Complete package attachment record to replace; bytes may be explicit
 the edit.
 - `attachment`: Complete package attachment record to replace; bytes may be explicitly unavailable.
 
+## zipzi.modeling.AttachmentEditReplace.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AttachmentEditReplace.summary
 
 `() -> str`
@@ -2996,6 +4000,16 @@ reference: Resolved attachment identity or explicitly unresolved package path.
 - `registration`: Motion-registration ID whose sound attachment is being changed.
 - `reference`: Resolved attachment identity or explicitly unresolved package path.
 
+## zipzi.modeling.AttachmentEditSetSound.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AttachmentEditSetSound.summary
 
 `() -> str`
@@ -3013,6 +4027,16 @@ Fields:
 reference: Resolved attachment identity or explicitly unresolved package path.
 
 - `reference`: Resolved attachment identity or explicitly unresolved package path.
+
+## zipzi.modeling.AttachmentEditSetUserData.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AttachmentEditSetUserData.summary
 
@@ -3039,6 +4063,16 @@ attachment_id: Stable package-attachment ID, distinct from its relative package 
 
 - `attachment_id`: Stable package-attachment ID, distinct from its relative package path.
 
+## zipzi.modeling.AttachmentRefResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AttachmentRefResolved.summary
 
 `() -> str`
@@ -3058,6 +4092,16 @@ and .. components are invalid.
 
 - `path`: Normalized package-relative attachment path using forward slashes; absolute paths
 and .. components are invalid.
+
+## zipzi.modeling.AttachmentRefUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AttachmentRefUnresolved.summary
 
@@ -3084,6 +4128,16 @@ value: Parameter coordinate used to resample the old grid while reducing an axis
 
 - `value`: Parameter coordinate used to resample the old grid while reducing an axis.
 
+## zipzi.modeling.AxisReductionResample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.AxisReductionResample.summary
 
 `() -> str`
@@ -3101,6 +4155,16 @@ Fields:
 value: Parameter coordinate at which to slice the old grid while removing an axis.
 
 - `value`: Parameter coordinate at which to slice the old grid while removing an axis.
+
+## zipzi.modeling.AxisReductionSlice.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.AxisReductionSlice.summary
 
@@ -3129,6 +4193,16 @@ rather than mutating this value.
 - `value`: Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source
 rather than mutating this value.
 
+## zipzi.modeling.BindingAuthoringEditBlend.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingAuthoringEditBlend.summary
 
 `() -> str`
@@ -3148,6 +4222,16 @@ source rather than mutating this value.
 
 - `value`: Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit
 source rather than mutating this value.
+
+## zipzi.modeling.BindingAuthoringEditGrid.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BindingAuthoringEditGrid.summary
 
@@ -3169,6 +4253,16 @@ source rather than mutating this value.
 - `value`: Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit
 source rather than mutating this value.
 
+## zipzi.modeling.BindingAuthoringEditMeshGrid.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingAuthoringEditMeshGrid.summary
 
 `() -> str`
@@ -3189,6 +4283,16 @@ source rather than mutating this value.
 - `value`: Typed intent for parameter range conversion; apply/plan it against a Session/Edit
 source rather than mutating this value.
 
+## zipzi.modeling.BindingAuthoringEditParameterRange.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingAuthoringEditParameterRange.summary
 
 `() -> str`
@@ -3208,6 +4312,16 @@ source rather than mutating this value.
 
 - `value`: Typed intent for deformation reparenting; apply/plan it against a Session/Edit
 source rather than mutating this value.
+
+## zipzi.modeling.BindingAuthoringEditReparent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BindingAuthoringEditReparent.summary
 
@@ -3232,6 +4346,16 @@ axis.
 - `samples`: Ordered stable samples with strictly increasing finite parameter values.
 - `parameter_id`: Document parameter ID driving the axis; an empty string represents a pending/unassigned
 axis.
+
+## zipzi.modeling.BindingAxis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BindingAxis.summary
 
@@ -3277,6 +4401,16 @@ state/reason before invoking the operation.
 - `preview`: Current capability to evaluate a conversion preview; inspect its state/reason before
 invoking the operation.
 
+## zipzi.modeling.BindingCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingCapabilities.summary
 
 `() -> str`
@@ -3304,6 +4438,16 @@ reduction: Explicit parameter-domain reduction used when removing or replacing a
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 - `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
 
+## zipzi.modeling.BindingFieldPatchAxisParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingFieldPatchAxisParameter.summary
 
 `() -> str`
@@ -3324,6 +4468,16 @@ weight: Dimensionless interpolation weight applied to the referenced source vert
 - `value`: Scalar value in the referenced parameter domain.
 - `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
 
+## zipzi.modeling.BindingFieldPatchConstraintSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingFieldPatchConstraintSample.summary
 
 `() -> str`
@@ -3341,6 +4495,16 @@ Fields:
 value: Scalar value in the referenced parameter domain.
 
 - `value`: Scalar value in the referenced parameter domain.
+
+## zipzi.modeling.BindingFieldPatchSampleValue.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BindingFieldPatchSampleValue.summary
 
@@ -3371,6 +4535,16 @@ undeformed base shape.
 - `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
 undeformed base shape.
 
+## zipzi.modeling.BindingGridEditCreate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingGridEditCreate.summary
 
 `() -> str`
@@ -3388,6 +4562,16 @@ Fields:
 owner: Stable owner ID for the addressed drawing group, collection or reference selection.
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+
+## zipzi.modeling.BindingGridEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BindingGridEditDelete.summary
 
@@ -3408,6 +4592,16 @@ operation: Typed axis/sample grid edit to perform on this owner; not a Runtime o
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
 - `operation`: Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.
+
+## zipzi.modeling.BindingGridEditEdit.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BindingGridEditEdit.summary
 
@@ -3434,6 +4628,16 @@ value: Stable ID of the target Glue whose ordinary grid is being created.
 
 - `value`: Stable ID of the target Glue whose ordinary grid is being created.
 
+## zipzi.modeling.BindingGridTargetGlue.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingGridTargetGlue.summary
 
 `() -> str`
@@ -3452,6 +4656,16 @@ value: Stable ID of the target mesh whose ordinary grid is being created.
 
 - `value`: Stable ID of the target mesh whose ordinary grid is being created.
 
+## zipzi.modeling.BindingGridTargetMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BindingGridTargetMesh.summary
 
 `() -> str`
@@ -3469,6 +4683,16 @@ Fields:
 value: Stable ID of the target scene transform or Part whose ordinary grid is being created.
 
 - `value`: Stable ID of the target scene transform or Part whose ordinary grid is being created.
+
+## zipzi.modeling.BindingGridTargetScene.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BindingGridTargetScene.summary
 
@@ -3491,6 +4715,16 @@ increasing.
 - `id`: Stable sample UUID within the binding axis; distinct from its numeric value.
 - `value`: Finite sample coordinate in the driving parameter domain; axis samples are strictly
 increasing.
+
+## zipzi.modeling.BindingSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BindingSample.summary
 
@@ -3523,6 +4757,16 @@ runtime_id.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 - `samples`: Replacement ordered parameter samples and constraint weights.
 
+## zipzi.modeling.BlendAuthoringEditConstraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendAuthoringEditConstraint.summary
 
 `() -> str`
@@ -3547,6 +4791,16 @@ key_table_id: Stable BlendShape key-table ID controlling the binding.
 - `target_kind`: Category of the BlendShape target; must agree with target_id and keyform payload kind.
 - `key_table_id`: Stable BlendShape key-table ID controlling the binding.
 
+## zipzi.modeling.BlendAuthoringEditCreateBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendAuthoringEditCreateBinding.summary
 
 `() -> str`
@@ -3565,6 +4819,16 @@ constraint: Complete BlendShape constraint with its driving parameter and weight
 
 - `constraint`: Complete BlendShape constraint with its driving parameter and weighted samples.
 
+## zipzi.modeling.BlendAuthoringEditCreateConstraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendAuthoringEditCreateConstraint.summary
 
 `() -> str`
@@ -3582,6 +4846,16 @@ Fields:
 table: Complete BlendShape key table with stable sample IDs and an explicit base sample.
 
 - `table`: Complete BlendShape key table with stable sample IDs and an explicit base sample.
+
+## zipzi.modeling.BlendAuthoringEditCreateTable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BlendAuthoringEditCreateTable.summary
 
@@ -3607,6 +4881,16 @@ runtime_id.
 - `key_table_id`: Stable BlendShape key-table ID controlling the binding.
 - `reset`: Whether to reset shape data when switching the binding to another key table.
 
+## zipzi.modeling.BlendAuthoringEditSetBindingTable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendAuthoringEditSetBindingTable.summary
 
 `() -> str`
@@ -3628,6 +4912,16 @@ operation: Typed sample/base/parameter edit to perform on this BlendShape key ta
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 - `operation`: Typed sample/base/parameter edit to perform on this BlendShape key table.
+
+## zipzi.modeling.BlendAuthoringEditTable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BlendAuthoringEditTable.summary
 
@@ -3666,6 +4960,16 @@ table.
 - `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
 table.
 
+## zipzi.modeling.BlendShapeBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendShapeBinding.summary
 
 `() -> str`
@@ -3687,6 +4991,16 @@ parameter_id: Stable document parameter ID, not its exported runtime identifier.
 - `samples`: Ordered parameter samples with weights used to attenuate the BlendShape contribution.
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+
+## zipzi.modeling.BlendShapeConstraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BlendShapeConstraint.summary
 
@@ -3713,6 +5027,16 @@ names the neutral sample.
 - `base_sample_id`: Sample ID defining the neutral/base shape in this key table.
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+
+## zipzi.modeling.BlendShapeKeyTable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BlendShapeKeyTable.summary
 
@@ -3750,6 +5074,16 @@ replacement_base: Replacement base sample ID when deleting the current base; Non
 parameter value.
 - `replacement_base`: Replacement base sample ID when deleting the current base; None supplies no replacement.
 
+## zipzi.modeling.BlendTableOperationDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendTableOperationDelete.summary
 
 `() -> str`
@@ -3767,6 +5101,16 @@ Fields:
 sample: New stable sample UUID and finite parameter coordinate to insert into this key table.
 
 - `sample`: New stable sample UUID and finite parameter coordinate to insert into this key table.
+
+## zipzi.modeling.BlendTableOperationInsert.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BlendTableOperationInsert.summary
 
@@ -3790,6 +5134,16 @@ value: Scalar value in the referenced parameter domain.
 parameter value.
 - `value`: Scalar value in the referenced parameter domain.
 
+## zipzi.modeling.BlendTableOperationMove.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendTableOperationMove.summary
 
 `() -> str`
@@ -3812,6 +5166,16 @@ requested.
 - `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
 requested.
 
+## zipzi.modeling.BlendTableOperationRemapParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendTableOperationRemapParameter.summary
 
 `() -> str`
@@ -3832,6 +5196,16 @@ parameter value.
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
 parameter value.
 
+## zipzi.modeling.BlendTableOperationSetBase.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.BlendTableOperationSetBase.summary
 
 `() -> str`
@@ -3849,6 +5223,16 @@ Fields:
 parameter_id: Stable document parameter ID, not its exported runtime identifier.
 
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+
+## zipzi.modeling.BlendTableOperationSetParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.BlendTableOperationSetParameter.summary
 
@@ -3880,6 +5264,16 @@ redefine model space.
 this metadata does not rescale model geometry or change evaluation.
 - `flag`: Preserved imported source-canvas flag; no implicit interpretation is applied by this DTO.
 
+## zipzi.modeling.Canvas.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Canvas.summary
 
 `() -> str`
@@ -3907,6 +5301,16 @@ not infer support from method presence.
 - `value`: Current package attachments and their references capability states and reasons; do
 not infer support from method presence.
 
+## zipzi.modeling.CapabilitiesAttachment.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CapabilitiesAttachment.summary
 
 `() -> str`
@@ -3926,6 +5330,16 @@ not infer support from method presence.
 
 - `value`: Current parameter bindings and grid conversions capability states and reasons; do
 not infer support from method presence.
+
+## zipzi.modeling.CapabilitiesBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CapabilitiesBinding.summary
 
@@ -3947,6 +5361,16 @@ presence.
 - `value`: Current collection capability states and reasons; do not infer support from method
 presence.
 
+## zipzi.modeling.CapabilitiesCollection.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CapabilitiesCollection.summary
 
 `() -> str`
@@ -3966,6 +5390,16 @@ support from method presence.
 
 - `value`: Current geometry and topology content capability states and reasons; do not infer
 support from method presence.
+
+## zipzi.modeling.CapabilitiesContent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CapabilitiesContent.summary
 
@@ -3987,6 +5421,16 @@ not infer support from method presence.
 - `value`: Current document configuration and metadata repair capability states and reasons; do
 not infer support from method presence.
 
+## zipzi.modeling.CapabilitiesDocument.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CapabilitiesDocument.summary
 
 `() -> str`
@@ -4006,6 +5450,16 @@ infer support from method presence.
 
 - `value`: Current organization and parameter groups capability states and reasons; do not
 infer support from method presence.
+
+## zipzi.modeling.CapabilitiesOrganization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CapabilitiesOrganization.summary
 
@@ -4027,6 +5481,16 @@ infer support from method presence.
 - `value`: Current metadata references and selections capability states and reasons; do not
 infer support from method presence.
 
+## zipzi.modeling.CapabilitiesReferences.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CapabilitiesReferences.summary
 
 `() -> str`
@@ -4047,6 +5511,16 @@ infer support from method presence.
 - `value`: Current image asset metadata and references capability states and reasons; do not
 infer support from method presence.
 
+## zipzi.modeling.CapabilitiesResource.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CapabilitiesResource.summary
 
 `() -> str`
@@ -4066,6 +5540,16 @@ infer support from method presence.
 
 - `value`: Current scene lifecycle, hierarchy and drawing capability states and reasons; do not
 infer support from method presence.
+
+## zipzi.modeling.CapabilitiesScene.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CapabilitiesScene.summary
 
@@ -4095,6 +5579,16 @@ Typed public API entry.
 Immutable owned CapabilityStateAvailable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 
+## zipzi.modeling.CapabilityStateAvailable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CapabilityStateAvailable.summary
 
 `() -> str`
@@ -4113,6 +5607,16 @@ code: Stable reason code explaining why this operation is currently unavailable.
 
 - `code`: Stable reason code explaining why this operation is currently unavailable.
 
+## zipzi.modeling.CapabilityStateUnavailable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CapabilityStateUnavailable.summary
 
 `() -> str`
@@ -4130,6 +5634,16 @@ Fields:
 code: Stable reason code explaining why this operation is unsupported for this object/domain.
 
 - `code`: Stable reason code explaining why this operation is unsupported for this object/domain.
+
+## zipzi.modeling.CapabilityStateUnsupported.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CapabilityStateUnsupported.summary
 
@@ -4153,6 +5667,16 @@ object identity.
 - `members`: Ordered stable reference-entry records; entry identity is distinct from the referenced
 object identity.
 
+## zipzi.modeling.CdiCombinedSet.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CdiCombinedSet.summary
 
 `() -> str`
@@ -4174,6 +5698,16 @@ groups: Imported group document-ID to runtime-ID map, retained to validate opaqu
 - `parameters`: Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.
 - `parts`: Imported Part document-ID to runtime-ID map, retained to validate opaque metadata.
 - `groups`: Imported group document-ID to runtime-ID map, retained to validate opaque metadata.
+
+## zipzi.modeling.CdiNamespaceIds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CdiNamespaceIds.summary
 
@@ -4208,6 +5742,16 @@ root/unassigned container.
 - `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing
 known fields.
 
+## zipzi.modeling.CdiParameterEntryResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CdiParameterEntryResolved.summary
 
 `() -> str`
@@ -4237,6 +5781,16 @@ object ID.
 root/unassigned container.
 - `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing
 known fields.
+
+## zipzi.modeling.CdiParameterEntryUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CdiParameterEntryUnresolved.summary
 
@@ -4268,6 +5822,16 @@ selects the root/unassigned container.
 - `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing known
 fields.
 
+## zipzi.modeling.CdiParameterGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CdiParameterGroup.summary
 
 `() -> str`
@@ -4293,6 +5857,16 @@ parameter_id: Stable document parameter ID, not its exported runtime identifier.
 
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 
+## zipzi.modeling.CdiParameterRefResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CdiParameterRefResolved.summary
 
 `() -> str`
@@ -4313,6 +5887,16 @@ object ID.
 - `runtime_id`: External format/runtime identifier retained for import/export; not the document
 object ID.
 
+## zipzi.modeling.CdiParameterRefUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CdiParameterRefUnresolved.summary
 
 `() -> str`
@@ -4325,6 +5909,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned CdiParameterRefUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.CdiParameterRefUnspecified.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.CdiParameterRefUnspecified.summary
@@ -4356,6 +5950,16 @@ known fields.
 - `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing
 known fields.
 
+## zipzi.modeling.CdiPartEntryResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CdiPartEntryResolved.summary
 
 `() -> str`
@@ -4381,6 +5985,16 @@ object ID.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing
 known fields.
+
+## zipzi.modeling.CdiPartEntryUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CdiPartEntryUnresolved.summary
 
@@ -4410,6 +6024,16 @@ state/reason before invoking the operation.
 - `reorder`: Current capability to change its collection order; inspect its state/reason before
 invoking the operation.
 
+## zipzi.modeling.CollectionCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CollectionCapabilities.summary
 
 `() -> str`
@@ -4431,6 +6055,16 @@ Typed public API entry.
 Immutable owned CollectionQueryAttachments value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 
+## zipzi.modeling.CollectionQueryAttachments.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CollectionQueryAttachments.summary
 
 `() -> str`
@@ -4448,6 +6082,16 @@ Fields:
 field: Explicit field discriminator; must match the addressed object/domain.
 
 - `field`: Explicit field discriminator; must match the addressed object/domain.
+
+## zipzi.modeling.CollectionQueryDocument.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CollectionQueryDocument.summary
 
@@ -4467,6 +6111,16 @@ collection: Explicit native collection selector; it does not imply loading every
 
 - `collection`: Explicit native collection selector; it does not imply loading every object payload.
 
+## zipzi.modeling.CollectionQueryOrganization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CollectionQueryOrganization.summary
 
 `() -> str`
@@ -4485,6 +6139,16 @@ collection: Explicit native collection selector; it does not imply loading every
 
 - `collection`: Explicit native collection selector; it does not imply loading every object payload.
 
+## zipzi.modeling.CollectionQueryReferences.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.CollectionQueryReferences.summary
 
 `() -> str`
@@ -4497,6 +6161,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned CollectionQueryResources value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.CollectionQueryResources.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.CollectionQueryResources.summary
@@ -4516,6 +6190,16 @@ Fields:
 collection: Explicit native collection selector; it does not imply loading every object payload.
 
 - `collection`: Explicit native collection selector; it does not imply loading every object payload.
+
+## zipzi.modeling.CollectionQueryScene.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.CollectionQueryScene.summary
 
@@ -4539,6 +6223,16 @@ weight: Dimensionless BlendShape constraint weight at this parameter sample.
 - `value`: Finite parameter coordinate for this constraint sample.
 - `weight`: Dimensionless BlendShape constraint weight at this parameter sample.
 
+## zipzi.modeling.ConstraintSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ConstraintSample.summary
 
 `() -> str`
@@ -4561,6 +6255,16 @@ maximum: Upper endpoint of the parameter domain, in parameter units.
 - `minimum`: Lower endpoint of the parameter domain, in parameter units.
 - `maximum`: Upper endpoint of the parameter domain, in parameter units.
 
+## zipzi.modeling.ConversionDomain.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ConversionDomain.summary
 
 `() -> str`
@@ -4580,6 +6284,16 @@ intensity: Additive Glue intensity delta; zero is neutral.
 
 - `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
 - `intensity`: Additive Glue intensity delta; zero is neutral.
+
+## zipzi.modeling.DeltaGlueKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DeltaGlueKeyform.summary
 
@@ -4608,6 +6322,16 @@ channels describe deltas from the base shape.
 - `value`: Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;
 channels describe deltas from the base shape.
 
+## zipzi.modeling.DeltaKeyformsGlue.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DeltaKeyformsGlue.summary
 
 `() -> str`
@@ -4627,6 +6351,16 @@ channels describe deltas from the base shape.
 
 - `value`: Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;
 channels describe deltas from the base shape.
+
+## zipzi.modeling.DeltaKeyformsMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DeltaKeyformsMesh.summary
 
@@ -4648,6 +6382,16 @@ channels describe deltas from the base shape.
 - `value`: Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;
 channels describe deltas from the base shape.
 
+## zipzi.modeling.DeltaKeyformsOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DeltaKeyformsOffscreen.summary
 
 `() -> str`
@@ -4667,6 +6411,16 @@ channels describe deltas from the base shape.
 
 - `value`: Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;
 channels describe deltas from the base shape.
+
+## zipzi.modeling.DeltaKeyformsPart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DeltaKeyformsPart.summary
 
@@ -4688,6 +6442,16 @@ channels describe deltas from the base shape.
 - `value`: Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;
 channels describe deltas from the base shape.
 
+## zipzi.modeling.DeltaKeyformsRotation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DeltaKeyformsRotation.summary
 
 `() -> str`
@@ -4707,6 +6471,16 @@ channels describe deltas from the base shape.
 
 - `value`: Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;
 channels describe deltas from the base shape.
+
+## zipzi.modeling.DeltaKeyformsWarp.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DeltaKeyformsWarp.summary
 
@@ -4740,6 +6514,16 @@ channel.
 - `screen`: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
 channel.
 
+## zipzi.modeling.DeltaMeshKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DeltaMeshKeyform.summary
 
 `() -> str`
@@ -4768,6 +6552,16 @@ no multiply-color delta. Native conversion subtracts 1 before additive blending.
 - `screen`: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
 channel.
 
+## zipzi.modeling.DeltaOffscreenKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DeltaOffscreenKeyform.summary
 
 `() -> str`
@@ -4787,6 +6581,16 @@ draw_order: Additive drawing-order delta; zero is neutral.
 
 - `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
 - `draw_order`: Additive drawing-order delta; zero is neutral.
+
+## zipzi.modeling.DeltaPartKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DeltaPartKeyform.summary
 
@@ -4824,6 +6628,16 @@ channel.
 - `screen`: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
 channel.
 
+## zipzi.modeling.DeltaRotationKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DeltaRotationKeyform.summary
 
 `() -> str`
@@ -4853,6 +6667,16 @@ channel.
 channel.
 - `screen`: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
 channel.
+
+## zipzi.modeling.DeltaWarpKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DeltaWarpKeyform.summary
 
@@ -4892,6 +6716,16 @@ list explicitly preserves emptiness.
 fields.
 - `opaque_source_ids`: Complete namespace identity at import when opaque extensions exist.
 
+## zipzi.modeling.DisplayInfo.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DisplayInfo.summary
 
 `() -> str`
@@ -4928,6 +6762,16 @@ value: Scalar value in the referenced parameter domain.
 the edit.
 - `value`: Scalar value in the referenced parameter domain.
 
+## zipzi.modeling.DocumentAuthoringEditPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DocumentAuthoringEditPatch.summary
 
 `() -> str`
@@ -4949,6 +6793,16 @@ parameter_id: Stable document parameter ID, not its exported runtime identifier.
 - `runtime_id`: External format/runtime identifier retained for import/export; not the document
 object ID.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+
+## zipzi.modeling.DocumentAuthoringEditRepairCdiParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DocumentAuthoringEditRepairCdiParameter.summary
 
@@ -4974,6 +6828,16 @@ object ID.
 - `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects
 the root/unassigned container.
 
+## zipzi.modeling.DocumentAuthoringEditRepairCdiPart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DocumentAuthoringEditRepairCdiPart.summary
 
 `() -> str`
@@ -4995,6 +6859,16 @@ attachment_id: Stable package-attachment ID, distinct from its relative package 
 - `path`: Unresolved imported attachment path to repair; this command does not read client-
 side files.
 - `attachment_id`: Stable package-attachment ID, distinct from its relative package path.
+
+## zipzi.modeling.DocumentAuthoringEditRepairMissingAttachment.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DocumentAuthoringEditRepairMissingAttachment.summary
 
@@ -5028,6 +6902,16 @@ value: Replacement export-frame scale and padding settings.
 
 - `value`: Replacement export-frame scale and padding settings.
 
+## zipzi.modeling.DocumentValueExportSettings.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DocumentValueExportSettings.summary
 
 `() -> str`
@@ -5046,6 +6930,16 @@ value: Replacement model3 layout map; None explicitly removes the layout.
 
 - `value`: Replacement model3 layout map; None explicitly removes the layout.
 
+## zipzi.modeling.DocumentValueLayout.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.DocumentValueLayout.summary
 
 `() -> str`
@@ -5063,6 +6957,16 @@ Fields:
 value: Replacement source-canvas metadata; None explicitly removes the canvas provenance.
 
 - `value`: Replacement source-canvas metadata; None explicitly removes the canvas provenance.
+
+## zipzi.modeling.DocumentValueSourceCanvas.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DocumentValueSourceCanvas.summary
 
@@ -5087,6 +6991,16 @@ max_order: Inclusive upper drawing-order bound for this group.
 - `items`: Stable mesh/Part IDs, in tie-breaking order. A Part references its group.
 - `min_order`: Inclusive lower drawing-order bound for this group.
 - `max_order`: Inclusive upper drawing-order bound for this group.
+
+## zipzi.modeling.DrawOrderGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DrawOrderGroup.summary
 
@@ -5154,6 +7068,16 @@ above 1 are retained without clamping.
 - `inverted_mask`: Whether to invert the combined clipping mask for this drawable.
 - `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
 
+## zipzi.modeling.Drawable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Drawable.summary
 
 `() -> str`
@@ -5181,6 +7105,16 @@ deformers: Editor controls evaluated in the same pose as the drawables.
 - `offscreens`: Evaluated Offscreen compositing records for this pose.
 - `render_plan`: Ordered render commands; Offscreen begin/end delimit the compositing scopes.
 - `deformers`: Editor controls evaluated in the same pose as the drawables.
+
+## zipzi.modeling.DrawableFrame.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.DrawableFrame.summary
 
@@ -5212,6 +7146,16 @@ pending_interaction: Whether an unfinished UI interaction was present when the c
 - `active_tool`: Editor tool name captured with the context.
 - `pending_interaction`: Whether an unfinished UI interaction was present when the context was captured.
 
+## zipzi.modeling.EditorContext.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.EditorContext.summary
 
 `() -> str`
@@ -5229,6 +7173,16 @@ Fields:
 objects: Explicit flags only, keyed by globally unique object ID. Defaults are omitted.
 
 - `objects`: Explicit flags only, keyed by globally unique object ID. Defaults are omitted.
+
+## zipzi.modeling.EditorState.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.EditorState.summary
 
@@ -5260,6 +7214,16 @@ transformed origin and unit X/Y axes.
 - `rotation_axis`: Unit direction of the rotation's local X axis in model space, evaluated
 without translation or scale so tiny imported scales retain their angle.
 
+## zipzi.modeling.EvaluatedDeformer.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.EvaluatedDeformer.summary
 
 `() -> str`
@@ -5283,6 +7247,16 @@ clamped: Whether the effective parameter value differs due to range clamping.
 - `requested`: Requested parameter value before range/repeat handling, in the parameter domain.
 - `value`: Effective parameter value after native range/repeat handling, in the parameter domain.
 - `clamped`: Whether the effective parameter value differs due to range clamping.
+
+## zipzi.modeling.EvaluatedParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.EvaluatedParameter.summary
 
@@ -5321,6 +7295,16 @@ Specified bounds bypass automatic padding; pixel edges round outwards.
 - `padding_pixels`: Additional export padding measured in pixels.
 - `minimum_extent`: Finite nonnegative minimum automatic export extent in model units; native default is 256.
 
+## zipzi.modeling.ExportSettings.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ExportSettings.summary
 
 `() -> str`
@@ -5351,6 +7335,16 @@ triangle-specific.
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `triangle_index`: Optional zero-based index of the offending triangle; None means the diagnostic is not
 triangle-specific.
+
+## zipzi.modeling.GeometryDiagnostic.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.GeometryDiagnostic.summary
 
@@ -5391,6 +7385,16 @@ space: Coordinate space of positions; local-space variants carry the controlling
 array offsets.
 - `space`: Coordinate space of positions; local-space variants carry the controlling transform ID.
 
+## zipzi.modeling.GeometrySnapshot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.GeometrySnapshot.summary
 
 `() -> str`
@@ -5412,6 +7416,16 @@ Typed public API entry.
 Immutable owned GeometrySpaceModel value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 
+## zipzi.modeling.GeometrySpaceModel.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.GeometrySpaceModel.summary
 
 `() -> str`
@@ -5430,6 +7444,16 @@ value: Stable rotation-transform ID defining the local position space.
 
 - `value`: Stable rotation-transform ID defining the local position space.
 
+## zipzi.modeling.GeometrySpaceRotationLocal.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.GeometrySpaceRotationLocal.summary
 
 `() -> str`
@@ -5447,6 +7471,16 @@ Fields:
 value: Stable warp-transform ID defining the parameter/lattice position space.
 
 - `value`: Stable warp-transform ID defining the parameter/lattice position space.
+
+## zipzi.modeling.GeometrySpaceWarpParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.GeometrySpaceWarpParameter.summary
 
@@ -5480,6 +7514,16 @@ binding: Optional parameter-driven Glue binding; None leaves the Glue intensity 
 - `intensity`: Glue influence factor; 0 disables the connection and 1 applies its full influence.
 - `binding`: Optional parameter-driven Glue binding; None leaves the Glue intensity static.
 
+## zipzi.modeling.Glue.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Glue.summary
 
 `() -> str`
@@ -5502,6 +7546,16 @@ keyforms: First axis varies fastest, as in MOC3 ordinary bindings.
 own identities.
 - `keyforms`: First axis varies fastest, as in MOC3 ordinary bindings.
 
+## zipzi.modeling.GlueBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.GlueBinding.summary
 
 `() -> str`
@@ -5521,6 +7575,16 @@ intensity: Glue influence factor; 0 disables the connection and 1 applies its fu
 
 - `samples`: Stable sample IDs in active binding-axis order; not numeric coordinates.
 - `intensity`: Glue influence factor; 0 disables the connection and 1 applies its full influence.
+
+## zipzi.modeling.GlueKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.GlueKeyform.summary
 
@@ -5547,6 +7611,16 @@ weight_b: Dimensionless contribution of endpoint B; default Glue pair weight is 
 - `vertex_b`: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.
 - `weight_a`: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.
 - `weight_b`: Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.
+
+## zipzi.modeling.GlueVertexPair.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.GlueVertexPair.summary
 
@@ -5575,6 +7649,16 @@ from the parameter ID.
 - `axis`: Axis definition with a parameter ID and ordered samples; axis identity is distinct
 from the parameter ID.
 
+## zipzi.modeling.GridOperationAddAxis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.GridOperationAddAxis.summary
 
 `() -> str`
@@ -5594,6 +7678,16 @@ parameter value.
 
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
 parameter value.
+
+## zipzi.modeling.GridOperationDeleteSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.GridOperationDeleteSample.summary
 
@@ -5617,6 +7711,16 @@ value: Scalar value in the referenced parameter domain.
 - `id`: New stable UUID for this object; it must not conflict with an existing identity.
 - `value`: Scalar value in the referenced parameter domain.
 
+## zipzi.modeling.GridOperationInsertSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.GridOperationInsertSample.summary
 
 `() -> str`
@@ -5638,6 +7742,16 @@ value: Scalar value in the referenced parameter domain.
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
 parameter value.
 - `value`: Scalar value in the referenced parameter domain.
+
+## zipzi.modeling.GridOperationMoveSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.GridOperationMoveSample.summary
 
@@ -5663,6 +7777,16 @@ requested.
 - `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
 requested.
 
+## zipzi.modeling.GridOperationRemapParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.GridOperationRemapParameter.summary
 
 `() -> str`
@@ -5685,6 +7809,16 @@ keep_pending: Keep an axis with no parameter as pending instead of removing it f
 - `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
 - `keep_pending`: Keep an axis with no parameter as pending instead of removing it from the binding.
 
+## zipzi.modeling.GridOperationRemoveAxis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.GridOperationRemoveAxis.summary
 
 `() -> str`
@@ -5702,6 +7836,16 @@ Fields:
 axis_ids: Axis IDs in the requested new axis order; IDs refer to axes, not parameters.
 
 - `axis_ids`: Axis IDs in the requested new axis order; IDs refer to axes, not parameters.
+
+## zipzi.modeling.GridOperationReorderAxes.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.GridOperationReorderAxes.summary
 
@@ -5724,6 +7868,16 @@ reduction: Explicit parameter-domain reduction used when removing or replacing a
 - `axis_id`: Stable axis ID owned by this binding, not a parameter or sample ID.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 - `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
+
+## zipzi.modeling.GridOperationSetParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.GridOperationSetParameter.summary
 
@@ -5749,6 +7903,16 @@ source order.
 - `deformation`: Partial deformation-palette order expressed as object IDs; does not reparent objects.
 - `glues`: Management order only. Glue evaluation retains its native execution order.
 
+## zipzi.modeling.HierarchyOrder.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.HierarchyOrder.summary
 
 `() -> str`
@@ -5772,6 +7936,16 @@ content: Image content metadata; None explicitly represents an asset with no loa
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `content`: Image content metadata; None explicitly represents an asset with no loaded image content.
+
+## zipzi.modeling.ImageAsset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ImageAsset.summary
 
@@ -5798,6 +7972,16 @@ locator; reading metadata does not open it.
 - `width`: Image width in pixels; prepared image content requires a positive dimension.
 - `height`: Image height in pixels; prepared image content requires a positive dimension.
 - `sha256`: Hexadecimal SHA-256 of the stored image content; an empty string means no recorded digest.
+
+## zipzi.modeling.ImageContent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ImageContent.summary
 
@@ -5866,6 +8050,16 @@ this channel unspecified for native evaluation.
 - `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
 - `raw_blend_mode`: Original format-specific blend-mode code; None means no preserved raw code.
 
+## zipzi.modeling.Mesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Mesh.summary
 
 `() -> str`
@@ -5893,6 +8087,16 @@ table.
 own identities.
 - `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
 table.
+
+## zipzi.modeling.MeshBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.MeshBinding.summary
 
@@ -5923,6 +8127,16 @@ from the parameter ID.
 - `axis`: Axis definition with a parameter ID and ordered samples; axis identity is distinct
 from the parameter ID.
 
+## zipzi.modeling.MeshGridEditAddAxis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.MeshGridEditAddAxis.summary
 
 `() -> str`
@@ -5942,6 +8156,16 @@ mesh_id: Stable ID of the target mesh in this document.
 
 - `id`: New stable UUID for this object; it must not conflict with an existing identity.
 - `mesh_id`: Stable ID of the target mesh in this document.
+
+## zipzi.modeling.MeshGridEditCreate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.MeshGridEditCreate.summary
 
@@ -5965,6 +8189,16 @@ value: Scalar value in the referenced parameter domain.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 - `value`: Scalar value in the referenced parameter domain.
 
+## zipzi.modeling.MeshGridEditDeleteSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.MeshGridEditDeleteSample.summary
 
 `() -> str`
@@ -5986,6 +8220,16 @@ value: Scalar value in the referenced parameter domain.
 - `binding_id`: Stable binding ID owning the addressed axes or keyforms.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 - `value`: Scalar value in the referenced parameter domain.
+
+## zipzi.modeling.MeshGridEditInsertSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.MeshGridEditInsertSample.summary
 
@@ -6011,6 +8255,16 @@ to: New sample value in the same parameter domain.
 - `from_`: Existing sample value in the parameter domain, not a sample-array index.
 - `to`: New sample value in the same parameter domain.
 
+## zipzi.modeling.MeshGridEditMoveSample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.MeshGridEditMoveSample.summary
 
 `() -> str`
@@ -6033,6 +8287,16 @@ reduction: Explicit parameter-domain reduction used when removing or replacing a
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 - `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
 
+## zipzi.modeling.MeshGridEditRemoveAxis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.MeshGridEditRemoveAxis.summary
 
 `() -> str`
@@ -6052,6 +8316,16 @@ parameter_ids: Document parameter IDs in the requested axis order.
 
 - `binding_id`: Stable binding ID owning the addressed axes or keyforms.
 - `parameter_ids`: Document parameter IDs in the requested axis order.
+
+## zipzi.modeling.MeshGridEditReorderAxes.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.MeshGridEditReorderAxes.summary
 
@@ -6080,6 +8354,16 @@ coordinates.
 - `appearance`: Opacity and multiply/screen color factors for this object or shape.
 - `draw_order`: Optional keyform drawing-order coordinate; None lets native evaluation use its
 unoverridden order.
+
+## zipzi.modeling.MeshKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.MeshKeyform.summary
 
@@ -6117,6 +8401,16 @@ fields.
 - `source_runtime_ids`: Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.
 - `source_content`: Preserved opaque imported model3 source metadata; None means none was retained.
 
+## zipzi.modeling.Model3Settings.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Model3Settings.summary
 
 `() -> str`
@@ -6142,6 +8436,16 @@ fields.
 - `mesh`: Resolved mesh target or preserved unresolved mesh runtime identifier.
 - `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing known
 fields.
+
+## zipzi.modeling.ModelHitArea.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelHitArea.summary
 
@@ -6171,6 +8475,16 @@ distinct from parameter IDs.
 - `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing known
 fields.
 
+## zipzi.modeling.ModelParameterGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelParameterGroup.summary
 
 `() -> str`
@@ -6190,6 +8504,16 @@ export: Export-frame settings; padding is applied when computing an exported fra
 
 - `source_canvas`: Optional imported canvas metadata; None means this model has no source-canvas provenance.
 - `export`: Export-frame settings; padding is applied when computing an exported frame.
+
+## zipzi.modeling.ModelSetup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelSetup.summary
 
@@ -6216,6 +8540,16 @@ object_id: Stable document ID of the object described or selected by this value.
 
 - `object_id`: Stable document ID of the object described or selected by this value.
 
+## zipzi.modeling.ModelTargetRefResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelTargetRefResolved.summary
 
 `() -> str`
@@ -6236,6 +8570,16 @@ object ID.
 - `runtime_id`: External format/runtime identifier retained for import/export; not the document
 object ID.
 
+## zipzi.modeling.ModelTargetRefUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelTargetRefUnresolved.summary
 
 `() -> str`
@@ -6248,6 +8592,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned ModelTargetRefUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.ModelTargetRefUnspecified.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ModelTargetRefUnspecified.summary
@@ -6279,6 +8633,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 mutate or publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandAttachment.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandAttachment.summary
 
 `() -> str`
@@ -6300,6 +8664,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandBinding.summary
 
@@ -6323,6 +8697,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 mutate or publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandContent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandContent.summary
 
 `() -> str`
@@ -6344,6 +8728,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `asset`: Complete asset record to create with native identity validation; this DTO alone does
 not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandCreateAsset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandCreateAsset.summary
 
@@ -6367,6 +8761,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandCreateBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandCreateBinding.summary
 
 `() -> str`
@@ -6388,6 +8792,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `binding`: Complete blend binding record to create with native identity validation; this DTO
 alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandCreateBlendBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandCreateBlendBinding.summary
 
@@ -6411,6 +8825,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandCreateBlendConstraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandCreateBlendConstraint.summary
 
 `() -> str`
@@ -6432,6 +8856,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `table`: Complete blend key table record to create with native identity validation; this DTO
 alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandCreateBlendKeyTable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandCreateBlendKeyTable.summary
 
@@ -6455,6 +8889,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandCreateGlue.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandCreateGlue.summary
 
 `() -> str`
@@ -6476,6 +8920,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `mesh`: Complete mesh record to create with native identity validation; this DTO alone does
 not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandCreateMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandCreateMesh.summary
 
@@ -6499,6 +8953,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandCreateOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandCreateOffscreen.summary
 
 `() -> str`
@@ -6520,6 +8984,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `parameter`: Complete parameter record to create with native identity validation; this DTO alone
 does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandCreateParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandCreateParameter.summary
 
@@ -6543,6 +9017,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandCreatePart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandCreatePart.summary
 
 `() -> str`
@@ -6564,6 +9048,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `binding`: Complete scene binding record to create with native identity validation; this DTO
 alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandCreateSceneBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandCreateSceneBinding.summary
 
@@ -6587,6 +9081,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandCreateTransform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandCreateTransform.summary
 
 `() -> str`
@@ -6608,6 +9112,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandDocument.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandDocument.summary
 
@@ -6631,6 +9145,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 runtime_id.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandEraseObject.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandEraseObject.summary
 
 `() -> str`
@@ -6653,6 +9177,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 mutate or publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandOrganization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandOrganization.summary
 
 `() -> str`
@@ -6674,6 +9208,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReferences.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReferences.summary
 
@@ -6705,6 +9249,16 @@ satisfy native vertex/working-set limits.
 satisfy native vertex/working-set limits.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandRemeshRectangleGrid.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandRemeshRectangleGrid.summary
 
 `() -> str`
@@ -6729,6 +9283,16 @@ runtime_id.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandRenameMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandRenameMesh.summary
 
 `() -> str`
@@ -6750,6 +9314,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `asset`: Complete asset record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceAsset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceAsset.summary
 
@@ -6773,6 +9347,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandReplaceBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandReplaceBinding.summary
 
 `() -> str`
@@ -6794,6 +9378,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `binding`: Complete blend binding record to replace the existing object while preserving its
 stable identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceBlendBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceBlendBinding.summary
 
@@ -6817,6 +9411,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 stable identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandReplaceBlendConstraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandReplaceBlendConstraint.summary
 
 `() -> str`
@@ -6838,6 +9442,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `table`: Complete blend key table record to replace the existing object while preserving its
 stable identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceBlendKeyTable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceBlendKeyTable.summary
 
@@ -6861,6 +9475,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 and ranges. This is a required list, not an optional grouping override.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandReplaceDrawOrderGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandReplaceDrawOrderGroups.summary
 
 `() -> str`
@@ -6880,6 +9504,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 
 - `state`: Complete Editor visibility/lock metadata to replace.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceEditorState.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceEditorState.summary
 
@@ -6903,6 +9537,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandReplaceGlue.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandReplaceGlue.summary
 
 `() -> str`
@@ -6922,6 +9566,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 
 - `order`: Replacement organization/deformation palette order; not runtime draw order.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceHierarchyOrder.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceHierarchyOrder.summary
 
@@ -6945,6 +9599,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandReplaceMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandReplaceMesh.summary
 
 `() -> str`
@@ -6964,6 +9628,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 
 - `setup`: Model source-canvas and export-frame configuration.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceModelSetup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceModelSetup.summary
 
@@ -6987,6 +9661,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandReplaceOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandReplaceOffscreen.summary
 
 `() -> str`
@@ -7008,6 +9692,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `parameter`: Complete parameter record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceParameter.summary
 
@@ -7031,6 +9725,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandReplacePart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandReplacePart.summary
 
 `() -> str`
@@ -7052,6 +9756,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `binding`: Complete scene binding record to replace the existing object while preserving its
 stable identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceSceneBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceSceneBinding.summary
 
@@ -7079,6 +9793,16 @@ versions are rejected.
 remeshing plan.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandReplaceTopology.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandReplaceTopology.summary
 
 `() -> str`
@@ -7100,6 +9824,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `transform`: Complete transform record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandReplaceTransform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandReplaceTransform.summary
 
@@ -7123,6 +9857,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 mutate or publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandResource.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandResource.summary
 
 `() -> str`
@@ -7144,6 +9888,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandScene.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandScene.summary
 
@@ -7169,6 +9923,16 @@ runtime_id.
 - `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.modeling.ModelingCommandSetMeshKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingCommandSetMeshKeyform.summary
 
 `() -> str`
@@ -7192,6 +9956,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 runtime_id.
 - `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandSetSceneKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandSetSceneKeyform.summary
 
@@ -7220,6 +9994,16 @@ runtime_id.
 positions in the supplied order.
 - `positions`: Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandUpdatePositions.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ModelingCommandUpdatePositions.summary
 
@@ -7293,6 +10077,16 @@ requests no payloads, while collection IDs remain discoverable.
 - `attachments`: Explicit IDs of package attachments to read, in result-slot order; an empty list
 requests no payloads, while collection IDs remain discoverable.
 
+## zipzi.modeling.ModelingQuery.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingQuery.summary
 
 `() -> str`
@@ -7319,6 +10113,16 @@ document parameter ID.
 - `frames`: CPU-evaluated frames in the same order as requested parameter maps.
 - `diagnostics`: Structured diagnostics from this query or operation; an empty list means none were reported.
 
+## zipzi.modeling.ModelingSamples.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ModelingSamples.summary
 
 `() -> str`
@@ -7343,6 +10147,16 @@ seed: Explicit policy for initializing this new vertex in dependent ordinary/Ble
 - `uv`: Texture UV pair for this vertex; not a model-space position.
 - `seed`: Explicit policy for initializing this new vertex in dependent ordinary/BlendShape keyforms.
 
+## zipzi.modeling.NewMeshVertex.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.NewMeshVertex.summary
 
 `() -> str`
@@ -7362,6 +10176,16 @@ locked: Authoring lock state; native edit admission and capabilities enforce the
 
 - `hidden_in_editor`: Editor-only hiding flag; does not replace the model enabled/visibility state.
 - `locked`: Authoring lock state; native edit admission and capabilities enforce the lock.
+
+## zipzi.modeling.ObjectEditorState.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ObjectEditorState.summary
 
@@ -7408,6 +10232,16 @@ table.
 - `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
 table.
 
+## zipzi.modeling.Offscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Offscreen.summary
 
 `() -> str`
@@ -7429,6 +10263,16 @@ Typed public API entry.
 Immutable owned OffscreenDeletePolicyNeutral value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 
+## zipzi.modeling.OffscreenDeletePolicyNeutral.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OffscreenDeletePolicyNeutral.summary
 
 `() -> str`
@@ -7441,6 +10285,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned OffscreenDeletePolicyRejectReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.OffscreenDeletePolicyRejectReferences.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.OffscreenDeletePolicyRejectReferences.summary
@@ -7462,6 +10316,16 @@ slot.
 
 - `replacements`: Deleted-keyform-slot to replacement-slot map; None selects neutral/unmapped for that
 slot.
+
+## zipzi.modeling.OffscreenDeletePolicyRemap.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.OffscreenDeletePolicyRemap.summary
 
@@ -7509,6 +10373,16 @@ above 1 are retained without clamping.
 - `multiply_color`: Evaluated RGBA multiply factors, channel order R, G, B, A.
 - `screen_color`: Evaluated RGBA screen factors, channel order R, G, B, A.
 
+## zipzi.modeling.OffscreenFrame.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OffscreenFrame.summary
 
 `() -> str`
@@ -7533,6 +10407,16 @@ above 1 are retained without clamping.
 - `multiply`: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
 - `screen`: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
+## zipzi.modeling.OffscreenKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OffscreenKeyform.summary
 
 `() -> str`
@@ -7552,6 +10436,16 @@ keyform: Offscreen keyform-array index; -1 explicitly selects the neutral/unmapp
 
 - `slot`: Static Part slot or stable Part-binding sample combination to remap.
 - `keyform`: Offscreen keyform-array index; -1 explicitly selects the neutral/unmapped state.
+
+## zipzi.modeling.OffscreenMappingPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.OffscreenMappingPatch.summary
 
@@ -7601,6 +10495,16 @@ operation.
 - `dissolve`: Current capability to remove its container while preserving contents; inspect its
 state/reason before invoking the operation.
 
+## zipzi.modeling.OrganizationCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OrganizationCapabilities.summary
 
 `() -> str`
@@ -7628,6 +10532,16 @@ selects the root/unassigned container.
 - `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
 selects the root/unassigned container.
 
+## zipzi.modeling.OrganizationCollectionParameterGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OrganizationCollectionParameterGroups.summary
 
 `() -> str`
@@ -7648,6 +10562,16 @@ root/unassigned container.
 - `group_id`: Parameter-group ID in the document metadata hierarchy. None selects the
 root/unassigned container.
 
+## zipzi.modeling.OrganizationCollectionParameters.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OrganizationCollectionParameters.summary
 
 `() -> str`
@@ -7667,6 +10591,16 @@ the root/unassigned container.
 
 - `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects
 the root/unassigned container.
+
+## zipzi.modeling.OrganizationCollectionPartMembers.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.OrganizationCollectionPartMembers.summary
 
@@ -7704,6 +10638,16 @@ the selected destination.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.OrganizationEditCreateGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OrganizationEditCreateGroup.summary
 
 `() -> str`
@@ -7730,6 +10674,16 @@ root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.OrganizationEditCreateParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OrganizationEditCreateParameter.summary
 
 `() -> str`
@@ -7751,6 +10705,16 @@ the selected destination.
 - `part`: Complete Part record, including identity, hierarchy context and enabled/drawing state.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
+
+## zipzi.modeling.OrganizationEditCreatePart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.OrganizationEditCreatePart.summary
 
@@ -7775,6 +10739,16 @@ requested.
 are not identities.
 - `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
 requested.
+
+## zipzi.modeling.OrganizationEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.OrganizationEditDelete.summary
 
@@ -7804,6 +10778,16 @@ are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.OrganizationEditDuplicate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OrganizationEditDuplicate.summary
 
 `() -> str`
@@ -7832,6 +10816,16 @@ are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.OrganizationEditMove.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OrganizationEditMove.summary
 
 `() -> str`
@@ -7854,6 +10848,16 @@ group: Complete CDI parameter-group metadata record to create or replace.
 the edit.
 - `group`: Complete CDI parameter-group metadata record to create or replace.
 
+## zipzi.modeling.OrganizationEditPatchGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OrganizationEditPatchGroup.summary
 
 `() -> str`
@@ -7875,6 +10879,16 @@ root/unassigned container.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 - `group_id`: Parameter-group ID in the document metadata hierarchy. None selects the
 root/unassigned container.
+
+## zipzi.modeling.OrganizationEditSetParameterGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.OrganizationEditSetParameterGroup.summary
 
@@ -7968,6 +10982,16 @@ missing requested ID and an empty query returns no payloads.
 - `attachments`: Owned package attachments aligned with the corresponding query ID list; None marks a
 missing requested ID and an empty query returns no payloads.
 
+## zipzi.modeling.OwnedModelingRecords.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.OwnedModelingRecords.summary
 
 `() -> str`
@@ -7991,6 +11015,16 @@ bytes: Optional owned file contents; None preserves an unavailable attachment, n
 - `path`: Normalized package-relative path using forward slashes; absolute paths, empty components
 and .. are invalid.
 - `bytes`: Optional owned file contents; None preserves an unavailable attachment, not an empty file.
+
+## zipzi.modeling.PackageAttachment.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.PackageAttachment.summary
 
@@ -8026,6 +11060,16 @@ repeat: Whether parameter values repeat across the declared range; native defaul
 - `kind`: Normal or BlendShape parameter behavior; native default is Normal.
 - `repeat`: Whether parameter values repeat across the declared range; native default is false.
 
+## zipzi.modeling.Parameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Parameter.summary
 
 `() -> str`
@@ -8058,6 +11102,16 @@ policy: Explicit native conflict/conversion policy; no implicit removal or remap
 - `maximum`: Upper endpoint of the parameter domain, in parameter units.
 - `default_value`: Default parameter value within the declared domain.
 - `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is requested.
+
+## zipzi.modeling.ParameterRangeEdit.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ParameterRangeEdit.summary
 
@@ -8096,6 +11150,16 @@ string represents the root/unassigned container.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 - `draw_order`: Drawing-order coordinate; distinct from the final evaluated render_order.
 
+## zipzi.modeling.Part.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Part.summary
 
 `() -> str`
@@ -8113,6 +11177,16 @@ Fields:
 value: Persistent scene object identifier.
 
 - `value`: Persistent scene object identifier.
+
+## zipzi.modeling.PartId.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.PartId.summary
 
@@ -8133,6 +11207,16 @@ draw_order: Drawing-order coordinate; distinct from the final evaluated render_o
 
 - `samples`: Stable sample IDs in active binding-axis order; not numeric coordinates.
 - `draw_order`: Drawing-order coordinate; distinct from the final evaluated render_order.
+
+## zipzi.modeling.PartKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.PartKeyform.summary
 
@@ -8159,6 +11243,16 @@ samples: Stable sample IDs selecting one ordinary-binding combination, in active
 
 - `samples`: Stable sample IDs selecting one ordinary-binding combination, in active axis order.
 
+## zipzi.modeling.PartKeyformSlotSamples.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.PartKeyformSlotSamples.summary
 
 `() -> str`
@@ -8171,6 +11265,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned PartKeyformSlotStatic value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.PartKeyformSlotStatic.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.PartKeyformSlotStatic.summary
@@ -8206,6 +11310,16 @@ message: Human-readable diagnostic detail; code is the stable programmatic discr
 - `code`: Machine-readable reason or diagnostic code; use it instead of matching human-readable text.
 - `object_id`: Stable document object ID related to this diagnostic; empty if no object was attributed.
 - `message`: Human-readable diagnostic detail; code is the stable programmatic discriminator.
+
+## zipzi.modeling.ProjectDiagnostic.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ProjectDiagnostic.summary
 
@@ -8245,6 +11359,16 @@ alone does not imply true.
 - `paths`: Host-side output paths actually reported by the operation; no client-side path
 translation is implied.
 
+## zipzi.modeling.ProjectReport.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ProjectReport.summary
 
 `() -> str`
@@ -8264,6 +11388,16 @@ Typed public API entry.
 `()`
 
 Immutable owned ProjectRequestDiagnose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.ProjectRequestDiagnose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ProjectRequestDiagnose.summary
@@ -8300,6 +11434,16 @@ unsupported loss.
 - `auto_frame_rate`: Whether export may choose a frame rate automatically instead of requiring an
 explicit one.
 
+## zipzi.modeling.ProjectRequestExport.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ProjectRequestExport.summary
 
 `() -> str`
@@ -8324,6 +11468,16 @@ separate images.
 - `textures`: Explicit external texture-slot to host-file mappings used by imports requiring
 separate images.
 
+## zipzi.modeling.ProjectRequestImport.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ProjectRequestImport.summary
 
 `() -> str`
@@ -8344,6 +11498,16 @@ setup: Model source-canvas and export-frame configuration.
 - `document_id`: Stable document UUID; not a Runtime Session handle.
 - `setup`: Model source-canvas and export-frame configuration.
 
+## zipzi.modeling.ProjectRequestNew.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ProjectRequestNew.summary
 
 `() -> str`
@@ -8361,6 +11525,16 @@ Fields:
 path: Host-side filesystem path for this IO request; resolve it explicitly on the host.
 
 - `path`: Host-side filesystem path for this IO request; resolve it explicitly on the host.
+
+## zipzi.modeling.ProjectRequestOpen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ProjectRequestOpen.summary
 
@@ -8406,6 +11580,16 @@ operation.
 - `dissolve`: Current capability to remove its container while preserving contents; inspect its
 state/reason before invoking the operation.
 
+## zipzi.modeling.ReferenceCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceCapabilities.summary
 
 `() -> str`
@@ -8431,6 +11615,16 @@ set_id: Stable CDI combined-parameter set ID owning the selected members.
 
 - `set_id`: Stable CDI combined-parameter set ID owning the selected members.
 
+## zipzi.modeling.ReferenceCollectionCdiCombinedMembers.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceCollectionCdiCombinedMembers.summary
 
 `() -> str`
@@ -8443,6 +11637,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned ReferenceCollectionCdiCombinedSets value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.ReferenceCollectionCdiCombinedSets.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ReferenceCollectionCdiCombinedSets.summary
@@ -8459,6 +11663,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ReferenceCollectionModelHitAreas value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 
+## zipzi.modeling.ReferenceCollectionModelHitAreas.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceCollectionModelHitAreas.summary
 
 `() -> str`
@@ -8471,6 +11685,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned ReferenceCollectionModelParameterGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.ReferenceCollectionModelParameterGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ReferenceCollectionModelParameterGroups.summary
@@ -8490,6 +11714,16 @@ Fields:
 group_id: Existing model3 parameter-group object ID; this collection has no root/unassigned group.
 
 - `group_id`: Existing model3 parameter-group object ID; this collection has no root/unassigned group.
+
+## zipzi.modeling.ReferenceCollectionModelParameterMembers.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReferenceCollectionModelParameterMembers.summary
 
@@ -8520,6 +11754,16 @@ the selected destination.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.ReferenceEditCreateCdiCombinedSet.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceEditCreateCdiCombinedSet.summary
 
 `() -> str`
@@ -8543,6 +11787,16 @@ the selected destination.
 - `collection`: Explicit native collection selector; it does not imply loading every object payload.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
+
+## zipzi.modeling.ReferenceEditCreateMember.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReferenceEditCreateMember.summary
 
@@ -8568,6 +11822,16 @@ the selected destination.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.ReferenceEditCreateModelHitArea.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceEditCreateModelHitArea.summary
 
 `() -> str`
@@ -8592,6 +11856,16 @@ the selected destination.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.ReferenceEditCreateModelParameterGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceEditCreateModelParameterGroup.summary
 
 `() -> str`
@@ -8611,6 +11885,16 @@ are not identities.
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
 are not identities.
+
+## zipzi.modeling.ReferenceEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReferenceEditDelete.summary
 
@@ -8640,6 +11924,16 @@ are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.ReferenceEditDissolve.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceEditDissolve.summary
 
 `() -> str`
@@ -8667,6 +11961,16 @@ are not identities.
 are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
+
+## zipzi.modeling.ReferenceEditDuplicate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReferenceEditDuplicate.summary
 
@@ -8696,6 +12000,16 @@ are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.ReferenceEditMove.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceEditMove.summary
 
 `() -> str`
@@ -8724,6 +12038,16 @@ the edit.
 - `fields`: Typed replacement metadata fields; their variant must match the addressed reference
 kind.
 
+## zipzi.modeling.ReferenceEditPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceEditPatch.summary
 
 `() -> str`
@@ -8748,6 +12072,16 @@ targets: Complete replacement ordered target-ID selection; an empty list explici
 - `expected`: Exact current ordered target-ID selection; a mismatch rejects the edit.
 - `targets`: Complete replacement ordered target-ID selection; an empty list explicitly clears it.
 
+## zipzi.modeling.ReferenceEditReplaceSelection.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceEditReplaceSelection.summary
 
 `() -> str`
@@ -8770,6 +12104,16 @@ remains independent of the target.
 - `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
 remains independent of the target.
 
+## zipzi.modeling.ReferenceEntryCdiParameterRef.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceEntryCdiParameterRef.summary
 
 `() -> str`
@@ -8791,6 +12135,16 @@ remains independent of the target.
 - `id`: Stable UUID of this reference entry; not the identity of its target.
 - `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
 remains independent of the target.
+
+## zipzi.modeling.ReferenceEntryModelTargetRef.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReferenceEntryModelTargetRef.summary
 
@@ -8819,6 +12173,16 @@ remains independent of the target.
 - `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
 remains independent of the target.
 
+## zipzi.modeling.ReferenceFieldsCdiCombinedMember.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceFieldsCdiCombinedMember.summary
 
 `() -> str`
@@ -8839,6 +12203,16 @@ mesh: Resolved mesh target or preserved unresolved mesh runtime identifier.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `mesh`: Resolved mesh target or preserved unresolved mesh runtime identifier.
 
+## zipzi.modeling.ReferenceFieldsModelHitArea.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReferenceFieldsModelHitArea.summary
 
 `() -> str`
@@ -8856,6 +12230,16 @@ Fields:
 name: Human-readable display name; use the stable ID for identity because names can change.
 
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
+
+## zipzi.modeling.ReferenceFieldsModelParameterGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReferenceFieldsModelParameterGroup.summary
 
@@ -8876,6 +12260,16 @@ remains independent of the target.
 
 - `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
 remains independent of the target.
+
+## zipzi.modeling.ReferenceFieldsModelParameterMember.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReferenceFieldsModelParameterMember.summary
 
@@ -8909,6 +12303,16 @@ offscreen_id: Stable Offscreen object ID; not a texture asset ID.
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 
+## zipzi.modeling.RenderCommandBeginOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.RenderCommandBeginOffscreen.summary
 
 `() -> str`
@@ -8927,6 +12331,16 @@ mesh_id: Stable ID of the target mesh in this document.
 
 - `mesh_id`: Stable ID of the target mesh in this document.
 
+## zipzi.modeling.RenderCommandDrawMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.RenderCommandDrawMesh.summary
 
 `() -> str`
@@ -8944,6 +12358,16 @@ Fields:
 offscreen_id: Stable Offscreen object ID; not a texture asset ID.
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+
+## zipzi.modeling.RenderCommandEndOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.RenderCommandEndOffscreen.summary
 
@@ -8970,6 +12394,16 @@ parameter domain.
 - `parameter_domain`: Empty for PreserveEditState. For domain preservation every unfixed
 dependency must have an explicit finite interval.
 - `edit_time_seconds`: Finite reference pose time in seconds; zero is the default reference time.
+
+## zipzi.modeling.ReparentContext.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReparentContext.summary
 
@@ -9005,6 +12439,16 @@ or reported.
 - `context`: Required for preservation. These are frozen native parameter inputs;
 Motion/Physics must first be resolved to parameters by the caller.
 
+## zipzi.modeling.ReparentEdit.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ReparentEdit.summary
 
 `() -> str`
@@ -9022,6 +12466,16 @@ Fields:
 before: None appends; Some names an unselected member of the destination.
 
 - `before`: None appends; Some names an unselected member of the destination.
+
+## zipzi.modeling.ReparentPlacement.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ReparentPlacement.summary
 
@@ -9070,6 +12524,16 @@ operation.
 - `reorder`: Current capability to change its collection order; inspect its state/reason before
 invoking the operation.
 
+## zipzi.modeling.ResourceCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ResourceCapabilities.summary
 
 `() -> str`
@@ -9101,6 +12565,16 @@ the selected destination.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.ResourceEditCreate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ResourceEditCreate.summary
 
 `() -> str`
@@ -9124,6 +12598,16 @@ resolved target or an unresolved/detached reference.
 runtime_id.
 - `replacement`: None rejects deletion while referenced; Some explicitly redirects users to a
 resolved target or an unresolved/detached reference.
+
+## zipzi.modeling.ResourceEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ResourceEditDelete.summary
 
@@ -9151,6 +12635,16 @@ the selected destination.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.ResourceEditDuplicate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ResourceEditDuplicate.summary
 
 `() -> str`
@@ -9177,6 +12671,16 @@ runtime_id.
 the edit.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 
+## zipzi.modeling.ResourceEditPatchName.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ResourceEditPatchName.summary
 
 `() -> str`
@@ -9200,6 +12704,16 @@ the selected destination.
 are not identities.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
+
+## zipzi.modeling.ResourceEditReorder.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.ResourceEditReorder.summary
 
@@ -9229,6 +12743,16 @@ no loaded content.
 - `content`: Image content metadata; None explicitly represents an asset with no loaded image
 content.
 
+## zipzi.modeling.ResourceEditSetContent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ResourceEditSetContent.summary
 
 `() -> str`
@@ -9250,6 +12774,16 @@ appearance: Opacity and multiply/screen color factors for this object or shape.
 - `samples`: Stable sample IDs in active binding-axis order; not numeric coordinates.
 - `rotation`: Rotation pose containing origin, angle in degrees, scale and axis reflections.
 - `appearance`: Opacity and multiply/screen color factors for this object or shape.
+
+## zipzi.modeling.RotationKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.RotationKeyform.summary
 
@@ -9277,6 +12811,16 @@ reflect_y: Reflect the local Y axis about the rotation origin when true.
 - `reflect_x`: Reflect the local X axis about the rotation origin when true.
 - `reflect_y`: Reflect the local Y axis about the rotation origin when true.
 
+## zipzi.modeling.RotationPose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.RotationPose.summary
 
 `() -> str`
@@ -9296,6 +12840,16 @@ pose: Base rotation pose; its origin is expressed in the parent authoring space.
 
 - `base_angle`: Reference angle in degrees used to orient the rotation control.
 - `pose`: Base rotation pose; its origin is expressed in the parent authoring space.
+
+## zipzi.modeling.RotationTransform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.RotationTransform.summary
 
@@ -9322,6 +12876,16 @@ interpretation.
 own identities.
 - `track`: Typed Warp, Rotation or Part keyform track; the track target determines shape
 interpretation.
+
+## zipzi.modeling.SceneBinding.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneBinding.summary
 
@@ -9371,6 +12935,16 @@ operation.
 - `dissolve`: Current capability to remove its container while preserving contents; inspect its
 state/reason before invoking the operation.
 
+## zipzi.modeling.SceneCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneCapabilities.summary
 
 `() -> str`
@@ -9398,6 +12972,16 @@ selects the root/unassigned container.
 - `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
 selects the root/unassigned container.
 
+## zipzi.modeling.SceneCollectionDeformation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneCollectionDeformation.summary
 
 `() -> str`
@@ -9416,6 +13000,16 @@ owner: Stable owner ID for the addressed drawing group, collection or reference 
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
 
+## zipzi.modeling.SceneCollectionDrawing.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneCollectionDrawing.summary
 
 `() -> str`
@@ -9430,6 +13024,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned SceneCollectionDrawingGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 
+## zipzi.modeling.SceneCollectionDrawingGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneCollectionDrawingGroups.summary
 
 `() -> str`
@@ -9442,6 +13046,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned SceneCollectionGlues value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.SceneCollectionGlues.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.SceneCollectionGlues.summary
@@ -9463,6 +13077,16 @@ the root/unassigned container.
 
 - `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects
 the root/unassigned container.
+
+## zipzi.modeling.SceneCollectionOrganization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneCollectionOrganization.summary
 
@@ -9491,6 +13115,16 @@ invoking the operation.
 state/reason before invoking the operation.
 - `topology`: Current capability to change topology while preserving or explicitly resolving
 dependencies; inspect its state/reason before invoking the operation.
+
+## zipzi.modeling.SceneContentCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentCapabilities.summary
 
@@ -9521,6 +13155,16 @@ are not identities.
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
 are not identities.
 
+## zipzi.modeling.SceneContentEditDeleteGluePairs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditDeleteGluePairs.summary
 
 `() -> str`
@@ -9544,6 +13188,16 @@ requested.
 - `vertices`: Stable vertex IDs in this mesh, not offsets into positions.
 - `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
 requested.
+
+## zipzi.modeling.SceneContentEditDeleteMeshVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditDeleteMeshVertices.summary
 
@@ -9571,6 +13225,16 @@ mappings.
 - `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
 requested.
 
+## zipzi.modeling.SceneContentEditDeleteOffscreenKeyforms.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditDeleteOffscreenKeyforms.summary
 
 `() -> str`
@@ -9590,6 +13254,16 @@ slots: Zero-based content-array positions selected by this operation.
 
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `slots`: Zero-based content-array positions selected by this operation.
+
+## zipzi.modeling.SceneContentEditDeleteTriangles.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditDeleteTriangles.summary
 
@@ -9617,6 +13291,16 @@ are not identities.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.SceneContentEditDuplicateGluePairs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditDuplicateGluePairs.summary
 
 `() -> str`
@@ -9642,6 +13326,16 @@ belong to the selected destination.
 mappings.
 - `before`: Optional zero-based array slot before which to insert; None appends. The anchor must
 belong to the selected destination.
+
+## zipzi.modeling.SceneContentEditDuplicateOffscreenKeyforms.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditDuplicateOffscreenKeyforms.summary
 
@@ -9669,6 +13363,16 @@ meshes.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.SceneContentEditInsertGluePair.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditInsertGluePair.summary
 
 `() -> str`
@@ -9695,6 +13399,16 @@ dependent-shape seed.
 - `before`: Optional stable vertex ID before which to insert new vertices; None appends. This is
 not a position-array index.
 
+## zipzi.modeling.SceneContentEditInsertMeshVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditInsertMeshVertices.summary
 
 `() -> str`
@@ -9718,6 +13432,16 @@ belong to the selected destination.
 - `value`: Scalar value in the referenced parameter domain.
 - `before`: Optional zero-based array slot before which to insert; None appends. The anchor must
 belong to the selected destination.
+
+## zipzi.modeling.SceneContentEditInsertOffscreenKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditInsertOffscreenKeyform.summary
 
@@ -9743,6 +13467,16 @@ belong to the selected destination.
 - `before`: Optional zero-based array slot before which to insert; None appends. The anchor must
 belong to the selected destination.
 
+## zipzi.modeling.SceneContentEditInsertTriangle.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditInsertTriangle.summary
 
 `() -> str`
@@ -9766,6 +13500,16 @@ updates: Ordered content patches applied together by the native edit.
 - `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
 undeformed base shape.
 - `updates`: Ordered content patches applied together by the native edit.
+
+## zipzi.modeling.SceneContentEditMeshVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditMeshVertices.summary
 
@@ -9793,6 +13537,16 @@ are not identities.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.SceneContentEditMoveGluePairs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditMoveGluePairs.summary
 
 `() -> str`
@@ -9814,6 +13568,16 @@ meshes.
 - `glue_id`: Stable Glue object ID owning the affected vertex pairs.
 - `pair`: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected
 meshes.
+
+## zipzi.modeling.SceneContentEditPatchGluePair.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditPatchGluePair.summary
 
@@ -9839,6 +13603,16 @@ value: Scalar value in the referenced parameter domain.
 object ID.
 - `value`: Scalar value in the referenced parameter domain.
 
+## zipzi.modeling.SceneContentEditPatchOffscreenKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditPatchOffscreenKeyform.summary
 
 `() -> str`
@@ -9860,6 +13634,16 @@ vertices: Triangle corners as three stable vertex IDs; not position-array indice
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `slot`: Zero-based position within the addressed content array; not a stable object ID.
 - `vertices`: Triangle corners as three stable vertex IDs; not position-array indices.
+
+## zipzi.modeling.SceneContentEditPatchTriangle.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditPatchTriangle.summary
 
@@ -9883,6 +13667,16 @@ vertex payload.
 - `order`: Complete new order of stable vertex IDs; preserves identities and associated per-
 vertex payload.
 
+## zipzi.modeling.SceneContentEditReorderMeshVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditReorderMeshVertices.summary
 
 `() -> str`
@@ -9905,6 +13699,16 @@ references consistently.
 - `order`: Permutation of zero-based Offscreen keyform slots; native execution remaps
 references consistently.
 
+## zipzi.modeling.SceneContentEditReorderOffscreenKeyforms.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditReorderOffscreenKeyforms.summary
 
 `() -> str`
@@ -9926,6 +13730,16 @@ position-array offsets.
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `triangles`: Triangle triples of stable vertex IDs; preserve winding and do not substitute
 position-array offsets.
+
+## zipzi.modeling.SceneContentEditReplaceTriangles.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditReplaceTriangles.summary
 
@@ -9951,6 +13765,16 @@ quad: Whether to use the quad warp interpolation mode for the lattice.
 - `columns`: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
 - `quad`: Whether to use the quad warp interpolation mode for the lattice.
 
+## zipzi.modeling.SceneContentEditResizeWarp.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditResizeWarp.summary
 
 `() -> str`
@@ -9970,6 +13794,16 @@ updates: Ordered content patches applied together by the native edit.
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 - `updates`: Ordered content patches applied together by the native edit.
+
+## zipzi.modeling.SceneContentEditSetOffscreenMapping.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditSetOffscreenMapping.summary
 
@@ -9999,6 +13833,16 @@ are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.SceneContentEditTransferGluePairs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditTransferGluePairs.summary
 
 `() -> str`
@@ -10022,6 +13866,16 @@ controller: Complete authoring Bezier controller; its baked lattice is updated b
 - `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
 undeformed base shape.
 - `controller`: Complete authoring Bezier controller; its baked lattice is updated by the native edit.
+
+## zipzi.modeling.SceneContentEditWarpBezier.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentEditWarpBezier.summary
 
@@ -10049,6 +13903,16 @@ undeformed base shape.
 - `updates`: Ordered content patches applied together by the native edit.
 - `clear_bezier`: Explicitly remove the authoring Bezier controller when editing baked lattice points.
 
+## zipzi.modeling.SceneContentEditWarpPoints.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentEditWarpPoints.summary
 
 `() -> str`
@@ -10074,6 +13938,16 @@ pair_id: Stable Glue pair ID, not its offset in the pair array.
 
 - `pair_id`: Stable Glue pair ID, not its offset in the pair array.
 
+## zipzi.modeling.SceneContentTargetGluePair.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentTargetGluePair.summary
 
 `() -> str`
@@ -10093,6 +13967,16 @@ object ID.
 
 - `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
 object ID.
+
+## zipzi.modeling.SceneContentTargetOffscreenKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentTargetOffscreenKeyform.summary
 
@@ -10114,6 +13998,16 @@ offset.
 - `slot`: Static Part slot or stable Part-binding sample combination, not an Offscreen array
 offset.
 
+## zipzi.modeling.SceneContentTargetOffscreenMapping.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentTargetOffscreenMapping.summary
 
 `() -> str`
@@ -10133,6 +14027,16 @@ object ID.
 
 - `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
 object ID.
+
+## zipzi.modeling.SceneContentTargetTriangle.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentTargetTriangle.summary
 
@@ -10156,6 +14060,16 @@ shape.
 - `shape`: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
 shape.
 
+## zipzi.modeling.SceneContentTargetVertexPosition.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentTargetVertexPosition.summary
 
 `() -> str`
@@ -10173,6 +14087,16 @@ Fields:
 vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
 
 - `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
+
+## zipzi.modeling.SceneContentTargetVertexUv.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentTargetVertexUv.summary
 
@@ -10198,6 +14122,16 @@ shape.
 - `shape`: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
 shape.
 
+## zipzi.modeling.SceneContentTargetWarpBezierControl.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentTargetWarpBezierControl.summary
 
 `() -> str`
@@ -10221,6 +14155,16 @@ shape.
 - `column`: Zero-based lattice point column, in the inclusive range 0..columns.
 - `shape`: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
 shape.
+
+## zipzi.modeling.SceneContentTargetWarpPoint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentTargetWarpPoint.summary
 
@@ -10247,6 +14191,16 @@ value: Complete replacement Glue pair with its identity and endpoint vertices.
 
 - `value`: Complete replacement Glue pair with its identity and endpoint vertices.
 
+## zipzi.modeling.SceneContentValueGluePair.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentValueGluePair.summary
 
 `() -> str`
@@ -10264,6 +14218,16 @@ Fields:
 value: Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.
 
 - `value`: Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.
+
+## zipzi.modeling.SceneContentValueMapping.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentValueMapping.summary
 
@@ -10283,6 +14247,16 @@ value: Complete replacement Offscreen appearance sample.
 
 - `value`: Complete replacement Offscreen appearance sample.
 
+## zipzi.modeling.SceneContentValueOffscreenKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentValueOffscreenKeyform.summary
 
 `() -> str`
@@ -10301,6 +14275,16 @@ value: Replacement XY value in the selected shape/UV space; BlendShape targets u
 
 - `value`: Replacement XY value in the selected shape/UV space; BlendShape targets use deltas.
 
+## zipzi.modeling.SceneContentValuePoint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneContentValuePoint.summary
 
 `() -> str`
@@ -10318,6 +14302,16 @@ Fields:
 value: Replacement triangle as three stable vertex IDs, not position-array indices.
 
 - `value`: Replacement triangle as three stable vertex IDs, not position-array indices.
+
+## zipzi.modeling.SceneContentValueTriangle.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneContentValueTriangle.summary
 
@@ -10357,6 +14351,16 @@ references retain runtime identifiers.
 - `b`: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved
 references retain runtime identifiers.
 
+## zipzi.modeling.SceneCreateGlue.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneCreateGlue.summary
 
 `() -> str`
@@ -10377,6 +14381,16 @@ external texture identifiers.
 - `texture`: Image-asset reference; resolved values use asset IDs and unresolved values retain
 external texture identifiers.
 
+## zipzi.modeling.SceneCreateMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneCreateMesh.summary
 
 `() -> str`
@@ -10391,6 +14405,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned SceneCreateOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 
+## zipzi.modeling.SceneCreateOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneCreateOffscreen.summary
 
 `() -> str`
@@ -10403,6 +14427,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned SceneCreateRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.SceneCreateRotation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.SceneCreateRotation.summary
@@ -10424,6 +14458,16 @@ native defaults.
 
 - `bounds`: Optional [left, bottom, right, top] warp bounds in parent coordinates; None requests
 native defaults.
+
+## zipzi.modeling.SceneCreateWarp.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneCreateWarp.summary
 
@@ -10470,6 +14514,16 @@ connection collection for Glue. None appends to that collection.
 - `deformation_before`: Independent stable anchor in the deformation collection (`parent_id`).
 Only Mesh/Warp/Rotation support this position; None appends.
 
+## zipzi.modeling.SceneEditCreate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneEditCreate.summary
 
 `() -> str`
@@ -10494,6 +14548,16 @@ are not identities.
 - `scope`: Native copy/delete scope specifying whether dependent deformation descendants are
 included.
 
+## zipzi.modeling.SceneEditDelete.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneEditDelete.summary
 
 `() -> str`
@@ -10511,6 +14575,16 @@ Fields:
 owner: Stable owner ID for the addressed drawing group, collection or reference selection.
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+
+## zipzi.modeling.SceneEditDissolveDrawingGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneEditDissolveDrawingGroup.summary
 
@@ -10544,6 +14618,16 @@ are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.SceneEditDuplicate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneEditDuplicate.summary
 
 `() -> str`
@@ -10568,6 +14652,16 @@ rewrite it.
 - `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
 undeformed base shape.
 
+## zipzi.modeling.SceneEditDuplicateDrawingGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneEditDuplicateDrawingGroup.summary
 
 `() -> str`
@@ -10591,6 +14685,16 @@ the selected destination.
 - `parent`: Drawing-group parent owner; an empty string selects the root drawing group.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
+
+## zipzi.modeling.SceneEditEnsureDrawingGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneEditEnsureDrawingGroup.summary
 
@@ -10620,6 +14724,16 @@ are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.SceneEditMove.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneEditMove.summary
 
 `() -> str`
@@ -10648,6 +14762,16 @@ the edit.
 - `value`: Scalar value in the referenced parameter domain.
 - `clear_glue_pairs`: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.
 
+## zipzi.modeling.SceneEditPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneEditPatch.summary
 
 `() -> str`
@@ -10665,6 +14789,16 @@ Fields:
 edit: Edit candidate handle; None selects formal document state.
 
 - `edit`: Edit candidate handle; None selects formal document state.
+
+## zipzi.modeling.SceneEditReparent.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneEditReparent.summary
 
@@ -10690,6 +14824,16 @@ range: Inclusive lower and upper drawing-order bounds, in that order.
 the edit.
 - `range`: Inclusive lower and upper drawing-order bounds, in that order.
 
+## zipzi.modeling.SceneEditSetDrawingRange.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneEditSetDrawingRange.summary
 
 `() -> str`
@@ -10713,6 +14857,16 @@ part_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are key
 runtime_id.
 - `part_id`: Destination Part object ID; it must name an existing Part.
 - `part_keyform_indices`: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.
+
+## zipzi.modeling.SceneEditTransferOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneEditTransferOffscreen.summary
 
@@ -10746,6 +14900,16 @@ value: Replacement opacity and RGB color factors.
 
 - `value`: Replacement opacity and RGB color factors.
 
+## zipzi.modeling.SceneFieldValueAppearance.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneFieldValueAppearance.summary
 
 `() -> str`
@@ -10770,6 +14934,16 @@ the root/unassigned container.
 - `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
 selects the root/unassigned container.
 
+## zipzi.modeling.SceneFieldValueContext.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneFieldValueContext.summary
 
 `() -> str`
@@ -10787,6 +14961,16 @@ Fields:
 value: Replacement model evaluation enabled flag.
 
 - `value`: Replacement model evaluation enabled flag.
+
+## zipzi.modeling.SceneFieldValueEnabled.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneFieldValueEnabled.summary
 
@@ -10812,6 +14996,16 @@ references retain runtime identifiers.
 - `b`: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved
 references retain runtime identifiers.
 
+## zipzi.modeling.SceneFieldValueGlueEndpoints.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneFieldValueGlueEndpoints.summary
 
 `() -> str`
@@ -10829,6 +15023,16 @@ Fields:
 value: Replacement Glue influence factor.
 
 - `value`: Replacement Glue influence factor.
+
+## zipzi.modeling.SceneFieldValueGlueIntensity.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneFieldValueGlueIntensity.summary
 
@@ -10848,6 +15052,16 @@ value: Replacement display label.
 
 - `value`: Replacement display label.
 
+## zipzi.modeling.SceneFieldValueLabel.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneFieldValueLabel.summary
 
 `() -> str`
@@ -10865,6 +15079,16 @@ Fields:
 value: Complete ordered clipping-mask mesh selection.
 
 - `value`: Complete ordered clipping-mask mesh selection.
+
+## zipzi.modeling.SceneFieldValueMasks.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneFieldValueMasks.summary
 
@@ -10894,6 +15118,16 @@ leaves this channel unspecified for native evaluation.
 - `double_sided`: Whether both triangle faces contribute to drawing.
 - `inverted_mask`: Whether to invert the combined clipping mask for this drawable.
 
+## zipzi.modeling.SceneFieldValueMeshDrawing.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneFieldValueMeshDrawing.summary
 
 `() -> str`
@@ -10920,6 +15154,16 @@ part_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are key
 key table.
 - `part_keyform_indices`: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.
 
+## zipzi.modeling.SceneFieldValueOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneFieldValueOffscreen.summary
 
 `() -> str`
@@ -10937,6 +15181,16 @@ Fields:
 value: Complete replacement rotation definition.
 
 - `value`: Complete replacement rotation definition.
+
+## zipzi.modeling.SceneFieldValueRotation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneFieldValueRotation.summary
 
@@ -10956,6 +15210,16 @@ value: Replacement external runtime identifier; an empty string explicitly clear
 
 - `value`: Replacement external runtime identifier; an empty string explicitly clears it.
 
+## zipzi.modeling.SceneFieldValueRuntimeId.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneFieldValueRuntimeId.summary
 
 `() -> str`
@@ -10974,6 +15238,16 @@ value: Resolved image-asset reference or explicitly unresolved texture runtime i
 
 - `value`: Resolved image-asset reference or explicitly unresolved texture runtime identifier.
 
+## zipzi.modeling.SceneFieldValueTexture.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneFieldValueTexture.summary
 
 `() -> str`
@@ -10991,6 +15265,16 @@ Fields:
 value: Complete replacement warp lattice and controller definition.
 
 - `value`: Complete replacement warp lattice and controller definition.
+
+## zipzi.modeling.SceneFieldValueWarp.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneFieldValueWarp.summary
 
@@ -11017,6 +15301,16 @@ value: Complete Part ordinary-binding keyform; samples identify the active axis 
 
 - `value`: Complete Part ordinary-binding keyform; samples identify the active axis combination.
 
+## zipzi.modeling.SceneKeyformPart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneKeyformPart.summary
 
 `() -> str`
@@ -11037,6 +15331,16 @@ combination.
 - `value`: Complete Rotation ordinary-binding keyform; samples identify the active axis
 combination.
 
+## zipzi.modeling.SceneKeyformRotation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneKeyformRotation.summary
 
 `() -> str`
@@ -11054,6 +15358,16 @@ Fields:
 value: Complete Warp ordinary-binding keyform; samples identify the active axis combination.
 
 - `value`: Complete Warp ordinary-binding keyform; samples identify the active axis combination.
+
+## zipzi.modeling.SceneKeyformWarp.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneKeyformWarp.summary
 
@@ -11080,6 +15394,16 @@ object_id: Stable document ID of the object described or selected by this value.
 
 - `object_id`: Stable document ID of the object described or selected by this value.
 
+## zipzi.modeling.SceneReferenceResolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneReferenceResolved.summary
 
 `() -> str`
@@ -11100,6 +15424,16 @@ object ID.
 - `runtime_id`: External format/runtime identifier retained for import/export; not the document
 object ID.
 
+## zipzi.modeling.SceneReferenceUnresolved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneReferenceUnresolved.summary
 
 `() -> str`
@@ -11112,6 +15446,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 Immutable owned SceneReferenceUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.SceneReferenceUnspecified.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.SceneReferenceUnspecified.summary
@@ -11141,6 +15485,16 @@ keyforms: Ordered Part shape records whose samples refer to this binding's activ
 - `target_id`: Stable Part ID driven by this ordinary binding.
 - `keyforms`: Ordered Part shape records whose samples refer to this binding's active axes.
 
+## zipzi.modeling.SceneTrackPart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneTrackPart.summary
 
 `() -> str`
@@ -11160,6 +15514,16 @@ keyforms: Ordered Rotation shape records whose samples refer to this binding's a
 
 - `target_id`: Stable rotation transform ID driven by this ordinary binding.
 - `keyforms`: Ordered Rotation shape records whose samples refer to this binding's active axes.
+
+## zipzi.modeling.SceneTrackRotation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.SceneTrackRotation.summary
 
@@ -11181,6 +15545,16 @@ keyforms: Ordered Warp shape records whose samples refer to this binding's activ
 - `target_id`: Stable warp transform ID driven by this ordinary binding.
 - `keyforms`: Ordered Warp shape records whose samples refer to this binding's active axes.
 
+## zipzi.modeling.SceneTrackWarp.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.SceneTrackWarp.summary
 
 `() -> str`
@@ -11200,6 +15574,16 @@ Typed public API entry.
 `()`
 
 Immutable owned ShapeTargetBase value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.ShapeTargetBase.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ShapeTargetBase.summary
@@ -11224,6 +15608,16 @@ parameter value.
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
 parameter value.
 
+## zipzi.modeling.ShapeTargetBlend.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ShapeTargetBlend.summary
 
 `() -> str`
@@ -11244,6 +15638,16 @@ samples: Stable sample IDs selecting one ordinary-binding combination, in active
 - `binding_id`: Stable binding ID owning the addressed axes or keyforms.
 - `samples`: Stable sample IDs selecting one ordinary-binding combination, in active axis order.
 
+## zipzi.modeling.ShapeTargetOrdinary.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.ShapeTargetOrdinary.summary
 
 `() -> str`
@@ -11263,6 +15667,16 @@ path: Host-side image file path supplying this external texture slot.
 
 - `slot`: Zero-based external texture slot number used by the import format.
 - `path`: Host-side image file path supplying this external texture slot.
+
+## zipzi.modeling.TextureSlot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.TextureSlot.summary
 
@@ -11291,6 +15705,16 @@ removes it.
 - `glues`: Complete replacement Glue records affected by the remesh.
 - `vertex_mapping`: Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly
 removes it.
+
+## zipzi.modeling.TopologyReplacement.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.TopologyReplacement.summary
 
@@ -11330,6 +15754,16 @@ rotation-pose interpretation.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 - `appearance`: Opacity and multiply/screen color factors for this object or shape.
 
+## zipzi.modeling.Transform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.Transform.summary
 
 `() -> str`
@@ -11355,6 +15789,16 @@ value: Rotation deformation definition with its reference angle and base pose.
 
 - `value`: Rotation deformation definition with its reference angle and base pose.
 
+## zipzi.modeling.TransformDataRotation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.TransformDataRotation.summary
 
 `() -> str`
@@ -11373,6 +15817,16 @@ value: Warp deformation definition with its baked lattice and optional authoring
 
 - `value`: Warp deformation definition with its baked lattice and optional authoring controller.
 
+## zipzi.modeling.TransformDataWarp.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.TransformDataWarp.summary
 
 `() -> str`
@@ -11390,6 +15844,16 @@ Fields:
 value: Persistent scene object identifier.
 
 - `value`: Persistent scene object identifier.
+
+## zipzi.modeling.TransformId.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.TransformId.summary
 
@@ -11425,6 +15889,16 @@ uv: Optional texture UV pair; None preserves the current UV.
 None preserves the current value in the selected shape.
 - `uv`: Optional texture UV pair; None preserves the current UV.
 
+## zipzi.modeling.VertexContentPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.VertexContentPatch.summary
 
 `() -> str`
@@ -11453,6 +15927,16 @@ Typed public API entry.
 Immutable owned VertexSeedBase value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 
+## zipzi.modeling.VertexSeedBase.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.VertexSeedBase.summary
 
 `() -> str`
@@ -11470,6 +15954,16 @@ Fields:
 weights: Source vertex IDs and interpolation weights used to seed dependent shape content.
 
 - `weights`: Source vertex IDs and interpolation weights used to seed dependent shape content.
+
+## zipzi.modeling.VertexSeedInterpolate.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.VertexSeedInterpolate.summary
 
@@ -11490,6 +15984,16 @@ weight: Dimensionless interpolation weight applied to the referenced source vert
 
 - `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
 - `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
+
+## zipzi.modeling.VertexWeight.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.VertexWeight.summary
 
@@ -11513,6 +16017,16 @@ nodes: Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes
 - `columns`: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
 - `nodes`: Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.
 
+## zipzi.modeling.WarpBezier.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.WarpBezier.summary
 
 `() -> str`
@@ -11532,6 +16046,16 @@ handles: Absolute positions: left, right, up, down in lattice coordinates.
 
 - `position`: Absolute Bezier anchor position in lattice coordinates; not a handle offset.
 - `handles`: Absolute positions: left, right, up, down in lattice coordinates.
+
+## zipzi.modeling.WarpBezierNode.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.WarpBezierNode.summary
 
@@ -11557,6 +16081,16 @@ appearance: Opacity and multiply/screen color factors for this object or shape.
 - `positions`: Absolute warp lattice positions in row-major point order; not displacement vectors.
 - `appearance`: Opacity and multiply/screen color factors for this object or shape.
 
+## zipzi.modeling.WarpKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.modeling.WarpKeyform.summary
 
 `() -> str`
@@ -11578,6 +16112,16 @@ point: Replacement lattice XY value: absolute for Base/Ordinary, displacement fo
 - `row`: Zero-based lattice point row, in the inclusive range 0..rows.
 - `column`: Zero-based lattice point column, in the inclusive range 0..columns.
 - `point`: Replacement lattice XY value: absolute for Base/Ordinary, displacement for BlendShape.
+
+## zipzi.modeling.WarpPointPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.WarpPointPatch.summary
 
@@ -11604,6 +16148,16 @@ points: Absolute lattice points in row-major order; index = row * (columns + 1) 
 - `columns`: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
 - `quad`: Whether to use the quad warp interpolation mode for the lattice.
 - `points`: Absolute lattice points in row-major order; index = row * (columns + 1) + column.
+
+## zipzi.modeling.WarpTransform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.modeling.WarpTransform.summary
 
@@ -11654,6 +16208,16 @@ invalid input.
 invalid input.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.parameters.Create.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.parameters.Create.summary
 
 `() -> str`
@@ -11694,6 +16258,16 @@ repeat: Whether parameter values repeat across the declared range; native defaul
 - `decimal_places`: Decimal precision used for runtime parameter handling; native default is 6.
 - `kind`: Normal or BlendShape parameter behavior; native default is Normal.
 - `repeat`: Whether parameter values repeat across the declared range; native default is false.
+
+## zipzi.parameters.Parameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.parameters.Parameter.summary
 
@@ -11745,6 +16319,16 @@ value; it does not reset the field to its default.
 - `repeat`: Replacement repeat flag; false explicitly disables repeating. None preserves the current
 value; it does not reset the field to its default.
 
+## zipzi.parameters.ParameterPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.parameters.ParameterPatch.summary
 
 `() -> str`
@@ -11783,6 +16367,16 @@ minimum and maximum.
 of 6.
 - `repeat`: Optional range-repeat flag; None uses the native default false.
 
+## zipzi.parameters.ParameterSpec.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.parameters.ParameterSpec.summary
 
 `() -> str`
@@ -11805,6 +16399,16 @@ patch: Typed patch for the addressed object; apply through the Edit to mutate ca
 runtime_id.
 - `patch`: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.parameters.Patch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.parameters.Patch.summary
 
@@ -11843,6 +16447,16 @@ vertex_count: Number of mesh vertices, without cloning vertex data.
 - `width`: Decoded image width in pixels when known, without reading pixels.
 - `height`: Decoded image height in pixels when known, without reading pixels.
 - `vertex_count`: Number of mesh vertices, without cloning vertex data.
+
+## zipzi.parameters.Summary.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.parameters.Summary.summary
 
@@ -11884,6 +16498,16 @@ code: Stable refusal reason; None for the available state.
 - `state`: Available, temporarily unavailable, or unsupported for this object/domain.
 - `code`: Stable refusal reason; None for the available state.
 
+## zipzi.references.Capability.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.references.Capability.summary
 
 `() -> str`
@@ -11896,6 +16520,25 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 `()`
 
 An SDK address with incarnation and monotonic epoch validation.
+
+
+## zipzi.references.FieldAddress.__enter__
+
+`() -> FieldAddress`
+
+Check the owning client/lease locally and return this FieldAddress without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+
+## zipzi.references.FieldAddress.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
 
 
 ## zipzi.references.FieldAddress.close
@@ -11924,6 +16567,25 @@ Plan a typed address patch under captured SDK epochs and context. Stale fields o
 `(factory-owned; use the documented public entry)`
 
 Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.references.LabelAddress.__enter__
+
+`() -> LabelAddress`
+
+Check the owning client/lease locally and return this LabelAddress without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+
+## zipzi.references.LabelAddress.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
 
 
 ## zipzi.references.LabelAddress.close
@@ -11973,6 +16635,25 @@ Typed public API entry.
 `(factory-owned; use the documented public entry)`
 
 Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.references.ObjectRef.__enter__
+
+`() -> ObjectRef`
+
+Check the owning client/lease locally and return this ObjectRef without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+
+## zipzi.references.ObjectRef.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
 
 
 ## zipzi.references.ObjectRef.capabilities
@@ -12072,6 +16753,16 @@ operation.
 - `dissolve`: Current capability to remove its container while preserving contents; inspect its
 state/reason before invoking the operation.
 
+## zipzi.references.SceneCapabilities.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.references.SceneCapabilities.summary
 
 `() -> str`
@@ -12105,6 +16796,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 ownership.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.resources.CreateImage.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.resources.CreateImage.summary
 
 `() -> str`
@@ -12127,6 +16828,16 @@ pixels: Owned decoded image pixels; reading this value does not perform another 
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `pixels`: Owned decoded image pixels; reading this value does not perform another host request.
 
+## zipzi.resources.Image.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.resources.Image.summary
 
 `() -> str`
@@ -12146,6 +16857,25 @@ Fields:
 source: Exact formal or candidate source captured with the pixels; reading this cached value performs no IO.
 
 - `source`: Exact formal or candidate source captured with the pixels; reading this cached value performs no IO.
+
+## zipzi.resources.ImageLease.__enter__
+
+`() -> ImageLease`
+
+Check the owning client/lease locally and return this ImageLease without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+
+## zipzi.resources.ImageLease.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
+
 
 ## zipzi.resources.ImageLease.close
 
@@ -12199,6 +16929,16 @@ height * 4 bytes, with straight alpha.
 - `rgba`: Owned tightly packed RGBA8 pixels in row-major order, top row first; length is width *
 height * 4 bytes, with straight alpha.
 
+## zipzi.resources.ImagePixels.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.resources.ImagePixels.summary
 
 `() -> str`
@@ -12210,7 +16950,32 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(factory-owned; use the documented public entry)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Owned prepared-image lease from Runtime.resources preparation/loading.
+
+Preparation owns immutable pixels independently of any Edit. Accept/replace
+through edit.resources, then close this lease or use with; formal/candidate/
+history owners retain their own references. width/height are cached, while
+pixels() synchronously downloads owned bytes. A pending request must recover
+on this original owner. Handles cannot cross Runtime/client boundaries.
+
+
+## zipzi.resources.PreparedImage.__enter__
+
+`() -> PreparedImage`
+
+Check the owning client/lease locally and return this PreparedImage without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+
+## zipzi.resources.PreparedImage.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
 
 
 ## zipzi.resources.PreparedImage.close
@@ -12267,6 +17032,16 @@ runtime_id.
 - `expected_name`: Required current display name; None disables this name precondition.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.resources.RenameImage.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.resources.RenameImage.summary
 
 `() -> str`
@@ -12292,6 +17067,16 @@ runtime_id.
 - `image`: Client-owned prepared-image handle; creating an operation value does not transfer
 ownership.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.resources.ReplaceImage.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.resources.ReplaceImage.summary
 
@@ -12331,6 +17116,16 @@ vertex_count: Number of mesh vertices, without cloning vertex data.
 - `height`: Decoded image height in pixels when known, without reading pixels.
 - `vertex_count`: Number of mesh vertices, without cloning vertex data.
 
+## zipzi.resources.Summary.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.resources.Summary.summary
 
 `() -> str`
@@ -12364,6 +17159,16 @@ transfer_bytes: Reserved bytes for in-progress binary transfers.
 - `blob_bytes`: Retained immutable binary blob storage in bytes under Runtime accounting.
 - `preparing_bytes`: Reserved bytes for resource preparation that has not yet finished.
 - `transfer_bytes`: Reserved bytes for in-progress binary transfers.
+
+## zipzi.resources.Usage.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.resources.Usage.summary
 
@@ -12401,6 +17206,16 @@ model_bounds: Optional expected model bounds for root meshes only.
 the appropriate rotation-local / Warp-parameter units under a parent.
 - `model_bounds`: Optional expected model bounds for root meshes only.
 
+## zipzi.sampling.Checks.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.sampling.Checks.summary
 
 `() -> str`
@@ -12431,6 +17246,16 @@ transformed origin and unit X/Y axes.
 - `rotation_axis`: Unit direction of the rotation's local X axis in model space, evaluated
 without translation or scale so tiny imported scales retain their angle.
 
+## zipzi.sampling.Deformer.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.sampling.Deformer.summary
 
 `() -> str`
@@ -12454,6 +17279,16 @@ triangle-specific.
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `triangle_index`: Optional zero-based index of the offending triangle; None means the diagnostic is not
 triangle-specific.
+
+## zipzi.sampling.Diagnostic.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.sampling.Diagnostic.summary
 
@@ -12528,6 +17363,16 @@ above 1 are retained without clamping.
 - `inverted_mask`: Whether to invert the combined clipping mask for this drawable.
 - `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
 
+## zipzi.sampling.Drawable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.sampling.Drawable.summary
 
 `() -> str`
@@ -12555,6 +17400,16 @@ deformers: Editor controls evaluated in the same pose as the drawables.
 - `offscreens`: Evaluated Offscreen compositing records for this pose.
 - `render_plan`: Ordered render commands; Offscreen begin/end delimit the compositing scopes.
 - `deformers`: Editor controls evaluated in the same pose as the drawables.
+
+## zipzi.sampling.Frame.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.sampling.Frame.summary
 
@@ -12602,6 +17457,16 @@ above 1 are retained without clamping.
 - `multiply_color`: Evaluated RGBA multiply factors, channel order R, G, B, A.
 - `screen_color`: Evaluated RGBA screen factors, channel order R, G, B, A.
 
+## zipzi.sampling.Offscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.sampling.Offscreen.summary
 
 `() -> str`
@@ -12626,6 +17491,16 @@ clamped: Whether the effective parameter value differs due to range clamping.
 - `value`: Effective parameter value after native range/repeat handling, in the parameter domain.
 - `clamped`: Whether the effective parameter value differs due to range clamping.
 
+## zipzi.sampling.Parameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.sampling.Parameter.summary
 
 `() -> str`
@@ -12643,6 +17518,16 @@ Fields:
 values: Immutable parameter-ID/value pairs sorted by parameter ID; IDs are document parameter IDs and values use each parameter domain.
 
 - `values`: Immutable parameter-ID/value pairs sorted by parameter ID; IDs are document parameter IDs and values use each parameter domain.
+
+## zipzi.sampling.Pose.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.sampling.Pose.summary
 
@@ -12663,6 +17548,16 @@ id: Stable mesh ID for DrawMesh, or Offscreen ID for begin/end commands.
 
 - `kind`: BeginOffscreen, DrawMesh or EndOffscreen; begin/end commands delimit compositing scopes.
 - `id`: Stable mesh ID for DrawMesh, or Offscreen ID for begin/end commands.
+
+## zipzi.sampling.RenderCommand.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.sampling.RenderCommand.summary
 
@@ -12699,6 +17594,16 @@ document parameter ID.
 - `diagnostics`: Structured diagnostics from this query or operation; an empty list means none were reported.
 - `state`: Captured sampling source state, distinguishing formal content from an Edit candidate.
 
+## zipzi.sampling.Result.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.sampling.Result.summary
 
 `() -> str`
@@ -12733,6 +17638,16 @@ must name one of them.
 - `base_sample_id`: Sample ID defining the neutral/base shape in this key table.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.CreateBlendTable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.CreateBlendTable.summary
 
@@ -12770,6 +17685,16 @@ selects the root/unassigned container.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.CreateGlue.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.CreateGlue.summary
 
 `() -> str`
@@ -12793,6 +17718,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `table_id`: Stable BlendShape key-table ID in this document.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.CreateMeshBlend.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.CreateMeshBlend.summary
 
@@ -12820,6 +17755,16 @@ change.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.CreateOffscreen.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.CreateOffscreen.summary
 
 `() -> str`
@@ -12842,6 +17787,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 rejects invalid input.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.CreateParameterGroup.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.CreateParameterGroup.summary
 
 `() -> str`
@@ -12863,6 +17818,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `spec`: Creation specification; native admission supplies identities/defaults and
 rejects invalid input.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.CreatePart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.CreatePart.summary
 
@@ -12891,6 +17856,16 @@ change.
 anchors.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.CreateRotation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.CreateRotation.summary
 
@@ -12924,6 +17899,16 @@ requests native defaults.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.CreateWarp.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.CreateWarp.summary
 
 `() -> str`
@@ -12947,6 +17932,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row
 numbers are not identities.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.DeleteGluePairs.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.DeleteGluePairs.summary
 
@@ -12974,6 +17969,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 referenced-vertex deletion.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.DeleteMeshVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.DeleteMeshVertices.summary
 
 `() -> str`
@@ -13000,6 +18005,16 @@ numbers are not identities.
 deleting its contents.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.DeleteOrganization.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.DeleteOrganization.summary
 
 `() -> str`
@@ -13023,6 +18038,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 numbers are not identities.
 - `subtree`: Include the deformation subtree when true; false affects only the selected objects.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.DeleteScene.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.DeleteScene.summary
 
@@ -13056,6 +18081,16 @@ selects the root/unassigned container.
 to the selected destination.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.DuplicateScene.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.DuplicateScene.summary
 
 `() -> str`
@@ -13081,6 +18116,16 @@ vertex_b: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint una
 - `id`: Optional new Glue-pair UUID; None allocates a fresh pair identity in the SDK.
 - `vertex_a`: Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.
 - `vertex_b`: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.
+
+## zipzi.scene.GluePair.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.GluePair.summary
 
@@ -13109,6 +18154,16 @@ connected meshes.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.InsertGluePair.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.InsertGluePair.summary
 
@@ -13142,6 +18197,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 This is not a position-array index.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.InsertMeshVertex.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.InsertMeshVertex.summary
 
 `() -> str`
@@ -13167,6 +18232,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `before`: Optional stable vertex ID before which to insert new vertices; None appends.
 This is not a position-array index.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.InsertOffscreenKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.InsertOffscreenKeyform.summary
 
@@ -13198,6 +18273,16 @@ None selects the root/unassigned container.
 to the selected destination.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.MoveDeformation.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.MoveDeformation.summary
 
 `() -> str`
@@ -13227,6 +18312,16 @@ None selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.MoveParameterGroups.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.MoveParameterGroups.summary
 
@@ -13258,6 +18353,16 @@ root/unassigned container.
 to the selected destination.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.MoveParameters.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.MoveParameters.summary
 
 `() -> str`
@@ -13288,6 +18393,16 @@ selects the root/unassigned container.
 to the selected destination.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.MoveToPart.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.MoveToPart.summary
 
 `() -> str`
@@ -13311,6 +18426,16 @@ screen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 above 1 are retained without clamping.
 - `multiply`: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
 - `screen`: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
+
+## zipzi.scene.OffscreenForm.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.OffscreenForm.summary
 
@@ -13349,6 +18474,16 @@ selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.scene.ParameterGroupSpec.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.ParameterGroupSpec.summary
 
 `() -> str`
@@ -13377,6 +18512,16 @@ selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.scene.PartSpec.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.PartSpec.summary
 
 `() -> str`
@@ -13402,6 +18547,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 object ID.
 - `value`: Scalar value in the referenced parameter domain.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.PatchOffscreenKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.PatchOffscreenKeyform.summary
 
@@ -13431,6 +18586,16 @@ collection.
 - `deformation_before`: Optional deformation-order sibling ID; None appends in the selected deformation
 collection.
 
+## zipzi.scene.Placement.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.Placement.summary
 
 `() -> str`
@@ -13454,6 +18619,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `order`: Complete new order of stable vertex IDs; preserves identities and associated
 per-vertex payload.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.ReorderMeshVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.ReorderMeshVertices.summary
 
@@ -13485,6 +18660,16 @@ None selects the root/unassigned container.
 to the selected destination.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.ReparentLocal.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.ReparentLocal.summary
 
 `() -> str`
@@ -13509,6 +18694,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 position-array offsets.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.ReplaceTriangles.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.ReplaceTriangles.summary
 
 `() -> str`
@@ -13528,6 +18723,16 @@ value: Finite parameter sample coordinate in the driving parameter domain.
 
 - `id`: Stable UUID assigned to this parameter sample.
 - `value`: Finite parameter sample coordinate in the driving parameter domain.
+
+## zipzi.scene.Sample.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.Sample.summary
 
@@ -13557,6 +18762,16 @@ parameter value.
 - `updates`: Ordered content patches applied together by the native edit.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
+## zipzi.scene.SetMeshBlendVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.SetMeshBlendVertices.summary
 
 `() -> str`
@@ -13578,6 +18793,16 @@ kind: Fixed operation discriminator supplied by this value type; not a construct
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 - `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.SetOffscreenStaticKeyform.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.SetOffscreenStaticKeyform.summary
 
@@ -13606,6 +18831,16 @@ runtime_id.
 reject the edit.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.SetSceneEnabled.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.SetSceneEnabled.summary
 
@@ -13636,6 +18871,16 @@ reject the edit.
 - `name`: Human-readable display name; use the stable ID for identity because names can
 change.
 - `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.scene.SetSceneLabel.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.SetSceneLabel.summary
 
@@ -13673,6 +18918,16 @@ object ID.
 Parts/groups; None means root or not applicable.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 
+## zipzi.scene.Summary.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.Summary.summary
 
 `() -> str`
@@ -13695,6 +18950,16 @@ uv: UV edits require the base-shape content API; keep None for BlendShape patche
 - `position`: Optional BlendShape XY displacement for this vertex; None preserves its delta.
 - `uv`: UV edits require the base-shape content API; keep None for BlendShape patches.
 
+## zipzi.scene.VertexPatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
 ## zipzi.scene.VertexPatch.summary
 
 `() -> str`
@@ -13714,6 +18979,16 @@ weight: Dimensionless interpolation weight applied to the referenced source vert
 
 - `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
 - `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
+
+## zipzi.scene.VertexWeight.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
 
 ## zipzi.scene.VertexWeight.summary
 

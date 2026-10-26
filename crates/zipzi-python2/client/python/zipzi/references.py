@@ -66,6 +66,7 @@ class ObjectRef(Owned):
         return LabelAddress._create(self)
 
     def __enter__(self) -> ObjectRef:
+        'Check the owning client/lease locally and return this ObjectRef without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.'
         super().__enter__()
         return self
 
@@ -106,6 +107,7 @@ class LabelAddress(Owned):
         return plan._request("plan", lambda: self._backend.label_plan(self._token, name, plan), plan._load)
 
     def __enter__(self) -> LabelAddress:
+        'Check the owning client/lease locally and return this LabelAddress without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.'
         super().__enter__()
         return self
 
@@ -129,6 +131,7 @@ class FieldAddress(Owned):
         return plan._request("plan", lambda: self._backend.address_plan(self._token, patch, plan), plan._load)
 
     def __enter__(self) -> FieldAddress:
+        'Check the owning client/lease locally and return this FieldAddress without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.'
         super().__enter__()
         return self
 

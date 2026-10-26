@@ -40,10 +40,22 @@ class Owned(RecoveryOwner):
         self._request("close", lambda: self._backend.release_handle(self._kind, self._token, self), closed)
 
     def __enter__(self) -> Owned:
+        """Validate this client's live lease and return it without a host request.
+
+        Closed/foreign leases fail; pending work must be recovered first. This
+        does not refresh SDK object incarnation. Use with to close on exit.
+        """
         self._check(self._backend)
         return self
 
     def __exit__(self, kind: object, exception: BaseException | None, traceback: object) -> None:
+        """Close the owned lease on scope exit; never suppress the body exception.
+
+        Python supplies the context arguments. Closing can synchronously contact
+        the host. On normal exit an unknown release remains recoverable and is
+        raised; during an existing exception cleanup failure is added as a note.
+        Retain the handle for pending cleanup. No formal document write occurs.
+        """
         try:
             self.close()
         except BaseException as cleanup:

@@ -15,6 +15,17 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_handwritten_context_and_representation_methods_have_public_entries(self):
+        output=gen.render(self.contract());namespace={}
+        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
+        catalog=namespace['CATALOG']
+        for path in ('zipzi.Runtime.__enter__','zipzi.Runtime.__exit__',
+                     'zipzi.Edit.__enter__','zipzi.Edit.__exit__','zipzi.Job.__exit__',
+                     'zipzi.Plan.__exit__','zipzi.Buffer.__enter__','zipzi.Source.__repr__'):
+            with self.subTest(path=path):
+                self.assertEqual(catalog[path]['kind'],'callable')
+                self.assertTrue(catalog[path]['documentation'])
+
     def test_missing_field_docs_fail_instead_of_generating_declaration_placeholders(self):
         contract = self.contract()
         def remove(node):

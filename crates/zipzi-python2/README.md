@@ -63,8 +63,9 @@ commands and their limits are documented in [tools](../../tools/README.md).
 P3A-2 has completed result unification, domain-owned operations, generated DTOs
 and common plan/apply. Generated facades, pagination and session lifecycle have
 focused P3A-6 evidence. Semantic field documentation and installed offline checks
-now pass; remaining complete documentation review, the comparable P0 run and
-independent agent tasks remain open. The examples below
+now pass, including handwritten context methods, build fingerprints and installed
+examples. The comparable P0 experiment completed; the user waived its stability gate for this round on 2026-10-26, retaining the original failed data and thresholds;
+the fixed agent functional gate has passed; actual service identity remains unverified. The examples below
 describe the current API.
 
 ## Selected code generation
@@ -432,8 +433,9 @@ P3A-3/4/5 was committed as `8500d9fe` without acceptance, by user request.
 Subsequent P3A-6 fixes and selected behavior, recovery, discovery, type, normal
 paired sdist/wheel and current production Editor checks are recorded in
 [P3A-6 results](../../docs/plans/python-sdk-rewrite/p3a-6.md). Overall P3A is still
-unaccepted: remaining documentation review, P0 comparison and independent agent
-execution remain pending. Field semantics and installed offline automatic checks pass.
+unaccepted: P0 stability is waived for this round only; the fixed agent functional
+gate passed, while actual model/service identity remains unverified. Fixes were committed as `32e42da7`; documentation, context methods,
+installed examples and deterministic contract evidence have been consolidated.
 
 All five object collections now provide `get(id, expected=...)`,
 `get_many(ids, expected=...)` and `list(name=None, limit=128, cursor=None)` on both
@@ -463,5 +465,10 @@ stages remain handwritten. New normal native/IPC pairs are required; no fallback
 For a focused run, `./tools/test-sdk.sh python2 --discovery` selects the collection,
 Session and offline catalog regressions. Agent packets and recorders are prepared via
 `tools/python/python2_agent_tasks.py --help`; preparing fixtures does not run an
-agent or prove G01–G08. Strict types and field documentation are passing; complete method-semantics review,
-fault-controller integration and independent task execution remain open.
+agent or prove G01–G08. Strict types, field/method documentation and installed public recovery examples
+are passing. Local inter-page/Plan controls and pre-close independent evidence
+are complete. The fixed 42-run agent functional gate passed at 38/42 with at least
+2/3 per environment; a separate review of the same evidence corrects three grader
+false negatives to 41/42. Original results are retained. The matrix used 16,093,048
+reported tokens with no token caps. Actual model/service revision identity is
+still unavailable, so overall P3A acceptance remains open.

@@ -71,7 +71,14 @@ class _Subscription(RecoveryOwner, Generic[T]):
         return self._request("subscribe", lambda: self._backend.subscribe(self._token, self), decode)
 
     def resync(self) -> T:
-        """Explicitly replace the initial metadata and cursor atomically."""
+        """Atomically recapture metadata and reset this subscriber's cached cursor.
+
+        Returns the new initial Session/registry metadata after RESYNC_REQUIRED;
+        it does not replay missed events or drain another subscriber. This is a
+        synchronous host read under event/response budgets. Recover a lost reply
+        through its original Call before polling again. No model write occurs.
+        Example: initial = subscription.resync().
+        """
         return self._request("resync", lambda: self._backend.subscribe(self._token, self), self._reset)
 
     def poll(self, *, limit: int = 128) -> tuple[Event, ...]:

@@ -8,6 +8,7 @@ from copy import deepcopy
 from pathlib import Path
 
 TARGETS=frozenset({'client/python/zipzi/_generated/catalog.py','client/python/zipzi/docs/reference.md'})
+PUBLIC_SPECIALS=frozenset({'__enter__','__exit__','__repr__'})
 
 def compact(source):
     lines=source.splitlines();result=[];decorated=False;changed=False
@@ -182,12 +183,15 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
             value=base.value if isinstance(base,ast.Subscript) else base
             parent=resolve(module,value.id) if isinstance(value,ast.Name) else None
             if isinstance(parent,ast.ClassDef):methods.update(public_methods(parent,seen))
-        methods.update({n.name:n for n in node.body if isinstance(n,ast.FunctionDef) and not n.name.startswith('_')})
+        methods.update({n.name:n for n in node.body if isinstance(n,ast.FunctionDef)
+                        and (not n.name.startswith('_') or n.name in PUBLIC_SPECIALS)})
         return methods
     catalog={'zipzi':dict(kind='module',signature='',documentation='Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release.',example='docs/recipes.py',children=[])}
     def add(path,node,field_docs=None):
         kind='type' if isinstance(node,ast.ClassDef) else 'callable' if isinstance(node,ast.FunctionDef) else 'value'
         text=ast.get_docstring(node) if isinstance(node,(ast.ClassDef,ast.FunctionDef)) else ''
+        if kind=='callable' and not text:
+            raise ValueError('Missing semantic callable documentation: '+path)
         fields=field_docs or []
         if isinstance(node,ast.ClassDef):
             fields=fields or compiled_fields(node_modules.get(id(node),'').rsplit('.',1)[-1],node)
@@ -245,6 +249,15 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
     for owner,module,cls in [('Runtime.sessions','_lifecycle','Sessions'),('Session.project','_lifecycle','Project'),('Runtime.resources','resources','Resources')]:
         node=resolve(module,cls)
         if node:add('zipzi.'+owner,node)
+    fingerprint=hashlib.sha256()
+    for path,source in sorted(sources.items()):
+        if not path.startswith(prefix) or path.endswith('/catalog.py'):continue
+        fingerprint.update(path.encode());fingerprint.update(b'\0');fingerprint.update(source.encode())
+    guide_path=prefix+'docs/guide.md'
+    fingerprint.update(guide_path.encode());fingerprint.update(b'\0')
+    fingerprint.update((package/guide_path).read_text().encode())
+    source_sha=fingerprint.hexdigest()
+    catalog['zipzi']['documentation']+=' Package 0.1.0; protocol zipzi-runtime-p3a-345-1; client source SHA-256 '+source_sha+'.'
     for row in catalog.values():row['children']=tuple(sorted(set(row.get('children',()))))
     reference=[header.rstrip(),'# Installed Python API reference','','Generated from the compiled authoring contract, the finite binding directory and lifecycle source docs.','']
     for path,row in sorted(catalog.items()):
@@ -252,4 +265,6 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
         for field,text in row.get('fields',()):reference+=['- `'+field+'`: '+text]
         reference+=['']
     result={'client/python/zipzi/_generated/catalog.py':header+'"""Offline API directory; no imports or host probes."""\nfrom typing import TypedDict, NotRequired\nfrom collections.abc import Sequence\nclass _Entry(TypedDict):\n    kind: str\n    signature: str\n    documentation: str\n    fields: NotRequired[Sequence[tuple[str,str]]]\n    children: tuple[str,...]\n    example: NotRequired[str]\nCONTRACT = "zipzi-runtime-p3a-345-1"\nPACKAGE_VERSION = "0.1.0"\nCONTRACT_SHA256 = '+repr(hashlib.sha256(__import__('json').dumps(contract,sort_keys=True).encode()).hexdigest())+'\nCATALOG: dict[str,_Entry] = '+pprint.pformat(catalog,width=120,sort_dicts=True)+'\n', 'client/python/zipzi/docs/reference.md':'\n'.join(reference)+'\n'}
+    result['client/python/zipzi/_generated/catalog.py']=result['client/python/zipzi/_generated/catalog.py'].replace(
+        'CONTRACT_SHA256 = ', 'CLIENT_SOURCE_SHA256 = '+repr(source_sha)+'\nCONTRACT_SHA256 = ',1)
     return result

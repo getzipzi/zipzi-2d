@@ -23,13 +23,17 @@ def main() -> None:
     parser.add_argument("tests", nargs="*", help="Optional unittest names, e.g. PythonSdk.test_shared_recipe")
     parser.add_argument("--release", action="store_true", help="Build the native adapter in Release for P0 measurements")
     parser.add_argument("--instrumented", action="store_true", help="Build separate P0 allocator/codec/copy probes; never use for latency")
+    parser.add_argument("--build-only", action="store_true", help="Copy paired native/CPU artifacts and metadata without running previously accepted tests")
+    parser.add_argument("--output", type=Path, help="Separate artifact directory (requires --build-only)")
     parser.add_argument("--recovery", action="store_true", help="Run focused P3A-1 complete-call/Edit/Job recovery tests; optional P3ARecovery.test_name selectors")
-    parser.add_argument("--discovery", action="store_true", help="Run staged P3A-3/4/5 discovery/lifecycle/documentation regressions; optional P3ADiscovery.test_name selectors")
+    parser.add_argument("--discovery", action="store_true", help="Run focused collection/Session/offline-catalog regressions; optional P3ADiscovery.test_name selectors")
     args = parser.parse_args()
+    if args.output is not None and not args.build_only:
+        parser.error('--output requires --build-only')
     if sys.version_info[:2] != (3, 14):
         parser.error("Run with uv run --locked python (CPython 3.14)")
     common = ROOT / "target/python2"
-    output = common / "probes" if args.instrumented else common
+    output = args.output.resolve() if args.output is not None else common / "probes" if args.instrumented else common
     output.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, PYO3_PYTHON=sys.executable, PYO3_BUILD_EXTENSION_MODULE="1")
     for name in ("PYTHONPATH", "PYTHONHOME", "ZIPZI_DEV_SESSION_DIR"):
@@ -73,6 +77,9 @@ def main() -> None:
             instrumented=args.instrumented, host_profile="release" if args.release else "debug",
             host_sha256=hashlib.sha256(host.read_bytes()).hexdigest(),
             python=sys.version, artifact_sha256=hashlib.sha256(extension.read_bytes()).hexdigest()), indent=2) + "\n")
+        if args.build_only:
+            print(f'zipzi-python2: copied paired build artifacts to {output}')
+            return
         env.update(ZIPZI_PYTHON2_NATIVE=str(native.parent), ZIPZI_PYTHON2_HOST=str(host))
         module = "test_p3a_discovery.py" if args.discovery else "test_p3a_recovery.py" if args.recovery else "test_api.py"
         subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests" / module), "-v", *args.tests], cwd="/tmp", env=env, check=True)

@@ -232,28 +232,69 @@ def render_api(contract,header,rust_header):
         summary='scene.Summary' if domain=='scene' else domain+'.Summary'
         facade+=['class '+cls+'(Collection['+domain+'.'+value+']):','    def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):','        super().__init__(session,edit,'+repr(domain)+','+domain+'.'+value+'.read,'+repr(key)+')',
          '    def get(self, id: str, *, expected: Source | None = None) -> Snapshot['+domain+'.'+value+']:',
-         '        """Read one owned value at an exact source. Missing IDs fail the whole read; recover the original call after transport loss."""',
+         '        '+repr('Read one owned value at an exact formal or candidate Source.\n\n'
+             'id is the stable document object ID, not a name. expected=None reads current content; '
+             'an explicit Source is checked atomically and stale sources raise STALE_SOURCE. '
+             'Returns Snapshot[value] with the captured Source; reading its fields performs no IO. '
+             'This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. '
+             'Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the '
+             'original captured result; do not replace it with a fresh read. The result owns no host lease. '
+             'Example: snapshot = session.'+domain+'.get(id); value = snapshot.value.'),
          '        return project(lambda: self._read((id,),expected), self._single, operation='+repr(domain+'.get')+', inputs=(id,expected))',
          '    def get_many(self, ids: Sequence[str], *, expected: Source | None = None) -> Batch['+domain+'.'+value+']:',
-         '        """Read all IDs in request order, including duplicates. Empty batches keep Source; missing IDs or budgets reject the entire read."""',
+         '        '+repr('Read all selected IDs atomically from one formal or candidate Source.\n\n'
+             'ids is copied before execution; requested order and duplicates are preserved. '
+             'expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. '
+             'Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte '
+             'budgets reject the whole read without partial values or an aborted Edit. This call is synchronous '
+             'and has no host-owned result lease. Recover a lost response through its original Call to retain '
+             'the captured source. Example: batch = session.'+domain+'.get_many((id, id)).'),
          '        return self._read(tuple(ids),expected)',
          '    def list(self, *, name: str | None = None, limit: int = 128, cursor: PageCursor | None = None) -> Page['+summary+']:',
-         '        """Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly."""',
+         '        '+repr('Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.\n\n'
+             'name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate '
+             'names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan '
+             'budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the '
+             'previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. '
+             'A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging '
+             'versions. A lost response recovers the original page, even after a peer publication. This is a '
+             'synchronous query; read failure does not abort an Edit and the Page needs no close. '
+             'Example: page = session.'+domain+'.list(name="Face", limit=128).'),
          '        return self._page(name,limit,cursor,'+summary+'.read)','']
-        if cls=='Images':facade+=['    def snapshot(self, id: str) -> resources.ImageLease:','        """Pin immutable pixels with an explicit lease; close the lease when finished."""','        return self._image_lease(id)','']
+        if cls=='Images':facade+=['    def snapshot(self, id: str) -> resources.ImageLease:',
+            '        '+repr('Capture pixels of image id at this exact formal/candidate source into an independent ImageLease. '
+                'This synchronous request can reject a missing image or lease/byte budget; queries do not abort an Edit. '
+                'The lease pins pixels across replacement and history eviction: close it or use with. Its source is '
+                'cached, and pixels() returns owned ImagePixels. Recover an unknown capture through its original Call. '
+                'Example: with session.resources.snapshot(id) as lease: pixels = lease.pixels().'),
+            '        return self._image_lease(id)','']
         if cls not in writes:continue
         facade+=['class Editable'+cls+'('+cls+'):']
         for name,args,result,expr,inputs in writes[cls]:
-            facade+=['    def '+name+'(self, '+args+') -> '+result+':','        """Apply a typed '+domain+' operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit."""']
+            operation=expr.split('(',1)[0]
+            returns='the stable object ID as str' if result=='str' else 'WriteResult with the new candidate Source and ordered result IDs'
+            detail='Arguments have the semantics of '+operation+'; inspect that operation and its input DTO fields with zipzi.describe. '
+            if cls=='Images' and name in {'create_image','replace_image'}:detail+='image must be a live PreparedImage from this Runtime; close that independent lease after acceptance, while native candidate/history owners retain the pixels. '
+            facade+=['    def '+name+'(self, '+args+') -> '+result+':',
+                '        '+repr('Apply '+operation+' synchronously to this Edit and return '+returns+'.\n\n'+detail+
+                    'This changes candidate state only; commit publishes separately. Ordinary write failures '
+                    'abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy '
+                    'or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown '
+                    'retains the original Call and exact return type: recover it instead of replaying the write. '
+                    'Example: result = edit.'+domain+'.'+name+'(...), using the arguments shown in its signature.')]
             if result=='str':facade+=['        return project(lambda: self._write(lambda: '+expr+'),single_id,operation='+repr(domain+'.'+name)+',inputs='+inputs+')']
             else:facade+=['        return self._write(lambda: '+expr+')']
         facade+=['']
     facade+=['class Modeling:', '    def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):','        self._session,self._edit=session,edit',
-     '    def records(self, query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]:','        """Read selected canonical records from one exact source; the complete result remains owned after later writes."""','        return records(self,query)',
+     '    def records(self, query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]:',
+     '        '+repr('Read selected canonical records from one exact source without editing. query lists stable IDs per domain; empty lists request no payloads, while the ids directory still exposes collection identities. Returns an owned Snapshot; payload slots follow query order and None marks a missing requested ID. This synchronous query may reject count/byte budgets but does not abort an Edit. Recover a lost response through its original Call; results need no close. Example: result = session.modeling.records(modeling.ModelingQuery(meshes=(id,))).'),
+     '        return records(self,query)',
      '    def sample(self, poses: Sequence[Mapping[str,float]], *, checks: sampling.Checks = sampling.Checks(), expected: Source | None = None) -> Snapshot[sampling.Result]:',
-     '        """Evaluate CPU poses without editing. Values are copied before execution; expected rejects a changed source."""','        return sample(self,poses,checks,expected,False)',
+     '        '+repr('Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies optional native geometry diagnostics, and expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).'),
+     '        return sample(self,poses,checks,expected,False)',
      '    def sample_async(self, poses: Sequence[Mapping[str,float]], *, checks: sampling.Checks = sampling.Checks(), expected: Source | None = None) -> "_lifecycle.Job[Snapshot[sampling.Result]]":',
-     '        """Submit CPU evaluation at the captured source; wait and close the accepted Job to release its result slot."""','        return sample(self,poses,checks,expected,True)','']
+     '        '+repr('Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().'),
+     '        return sample(self,poses,checks,expected,True)','']
     directory=[header.rstrip(),'from .._calls import register_request','', 'def register() -> None:','    from .. import _lifecycle as lifecycle, resources, references, events','    from ..buffers import Buffer','    from .._owned import Owned']
     registrations={**{'lifecycle.'+k:v for k,v in LIFECYCLE_REQUESTS.items()},**OWNED_REQUESTS}
     for cls,domain,_,_ in DOMAINS:

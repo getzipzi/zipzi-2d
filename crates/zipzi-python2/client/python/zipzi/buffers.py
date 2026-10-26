@@ -93,5 +93,6 @@ class Buffer(Owned):
         return self._request(f"read:{offset}:{count}", lambda: self._backend.buffer_read(self._token, offset, count, self), decode)
 
     def __enter__(self) -> Buffer:
+        'Check the owning client/lease locally and return this Buffer without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.'
         super().__enter__()
         return self

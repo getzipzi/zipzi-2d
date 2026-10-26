@@ -79,9 +79,11 @@ facades/backend registration and unique transport hooks, exact-source metadata
 pages and selected reads, Runtime capabilities/limits, Session close/detach and
 alias invalidation, bounded owned-value output, private codecs/factories, and the
 offline catalog/reference/guide/recipes. Agent fixture inputs, installed packet
-preparation and bounded recording are present; independent runs and external
-fault-controller integration have not been executed. Subsequent P3A-6 selected
-checks cover both backends, response losses, pagination/close, strict types,
-paired source distribution/wheels and the current production Editor. Offline
-field semantics and installed automatic D02 checks now pass. Complete documentation
-review, P0 workload comparability and independent agent execution remain pending. Earlier P3A-0–2 acceptance is not reused as proof for these APIs.
+preparation and bounded recording are present. Local/Connected external controls,
+pre-close history/content and independent file verification are connected. The
+fixed 42-run agent functional gate passed at 38/42 and at least 2/3 per environment;
+a supplemental review corrects three grader false negatives to 41/42 without
+rerunning tasks or replacing the original records. Token usage is report-only:
+16,093,048 for the fixed matrix. Actual model/service revision identity remains
+unverified, so overall acceptance stays open. Prior behavior/type/distribution/
+Editor and P0 evidence is reused within its original scope.

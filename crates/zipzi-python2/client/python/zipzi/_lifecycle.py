@@ -47,8 +47,16 @@ class Runtime:
         """Immutable negotiated host metadata; local runtimes return None."""
         return self._backend.connection_info
     def __enter__(self) -> "Runtime":
+        """Return this factory-created Runtime; no new host/client or IO is started."""
         return self
     def __exit__(self, kind: object, exception: BaseException | None, traceback: object) -> None:
+        """Close on scope exit without saving or suppressing the body exception.
+
+        Python supplies the context arguments. close may block on entered work
+        or raise Busy/OutcomeUnknown for pending ownership. With an existing
+        exception, cleanup failure is added as a note. Connected documents stay
+        resident; Local releases its Runtime sessions. Returns None.
+        """
         try:
             self.close()
         except BaseException as cleanup:
@@ -87,7 +95,7 @@ class Sessions:
         'Capture current registry metadata and an independent cursor. Poll bounded pages; resync explicitly after RESYNC_REQUIRED. This does not drain another subscriber.'
         return events.RegistrySubscription(self._runtime._backend)._start()
     def create(self, document_id: str | None = None) -> "Session":
-        'Create a session with SDK defaults. None allocates a canonical document UUID in Rust. Returns the owned binding; a lost reply must recover this original call, never create another session.'
+        'Synchronously create a resident document with SDK defaults and return its client Session binding. document_id=None allocates a canonical UUID in Rust; an explicit value must be a valid document UUID. Host Session/client-slot and memory budgets apply. A new document is unsaved and modified: save it or explicitly permit discard when closing. A lost reply must recover this original call, never create another Session. Use session.close() to free the host document, or detach() to keep it resident. Example: session = runtime.sessions.create().'
         backend = self._runtime._backend
         return known(lambda: Session(self._runtime, backend.create(document_id, self)),
             lambda: Session(self._runtime, backend.recover(self)))
@@ -157,7 +165,17 @@ class Session:
         def finish(_:object)->None:binding.active=False
         binding._request("detach",lambda:self._backend.detach_session(binding.token,binding),finish)
     def close(self, *, discard_modified: bool = False) -> SessionInfo:
-        """Close the host session and release its path/slot. Unsaved changes and other clients refuse closure without changes. Never saves implicitly."""
+        """Close the host document and return its final SessionInfo, without saving.
+
+        discard_modified=False protects unsaved changes, including a newly created
+        document. True explicitly permits discarding them only; it does not bypass
+        other clients, active candidates or work. Confirmed refusal preserves the
+        document. This synchronous call frees the Session slot/path and invalidates
+        this client's aliases and child references. Independent prepared resources
+        keep their own leases. Confirmed close is cached/idempotent; a lost response
+        must recover the original close and returns the same final metadata.
+        Example: session.close(discard_modified=True) when discarding is intended.
+        """
         binding=self._binding
         if binding.closed is not None:return binding.closed
         self._check_binding()
@@ -194,7 +212,14 @@ class Session:
         'Read an owned optional Editor context and exact formal Source. Local or non-Editor hosts can return None; no Editor object is exposed.'
         return known(lambda:queries.editor_context(self._backend.editor_context(self._token,self)),lambda:queries.editor_context(self._backend.recover(self)))
     def show_window(self) -> None:
-        """Display this resident session in its desktop host."""
+        """Synchronously display this resident document in the connected desktop host.
+
+        Requires runtime.capabilities().editor_windows; Local/CPU-only hosts can
+        reject it with SdkFailure. Returns None, changes UI visibility rather
+        than model/history, and owns no new client lease. Recover an unknown
+        response through the original call before requesting another window.
+        Example: session.show_window().
+        """
         known(lambda: self._backend.show_window(self._token, self), lambda: self._backend.recover(self))
     def subscribe(self) -> events.SessionSubscription:
         'Capture SessionInfo and an independent exact event cursor. Poll explicit bounded pages and resync on gaps; subscribed metadata does not hold a model mirror.'
@@ -231,7 +256,7 @@ class Project:
         'Submit a selected export to a host-absolute path. allow_loss, animation baking and frame-rate choices are explicit. Read report losses/published and wait for the durable IO outcome.'
         return self.run(modeling.ProjectRequestExport(path=str(absolute(path)),format=format,name=name,object_id=object_id,allow_loss=allow_loss,bake_animation=bake_animation,auto_frame_rate=auto_frame_rate))
     def save(self, path: Path) -> Job[SaveReceipt]:
-        'Submit saving to a host-absolute project folder. Returns Job[SaveReceipt]; wait checks durable and before/after versions. A client-side Path.exists is not evidence of host persistence.'
+        'Submit saving to host-absolute project folder path and return Job[SaveReceipt]. Wait for the receipt, then inspect durable and its before/after versions before claiming persistence. A client-side Path.exists is not evidence of host persistence. Recover an unknown submission/wait through its original Call; do not submit another save to probe its outcome. The Job owns a bounded result slot released by wait/close. Example: saved = session.project.save(absolute_folder).wait(); assert saved.durable.'
         s = self._session
         path = absolute(path)
         return Job[SaveReceipt]._start(s._backend, lambda owner: s._backend.save(s._token, path, owner), "saved", SaveReceipt._read)
@@ -307,6 +332,11 @@ class Edit(RecoveryOwner):
             self._poison(error)
 
     def __enter__(self) -> "Edit":
+        """Return this active candidate after a local state check, without IO.
+
+        A closed/aborted/unknown Edit is rejected. Normal scope exit commits and
+        waits; an explicit cancel is the other successful exit state.
+        """
         self._ensure_editing()
         return self
 
@@ -427,6 +457,16 @@ class Edit(RecoveryOwner):
         self._release()
 
     def __exit__(self, kind: object, exception: BaseException | None, traceback: object) -> None:
+        """Confirm commit/cancel on normal exit, never turn an unknown into success.
+
+        Python supplies the context arguments. Normal exit accepts only a
+        confirmed committed or explicitly cancelled state; it may commit and
+        wait synchronously. Caught ordinary write failures raise EDIT_ABORTED.
+        Caught unknown outcomes raise their recoverable original exception again.
+        An already propagating exception is preserved; ordinary candidates are
+        cancelled, accepted work may be waited, and cleanup failures become notes.
+        No unknown write is replayed or silently aborted. Returns None.
+        """
         if exception is not None:
             if self._state == EditState.unknown or isinstance(exception, (OutcomeUnknown, JobTimeout)) or self.pending_request is not None:
                 exception.add_note("Edit outcome/cleanup remains owned by the original call or accepted Job")
