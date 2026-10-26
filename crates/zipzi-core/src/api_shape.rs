@@ -66,6 +66,7 @@ pub enum Shape {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Field {
+    pub doc: String,
     pub name: String,
     pub shape: Shape,
     pub default: Option<DefaultValue>,
@@ -178,10 +179,20 @@ impl<T: ApiShape, const N: usize> ApiShape for [T; N] {
     }
 }
 impl Field {
+    pub fn documented(mut self, doc: &str) -> Self {
+        self.doc = if self.doc.is_empty() {
+            doc.trim().into()
+        } else {
+            format!("{}\n{}", doc.trim(), self.doc)
+        };
+        self
+    }
+
     pub fn of<T: ApiShape>(name: &str) -> Self {
         let shape = T::api_shape();
         let default = matches!(shape, Shape::Optional { .. }).then_some(DefaultValue::Null);
         Self {
+            doc: String::new(),
             name: name.into(),
             shape,
             default,
@@ -189,6 +200,7 @@ impl Field {
     }
     pub fn defaulted<T: ApiShape + ApiDefault>(name: &str) -> Self {
         Self {
+            doc: String::new(),
             name: name.into(),
             shape: T::api_shape(),
             default: Some(T::api_default()),
@@ -219,9 +231,9 @@ macro_rules! api_record_attributes {
 #[macro_export]
 macro_rules! api_field {
     ($name:ident: $ty:ty; #[serde(default)] $($rest:tt)*) => { $crate::api_field!(@default $name: $ty; $($rest)*) };
-    (@default $name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!(@default $name: $ty; $($rest)*) };
+    (@default $name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!(@default $name: $ty; $($rest)*).documented($doc) };
     (@default $name:ident: $ty:ty;) => { $crate::api_shape::Field::defaulted::<$ty>(stringify!($name)) };
-    ($name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!($name: $ty; $($rest)*) };
+    ($name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!($name: $ty; $($rest)*).documented($doc) };
     ($name:ident: $ty:ty;) => { $crate::api_shape::Field::of::<$ty>(stringify!($name)) };
 }
 #[macro_export]
@@ -241,17 +253,17 @@ macro_rules! api_record {
 }
 #[macro_export]
 macro_rules! api_union {
-    (tag = $tag:literal; $(#[$($meta:tt)*])* pub enum $name:ident { $($variant:ident { $($field:ident: $ty:ty),* $(,)? }),* $(,)? }) => {
+    (tag = $tag:literal; $(#[$($meta:tt)*])* pub enum $name:ident { $($variant:ident { $($(#[$($field_meta:tt)*])* $field:ident: $ty:ty),* $(,)? }),* $(,)? }) => {
         const _: () = $crate::api_record_attributes!($(#[$($meta)*])*);
         $(#[$($meta)*])* #[serde(tag = $tag, rename_all = "snake_case", deny_unknown_fields)]
-        pub enum $name { $($variant { $($field: $ty),* }),* }
+        pub enum $name { $($variant { $($(#[$($field_meta)*])* $field: $ty),* }),* }
         impl $crate::api_shape::ApiShape for $name {
             fn api_shape() -> $crate::api_shape::Shape {
                 $crate::api_shape::Shape::Union {
                     name: concat!(module_path!(), "::", stringify!($name)).into(), tag: $tag.into(),
                     variants: vec![$($crate::api_shape::Variant {
                         rust_name: stringify!($variant).into(), wire_name: $crate::api_shape::snake_case(stringify!($variant)),
-                        fields: vec![$($crate::api_shape::Field::of::<$ty>(stringify!($field))),*],
+                        fields: vec![$($crate::api_field!($field: $ty; $(#[$($field_meta)*])*)),*],
                     }),*],
                 }
             }
@@ -261,6 +273,7 @@ macro_rules! api_union {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SerdeField {
+    pub doc: String,
     pub rust_name: String,
     pub name: String,
     pub shape: Shape,

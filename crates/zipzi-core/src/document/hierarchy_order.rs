@@ -11,8 +11,11 @@ use std::collections::{HashMap, HashSet};
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct HierarchyOrder {
     #[serde(default)]
+    /// Partial organization-palette order expressed as object IDs; unlisted IDs keep their
+    /// source order.
     pub organization: Vec<String>,
     #[serde(default)]
+    /// Partial deformation-palette order expressed as object IDs; does not reparent objects.
     pub deformation: Vec<String>,
     /// Management order only. Glue evaluation retains its native execution order.
     #[serde(default)]

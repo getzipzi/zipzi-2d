@@ -6,6 +6,8 @@ from ._values import integer
 from ._errors import OutcomeUnknown, SdkFailure
 if TYPE_CHECKING:
     from .backends import Backend
+else:
+    Backend = object
 
 MAX_BUFFER_BYTES = 256 << 20
 CHUNK = 1 << 20
@@ -20,19 +22,20 @@ class Buffer(Owned):
 
     @property
     def size(self) -> int:
+        'Return the cached immutable byte length without reading the host buffer or allocating a copy.'
         return self._size
 
     @classmethod
-    def prepare(cls, backend: Backend, data: bytes | bytearray | memoryview) -> Buffer:
+    def _prepare(cls, backend: Backend, data: bytes | bytearray | memoryview) -> Buffer:
         if not isinstance(data, (bytes, bytearray, memoryview)):
             raise TypeError("Expected bytes or a buffer")
         size = data.nbytes if isinstance(data, memoryview) else len(data)
         if size > MAX_BUFFER_BYTES:
             raise ValueError("Buffer exceeds 256 MiB")
         value = cls(backend, bytes(data))
-        return value._prepare()
+        return value._drive_prepare()
 
-    def _prepare(self) -> Buffer:
+    def _drive_prepare(self) -> Buffer:
         try:
             while self._stage != "ready":
                 if self._stage == "create":
@@ -53,7 +56,7 @@ class Buffer(Owned):
             def resume() -> Buffer:
                 if self.pending_request != expected:
                     raise SdkFailure("NO_PENDING_REQUEST", "Buffer request already resolved")
-                return self._prepare()
+                return self._drive_prepare()
             error._resume = resume
             raise
         except BaseException as error:
@@ -73,6 +76,7 @@ class Buffer(Owned):
         return self
 
     def read(self, offset: int = 0, length: int | None = None) -> bytes:
+        'Read immutable bytes from offset for length bytes; None reads the remaining bytes. Bounds and transfer budgets apply before download. Recover the original multi-stage read after transport loss; close the Buffer after use.'
         if self._closed:
             self._check(self._backend)
         if self._stage != "ready":
@@ -89,5 +93,6 @@ class Buffer(Owned):
         return self._request(f"read:{offset}:{count}", lambda: self._backend.buffer_read(self._token, offset, count, self), decode)
 
     def __enter__(self) -> Buffer:
+        'Check the owning client/lease locally and return this Buffer without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.'
         super().__enter__()
         return self

@@ -8,9 +8,12 @@ pub enum SceneReference {
     #[default]
     Unspecified,
     Resolved {
+        /// Stable document ID of the object described or selected by this value.
         object_id: String,
     },
     Unresolved {
+        /// External format/runtime identifier retained for import/export; not the document
+        /// object ID.
         runtime_id: String,
     },
 }

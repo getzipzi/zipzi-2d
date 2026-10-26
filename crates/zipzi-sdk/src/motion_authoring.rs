@@ -564,10 +564,20 @@ impl AuthoringSession {
 
 #[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
 pub struct AttachmentCapabilities {
+    /// Current capability to read the current typed record; inspect its state/reason before
+    /// invoking the operation.
     pub inspect: CapabilityState,
+    /// Current capability to modify fields through a captured address; inspect its state/reason
+    /// before invoking the operation.
     pub patch: CapabilityState,
+    /// Current capability to duplicate this object; inspect its state/reason before invoking
+    /// the operation.
     pub duplicate: CapabilityState,
+    /// Current capability to delete this object; inspect its state/reason before invoking the
+    /// operation.
     pub delete: CapabilityState,
+    /// Current capability to load the referenced resource contents; inspect its state/reason
+    /// before invoking the operation.
     pub load_content: CapabilityState,
 }
 impl AuthoringSession {

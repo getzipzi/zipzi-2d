@@ -634,7 +634,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(image.pixels().rgba, data)
                 image.close()
                 self.assertEqual(runtime.resources.usage().prepared_images, 0)
-        for operation in ("image_snapshot", "read_blob_binary", "release_blob"):
+        for operation in ("read_selection", "read_blob_binary", "release_blob"):
             with self.subTest(read=operation):
                 runtime = self.runtime("connected", drop=operation, drop_after=1 if operation == "release_blob" else 0)
                 session = runtime.sessions.create(uid(1))
@@ -1038,7 +1038,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(binding.value.keyforms[1].appearance, bindings.Appearance(1., (1., 1., 1.), (0., 0., 0.)))
                     queried = edit.bindings.get_many((uid(4), uid(4)))
                     self.assertEqual(queried.items, (binding.value, binding.value))
-                    self.assertEqual(edit.bindings.list(), zipzi.Batch(binding.source, (binding.value,)))
+                    self.assertEqual(tuple(item.id for item in edit.bindings.list().items), (binding.value.id,))
                     poses = [{uid(3): x} for x in (0., .5, 1., 2.)]
                     sampled = edit.modeling.sample(poses, expected=result.source, checks=sampling.Checks(.75))
                     poses[0][uid(3)] = 1.
@@ -1149,7 +1149,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.info().history, (1, 0))
 
     def test_binding_apply_and_read_response_losses_keep_original_owners(self):
-        for dropped in ("apply_authoring", "mesh_binding_snapshot", "sample_modeling"):
+        for dropped in ("apply_authoring", "read_selection", "sample_modeling"):
             with self.subTest(dropped=dropped), self.runtime("connected", drop=dropped) as runtime:
                 session = runtime.sessions.create(uid(1))
                 with session.edit("recover binding") as edit:
@@ -1161,7 +1161,7 @@ class PythonSdk(unittest.TestCase):
                         self.assertEqual(result.source.sequence, 1)
                     else:
                         self.create_bound_mesh(edit)
-                    if dropped == "mesh_binding_snapshot":
+                    if dropped == "read_selection":
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                             edit.bindings.get(uid(4))
                         binding = lost.exception.recover()
@@ -1385,7 +1385,7 @@ class PythonSdk(unittest.TestCase):
             lost.exception.recover()
         self.assertEqual(resolved.exception.code, "NO_PENDING_REQUEST")
         for many in (False, True):
-            runtime = self.runtime("connected", drop="parameter_snapshot")
+            runtime = self.runtime("connected", drop="read_selection")
             session = runtime.sessions.create(uid(853))
             with session.edit("parameter") as edit:
                 id = edit.parameters.create(parameters.ParameterSpec("Read", -1., 1., 0.))
@@ -1429,7 +1429,7 @@ class PythonSdk(unittest.TestCase):
                     edit.meshes.rename(a, "After read refusal")
                 self.assertEqual(session.info().history, (1, 0))
                 self.assertEqual(session.meshes.get_many((a, b)).items[0].name, "After read refusal")
-        runtime = self.runtime("connected", drop="mesh_snapshots")
+        runtime = self.runtime("connected", drop="read_selection")
         session = runtime.sessions.create(uid(872))
         with session.edit("read recovery") as edit:
             id = edit.meshes.create(meshes.MeshSpec("Recovered", GEOMETRY))
@@ -1672,7 +1672,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.info().history, (0, 0))
 
     def test_resource_and_plan_response_losses_keep_exact_recovery_owner(self):
-        for lost in ("prepare_image", "prepared_pixels", "image_snapshot", "plan_authoring", "release_prepared_image", "release_modeling_plan", "statistics"):
+        for lost in ("prepare_image", "prepared_pixels", "read_selection", "plan_authoring", "release_prepared_image", "release_modeling_plan", "statistics"):
             with self.subTest(lost=lost):
                 runtime = self.runtime("connected", drop=lost)
                 session = runtime.sessions.create(uid(1))
@@ -1694,7 +1694,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(resolved.exception.code, "NO_PENDING_REQUEST")
                 edit = session.edit("recover handles")
                 asset = edit.resources.create_image("Draft", image)
-                if lost == "image_snapshot":
+                if lost == "read_selection":
                     with self.assertRaises(zipzi.OutcomeUnknown) as error:
                         edit.resources.get(asset)
                     self.assertEqual(error.exception.recover().value.pixels.rgba, b"rgba")
@@ -2272,7 +2272,7 @@ class PythonSdk(unittest.TestCase):
         self.assertEqual(error.exception.code, "HOST_CLOSED")
 
     def test_connected_lifecycle_and_read_response_loss_keep_a_recovery_owner(self):
-        for lost in ("create_session", "begin_edit", "mesh_snapshot", "session_info", "save", "undo", "redo"):
+        for lost in ("create_session", "begin_edit", "read_selection", "session_info", "save", "undo", "redo"):
             with self.subTest(lost=lost):
                 runtime = self.runtime("connected", drop=lost)
                 if lost == "create_session":
@@ -2290,7 +2290,7 @@ class PythonSdk(unittest.TestCase):
                     edit = session.edit("begin")
                 with edit:
                     face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
-                    if lost == "mesh_snapshot":
+                    if lost == "read_selection":
                         with self.assertRaises(zipzi.OutcomeUnknown) as error:
                             edit.meshes.get(face)
                         snapshot = error.exception.recover()
@@ -2351,7 +2351,7 @@ class PythonSdk(unittest.TestCase):
     def test_generated_resource_values_preserve_maps_bytes_costs_and_public_identity(self):
         import pickle
         from typing import get_type_hints
-        from zipzi import plans
+        from zipzi._generated import plan_values as plans
         from zipzi._lifecycle import EditableImages
         self.assertIs(get_type_hints(resources.CreateImage)["image"], resources.PreparedImage)
         self.assertIs(get_type_hints(EditableImages.create_image)["image"], resources.PreparedImage)
@@ -2361,18 +2361,18 @@ class PythonSdk(unittest.TestCase):
             face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
         source = session.meshes.get(face).source
         raw = runtime._backend._native._test_codegen_report()
-        report = plans.Report.read(source.wire(), raw)
+        report = plans.PlanReport._read(source._wire(), raw)
         self.assertEqual(report.source, source)
         self.assertEqual((report.version.session_id, report.version.generation, report.version.revision), (9, 2, 3))
         self.assertEqual(report.affected_ids, ("first", "second"))
         self.assertEqual(report.copied_ids, (("a", "first"), ("z", "last")))
-        self.assertEqual(report.cost, plans.Cost(7, 1 << 40, 11, 13))
+        self.assertEqual(report.cost, plans.PlanCost(7, 1 << 40, 11, 13))
         self.assertEqual(report.losses, ("fixed diagnostic",))
         self.assertIs(report.no_op, False)
         raw["no_op"] = 1
         with self.assertRaises(TypeError):
-            plans.Report.read(source.wire(), raw)
-        self.assertEqual(resources.ImagePixels.read(dict(width=1, height=1, rgba=[0, 127, 255, 1])),
+            plans.PlanReport._read(source._wire(), raw)
+        self.assertEqual(resources.ImagePixels._read(dict(width=1, height=1, rgba=[0, 127, 255, 1])),
                          resources.ImagePixels(1, 1, bytes((0, 127, 255, 1))))
         for value in (meshes.Rename(face, "Next", expected_name="Face"), resources.RenameImage(face, "B", expected_name="A"), report):
             self.assertEqual(pickle.loads(pickle.dumps(value)), value)

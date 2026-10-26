@@ -3,8 +3,13 @@ pub use editor::CandidateWork;
 mod authoring;
 mod binary_authoring;
 mod blobs;
+mod collections;
 mod mesh_read;
 pub use binary_authoring::AUTHORING_MAGIC;
+pub use collections::{
+    CollectionDomain, CollectionPage, CollectionQuery, ObjectSummary, RuntimeCapabilities,
+    Selection,
+};
 mod modeling;
 mod modeling_read;
 mod read_jobs;
@@ -255,6 +260,26 @@ impl Runtime {
     }
     pub fn detach_session(&mut self, client: ClientId, session: SessionId) -> Result<()> {
         self.client(client)?;
+        let entry = self.entry(session)?;
+        if !entry.users.contains(&client) {
+            return Err(RuntimeError::WrongOwner);
+        }
+        if self
+            .edits
+            .values()
+            .any(|e| e.session == session && e.client == client)
+            || self.jobs.values().any(|j| {
+                j.info.session == session && j.info.client == client && !j.info.state.is_terminal()
+            })
+        {
+            return Err(RuntimeError::Busy);
+        }
+        self.object_refs
+            .retain(|_, r| r.session != session || r.client != client);
+        self.field_addresses
+            .retain(|_, r| r.session != session || r.client != client);
+        self.plans
+            .retain(|_, p| p.source.source.session() != session || p.client != client);
         self.entry_mut(session)?.users.remove(&client);
         Ok(())
     }

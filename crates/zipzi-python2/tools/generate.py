@@ -34,20 +34,26 @@ _DTO_SPEC = importlib.util.spec_from_file_location('zipzi_dto_codegen', PACKAGE 
 _dto_codegen = importlib.util.module_from_spec(_DTO_SPEC)
 _DTO_SPEC.loader.exec_module(_dto_codegen)
 
+_CATALOG_SPEC = importlib.util.spec_from_file_location('zipzi_catalog_codegen', PACKAGE / 'tools/generate_catalog.py')
+_catalog_codegen = importlib.util.module_from_spec(_CATALOG_SPEC)
+_CATALOG_SPEC.loader.exec_module(_catalog_codegen)
+
+_API_SPEC = importlib.util.spec_from_file_location('zipzi_api_codegen', PACKAGE / 'tools/generate_api.py')
+_api_codegen = importlib.util.module_from_spec(_API_SPEC)
+_API_SPEC.loader.exec_module(_api_codegen)
+
 _BINARY_SPEC = importlib.util.spec_from_file_location('zipzi_binary_codegen', PACKAGE / 'tools/generate_binary.py')
 _binary_codegen = importlib.util.module_from_spec(_BINARY_SPEC)
 _BINARY_SPEC.loader.exec_module(_binary_codegen)
 
-TARGETS = _dto_codegen.TARGETS | _binary_codegen.TARGETS | _modeling_codegen.TARGETS | RESOURCE_TARGETS | _scene_codegen.TARGETS | frozenset({
-    'schema/mesh.json',
+TARGETS = (_catalog_codegen.TARGETS | _api_codegen.TARGETS | _dto_codegen.TARGETS | _binary_codegen.TARGETS | _modeling_codegen.TARGETS | RESOURCE_TARGETS | _scene_codegen.TARGETS | frozenset({
+    'schema/authoring.json',
     'client/python/zipzi/_generated/__init__.py',
     'client/python/zipzi/_generated/meshes.py',
     'client/python/zipzi/_generated/mesh_ops.py',
     'client/python/zipzi/_generated/protocols.py',
-    'client/python/zipzi/_generated/backends.py',
-    'client/python/zipzi/_generated/conveniences.py',
     'src/generated/mod.rs', 'src/generated/mesh.rs', 'src/generated/queries.rs',
-})
+}))
 OWNER = 'zipzi-python2/tools/generate.py'
 
 def identifier(value):
@@ -350,42 +356,6 @@ def render_mesh(contract):
     protocols = HEADER + 'from typing import Protocol\n\nclass MeshBackend(Protocol):\n'
     protocols += f'    def {method}(self, {params}, owner: object) -> object: ...\n\nclass NativeQueries(Protocol):\n'
     protocols += f'    def {method}(self, {params}) -> object: ...\n'
-    backends = HEADER + '\n'.join([
-        'from abc import ABC, abstractmethod', 'from typing import TYPE_CHECKING', 'from .._errors import unwrap',
-        'if TYPE_CHECKING:', '    from ..backends._native_types import NativeRuntime', '',
-        'class LocalQueries:', '    _native: "NativeRuntime"',
-        f'    def {method}(self, {params}, owner: object) -> object:', f'        return unwrap(self._native.{method}({names}))', '',
-        'class ConnectedQueries(ABC):', '    @abstractmethod',
-        '    def _request(self, value: dict[str, object], owner: object, operation: str) -> object: ...',
-        f'    def {method}(self, {params}, owner: object) -> object:',
-        f'        return self._request(dict(op="{m.operation["name"]}", ' + ', '.join(f'{f["name"]}={f["name"]}' for f in fields) + '), owner, "meshes.get")', '',
-    ])
-    conveniences = [HEADER.rstrip(), 'from collections.abc import Callable, Sequence', 'from typing import Protocol',
-        'from . import mesh_ops as ops', 'from .meshes import MeshSpec, Point', 'from .._values import WriteResult',
-        'from .._calls import project, single_id', '',
-        'class MeshWriter(Protocol):', '    def _construct_and_apply(self, construct: Callable[[], ops.MeshOperation]) -> WriteResult: ...', '',
-        'class EditableMeshes:', '    _owner: MeshWriter']
-    for variant in m.union['variants']:
-        arguments, inputs = [], []
-        keywords = False
-        for f in variant['fields']:
-            shape, name = f['shape'], f['name']
-            sequence = shape['kind'] == 'sequence'
-            optional = shape['kind']=='optional'
-            if (sequence or optional) and not keywords:
-                arguments.append('*')
-                keywords = True
-            annotation = f'Sequence[{m.pytype(shape["item"])}]' if sequence else m.pytype(shape)
-            arguments.append(f'{name}: {annotation}'+(' = None' if optional else ''))
-            inputs.append(name+'='+name if optional else f'tuple({name})' if sequence else name)
-        returns_id = variant['rust_name'] == 'Create'
-        conveniences += [f'    def {variant["wire_name"]}(self, ' + ', '.join(arguments) + f') -> {"str" if returns_id else "WriteResult"}:']
-        operation = f'ops.{variant["rust_name"]}(' + ', '.join(inputs) + ')'
-        if returns_id:
-            conveniences += [f'        return project(lambda: self._owner._construct_and_apply(lambda: {operation}), single_id, operation="meshes.create", inputs=(spec,))']
-        else:
-            conveniences += [f'        return self._owner._construct_and_apply(lambda: {operation})']
-    conveniences = '\n'.join(conveniences) + '\n'
     def record_names(shape):
         kind = shape['kind']
         children = [f['shape'] for f in shape.get('fields', [])]
@@ -440,13 +410,11 @@ def render_mesh(contract):
         f'        reply(py, value, "meshes.get", |(value,_lease)| Ok({output_writer}(py, value)?.into_any()))', '    }', '}', '',
     ])
     output = {
-        'schema/mesh.json': json.dumps(dict(contract, _generated_by=OWNER, _contract_sha256=hashlib.sha256(json.dumps(contract, sort_keys=True).encode()).hexdigest()), indent=2, sort_keys=True) + '\n',
+        'schema/authoring.json': json.dumps(dict(contract, _generated_by=OWNER, _contract_sha256=hashlib.sha256(json.dumps(contract, sort_keys=True).encode()).hexdigest()), indent=2, sort_keys=True) + '\n',
         'client/python/zipzi/_generated/__init__.py': HEADER + '"""Compiled authoring contract outputs. Do not edit by hand."""\n',
         'client/python/zipzi/_generated/meshes.py': '\n'.join(mesh),
         'client/python/zipzi/_generated/mesh_ops.py': '\n'.join(ops),
         'client/python/zipzi/_generated/protocols.py': protocols,
-        'client/python/zipzi/_generated/backends.py': backends,
-        'client/python/zipzi/_generated/conveniences.py': conveniences,
         'src/generated/mod.rs': RUST_HEADER + 'pub mod mesh;\npub mod queries;\npub mod resources;\npub mod resource_queries;\n',
         'src/generated/mesh.rs': '\n'.join(rust),
         'src/generated/queries.rs': queries,
@@ -455,17 +423,20 @@ def render_mesh(contract):
 
 
 def render(contract):
+    contract={k:v for k,v in contract.items() if not k.startswith('_')}
     render_resources = _resource_codegen.render_resources
-    mesh_contract = {k: v for k, v in contract.items() if k not in {'resources', 'scene', 'modeling', 'binary', 'dtos'}}
+    mesh_contract = {k: v for k, v in contract.items() if k not in {'resources', 'scene', 'modeling', 'binary', 'dtos', 'runtime'}}
     output = render_mesh(mesh_contract)
     # The root intermediate is the complete executable contract.
-    output['schema/mesh.json'] = json.dumps(dict(contract, _generated_by=OWNER), indent=2, sort_keys=True) + '\n'
+    output['schema/authoring.json'] = json.dumps(dict(contract, _generated_by=OWNER), indent=2, sort_keys=True) + '\n'
     output.update(render_resources(contract['resources'], Model, HEADER, RUST_HEADER))
     output.update(_scene_codegen.render_scene(contract['scene'], HEADER, RUST_HEADER, identifier, rust_path))
     output.update(_modeling_codegen.render_modeling(contract['modeling'], HEADER, RUST_HEADER))
     output.update(_binary_codegen.render_binary(contract['binary'], HEADER))
     output.update(_dto_codegen.render_dtos(contract['dtos'], HEADER))
-    output['src/generated/mod.rs'] += 'pub mod scene;\npub mod modeling;\n'
+    output.update(_api_codegen.render_api(contract, HEADER, RUST_HEADER))
+    output['src/generated/mod.rs'] += 'pub mod scene;\npub mod modeling;\npub mod discovery;\n'
+    output.update(_catalog_codegen.render_catalog(contract, output, HEADER, PACKAGE, _dto_codegen.NAMES, _modeling_codegen.public_name))
     # rustfmt only sees generated scratch files, never handwritten sources.
     import tempfile
     with tempfile.TemporaryDirectory(prefix='zipzi-codegen-') as folder:

@@ -2,7 +2,7 @@
 use crate::*;
 use zipzi_runtime::authoring::{ParameterBatch, ParameterQuery};
 
-fn batch(py: Python<'_>, value: ParameterBatch) -> PyResult<Bound<'_, PyDict>> {
+pub(crate) fn batch(py: Python<'_>, value: ParameterBatch) -> PyResult<Bound<'_, PyDict>> {
     let d = PyDict::new(py);
     d.set_item("source", source(py, value.source)?)?;
     let values = PyList::empty(py);

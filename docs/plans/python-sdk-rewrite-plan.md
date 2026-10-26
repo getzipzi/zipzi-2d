@@ -2,6 +2,8 @@
 
 日期：2026-10-25。状态：**P1/P2 选定范围已有验收，P0 有试点比较门禁，P3 已交付选定建模/身份切片；P3A-0/P3A-1 已通过，P3A-1 本轮性能噪声由用户豁免，P3A-2 统一值、领域操作、DTO 单一声明和 plan/apply 已验收，整体 P3A 尚未验收。P3 剩余工作归 P3B；P4–P7 按本文调整后的依赖推进。** 既有证据见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
+**本轮推进：**[P3A-3/4/5 实现已落地](python-sdk-rewrite/p3a-345.md)，按用户要求期间不验收，统一留待 P3A-6；不得据此标为阶段通过。
+
 本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）、`f2ef33c`（生命周期与 P0 门禁）、`1e0043f`（P2 网格生成）、`acc54907`（宿主/会话接回）、`c0e186b`（R3 事件/参数/批量）和 2026-10-25 工作区为依据。当前主线按 [Runtime R0–R4](sdk-runtime/python2-r0-r4.md) 推进；已提交的[事件、参数及批量读取](sdk-runtime/python2-r3-events.md)贯通新包 R3 最小链路；工作区中的[网格绑定和显式 CPU 采样](sdk-runtime/python2-r4-bindings.md)接回首批 R4 数值链路，生成器随能力推进。本文区分已提交基础、已有验证记录、工作区实现和后续目标，不改写此前验收结果。
 
 本计划按用户决定，从一个全新的 `crates/zipzi-python2` 开始。把 `zipzi-python` 视为不存在：不读取或导入其实现，不复用其包装、stub、构建入口或测试 recipe，不以其接口数量、行数和性能作为交付基准，也不承担迁移、兼容或删除旧包的任务。先前放在旧 crate 内的 P1 试验代码已迁入新包；旧 crate 的接线改动已撤回。
@@ -158,7 +160,7 @@ zipzi-python2/
 | **P1 手写完整链路** | 选定生命周期矩阵已验收 | 历史记录保留；P3A 按新接口复用独立预期并补遗漏故障 |
 | **P2 提取生成器** | 网格、资源/Plan 及配对源码发行已验收 | 历史记录保留；P3A 扩展到统一领域 facade、返回投影和文档 |
 | **P3 已有 Modeling 切片** | 场景/组织、选定 BlendShape/拓扑与 SDK Ref/标签地址已有证据 | 纳入 P3A，保持数值、身份和资源行为；完整领域不标完成 |
-| **P3A API 与 agent 契约重构** | **P3A-0–2 已通过（P3A-1 本轮性能噪声由用户豁免）** | [P3A-0](python-sdk-rewrite/p3a-0.md)、[P3A-1](python-sdk-rewrite/p3a-1.md) 保留验收结论；[P3A-2](python-sdk-rewrite/p3a-2.md) 已通过，继续 P3A-3–6 |
+| **P3A API 与 agent 契约重构** | **P3A-0–2 已通过；P3A-3/4/5 已提交，P3A-6 综合验收中** | [P3A-6](python-sdk-rewrite/p3a-6.md) 的选定行为/类型/安装及当前 Editor 检查已通过；修复已提交 `32e42da7`；文档/类型/安装及 C 确定性证据已汇总，2026-10-26 用户豁免本轮 P0 稳定性（保留原数据/阈值），执行器与独立证据已补齐，固定 agent 功能门禁原评分 38/42、每环境至少 2/3，补充复核 41/42；token 仅统计，实际模型/服务修订身份仍未验证；整体未通过 |
 | **P3B Modeling 剩余能力** | 待 P3A | 完整场景绑定/网格转换/剩余字段与内容地址，按新 API 补齐两后端 recipe |
 | **P4 资源与工程** | 工作区已有 Buffer/二进制资源代码与测试，完整阶段未验收 | 已有公开能力纳入 P3A；后续完整格式/IO、昂贵工作取消、公平调度、总预算/峰值及安装证据独立交付 |
 | **P5 动画与观察** | 未开始 | Motion/Expression/Physics/Pose、独立 Preview、空间/观察和 inspection；已有 CPU 建模采样归 P3A/P3B，不重复延期 |
@@ -219,7 +221,7 @@ P3A 的范围与排除项见[独立方案第 1 节](python-sdk-rewrite/p3a-api-a
 
 P3A 的详细设计、7 个子任务及退出条件已拆到[独立方案](python-sdk-rewrite/p3a-api-agent-contract.md)。实施顺序为冻结契约/失败基线 → 完整调用恢复 → 统一值/操作/规划 → 生成包装与发现/生命周期 → agent 文档 → 综合验收；依赖和交付物见[任务表](python-sdk-rewrite/p3a-api-agent-contract.md#5-实施任务与交付物)。
 
-当前 [P3A-0](python-sdk-rewrite/p3a-0.md) 已补齐逐符号目标映射、完整签名、agent 配置和 P0 冻结并通过门禁，随后完成 [P3A-1](python-sdk-rewrite/p3a-1.md) 的完整调用恢复与生命周期状态验收。P3A-2 已通过，P3A-3–6 和整体阶段仍待验收。P3A 必须验证全部已有公开能力、正常安装包、当前 Editor 和独立 agent 任务，完成后才进入 P3B/P4；本轮仅按用户决定豁免 P3A-1 的性能噪声阻塞，后续完整范围和门槛保持不变。
+当前 [P3A-0](python-sdk-rewrite/p3a-0.md) 已补齐逐符号目标映射、完整签名、agent 配置和 P0 冻结并通过门禁，随后完成 [P3A-1](python-sdk-rewrite/p3a-1.md) 的完整调用恢复与生命周期状态验收。P3A-2 已通过，P3A-3/4/5 已提交为 `8500d9fe`；[P3A-6](python-sdk-rewrite/p3a-6.md) 已启动综合验收并修复实际故障，整体仍未通过。P3A 必须验证全部已有公开能力、正常安装包、当前 Editor 和独立 agent 任务，完成后才进入 P3B/P4；P3A-1 原轮次性能噪声豁免单独保留；2026-10-26 用户另行豁免 P3A-6 本轮 P0 稳定性门槛，直接推进 agent 验收，其他范围和门槛保持不变。
 
 ### 9.7 P3A 之后的任务调整
 

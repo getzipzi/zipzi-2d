@@ -2,8 +2,7 @@
 
 Host discovery/start ownership lives in _endpoint; request recovery never launches.
 """
-from .._generated import modeling, binary as typed_binary
-from .._generated.resource_backends import ConnectedResources
+from .._generated import binary as typed_binary
 import hashlib
 import json
 from pathlib import Path
@@ -12,17 +11,14 @@ import struct
 import threading
 import time
 from typing import Literal
-from .. import _operations as ops, sampling, scene
-from .._generated.backends import ConnectedQueries
-from .._generated.planning import encode_modeling
-from .._generated.planning import ModelingPlanOperation
+from .. import _operations as ops
+from .._generated.backend_bindings import ConnectedBindings
 from .._errors import Busy, JobTimeout, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
 from ._transfers import Transfer
-from ..events import Cursor
 
-CONTRACT = "zipzi-runtime-p3a-2-1"
+CONTRACT = "zipzi-runtime-p3a-345-1"
 MAX_FRAME = 16 << 20
 MAX_BINARY_CHUNK = 1 << 20
 MAX_BINARY_HEADER = 16 << 10
@@ -70,17 +66,7 @@ def _exchange(stream: socket.socket, body: bytes) -> object:
         raise ValueError("Unexpected binary response bytes")
     return response
 
-class ConnectedBackend(ConnectedQueries, ConnectedResources):
-    def object_ref(self, session: object, kind: str, id: str, owner: object) -> object:
-        return self._request(dict(op="capture_object_ref", session=session, kind=kind, id=id), owner, "references.object_ref")
-    def resolve_ref(self, reference: object, owner: object) -> object:
-        return self._request(dict(op="resolve_object_ref", reference=reference), owner, "references.resolve_ref")
-    def ref_capabilities(self, reference: object, owner: object) -> object:
-        return self._request(dict(op="object_scene_capabilities", reference=reference), owner, "references.ref_capabilities")
-    def label_address(self, reference: object, owner: object) -> object:
-        return self._request(dict(op="capture_label_address", reference=reference), owner, "references.label_address")
-    def label_plan(self, address: object, name: str, owner: object) -> object:
-        return self._request(dict(op="plan_label_patch", address=address, name=name), owner, "references.label_plan")
+class ConnectedBackend(ConnectedBindings):
     def __init__(self, endpoint: Path, timeout: float = 10., *, sdk_build: str | None = None,
         handshake_timeout: float | None = None) -> None:
         if not endpoint.is_absolute():
@@ -114,7 +100,7 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
             stream.connect(str(self._endpoint))
             hello = record(unwrap(_exchange(stream, _body(dict(protocol=CONTRACT, runtime=self._runtime,
                 client=self._client, secret=self._secret, sdk_build=self._sdk_build)))))
-            metadata = ConnectionInfo.read(hello)
+            metadata = ConnectionInfo._read(hello)
             if metadata.protocol != CONTRACT:
                 raise SdkFailure("PROTOCOL_MISMATCH", "Host returned an incompatible protocol")
             if self._sdk_build is not None and metadata.sdk_build != self._sdk_build:
@@ -218,84 +204,33 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
                 raise self._unknown_error from e
             return self._send(pending, body, owner)
 
-    def create(self, document_id: str, owner: object) -> object:
-        # ModelSetup defaults are supplied by serde/SDK, not copied into Python.
-        return self._request(dict(op="create_session", document_id=document_id), owner, "sessions.create")
-    def bindings(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object:
-        return self._drive_transfer(Transfer(self,owner,"bindings",selector=dict(op="mesh_binding_snapshot",session=session,edit=edit,ids=ids)))
-    def capture_address(self, session: object, selector: modeling.AddressSelector, owner: object) -> object:
-        return self._request(dict(op="capture_address", session=session, selector=modeling.encode_AddressSelector(selector)), owner, "capture_address")
-    def address_plan(self, address: object, patch: modeling.AddressPatch, owner: object) -> object:
-        return self._request(dict(op="plan_address_patch", address=address, patch=modeling.encode_AddressPatch(patch)), owner, "address_plan")
-    def modeling_capabilities(self, reference: object, domain: modeling.CapabilityDomain, owner: object) -> object:
-        return self._request(dict(op="modeling_capabilities", reference=reference, domain=modeling.encode_CapabilityDomain(domain)), owner, "modeling_capabilities")
-    def collection_capabilities(self, session: object, query: modeling.CollectionQuery, owner: object) -> object:
-        return self._request(dict(op="collection_capabilities", session=session, query=modeling.encode_CollectionQuery(query)), owner, "collection_capabilities")
-    def sample_job(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object:
-        return record(self._request(dict(op="request_modeling_samples", input=dict(session=session,edit=edit,parameters=poses,checks=checks.wire(),expected=None if expected is None else expected.wire())), owner, "sample_job"))["job"]
-    def modeling_plan_job(self, session: object, edit: object | None, intent: ModelingPlanOperation, owner: object) -> object:
-        return record(self._request(dict(op="request_modeling_plan", session=session,edit=edit,intent=encode_modeling(intent)), owner, "modeling_plan_job"))["job"]
-    def modeling_records(self, session: object, edit: object | None, query: modeling.ModelingQuery, owner: object) -> object:
-        return self._drive_transfer(Transfer(self,owner,"records",selector=dict(op="modeling_query",session=session,edit=edit,query=modeling.encode_ModelingQuery(query))))
-    def modeling_plan(self, session: object, edit: object | None, intent: ModelingPlanOperation, owner: object) -> object:
-        return self._request(dict(op="plan_modeling", session=session, edit=edit, intent=encode_modeling(intent)), owner, "modeling.plan")
-    def scene(self, session: object, edit: object | None, ids: tuple[str, ...], owner: object) -> object:
-        return self._request(dict(op="scene_snapshot", session=session, edit=edit, ids=ids), owner, "scene.get")
-    def scene_plan(self, session: object, edit: object | None, operation: scene.Operation, owner: object) -> object:
-        return self._request(dict(op="plan_scene_authoring", session=session, edit=edit,
-            operation=scene.wire(operation)["operation"]), owner, "scene.plan")
-    def sample(self, session: object, edit: object | None, poses: sampling.Inputs, checks: sampling.Checks, expected: Source | None, owner: object) -> object:
-        return self._drive_transfer(Transfer(self,owner,"samples",selector=dict(op="sample_modeling", session=session, edit=edit, parameters=poses,
-            checks=checks.wire(), expected=None if expected is None else expected.wire())))
-    def subscribe(self, session: object, owner: object) -> object:
-        return self._request(dict(op="subscribe", session=session), owner, "events.subscribe")
-    def events(self, cursor: Cursor, limit: int, owner: object) -> object:
-        return self._request(dict(op="events", cursor=cursor.wire(), limit=limit), owner, "events.poll")
-    def parameters(self, session: object, edit: object | None, ids: tuple[str, ...] | None, owner: object) -> object:
-        return self._request(dict(op="parameter_snapshot", session=session, edit=edit, ids=ids), owner, "parameters.get")
-    def mesh(self,session:object,id:str,edit:object | None,owner:object)->object:
-        return self._drive_transfer(Transfer(self,owner,"meshes",selector=dict(op="mesh_snapshot",session=session,edit=edit,id=id)))
-    def meshes(self, session: object, edit: object | None, ids: tuple[str, ...], owner: object) -> object:
-        return self._drive_transfer(Transfer(self,owner,"meshes",selector=dict(op="mesh_snapshots",session=session,edit=edit,ids=ids)))
     def session_id(self, token: object) -> SessionId:
-        return SessionId.read(token)
-    def list_sessions(self, owner: object) -> object:
-        return self._request(dict(op="list_sessions"), owner, "sessions.list")
-    def attach(self, session: SessionId, owner: object) -> object:
-        return self._request(dict(op="attach_session", session=session.wire()), owner, "sessions.attach")
+        return SessionId._read(token)
     def show_window(self, session: object, owner: object) -> None:
         self._request(dict(op="show_window", session=session), owner, "session.show_window")
-    def info(self, session: object, owner: object) -> object:
-        return self._request(dict(op="session_info", session=session), owner, "session.info")
-    def begin(self, session: object, label: str, owner: object) -> object:
-        return self._request(dict(op="begin_edit", session=session, label=label), owner, "edit.begin")
-    def apply(self, edit: object, operations: tuple[ops.WireOperation, ...], owner: object) -> object:
+    def _transport_apply(self, edit: object, operations: tuple[ops.WireOperation, ...], owner: object) -> object:
         if len(operations)>1024:
             return self._request(dict(op="apply_authoring",edit=edit,operations=tuple(ops.wire(op) for op in operations)),owner,"edit.apply")
         payload = typed_binary.encode_operations(operations)
         if len(payload) > 65536:
             return self._drive_transfer(Transfer(self,owner,"authoring",data=payload,edit=edit))
         return self._request(dict(op="apply_authoring", edit=edit, operations=[ops.wire(op) for op in operations]), owner, "edit.apply")
-    def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
+    def _transport_prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
         if len(rgba) > 65536:
             return self._drive_transfer(Transfer(self, owner, "image", data=rgba, width=width, height=height))
         return self._request(dict(op="prepare_image", width=width, height=height, rgba=list(rgba)), owner, "resources.prepare_image")
-    def prepare_image_buffer(self, width: int, height: int, blob: object, owner: object) -> object:
+    def _transport_prepare_image_buffer(self, width: int, height: int, blob: object, owner: object) -> object:
         return self._request(dict(op="prepare_image_blob", width=width, height=height, blob=blob), owner, "resources.prepare_buffer")
-    def buffer_create(self, length: int, owner: object) -> object:
+    def _transport_buffer_create(self, length: int, owner: object) -> object:
         return self._request(dict(op="create_blob", length=length), owner, "buffer.create")
-    def buffer_append(self, blob: object, offset: int, data: bytes, owner: object) -> object:
+    def _transport_buffer_append(self, blob: object, offset: int, data: bytes, owner: object) -> object:
         return self._binary_request(dict(op="append_blob_binary", blob=blob, offset=offset,
             length=len(data), payload_sha256=hashlib.sha256(data).hexdigest()), data, owner, "buffer.append")
-    def buffer_seal(self, blob: object, owner: object) -> object:
+    def _transport_buffer_seal(self, blob: object, owner: object) -> object:
         return self._request(dict(op="seal_blob", blob=blob), owner, "buffer.seal")
-    def buffer_read(self, blob: object, offset: int, length: int, owner: object) -> object:
+    def _transport_buffer_read(self, blob: object, offset: int, length: int, owner: object) -> object:
         return self._drive_transfer(Transfer(self, owner, "read", blob=blob, offset=offset, length=length))
-    def image(self, session: object, id: str, edit: object | None, owner: object) -> object:
-        return self._drive_transfer(Transfer(self, owner, "snapshot", selector=dict(op="image_snapshot", session=session, id=id, edit=edit)))
-    def prepared_pixels(self, image: object, owner: object) -> object:
-        return self._drive_transfer(Transfer(self, owner, "pixels", selector=dict(op="prepared_pixels", image=image)))
-    def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None:
+    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None:
         if kind == "image":
             operation = dict(op="release_prepared_image", image=token)
         elif kind == "plan":
@@ -307,33 +242,9 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
         else:
             operation = dict(op="release_blob", blob=token)
         self._request(operation, owner, f"{kind}.close")
-    def statistics(self, owner: object) -> object:
-        return self._request(dict(op="statistics"), owner, "resources.usage")
-    def release(self, edit: object, owner: object) -> None:
-        self._request(dict(op="release_edit", edit=edit), owner, "edit.cancel")
-    def commit(self, edit: object, owner: object) -> object:
-        return record(self._request(dict(op="commit", edit=edit), owner, "edit.commit"))["job"]
-    def prepare_image_job(self,path: str | None,blob:object | None,owner:object)->object:
-        return record(self._request(dict(op="prepare_image_job",path=path,blob=blob),owner,"resources.load"))["job"]
-    def capture_image(self,session:object,edit:object | None,id:str,owner:object)->object:
-        return self._request(dict(op="capture_image",session=session,edit=edit,id=id),owner,"resources.snapshot")
-    def editor_context(self,session:object,owner:object)->object:
-        return self._request(dict(op="editor_context",session=session),owner,"session.editor_context")
-    def project(self, session: object | None, request: modeling.ProjectRequest, owner: object) -> object:
-        return record(self._request(dict(op="project",session=session,request=modeling.encode_ProjectRequest(request)),owner,"project"))["job"]
-    def save(self, session: object, path: Path, owner: object) -> object:
-        return record(self._request(dict(op="save", session=session, path=str(path)), owner, "project.save"))["job"]
-    def open(self, path: Path, owner: object) -> object:
-        return self._request(dict(op="open", path=str(path)), owner, "sessions.open")
-    def history(self, session: object, redo: bool, owner: object) -> object:
-        return record(self._request(dict(op="redo" if redo else "undo", session=session), owner, "session.history"))["job"]
-    def cancel_job(self, job: object, owner: object) -> None:
-        self._request(dict(op="cancel_job", job=job), owner, "job.cancel")
-    def job_state(self, job: object, owner: object) -> object:
-        return self._request(dict(op="job_status", job=job), owner, "job.state")
     def _test_control(self, action: str) -> object:
         return self._request(dict(op="test_control", action=action), self, "test.control")
-    def wait(self, job: object, kind: JobKind, owner: object, *, timeout: float | None = None) -> object:
+    def _transport_wait(self, job: object, kind: JobKind, owner: object, *, timeout: float | None = None) -> object:
         deadline = None if timeout is None else time.monotonic() + timeout
         while True:
             if kind=="sampled":
@@ -353,7 +264,7 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
                 raise JobTimeout()
             time.sleep(.005)
 
-    def close(self, *, abandon_pending: bool = False) -> None:
+    def _transport_close(self, *, abandon_pending: bool = False) -> None:
         with self._lock:
             if self._closed:
                 return
@@ -378,3 +289,11 @@ class ConnectedBackend(ConnectedQueries, ConnectedResources):
             self._closed = True
             self._disconnect()
             self._flows.clear()
+
+
+    def _transport_read_selection(self, session: object, edit: object | None, domain: str, ids: tuple[str,...], expected: Source | None, owner: object) -> object:
+        selector=dict(op="read_selection",session=session,edit=edit,domain=domain,ids=ids,expected=None if expected is None else expected._wire())
+        if domain in {"meshes","bindings","resources"}:
+            kind = "images" if domain=="resources" else "meshes" if domain=="meshes" else "bindings"
+            return self._drive_transfer(Transfer(self,owner,kind,selector=selector))
+        return self._request(selector,owner,"collection.get_many")

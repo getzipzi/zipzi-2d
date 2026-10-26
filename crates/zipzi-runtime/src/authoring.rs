@@ -7,9 +7,15 @@ zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(zipzi_api_derive::BinaryOutput)]
 pub struct MeshSnapshot {
+    /// Exact formal or candidate source captured for this result; later host changes do not
+    /// rewrite it.
     pub source: SourceRef,
+    /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
+    /// Human-readable display name; use the stable ID for identity because names can change.
     pub name: String,
+    /// Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not
+    /// position offsets.
     pub geometry: zipzi_sdk::MeshGeometry,
 }
 }
@@ -105,9 +111,14 @@ pub struct ModelingSampleQuery {
 #[derive(Debug, Serialize, zipzi_api_derive::ApiFields)]
 pub struct ModelingSampleBatch {
     #[serde(skip)]
+    /// Client-owned frozen-sampling lease ID; release through the owning job/resource lifecycle.
     pub lease: Option<std::sync::Arc<zipzi_project::TransferReservation>>,
+    /// Exact formal or candidate source captured for this result; later host changes do not
+    /// rewrite it.
     pub source: SourceRef,
+    /// Captured sampling source state, distinguishing formal content from an Edit candidate.
     pub state: &'static str,
+    /// Owned CPU sampling result captured from this frozen source.
     pub samples: zipzi_sdk::ModelingSamples,
 }
 
@@ -116,13 +127,21 @@ tag = "kind";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PlanIntent {
     MeshRename {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         id: String,
+        /// Required current display name; None disables this name precondition.
         expected_name: Option<String>,
+        /// Human-readable display name; use the stable ID for identity because names can change.
         name: String,
     },
     ImageRename {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         id: String,
+        /// Required current display name; None disables this name precondition.
         expected_name: Option<String>,
+        /// Human-readable display name; use the stable ID for identity because names can change.
         name: String,
     },
 }
@@ -131,8 +150,12 @@ pub enum PlanIntent {
 zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
 pub struct PlanSnapshot {
+    /// Client-owned plan handle, valid only for its captured source and owning client.
     pub plan: PlanId,
+    /// Exact formal or candidate source captured for this result; later host changes do not
+    /// rewrite it.
     pub source: SourceRef,
+    /// Cached native plan report containing source, estimated costs and predicted losses.
     pub report: zipzi_sdk::ModelingPlanReport,
 }
 }
@@ -144,25 +167,37 @@ pub const MAX_INLINE_IMAGE_BYTES: usize = 1 << 20;
 zipzi_core::api_record! {
 #[derive(Debug, Clone, Serialize)]
 pub struct PreparedImageInfo {
+    /// Client-owned prepared-image handle; creating an operation value does not transfer ownership.
     pub image: ImageId,
+    /// Image width in pixels; prepared image content requires a positive dimension.
     pub width: u32,
+    /// Image height in pixels; prepared image content requires a positive dimension.
     pub height: u32,
 }
 }
 zipzi_core::api_record! {
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
 pub struct ImagePixels {
+    /// Image width in pixels; prepared image content requires a positive dimension.
     pub width: u32,
+    /// Image height in pixels; prepared image content requires a positive dimension.
     pub height: u32,
+    /// Owned tightly packed RGBA8 pixels in row-major order, top row first; length is width *
+    /// height * 4 bytes, with straight alpha.
     pub rgba: std::sync::Arc<[u8]>,
 }
 }
 zipzi_core::api_record! {
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
 pub struct ImageSnapshot {
+    /// Exact formal or candidate source captured for this result; later host changes do not
+    /// rewrite it.
     pub source: SourceRef,
+    /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
+    /// Human-readable display name; use the stable ID for identity because names can change.
     pub name: String,
+    /// Owned decoded image pixels; reading this value does not perform another host request.
     pub pixels: ImagePixels,
 }
 }
@@ -171,8 +206,12 @@ zipzi_core::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct MeshQuery {
+        /// Runtime Session handle; distinct from the persistent document UUID.
         pub session: crate::SessionId,
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         pub id: String,
+        /// Edit candidate handle; None selects formal document state.
         pub edit: Option<crate::EditId>,
     }
 }
@@ -211,19 +250,32 @@ tag = "domain";
 #[derive(zipzi_api_derive::BinaryWire)]
 pub enum ResourceOperation {
     CreateImage {
+        /// Creation specification; native admission supplies identities/defaults and rejects
+        /// invalid input.
         spec: zipzi_sdk::ImageCreateSpec,
+        /// Client-owned prepared-image handle; creating an operation value does not transfer
+        /// ownership.
         image: ImageId,
     },
     ReplaceImage {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         id: String,
+        /// Client-owned prepared-image handle; creating an operation value does not transfer
+        /// ownership.
         image: ImageId,
     },
     RenameImage {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         id: String,
+        /// Human-readable display name; use the stable ID for identity because names can change.
         name: String,
+        /// Required current display name; None disables this name precondition.
         expected_name: Option<String>,
     },
     ApplyPlan {
+        /// Client-owned plan handle, valid only for its captured source and owning client.
         plan: PlanId,
     },
 }
@@ -233,8 +285,12 @@ zipzi_core::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct ImageQuery {
+        /// Runtime Session handle; distinct from the persistent document UUID.
         pub session: crate::SessionId,
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         pub id: String,
+        /// Edit candidate handle; None selects formal document state.
         pub edit: Option<crate::EditId>,
     }
 }
@@ -242,15 +298,23 @@ zipzi_core::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct PlanQuery {
+        /// Runtime Session handle; distinct from the persistent document UUID.
         pub session: crate::SessionId,
+        /// Edit candidate handle; None selects formal document state.
         pub edit: Option<crate::EditId>,
+        /// Typed domain edit executed against the candidate; constructing this intent does not
+        /// mutate or publish.
         pub intent: PlanIntent,
     }
 }
 zipzi_core::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
-    pub struct PreparedPixelsQuery { pub image: ImageId }
+    pub struct PreparedPixelsQuery {
+        /// Client-owned prepared-image handle; creating an operation value does not transfer
+        /// ownership.
+        pub image: ImageId,
+    }
 }
 pub const IMAGE_QUERY: Registered<ImageQuery, ImageSnapshot> =
     Registered::new("image_snapshot", |rt, client, input| {
@@ -268,14 +332,23 @@ pub const PREPARED_PIXELS_QUERY: Registered<PreparedPixelsQuery, ImagePixels> =
 zipzi_core::api_record! {
     #[derive(Debug, Clone, Serialize)]
     pub struct ResourceUsage {
-        pub allocations:usize,
-        pub resource_entries:usize,
+        /// Number of distinct retained allocations counted by Runtime resource accounting.
+        pub allocations: usize,
+        /// Number of retained resource-accounting entries, including history/lease holders.
+        pub resource_entries: usize,
+        /// Runtime-wide number of retained client-owned prepared image handles.
         pub prepared_images: usize,
+        /// Runtime-wide number of retained client-owned plans, not operations inside each plan.
         pub plans: usize,
+        /// Retained decoded RGBA storage in bytes under Runtime accounting.
         pub rgba_bytes: usize,
+        /// Retained encoded PNG storage in bytes under Runtime accounting.
         pub png_bytes: usize,
+        /// Retained immutable binary blob storage in bytes under Runtime accounting.
         pub blob_bytes: usize,
+        /// Reserved bytes for resource preparation that has not yet finished.
         pub preparing_bytes: usize,
+        /// Reserved bytes for in-progress binary transfers.
         pub transfer_bytes: usize,
     }
 }

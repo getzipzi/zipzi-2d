@@ -56,6 +56,7 @@ struct Contract {
     modeling: Option<serde_json::Value>,
     binary: Option<serde_json::Value>,
     dtos: Option<serde_json::Value>,
+    runtime: Option<serde_json::Value>,
 }
 fn main() {
     use zipzi_runtime::authoring::*;
@@ -66,6 +67,9 @@ fn main() {
         resources: Some(Box::new(resource_contract())),
         binary: Some(binary_contract()),
         dtos: Some(dto_contract()),
+        runtime: Some(
+            serde_json::json!({"ObjectSummary":zipzi_runtime::ObjectSummary::api_shape(),"RuntimeCapabilities":zipzi_runtime::RuntimeCapabilities::api_shape(),"RuntimeLimits":zipzi_runtime::RuntimeLimits::api_shape()}),
+        ),
         modeling: Some(
             serde_json::json!({"version":1,"input_roots":[0,1,2,4,5,6,7,9,11],"native_only_roots":[zipzi_sdk::ParameterOperation::api_shape(),zipzi_sdk::MeshBindingOperation::api_shape(),zipzi_sdk::GeometryChecks::api_shape()],"roots":[zipzi_runtime::modeling::ModelingCommand::api_shape(),zipzi_sdk::ModelingIntent::api_shape(),zipzi_sdk::ModelingQuery::api_shape(),zipzi_sdk::OwnedModelingRecords::api_shape(),zipzi_runtime::addressing::AddressSelector::api_shape(),zipzi_runtime::addressing::AddressPatch::api_shape(),zipzi_runtime::addressing::CapabilityDomain::api_shape(),zipzi_runtime::addressing::CollectionQuery::api_shape(),zipzi_runtime::addressing::Capabilities::api_shape(),zipzi_sdk::ObjectKind::api_shape(),zipzi_sdk::ModelingSamples::api_shape(),zipzi_runtime::project_io::ProjectRequest::api_shape(),zipzi_runtime::project_io::ProjectReport::api_shape(),zipzi_runtime::editor_context::EditorContext::api_shape()]}),
         ),
@@ -156,6 +160,7 @@ fn resource_contract() -> Contract {
         modeling: None,
         binary: None,
         dtos: None,
+        runtime: None,
         bindings: vec![
             binding!(
                 zipzi_sdk::ImageCreateSpec,
@@ -260,6 +265,8 @@ fn binary_contract() -> serde_json::Value {
         "inputs":[zipzi_runtime::modeling::ModelingCommand::api_shape(),zipzi_sdk::SceneOperation::api_shape(),zipzi_sdk::MeshOperation::api_shape(),zipzi_sdk::ParameterOperation::api_shape(),zipzi_sdk::MeshBindingOperation::api_shape(),zipzi_runtime::authoring::ResourceOperation::api_shape()],
         "output":zipzi_sdk::OwnedModelingRecords::api_shape(),
         "mesh":zipzi_runtime::authoring::MeshSnapshot::api_shape(),
+        "image":zipzi_runtime::authoring::ImageSnapshot::api_shape(),
+        "image_signature":format!("{:032x}",Vec::<zipzi_runtime::authoring::ImageSnapshot>::SIGNATURE),
         "mesh_signature":format!("{:032x}",Vec::<zipzi_runtime::authoring::MeshSnapshot>::SIGNATURE),
         "binding_signature":format!("{:032x}",Vec::<zipzi_core::MeshBinding>::SIGNATURE),
         "source_variants":zipzi_runtime::SourceRef::VARIANTS,

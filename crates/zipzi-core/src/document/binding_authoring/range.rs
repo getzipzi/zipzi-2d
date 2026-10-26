@@ -26,10 +26,15 @@ pub enum ParameterRangePolicy {
     zipzi_api_derive::BinaryWire,
 )]
 pub struct ParameterRangeEdit {
+    /// Stable document parameter ID, not its exported runtime identifier.
     pub parameter_id: String,
+    /// Lower endpoint of the parameter domain, in parameter units.
     pub minimum: f32,
+    /// Upper endpoint of the parameter domain, in parameter units.
     pub maximum: f32,
+    /// Default parameter value within the declared domain.
     pub default_value: f32,
+    /// Explicit native conflict/conversion policy; no implicit removal or remapping is requested.
     pub policy: ParameterRangePolicy,
 }
 #[derive(Debug, Clone, Copy)]

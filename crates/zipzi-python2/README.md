@@ -19,7 +19,7 @@ no JSON transport conversion or direct SDK session owner.
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |
 | `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract and selected mesh/resource/Plan generation |
-| `client/python/zipzi/_generated/`, `src/generated/` | 29 checked-in mechanical values/operations/DTO/scene/modeling/binary outputs |
+| `client/python/zipzi/_generated/`, `src/generated/` | 37 managed outputs, including uniform facades, backend bindings, metadata, public reexports and the offline API reference |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
 From the repository root, using the workspace's CPython 3.14 tools:
@@ -48,9 +48,9 @@ macOS/Unix. Other platform/version claims require separate CI evidence.
 P3A-0 has a frozen symbol map, signatures, experiment configuration and Release
 baseline. P3A-1 is accepted with complete-call recovery, cached Edit state/receipt
 and known Job timeouts; this round's final performance noise blocker was waived by
-the user. See the [acceptance record](../../docs/plans/python-sdk-rewrite/p3a-1.md). Remaining target regressions in `tests/test_p3a_contract.py`
-continue separately while later P3A tasks are implemented. After refreshing fixtures
-with `./tools/test-sdk.sh python2`, run from the repository root:
+the user. See the [acceptance record](../../docs/plans/python-sdk-rewrite/p3a-1.md). Target regressions in `tests/test_p3a_contract.py`
+are now passing in [P3A-6](../../docs/plans/python-sdk-rewrite/p3a-6.md).
+After refreshing fixtures with `./tools/test-sdk.sh python2`, run from the repository root:
 
 ```sh
 uv run --locked python tools/python/python2_contract.py baseline --output target/python2/p3a-baseline.json
@@ -61,8 +61,12 @@ This command preserves every failure and returns a nonzero status until the
 selected contracts pass. Use a new output path for every run. Inventory/freeze
 commands and their limits are documented in [tools](../../tools/README.md).
 P3A-2 has completed result unification, domain-owned operations, generated DTOs
-and common plan/apply. Pagination, generated facades and documentation/agent gates
-continue in P3A-3–6. The examples below describe the current API.
+and common plan/apply. Generated facades, pagination and session lifecycle have
+focused P3A-6 evidence. Semantic field documentation and installed offline checks
+now pass, including handwritten context methods, build fingerprints and installed
+examples. The comparable P0 experiment completed; the user waived its stability gate for this round on 2026-10-26, retaining the original failed data and thresholds;
+the fixed agent functional gate has passed; actual service identity remains unverified. The examples below
+describe the current API.
 
 ## Selected code generation
 
@@ -124,8 +128,8 @@ Domain payloads (`meshes.Mesh`, `parameters.Parameter`, `bindings.MeshBinding`,
 `resources.Image`, `scene.Summary`) have no nested Source. Empty batches retain
 their exact source. CPU samples use `Snapshot[sampling.Result]`; canonical modeling
 records, capabilities and Editor context also use `Snapshot`. Field access sends
-no requests. `Page`/`PageCursor` define the result shape; collection pagination
-remains P3A-4 work. A failed
+no requests. Collection discovery returns `Page[Summary]` with a source-bound
+`PageCursor`; see the collection rules below. A failed
 write makes its candidate uncommittable even when caught. Admission refusal is
 distinct from execution failure.
 
@@ -353,7 +357,7 @@ release their tables. Every create/read/plan/close retains its own recovery owne
 
 ## Complete Runtime R4 routes
 
-The native pairing contract is `zipzi-python2-13`; IPC is `zipzi-runtime-p3a-2-1`.
+The native pairing contract is `zipzi-python2-14`; IPC is `zipzi-runtime-p3a-345-1`.
 Rebuild both adapters and hosts after contract changes. Compiled Rust serde
 shapes generate `zipzi.modeling`, native constructors/writers and the binary
 array codec. `edit.apply` accepts the full `ModelingCommand` family, including
@@ -421,3 +425,50 @@ CPU fixture numbers do not claim Editor latency.
 Animation, independent Preview and observer/inspection remain later Runtime capabilities. See the
 [construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).
+
+
+## P3A-3/4/5 implementation and P3A-6 acceptance
+
+P3A-3/4/5 was committed as `8500d9fe` without acceptance, by user request.
+Subsequent P3A-6 fixes and selected behavior, recovery, discovery, type, normal
+paired sdist/wheel and current production Editor checks are recorded in
+[P3A-6 results](../../docs/plans/python-sdk-rewrite/p3a-6.md). Overall P3A is still
+unaccepted: P0 stability is waived for this round only; the fixed agent functional
+gate passed, while actual model/service identity remains unverified. Fixes were committed as `32e42da7`; documentation, context methods,
+installed examples and deterministic contract evidence have been consolidated.
+
+All five object collections now provide `get(id, expected=...)`,
+`get_many(ids, expected=...)` and `list(name=None, limit=128, cursor=None)` on both
+Session and Edit. List returns `Page[Summary]` in SDK storage order, with exact
+case-sensitive names and an opaque source-bound continuation. Restart explicitly
+on `STALE_SOURCE`; an empty page can still advance a bounded scan. Metadata
+never includes geometry/keyforms/pixels. Resources also support selected batches.
+
+`runtime.capabilities()` and `runtime.limits()` query host facts. Sessions can
+`detach()` or `close(discard_modified=False)`; aliases share binding state,
+modified/other-client/active-work refusals leave the document intact. Creation
+accepts an omitted document UUID allocated by Rust.
+
+`zipzi.describe("Session.meshes.list")` reads the installed offline directory.
+The [short guide](client/python/zipzi/docs/guide.md),
+[generated API reference](client/python/zipzi/docs/reference.md) and
+[executable recipes](client/python/zipzi/docs/recipes.py) are included as package
+resources. Pure DTO codecs and internal ownership factories use private names.
+Owned DTO and query-container repr/summary is bounded and does no IO.
+
+Generation uses `schema/authoring.json`; API bindings, public reexports, complete
+request registration and transport-hook metadata come from the same finite
+binding layer. Rust field docs survive export into class docstrings/reference.
+Runtime state machines, identity rules, resource ownership and binary transfer
+stages remain handwritten. New normal native/IPC pairs are required; no fallback.
+
+For a focused run, `./tools/test-sdk.sh python2 --discovery` selects the collection,
+Session and offline catalog regressions. Agent packets and recorders are prepared via
+`tools/python/python2_agent_tasks.py --help`; preparing fixtures does not run an
+agent or prove G01–G08. Strict types, field/method documentation and installed public recovery examples
+are passing. Local inter-page/Plan controls and pre-close independent evidence
+are complete. The fixed 42-run agent functional gate passed at 38/42 with at least
+2/3 per environment; a separate review of the same evidence corrects three grader
+false negatives to 41/42. Original results are retained. The matrix used 16,093,048
+reported tokens with no token caps. Actual model/service revision identity is
+still unavailable, so overall P3A acceptance remains open.

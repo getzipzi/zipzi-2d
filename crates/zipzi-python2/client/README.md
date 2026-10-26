@@ -15,7 +15,7 @@ again. `job.wait(timeout=None)` waits until terminal; a finite timeout raises
 `JobTimeout` while the accepted Job remains usable. Close an unresolved Runtime
 only after recovery or with explicit `abandon_pending=True`.
 
-The native/host pairing is `zipzi-python2-13` / `zipzi-runtime-p3a-2-1`; rebuild
+The native/host pairing is `zipzi-python2-14` / `zipzi-runtime-p3a-345-1`; rebuild
 adapters and hosts together after a contract change.
 
 See the [package source](https://github.com/getzipzi/zipzi-2d/tree/main/crates/zipzi-python2)
@@ -42,3 +42,10 @@ or `modeling`; `ops` contains only static unions. Use `ParameterPatch` for field
 values and `parameters.Patch` for the operation. `session.plan(operation)` and
 `edit.plan(operation)` use the same registered operations as direct apply. Apply
 Plan values with `edit.apply(plan)`; mixed batches allow one Plan in the first slot.
+
+
+The installed package includes `zipzi/docs/guide.md`, `reference.md` and
+`recipes.py`. `zipzi.describe("zipzi")` is an offline entry point with no native
+extension or host requirement. Collection paging, Session detach/close and the
+new offline catalog are implemented for P3A-3/4/5; acceptance is deferred to
+P3A-6 by user request.

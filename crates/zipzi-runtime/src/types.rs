@@ -24,7 +24,9 @@ macro_rules! ids {
         #[serde(deny_unknown_fields)]
         #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiFields)]
         pub struct $name {
+            /// Runtime instance that allocated this handle; handles are invalid across instances.
             pub(crate) runtime: RuntimeInstanceId,
+            /// Runtime-allocated serial, meaningful only together with the instance and handle kind.
             pub(crate) serial: u64,
         }
         impl zipzi_core::api_shape::ApiShape for $name {
@@ -184,7 +186,7 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 /// the formal SDK version did not change. Snapshot/Proposal tokens arrive later.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::BinaryOutput)]
+#[derive(zipzi_api_derive::BinaryWire)]
 pub enum SourceRef {
     Formal {
         session: SessionId,

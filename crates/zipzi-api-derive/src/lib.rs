@@ -98,6 +98,25 @@ fn wire(name: &str, rename: Option<&str>) -> syn::Result<String> {
         }
     })
 }
+fn doc_text(attrs: &[syn::Attribute]) -> String {
+    attrs
+        .iter()
+        .filter_map(|a| {
+            if !a.path().is_ident("doc") {
+                return None;
+            }
+            if let syn::Meta::NameValue(v) = &a.meta {
+                if let syn::Expr::Lit(v) = &v.value {
+                    if let syn::Lit::Str(v) = &v.lit {
+                        return Some(v.value().trim().to_owned());
+                    }
+                }
+            }
+            None
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
 fn fields(
     fields: &Fields,
     rename_all: Option<&str>,
@@ -105,6 +124,7 @@ fn fields(
 ) -> syn::Result<proc_macro2::TokenStream> {
     let values = fields.iter().enumerate().map(|(i,f)| {
         let a=attrs(&f.attrs)?;
+        let doc=doc_text(&f.attrs);
         let rust=f.ident.as_ref().map(ToString::to_string).unwrap_or_else(||i.to_string());
         let name=if let Some(n)=a.rename { n } else if f.ident.is_none() { if fields.len()==1 { "value".into() } else { format!("value{i}") } } else { wire(&rust, rename_all)? };
         let ty=&f.ty;
@@ -115,7 +135,7 @@ fn fields(
             let expr=if let Some(path)=default {let path:syn::Path=syn::parse_str(&path)?;quote!(#path())} else {quote!(<#ty as Default>::default())};
             quote!(zipzi_core::api_shape::serde_default(#expr))
         } else {quote!(None)};
-        Ok(quote!(zipzi_core::api_shape::SerdeField {rust_name:#rust.into(), name:#name.into(), shape:#shape, skip:#skip, default:#default}))
+        Ok(quote!(zipzi_core::api_shape::SerdeField {doc:#doc.into(),rust_name:#rust.into(), name:#name.into(), shape:#shape, skip:#skip, default:#default}))
     }).collect::<syn::Result<Vec<_>>>()?;
     Ok(quote!(vec![#(#values),*]))
 }
@@ -130,7 +150,9 @@ pub fn api_fields(input: TokenStream) -> TokenStream {
             let key = field.ident.as_ref().map(ToString::to_string)
                 .unwrap_or_else(|| if fields.len() == 1 { "value".into() } else { format!("value{index}") });
             let ty = &field.ty;
+            let doc=doc_text(&field.attrs);
             quote!(zipzi_core::api_shape::SerdeField {
+                doc:#doc.into(),
                 rust_name: #key.into(), name: #key.into(),
                 shape: zipzi_core::api_shape::Shape::Opaque { name: std::any::type_name::<#ty>().into() },
                 skip: false, default: None,

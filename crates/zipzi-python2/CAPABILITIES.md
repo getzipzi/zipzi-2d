@@ -63,10 +63,27 @@ Python [P3A-0](../../docs/plans/python-sdk-rewrite/p3a-0.md) has passed its free
 cached state and JobTimeout with source/type/installed evidence. P3A-1 is accepted;
 the user waived this round's final performance noise blocker. Raw failed measurements
 and the original P0 policy remain unchanged.
-P3A-3–6 and the overall API/agent contract remain unaccepted.
+P3A-3–6 and the overall API/agent contract remain unaccepted; current selected
+passes and unmet gates are recorded in [P3A-6](../../docs/plans/python-sdk-rewrite/p3a-6.md).
 
 [P3A-2](../../docs/plans/python-sdk-rewrite/p3a-2.md) is accepted. Existing reads
 use root `Snapshot[T]`/`Batch[T]` with pure payloads and exact empty-batch sources.
 Domain operations, the common plan/apply path, generated parameter/binding/sampling/
 event/reference DTOs and root `PlanCost`/`PlanReport` are implemented.
-`Page`/`PageCursor` are value shapes; collection pagination remains P3A-4.
+Collection pagination uses `Page[Summary]`/`PageCursor` and has focused P3A-6
+evidence for more than 256 objects, exact source, bounded scans and stale cursors.
+
+
+P3A-3/4/5 was committed as `8500d9fe`; **overall acceptance remains open**. It adds generated uniform
+facades/backend registration and unique transport hooks, exact-source metadata
+pages and selected reads, Runtime capabilities/limits, Session close/detach and
+alias invalidation, bounded owned-value output, private codecs/factories, and the
+offline catalog/reference/guide/recipes. Agent fixture inputs, installed packet
+preparation and bounded recording are present. Local/Connected external controls,
+pre-close history/content and independent file verification are connected. The
+fixed 42-run agent functional gate passed at 38/42 and at least 2/3 per environment;
+a supplemental review corrects three grader false negatives to 41/42 without
+rerunning tasks or replacing the original records. Token usage is report-only:
+16,093,048 for the fixed matrix. Actual model/service revision identity remains
+unverified, so overall acceptance stays open. Prior behavior/type/distribution/
+Editor and P0 evidence is reused within its original scope.

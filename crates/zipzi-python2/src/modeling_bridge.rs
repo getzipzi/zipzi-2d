@@ -3,7 +3,10 @@ use crate::*;
 use zipzi_runtime::authoring::{
     MeshBindingBatch, MeshBindingQuery, ModelingSampleBatch, ModelingSampleQuery,
 };
-fn binding_batch(py: Python<'_>, value: MeshBindingBatch) -> PyResult<Bound<'_, PyDict>> {
+pub(crate) fn binding_batch(
+    py: Python<'_>,
+    value: MeshBindingBatch,
+) -> PyResult<Bound<'_, PyDict>> {
     let d = PyDict::new(py);
     d.set_item("source", source(py, value.source)?)?;
     let bindings = PyList::empty(py);
@@ -26,7 +29,7 @@ pub(crate) fn sample_batch<'py>(
     )?;
     Ok(d)
 }
-fn read_source(value: &Bound<'_, PyAny>) -> PyResult<SourceRef> {
+pub(crate) fn read_source(value: &Bound<'_, PyAny>) -> PyResult<SourceRef> {
     let runtime_value = value.getattr("runtime")?;
     let runtime = runtime_value
         .extract::<&str>()?

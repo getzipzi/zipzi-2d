@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
     zipzi_api_derive::BinaryWire,
 )]
 pub struct WarpBezierNode {
+    /// Absolute Bezier anchor position in lattice coordinates; not a handle offset.
     pub position: Vec2,
     /// Absolute positions: left, right, up, down in lattice coordinates.
     pub handles: [Vec2; 4],
@@ -27,8 +28,11 @@ pub struct WarpBezierNode {
     zipzi_api_derive::BinaryWire,
 )]
 pub struct WarpBezier {
+    /// Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
     pub rows: u32,
+    /// Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
     pub columns: u32,
+    /// Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.
     pub nodes: Vec<WarpBezierNode>,
 }
 fn add(a: Vec2, b: Vec2) -> Vec2 {

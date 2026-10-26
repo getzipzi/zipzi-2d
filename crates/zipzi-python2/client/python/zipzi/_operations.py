@@ -1,7 +1,8 @@
 """Internal typed wire projection; public constructors live in domain modules."""
+from ._generated import scene as _scene_codec
+from ._generated import modeling as _modeling_codec
 from typing import TypeAlias
 from . import meshes, parameters, bindings, resources
-from ._generated import scene, modeling
 from ._generated.mesh_ops import validate as validate_mesh, wire as mesh_wire
 from ._generated.resource_ops import ApplyPlan as ApplyPlan, validate as validate_resource, wire as resource_wire
 from ._generated.parameter_values import validate_Operation as validate_parameter, encode_Operation as parameter_wire
@@ -21,11 +22,11 @@ RenameImage = resources.RenameImage
 WireOperation: TypeAlias = Operation | ApplyPlan
 OPERATION_TYPES = (Create, Rename, SetPositions, CreateParameter, PatchParameter,
     CreateMeshBinding, SetMeshKeyform, CreateImage, ReplaceImage, RenameImage,
-    *scene.OPERATION_TYPES, *modeling.OPERATION_TYPES)
+    *_scene_codec.OPERATION_TYPES, *_modeling_codec.OPERATION_TYPES)
 
 def validate(op: WireOperation) -> None:
-    if isinstance(op, modeling.OPERATION_TYPES): modeling.validate_ModelingCommand(op)
-    elif isinstance(op, scene.OPERATION_TYPES): scene.validate(op)
+    if isinstance(op, _modeling_codec.OPERATION_TYPES): _modeling_codec.validate_ModelingCommand(op)
+    elif isinstance(op, _scene_codec.OPERATION_TYPES): _scene_codec.validate(op)
     elif isinstance(op, (CreateParameter, PatchParameter)): validate_parameter(op)
     elif isinstance(op, (CreateMeshBinding, SetMeshKeyform)): validate_binding(op)
     elif isinstance(op, (CreateImage, ReplaceImage, RenameImage, ApplyPlan)): validate_resource(op)
@@ -33,8 +34,8 @@ def validate(op: WireOperation) -> None:
     else: raise TypeError('Expected domain operation')
 
 def wire(op: WireOperation) -> dict[str, object]:
-    if isinstance(op, modeling.OPERATION_TYPES): return dict(domain='modeling', operation=modeling.encode_ModelingCommand(op))
-    if isinstance(op, scene.OPERATION_TYPES): return scene.wire(op)
+    if isinstance(op, _modeling_codec.OPERATION_TYPES): return dict(domain='modeling', operation=_modeling_codec.encode_ModelingCommand(op))
+    if isinstance(op, _scene_codec.OPERATION_TYPES): return _scene_codec.wire(op)
     if isinstance(op, (CreateParameter, PatchParameter)): return dict(domain='parameter', operation=parameter_wire(op))
     if isinstance(op, (CreateMeshBinding, SetMeshKeyform)): return dict(domain='mesh_binding', operation=binding_wire(op))
     if isinstance(op, (CreateImage, ReplaceImage, RenameImage, ApplyPlan)): return resource_wire(op)

@@ -13,36 +13,56 @@ use super::*;
 )]
 pub enum MeshGridEdit {
     Create {
+        /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
+        /// Stable ID of the target mesh in this document.
         mesh_id: String,
     },
     AddAxis {
+        /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
+        /// Axis definition with a parameter ID and ordered samples; axis identity is distinct
+        /// from the parameter ID.
         axis: BindingAxis,
     },
     ReorderAxes {
+        /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
+        /// Document parameter IDs in the requested axis order.
         parameter_ids: Vec<String>,
     },
     InsertSample {
+        /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
+        /// Scalar value in the referenced parameter domain.
         value: f32,
     },
     MoveSample {
+        /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
+        /// Existing sample value in the parameter domain, not a sample-array index.
         from: f32,
+        /// New sample value in the same parameter domain.
         to: f32,
     },
     DeleteSample {
+        /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
+        /// Scalar value in the referenced parameter domain.
         value: f32,
     },
     RemoveAxis {
+        /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
+        /// Explicit parameter-domain reduction used when removing or replacing an axis.
         reduction: AxisReduction,
     },
 }
@@ -57,8 +77,14 @@ pub enum MeshGridEdit {
     zipzi_api_derive::BinaryWire,
 )]
 pub enum AxisReduction {
-    Slice(f32),
-    Resample(f32),
+    Slice(
+        /// Parameter coordinate at which to slice the old grid while removing an axis.
+        f32,
+    ),
+    Resample(
+        /// Parameter coordinate used to resample the old grid while reducing an axis.
+        f32,
+    ),
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GridGuarantee {

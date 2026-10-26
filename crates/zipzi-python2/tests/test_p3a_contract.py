@@ -80,7 +80,7 @@ class P3AContract(unittest.TestCase):
         self.assertEqual(session.info().history, (1, 0))
 
     def test_scene_get_recovery_keeps_single_snapshot(self):
-        runtime = self.runtime("connected", drop="scene_snapshot")
+        runtime = self.runtime("connected", drop="read_selection")
         session = runtime.sessions.create(support.uid(1))
         with session.edit("create part") as edit:
             part = edit.apply(scene.CreatePart(scene.PartSpec("Face"))).ids[0]
@@ -161,7 +161,12 @@ class P3AContract(unittest.TestCase):
                 runtime = self.runtime(mode)
                 for n in range(40):
                     session = runtime.sessions.create(support.uid(n + 1))
-                    closed = session.close()
+                    # A newly initialized document is unsaved and modified.
+                    # Default close must protect it before an explicit discard.
+                    with self.assertRaises(zipzi.SdkFailure) as refused:
+                        session.close()
+                    self.assertEqual(refused.exception.code, "MODIFIED")
+                    closed = session.close(discard_modified=True)
                     self.assertIsInstance(closed, zipzi.SessionInfo)
                     self.assertEqual(closed.id, session.id)
                     self.assertEqual(session.close(), closed)

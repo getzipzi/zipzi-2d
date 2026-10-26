@@ -11,8 +11,10 @@ from ._values import Source, record
 Inputs = tuple[dict[str, float], ...]
 
 def read(raw: object) -> Snapshot[Result]:
-    source = Source.read(record(raw)['source'])
-    value = Result.read(raw)
+    source = Source._read(record(raw)['source'])
+    value = Result._read(raw)
     if source.version != value.version or len(value.parameters) != len(value.frames):
         raise ValueError('Inconsistent sampled source or batch')
     return Snapshot(source, value)
+
+__all__ = ['Checks', 'BlendMode', 'DiagnosticKind', 'RenderKind', 'Diagnostic', 'Parameter', 'Pose', 'Drawable', 'Deformer', 'Offscreen', 'RenderCommand', 'Frame', 'Result']

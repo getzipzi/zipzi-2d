@@ -12,12 +12,34 @@ from ._results import Batch, Page, PageCursor, Snapshot
 from ._values import ConnectionInfo, ConnectionLimits, Receipt, SaveReceipt, SessionId, SessionInfo, Source, Version, WriteResult
 
 def local() -> Runtime:
+    'Explicitly create an owned in-process Runtime with the paired optional native wheel. Importing zipzi alone does not start it. Use as a context manager; close releases its sessions without saving or connecting to another host.'
     from .backends.local import LocalBackend
     return Runtime(LocalBackend())
 
 def connect(*, endpoint: Path | None = None, start: bool = False, host: Path | None = None,
     timeout: float = 10., startup_timeout: float = 15., sdk_build: str | None = None) -> Runtime:
-    """Discover a host, optionally start one, and bind a strictly checked client."""
+    """Connect to an explicit/discovered host and return an owned Runtime client.
+
+    endpoint is an absolute private Unix <profile>.sock path; None discovers it
+    from ZIPZI_RUNTIME_DIR/ZIPZI_RUNTIME_PROFILE. start=False never launches a
+    process. With start=True, host is an absolute executable, or discovery uses
+    ZIPZI_EDITOR_HOST and the supported app locations. host requires start=True.
+    timeout is the positive finite per-request socket timeout in seconds;
+    startup_timeout is the positive finite total startup/handshake budget.
+    sdk_build=None accepts the compatible host build; an explicit string also
+    requires an exact build match. Protocol and required capabilities always
+    match strictly; installing native never changes the selected execution host.
+
+    This blocks for connection/startup, raising ValueError for invalid options,
+    PermissionError for unsafe endpoint ownership, OS connection errors when
+    no host is listening, or SdkFailure for pairing/startup refusal. Runtime
+    resources are bounded by host limits. Close the returned client or use with;
+    this releases its leases while formal Connected sessions remain resident.
+    A request that later becomes unknown must recover on this original Runtime;
+    calling connect again does not replay or resolve that request.
+
+    Example: with zipzi.connect(endpoint=absolute_socket_path) as runtime: ...
+    """
     from ._endpoint import connect_backend
     return Runtime(connect_backend(endpoint, start=start, host=host, timeout=timeout,
         startup_timeout=startup_timeout, sdk_build=sdk_build))
@@ -32,3 +54,9 @@ _register_requests()
 __all__ += ["Snapshot", "Batch", "Page", "PageCursor"]
 
 __all__ += ["PlanCost", "PlanReport"]
+
+from ._generated.discovery import RuntimeCapabilities, RuntimeLimits, ObjectSummary
+__all__ += ["RuntimeCapabilities", "RuntimeLimits", "ObjectSummary"]
+
+from ._documentation import ApiDescription, describe
+__all__ += ["ApiDescription", "describe"]

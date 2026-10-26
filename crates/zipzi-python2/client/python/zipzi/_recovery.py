@@ -6,6 +6,8 @@ from ._errors import Busy, OutcomeUnknown, PendingRequest
 from ._calls import Call
 if TYPE_CHECKING:
     from .backends import Backend
+else:
+    Backend = object
 T = TypeVar("T")
 
 class RecoveryOwner:
@@ -17,6 +19,7 @@ class RecoveryOwner:
 
     @property
     def pending_request(self) -> PendingRequest | None:
+        "Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it."
         return self._backend.pending(self)
 
     def _request_unknown(self, action: str, error: OutcomeUnknown) -> None:

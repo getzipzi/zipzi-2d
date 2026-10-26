@@ -8,7 +8,8 @@ from typing import cast
 from uuid import UUID
 import math
 import struct
-from .. import _operations as ops, scene, meshes, modeling as m
+from .. import _operations as ops, meshes, resources
+from . import modeling as m, scene
 from .._values import Source,Version
 from .._results import Snapshot
 from .._values import record, sequence, string, integer, number
@@ -147,6 +148,7 @@ def render_binary(contract,header):
     visit(contract['output'],outputs)
     visit(contract['samples'],outputs)
     visit(contract['mesh'],outputs)
+    visit(contract['image'],outputs)
     if contract['source_variants']!=['Formal','Edit'] or contract['source_fields']!=[['session','version'],['session','edit','base','sequence']]:raise ValueError('SourceRef binary lifecycle requires review')
     def name(s):return ''.join(re.findall(r'(?:^|::)([A-Z][A-Za-z0-9_]*)',s['name'])) if '<' in s['name'] else s['name'].rsplit('::',1)[-1]
     def fn(s):return name(s).lower()
@@ -194,7 +196,7 @@ def render_binary(contract,header):
         if k=='sequence':return 'bytes' if s['item']['kind']=='u8' else 'tuple['+typ(s['item'])+', ...]'
         if k=='array':return 'tuple['+', '.join([typ(s['item'])]*s['length'])+']'
         if k in {'string_map','index_map'}:return 'Mapping['+('str' if k=='string_map' else 'int')+', '+typ(s['value'])+']'
-        return {'Version':'Version','SourceRef':'Source','MeshSnapshot':'Snapshot[meshes.Mesh]','MeshGeometry':'meshes.Geometry'}.get(name(s),'m.'+name(s))
+        return {'Version':'Version','SourceRef':'Source','MeshSnapshot':'Snapshot[meshes.Mesh]','MeshGeometry':'meshes.Geometry','ImageSnapshot':'Snapshot[resources.Image]','ImagePixels':'resources.ImagePixels'}.get(name(s),'m.'+name(s))
     def read(s,d=0):
         k=s['kind']
         if k=='shared':return read(s['item'],d)
@@ -254,9 +256,9 @@ def render_binary(contract,header):
                     else:value='m.'+name(s)+v['rust_name']+'('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(v))+')'
                     out+=['        return '+value]
                 out+=['    raise ValueError("Unknown binary '+name(s)+' variant")']
-            elif name(s)=='MeshSnapshot':
+            elif name(s) in {'MeshSnapshot','ImageSnapshot'}:
                 if fields(s)[0]['name']!='source': raise ValueError('Mesh source must precede its payload')
-                out+=['    return Snapshot('+read(fields(s)[0]['shape'])+', meshes.Mesh('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(s)[1:])+'))']
+                out+=['    return Snapshot('+read(fields(s)[0]['shape'])+', '+('meshes.Mesh' if name(s)=='MeshSnapshot' else 'resources.Image')+'('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(s)[1:])+'))']
             else:out+=['    return '+typ(s)+'('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(s))+')']
             out+=['']
     roots={name(s):s for s in contract['inputs']}
@@ -273,4 +275,5 @@ def render_binary(contract,header):
     out+=['def decode_samples(value: bytes, signature: str) -> m.ModelingSamples:', '    if signature!=SAMPLE_SIGNATURE: raise ValueError("Binary sample contract differs")', '    r=Reader(value)', '    result=_read_modelingsamples(r)', '    r.finish()', '    return result', '']
     out+=['def decode_meshes(value: bytes,signature:str)->tuple[Snapshot[meshes.Mesh],...]:','    if signature!=MESH_SIGNATURE: raise ValueError("Binary mesh contract differs")','    r=Reader(value)','    result=tuple(_read_meshsnapshot(r) for _ in range(r.count()))','    r.finish()','    return result','']
     out+=['def decode_bindings(value:bytes,signature:str)->tuple[m.MeshBinding,...]:','    if signature!=BINDING_SIGNATURE: raise ValueError("Binary binding contract differs")','    r=Reader(value)','    result=tuple(_read_meshbinding(r) for _ in range(r.count()))','    r.finish()','    return result','']
+    out+=['def decode_images(value:bytes,signature:str)->tuple[Snapshot[resources.Image],...]:', '    if signature!='+repr(contract['image_signature'])+': raise ValueError("Binary image contract differs")','    r=Reader(value)','    result=tuple(_read_imagesnapshot(r) for _ in range(r.count()))','    r.finish()','    return result','']
     return {'client/python/zipzi/_generated/binary.py':'\n'.join(out)}

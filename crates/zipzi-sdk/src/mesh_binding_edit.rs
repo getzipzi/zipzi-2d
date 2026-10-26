@@ -7,18 +7,31 @@ use zipzi_core::{Appearance, BindingAxis, MeshBinding, MeshKeyform, Vec2};
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct MeshBindingAxisSpec {
+    /// Stable document parameter ID, not its exported runtime identifier.
     pub parameter_id: String,
+    /// Strictly increasing finite parameter sample values for this axis, in parameter units;
+    /// not sample indices.
     pub keys: Vec<f32>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct MeshKeyformSpec {
+    /// One actual parameter sample value per binding axis, in axis order; each must match a
+    /// declared axis sample.
     pub keys: Vec<f32>,
+    /// Absolute mesh-local positions, one per target mesh vertex in vertex_ids order; not
+    /// displacement vectors.
     pub positions: Vec<Vec2>,
+    /// Optional finite nonnegative opacity factor; None uses the native neutral default 1.
+    /// Values above 1 are retained for import roundtrips.
     pub opacity: Option<f32>,
+    /// Optional RGB multiply factors; None uses neutral (1, 1, 1).
     pub multiply: Option<[f32; 3]>,
+    /// Optional RGB screen factors; None uses neutral (0, 0, 0).
     pub screen: Option<[f32; 3]>,
+    /// Optional keyform drawing-order coordinate; None leaves the order unspecified for native
+    /// evaluation.
     pub draw_order: Option<f32>,
 }
 impl MeshKeyformSpec {
@@ -46,9 +59,15 @@ impl MeshKeyformSpec {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct MeshBindingCreateSpec {
+    /// Stable ID of the target mesh in this document.
     pub mesh_id: String,
+    /// Ordered parameter axes; keyform coordinates follow this order and samples retain their
+    /// own identities.
     pub axes: Vec<MeshBindingAxisSpec>,
+    /// Shape samples for this binding; coordinate/sample identities must match its axes or key
+    /// table.
     pub keyforms: Vec<MeshKeyformSpec>,
+    /// Optional new binding UUID; None allocates a fresh UUID when the create operation executes.
     pub id: Option<String>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,10 +75,15 @@ pub struct MeshBindingCreateSpec {
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub enum MeshBindingOperation {
     Create {
+        /// Creation specification; native admission supplies identities/defaults and rejects
+        /// invalid input.
         spec: MeshBindingCreateSpec,
     },
     SetKeyform {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         id: String,
+        /// Complete shape sample to insert or replace; unrelated samples are retained.
         keyform: MeshKeyformSpec,
     },
 }

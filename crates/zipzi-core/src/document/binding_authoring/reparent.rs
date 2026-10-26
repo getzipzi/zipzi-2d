@@ -29,9 +29,12 @@ pub enum ReparentStrategy {
     zipzi_api_derive::BinaryWire,
 )]
 pub struct ReparentEdit {
+    /// Stable IDs of objects to reparent; source order is retained in the planned selection.
     pub sources: Vec<String>,
     /// Empty means the model root. Part organization is an independent relation.
     pub parent_id: String,
+    /// Explicit reparenting/conversion strategy, including how shape differences are preserved
+    /// or reported.
     pub strategy: ReparentStrategy,
     /// Optional placement in the resulting deformation collection.
     #[serde(default)]
@@ -72,10 +75,13 @@ fn default_relative_tolerance() -> f64 {
     zipzi_api_derive::BinaryWire,
 )]
 pub struct ReparentContext {
+    /// Parameter-ID-to-value map used for the reparenting reference pose; values use each
+    /// parameter domain.
     pub parameter_values: crate::PreviewValues,
     /// Empty for PreserveEditState. For domain preservation every unfixed
     /// dependency must have an explicit finite interval.
     pub parameter_domain: Vec<ConversionDomain>,
+    /// Finite reference pose time in seconds; zero is the default reference time.
     pub edit_time_seconds: f64,
 }
 impl ReparentEdit {

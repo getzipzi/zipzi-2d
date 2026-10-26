@@ -53,6 +53,7 @@ def main():
     parser.add_argument("--policy", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--pairs", type=int, default=5)
+    parser.add_argument("--migration", type=Path, help="Explicit frozen API-only migration manifest; both sides must use one identical worker")
     args = parser.parse_args()
     if args.pairs < 5:
         parser.error("At least five independent pairs are required")
@@ -63,9 +64,14 @@ def main():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     directories = {"baseline": args.baseline.resolve(), "candidate": args.candidate.resolve()}
+    migration=None
+    if args.migration:
+        from python2_p0_migration import validate_migration
+        migration=validate_migration(args.migration.resolve(),args.policy.resolve(),directories)
+    measurement_sha=policy['measurement_sha256'] if migration is None else migration['common_workload_sha256']
     builds = {}
     for side, directory in directories.items():
-        if sha(directory / "tools/baseline.py") != policy["measurement_sha256"]:
+        if sha(directory / "tools/baseline.py") != measurement_sha:
             raise ValueError("Paired workloads must match the original frozen script")
         builds[side] = {}
         for role in ("timing", "probe"):
@@ -112,7 +118,7 @@ def main():
         "policy_sha256": sha(args.policy), "runner_sha256": sha(Path(__file__)),
         "historical_comparison": "retained separately; no historical result or threshold is overwritten",
         "order": [pair_order(i) for i in range(args.pairs)], "baseline": control, "candidate": candidate,
-        "comparison": failures, "runs": events}
+        "comparison": failures, "runs": events, "api_migration": migration}
     (args.output / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
     print(args.output / "summary.json")
     if failures:

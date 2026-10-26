@@ -5,6 +5,8 @@ from ._recovery import RecoveryOwner
 from ._values import SessionId, SessionInfo, record, sequence
 if TYPE_CHECKING:
     from .backends import Backend
+else:
+    Backend = object
 
 from ._generated.event_values import (
     Cursor as Cursor, Origin as Origin, Published as Published, Saved as Saved,
@@ -43,17 +45,19 @@ class _Subscription(RecoveryOwner, Generic[T]):
 
     @property
     def cursor(self) -> Cursor:
+        "Return this subscription's cached exact cursor without IO. Recover initial subscription before using it; cursors belong to one Runtime and registry/session stream."
         if self._cursor is None:
             raise SdkFailure("NOT_SUBSCRIBED", "Recover the subscription first")
         return self._cursor
 
     @property
     def initial(self) -> T:
+        'Return the immutable metadata captured at subscribe/resync, without IO. Later poll calls advance the cursor but do not silently refresh this initial value.'
         return self._initial
 
     def _reset(self, raw: object) -> T:
         value = record(raw)
-        cursor = Cursor.read(value["cursor"])
+        cursor = Cursor._read(value["cursor"])
         if cursor.session != self._expected:
             raise ValueError("Subscription has another event stream")
         initial = self._decode(raw)
@@ -67,10 +71,18 @@ class _Subscription(RecoveryOwner, Generic[T]):
         return self._request("subscribe", lambda: self._backend.subscribe(self._token, self), decode)
 
     def resync(self) -> T:
-        """Explicitly replace the initial metadata and cursor atomically."""
+        """Atomically recapture metadata and reset this subscriber's cached cursor.
+
+        Returns the new initial Session/registry metadata after RESYNC_REQUIRED;
+        it does not replay missed events or drain another subscriber. This is a
+        synchronous host read under event/response budgets. Recover a lost reply
+        through its original Call before polling again. No model write occurs.
+        Example: initial = subscription.resync().
+        """
         return self._request("resync", lambda: self._backend.subscribe(self._token, self), self._reset)
 
     def poll(self, *, limit: int = 128) -> tuple[Event, ...]:
+        'Read up to limit events after this independent cursor, with limit in 1..256. Advance only after a complete valid page; gaps require explicit resync. Recover the original call after a lost response.'
         check_limit(limit)
         cursor = self.cursor
         def decode(raw: object) -> tuple[Event, ...]:
@@ -82,8 +94,10 @@ class _Subscription(RecoveryOwner, Generic[T]):
 
 class SessionSubscription(_Subscription[SessionInfo]):
     def __init__(self, backend: "Backend", token: object, id: SessionId):
-        super().__init__(backend, token, id, lambda raw: SessionInfo.read(record(raw)["info"]))
+        super().__init__(backend, token, id, lambda raw: SessionInfo._read(record(raw)["info"]))
 
 class RegistrySubscription(_Subscription[tuple[SessionInfo, ...]]):
     def __init__(self, backend: "Backend"):
-        super().__init__(backend, None, None, lambda raw: tuple(SessionInfo.read(item) for item in sequence(record(raw)["sessions"])))
+        super().__init__(backend, None, None, lambda raw: tuple(SessionInfo._read(item) for item in sequence(record(raw)["sessions"])))
+
+__all__ = ['Cursor', 'Origin', 'Published', 'Saved', 'StateChanged', 'Created', 'Closed', 'Event', 'SessionSubscription', 'RegistrySubscription']

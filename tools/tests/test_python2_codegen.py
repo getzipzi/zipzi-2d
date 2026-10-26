@@ -15,6 +15,78 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_handwritten_context_and_representation_methods_have_public_entries(self):
+        output=gen.render(self.contract());namespace={}
+        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
+        catalog=namespace['CATALOG']
+        for path in ('zipzi.Runtime.__enter__','zipzi.Runtime.__exit__',
+                     'zipzi.Edit.__enter__','zipzi.Edit.__exit__','zipzi.Job.__exit__',
+                     'zipzi.Plan.__exit__','zipzi.Buffer.__enter__','zipzi.Source.__repr__'):
+            with self.subTest(path=path):
+                self.assertEqual(catalog[path]['kind'],'callable')
+                self.assertTrue(catalog[path]['documentation'])
+
+    def test_missing_field_docs_fail_instead_of_generating_declaration_placeholders(self):
+        contract = self.contract()
+        def remove(node):
+            if isinstance(node, dict):
+                if node.get('name', '').endswith('::ParameterPatch') and node.get('kind') == 'serde_record':
+                    next(field for field in node['fields'] if field['name'] == 'repeat')['doc'] = ''
+                for value in node.values():
+                    remove(value)
+            elif isinstance(node, list):
+                for value in node:
+                    remove(value)
+        remove(contract)
+        with self.assertRaisesRegex(ValueError, r'Missing semantic field documentation: .*ParameterPatch.repeat'):
+            gen.render(contract)
+
+    def test_field_semantics_are_shared_by_docstrings_catalog_and_reference(self):
+        output=gen.render(self.contract())
+        namespace={}
+        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
+        catalog=namespace['CATALOG']
+        examples={
+            'zipzi.parameters.ParameterPatch':('repeat','None preserves the current value'),
+            'zipzi.bindings.Keyform':('keys','axis order'),
+            'zipzi.resources.ImagePixels':('rgba','straight alpha'),
+            'zipzi.Source':('version','formal base version'),
+            'zipzi.Snapshot':('source','captured atomically'),
+            'zipzi.scene.VertexPatch':('position','BlendShape XY displacement'),
+            'zipzi.modeling.CdiNamespaceIds':('parameters','document-ID to runtime-ID map'),
+            'zipzi.modeling.BindingGridEditEdit':('operation','Typed axis/sample grid edit'),
+            'zipzi.modeling.DeltaOffscreenKeyform':('multiply','neutral (1, 1, 1)'),
+        }
+        reference=output['client/python/zipzi/docs/reference.md']
+        for path,(field,meaning) in examples.items():
+            with self.subTest(path=path,field=field):
+                entry=catalog[path]
+                self.assertIn(meaning,' '.join(dict(entry['fields'])[field].split()))
+                self.assertIn(meaning,' '.join(entry['documentation'].split()))
+                self.assertIn(meaning,' '.join(reference.split()))
+        mesh=output['client/python/zipzi/_generated/mesh_ops.py']
+        self.assertIn('name precondition',mesh)
+
+    def test_operation_docs_are_bound_to_the_declaring_domain_and_propagate_changes(self):
+        contract=self.contract()
+        def describe(node):
+            if isinstance(node,dict):
+                if isinstance(node.get('kind'),str) and node['kind']=='union' and node.get('name','').endswith('::MeshOperation'):
+                    node['variants'][0]['fields'][0]['doc']='Mesh-only specification semantics.'
+                if isinstance(node.get('kind'),str) and node['kind']=='serde_enum' and node.get('name','').endswith('::ParameterOperation'):
+                    node['variants'][0]['fields'][0]['doc']='Parameter-only specification semantics.'
+                for value in node.values():describe(value)
+            elif isinstance(node,list):
+                for value in node:describe(value)
+        describe(contract)
+        output=gen.render(contract)
+        mesh=output['client/python/zipzi/_generated/mesh_ops.py']
+        parameter=output['client/python/zipzi/_generated/parameter_values.py']
+        self.assertIn('Mesh-only specification semantics.',mesh)
+        self.assertNotIn('Parameter-only specification semantics.',mesh)
+        self.assertIn('Parameter-only specification semantics.',parameter)
+        self.assertNotIn('Mesh-only specification semantics.',parameter)
+
     def test_selected_dtos_follow_compiled_fields_and_reject_unknown_shapes(self):
         contract = self.contract()["dtos"]
         output = gen._dto_codegen.render_dtos(contract, gen.HEADER)
@@ -22,7 +94,8 @@ class Python2Codegen(unittest.TestCase):
         self.assertIn("keys: Sequence[float]", output["client/python/zipzi/_generated/binding_values.py"])
         changed = deepcopy(contract)
         spec = changed["parameters"][0]["variants"][0]["fields"][0]["shape"]
-        spec["fields"].append({"name":"future_flag", "shape":{"kind":"bool"}, "default":None})
+        spec["fields"].append({"name":"future_flag", "shape":{"kind":"bool"}, "default":None,
+                               "doc":"Explicit future parameter behavior flag."})
         generated = gen._dto_codegen.render_dtos(changed, gen.HEADER)["client/python/zipzi/_generated/parameter_values.py"]
         self.assertIn("future_flag: bool", generated)
         self.assertIn("_flag(_get(value, 'future_flag'))", generated)
@@ -73,7 +146,7 @@ class Python2Codegen(unittest.TestCase):
             with self.assertRaises(ValueError):gen.render(invalid)
 
     def contract(self):
-        return json.loads((PACKAGE / 'schema/mesh.json').read_text())
+        return json.loads((PACKAGE / 'schema/authoring.json').read_text())
 
     def files(self, folder):
         return {p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob('*') if p.is_file()}
@@ -152,7 +225,8 @@ class Python2Codegen(unittest.TestCase):
         def change(node):
             if isinstance(node, dict):
                 if node.get('kind') == 'record' and node.get('name', '').endswith('::MeshGeometry'):
-                    node['fields'].append(dict(name='segments', shape=dict(kind='u32'), default=None))
+                    node['fields'].append(dict(name='segments', shape=dict(kind='u32'), default=None,
+                                              doc='Number of generated geometry segments.'))
                 for value in node.values():
                     change(value)
             elif isinstance(node, list):
@@ -214,10 +288,13 @@ class Python2Codegen(unittest.TestCase):
         def change(node):
             if isinstance(node, dict):
                 if node.get('kind') == 'record' and node.get('name', '').endswith('::ImageCreateSpec'):
-                    node['fields'].append(dict(name='label', shape=dict(kind='string'), default=None))
-                    node['fields'].append(dict(name='description', shape=dict(kind='string'), default=dict(kind='empty_string')))
+                    node['fields'].append(dict(name='label', shape=dict(kind='string'), default=None,
+                                              doc='User-facing label for this image creation.'))
+                    node['fields'].append(dict(name='description', shape=dict(kind='string'), default=dict(kind='empty_string'),
+                                              doc='Optional descriptive text; the empty string supplies no description.'))
                 if node.get('kind') == 'record' and node.get('name', '').endswith('::ConversionCost'):
-                    node['fields'].append(dict(name='operations', shape=dict(kind='u64'), default=None))
+                    node['fields'].append(dict(name='operations', shape=dict(kind='u64'), default=None,
+                                              doc='Estimated number of native operations in the conversion.'))
                 for value in node.values():
                     change(value)
             elif isinstance(node, list):
@@ -227,14 +304,14 @@ class Python2Codegen(unittest.TestCase):
         output = gen.render(contract)
         self.assertIn('label: str', output['client/python/zipzi/_generated/resource_ops.py'])
         self.assertIn('label=op.label', output['client/python/zipzi/_generated/resource_ops.py'])
-        self.assertIn('label: str', output['client/python/zipzi/_generated/resource_conveniences.py'])
+        self.assertIn('label: str', output['client/python/zipzi/_generated/facades.py'])
         self.assertIn('op.getattr("label")', output['src/generated/resources.rs'])
         self.assertIn('input_budget::text(&op.getattr("label")?)?', output['src/generated/resources.rs'])
         self.assertIn('measure_planintent(intent)?', output['src/generated/resource_queries.rs'])
         self.assertIn('operations: int', output['client/python/zipzi/_generated/plan_values.py'])
         self.assertIn('value.operations', output['src/generated/resources.rs'])
         self.assertIn('description: str = ""', output['client/python/zipzi/_generated/resource_ops.py'])
-        convenience = output['client/python/zipzi/_generated/resource_conveniences.py']
+        convenience = output['client/python/zipzi/_generated/facades.py']
         self.assertIn('description: str = ""', convenience)
         compile(convenience, '<generated resource convenience>', 'exec')
 
