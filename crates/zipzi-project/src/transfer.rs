@@ -76,7 +76,7 @@ fn codec(e: zipzi_cmo3::Cmo3Error) -> Status {
 impl DocumentSession {
     pub fn transfer_snapshot(&self) -> Result<TransferSnapshot, Status> {
         let mut resources = HashMap::new();
-        let mut protected_paths = Vec::new();
+        let mut protected_paths = self.import_sources.clone();
         let root = self.root();
         if !root.as_os_str().is_empty() {
             protected_paths.push(
@@ -137,6 +137,10 @@ impl DocumentSession {
                 .map_err(codec)?;
         }
         let mut candidate = DocumentSession::from_authoring_document(imported.document);
+        candidate.import_sources = vec![
+            model,
+            fs::canonicalize(path).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?,
+        ];
         candidate.set_image_memory_budget(self.image_memory_budget().clone())?;
         let mut document = candidate.document().clone();
         for asset_id in document.asset_order().to_vec() {
@@ -156,9 +160,14 @@ impl DocumentSession {
             }
             candidate.retain_prepared_image(&image);
         }
+        // Source images may be original artwork or packed pages. Only known
+        // atlas inputs and shared pages need extraction; keep independent originals.
+        candidate.document_mut().clone_from(&document);
+        candidate.unpack_atlas_images(&imported.atlas_assets)?;
+        document = candidate.document().clone();
         // Keep the candidate resource store; publication replaces the session
         // only after every model, animation and texture has been validated.
-        self.store_cubism_candidate(candidate, document);
+        self.store_import_candidate(candidate, document);
         Ok(())
     }
 }

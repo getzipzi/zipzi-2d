@@ -527,6 +527,14 @@ impl super::DocumentSession {
             .entry(image.content.source.clone())
             .or_insert_with(|| image.memory.clone());
     }
+    pub(crate) fn retain_image_sources(&self, sources: &std::collections::HashSet<String>) {
+        self.store
+            .memory_assets
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .retain(|source, _| sources.contains(source));
+    }
+
     pub fn memory_image(&self, asset: &ImageAsset) -> Option<PreparedImageContent> {
         Some(PreparedImageContent {
             memory: self.store.memory_asset(asset)?,

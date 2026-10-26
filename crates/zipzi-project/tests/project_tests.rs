@@ -1,3 +1,5 @@
+#[path = "project_tests/atlas_import.rs"]
+mod atlas_import;
 #[path = "project_tests/helpers.rs"]
 mod helpers;
 #[path = "project_tests/manual_mesh.rs"]

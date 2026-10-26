@@ -19,6 +19,9 @@ pub struct ImportedModel {
     pub document: Document,
     /// PNG bytes keyed by the document's draft source paths.
     pub images: HashMap<String, Vec<u8>>,
+    /// Image asset IDs whose active texture input is a packed atlas region.
+    /// Project import uses these to recover independent mesh artwork.
+    pub atlas_assets: std::collections::HashSet<String>,
 }
 pub fn import_model(bytes: &[u8]) -> Result<ImportedModel> {
     import_model_with_budget(bytes, usize::MAX)

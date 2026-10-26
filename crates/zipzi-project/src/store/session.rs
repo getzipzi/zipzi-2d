@@ -8,7 +8,7 @@ use super::{
 };
 use crate::filesystem::{self as io, FileSystem, NativeFileSystem};
 use crate::package::{
-    publish_with_filesystem, PackageOptions, PackageValidation, RuntimeValidation,
+    publish_with_resources, PackageOptions, PackageValidation, RuntimeValidation,
 };
 use crate::resources::{decode_png, AssetData, TextureData};
 use std::{
@@ -27,6 +27,7 @@ pub struct DocumentSession {
     document: Document,
     manifest: PathBuf,
     manifest_sha256: String,
+    pub(crate) import_sources: Vec<PathBuf>,
 }
 
 impl DocumentSession {
@@ -56,6 +57,7 @@ impl DocumentSession {
         self.document = document;
         self.manifest = PathBuf::new();
         self.manifest_sha256.clear();
+        self.import_sources.clear();
     }
 
     /// Publish an SDK candidate while retaining the saved baseline.
@@ -83,10 +85,11 @@ impl DocumentSession {
             document: Document::new(),
             manifest: PathBuf::new(),
             manifest_sha256: String::new(),
+            import_sources: Vec::new(),
         }
     }
 
-    pub(crate) fn store_cubism_candidate(&mut self, candidate: Self, document: Document) {
+    pub(crate) fn store_import_candidate(&mut self, candidate: Self, document: Document) {
         self.reset_authoring_document(document);
         *self
             .store
@@ -98,6 +101,7 @@ impl DocumentSession {
             .lock()
             .unwrap_or_else(|p| p.into_inner())
             .clone();
+        self.import_sources = candidate.import_sources;
         self.store.remember_imported_assets(&self.document);
     }
 
@@ -128,6 +132,7 @@ impl DocumentSession {
         if result.status.is_ok() {
             let s = snapshot.unwrap();
             self.store.clear_memory_assets();
+            self.import_sources.clear();
             self.document = s.document;
             self.manifest = s.manifest;
             self.manifest_sha256 = s.manifest_sha256;
@@ -150,6 +155,7 @@ impl DocumentSession {
             return ProjectResult::from_status(issue.status);
         }
         self.store.clear_memory_assets();
+        self.import_sources.clear();
         self.document = snapshot.document;
         self.manifest = snapshot.manifest;
         self.manifest_sha256 = snapshot.manifest_sha256;
@@ -192,10 +198,9 @@ impl DocumentSession {
         let (result, snapshot, report) = self.store.import_model3(path);
         if result.status.is_ok() {
             let s = snapshot.unwrap();
-            self.store.clear_memory_assets();
-            self.document = s.document;
-            self.manifest = s.manifest;
-            self.manifest_sha256 = s.manifest_sha256;
+            if let Err(status) = self.install_runtime_import(s, path) {
+                return (ProjectResult::from_status(status), None);
+            }
         }
         (result, report)
     }
@@ -220,10 +225,9 @@ impl DocumentSession {
         if let Some(issue) = snapshot.document.validate_structure().into_iter().next() {
             return (ProjectResult::from_status(issue.status), None);
         }
-        self.store.clear_memory_assets();
-        self.document = snapshot.document;
-        self.manifest = snapshot.manifest;
-        self.manifest_sha256 = snapshot.manifest_sha256;
+        if let Err(status) = self.install_runtime_import(snapshot, path) {
+            return (ProjectResult::from_status(status), None);
+        }
         (result, report)
     }
 
@@ -241,10 +245,9 @@ impl DocumentSession {
         let (result, snapshot, report) = self.store.import_bare_moc3(moc3_path, texture_map);
         if result.status.is_ok() {
             let s = snapshot.unwrap();
-            self.store.clear_memory_assets();
-            self.document = s.document;
-            self.manifest = s.manifest;
-            self.manifest_sha256 = s.manifest_sha256;
+            if let Err(status) = self.install_runtime_import(s, moc3_path) {
+                return (ProjectResult::from_status(status), None);
+            }
         }
         (result, report)
     }
@@ -269,11 +272,36 @@ impl DocumentSession {
         if let Some(issue) = snapshot.document.validate_structure().into_iter().next() {
             return (ProjectResult::from_status(issue.status), None);
         }
-        self.store.clear_memory_assets();
-        self.document = snapshot.document;
-        self.manifest = snapshot.manifest;
-        self.manifest_sha256 = snapshot.manifest_sha256;
+        if let Err(status) = self.install_runtime_import(snapshot, moc3_path) {
+            return (ProjectResult::from_status(status), None);
+        }
         (result, report)
+    }
+
+    fn install_runtime_import(
+        &mut self,
+        snapshot: super::DocumentSnapshot,
+        source: &Path,
+    ) -> Result<(), Status> {
+        let mut candidate = Self::from_authoring_document(snapshot.document);
+        candidate.set_image_memory_budget(self.image_memory_budget().clone())?;
+        candidate.import_sources = candidate
+            .document()
+            .asset_order()
+            .iter()
+            .filter_map(|id| {
+                let content = candidate.document().get_asset(id)?.content.as_ref()?;
+                fs::canonicalize(&content.source).ok()
+            })
+            .collect();
+        candidate
+            .import_sources
+            .push(fs::canonicalize(source).map_err(io::io_error)?);
+        let atlases = candidate.document().asset_order().iter().cloned().collect();
+        candidate.unpack_atlas_images(&atlases)?;
+        let document = candidate.document().clone();
+        self.store_import_candidate(candidate, document);
+        Ok(())
     }
 
     /// Import a PSD into a newly published project before replacing the
@@ -295,6 +323,7 @@ impl DocumentSession {
         }
         let snapshot = snapshot.expect("successful PSD import has a snapshot");
         self.store.clear_memory_assets();
+        self.import_sources.clear();
         self.document = snapshot.document;
         self.manifest = snapshot.manifest;
         self.manifest_sha256 = snapshot.manifest_sha256;
@@ -395,6 +424,7 @@ impl DocumentSession {
             .memory_assets
             .lock()
             .unwrap_or_else(|p| p.into_inner()) = assets;
+        self.import_sources.clear();
         self.document = document;
         self.manifest = PathBuf::new();
         self.manifest_sha256.clear();
@@ -603,7 +633,13 @@ impl DocumentSession {
                 ))
             })),
         };
-        match publish_with_filesystem(&self.document, &options, self.store.filesystem.as_ref()) {
+        match publish_with_resources(
+            &self.document,
+            &options,
+            self.store.filesystem.as_ref(),
+            &|asset| self.read_asset(&asset.id),
+            &self.import_sources,
+        ) {
             Ok(publication) => publication_result(publication),
             Err(status) => ProjectResult::from_status(status),
         }

@@ -79,6 +79,25 @@ pub(crate) fn publish_with_filesystem(
     publish_plan_with_filesystem(&plan, &options.destination, validate.as_ref(), files, false)
 }
 
+/// Session publication resolves both extracted drafts and on-disk resources.
+pub(crate) fn publish_with_resources(
+    doc: &Document,
+    options: &PackageOptions,
+    files: &dyn FileSystem,
+    read: &dyn Fn(&zipzi_core::ImageAsset) -> Result<crate::AssetData, Status>,
+    protected: &[PathBuf],
+) -> Result<Publication, Status> {
+    let validate = options.validate.as_ref().ok_or_else(|| {
+        Status::error(
+            "MISSING_VALIDATOR",
+            "Package publication requires an explicit validation gate",
+        )
+    })?;
+    let mut plan = build_export_plan_with(doc, &options.asset_root, read)?;
+    plan.source_paths.extend_from_slice(protected);
+    publish_plan_with_filesystem(&plan, &options.destination, validate.as_ref(), files, false)
+}
+
 /// Validate and publish the exact captured bytes; source files are never reopened.
 pub fn publish_export_plan(
     plan: &ExportPlan,

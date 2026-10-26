@@ -262,6 +262,7 @@ pub(super) fn read(
     let meshes = g.list(g.req(root, "drawableSourceSet")?, "_sources")?;
     let mut decoded_budget = 0u64;
     let mut images = HashMap::new();
+    let mut atlas_assets = std::collections::HashSet::new();
     let mut texture_ids: HashMap<String, String> = HashMap::new();
     let mut deferred_masks = Vec::new();
     let mut vertex_uids = HashMap::new();
@@ -361,6 +362,13 @@ pub(super) fn read(
             (0..u32::try_from(points.len()).map_err(|_| invalid("Too many vertices"))?).collect();
         let mut uids = vertices.clone();
         for extension in g.list(n, "_extensions")? {
+            if extension.has_tag_name("CTextureInputExtension") {
+                if let Some(input) = g.field(extension, "currentTextureInputData")? {
+                    if input.has_tag_name("CTextureInput_TextureAtlasRegion") {
+                        atlas_assets.insert(texture_id.clone());
+                    }
+                }
+            }
             if extension.has_tag_name("CEditableMeshExtension") {
                 let editable = g.req(extension, "editableMesh")?;
                 uids = g.array(editable, "pointUid")?;
@@ -540,7 +548,11 @@ pub(super) fn read(
             issue.object_id, issue.status.message
         )));
     }
-    Ok(ImportedModel { document, images })
+    Ok(ImportedModel {
+        document,
+        images,
+        atlas_assets,
+    })
 }
 
 pub(super) fn appearance(g: &Graph<'_>, n: Node<'_>) -> Result<Appearance> {

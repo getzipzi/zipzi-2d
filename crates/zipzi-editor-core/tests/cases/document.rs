@@ -172,7 +172,19 @@ fn sdk_imports_create_editable_documents_with_textures() -> anyhow::Result<()> {
     assert!(model.path().is_none());
     assert_no_selection(&model);
     assert_eq!(model.import_name(), Some("external_v50"));
-    assert!(!model.snapshot()?.textures.is_empty());
+    let imported_model = model.snapshot()?;
+    assert!(!imported_model.textures.is_empty());
+    let images: std::collections::HashSet<_> = imported_model
+        .viewport_frame
+        .drawables
+        .iter()
+        .map(|mesh| &mesh.texture_asset_id)
+        .collect();
+    assert_eq!(
+        images.len(),
+        imported_model.viewport_frame.drawables.len(),
+        "Editor imports must receive independent Mesh artwork, not shared atlas pages"
+    );
     assert!(!notices.is_empty()); // Missing optional model3 attachments are reported.
     let output = tempfile::tempdir()?;
     model.save(&output.path().join("model.zipzi"))?;

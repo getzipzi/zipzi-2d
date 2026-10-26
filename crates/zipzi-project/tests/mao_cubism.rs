@@ -26,6 +26,16 @@ fn local_mao_exports_linked_editable_cubism_projects() {
     assert!(document.validate_structure().is_empty());
     assert!(document.missing_attachments().is_empty());
     assert_eq!(document.mesh_order().len(), 260);
+    let images: std::collections::HashSet<_> = document
+        .mesh_order()
+        .iter()
+        .map(|id| document.get_mesh(id).unwrap().texture_asset_id.clone())
+        .collect();
+    assert_eq!(
+        images.len(),
+        260,
+        "Every imported Mesh needs independent artwork"
+    );
     assert_eq!(document.glue_order().len(), 7);
     assert_eq!(document.motion_order().len(), 7);
     assert_eq!(document.expression_order().len(), 8);

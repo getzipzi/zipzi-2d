@@ -226,6 +226,11 @@ parameter and Part identities. No Java or Cubism installation is required by
 these readers. Project/SDK adapters resolve relocated sibling files and retain
 artwork in memory; `AuthoringSession::import_cubism` accepts either entry file.
 
+The model reader reports active atlas image IDs in `ImportedModel::atlas_assets`.
+Project/SDK imports use these IDs to extract an independent image for each Mesh
+and rebase its UVs; independent original artwork stays intact. The raw CMO3 reader
+keeps source pages and coordinates. See [project import artwork](../zipzi-project/README.md#import-artwork).
+
 The local Mao Editor-authored CMO3 5.2 and CAN3 5.4 files are tested, together with
 Zipzi's 5.3 output. Coverage includes ordinary grids, meshes, warp/rotation
 hierarchies, morphs and constraints, Glue, parameter folders, effect groups,

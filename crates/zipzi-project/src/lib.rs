@@ -1,3 +1,4 @@
+mod atlas;
 pub mod cdi;
 pub mod cmo3;
 pub mod codec;
