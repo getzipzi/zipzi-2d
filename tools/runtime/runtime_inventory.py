@@ -2,13 +2,12 @@
 """Reproducible R0 source inventory; classification is not connection coverage.
 
 Scan every split SDK implementation, re-exported animation implementation,
-public Python facade method/value, and native stub type. Never import _native.
-The checked-in catalog is a review artifact. --check detects source drift.
+historical Python facade rows retained in the checked-in catalog.
+The catalog is a review artifact. --check detects shared source drift.
 """
 from __future__ import annotations
 
 import argparse
-import ast
 from collections import Counter
 import json
 from pathlib import Path
@@ -235,7 +234,6 @@ def collect(root: Path = ROOT, *, shared_only: bool = False) -> dict:
     if root != ROOT:
         raise ValueError("inventory must describe this paired checkout")
     rows = []
-    legacy = {} if shared_only else json.loads((ROOT / "crates/zipzi-python/python-coverage.json").read_text())
     sdk_paths = sorted((ROOT / "crates/zipzi-sdk/src").rglob("*.rs"))
     public_owners = {name for path in sdk_paths for name in re.findall(
         r"\bpub\s+(?:struct|enum)\s+(\w+)", mask_rust(path.read_text()))}
@@ -246,10 +244,6 @@ def collect(root: Path = ROOT, *, shared_only: bool = False) -> dict:
                 continue
             entry = dict(id=f"sdk::{owner}.{name}", location=str(path.relative_to(ROOT)), **method,
                          **rust_contract(method, path))
-            legacy_owner = {"AuthoringSession": "Session", "EditSession": "Edit"}.get(owner, owner)
-            previous = legacy.get(f"{legacy_owner}.{name}")
-            if previous:
-                entry["legacy_binding_evidence"] = previous
             rows.append(entry)
 
     # Re-exports are part of the public SDK, although their impl lives elsewhere.
@@ -270,84 +264,21 @@ def collect(root: Path = ROOT, *, shared_only: bool = False) -> dict:
                 bulk="ordered schedule and sample arrays", scheduling="captured source; bounded replay worker",
                 acceptance=["A11", "A14", "A17"], implementation="not-connected"))
 
-    if shared_only:
-        # Refresh shared Rust sources without inspecting the retired client.
-        # Historical Python rows remain historical evidence, not a new API spec.
-        previous = json.loads(OUTPUT.read_text())
-        facade = [row for row in previous["apis"] if row["id"].startswith("python::")]
-        old_rows = {row["id"]: row for row in previous["apis"]}
-        for row in rows:
-            old = old_rows.get(row["id"], {})
-            if "legacy_binding_evidence" in old:
-                row["legacy_binding_evidence"] = old["legacy_binding_evidence"]
-            row["facade_route_candidates"] = [item["id"] for item in facade
-                if row["name"] in item.get("native_calls", []) or row["name"] == item.get("name")]
-            row["facade_route_status"] = "review candidate routes" if row["facade_route_candidates"] else "new route or explicit adapter required"
-        return dict(previous, apis=sorted(rows + facade, key=lambda row: row["id"]),
-                    domain_intents=domain_intents(), value_types=value_types())
-
-    package = ROOT / "crates/zipzi-python/python/zipzi"
-    native_imports = []
-    for path in sorted(package.glob("*.py")):
-        tree = ast.parse(path.read_text())
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module and "_native" in node.module:
-                native_imports.append(dict(location=str(path.relative_to(ROOT)), line=node.lineno,
-                    names=[n.name for n in node.names]))
-        for node in tree.body:
-            if isinstance(node, ast.ClassDef):
-                if node.name.startswith("_") or node.name == "SpatialSource":
-                    continue
-                members = [member for member in node.body if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
-                           and (not member.name.startswith("_") or member.name in {"__init__", "__enter__", "__exit__"})]
-                fields = [ast.unparse(member) for member in node.body if isinstance(member, ast.AnnAssign)]
-                if fields:
-                    rows.append(dict(id=f"python::{node.name}", location=str(path.relative_to(ROOT)), line=node.lineno,
-                        signature="; ".join(fields), domain="values-identity", classification="local-value",
-                        stage="R3", source_ref="returned value", effect="local record", lifecycle="Python value",
-                        bulk="record/array", scheduling="local", acceptance=["A12"], implementation="not-connected"))
-                for member in members:
-                    rows.append(python_row(path, member, node.name))
-            elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
-                rows.append(python_row(path, node, "free"))
-    # Include the whole native type boundary, not only names imported by __init__.
-    stub = ast.parse((package / "_native.pyi").read_text())
-    native_types = [{"name": node.name, "line": node.lineno,
-        "members": [m.name for m in node.body if isinstance(m, ast.FunctionDef)]}
-        for node in stub.body if isinstance(node, ast.ClassDef)]
-    init = ast.parse((package / "__init__.py").read_text())
-    public_exports = next(ast.literal_eval(node.value) for node in init.body if isinstance(node, ast.Assign)
-                          and any(isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets))
-    for node in stub.body:
-        if isinstance(node, ast.FunctionDef) and node.name in public_exports:
-            rows.append(python_row(package / "_native.pyi", node, "free"))
-        elif isinstance(node, ast.ClassDef) and node.name in {"ObjectHandle", "SdkFailure", "ObservationFailure"}:
-            fields = [ast.unparse(member) for member in node.body if isinstance(member, ast.AnnAssign)]
-            if fields:
-                rows.append(dict(id=f"python::{node.name}", location=str((package / "_native.pyi").relative_to(ROOT)),
-                    line=node.lineno, signature="; ".join(fields), domain="values-identity", classification="local-value",
-                    stage="R3", source_ref="structured error value", effect="no history", lifecycle="Python value",
-                    bulk="structured diagnostic", scheduling="local", acceptance=["A12"], implementation="not-connected"))
-            for member in node.body:
-                if isinstance(member, ast.FunctionDef) and not member.name.startswith("_"):
-                    rows.append(python_row(package / "_native.pyi", member, node.name))
-    facade = [row for row in rows if row["id"].startswith("python::")]
+    # Refresh shared Rust sources without inspecting the retired client.
+    # Historical Python rows remain historical evidence, not a new API spec.
+    previous = json.loads(OUTPUT.read_text())
+    facade = [row for row in previous["apis"] if row["id"].startswith("python::")]
+    old_rows = {row["id"]: row for row in previous["apis"]}
     for row in rows:
-        if row["id"].startswith("sdk::"):
-            # Same-name matches are leads for implementation review, not proof of
-            # an equivalent public binding. Preserve the old evidence separately.
-            row["facade_route_candidates"] = [item["id"] for item in facade
-                if row["name"] in item.get("native_calls", [])
-                or row["name"] == item.get("name")]
-            row["facade_route_status"] = "review candidate routes" if row["facade_route_candidates"] else "new route or explicit adapter required"
-    identities = [row["id"] for row in rows]
-    duplicates = [key for key, count in Counter(identities).items() if count > 1]
-    if duplicates:
-        raise ValueError(f"duplicate API identities: {duplicates}")
-    return dict(schema=1, note="R0 classification and target contracts, NOT implemented connection coverage",
-                apis=sorted(rows, key=lambda row: row["id"]), native_imports=native_imports,
-                native_types=native_types, python_public_exports=public_exports,
+        old = old_rows.get(row["id"], {})
+        if "legacy_binding_evidence" in old:
+            row["legacy_binding_evidence"] = old["legacy_binding_evidence"]
+        row["facade_route_candidates"] = [item["id"] for item in facade
+            if row["name"] in item.get("native_calls", []) or row["name"] == item.get("name")]
+        row["facade_route_status"] = "review candidate routes" if row["facade_route_candidates"] else "new route or explicit adapter required"
+    return dict(previous, apis=sorted(rows + facade, key=lambda row: row["id"]),
                 domain_intents=domain_intents(), value_types=value_types())
+
 
 
 def value_types() -> list[dict]:
@@ -397,55 +328,6 @@ def domain_intents() -> list[dict]:
                     contract="same SDK intent, atomic history on commit; Plan/source/version checks; no private Command protocol",
                     implementation="not-connected"))
     return sorted(result, key=lambda row: row["name"])
-
-
-def python_row(path: Path, node: ast.FunctionDef, owner: str) -> dict:
-    name = node.name
-    native_calls = sorted({call.func.attr for call in ast.walk(node) if isinstance(call, ast.Call)
-                          and isinstance(call.func, ast.Attribute)
-                          and "_native" in ast.unparse(call.func.value)})
-    domain, stage, acceptance = DOMAINS["session"]
-    classification, effect, source_ref = "connected", "read-only or explicit backend operation", "session"
-    if owner == "Edit":
-        source_ref, effect = "edit + candidate sequence", "candidate; commit once iff changed"
-        stage = "R4"
-    elif owner in {"MotionPreview", "PhysicsPreview", "ExpressionPreview", "Observer", "CapturedScene", "RenderedSceneView", "FocusedSceneView"}:
-        domain, stage, acceptance = DOMAINS["spatial"]
-        source_ref, effect = "independent Preview / captured source", "no formal history"
-    elif name == "capabilities":
-        source_ref, acceptance = "host/backend metadata (no Session required)", ["A06", "A12"]
-        effect = "query attached host/backend capabilities; native build flags are not connected host flags"
-    elif path.stem == "_mesh_edit" or name == "open_project":
-        domain, stage, acceptance = DOMAINS["geometry"] if path.stem == "_mesh_edit" else DOMAINS["session"]
-        effect = "formal publication" if path.stem == "_mesh_edit" else "open/bind session through registry"
-    elif owner == "ObjectHandle":
-        classification, effect, source_ref = "local-value", "read token metadata", "returned handle"
-    elif owner != "Session" or path.stem == "geometry":
-        classification, effect, source_ref = "local-helper", "local value/file operation", "captured value / explicit arguments"
-        stage = "R7"
-    if owner == "Session" and any(part in name for part in ("motion", "expression", "physics", "pose")):
-        domain, stage, acceptance = DOMAINS["motion_authoring"]
-    elif owner == "Session" and any(part in name for part in ("binding", "mesh", "blend", "geometry")):
-        domain, stage, acceptance = DOMAINS["geometry"]
-    elif owner == "Session" and any(part in name for part in ("asset", "resource", "save", "export", "import", "attachment")):
-        domain, stage, acceptance = DOMAINS["project_io"]
-    elif owner == "Session" and name not in {"__init__", "edit", "version", "history_state", "undo", "redo", "modified", "drain_events"}:
-        stage = "R4"
-    if name in {"modeling_query", "sample_modeling", "plan_modeling", "apply_modeling", "apply_modeling_plan", "apply_modeling_blob", "create_rgba_image", "replace_rgba_image", "create_rgba_image_from_blob"} or owner in {"ModelingPlan", "Blob"}:
-        domain, stage, acceptance = DOMAINS["modeling"]
-        classification = "local-value" if owner == "ModelingPlan" and name == "report" else "connected"
-        source_ref = "client-owned Plan/blob or explicit formal/candidate source"
-        effect = "candidate write, read-only source operation, or explicit token release; no independent history"
-    return dict(id=f"python::{owner}.{name}" if owner != "free" else f"python::{path.stem}.{name}",
-        location=str(path.relative_to(ROOT)), line=node.lineno, owner=owner, name=name,
-        signature=f"def {name}({ast.unparse(node.args)})" + (f" -> {ast.unparse(node.returns)}" if node.returns else ""),
-        description=(ast.get_docstring(node) or "").split("\n")[0],
-        native_calls=native_calls, domain=domain, classification=classification, stage=stage,
-        source_ref=source_ref, effect=effect,
-        lifecycle="backend refs become client/session-owned tokens; records stay values",
-        bulk="preserve Sequence/Mapping input and collection results",
-        scheduling="backend decides from SDK source/operation; Python conversion stays local",
-        acceptance=acceptance, implementation="not-connected")
 
 
 def main() -> int:

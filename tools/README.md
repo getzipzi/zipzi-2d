@@ -19,14 +19,13 @@ this guide are relative to `tools/` unless a command starts with `tools/`.
 | Directory | Responsibility |
 | --- | --- |
 | `workspace/` | Cargo package domains, shared shell paths, artifact discovery and provenance |
-| `python/` | Python extension and installed-wheel test runner, called by `test-sdk.sh` |
+| `python/` | Python2 contract, comparison and agent test helpers |
 | `packaging/` | Workspace source archives and source/wheel/app verification |
 | `benchmarks/` | Native Editor benchmarks, offscreen measurement and trace reports |
 | `validation/` | SDK acceptance, image comparisons, model/runtime probes and Purism checks |
 | `validation/probes/`, `validation/cmo3/` | C++ probe builds and Cubism Java inspection helper |
 | `fixtures/` | Shared model/animation fixture generators; generated inputs live in root `fixtures/` |
 | `runtime/` | Runtime inventories, ownership guards, CPU/native paired benchmarks |
-| `experiments/` | Agent experiment CLI and packet/worker support in `sdk_experiment/` |
 | `tests/` | Regression tests for all tooling groups |
 
 Add specialized scripts to their owning directory and update this guide and
@@ -40,9 +39,8 @@ arguments and output paths.
 | Entry | Purpose |
 | --- | --- |
 | `test_tools.py` | Repository tooling tests; accepts unittest discovery flags (`-p`, `-k`, `-v`) |
-| `test-sdk.sh` | SDK fast, mesh, regression, stress, Python, wheel and full gates |
+| `test-sdk.sh` | SDK fast, mesh, regression, stress, Python2 and full gates |
 | `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
-| `python/test_python.py` | Deprecated `zipzi-python` adapter: historical Debug extension / Release wheel runner |
 | `python/python2_contract.py` | P3A inventory, source/artifact freeze, complete target map/signatures, agent configuration and P3A-0 exit gate |
 | `python/python2_pairs.py` | Counterbalanced comparisons of frozen Python2 clients/Release binaries with the unchanged P0 workload and thresholds |
 | `python/python2_p0_migration.py` | Freeze an explicit shared P3A API adapter for both generations; guard original inputs, operations, assertions, measurement core and policy |
@@ -61,7 +59,7 @@ from another directory. The Python tooling runner also resolves its own checkout
 ## Test coverage
 
 Run commands from the repository root. `tools/workspace/package-domains.json` assigns every
-owned workspace package to exactly one domain: 17 SDK packages (including Python
+owned workspace package to exactly one domain: 17 SDK packages (including Python2
 and the Rust comparison runner) and 3 Editor packages. New workspace members must
 be explicitly assigned; missing, stale, duplicate or overlapping names fail the
 metadata coverage gate. Vendor packages are not workspace members.
@@ -83,25 +81,22 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | --- | --- |
 | SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
 | SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic, events, protocol/framing and retention contracts; optional filter |
-| `python tools/python/test_connected.py` | Deprecated legacy Connected tests; the old client protocol is incompatible with the current Runtime. Use `python2-connected` for maintained acceptance |
 | SDK `mesh` / `regression` | Daily alpha mesh / all 17 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
-| SDK `python` / `wheel` | Deprecated `zipzi-python` historical Debug extension / Release wheel gates; use `python2` / `python2-connected` for maintained Python SDK checks |
 | SDK `python2` | New Runtime-backed package: refreshed native adapter, Local/Connected behavior, strict positive/negative types and generation drift |
 | SDK `python2-connected` | New pure wheel in an isolated environment; real cold-start/ownership/recovery; optional `--editor-host /absolute/path/to/zipzi-editor` adds production desktop acceptance |
-| SDK `full` or no argument | SDK formatting, complete 16-package Cargo test invocation (examples/doctests included), then CPU wheel gate |
+| SDK `full` or no argument | SDK formatting and complete 17-package Cargo test invocation (examples/doctests included) |
 | Editor `fast` | zipzi-editor-core library and synthetic integration |
 | Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
 | Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance、runtime_ipc_acceptance（自动安装隔离 Python 客户端） |
 | Editor `tools` | All repository tooling tests (automatic discovery) |
 | Editor `full` or no argument | Editor formatting, tooling and complete three-package Cargo test invocation with test-support (examples/doctests included) |
 
-The SDK full gate's extra arguments retain their original wheel-gate meaning;
-Editor full extra arguments go to Cargo tests. Editor `fast` and `regression` omit
+SDK and Editor full extra arguments go to Cargo tests. Editor `fast` and `regression` omit
 example compilation and doctests; `full` includes both. Focused Cargo arguments and arguments
 after `--` retain their normal meaning. Editor Rust gates unset
 `ZIPZI_DEV_SESSION_DIR` to isolate tests from live development sessions.
-Formatting, Rust, tooling and wheel failures stop the relevant full gate and
+Formatting, Rust and tooling failures stop the relevant full gate and
 propagate their exit status. Complete suites remain expensive: use focused modes
 during iteration and reserve full runs for broad regression acceptance.
 
@@ -141,9 +136,8 @@ isolated Local/Connected installation. It uploads the packages and acceptance
 report as three-day artifacts. No workflow uploads to PyPI or crates.io.
 
 SDK CI retains Linux/macOS/Windows, all-target clippy, decoder safety without
-native Core, complete SDK tests, wheel building, isolated integration, Python
-typing, validator negative controls, non-Windows experiment controls and the
-macOS WGPU blend reference. Cargo commands select only SDK packages.
+native Core, complete SDK tests and the macOS WGPU blend reference. Maintained Python
+package build and installed integration run in Prepare Python Packages. Cargo commands select only SDK packages.
 
 Editor CI runs on macOS: package coverage, formatting, tooling, every-target
 compilation with test-support, and core synthetic tests. A Swift Metal-device
@@ -162,12 +156,12 @@ unavailable GPU coverage.
 
 Tooling implementations live in `tools/`; their regression tests live in
 `tools/tests/test_*.py`. Both Editor `tools` and Editor `full` call the shared discovery
-runner, including SDK validator and Python-runner controls. New test modules do
+runner, including Python2 tooling controls. New test modules do
 not require editing a shell-script module list.
 
 ```sh
 uv run --locked python tools/test_tools.py
-uv run --locked python tools/test_tools.py -p test_python_runner.py -v
+uv run --locked python tools/test_tools.py -p test_python2_tools.py -v
 uv run --locked python tools/test_tools.py -k failure
 ```
 
@@ -183,14 +177,6 @@ distribution without `zipzi_native`; the acceptance test checks this explicitly.
 See [test layout and prerequisites](tests/README.md). These tests exercise
 tooling, not the built SDK extension. Maintained Python SDK checks use
 `test-sdk.sh python2` or `test-sdk.sh python2-connected`.
-The deprecated adapter's historical `test-sdk.sh python` runner
-rebuilds its Debug extension, checks GPU capabilities and
-starts fresh test processes. CPU and observe runs share one locked editable
-environment in `target/python-tests/`; wheel runs use separate environments and
-isolated installed packages. `python -- -k history` filters development tests;
-choose filters matching both CPU and inspection modules (repeat `-k` to match
-alternatives). Python 3.14 returns a failure when a selected module has no matching tests;
-wheel acceptance deliberately rejects filters.
 
 Daily SDK `mesh` and `regression` skip only `alpha_mesh_stress::`; the 65536-vertex
 boundary remains in daily checks. `stress`, plain `cargo test -p zipzi-sdk` and
@@ -200,27 +186,17 @@ SDK `full` retain the complete fixed-seed matrix. Tests are not globally ignored
 
 | Tools | Purpose |
 | --- | --- |
-| `validation/validate_sdk.py` | Isolated installed-wheel CPU/GPU, authoring, import/edit/export and image-reference acceptance |
 | `validation/validate_official_core.py`, `validation/probes/` | Official/Purism Core numerical comparison for MOC3 exports |
 | `validation/compare_sdk_image.py`, `validation/compare_wgpu_blends.py` | Image differences and pinned WGPU blend-reference checks |
 | `fixtures/create_*`, `fixtures/make_project_stress_fixture.py` | Reproducible shared fixture generation |
 | `validation/check_cmo3.py`, `validation/cmo3/` | Cubism document inspection |
-| `validation/run_*_probe.py`, `validation/run_*_integration.py`, `validation/run_observe_visual_baseline.py` | Explicit format/runtime/visual acceptance experiments |
+| `validation/run_*_probe.py`, `validation/run_*_integration.py` | Explicit format/runtime/visual acceptance experiments |
 | `validation/run_purism_fuzz.sh`, `validation/check_purism_bundle.sh` | Purism fuzzing and single-header smoke checks |
 | `packaging/package_source.py`, `packaging/verify_artifacts.py` | Source packaging, notice and built-artifact checks |
 
-```sh
-uv build --wheel --python 3.14 --out-dir target/python-wheels crates/zipzi-python
-uv run --locked python tools/validation/validate_sdk.py --wheel /absolute/path/to/zipzi.whl
-```
-
-An observe-enabled wheel can use `--require-gpu --require-image-reference`.
-`--full` additionally requires `--official-probe` and `--purism-probe` paths and
-successful GPU, dual-Core and reference checks. CPU wheel validation reports GPU
-items as `not_run` and overall status as `partial`. Reference captures in
-`fixtures/render_reference/` preserve model/texture hashes and view settings;
-updates need new provenance and comparison evidence. See
-[distribution](#local-distribution-artifacts) for packaging commands.
+Reference captures in `fixtures/render_reference/` preserve model/texture hashes
+and view settings; updates need new provenance and comparison evidence.
+See [distribution](#local-distribution-artifacts) for packaging commands.
 
 ## Benchmarks and research tools
 
@@ -311,10 +287,6 @@ behavior/type tests; add `--instrumented` with a different output for probes.
 `runtime/editor_benchmark_pairs.py` runs five alternating prebuilt Release pairs,
 and `runtime/editor_benchmark_report.py` applies the frozen per-operation gates.
 See [the benchmark guide](benchmarks/README.md#runtime-editor-pairs).
-`experiments/sdk_experiments.py` and `experiments/sdk_experiment/` implement the
-[SDK experiment protocol](../docs/archive/SDK-EXPERIMENTS.md).
-These research tools are separate from routine package tests; model-dependent
-runs require the documented local inputs. Generated output belongs in `target/`.
 
 ## Local distribution artifacts
 
@@ -327,8 +299,6 @@ This does not change Cargo package identities, APIs or licenses.
 ```sh
 uv run --locked python tools/packaging/package_source.py target/releases/zipzi-2d-source.tar.gz
 uv run --locked python tools/packaging/verify_artifacts.py --source target/releases/zipzi-2d-source.tar.gz
-uv build --wheel --python 3.14 --out-dir target/python-wheels crates/zipzi-python
-uv run --locked python tools/packaging/verify_artifacts.py --wheel /absolute/path/to/zipzi.whl
 ./tools/build-editor-app.sh editor debug
 ./tools/build-editor-app.sh editor release
 uv run --locked python tools/packaging/verify_artifacts.py --app 'target/Zipzi Editor.app'
@@ -342,18 +312,8 @@ target, Python caches and machine Cargo config are excluded.
 It retains all 20 crate paths, Editor crate assets, patches, docs and both license texts.
 Extract the `zipzi-2d/` directory and build from that workspace root.
 
-The wheel carries MIT and third-party notices under `.dist-info/licenses`, the
-native extension, `py.typed` and `_native.pyi`. Distribution copies of the two
-notice files live in `crates/zipzi-python/`; `packaging/verify_artifacts.py` compares them
-byte-for-byte to the canonical root files before CI builds a wheel. Update both
-copies when the canonical text changes. An isolated installed-wheel gate is:
-
-```sh
-uv run --locked python tools/validation/validate_sdk.py --wheel /absolute/path/to/zipzi.whl
-```
-
-The CPU wheel report is `partial` when CPU checks pass but GPU/dual-Core checks
-were not requested. Read the individual checks; do not relabel it a full pass.
+Python package artifacts are built and verified by the maintained
+[zipzi-python2 workflow](../crates/zipzi-python2/README.md).
 
 Both app profiles place the binary reported by Cargo in `Contents/MacOS`, the
 application icon and MIT/GPL/licensing/notices in `Contents/Resources`, and retain

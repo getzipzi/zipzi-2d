@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify local workspace source, wheel and macOS app distribution contents."""
+"""Verify local workspace source and macOS app distribution contents."""
 import argparse
 import hashlib
 import json
@@ -7,7 +7,6 @@ from pathlib import Path
 import plistlib
 import tarfile
 import tomllib
-import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 EDITOR_ASSETS = ROOT/'crates/zipzi-editor/assets'
@@ -15,24 +14,7 @@ EDITOR_ASSETS = ROOT/'crates/zipzi-editor/assets'
 
 def check_notices():
     for name in ['LICENSE-MIT', 'THIRD_PARTY_NOTICES.md']:
-        assert (ROOT/'crates/zipzi-python'/name).read_bytes() == (ROOT/name).read_bytes(), f'Stale Python distribution notice: {name}'
-
-
-def check_wheel(path):
-    with zipfile.ZipFile(path) as wheel:
-        names = wheel.namelist()
-        assert len(names) == len(set(names))
-        for name in ['LICENSE-MIT', 'THIRD_PARTY_NOTICES.md']:
-            matches = [n for n in names if n.endswith('.dist-info/licenses/'+name)]
-            assert len(matches) == 1 and wheel.read(matches[0]) == (ROOT/name).read_bytes(), name
-        metadata = next(n for n in names if n.endswith('.dist-info/METADATA'))
-        assert b'Name: zipzi' in wheel.read(metadata).splitlines()
-        assert b'License-Expression: MIT' in wheel.read(metadata)
-        assert 'zipzi/py.typed' in names and 'zipzi/_native.pyi' in names
-        native = [n for n in names if n.startswith('zipzi/_native') and n.endswith(('.so', '.pyd'))]
-        assert len(native) == 1, native
-        assert not any(n.startswith(('models/', 'assets/', 'crates/zipzi-editor/', 'vendor/')) for n in names)
-    print(f'PASS wheel: {path.name}; MIT/notices, typing and native extension')
+        assert (ROOT/name).is_file(), f'Missing distribution notice: {name}'
 
 
 def check_app(path):
@@ -92,12 +74,11 @@ def check_source(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--wheel', type=Path)
     parser.add_argument('--app', type=Path)
     parser.add_argument('--source', type=Path)
     args = parser.parse_args()
     check_notices()
-    for path, check in [(args.wheel, check_wheel), (args.app, check_app), (args.source, check_source)]:
+    for path, check in [(args.app, check_app), (args.source, check_source)]:
         if path:check(path)
 
 
