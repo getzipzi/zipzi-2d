@@ -124,12 +124,19 @@ impl Cursor {
 /// Runtime implementation capabilities, independent of the cached connection handshake.
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape)]
 pub struct RuntimeCapabilities {
+    /// Finite domain names supported by this host; absence means the domain is unavailable.
     pub domains: Vec<String>,
+    /// Whether this host supports source-bound bounded collection pagination.
     pub pagination: bool,
+    /// Whether selected reads accept an exact expected Source.
     pub source_checked_reads: bool,
+    /// Whether this host supports explicit Session detach/close.
     pub session_close: bool,
+    /// Whether this host supports the paired binary array transport.
     pub binary_arrays: bool,
+    /// Whether Session window display is supported by this host.
     pub editor_windows: bool,
+    /// Whether GPU operations are available from this host; CPU sampling is independent.
     pub gpu: bool,
 }
 

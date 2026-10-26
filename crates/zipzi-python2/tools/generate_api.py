@@ -116,12 +116,42 @@ PUBLIC_EXPORTS = {'meshes': ('Mesh values are generated; selected Plan intents a
 
 TARGETS=frozenset('client/python/zipzi/'+n+'.py' for n in PUBLIC_EXPORTS) | frozenset({'client/python/zipzi/_generated/facades.py','client/python/zipzi/_generated/discovery.py','src/generated/discovery.rs','client/python/zipzi/_generated/request_directory.py','client/python/zipzi/_generated/backend_bindings.py'})
 DOMAINS=(('Meshes','meshes','Mesh','items'),('Parameters','parameters','Parameter','parameters'),('Bindings','bindings','MeshBinding','bindings'),('Images','resources','Image','items'),('Scene','scene','Summary','items'))
-WRITES={
- 'Meshes': [('create','spec: meshes.MeshSpec','str','meshes.Create(spec)','(spec,)'),('rename','id: str, name: str, *, expected_name: str | None = None','WriteResult','meshes.Rename(id,name,expected_name=expected_name)','(id,name,expected_name)'),('set_positions','id: str, *, vertex_ids: Sequence[int], positions: Sequence[meshes.Point]','WriteResult','meshes.SetPositions(id,vertex_ids,positions)','(id,vertex_ids,positions)')],
- 'Parameters':[('create','spec: parameters.ParameterSpec','str','parameters.Create(spec)','(spec,)'),('patch','id: str, patch: parameters.ParameterPatch','WriteResult','parameters.Patch(id,patch)','(id,patch)')],
- 'Bindings':[('create','spec: bindings.MeshBindingSpec','str','bindings.Create(spec)','(spec,)'),('set_keyform','id: str, keyform: bindings.Keyform','WriteResult','bindings.SetKeyform(id,keyform)','(id,keyform)')],
- 'Images':[('create_image','name: str, image: resources.PreparedImage, *, id: str | None = None','str','resources.CreateImage(name,image,id)','(name,image,id)'),('replace_image','id: str, image: resources.PreparedImage','WriteResult','resources.ReplaceImage(id,image)','(id,image)'),('rename_image','id: str, name: str, *, expected_name: str | None = None','WriteResult','resources.RenameImage(id,name,expected_name=expected_name)','(id,name,expected_name)')],
-}
+WRITES = {'Meshes': [('create',
+             'spec: meshes.MeshSpec',
+             'str',
+             'meshes.Create(spec)',
+             '(spec,)'),
+            ('rename',
+             'id: str, name: str, *, expected_name: str | None = None',
+             'WriteResult',
+             'meshes.Rename(id,name,expected_name=expected_name)',
+             '(id,name,expected_name)'),
+            ('set_positions',
+             'id: str, *, vertex_ids: Sequence[int], positions: '
+             'Sequence[meshes.Point]',
+             'WriteResult',
+             'meshes.SetPositions(id,vertex_ids,positions)',
+             '(id,vertex_ids,positions)')],
+ 'Parameters': [('create',
+                 'spec: parameters.ParameterSpec',
+                 'str',
+                 'parameters.Create(spec)',
+                 '(spec,)'),
+                ('patch',
+                 'id: str, patch: parameters.ParameterPatch',
+                 'WriteResult',
+                 'parameters.Patch(id,patch)',
+                 '(id,patch)')],
+ 'Bindings': [('create',
+               'spec: bindings.MeshBindingSpec',
+               'str',
+               'bindings.Create(spec)',
+               '(spec,)'),
+              ('set_keyform',
+               'id: str, keyform: bindings.Keyform',
+               'WriteResult',
+               'bindings.SetKeyform(id,keyform)',
+               '(id,keyform)')]}
 # Special methods retain exactly one lifecycle implementation; this registration
 # is also used by recover_call and the installed API catalog.
 LIFECYCLE_REQUESTS={
@@ -134,6 +164,42 @@ OWNED_REQUESTS={'resources.Resources':'prepare_image prepare_buffer load_png pre
 
 def render_api(contract,header,rust_header):
     runtime=contract['runtime']
+    writes={key:list(value) for key,value in WRITES.items()}
+    # Public resource constructors flatten the selected SDK spec and replace
+    # only the runtime ImageId leaf with its ownership wrapper.
+    roots=contract['resources']['roots']
+    union=next(shape for shape in roots if shape.get('name','').endswith('::ResourceOperation'))
+    writes['Images']=[]
+    for variant in union['variants']:
+        if variant['rust_name']=='ApplyPlan':continue
+        policy={'CreateImage':('create_image','str'),'ReplaceImage':('replace_image','WriteResult'),'RenameImage':('rename_image','WriteResult')}
+        if variant['rust_name'] not in policy:raise ValueError('Unregistered public resource operation')
+        projected=[]
+        for field in variant['fields']:
+            if field['name']=='spec':projected.extend(field['shape']['fields'])
+            else:projected.append(field)
+        def default(field):
+            if field['shape']['kind']=='optional':return 'None'
+            value=field.get('default')
+            if value is None:return None
+            if value=={'kind':'empty_string'}:return '""'
+            raise ValueError('Unsupported resource convenience default')
+        def annotation(shape):
+            if shape['kind']=='string':return 'str'
+            if shape['kind']=='optional':return annotation(shape['item'])+' | None'
+            if shape['kind']=='opaque' and shape['name'].endswith('::ImageId'):return 'resources.PreparedImage'
+            raise ValueError('Unsupported resource convenience field')
+        projected=sorted(projected,key=lambda field:default(field) is not None)
+        args=[];keyword=False
+        for field in projected:
+            value=default(field)
+            if value is not None and not keyword:args.append('*');keyword=True
+            args.append(field['name']+': '+annotation(field['shape'])+(' = '+value if value is not None else ''))
+        names=[field['name'] for field in projected]
+        expr='resources.'+variant['rust_name']+'('+','.join(name+'='+name for name in names)+')'
+        name,result=policy[variant['rust_name']]
+        writes['Images'].append((name,', '.join(args),result,expr,'('+','.join(names)+',)'))
+
     import runpy
     BINDINGS=runpy.run_path(str(Path(__file__).with_name('backend_bindings.py')))['BINDINGS']
     py=[header.rstrip(),'"""Owned Runtime metadata generated from compiled Rust declarations."""','from dataclasses import dataclass','from .._values import record, sequence, integer, string','']
@@ -175,9 +241,9 @@ def render_api(contract,header,rust_header):
          '        """Read bounded metadata in SDK storage order. Names match exactly and preserve duplicates. Source changes raise STALE_SOURCE; restart explicitly."""',
          '        return self._page(name,limit,cursor,'+summary+'.read)','']
         if cls=='Images':facade+=['    def snapshot(self, id: str) -> resources.ImageLease:','        """Pin immutable pixels with an explicit lease; close the lease when finished."""','        return self._image_lease(id)','']
-        if cls not in WRITES:continue
+        if cls not in writes:continue
         facade+=['class Editable'+cls+'('+cls+'):']
-        for name,args,result,expr,inputs in WRITES[cls]:
+        for name,args,result,expr,inputs in writes[cls]:
             facade+=['    def '+name+'(self, '+args+') -> '+result+':','        """Apply a typed '+domain+' operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit."""']
             if result=='str':facade+=['        return project(lambda: self._write(lambda: '+expr+'),single_id,operation='+repr(domain+'.'+name)+',inputs='+inputs+')']
             else:facade+=['        return self._write(lambda: '+expr+')']
@@ -192,9 +258,9 @@ def render_api(contract,header,rust_header):
     registrations={**{'lifecycle.'+k:v for k,v in LIFECYCLE_REQUESTS.items()},**OWNED_REQUESTS}
     for cls,domain,_,_ in DOMAINS:
         registrations['lifecycle.'+cls]='get get_many list'+(' snapshot' if cls=='Images' else '')
-        if cls in WRITES:registrations['lifecycle.Editable'+cls]=' '.join(m[0] for m in WRITES[cls])
+        if cls in writes:registrations['lifecycle.Editable'+cls]=' '.join(m[0] for m in writes[cls])
     for cls,methods in registrations.items():
-        for method in methods.split():directory+=['    register_request('+cls+'.'+method+')']
+        for method in methods.split():directory+=['    register_request('+cls+('[object]' if cls=='lifecycle.Job' else '')+'.'+method+')']
     hooks={}
     for cls,methods in BINDINGS.items():
         names=[name for name,_,_ in methods]
@@ -207,11 +273,11 @@ def render_api(contract,header,rust_header):
             if hook:
                 if hook not in actual:raise ValueError('Missing unique transport hook '+hook)
                 hooks[cls+'.'+name]={'hook':hook,'reason':'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call','contracts':['C01','C07','C08']}
-    backend=[header.rstrip(), 'from __future__ import annotations','from abc import ABC, abstractmethod','from collections.abc import Mapping','from pathlib import Path','from typing import TYPE_CHECKING, Literal','from .. import _operations as ops, sampling','from . import modeling, scene','from .plan_intents import Intent, wire as intent_wire','from .planning import ModelingPlanOperation, encode_modeling','from .._errors import unwrap','from .._values import Source, SessionId, record','from ..events import Cursor','from ..backends._transfers import Transfer, TransferBackend','from ..backends import JobKind','if TYPE_CHECKING:','    from ..backends._native_types import NativeRuntime','']
+    backend=[header.rstrip(), 'from __future__ import annotations','from abc import ABC, abstractmethod','from pathlib import Path','from typing import TYPE_CHECKING, Literal','from .. import _operations as ops, sampling','from . import modeling, scene','from .plan_intents import Intent, wire as intent_wire','from .planning import ModelingPlanOperation, encode_modeling','from .._errors import unwrap','from .._values import Source, SessionId, record','from ..events import Cursor','from ..backends._transfers import Transfer, TransferBackend','from ..backends import JobKind','if TYPE_CHECKING:','    from ..backends._native_types import NativeRuntime','']
     for cls,methods in BINDINGS.items():
         backend+=['class '+cls+'Bindings('+('TransferBackend, ' if cls=='Connected' else '')+'ABC):']
         if cls=='Local':backend+=['    _native: NativeRuntime']
-        else:backend+=['    @abstractmethod','    def _request(self,value:dict[str,object],owner:object,operation:str)->object: ...','    @abstractmethod','    def _drive_transfer(self,flow:Transfer)->object: ...']
+        else:backend+=['    @abstractmethod','    def _request(self,value:dict[str,object],owner:object,operation:str)->object: ...','    @abstractmethod','    def _drive_transfer(self,transfer:Transfer)->object: ...']
         for name,source,hook in methods:
             if hook:
                 signature=source.split('\n',1)[0].replace('def '+name+'(','def '+hook+'(')

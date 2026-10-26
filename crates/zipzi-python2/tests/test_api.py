@@ -634,7 +634,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(image.pixels().rgba, data)
                 image.close()
                 self.assertEqual(runtime.resources.usage().prepared_images, 0)
-        for operation in ("image_snapshot", "read_blob_binary", "release_blob"):
+        for operation in ("read_selection", "read_blob_binary", "release_blob"):
             with self.subTest(read=operation):
                 runtime = self.runtime("connected", drop=operation, drop_after=1 if operation == "release_blob" else 0)
                 session = runtime.sessions.create(uid(1))
@@ -1149,7 +1149,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.info().history, (1, 0))
 
     def test_binding_apply_and_read_response_losses_keep_original_owners(self):
-        for dropped in ("apply_authoring", "mesh_binding_snapshot", "sample_modeling"):
+        for dropped in ("apply_authoring", "read_selection", "sample_modeling"):
             with self.subTest(dropped=dropped), self.runtime("connected", drop=dropped) as runtime:
                 session = runtime.sessions.create(uid(1))
                 with session.edit("recover binding") as edit:
@@ -1161,7 +1161,7 @@ class PythonSdk(unittest.TestCase):
                         self.assertEqual(result.source.sequence, 1)
                     else:
                         self.create_bound_mesh(edit)
-                    if dropped == "mesh_binding_snapshot":
+                    if dropped == "read_selection":
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                             edit.bindings.get(uid(4))
                         binding = lost.exception.recover()
@@ -1672,7 +1672,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.info().history, (0, 0))
 
     def test_resource_and_plan_response_losses_keep_exact_recovery_owner(self):
-        for lost in ("prepare_image", "prepared_pixels", "image_snapshot", "plan_authoring", "release_prepared_image", "release_modeling_plan", "statistics"):
+        for lost in ("prepare_image", "prepared_pixels", "read_selection", "plan_authoring", "release_prepared_image", "release_modeling_plan", "statistics"):
             with self.subTest(lost=lost):
                 runtime = self.runtime("connected", drop=lost)
                 session = runtime.sessions.create(uid(1))
@@ -1694,7 +1694,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(resolved.exception.code, "NO_PENDING_REQUEST")
                 edit = session.edit("recover handles")
                 asset = edit.resources.create_image("Draft", image)
-                if lost == "image_snapshot":
+                if lost == "read_selection":
                     with self.assertRaises(zipzi.OutcomeUnknown) as error:
                         edit.resources.get(asset)
                     self.assertEqual(error.exception.recover().value.pixels.rgba, b"rgba")
@@ -2272,7 +2272,7 @@ class PythonSdk(unittest.TestCase):
         self.assertEqual(error.exception.code, "HOST_CLOSED")
 
     def test_connected_lifecycle_and_read_response_loss_keep_a_recovery_owner(self):
-        for lost in ("create_session", "begin_edit", "mesh_snapshot", "session_info", "save", "undo", "redo"):
+        for lost in ("create_session", "begin_edit", "read_selection", "session_info", "save", "undo", "redo"):
             with self.subTest(lost=lost):
                 runtime = self.runtime("connected", drop=lost)
                 if lost == "create_session":
@@ -2290,7 +2290,7 @@ class PythonSdk(unittest.TestCase):
                     edit = session.edit("begin")
                 with edit:
                     face = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY))
-                    if lost == "mesh_snapshot":
+                    if lost == "read_selection":
                         with self.assertRaises(zipzi.OutcomeUnknown) as error:
                             edit.meshes.get(face)
                         snapshot = error.exception.recover()

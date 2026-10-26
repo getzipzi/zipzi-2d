@@ -5,7 +5,8 @@ from typing import cast
 from uuid import UUID
 import math
 import struct
-from .. import _operations as ops, scene, meshes, resources, modeling as m
+from .. import _operations as ops, meshes, resources
+from . import modeling as m, scene
 from .._values import Source,Version
 from .._results import Snapshot
 from .._values import record, sequence, string, integer, number

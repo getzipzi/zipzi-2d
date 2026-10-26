@@ -10,7 +10,7 @@ def _boolean(value: object) -> bool:
 
 @dataclass(frozen=True, repr=False)
 class PlanCost(CompactValue):
-    'Immutable owned PlanCost value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    "Immutable owned PlanCost value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsample_combinations: Number of shape-sample combinations the conversion must process.\npayload_bytes: Estimated owned result payload in bytes; not total process RSS.\ntemporary_bytes: Estimated temporary working storage in bytes; not total process RSS.\nhistory_bytes: Includes the SDK's complete previous checkpoint and new candidate."
     __module__ = "zipzi"
     sample_combinations: int
     payload_bytes: int
@@ -24,7 +24,7 @@ class PlanCost(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class PlanReport(CompactValue):
-    'Immutable owned PlanReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned PlanReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\naffected_ids: Stable IDs conservatively affected by the planned operation.\ncopied_ids: Mapping from original object IDs to the new IDs allocated for copied objects.\ncost: Native plan cost estimates; inspect losses separately before applying the plan.\nlosses: Explicit semantic losses predicted by conversion; empty means no losses were reported.\nno_op: Whether applying the plan would leave the document unchanged.'
     __module__ = "zipzi"
     source: Source
     version: Version

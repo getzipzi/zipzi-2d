@@ -12,7 +12,7 @@ def _boolean(value: object) -> bool:
 
 @dataclass(frozen=True, repr=False)
 class Summary(CompactValue):
-    'Immutable owned Summary value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned Summary value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\nobject_kind: Object category for this metadata record; use it to select the corresponding domain API.\npart_id: Optional organizational Part ID; None means root or not applicable for this object kind.\nparent_id: Optional deformation parent for meshes/transforms or organization parent for\nParts/groups; None means root or not applicable.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.'
     __module__ = "zipzi.scene"
     id: str
     name: str
@@ -29,7 +29,7 @@ class Summary(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class OffscreenForm(CompactValue):
-    'Immutable owned OffscreenForm value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned OffscreenForm value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.\nscreen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.'
     __module__ = "zipzi.scene"
     opacity: float
     multiply: tuple[float, float, float] | None = None
@@ -43,7 +43,7 @@ class OffscreenForm(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class GluePair(CompactValue):
-    'Immutable owned GluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned GluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nweight_a: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.\nweight_b: Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.\nid: Optional new Glue-pair UUID; None allocates a fresh pair identity in the SDK.\nvertex_a: Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.\nvertex_b: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.'
     __module__ = "zipzi.scene"
     weight_a: float
     weight_b: float
@@ -53,7 +53,7 @@ class GluePair(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class VertexPatch(CompactValue):
-    'Immutable owned VertexPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned VertexPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nposition: Optional BlendShape XY displacement for this vertex; None preserves its delta.\nuv: UV edits require the base-shape content API; keep None for BlendShape patches.'
     __module__ = "zipzi.scene"
     vertex_id: int
     position: tuple[float, float] | None = None
@@ -67,21 +67,21 @@ class VertexPatch(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class Sample(CompactValue):
-    'Immutable owned Sample value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned Sample value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable UUID assigned to this parameter sample.\nvalue: Finite parameter sample coordinate in the driving parameter domain.'
     __module__ = "zipzi.scene"
     id: str
     value: float
 
 @dataclass(frozen=True, repr=False)
 class VertexWeight(CompactValue):
-    'Immutable owned VertexWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvertex_id: Declared by zipzi_core::document::scene_content::VertexWeight.vertex_id; u32 value.\nweight: Declared by zipzi_core::document::scene_content::VertexWeight.weight; f32 value.'
+    'Immutable owned VertexWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nweight: Dimensionless interpolation weight applied to the referenced source vertex.'
     __module__ = "zipzi.scene"
     vertex_id: int
     weight: float
 
 @dataclass(frozen=True, repr=False)
 class Placement(CompactValue):
-    'Immutable owned Placement value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned Placement value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Optional organizational Part ID; None uses the root organization.\nparent_id: Optional deformation-parent transform ID; None uses model space.\nbefore: Optional organization-order sibling ID; None appends in the selected organization\ncollection.\ndeformation_before: Optional deformation-order sibling ID; None appends in the selected deformation\ncollection.'
     __module__ = "zipzi.scene"
     part_id: str | None = None
     parent_id: str | None = None
@@ -90,7 +90,7 @@ class Placement(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ParameterGroupSpec(CompactValue):
-    'Immutable owned ParameterGroupSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned ParameterGroupSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\nid: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.\nruntime_id: Optional external group identifier; None uses the native default empty string.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     __module__ = "zipzi.scene"
     name: str
     id: str | None = None
@@ -100,7 +100,7 @@ class ParameterGroupSpec(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class PartSpec(CompactValue):
-    'Immutable owned PartSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned PartSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\nid: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     __module__ = "zipzi.scene"
     name: str
     id: str | None = None
@@ -109,21 +109,21 @@ class PartSpec(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class CreatePart(CompactValue):
-    'Immutable owned CreatePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned CreatePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nspec: Creation specification; native admission supplies identities/defaults and\nrejects invalid input.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     spec: PartSpec
     kind: Literal["scene_create_part"] = field(default="scene_create_part", init=False)
 
 @dataclass(frozen=True, repr=False)
 class CreateParameterGroup(CompactValue):
-    'Immutable owned CreateParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned CreateParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nspec: Creation specification; native admission supplies identities/defaults and\nrejects invalid input.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     spec: ParameterGroupSpec
     kind: Literal["scene_create_parameter_group"] = field(default="scene_create_parameter_group", init=False)
 
 @dataclass(frozen=True, repr=False)
 class CreateWarp(CompactValue):
-    'Immutable owned CreateWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned CreateWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\nplacement: Explicit organizational and deformation placement, with independent ordering\nanchors.\nbounds: Optional [left, bottom, right, top] warp bounds in parent coordinates; None\nrequests native defaults.\nid: Optional new object UUID; None allocates a fresh identity in the SDK.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     name: str
     placement: Placement
@@ -137,7 +137,7 @@ class CreateWarp(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class CreateRotation(CompactValue):
-    'Immutable owned CreateRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned CreateRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\nplacement: Explicit organizational and deformation placement, with independent ordering\nanchors.\nid: Optional new object UUID; None allocates a fresh identity in the SDK.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     name: str
     placement: Placement
@@ -146,7 +146,7 @@ class CreateRotation(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class CreateGlue(CompactValue):
-    'Immutable owned CreateGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned CreateGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\na: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and\nunresolved references retain runtime identifiers.\nb: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and\nunresolved references retain runtime identifiers.\npart_id: Organizational Part owner ID; independent of the deformation parent. None\nselects the root/unassigned container.\nid: Optional new object UUID; None allocates a fresh identity in the SDK.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     name: str
     a: str
@@ -157,7 +157,7 @@ class CreateGlue(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class CreateOffscreen(CompactValue):
-    'Immutable owned CreateOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned CreateOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\npart_id: Owning Part object ID; it must name an existing Part.\nid: Optional new object UUID; None allocates a fresh identity in the SDK.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     name: str
     part_id: str
@@ -166,7 +166,7 @@ class CreateOffscreen(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class MoveToPart(CompactValue):
-    'Immutable owned MoveToPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned MoveToPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\npart_id: Organizational Part owner ID; independent of the deformation parent. None\nselects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     ids: tuple[str, ...]
     part_id: str | None = None
@@ -178,7 +178,7 @@ class MoveToPart(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class MoveDeformation(CompactValue):
-    'Immutable owned MoveDeformation value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned MoveDeformation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order.\nNone selects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     ids: tuple[str, ...]
     parent_id: str | None = None
@@ -190,7 +190,7 @@ class MoveDeformation(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class MoveParameters(CompactValue):
-    'Immutable owned MoveParameters value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned MoveParameters value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     ids: tuple[str, ...]
     group_id: str | None = None
@@ -202,7 +202,7 @@ class MoveParameters(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class MoveParameterGroups(CompactValue):
-    'Immutable owned MoveParameterGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned MoveParameterGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order.\nNone selects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     ids: tuple[str, ...]
     parent_id: str | None = None
@@ -214,7 +214,7 @@ class MoveParameterGroups(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class DuplicateScene(CompactValue):
-    'Immutable owned DuplicateScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned DuplicateScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\nsubtree: Include the deformation subtree when true; false affects only the selected objects.\npart_id: Organizational Part owner ID; independent of the deformation parent. None\nselects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     ids: tuple[str, ...]
     subtree: bool
@@ -227,7 +227,7 @@ class DuplicateScene(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class DeleteScene(CompactValue):
-    'Immutable owned DeleteScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned DeleteScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\nsubtree: Include the deformation subtree when true; false affects only the selected objects.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     ids: tuple[str, ...]
     subtree: bool
@@ -238,7 +238,7 @@ class DeleteScene(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class DeleteOrganization(CompactValue):
-    'Immutable owned DeleteOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned DeleteOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\ndissolve: Preserve contained objects by dissolving their organization container instead of\ndeleting its contents.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     ids: tuple[str, ...]
     dissolve: bool
@@ -249,7 +249,7 @@ class DeleteOrganization(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class SetSceneLabel(CompactValue):
-    'Immutable owned SetSceneLabel value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned SetSceneLabel value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values\nreject the edit.\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     id: str
     expected: str
@@ -258,7 +258,7 @@ class SetSceneLabel(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class SetSceneEnabled(CompactValue):
-    'Immutable owned SetSceneEnabled value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned SetSceneEnabled value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values\nreject the edit.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     id: str
     expected: bool
@@ -267,7 +267,7 @@ class SetSceneEnabled(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ReparentLocal(CompactValue):
-    'Immutable owned ReparentLocal value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned ReparentLocal value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order.\nNone selects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     ids: tuple[str, ...]
     parent_id: str | None = None
@@ -279,7 +279,7 @@ class ReparentLocal(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ReplaceTriangles(CompactValue):
-    'Immutable owned ReplaceTriangles value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned ReplaceTriangles value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\ntriangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute\nposition-array offsets.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     mesh_id: str
     triangles: tuple[tuple[int, int, int], ...]
@@ -290,7 +290,7 @@ class ReplaceTriangles(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ReorderMeshVertices(CompactValue):
-    'Immutable owned ReorderMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned ReorderMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\norder: Complete new order of stable vertex IDs; preserves identities and associated\nper-vertex payload.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     mesh_id: str
     order: tuple[int, ...]
@@ -301,7 +301,7 @@ class ReorderMeshVertices(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class InsertMeshVertex(CompactValue):
-    'Immutable owned InsertMeshVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned InsertMeshVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nposition: Absolute XY authoring position for this vertex, not a displacement.\nuv: Texture UV pair for this vertex; not a model-space position.\nweights: Source vertex IDs and interpolation weights used to seed dependent shape content.\nbefore: Optional stable vertex ID before which to insert new vertices; None appends.\nThis is not a position-array index.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     mesh_id: str
     vertex_id: int
@@ -318,7 +318,7 @@ class InsertMeshVertex(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class DeleteMeshVertices(CompactValue):
-    'Immutable owned DeleteMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned DeleteMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nvertices: Stable vertex IDs in this mesh, not offsets into positions.\nremove_dependents: Explicitly remove dependent topology/keyform/Glue content; false rejects\nreferenced-vertex deletion.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     mesh_id: str
     vertices: tuple[int, ...]
@@ -330,7 +330,7 @@ class DeleteMeshVertices(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class CreateBlendTable(CompactValue):
-    'Immutable owned CreateBlendTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned CreateBlendTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nsamples: Strictly increasing finite parameter samples with stable IDs; base_sample_id\nmust name one of them.\nbase_sample_id: Sample ID defining the neutral/base shape in this key table.\nid: Optional new object UUID; None allocates a fresh identity in the SDK.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     parameter_id: str
     samples: tuple[Sample, ...]
@@ -343,7 +343,7 @@ class CreateBlendTable(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class CreateMeshBlend(CompactValue):
-    'Immutable owned CreateMeshBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned CreateMeshBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\ntable_id: Stable BlendShape key-table ID in this document.\nid: Optional new object UUID; None allocates a fresh identity in the SDK.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     mesh_id: str
     table_id: str
@@ -352,7 +352,7 @@ class CreateMeshBlend(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class SetMeshBlendVertices(CompactValue):
-    'Immutable owned SetMeshBlendVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned SetMeshBlendVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.\nupdates: Ordered content patches applied together by the native edit.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     mesh_id: str
     binding_id: str
@@ -365,7 +365,7 @@ class SetMeshBlendVertices(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class InsertGluePair(CompactValue):
-    'Immutable owned InsertGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned InsertGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\npair: Complete Glue pair to insert or replace; endpoint IDs belong to the two\nconnected meshes.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     glue_id: str
     pair: GluePair
@@ -374,7 +374,7 @@ class InsertGluePair(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class DeleteGluePairs(CompactValue):
-    'Immutable owned DeleteGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned DeleteGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\nids: Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     glue_id: str
     ids: tuple[str, ...]
@@ -385,7 +385,7 @@ class DeleteGluePairs(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class PatchOffscreenKeyform(CompactValue):
-    'Immutable owned PatchOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned PatchOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.\nvalue: Scalar value in the referenced parameter domain.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     offscreen_id: str
     slot: int
@@ -394,7 +394,7 @@ class PatchOffscreenKeyform(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class InsertOffscreenKeyform(CompactValue):
-    'Immutable owned InsertOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned InsertOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nvalue: Scalar value in the referenced parameter domain.\nbefore: Optional stable vertex ID before which to insert new vertices; None appends.\nThis is not a position-array index.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     offscreen_id: str
     value: OffscreenForm
@@ -403,7 +403,7 @@ class InsertOffscreenKeyform(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class SetOffscreenStaticKeyform(CompactValue):
-    'Immutable owned SetOffscreenStaticKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned SetOffscreenStaticKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nkeyform: Complete shape sample to insert or replace; unrelated samples are retained.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.scene"
     offscreen_id: str
     keyform: int

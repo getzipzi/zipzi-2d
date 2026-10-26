@@ -3,7 +3,6 @@ from ._generated import scene as _scene_codec
 from ._generated import modeling as _modeling_codec
 from typing import TypeAlias
 from . import meshes, parameters, bindings, resources
-from ._generated import scene, modeling
 from ._generated.mesh_ops import validate as validate_mesh, wire as mesh_wire
 from ._generated.resource_ops import ApplyPlan as ApplyPlan, validate as validate_resource, wire as resource_wire
 from ._generated.parameter_values import validate_Operation as validate_parameter, encode_Operation as parameter_wire

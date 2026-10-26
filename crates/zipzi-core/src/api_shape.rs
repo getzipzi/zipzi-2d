@@ -253,17 +253,17 @@ macro_rules! api_record {
 }
 #[macro_export]
 macro_rules! api_union {
-    (tag = $tag:literal; $(#[$($meta:tt)*])* pub enum $name:ident { $($variant:ident { $($field:ident: $ty:ty),* $(,)? }),* $(,)? }) => {
+    (tag = $tag:literal; $(#[$($meta:tt)*])* pub enum $name:ident { $($variant:ident { $($(#[$($field_meta:tt)*])* $field:ident: $ty:ty),* $(,)? }),* $(,)? }) => {
         const _: () = $crate::api_record_attributes!($(#[$($meta)*])*);
         $(#[$($meta)*])* #[serde(tag = $tag, rename_all = "snake_case", deny_unknown_fields)]
-        pub enum $name { $($variant { $($field: $ty),* }),* }
+        pub enum $name { $($variant { $($(#[$($field_meta)*])* $field: $ty),* }),* }
         impl $crate::api_shape::ApiShape for $name {
             fn api_shape() -> $crate::api_shape::Shape {
                 $crate::api_shape::Shape::Union {
                     name: concat!(module_path!(), "::", stringify!($name)).into(), tag: $tag.into(),
                     variants: vec![$($crate::api_shape::Variant {
                         rust_name: stringify!($variant).into(), wire_name: $crate::api_shape::snake_case(stringify!($variant)),
-                        fields: vec![$($crate::api_shape::Field::of::<$ty>(stringify!($field))),*],
+                        fields: vec![$($crate::api_field!($field: $ty; $(#[$($field_meta)*])*)),*],
                     }),*],
                 }
             }

@@ -7,6 +7,7 @@ from itertools import islice
 
 def _short(value: object, depth: int = 0) -> str:
     if isinstance(value, (bytes, bytearray, memoryview)):
+        value=cast(bytes | bytearray | memoryview[int],value)
         return f'<{type(value).__name__} {len(value)} bytes>'
     if isinstance(value,str):
         return repr(value[:80])+('…' if len(value)>80 else '')

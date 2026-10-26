@@ -16,7 +16,7 @@ class Kind(str, Enum):
 
 @dataclass(frozen=True, init=False, repr=False)
 class ParameterSpec(CompactValue):
-    'Immutable owned ParameterSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.name; string value.\nminimum: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.minimum; f32 value.\nmaximum: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.maximum; f32 value.\ndefault_value: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.default_value; f32 value.\nid: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.id; optional value.\nruntime_id: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.runtime_id; optional value.\nkind: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.kind; optional value.\ndecimal_places: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.decimal_places; optional value.\nrepeat: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.repeat; optional value.'
+    'Owned parameters ParameterSpec value; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\nminimum: Lower endpoint of the parameter domain, in model-defined parameter units.\nmaximum: Upper endpoint of the parameter domain, in the same units as minimum.\ndefault_value: Default parameter value in its declared domain; native validation checks it against\nminimum and maximum.\nid: Optional new parameter UUID; None allocates a fresh UUID when the create operation executes.\nruntime_id: Optional external runtime identifier; None uses the native default empty string.\nkind: Optional parameter kind; None uses Normal.\ndecimal_places: Optional decimal precision for runtime parameter handling; None uses the native default\nof 6.\nrepeat: Optional range-repeat flag; None uses the native default false.'
     __module__ = "zipzi.parameters"
     name: str
     minimum: float
@@ -68,7 +68,7 @@ def encode_ParameterSpec(value: ParameterSpec) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class ParameterPatch(CompactValue):
-    'Immutable owned ParameterPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Declared by zipzi_sdk::parameter_edit::ParameterPatch.name; optional value.\nminimum: Declared by zipzi_sdk::parameter_edit::ParameterPatch.minimum; optional value.\nmaximum: Declared by zipzi_sdk::parameter_edit::ParameterPatch.maximum; optional value.\ndefault_value: Declared by zipzi_sdk::parameter_edit::ParameterPatch.default_value; optional value.\nruntime_id: Declared by zipzi_sdk::parameter_edit::ParameterPatch.runtime_id; optional value.\nkind: Declared by zipzi_sdk::parameter_edit::ParameterPatch.kind; optional value.\ndecimal_places: Declared by zipzi_sdk::parameter_edit::ParameterPatch.decimal_places; optional value.\nrepeat: Declared by zipzi_sdk::parameter_edit::ParameterPatch.repeat; optional value.'
+    'Owned parameters ParameterPatch value; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\nNone preserves the current value; it does not reset the field to its default.\nminimum: Lower endpoint of the parameter domain, in model-defined parameter units. None preserves\nthe current value; it does not reset the field to its default.\nmaximum: Upper endpoint of the parameter domain, in the same units as minimum. None preserves the\ncurrent value; it does not reset the field to its default.\ndefault_value: Default parameter value in its declared domain; native validation checks it against\nminimum and maximum. None preserves the current value; it does not reset the field to\nits default.\nruntime_id: Replacement external runtime identifier; an empty string explicitly clears it. None\npreserves the current value; it does not reset the field to its default.\nkind: Replacement parameter kind. None preserves the current value; it does not reset the\nfield to its default.\ndecimal_places: Replacement decimal precision for runtime parameter handling. None preserves the current\nvalue; it does not reset the field to its default.\nrepeat: Replacement repeat flag; false explicitly disables repeating. None preserves the current\nvalue; it does not reset the field to its default.'
     __module__ = "zipzi.parameters"
     name: str | None
     minimum: float | None
@@ -120,7 +120,7 @@ def encode_ParameterPatch(value: ParameterPatch) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Create(CompactValue):
-    'Immutable owned Create value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Declared by Create.id; string value.\ntarget: Declared by Create.target; serde_enum value.'
+    'Owned parameters Create value; reading fields, repr and summary performs no IO.\n\nFields:\nspec: Creation specification; native admission supplies identities/defaults and rejects\ninvalid input.'
     __module__ = "zipzi.parameters"
     kind: ClassVar[Literal['create_parameter']] = 'create_parameter'
     _variant: ClassVar[str] = 'create'
@@ -144,7 +144,7 @@ def encode_Create(value: Create) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Patch(CompactValue):
-    'Immutable owned Patch value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Owned parameters Patch value; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\npatch: Typed patch for the addressed object; apply through the Edit to mutate candidate state.'
     __module__ = "zipzi.parameters"
     kind: ClassVar[Literal['patch_parameter']] = 'patch_parameter'
     _variant: ClassVar[str] = 'patch'
@@ -184,7 +184,7 @@ def encode_Operation(value: Operation) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Parameter(CompactValue):
-    "Immutable owned Parameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Declared by zipzi_core::types::Parameter.id; string value.\nruntime_id: Declared by zipzi_core::types::Parameter.runtime_id; string value.\nname: Declared by zipzi_core::types::Parameter.name; string value.\nminimum: Declared by zipzi_core::types::Parameter.minimum; f32 value.\nmaximum: Declared by zipzi_core::types::Parameter.maximum; f32 value.\ndefault_value: Declared by zipzi_core::types::Parameter.default_value; f32 value.\ndecimal_places: Declared by zipzi_core::types::Parameter.decimal_places; i32 value; default 6.\nkind: Declared by zipzi_core::types::Parameter.kind; serde_enum value; default 'normal'.\nrepeat: Declared by zipzi_core::types::Parameter.repeat; bool value; default False."
+    'Owned parameters Parameter value; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nminimum: Lower endpoint of the parameter domain, in model-defined parameter units.\nmaximum: Upper endpoint of the parameter domain, in the same units as minimum.\ndefault_value: Default parameter value used when no override is supplied.\ndecimal_places: Decimal precision used for runtime parameter handling; native default is 6.\nkind: Normal or BlendShape parameter behavior; native default is Normal.\nrepeat: Whether parameter values repeat across the declared range; native default is false.'
     __module__ = "zipzi.parameters"
     id: str
     runtime_id: str

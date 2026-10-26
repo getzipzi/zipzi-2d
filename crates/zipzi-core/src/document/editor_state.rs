@@ -8,8 +8,10 @@ use std::collections::BTreeMap;
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct ObjectEditorState {
     #[serde(default, skip_serializing_if = "is_false")]
+    /// Editor-only hiding flag; does not replace the model enabled/visibility state.
     pub hidden_in_editor: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    /// Authoring lock state; native edit admission and capabilities enforce the lock.
     pub locked: bool,
 }
 fn is_false(value: &bool) -> bool {

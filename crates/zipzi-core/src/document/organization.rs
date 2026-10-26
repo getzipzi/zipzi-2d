@@ -11,9 +11,21 @@ mod scene;
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum OrganizationCollection {
-    Parameters { group_id: Option<String> },
-    ParameterGroups { parent_id: Option<String> },
-    PartMembers { part_id: Option<String> },
+    Parameters {
+        /// Parameter-group ID in the document metadata hierarchy. None selects the
+        /// root/unassigned container.
+        group_id: Option<String>,
+    },
+    ParameterGroups {
+        /// Parent object ID in this hierarchy; independent of storage and drawing order. None
+        /// selects the root/unassigned container.
+        parent_id: Option<String>,
+    },
+    PartMembers {
+        /// Organizational Part owner ID; independent of the deformation parent. None selects
+        /// the root/unassigned container.
+        part_id: Option<String>,
+    },
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -27,38 +39,71 @@ pub enum OrganizationDeletePolicy {
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum OrganizationEdit {
     CreateParameter {
+        /// Complete parameter record with identity, finite range, default and runtime behavior.
         parameter: Parameter,
+        /// Parameter-group ID in the document metadata hierarchy. None selects the
+        /// root/unassigned container.
         group_id: Option<String>,
+        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
+        /// the selected destination.
         before: Option<String>,
     },
     CreateGroup {
+        /// Complete CDI parameter-group metadata record to create or replace.
         group: CdiParameterGroup,
+        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
+        /// the selected destination.
         before: Option<String>,
     },
     CreatePart {
+        /// Complete Part record, including identity, hierarchy context and enabled/drawing state.
         part: Part,
+        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
+        /// the selected destination.
         before: Option<String>,
     },
     SetParameterGroup {
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
+        /// Parameter-group ID in the document metadata hierarchy. None selects the
+        /// root/unassigned container.
         group_id: Option<String>,
     },
     PatchGroup {
+        /// Exact current field value used as an optimistic precondition; stale values reject
+        /// the edit.
         expected: CdiParameterGroup,
+        /// Complete CDI parameter-group metadata record to create or replace.
         group: CdiParameterGroup,
     },
     Move {
+        /// Ordered stable object IDs selected for this operation; visible names and row numbers
+        /// are not identities.
         ids: Vec<String>,
+        /// Explicit destination collection; organization, deformation and drawing memberships
+        /// are independent.
         destination: OrganizationCollection,
+        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
+        /// the selected destination.
         before: Option<String>,
     },
     Duplicate {
+        /// Ordered stable object IDs selected for this operation; visible names and row numbers
+        /// are not identities.
         ids: Vec<String>,
+        /// Explicit destination collection; organization, deformation and drawing memberships
+        /// are independent.
         destination: OrganizationCollection,
+        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
+        /// the selected destination.
         before: Option<String>,
     },
     Delete {
+        /// Ordered stable object IDs selected for this operation; visible names and row numbers
+        /// are not identities.
         ids: Vec<String>,
+        /// Explicit native conflict/conversion policy; no implicit removal or remapping is
+        /// requested.
         policy: OrganizationDeletePolicy,
     },
 }

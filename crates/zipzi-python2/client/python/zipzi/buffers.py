@@ -22,6 +22,7 @@ class Buffer(Owned):
 
     @property
     def size(self) -> int:
+        'Return the cached immutable byte length without reading the host buffer or allocating a copy.'
         return self._size
 
     @classmethod
@@ -32,9 +33,9 @@ class Buffer(Owned):
         if size > MAX_BUFFER_BYTES:
             raise ValueError("Buffer exceeds 256 MiB")
         value = cls(backend, bytes(data))
-        return value._prepare()
+        return value._drive_prepare()
 
-    def _prepare(self) -> Buffer:
+    def _drive_prepare(self) -> Buffer:
         try:
             while self._stage != "ready":
                 if self._stage == "create":
@@ -55,7 +56,7 @@ class Buffer(Owned):
             def resume() -> Buffer:
                 if self.pending_request != expected:
                     raise SdkFailure("NO_PENDING_REQUEST", "Buffer request already resolved")
-                return self._prepare()
+                return self._drive_prepare()
             error._resume = resume
             raise
         except BaseException as error:
@@ -75,6 +76,7 @@ class Buffer(Owned):
         return self
 
     def read(self, offset: int = 0, length: int | None = None) -> bytes:
+        'Read immutable bytes from offset for length bytes; None reads the remaining bytes. Bounds and transfer budgets apply before download. Recover the original multi-stage read after transport loss; close the Buffer after use.'
         if self._closed:
             self._check(self._backend)
         if self._stage != "ready":

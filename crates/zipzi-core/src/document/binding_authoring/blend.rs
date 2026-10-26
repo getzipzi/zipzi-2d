@@ -13,24 +13,37 @@ use crate::*;
 )]
 pub enum BlendTableOperation {
     Insert {
+        /// New stable sample UUID and finite parameter coordinate to insert into this key table.
         sample: BindingSample,
     },
     Move {
+        /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
+        /// parameter value.
         sample_id: String,
+        /// Scalar value in the referenced parameter domain.
         value: f32,
     },
     Delete {
+        /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
+        /// parameter value.
         sample_id: String,
+        /// Replacement base sample ID when deleting the current base; None supplies no replacement.
         replacement_base: Option<String>,
     },
     SetBase {
+        /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
+        /// parameter value.
         sample_id: String,
     },
     SetParameter {
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
     },
     RemapParameter {
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
+        /// Explicit native conflict/conversion policy; no implicit removal or remapping is
+        /// requested.
         policy: ParameterRangePolicy,
     },
 }
@@ -45,29 +58,46 @@ pub enum BlendTableOperation {
 )]
 pub enum BlendAuthoringEdit {
     CreateTable {
+        /// Complete BlendShape key table with stable sample IDs and an explicit base sample.
         table: BlendShapeKeyTable,
     },
     CreateConstraint {
+        /// Complete BlendShape constraint with its driving parameter and weighted samples.
         constraint: BlendShapeConstraint,
     },
     CreateBinding {
+        /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
+        /// Stable object ID driven by this binding; the declared target kind determines its domain.
         target_id: String,
+        /// Category of the BlendShape target; must agree with target_id and keyform payload kind.
         target_kind: BlendShapeTargetKind,
+        /// Stable BlendShape key-table ID controlling the binding.
         key_table_id: String,
     },
     Table {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         id: String,
+        /// Typed sample/base/parameter edit to perform on this BlendShape key table.
         operation: BlendTableOperation,
     },
     Constraint {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         id: String,
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
+        /// Replacement ordered parameter samples and constraint weights.
         samples: Vec<ConstraintSample>,
     },
     SetBindingTable {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
         id: String,
+        /// Stable BlendShape key-table ID controlling the binding.
         key_table_id: String,
+        /// Whether to reset shape data when switching the binding to another key table.
         reset: bool,
     },
 }

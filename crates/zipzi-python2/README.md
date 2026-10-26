@@ -48,9 +48,9 @@ macOS/Unix. Other platform/version claims require separate CI evidence.
 P3A-0 has a frozen symbol map, signatures, experiment configuration and Release
 baseline. P3A-1 is accepted with complete-call recovery, cached Edit state/receipt
 and known Job timeouts; this round's final performance noise blocker was waived by
-the user. See the [acceptance record](../../docs/plans/python-sdk-rewrite/p3a-1.md). Remaining target regressions in `tests/test_p3a_contract.py`
-continue separately while later P3A tasks are implemented. After refreshing fixtures
-with `./tools/test-sdk.sh python2`, run from the repository root:
+the user. See the [acceptance record](../../docs/plans/python-sdk-rewrite/p3a-1.md). Target regressions in `tests/test_p3a_contract.py`
+are now passing in [P3A-6](../../docs/plans/python-sdk-rewrite/p3a-6.md).
+After refreshing fixtures with `./tools/test-sdk.sh python2`, run from the repository root:
 
 ```sh
 uv run --locked python tools/python/python2_contract.py baseline --output target/python2/p3a-baseline.json
@@ -61,8 +61,11 @@ This command preserves every failure and returns a nonzero status until the
 selected contracts pass. Use a new output path for every run. Inventory/freeze
 commands and their limits are documented in [tools](../../tools/README.md).
 P3A-2 has completed result unification, domain-owned operations, generated DTOs
-and common plan/apply. Pagination, generated facades and documentation/agent gates
-continue in P3A-3–6. The examples below describe the current API.
+and common plan/apply. Generated facades, pagination and session lifecycle have
+focused P3A-6 evidence. Semantic field documentation and installed offline checks
+now pass; remaining complete documentation review, the comparable P0 run and
+independent agent tasks remain open. The examples below
+describe the current API.
 
 ## Selected code generation
 
@@ -124,8 +127,8 @@ Domain payloads (`meshes.Mesh`, `parameters.Parameter`, `bindings.MeshBinding`,
 `resources.Image`, `scene.Summary`) have no nested Source. Empty batches retain
 their exact source. CPU samples use `Snapshot[sampling.Result]`; canonical modeling
 records, capabilities and Editor context also use `Snapshot`. Field access sends
-no requests. `Page`/`PageCursor` define the result shape; collection pagination
-remains P3A-4 work. A failed
+no requests. Collection discovery returns `Page[Summary]` with a source-bound
+`PageCursor`; see the collection rules below. A failed
 write makes its candidate uncommittable even when caught. Admission refusal is
 distinct from execution failure.
 
@@ -423,11 +426,14 @@ Animation, independent Preview and observer/inspection remain later Runtime capa
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).
 
 
-## P3A-3/4/5 implementation (acceptance deferred)
+## P3A-3/4/5 implementation and P3A-6 acceptance
 
-This implementation is staged for P3A-6. By user request, no behavior, type,
-installed-package, Editor, performance or agent acceptance was run in this slice.
-The generator was run and the native adapter was compiled while implementing.
+P3A-3/4/5 was committed as `8500d9fe` without acceptance, by user request.
+Subsequent P3A-6 fixes and selected behavior, recovery, discovery, type, normal
+paired sdist/wheel and current production Editor checks are recorded in
+[P3A-6 results](../../docs/plans/python-sdk-rewrite/p3a-6.md). Overall P3A is still
+unaccepted: remaining documentation review, P0 comparison and independent agent
+execution remain pending. Field semantics and installed offline automatic checks pass.
 
 All five object collections now provide `get(id, expected=...)`,
 `get_many(ids, expected=...)` and `list(name=None, limit=128, cursor=None)` on both
@@ -454,8 +460,8 @@ binding layer. Rust field docs survive export into class docstrings/reference.
 Runtime state machines, identity rules, resource ownership and binary transfer
 stages remain handwritten. New normal native/IPC pairs are required; no fallback.
 
-For the later focused run, `./tools/test-sdk.sh python2 --discovery` selects the
-staged regressions. Agent packets and recorders are prepared via
+For a focused run, `./tools/test-sdk.sh python2 --discovery` selects the collection,
+Session and offline catalog regressions. Agent packets and recorders are prepared via
 `tools/python/python2_agent_tasks.py --help`; preparing fixtures does not run an
-agent or prove G01–G08. Full doc/typing coverage, fault-controller integration and
-independent task execution remain part of the later combined acceptance.
+agent or prove G01–G08. Strict types and field documentation are passing; complete method-semantics review,
+fault-controller integration and independent task execution remain open.

@@ -7,14 +7,25 @@ use zipzi_core::{Parameter, ParameterKind};
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct ParameterCreateSpec {
+    /// Human-readable display name; use the stable ID for identity because names can change.
     pub name: String,
+    /// Lower endpoint of the parameter domain, in model-defined parameter units.
     pub minimum: f32,
+    /// Upper endpoint of the parameter domain, in the same units as minimum.
     pub maximum: f32,
+    /// Default parameter value in its declared domain; native validation checks it against
+    /// minimum and maximum.
     pub default_value: f32,
+    /// Optional new parameter UUID; None allocates a fresh UUID when the create operation executes.
     pub id: Option<String>,
+    /// Optional external runtime identifier; None uses the native default empty string.
     pub runtime_id: Option<String>,
+    /// Optional parameter kind; None uses Normal.
     pub kind: Option<ParameterKind>,
+    /// Optional decimal precision for runtime parameter handling; None uses the native default
+    /// of 6.
     pub decimal_places: Option<i32>,
+    /// Optional range-repeat flag; None uses the native default false.
     pub repeat: Option<bool>,
 }
 
@@ -22,13 +33,30 @@ pub struct ParameterCreateSpec {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub struct ParameterPatch {
+    /// Human-readable display name; use the stable ID for identity because names can change.
+    /// None preserves the current value; it does not reset the field to its default.
     pub name: Option<String>,
+    /// Lower endpoint of the parameter domain, in model-defined parameter units. None preserves
+    /// the current value; it does not reset the field to its default.
     pub minimum: Option<f32>,
+    /// Upper endpoint of the parameter domain, in the same units as minimum. None preserves the
+    /// current value; it does not reset the field to its default.
     pub maximum: Option<f32>,
+    /// Default parameter value in its declared domain; native validation checks it against
+    /// minimum and maximum. None preserves the current value; it does not reset the field to
+    /// its default.
     pub default_value: Option<f32>,
+    /// Replacement external runtime identifier; an empty string explicitly clears it. None
+    /// preserves the current value; it does not reset the field to its default.
     pub runtime_id: Option<String>,
+    /// Replacement parameter kind. None preserves the current value; it does not reset the
+    /// field to its default.
     pub kind: Option<ParameterKind>,
+    /// Replacement decimal precision for runtime parameter handling. None preserves the current
+    /// value; it does not reset the field to its default.
     pub decimal_places: Option<i32>,
+    /// Replacement repeat flag; false explicitly disables repeating. None preserves the current
+    /// value; it does not reset the field to its default.
     pub repeat: Option<bool>,
 }
 
@@ -36,8 +64,18 @@ pub struct ParameterPatch {
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 pub enum ParameterOperation {
-    Create { spec: ParameterCreateSpec },
-    Patch { id: String, patch: ParameterPatch },
+    Create {
+        /// Creation specification; native admission supplies identities/defaults and rejects
+        /// invalid input.
+        spec: ParameterCreateSpec,
+    },
+    Patch {
+        /// Stable document object ID used by references; it is distinct from the exported
+        /// runtime_id.
+        id: String,
+        /// Typed patch for the addressed object; apply through the Edit to mutate candidate state.
+        patch: ParameterPatch,
+    },
 }
 
 impl ParameterOperation {

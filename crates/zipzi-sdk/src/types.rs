@@ -129,8 +129,14 @@ pub struct PsdImportReceipt {
 )]
 pub enum GeometrySpace {
     Model,
-    RotationLocal(String),
-    WarpParameter(String),
+    RotationLocal(
+        /// Stable rotation-transform ID defining the local position space.
+        String,
+    ),
+    WarpParameter(
+        /// Stable warp-transform ID defining the parameter/lattice position space.
+        String,
+    ),
 }
 
 #[derive(
@@ -143,12 +149,20 @@ pub enum GeometrySpace {
     zipzi_api_derive::BinaryWire,
 )]
 pub struct GeometrySnapshot {
+    /// Exact SDK version captured for this value; not a best-effort latest-version marker.
     pub version: Version,
+    /// Stable ID of the target mesh in this document.
     pub mesh_id: String,
+    /// Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
     pub vertex_ids: Vec<VertexId>,
+    /// Absolute XY vertices in the explicitly recorded GeometrySpace, aligned with vertex_ids.
     pub positions: Vec<Vec2>,
+    /// Texture UV pairs ordered by vertex_ids; keep one UV for each position.
     pub uvs: Vec<Vec2>,
+    /// Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
+    /// array offsets.
     pub triangles: Vec<[VertexId; 3]>,
+    /// Coordinate space of positions; local-space variants carry the controlling transform ID.
     pub space: GeometrySpace,
 }
 
@@ -270,11 +284,17 @@ impl From<&Mesh> for MeshProperties {
     zipzi_api_derive::BinaryWire,
 )]
 pub struct TopologyReplacement {
+    /// Complete replacement mesh geometry and metadata.
     pub mesh: Mesh,
+    /// Optional replacement ordinary mesh binding; None supplies no ordinary binding.
     pub binding: Option<MeshBinding>,
+    /// Complete replacement BlendShape bindings for the remeshed object.
     pub blend_bindings: Vec<BlendShapeBinding>,
+    /// Complete replacement Glue records affected by the remesh.
     pub glues: Vec<Glue>,
     #[serde(deserialize_with = "zipzi_core::serde_maps::u32_map")]
+    /// Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly
+    /// removes it.
     pub vertex_mapping: HashMap<VertexId, Option<VertexId>>,
 }
 

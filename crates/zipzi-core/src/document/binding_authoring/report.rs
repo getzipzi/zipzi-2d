@@ -46,8 +46,11 @@ pub struct ConversionRemapping {
     zipzi_api_derive::BinaryWire,
 )]
 pub struct ConversionDomain {
+    /// Stable document parameter ID, not its exported runtime identifier.
     pub parameter_id: String,
+    /// Lower endpoint of the parameter domain, in parameter units.
     pub minimum: f32,
+    /// Upper endpoint of the parameter domain, in parameter units.
     pub maximum: f32,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

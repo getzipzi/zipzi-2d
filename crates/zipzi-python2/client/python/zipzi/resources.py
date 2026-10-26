@@ -62,7 +62,13 @@ class PreparedImage(Owned):
         return self
 
 class ImageLease(PreparedImage):
-    """Explicit host lease that pins captured pixels across replacement/history eviction."""
+    """Explicit host lease that pins captured pixels across replacement/history eviction.
+
+    Close the lease or use its context manager when finished with the pixels.
+
+    Fields:
+    source: Exact formal or candidate source captured with the pixels; reading this cached value performs no IO.
+    """
     source: Source
     @classmethod
     def _capture(cls,backend:Backend,session:object,edit:object | None,id:str)->ImageLease:

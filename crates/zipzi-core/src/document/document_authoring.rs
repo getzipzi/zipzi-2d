@@ -23,9 +23,15 @@ pub enum DocumentField {
 )]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum DocumentValue {
-    Layout(Option<BTreeMap<String, f64>>),
-    ExportSettings(ExportSettings),
-    SourceCanvas(Option<Canvas>),
+    Layout(
+        /// Replacement model3 layout map; None explicitly removes the layout.
+        Option<BTreeMap<String, f64>>,
+    ),
+    ExportSettings(#[doc = "Replacement export-frame scale and padding settings."] ExportSettings),
+    SourceCanvas(
+        /// Replacement source-canvas metadata; None explicitly removes the canvas provenance.
+         Option<Canvas>,
+    ),
 }
 impl DocumentValue {
     pub fn field(&self) -> DocumentField {
@@ -41,19 +47,32 @@ impl DocumentValue {
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum DocumentAuthoringEdit {
     Patch {
+        /// Exact current field value used as an optimistic precondition; stale values reject
+        /// the edit.
         expected: DocumentValue,
+        /// Scalar value in the referenced parameter domain.
         value: DocumentValue,
     },
     RepairMissingAttachment {
+        /// Unresolved imported attachment path to repair; this command does not read client-
+        /// side files.
         path: String,
+        /// Stable package-attachment ID, distinct from its relative package path.
         attachment_id: Option<String>,
     },
     RepairCdiParameter {
+        /// External format/runtime identifier retained for import/export; not the document
+        /// object ID.
         runtime_id: String,
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: Option<String>,
     },
     RepairCdiPart {
+        /// External format/runtime identifier retained for import/export; not the document
+        /// object ID.
         runtime_id: String,
+        /// Organizational Part owner ID; independent of the deformation parent. None selects
+        /// the root/unassigned container.
         part_id: Option<String>,
     },
 }

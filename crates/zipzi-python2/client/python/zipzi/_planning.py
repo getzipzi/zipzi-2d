@@ -3,8 +3,8 @@ from __future__ import annotations
 from ._generated import scene as _scene_codec
 from ._generated import modeling as _modeling_codec
 from typing import TYPE_CHECKING
-from . import meshes, resources, scene, ops
-from ._generated import plan_intents, modeling, planning
+from . import meshes, resources, ops
+from ._generated import plan_intents, planning
 from ._generated.mesh_ops import validate as validate_mesh
 from ._generated.resource_ops import validate as validate_resource
 if TYPE_CHECKING:

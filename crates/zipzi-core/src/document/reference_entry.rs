@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ReferenceEntry<T> {
+    /// Stable UUID of this reference entry; not the identity of its target.
     pub id: String,
+    /// Resolved document target or preserved unresolved runtime identifier; entry identity
+    /// remains independent of the target.
     pub target: T,
 }
 impl<T> ReferenceEntry<T> {

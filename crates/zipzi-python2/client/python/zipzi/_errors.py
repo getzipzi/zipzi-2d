@@ -46,6 +46,7 @@ class Busy(SdkFailure):
 
 @dataclass(frozen=True)
 class PendingRequest:
+    'Immutable identity of the original request whose outcome is unknown; recover through its owning call.\n\nFields:\nrequest_id: Original client request number; do not allocate a fresh write request to probe the outcome.\ndigest: Digest binding the request identity to its original payload; not the payload itself.\noperation: Original protocol operation name used for diagnostics and recovery ownership.'
     request_id: int
     digest: str
     operation: str
@@ -88,7 +89,7 @@ def unwrap(value: object) -> object:
         return None if e.get(key) is None else Version._read(e[key])
     report=None
     if e.get("project_report") is not None:
-        from .modeling import read_ProjectReport
+        from ._generated.modeling import read_ProjectReport
         report=read_ProjectReport(e["project_report"])
     raise (Busy if code == "BUSY" else SdkFailure)(code, string(e["message"]),
         operation=string(e.get("operation", "")), object_ids=tuple(string(v) for v in sequence(e.get("object_ids", ()))),

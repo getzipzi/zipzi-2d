@@ -325,10 +325,16 @@ These commands create local unsigned artifacts. They do not upload releases,
 notarize apps, change remote repositories or verify GitHub license presentation.
 
 
-P3A-3/4/5 implementation is staged without acceptance, by user request.
+P3A-3/4/5 was committed without acceptance, by user request. Subsequent selected
+checks and remaining gates are recorded in [P3A-6](../docs/plans/python-sdk-rewrite/p3a-6.md).
 `./tools/test-sdk.sh python2 --discovery` selects the new focused collection,
-Session lifecycle and offline catalog regressions for a later run. It is not a
-record of a completed gate. `uv run --locked python tools/python/python2_agent_tasks.py --help`
+Session lifecycle and offline catalog regressions. For installed-only checks,
+run `tests/installed_contract.py --output /absolute/temporary/result.md` with the
+pure-wheel environment's Python `-I`, or `tests/installed_examples.py local|connected`
+with the corresponding normal wheel environment (paths relative to
+`crates/zipzi-python2/`; Connected examples require `ZIPZI_PYTHON2_HOST`). The offline
+audit exits nonzero for missing semantic docs and does not constitute a complete
+manual D02 review. `uv run --locked python tools/python/python2_agent_tasks.py --help`
 describes fixed installed-only agent packets and bounded run recording; preparation
 does not run a model or mark G01–G08 passed. Fixture data lives in
 `fixtures/python_sdk_agent/`; private controller manifests and raw run events belong
