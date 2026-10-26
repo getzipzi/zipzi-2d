@@ -34,8 +34,16 @@ fn enter(cx: &mut TestAppContext) -> Harness {
         window.click("tool_manual_mesh", cx);
     })
     .unwrap();
-    assert!(cx.has_pending_prompt());
-    cx.simulate_prompt_answer("Use full image");
+    assert!(
+        !cx.has_pending_prompt(),
+        "Mesh Edit must open directly without source-image confirmation"
+    );
+    assert!(!h.view.read_with(cx, |v, _| v.modal));
+    assert_eq!(
+        h.view
+            .read_with(cx, |v, _| v.editor.document().unwrap().history_lengths()),
+        (0, 0)
+    );
     present(&h, cx);
     assert!(h.view.read_with(cx, |v, _| v.editor.manual_active()));
     h
@@ -102,7 +110,7 @@ fn manual_mesh_toolbar_only_shows_relevant_tools(cx: &mut TestAppContext) {
         window.click("tool_manual_mesh", cx);
     })
     .unwrap();
-    cx.simulate_prompt_answer("Use full image");
+    assert!(!cx.has_pending_prompt());
     present(&h, cx);
     cx.update_window(h.window, |_, window, _| {
         assert!(window.find("tool_select").visible());

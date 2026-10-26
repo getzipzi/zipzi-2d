@@ -194,7 +194,7 @@ impl ToolController {
         if let Some(previous) = &self.manual {
             let tool = previous.tool;
             let preview_result = previous.preview_result;
-            let target = document.manual_mesh_target(true)?;
+            let target = document.manual_mesh_target()?;
             let mut mode = manual_mesh::ManualMeshMode::new(target, document);
             mode.tool = tool;
             mode.preview_result = preview_result;

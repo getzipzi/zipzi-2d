@@ -996,6 +996,3 @@ invalid_boundary = "网格编辑需要单个闭合外围，暂不支持孔洞或
 select_hint = "选择点或边 · 拖动移动 · Shift 多选 · Delete 删除 · Esc 退出"
 create_hint = "点击加点 · 从点拖出，连到已有点或创建新点 · V 选择 · Esc 退出"
 delete_hint = "点击删除点、外围边或解除固定边 · V 选择 · Esc 退出"
-confirm_source = "确认这是完整且独立的源图片"
-confirm_source_detail = "网格编辑使用整张图片。Atlas 页面或裁剪区域不能用于此模式。"
-confirm = "使用完整图片"

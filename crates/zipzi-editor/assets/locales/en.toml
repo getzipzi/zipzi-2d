@@ -997,6 +997,3 @@ invalid_boundary = "Mesh Edit requires one closed outline without holes or separ
 select_hint = "Select points or edges · Drag to move · Shift to add · Delete to remove · Esc to exit"
 create_hint = "Click to add a point · Drag from a point to connect or create another · V to select · Esc to exit"
 delete_hint = "Click to delete a point or outline edge, or release a fixed edge · V to select · Esc to exit"
-confirm_source = "Confirm this is the complete, independent source image"
-confirm_source_detail = "Mesh Edit uses the full image. Do not continue with an atlas page or a cropped region."
-confirm = "Use full image"

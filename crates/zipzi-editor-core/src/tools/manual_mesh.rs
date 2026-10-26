@@ -76,7 +76,7 @@ impl ManualMeshMode {
     }
 
     pub(super) fn refresh_source(&mut self, document: &Document) -> Result<()> {
-        self.target.source = document.manual_mesh_target(true)?.source;
+        self.target.source = document.manual_mesh_target()?.source;
         let model = document.model();
         if let Some(mesh) = model.get_mesh(&self.target.object.id) {
             self.selected.retain(|id| mesh.vertex_ids.contains(id));

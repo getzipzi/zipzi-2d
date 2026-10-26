@@ -41,7 +41,7 @@ fn present(editor: &mut Editor, vertices: usize, triangles: usize) -> anyhow::Re
 #[test]
 fn manual_mesh_stages_preview_apply_and_reject_stale_options() -> anyhow::Result<()> {
     let (mut doc, dir) = support::alpha_document()?;
-    let target = doc.manual_mesh_target(true)?;
+    let target = doc.manual_mesh_target()?;
     let source = doc.mesh_generation_source_manual(&target)?;
     let options = AlphaMeshOptions {
         outside_spacing: 8.,
@@ -65,7 +65,7 @@ fn manual_mesh_stages_preview_apply_and_reject_stale_options() -> anyhow::Result
     let edge_meshing = edge.geometry().meshing.clone().unwrap();
     doc.apply_mesh_generation(&edge)?;
     assert_eq!(doc.history_lengths(), (1, 0));
-    let target = doc.manual_mesh_target(true)?;
+    let target = doc.manual_mesh_target()?;
     let triangle = edge.geometry().triangles[0];
     let uv = triangle.map(|id| {
         let slot = edge
@@ -90,7 +90,7 @@ fn manual_mesh_stages_preview_apply_and_reject_stale_options() -> anyhow::Result
         }
     )?);
     assert_eq!(doc.history_lengths(), (2, 0));
-    let target = doc.manual_mesh_target(true)?;
+    let target = doc.manual_mesh_target()?;
     let source = doc.mesh_generation_source_manual(&target)?;
     let fill = source.generate(MeshGenerationOptions::ManualInterior(options))?;
     assert!(fill.geometry().vertex_ids.len() >= edge_vertex_count);
@@ -101,14 +101,14 @@ fn manual_mesh_stages_preview_apply_and_reject_stale_options() -> anyhow::Result
     assert!(fill.geometry().vertex_ids.contains(&inserted_id));
     doc.apply_mesh_generation(&fill)?;
     assert_eq!(doc.history_lengths(), (3, 0));
-    let target = doc.manual_mesh_target(true)?;
+    let target = doc.manual_mesh_target()?;
     let source = doc.mesh_generation_source_manual(&target)?;
     let reconnect = source.generate(MeshGenerationOptions::ManualReconnect)?;
     let reconnect_changed = reconnect.geometry() != fill.geometry();
     doc.apply_mesh_generation(&reconnect)?;
     let expected_history = 3 + usize::from(reconnect_changed);
     assert_eq!(doc.history_lengths(), (expected_history, 0));
-    let target = doc.manual_mesh_target(true)?;
+    let target = doc.manual_mesh_target()?;
     let source = doc.mesh_generation_source_manual(&target)?;
     let full = source.generate(MeshGenerationOptions::ManualFull(options))?;
     assert!(full.geometry().meshing.is_some());
@@ -971,7 +971,7 @@ fn manual_mesh_create_drag_from_empty_space_does_not_insert_a_point() -> anyhow:
 #[test]
 fn manual_mesh_sparse_interior_is_a_valid_noop_on_an_untouched_mesh() -> anyhow::Result<()> {
     let (mut doc, _dir) = support::alpha_document()?;
-    let target = doc.manual_mesh_target(true)?;
+    let target = doc.manual_mesh_target()?;
     let source = doc.mesh_generation_source_manual(&target)?;
     let options = AlphaMeshOptions {
         clip_to_image: true,

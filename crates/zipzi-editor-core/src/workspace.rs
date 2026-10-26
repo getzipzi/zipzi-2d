@@ -422,7 +422,7 @@ impl Editor {
             .active_session_mut()
             .ok_or_else(|| anyhow!("No document"))?;
         session.document.finish_edit()?;
-        let target = session.document.manual_mesh_target(true)?;
+        let target = session.document.manual_mesh_target()?;
         session
             .modeling
             .tools

@@ -13,13 +13,9 @@ pub struct ManualMeshTarget {
 }
 
 impl Document {
-    /// The caller must explicitly confirm that this asset is the complete
-    /// independent source image. A reference count cannot prove that fact.
-    pub fn manual_mesh_target(&self, full_source_confirmed: bool) -> Result<ManualMeshTarget> {
-        ensure!(
-            full_source_confirmed,
-            "Confirm the complete source image first"
-        );
+    /// Resolve the editable target and validate its image and geometry.
+    /// Imported atlas artwork is normalized by the project import pipeline.
+    pub fn manual_mesh_target(&self) -> Result<ManualMeshTarget> {
         let selection = &self.context().selections;
         ensure!(selection.len() == 1, "Select one mesh");
         let object = &selection[0];
