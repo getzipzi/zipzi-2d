@@ -174,7 +174,8 @@ fn lock_undo_redo_reuse_frames_and_live_picking_skips_locked_top_surface() -> an
         locked: true,
     })?;
     assert!(editor.preview_if_needed()?.is_none());
-    assert!(editor.overlay().vertices.is_empty());
+    assert!(!editor.overlay().vertices.is_empty());
+    assert!(editor.overlay().vertices.iter().all(|v| !v.editable));
     assert!(!editor.overlay().accent_lines.is_empty());
     let point = first.transform.to_viewport(ModelPoint { x: 128., y: 128. });
     let picks = editor.pick_candidates(point, Some(first.version));

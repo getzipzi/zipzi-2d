@@ -48,6 +48,17 @@ pub struct RequestSender {
     shared: Arc<(Mutex<Inbox>, Condvar)>,
 }
 impl RequestSender {
+    /// Hold work without a worker so UI tests can deliver frames deterministically.
+    #[cfg(test)]
+    pub(crate) fn deferred() -> Self {
+        Self {
+            shared: Arc::new((Mutex::new(Inbox::default()), Condvar::new())),
+        }
+    }
+    #[cfg(test)]
+    pub(crate) fn take_pending(&self) -> Option<Request> {
+        self.shared.0.lock().unwrap().pending.pop()
+    }
     pub fn cancel(&self, viewport: ViewportId) {
         if let Ok(mut inbox) = self.shared.0.lock() {
             if let Some(old) = inbox.pending.remove(viewport) {
@@ -154,6 +165,12 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
             let (image, completion) = match frame {
                 Ok(submitted) => {
                     let stats = renderer.last_frame_stats();
+                    if trace_id != 0 {
+                        submitted.image.set_label(&format!(
+                            "{}{trace_id}",
+                            frame_trace::PREVIEW_TEXTURE_LABEL_PREFIX
+                        ));
+                    }
                     frame_trace::emit(
                         trace_id,
                         "published",

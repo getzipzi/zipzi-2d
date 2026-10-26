@@ -30,6 +30,44 @@ pub(super) fn click(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyho
     crate::support::pointer_input(editor, CanvasInput::Up { point: p })?;
     Ok(())
 }
+
+pub(super) fn select_area(
+    editor: &mut Editor,
+    min: ViewportPoint,
+    max: ViewportPoint,
+    shift: bool,
+    alt: bool,
+) -> anyhow::Result<()> {
+    crate::support::pointer_input(
+        editor,
+        CanvasInput::Down {
+            point: min,
+            shift,
+            alt,
+        },
+    )?;
+    let end = if editor.active_tool() == ToolId::Lasso {
+        for point in [ViewportPoint { x: max.x, y: min.y }, max] {
+            assert!(!crate::support::pointer_input(
+                editor,
+                CanvasInput::Move {
+                    point,
+                    left_down: true
+                }
+            )?);
+        }
+        ViewportPoint { x: min.x, y: max.y }
+    } else {
+        max
+    };
+    assert!(!crate::support::pointer_input(
+        editor,
+        CanvasInput::Up { point: end }
+    )?);
+    assert!(!editor.gesture_active());
+    assert!(!editor.document().unwrap().has_pending_edit());
+    Ok(())
+}
 pub(super) fn texture(id: &str, alpha: [u8; 2]) -> SceneTexture {
     SceneTexture {
         asset_id: id.into(),

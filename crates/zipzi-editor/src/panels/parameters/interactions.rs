@@ -2,6 +2,41 @@
 use super::*;
 
 impl ParametersPanel {
+    pub(super) fn reset_defaults(
+        &mut self,
+        document_id: DocumentId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.document_id != Some(document_id) || !self.slider_interaction_allowed(window, cx) {
+            return;
+        }
+        self.finish_slider_drag(cx);
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        owner.update(cx, |owner, cx| {
+            if !owner.prepare_property_inputs(document_id, window, cx) {
+                return;
+            }
+            let Some(document) = owner.editor.document() else {
+                return;
+            };
+            // Reset the whole document, including collapsed and filtered rows.
+            let values = document
+                .parameters()
+                .into_iter()
+                .map(|parameter| (parameter.id, parameter.default_value))
+                .collect();
+            let result = owner
+                .editor
+                .execute_for(document_id, EditorCommand::SetPreviewParameters { values });
+            owner.complete_preview_edit(result, cx);
+        });
+        self.sync_with_editor(window, cx);
+        cx.notify();
+    }
+
     pub(super) fn select_nearest_direct_influence(
         &mut self,
         document_id: DocumentId,
@@ -101,6 +136,21 @@ impl ParametersPanel {
             return;
         }
         self.finish_slider_drag(cx);
+        if let Some(parameter) = self
+            .rows
+            .iter()
+            .find(|r| &r.slider == slider)
+            .map(|r| r.parameter.id.clone())
+        {
+            if let Some(owner) = self.owner.upgrade() {
+                owner.update(cx, |owner, cx| {
+                    let result = owner
+                        .editor
+                        .execute_for(document_id, EditorCommand::FocusParameter(parameter));
+                    owner.complete_preview_edit(result, cx);
+                });
+            }
+        }
         self.slider_drag = Some(slider.clone());
         if move_thumb {
             slider.update(cx, |slider, cx| {
@@ -247,6 +297,23 @@ impl ParametersPanel {
                 || owner.editor.active_id() != Some(document_id)
             {
                 return false;
+            }
+            if values.len() == 1
+                && owner.editor.document().is_some_and(|d| {
+                    d.context()
+                        .parameter_focus
+                        .as_ref()
+                        .is_none_or(|p| p.id != values[0].0)
+                })
+            {
+                let result = owner.editor.execute_for(
+                    document_id,
+                    EditorCommand::FocusParameter(values[0].0.clone()),
+                );
+                if result.is_err() {
+                    owner.complete_preview_edit(result, cx);
+                    return false;
+                }
             }
             if !changed {
                 return true;

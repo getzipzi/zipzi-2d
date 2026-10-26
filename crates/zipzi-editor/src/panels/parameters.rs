@@ -233,6 +233,17 @@ impl ParametersPanel {
         })
     }
 
+    pub(crate) fn benchmark_slider_parameter(
+        &self,
+        cx: &App,
+    ) -> Option<zipzi_editor_core::ParameterValue> {
+        let (_, thumb) = self.benchmark_slider(cx)?;
+        self.rows
+            .iter()
+            .find(|row| row.slider.read(cx).bounds().contains(&thumb))
+            .map(|row| row.parameter.clone())
+    }
+
     #[cfg(test)]
     pub(crate) fn sorting_scroll_handle(&self) -> UniformListScrollHandle {
         self.scroll.clone()
@@ -356,6 +367,21 @@ impl ParametersPanel {
             })
             .control(add_keyforms)
             .control(delete_keyforms)
+            .control(
+                crate::ui::compact::header_button(Button::new("parameters-reset-defaults"))
+                    .icon(IconName::RotateCcw)
+                    .accessibility_label(t!("parameter.reset_defaults"))
+                    .tooltip(t!("parameter.reset_defaults"))
+                    .disabled(self.rows.is_empty() || !self.slider_interaction_allowed(window, cx))
+                    .on_click(cx.listener({
+                        let document = self.document_id;
+                        move |this, _, window, cx| {
+                            if let Some(document) = document {
+                                this.reset_defaults(document, window, cx);
+                            }
+                        }
+                    })),
+            )
             .control(self.expansion_button(window, cx))
             .control(self.related_filter_button(window, cx))
     }
@@ -546,6 +572,7 @@ impl crate::docking::header::PanelHeader for ParametersPanel {
 
 impl Render for ParametersPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let _span = crate::benchmark::parameter_overlay::ui_span("ui.parameters_render");
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };

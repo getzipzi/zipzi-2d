@@ -85,11 +85,21 @@ impl Document {
             .as_ref()
             .ok_or_else(|| anyhow!("No canvas edit"))?;
         ensure!(pending.kind == Gesture::Controls, "Another edit is active");
+        // Resolve all requested preview displacements before touching the candidate.
+        // Glue may couple selected vertices across multiple mesh write targets.
+        let mut mesh_positions = crate::mesh_edit::positions(targets, selected, change)
+            .map_err(|e| crate::mesh_edit::PreviewConstraint(e.to_string()))?;
         let previous_revision = self.projection_revision;
         self.invalidate_projection(false);
         let pending = self.pending.as_mut().unwrap();
         pending.changed.take();
-        for target in targets {
+        for (index, target) in targets.iter().enumerate() {
+            if let Some(positions) = mesh_positions.remove(&index) {
+                pending
+                    .edit
+                    .apply(|sdk| target.write_mesh(sdk, positions))?;
+                continue;
+            }
             let ids = selected
                 .iter()
                 .filter(|c| c.object == target.object)

@@ -21,6 +21,7 @@ impl EditorView {
 
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let _span = benchmark::parameter_overlay::ui_span("ui.editor_render");
         self.sync_viewports();
         let open: std::collections::HashSet<_> = self
             .editor

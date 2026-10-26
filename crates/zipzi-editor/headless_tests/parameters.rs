@@ -12,6 +12,95 @@ fn show_keyforms(harness: &super::Harness, cx: &mut TestAppContext) {
     .unwrap();
 }
 
+#[gpui_kit::test]
+fn parameter_reset_defaults_includes_filtered_parameters(cx: &mut TestAppContext) {
+    use gpui_kit::component::{WindowExt, input::AnyInputState};
+    use zipzi_editor_core::NewParameter;
+
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(2).unwrap();
+    let precise = document
+        .create_parameter(NewParameter {
+            runtime_id: "PreciseDefault".into(),
+            default_value: 0.375,
+            ..Default::default()
+        })
+        .unwrap();
+    for parameter in document.parameters() {
+        document
+            .set_preview_parameter(&parameter.id, parameter.maximum)
+            .unwrap();
+    }
+    let history = document.history_lengths();
+    let modified = document.modified();
+    let focus = document.context().parameter_focus.clone();
+    let harness = setup_with_document(cx, document, assets);
+
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("parameters-filter-related", cx);
+        window.render_frame(cx);
+        assert!(
+            window
+                .try_find(format!("parameter-row-{precise}"))
+                .is_none()
+        );
+        window.click("parameters-reset-defaults", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        for parameter in document.parameters() {
+            assert_eq!(parameter.value, parameter.default_value);
+        }
+        assert_eq!(document.history_lengths(), history);
+        assert_eq!(document.modified(), modified);
+        assert_eq!(document.context().parameter_focus, focus);
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("parameters-filter-related", cx);
+        window.click(format!("parameter-value-{precise}"), cx);
+        let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
+            panic!("numeric input not focused")
+        };
+        assert_eq!(input.read(cx).value().as_ref(), "0.3");
+        window.blur(cx);
+        window.click("parameters-reset-defaults", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert_eq!(document.history_lengths(), history);
+        assert!(
+            document
+                .parameters()
+                .iter()
+                .all(|p| p.value == p.default_value)
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_reset_defaults_is_blocked_by_modal(cx: &mut TestAppContext) {
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    document.set_preview_parameter(&parameter, 0.75).unwrap();
+    let before = document.parameters();
+    let harness = setup_with_document(cx, document, assets);
+    harness.view.update(cx, |view, cx| {
+        view.modal = true;
+        cx.notify();
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click("parameters-reset-defaults", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().parameters(), before);
+    });
+}
+
 fn indirect_selection_document(
     bind_child: bool,
 ) -> (zipzi_editor_core::Document, tempfile::TempDir, String) {
@@ -942,6 +1031,7 @@ fn parameter_titlebar_adds_endpoint_keyforms(cx: &mut TestAppContext) {
             "parameter-add-two-keyforms",
             "parameter-add-three-keyforms",
             "parameter-delete-all-keyforms",
+            "parameters-reset-defaults",
         ] {
             let bounds = window.find(button).bounds();
             assert_eq!(

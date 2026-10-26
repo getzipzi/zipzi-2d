@@ -50,6 +50,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
                         "parameter-add-two-keyforms",
                         "parameter-add-three-keyforms",
                         "parameter-delete-all-keyforms",
+                        "parameters-reset-defaults",
                     ] {
                         let bounds = window.find(id).bounds();
                         assert_eq!(bounds.size, standard.size, "{id}: standard button size");

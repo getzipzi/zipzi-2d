@@ -5,6 +5,51 @@ use gpui_kit::component::input;
 use std::path::{Path, PathBuf};
 use zipzi_editor_core::{COMMANDS, CommandId};
 
+/// Structural creation availability is independent of pose previews and textures.
+#[derive(Default)]
+pub(super) struct SceneCreationMenuCache {
+    document: Option<zipzi_editor_core::DocumentId>,
+    revision: u64,
+    pending: bool,
+    selection: Vec<zipzi_editor_core::ObjectRef>,
+    states: std::collections::HashMap<
+        CommandId,
+        std::sync::Arc<anyhow::Result<zipzi_sdk::CapabilityState>>,
+    >,
+    #[cfg(test)]
+    pub builds: usize,
+}
+impl SceneCreationMenuCache {
+    fn refresh(&mut self, editor: &Editor) {
+        let Some(document) = editor.document() else {
+            return;
+        };
+        if self.document == editor.active_id()
+            && self.revision == document.properties_revision()
+            && self.pending == document.has_pending_edit()
+            && self.selection == document.context().selections
+        {
+            return;
+        }
+        self.document = editor.active_id();
+        self.revision = document.properties_revision();
+        self.pending = document.has_pending_edit();
+        self.selection = document.context().selections.clone();
+        self.states = crate::authoring::scene_creation::all_commands()
+            .map(|id| {
+                (
+                    id,
+                    std::sync::Arc::new(editor.authoring_command_capability(id)),
+                )
+            })
+            .collect();
+        #[cfg(test)]
+        {
+            self.builds += 1;
+        }
+    }
+}
+
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct MenuState {
     pub commands: Vec<zipzi_editor_core::CommandState>,
@@ -109,6 +154,7 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let _span = benchmark::parameter_overlay::ui_span("ui.refresh_menus");
         let text = self.has_focused_input(window, cx);
         let property_form_edit = self.dock.as_ref().is_some_and(|dock| {
             dock.properties
@@ -124,8 +170,14 @@ impl EditorView {
             }
             state
         };
-        // One fresh domain query serves enabled state and its reason. Keep
-        // results local so selection, locks and history changes refresh them.
+        if !self.editor.is_busy()
+            && self.editor.editing_context() == Some(zipzi_editor_core::EditingContext::Modeling)
+            && !benchmark::parameter_overlay::uncached_creation_menus()
+        {
+            self.scene_creation_menus.refresh(&self.editor);
+        }
+        // Only structural creation queries are cached; preview/focus-dependent
+        // checked and enabled states still use the current editor context.
         let capabilities: std::collections::HashMap<_, _> = crate::authoring::creation_commands()
             .filter(|id| {
                 let expected = if id.scene_creation_type().is_some()
@@ -139,7 +191,16 @@ impl EditorView {
                 };
                 !self.editor.is_busy() && self.editor.editing_context() == Some(expected)
             })
-            .map(|id| (id, self.editor.authoring_command_capability(id)))
+            .map(|id| {
+                let capability = if id.scene_creation_type().is_some()
+                    && !benchmark::parameter_overlay::uncached_creation_menus()
+                {
+                    self.scene_creation_menus.states[&id].clone()
+                } else {
+                    std::sync::Arc::new(self.editor.authoring_command_capability(id))
+                };
+                (id, capability)
+            })
             .collect();
         let settings = cx.global::<settings::Settings>();
         let state = MenuState {
@@ -163,7 +224,7 @@ impl EditorView {
             creation_reasons: crate::authoring::creation_commands()
                 .map(|id| {
                     let capability = capabilities.get(&id)?;
-                    match capability {
+                    match capability.as_ref() {
                         Ok(zipzi_sdk::CapabilityState::Available) => None,
                         Ok(
                             zipzi_sdk::CapabilityState::Unavailable { code }

@@ -41,6 +41,40 @@ def composition(id, start, texture=123, present=None):
 
 
 class TraceReportTest(unittest.TestCase):
+    def test_overlay_reusing_preview_address_is_not_a_model_frame(self):
+        first = composition(100, 4, present=10)
+        next(e for e in first if e['stage'] == 'compose_surface')['fields']['preview'] = 0
+        second = composition(200, 24, present=32)
+        next(e for e in second if e['stage'] == 'compose_surface')['fields']['preview'] = 20
+        rows, summary = report.analyze(capture(*request(10, 1, 0), *first,
+                                             *request(20, 2, 20), *second))
+        self.assertEqual(rows[0]['outcome'], 'accepted_not_composed')
+        self.assertNotIn('input_to_present_ms', rows[0])
+        self.assertEqual(rows[1]['input_to_present_ms'], 12)
+        self.assertEqual(summary['surface_identity'], 'preview_id')
+        self.assertFalse(summary['issues'])
+
+    def test_tagged_multi_preview_composition_uses_each_identity(self):
+        compose = composition(100, 14, texture=456, present=20)
+        next(e for e in compose if e['stage'] == 'compose_surface')['fields']['preview'] = 20
+        compose += [event(100, 'compose_surface', 14.1, texture=123, preview=10),
+                    event(100, 'compose_surface', 14.1, texture=123, preview=0)]
+        rows, summary = report.analyze(capture(*request(10, 1, 0, texture=123),
+                                             *request(20, 2, 10, texture=456), *compose))
+        self.assertEqual([r['input_to_present_ms'] for r in rows], [20, 10])
+        self.assertFalse(summary['issues'])
+
+    def test_invalid_preview_identity_and_ambiguous_legacy_are_reported(self):
+        compose = composition(100, 4, present=10)
+        next(e for e in compose if e['stage'] == 'compose_surface')['fields']['preview'] = 99
+        _, summary = report.analyze(capture(*request(10, 1, 0), *compose))
+        self.assertTrue(any('invalid preview surface identity' in s for s in summary['issues']))
+        compose = composition(100, 14, texture=456, present=20)
+        compose += [event(100, 'compose_surface', 14.1, texture=123)]
+        _, summary = report.analyze(capture(*request(10, 1, 0, texture=123),
+                                           *request(20, 2, 10, texture=456), *compose))
+        self.assertTrue(any('ambiguous legacy' in s for s in summary['issues']))
+
     def test_completed_frame_replaced_before_ui_delivery_has_a_terminal_outcome(self):
         records = [e for e in request(10, 1, 0) if e.get("stage") not in ("published", "accepted")]
         rows, summary = report.analyze(capture(*records,

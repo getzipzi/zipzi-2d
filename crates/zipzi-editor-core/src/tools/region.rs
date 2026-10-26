@@ -1,13 +1,13 @@
 //! Region selection shared by the rectangle and freehand tools.
 use super::gesture::Press;
 use crate::{
-    CanvasScene, ComponentRef, ControlKind, Document, ObjectKind, ObjectRef, ObjectStateIndex,
-    ViewportPoint,
+    CanvasScene, ComponentRef, ControlKind, Document, HitTarget, ObjectKind, ObjectRef,
+    ObjectStateIndex, ViewportPoint,
 };
 use anyhow::Result;
 use std::{collections::HashSet, hash::Hash};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum SelectionOperation {
     Replace,
     Add,
@@ -40,6 +40,35 @@ impl SelectionOperation {
             }
         }
     }
+    pub fn click<T: Eq + Hash + Clone>(self, selected: &mut Vec<T>, hit: T) {
+        if self == Self::Add && selected.contains(&hit) {
+            selected.retain(|item| item != &hit);
+        } else {
+            self.apply(selected, vec![hit]);
+        }
+    }
+}
+
+pub(super) fn select_click(
+    components: &mut Vec<ComponentRef>,
+    document: &mut Document,
+    press: &Press,
+    target: &Option<HitTarget>,
+    component_surface: bool,
+) -> Result<()> {
+    if target.is_none() && !component_surface {
+        // A true miss clears selection even with modifiers.
+        document.select_objects(Vec::new())?;
+        components.clear();
+    } else if let Some(HitTarget::Object(object)) = target {
+        let mut selection = press.selection.clone();
+        press.operation.click(&mut selection, object.clone());
+        document.select_objects(selection)?;
+        components.clear();
+    } else if press.operation == SelectionOperation::Replace {
+        components.clear();
+    }
+    Ok(())
 }
 
 pub(super) struct SelectionRegion<'a> {
@@ -130,8 +159,8 @@ pub(super) fn select_region(
     document: &mut Document,
     press: &Press,
     region: &SelectionRegion<'_>,
-    operation: SelectionOperation,
 ) -> Result<()> {
+    let operation = press.operation;
     let locks = document.object_state_index();
     if has_region_components(&press.scene, &press.selection, &locks) {
         let mut hits = Vec::new();
@@ -145,11 +174,15 @@ pub(super) fn select_region(
                 continue;
             }
             let mut add = |id, point| {
-                if region.contains(press.transform.to_viewport(point)) {
-                    hits.push(ComponentRef {
-                        object: c.object.clone(),
-                        id,
-                    });
+                let component = ComponentRef {
+                    object: c.object.clone(),
+                    id,
+                };
+                if (operation == SelectionOperation::Remove
+                    || matches!(press.access.probe(&component), Some(Ok(()))))
+                    && region.contains(press.transform.to_viewport(point))
+                {
+                    hits.push(component);
                 }
             };
             if let Some(bezier) = (!press.warp_fine)
@@ -170,11 +203,15 @@ pub(super) fn select_region(
                 r.kind == ObjectKind::Mesh && !locks.is_locked(r) && press.scene.mesh_visible(&r.id)
             }) {
                 for &(id, point) in &mesh.vertices {
-                    if region.contains(press.transform.to_viewport(point)) {
-                        hits.push(ComponentRef {
-                            object: r.clone(),
-                            id,
-                        });
+                    let component = ComponentRef {
+                        object: r.clone(),
+                        id,
+                    };
+                    if (operation == SelectionOperation::Remove
+                        || matches!(press.access.probe(&component), Some(Ok(()))))
+                        && region.contains(press.transform.to_viewport(point))
+                    {
+                        hits.push(component);
                     }
                 }
             }

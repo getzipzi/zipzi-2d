@@ -26,6 +26,7 @@ pub(super) struct ParameterRowView {
 
 impl Render for ParameterRowView {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let _span = crate::benchmark::parameter_overlay::ui_span("ui.parameter_row_render");
         let parameter = &self.parameter;
         let slider = &self.slider;
         let disabled = self.disabled;

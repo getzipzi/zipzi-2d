@@ -697,6 +697,7 @@ fn render_readonly_value(value: &str, cx: &App) -> AnyElement {
 
 impl Render for PropertiesPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let _span = crate::benchmark::parameter_overlay::ui_span("ui.properties_render");
         #[cfg(test)]
         {
             self.renders += 1;

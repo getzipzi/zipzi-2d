@@ -6,6 +6,8 @@ mod support;
 #[allow(dead_code)]
 #[path = "cases/animation/acceptance.rs"]
 mod animation;
+#[path = "cases/mao_canvas.rs"]
+mod mao_canvas;
 #[path = "cases/psd_import.rs"]
 mod psd_import;
 #[path = "cases/transfer.rs"]

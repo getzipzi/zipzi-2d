@@ -13,6 +13,7 @@ pub(super) struct ControlGesture {
 struct ActiveEdit {
     edits: Vec<ControlEdit>,
     last: Option<ControlChange>,
+    constrained: Option<String>,
 }
 impl ControlGesture {
     pub fn new(press: Press, target: HitTarget) -> Self {
@@ -62,12 +63,29 @@ impl ControlGesture {
                     .any(|parent| targets.contains(parent))),
                 "Select controls from one deformation level at a time"
             );
-            let edits = targets
+            let mut edits = targets
                 .iter()
                 .map(|r| ControlEdit::prepare(document, &press.scene, r))
                 .collect::<Result<Vec<_>>>()?;
+            ensure!(
+                !targets
+                    .iter()
+                    .any(|r| r.kind == crate::ObjectKind::Deformer)
+                    || !targets.iter().any(|r| r.kind == crate::ObjectKind::Mesh
+                        && !document.model().glues_for_mesh(&r.id).is_empty()),
+                "Edit Glue-connected meshes separately from deformer controls"
+            );
+            for target in &mut edits {
+                if let Some(mesh) = &mut target.mesh {
+                    mesh.original_points = press.original_points;
+                }
+            }
             document.begin_control_edit(&edits)?;
-            self.edit = Some(ActiveEdit { edits, last: None });
+            self.edit = Some(ActiveEdit {
+                edits,
+                last: None,
+                constrained: None,
+            });
         }
         let edit = self.edit.as_mut().unwrap();
         let edits = &edit.edits;
@@ -146,9 +164,17 @@ impl ControlGesture {
             _ => ControlChange::Translate(delta),
         };
         if edit.last == Some(change) {
+            edit.constrained = None;
             return Ok(false);
         }
-        document.preview_control_edit(edits, components, change)?;
+        if let Err(error) = document.preview_control_edit(edits, components, change) {
+            if edit.last.is_none() || !error.is::<crate::mesh_edit::PreviewConstraint>() {
+                return Err(error);
+            }
+            edit.constrained = Some(error.to_string());
+            return Ok(false);
+        }
+        edit.constrained = None;
         edit.last = Some(change);
         Ok(true)
     }
@@ -167,6 +193,10 @@ impl ControlGesture {
         true
     }
     pub fn overlay(&self, out: &mut OverlaySnapshot) {
+        if let Some(reason) = self.edit.as_ref().and_then(|e| e.constrained.as_ref()) {
+            out.interaction_label = Some(reason.clone());
+            return;
+        }
         out.interaction_label =
             self.edit
                 .as_ref()
@@ -185,6 +215,18 @@ impl ControlGesture {
                         format!("Δ {:.1}°  × {:.3}", angle, scale)
                     }
                 });
+        if let Some(label) = &mut out.interaction_label {
+            if self.press.original_points {
+                *label = format!("Original points · {label}");
+            }
+            if let Some(target) = out
+                .target_label
+                .as_ref()
+                .filter(|t| t.starts_with("BlendShape delta"))
+            {
+                *label = format!("{target} · {label}");
+            }
+        }
     }
 }
 pub(super) const HINTS: &[InteractionHint] = &[

@@ -8,7 +8,10 @@ pub(super) struct Press {
     pub transform: ViewportTransform,
     pub scene: Arc<CanvasScene>,
     pub shift: bool,
+    pub operation: region::SelectionOperation,
+    pub access: Arc<access::EditAccess>,
     pub warp_fine: bool,
+    pub original_points: bool,
     pub selection: Vec<ObjectRef>,
     pub current: ViewportPoint,
     pub dragged: bool,
@@ -105,7 +108,6 @@ impl ToolId {
         press: Press,
         hit: Option<HitTarget>,
         component_surface: bool,
-        alt: bool,
     ) -> Option<Gesture> {
         if self == Self::Hand {
             return None;
@@ -118,8 +120,8 @@ impl ToolId {
             ) => Some(Gesture::Controls(ControlGesture::new(press, target))),
             target if self == Self::Lasso => Some(Gesture::Lasso(LassoGesture::new(
                 press,
-                alt,
-                target.is_none() && !component_surface,
+                target,
+                component_surface,
             ))),
             target => Some(Gesture::Select(SelectGesture {
                 press,

@@ -22,8 +22,6 @@ impl ToolController {
         frame: &CanvasFrame,
         event: CanvasInput,
     ) -> Result<bool> {
-        let scene = &frame.geometry;
-        let t = frame.transform;
         match event {
             CanvasInput::Cancel => Ok(self.cancel(document)),
             CanvasInput::Leave => {
@@ -53,15 +51,7 @@ impl ToolController {
                         .update(document, &self.components, point)
                 } else {
                     self.hovered_binding = Some(frame.version.binding);
-                    self.hovered = scene.hit_with_mode(
-                        point,
-                        t,
-                        &document.context().selections,
-                        self.active,
-                        self.deformer_visibility,
-                        self.warp_fine,
-                        &document.object_state_index(),
-                    );
+                    self.hovered = self.canvas_hit(document, frame, point);
                     Ok(false)
                 }
             }

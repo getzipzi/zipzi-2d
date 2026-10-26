@@ -24,7 +24,7 @@ behavior by operation:
 - `gesture.rs`: the explicit Select/Lasso/Controls variants, common press
   projection and dispatch. Tool selection-family and idle Escape policy are
   declared here alongside tool dispatch.
-- `region.rs`: shared rectangle/polygon geometry and selection application.
+- `region.rs`: shared click/region selection rules and rectangle/polygon geometry.
 - `input.rs`: pointer event dispatch and whether the model changed.
 - `overlay.rs`: projection of shared scene controls; delegates gesture feedback
   to the active variant.
@@ -33,6 +33,13 @@ The press snapshot holds the original scene, transform, selection and modifiers.
 Only a control gesture can own a candidate edit. An idle control press creates no
 transaction; crossing the existing drag threshold prepares it. Selection gestures
 never own model transactions.
+
+Select and Lasso share click selection, Shift addition/toggling and Option
+subtraction (Option takes precedence over Shift). Region captures use the same
+operation from the press snapshot; only their region geometry differs. Disabled
+vertices use the same edit-access checks as their overlay styling and are excluded
+from click and region selection. They remain hoverable to explain the restriction,
+and Option can remove a previously selected point that has since become disabled.
 
 ## Lifecycle
 

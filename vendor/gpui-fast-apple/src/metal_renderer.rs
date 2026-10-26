@@ -571,10 +571,22 @@ impl MetalRenderer {
         if trace_id != 0 {
             for surface in &scene.surfaces {
                 if let gpui::SurfaceSource::MetalTexture(texture) = &surface.source {
+                    // A recycled address can now belong to an overlay or another
+                    // preview. Read the identity from this live resource instead.
+                    let object = unsafe { &*(texture.as_ptr() as *const AnyObject) };
+                    let label: Option<objc2::rc::Retained<objc2_foundation::NSString>> =
+                        unsafe { objc2::msg_send![object, label] };
+                    let preview = label
+                        .and_then(|label| {
+                            label.to_string()
+                                .strip_prefix(gpui::frame_trace::PREVIEW_TEXTURE_LABEL_PREFIX)
+                                .and_then(|id| id.parse::<u64>().ok())
+                        })
+                        .unwrap_or(0);
                     gpui::frame_trace::emit(
                         trace_id,
                         "compose_surface",
-                        &[("texture", texture.as_ptr() as u64)],
+                        &[("texture", texture.as_ptr() as u64), ("preview", preview)],
                     );
                 }
             }

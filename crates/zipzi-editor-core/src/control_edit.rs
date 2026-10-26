@@ -6,6 +6,115 @@ use crate::{
 use anyhow::{Result, bail, ensure};
 use zipzi_core::{Mesh, MeshBinding, SceneBinding, SceneTrack, Transform, Vec2};
 
+fn keyform_edit_hint(
+    doc: &zipzi_core::Document,
+    parameters: &[zipzi_core::EvaluatedParameter],
+    axes: &[zipzi_core::BindingAxis],
+) -> String {
+    let active: Vec<_> = axes.iter().filter(|a| !a.parameter_id.is_empty()).collect();
+    let value = |id: &str| parameters.iter().find(|p| p.id == id).map(|p| p.value);
+    let off_keys: Vec<_> = active
+        .iter()
+        .copied()
+        .filter(|axis| {
+            !value(&axis.parameter_id)
+                .is_some_and(|v| axis.keys.iter().any(|k| (v - k).abs() < 1e-6))
+        })
+        .collect();
+    // If each axis is at a key but the combination is missing, identify all
+    // binding axes rather than suggesting that no parameter needs adjusting.
+    let targets = if off_keys.is_empty() {
+        &active
+    } else {
+        &off_keys
+    };
+    let names = targets
+        .iter()
+        .map(|axis| {
+            let id = axis.parameter_id.as_str();
+            let name = doc.get_parameter(id).map_or(id, |p| {
+                if !p.name.trim().is_empty() {
+                    p.name.as_str()
+                } else if !p.runtime_id.is_empty() {
+                    p.runtime_id.as_str()
+                } else {
+                    id
+                }
+            });
+            match value(id) {
+                Some(v) => format!("\"{name}\" ({v})"),
+                None => format!("\"{name}\""),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("Set {names} to stored keyform values before editing this object")
+}
+
+#[cfg(test)]
+mod hint_tests {
+    use super::keyform_edit_hint;
+    use zipzi_core::{BindingAxis, Canvas, EvaluatedParameter, Parameter};
+
+    #[test]
+    fn keyform_hint_names_only_parameters_away_from_keys() -> anyhow::Result<()> {
+        let ids = [
+            uuid::Uuid::new_v4().to_string(),
+            uuid::Uuid::new_v4().to_string(),
+        ];
+        let mut session = zipzi_sdk::AuthoringSession::new(
+            &uuid::Uuid::new_v4().to_string(),
+            Canvas::new(256., 256., Default::default(), 1.),
+        )?;
+        session.edit("Hint parameters", None, |edit| {
+            for (id, name, runtime) in [
+                (&ids[0], "Angle X", "ParamAngleX"),
+                (&ids[1], "", "ParamAngleY"),
+            ] {
+                edit.create_parameter(Parameter {
+                    id: id.clone(),
+                    name: name.into(),
+                    runtime_id: runtime.into(),
+                    minimum: 0.,
+                    maximum: 1.,
+                    default_value: 0.,
+                    ..Default::default()
+                })?;
+            }
+            Ok(())
+        })?;
+        let axes: Vec<_> = ids
+            .iter()
+            .map(|id| BindingAxis {
+                parameter_id: id.clone(),
+                keys: vec![0., 1.],
+                ..Default::default()
+            })
+            .collect();
+        let mut parameters: Vec<_> = ids
+            .iter()
+            .map(|id| EvaluatedParameter {
+                id: id.clone(),
+                value: 0.,
+                ..Default::default()
+            })
+            .collect();
+        parameters[0].value = 0.5;
+        let hint = keyform_edit_hint(session.document(), &parameters, &axes);
+        assert!(hint.contains("\"Angle X\" (0.5)"));
+        assert!(!hint.contains("ParamAngleY"));
+        parameters[1].value = 0.25;
+        let hint = keyform_edit_hint(session.document(), &parameters, &axes);
+        assert!(hint.contains("\"Angle X\" (0.5)"));
+        assert!(hint.contains("\"ParamAngleY\" (0.25)"));
+        parameters[0].value = 0.;
+        parameters[1].value = 0.;
+        let hint = keyform_edit_hint(session.document(), &parameters, &axes);
+        assert!(hint.contains("Angle X") && hint.contains("ParamAngleY"));
+        Ok(())
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum ControlChange {
     Translate(crate::ModelVector),
@@ -23,11 +132,42 @@ pub(crate) enum ControlChange {
     MoveAll(crate::ModelVector),
 }
 
+impl ControlChange {
+    pub(crate) fn apply_to(self, p: ModelPoint) -> ModelPoint {
+        match self {
+            Self::Translate(d) | Self::MoveAll(d) | Self::Rotation { translation: d, .. } => {
+                ModelPoint {
+                    x: p.x + d.x,
+                    y: p.y + d.y,
+                }
+            }
+            Self::Transform {
+                pivot,
+                scale,
+                radians,
+                translation,
+            } => {
+                let (s, c) = radians.sin_cos();
+                let x = (p.x - pivot.x) * scale[0];
+                let y = (p.y - pivot.y) * scale[1];
+                ModelPoint {
+                    x: pivot.x + x * c - y * s + translation.x,
+                    y: pivot.y + x * s + y * c + translation.y,
+                }
+            }
+        }
+    }
+    pub(crate) fn moves_all(self) -> bool {
+        !matches!(self, Self::Translate(_))
+    }
+}
+
 #[derive(Clone)]
 pub(crate) enum EditOriginal {
     Mesh(Mesh),
     Transform(Transform),
     MeshBinding(MeshBinding),
+    BlendBinding(zipzi_core::BlendShapeBinding),
     SceneBinding(SceneBinding),
     Batch(Vec<EditOriginal>),
 }
@@ -37,6 +177,7 @@ impl EditOriginal {
             Self::Mesh(m) => &m.id,
             Self::Transform(t) => &t.id,
             Self::MeshBinding(b) => &b.id,
+            Self::BlendBinding(b) => &b.id,
             Self::SceneBinding(b) => &b.id,
             Self::Batch(v) => v[0].id(),
         }
@@ -46,6 +187,7 @@ impl EditOriginal {
             Self::Mesh(v) => doc.get_mesh(&v.id) == Some(v),
             Self::Transform(v) => doc.get_transform(&v.id) == Some(v),
             Self::MeshBinding(v) => doc.get_binding(&v.id) == Some(v),
+            Self::BlendBinding(v) => doc.get_blend_binding(&v.id) == Some(v),
             Self::SceneBinding(v) => doc.get_scene_binding(&v.id) == Some(v),
             Self::Batch(v) => v.iter().all(|b| b.unchanged(doc)),
         }
@@ -61,6 +203,7 @@ pub(crate) struct ControlEdit {
     pub rotation: bool,
     pub space: ControlSpace,
     pub warp: Option<WarpEdit>,
+    pub mesh: Option<crate::mesh_edit::MeshEdit>,
 }
 #[derive(Clone)]
 pub(crate) struct WarpEdit {
@@ -75,6 +218,149 @@ pub(crate) struct ControlSpace {
     parent_points: Vec<f32>,
 }
 
+/// Prefer the focused parameter or opened binding. Without either, one
+/// contributing BlendShape on an exact stored key is unambiguous. Mixed or
+/// multiple contributions still require an explicit authoring destination.
+fn mesh_blend_target<'a>(
+    document: &Document,
+    doc: &'a zipzi_core::Document,
+    scene: &CanvasScene,
+    object: &ObjectRef,
+) -> Result<Option<(&'a zipzi_core::BlendShapeBinding, usize, f32)>> {
+    #[cfg(feature = "bench-instrumentation")]
+    let _span = zipzi_core::benchmark::span("overlay.mesh_blend_target");
+    let active = document.context().active_binding.as_ref();
+    let focus = document.context().parameter_focus.as_ref();
+    let bindings: Vec<_> = doc
+        .iter_blend_bindings_for_target(&object.id)
+        .filter(|b| doc.blend_binding_active(b))
+        .collect();
+    if bindings.is_empty() {
+        return Ok(None);
+    }
+    let values = scene.parameter_values();
+    for &b in &bindings {
+        let table = doc.get_blend_key_table(&b.key_table_id).unwrap();
+        if active.is_some_and(|r| r.kind == ObjectKind::BlendBinding && r.id == b.id)
+            && focus.is_none_or(|r| r.id == table.parameter_id)
+            || focus.is_some_and(|r| r.id == table.parameter_id)
+        {
+            let p = doc.get_parameter(&table.parameter_id).unwrap();
+            let value = values[&p.id];
+            let hint = || {
+                format!(
+                    "Set \"{}\" ({value}) to a stored BlendShape keyform before editing this object",
+                    p.name
+                )
+            };
+            let slot = table
+                .keys
+                .iter()
+                .position(|k| (value - k).abs() < 1e-6)
+                .ok_or_else(|| anyhow::anyhow!("{}", hint()))?;
+            // Selecting the neutral sample explicitly chooses the underlying
+            // base/ordinary form, even while other BlendShapes contribute.
+            // Its stored zero delta is never a writable pose destination.
+            if slot == table.base_key_idx {
+                return Ok(None);
+            }
+            let weight = zipzi_core::evaluation::evaluate_blend_binding(doc, values, b)
+                .into_iter()
+                .find(|(i, _)| *i == slot)
+                .map_or(0., |(_, w)| w);
+            ensure!(
+                weight >= 0.05,
+                "BlendShape \"{}\" has insufficient effective influence ({weight}); adjust its constraints before editing",
+                p.name
+            );
+            return Ok(Some((b, slot, weight)));
+        }
+    }
+    let contributing: Vec<_> = bindings
+        .iter()
+        .copied()
+        .filter(|b| !zipzi_core::evaluation::evaluate_blend_binding(doc, values, b).is_empty())
+        .collect();
+    // A newly opened model has no parameter focus. One contributing delta at
+    // an exact stored key is already an unambiguous authoring destination.
+    // Keep explicit binding choices above and ambiguous/mixed poses below.
+    if active.is_none() && contributing.len() == 1 {
+        let b = contributing[0];
+        let table = doc.get_blend_key_table(&b.key_table_id).unwrap();
+        if let Some(slot) = table
+            .keys
+            .iter()
+            .position(|key| (values[&table.parameter_id] - key).abs() < 1e-6)
+        {
+            let weight = zipzi_core::evaluation::evaluate_blend_binding(doc, values, b)
+                .into_iter()
+                .find(|(i, _)| *i == slot)
+                .map_or(0., |(_, w)| w);
+            let p = doc.get_parameter(&table.parameter_id).unwrap();
+            ensure!(
+                weight >= 0.05,
+                "BlendShape \"{}\" has insufficient effective influence ({weight}); adjust its constraints before editing",
+                p.name
+            );
+            return Ok(Some((b, slot, weight)));
+        }
+    }
+    let contributing: Vec<_> = contributing
+        .iter()
+        .map(|b| {
+            let t = doc.get_blend_key_table(&b.key_table_id).unwrap();
+            let p = doc.get_parameter(&t.parameter_id).unwrap();
+            format!("\"{}\" ({})", p.name, values[&p.id])
+        })
+        .collect();
+    ensure!(
+        contributing.is_empty(),
+        "Select a BlendShape keyform for {} before editing this object",
+        contributing.join(", ")
+    );
+    Ok(None)
+}
+
+/// Base deformer poses remain editable when their BlendShapes are neutral.
+/// Nonzero deltas need their own authoring path rather than an implicit base edit.
+fn deformer_blend_edit_hint(
+    doc: &zipzi_core::Document,
+    scene: &CanvasScene,
+    object: &ObjectRef,
+) -> Option<String> {
+    let values = scene.parameter_values();
+    let parameters: Vec<_> = doc
+        .iter_blend_bindings_for_target(&object.id)
+        .filter(|b| !zipzi_core::evaluation::evaluate_blend_binding(doc, values, b).is_empty())
+        .map(|b| {
+            let table = doc.get_blend_key_table(&b.key_table_id).unwrap();
+            let p = doc.get_parameter(&table.parameter_id).unwrap();
+            let name = if p.name.trim().is_empty() {
+                &p.runtime_id
+            } else {
+                &p.name
+            };
+            format!("\"{name}\" ({})", values[&p.id])
+        })
+        .collect();
+    (!parameters.is_empty()).then(|| {
+        format!(
+            "Set {} to their BlendShape base keyforms before editing this deformer",
+            parameters.join(", ")
+        )
+    })
+}
+
+pub(crate) enum ControlDescription {
+    Writable(WritableControl),
+    ReadOnly(String),
+}
+
+pub(crate) struct WritableControl {
+    pub label: String,
+    pub mesh_weight: Option<f32>,
+}
+
 impl ControlEdit {
     /// Read-only capability query for the overlay. Never clones authoring
     /// meshes or entire keyform tables on pointer/hover redraws.
@@ -82,41 +368,78 @@ impl ControlEdit {
         document: &Document,
         scene: &CanvasScene,
         object: &ObjectRef,
-    ) -> Result<String> {
+    ) -> Result<ControlDescription> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("overlay.describe");
         document.ensure_editable(std::slice::from_ref(object))?;
         let doc = document.model();
-        ensure!(
-            doc.blend_bindings_for_target(&object.id)
-                .iter()
-                .all(|b| !doc.blend_binding_active(b)),
-            "BlendShape editing requires an explicit blend target"
-        );
+        let writable = |label, weight| -> Result<ControlDescription> {
+            let mesh_weight = if object.kind == ObjectKind::Mesh {
+                let mesh = doc
+                    .get_mesh(&object.id)
+                    .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
+                if !mesh.deformer_id.is_empty()
+                    && !scene.control(&mesh.deformer_id).is_some_and(|c| c.enabled)
+                {
+                    return Ok(ControlDescription::ReadOnly(
+                        "Parent deformer is unavailable".into(),
+                    ));
+                }
+                Some(weight)
+            } else {
+                None
+            };
+            Ok(ControlDescription::Writable(WritableControl {
+                label,
+                mesh_weight,
+            }))
+        };
+        if object.kind == ObjectKind::Mesh {
+            match mesh_blend_target(document, &doc, scene, object) {
+                Ok(Some((b, slot, weight))) => {
+                    let table = doc.get_blend_key_table(&b.key_table_id).unwrap();
+                    let p = doc.get_parameter(&table.parameter_id).unwrap();
+                    return writable(
+                        format!("BlendShape delta · {} = {}", p.name, table.keys[slot]),
+                        weight,
+                    );
+                }
+                Ok(None) => (),
+                Err(error) => return Ok(ControlDescription::ReadOnly(error.to_string())),
+            }
+        } else if let Some(hint) = deformer_blend_edit_hint(&doc, scene, object) {
+            return Ok(ControlDescription::ReadOnly(hint));
+        }
         let describe_binding =
-            |axes: &[zipzi_core::BindingAxis], matches: bool| -> Result<String> {
-                ensure!(
-                    matches,
-                    "Select a stored keyform before editing this object"
-                );
-                Ok(format!(
-                    "Keyform · {}",
-                    axes.iter()
-                        .filter(|a| !a.parameter_id.is_empty())
-                        .map(|axis| {
-                            let value = scene
-                                .source
-                                .viewport_frame
-                                .parameters
-                                .iter()
-                                .find(|p| p.id == axis.parameter_id)
-                                .map_or(0., |p| p.value);
-                            let name = doc
-                                .get_parameter(&axis.parameter_id)
-                                .map_or(axis.parameter_id.as_str(), |p| p.name.as_str());
-                            format!("{name} = {value}")
-                        })
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ))
+            |axes: &[zipzi_core::BindingAxis], matches: bool| -> Result<ControlDescription> {
+                if !matches {
+                    return Ok(ControlDescription::ReadOnly(keyform_edit_hint(
+                        &doc,
+                        &scene.source.viewport_frame.parameters,
+                        axes,
+                    )));
+                }
+                writable(
+                    format!(
+                        "Keyform · {}",
+                        axes.iter()
+                            .filter(|a| !a.parameter_id.is_empty())
+                            .map(|axis| {
+                                let value = scene
+                                    .parameter_values()
+                                    .get(&axis.parameter_id)
+                                    .copied()
+                                    .unwrap_or(0.);
+                                let name = doc
+                                    .get_parameter(&axis.parameter_id)
+                                    .map_or(axis.parameter_id.as_str(), |p| p.name.as_str());
+                                format!("{name} = {value}")
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                    1.,
+                )
             };
         let at_keys = |axes: &[zipzi_core::BindingAxis], keys: &[f32]| {
             axes.iter().filter(|a| !a.parameter_id.is_empty()).count() == keys.len()
@@ -126,21 +449,14 @@ impl ControlEdit {
                     .zip(keys)
                     .all(|(axis, key)| {
                         scene
-                            .source
-                            .viewport_frame
-                            .parameters
-                            .iter()
-                            .find(|p| p.id == axis.parameter_id)
-                            .is_some_and(|p| (p.value - key).abs() < 1e-6)
+                            .parameter_values()
+                            .get(&axis.parameter_id)
+                            .is_some_and(|value| (value - key).abs() < 1e-6)
                     })
         };
         match object.kind {
             ObjectKind::Mesh => {
                 ensure!(doc.get_mesh(&object.id).is_some(), "Mesh no longer exists");
-                ensure!(
-                    doc.glues_for_mesh(&object.id).is_empty(),
-                    "Meshes connected by Glue are read-only in the vertex tool"
-                );
                 if let Some(b) = doc
                     .binding_for_mesh(&object.id)
                     .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
@@ -168,17 +484,19 @@ impl ControlEdit {
             }
             _ => bail!("This canvas object has no editable control points"),
         }
-        Ok("Base shape".into())
+        writable("Base shape".into(), 1.)
     }
     pub fn prepare(document: &Document, scene: &CanvasScene, object: &ObjectRef) -> Result<Self> {
         document.ensure_editable(std::slice::from_ref(object))?;
         let doc = document.model();
-        ensure!(
-            doc.blend_bindings_for_target(&object.id)
-                .iter()
-                .all(|b| !doc.blend_binding_active(b)),
-            "BlendShape editing requires an explicit blend target"
-        );
+        let blend = if object.kind == ObjectKind::Mesh {
+            mesh_blend_target(document, &doc, scene, object)?
+        } else {
+            if let Some(hint) = deformer_blend_edit_hint(&doc, scene, object) {
+                bail!(hint);
+            }
+            None
+        };
         let slot_for = |axes: &[zipzi_core::BindingAxis], points: Vec<Vec<f32>>| -> Result<usize> {
             points
                 .iter()
@@ -199,7 +517,10 @@ impl ControlEdit {
                             })
                 })
                 .ok_or_else(|| {
-                    anyhow::anyhow!("Select a stored keyform before editing this object")
+                    anyhow::anyhow!(
+                        "{}",
+                        keyform_edit_hint(&doc, &scene.source.viewport_frame.parameters, axes)
+                    )
                 })
         };
         let (original, ids, positions, slot, parent_id, rotation) = match object.kind {
@@ -207,11 +528,19 @@ impl ControlEdit {
                 let mesh = doc
                     .get_mesh(&object.id)
                     .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
-                ensure!(
-                    doc.glues_for_mesh(&object.id).is_empty(),
-                    "Meshes connected by Glue are read-only in the vertex tool"
-                );
-                if let Some(binding) = doc
+                if let Some((binding, slot, _)) = blend {
+                    let zipzi_core::DeltaKeyforms::Mesh(forms) = &binding.keyforms else {
+                        unreachable!()
+                    };
+                    (
+                        EditOriginal::BlendBinding(binding.clone()),
+                        mesh.vertex_ids.clone(),
+                        forms[slot].positions.clone(),
+                        Some(slot),
+                        mesh.deformer_id.clone(),
+                        false,
+                    )
+                } else if let Some(binding) = doc
                     .binding_for_mesh(&object.id)
                     .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
                 {
@@ -329,6 +658,29 @@ impl ControlEdit {
         } else {
             original
         };
+        let mesh = if object.kind == ObjectKind::Mesh {
+            let values = scene
+                .source
+                .viewport_frame
+                .parameters
+                .iter()
+                .map(|p| (p.id.clone(), p.value))
+                .collect();
+            let local = zipzi_core::evaluation::authoring_mesh_positions(&doc, &object.id, &values)
+                .map_err(|e| anyhow::anyhow!("{}", e.message))?;
+            let geometry = scene
+                .mesh(&object.id)
+                .ok_or_else(|| anyhow::anyhow!("Mesh preview is unavailable"))?;
+            Some(crate::mesh_edit::MeshEdit {
+                local,
+                displayed: geometry.vertices.iter().map(|(_, p)| *p).collect(),
+                weight: blend.map_or(1., |(_, _, w)| w),
+                glue: scene.glue_map.clone(),
+                original_points: false,
+            })
+        } else {
+            None
+        };
         Ok(Self {
             object: object.clone(),
             original,
@@ -338,6 +690,7 @@ impl ControlEdit {
             rotation,
             space: ControlSpace::new(document, scene, &parent_id)?,
             warp,
+            mesh,
         })
     }
     pub fn to_model(&self, p: Vec2) -> ModelPoint {
@@ -345,6 +698,60 @@ impl ControlEdit {
     }
     fn from_model(&self, p: ModelPoint, initial: Vec2) -> Result<Vec2> {
         self.space.from_model(p, initial)
+    }
+    pub(crate) fn mesh_positions(
+        &self,
+        displacement: &[(usize, crate::ModelVector)],
+    ) -> Result<Vec<Vec2>> {
+        let mesh = self.mesh.as_ref().unwrap();
+        let mut positions = self.positions.clone();
+        for &(slot, delta) in displacement {
+            if delta.x == 0. && delta.y == 0. {
+                continue;
+            }
+            let initial = mesh.local[slot];
+            let before = self.to_model(initial);
+            let local = self.from_model(
+                ModelPoint {
+                    x: before.x + delta.x,
+                    y: before.y + delta.y,
+                },
+                initial,
+            )?;
+            positions[slot].x += (local.x - initial.x) / mesh.weight;
+            positions[slot].y += (local.y - initial.y) / mesh.weight;
+        }
+        ensure!(
+            positions.iter().all(|p| p.x.is_finite() && p.y.is_finite()),
+            "Cannot map this drag to finite source positions"
+        );
+        Ok(positions)
+    }
+    pub(crate) fn write_mesh(
+        &self,
+        edit: &mut zipzi_sdk::EditSession<'_>,
+        positions: Vec<Vec2>,
+    ) -> Result<()> {
+        match &self.original {
+            EditOriginal::Mesh(m) => {
+                edit.update_positions(&m.id, &self.ids, &positions)?;
+            }
+            EditOriginal::MeshBinding(b) => {
+                let mut form = b.keyforms[self.slot.unwrap()].clone();
+                form.positions = positions;
+                edit.set_mesh_keyform(&b.id, form)?;
+            }
+            EditOriginal::BlendBinding(b) => {
+                let mut b = b.clone();
+                let zipzi_core::DeltaKeyforms::Mesh(forms) = &mut b.keyforms else {
+                    unreachable!()
+                };
+                forms[self.slot.unwrap()].positions = positions;
+                edit.replace_blend_binding(b)?;
+            }
+            _ => unreachable!(),
+        }
+        Ok(())
     }
     pub fn preview(
         &self,
@@ -425,6 +832,7 @@ impl ControlEdit {
         }
         match &self.original {
             EditOriginal::Batch(_) => unreachable!("a control target has a single baseline"),
+            EditOriginal::BlendBinding(_) => return self.write_mesh(edit, positions),
             EditOriginal::Mesh(m) => {
                 edit.update_positions(&m.id, &self.ids, &positions)?;
             }

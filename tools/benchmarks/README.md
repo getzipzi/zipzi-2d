@@ -8,12 +8,60 @@ and how to interpret their output; measured results belong in
 | --- | --- |
 | [Native Properties: Mesh and Physics](#properties-native-window-benchmark) | Real-window input, UI/Metal work and presentation correlation |
 | [Property editing chain](#property-editing-chain-benchmark) | Synchronous CPU editing cost, stage attribution and ownership controls |
+| [Whole-model parameter overlays](#whole-model-parameter-overlays) | Parameter dragging with every visible Mesh selected, rendering ablations and CPU/GPU attribution |
 
 Choose checks using the [UI performance reference](../../docs/references/ui-performance.md).
 See the [tool index](../README.md#benchmarks-and-research-tools) for Timeline,
 window and offscreen benchmark commands. Native window harnesses require macOS,
 Metal and the documented local model; CPU chain measurements do not measure
 window or GPU latency.
+
+## Whole-model parameter overlays
+
+Build once, then benchmark the saved Release executable without concurrent builds.
+The default workload uses Mao, 30 warmup inputs and 360 measured inputs at 120 Hz,
+with three rounds in alternating order. Keep the benchmark window in front.
+
+```sh
+cargo build --locked --release -p zipzi-editor --features test-support,bench-instrumentation
+python3 tools/benchmarks/parameter-overlay-benchmark.py \
+  --binary target/release/zipzi-editor --output target/parameter-overlays
+python3 tools/benchmarks/parameter-overlay-benchmark.py \
+  --binary target/release/zipzi-editor --output target/parameter-overlay-detail \
+  --cases detail_unselected detail detail_no_paint --rounds 1
+```
+
+The main comparison disables detailed timers. Cases include no selection, all
+visible unlocked Meshes selected, the same selection with painting skipped, only
+vertices, and only lines. Skipping painting retains overlay construction and
+selection-dependent panel behavior. The all-Mesh fixture matches enclosing the
+whole model with object marquee selection; it does not select individual vertices.
+Every run verifies the parameter deforms model positions and saves the parameter
+identity, selection, vertex/edge counts, raw trace and background-process samples.
+`--model` selects another local model; the first visible slider is used and audited.
+
+Detailed runs capture overlay construction by caller, nested CPU stage inclusive
+and self times, plus actual Metal command GPU timestamps on a separate diagnostics
+worker. They report UI-thread wall time, not thread CPU time. Compare detailed
+runs separately because timing and work counters add overhead. The driver retains
+warmup/setup in raw traces but excludes them from measured stage distributions;
+it preserves all request outcomes through the shared frame report. Background
+compiler activity is recorded as `interfered`, and such runs require review or
+fresh sampling before making performance claims.
+
+Detailed traces also include independent `ui.*` scopes for the editor root,
+native menu refresh, viewport, parameters, parameter rows, properties, and
+document panels. Their duration is `fields.end_ns - at_ns`; nested scope
+percentiles must not be added. Compare counts as well as durations to distinguish
+repeated canvas construction from selection-dependent menu work.
+
+Preview presentation joins use the request identity stored on the live Metal
+resource, emitted as `compose_surface.fields.preview`. Zero denotes a non-preview
+surface. Raw texture addresses are insufficient: an overlay may reuse a retired
+preview's address. The reporter rejects ambiguous legacy captures; keep their
+independent CPU timings, but repeat preview FPS/latency measurements with identity
+tags. Automatic parameter runs also support `ZIPZI_BENCH_EAGER_CANVAS=1` and
+`ZIPZI_BENCH_UNCACHED_CREATION_MENUS=1` for controlled refresh/menu ablations.
 
 ## Properties native-window benchmark
 

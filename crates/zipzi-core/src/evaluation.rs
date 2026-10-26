@@ -1,5 +1,6 @@
 mod evaluator;
 mod glue;
+mod glue_controls;
 mod meshes;
 mod parameters;
 mod parts;
@@ -10,13 +11,14 @@ mod transforms;
 mod types;
 
 pub use evaluator::{
-    EvaluationTimings, FrameEvaluator, evaluate_frame, evaluate_frame_including_hidden,
+    evaluate_frame, evaluate_frame_including_hidden, EvaluationTimings, FrameEvaluator,
 };
+pub use glue_controls::{evaluated_glue_operations, GlueOperation};
 pub(crate) use prepared::PreparedEvaluation;
 pub use selection::evaluate_blend_binding;
 pub use types::{
-    Drawable, DrawableFrame, EvaluatedDeformer, EvaluatedParameter, OffscreenFrame, PreviewValues,
-    RenderCommand, parent_origin, parent_positions,
+    parent_origin, parent_positions, Drawable, DrawableFrame, EvaluatedDeformer,
+    EvaluatedParameter, OffscreenFrame, PreviewValues, RenderCommand,
 };
 
 /// Native parameter-only edit snapshot, before parent inheritance and Glue.
@@ -88,7 +90,7 @@ fn normalized_authoring_values(doc: &crate::Document, values: &PreviewValues) ->
         .collect()
 }
 /// Geometry inspection does not require texture content or renderability.
-pub(crate) fn authoring_mesh_positions(
+pub fn authoring_mesh_positions(
     doc: &crate::Document,
     id: &str,
     values: &PreviewValues,

@@ -81,6 +81,7 @@ pub struct CanvasScene {
     pub controls: Vec<ControlGeometry>,
     pub index: Arc<crate::CanvasObjectIndex>,
     pub source: SceneSnapshot,
+    parameter_values: Arc<zipzi_core::PreviewValues>,
     beziers: HashMap<String, Arc<crate::warp_bezier::LazyBezierGeometry>>,
     mesh_slots: Arc<HashMap<String, usize>>,
     control_slots: Arc<HashMap<String, usize>>,
@@ -88,8 +89,13 @@ pub struct CanvasScene {
     visible_meshes: HashSet<String>,
     pub(crate) isolation_scope: Option<Arc<HashSet<ObjectRef>>>,
     pub(crate) topology: Arc<crate::canvas_topology::CanvasTopology>,
+    pub(crate) glue_map: Arc<crate::mesh_edit::GlueMap>,
 }
 impl CanvasScene {
+    /// Evaluated parameter values belong to this immutable pose, including retained frames.
+    pub(crate) fn parameter_values(&self) -> &zipzi_core::PreviewValues {
+        &self.parameter_values
+    }
     pub(crate) fn in_isolation_scope(&self, object: &ObjectRef) -> bool {
         self.isolation_scope
             .as_ref()

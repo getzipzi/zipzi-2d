@@ -309,7 +309,8 @@ fn lasso_cancel_lost_button_tool_switch_and_resize_preserve_selection() -> anyho
 }
 
 #[test]
-fn lasso_surface_click_collinear_path_and_invalid_input_preserve_selection() -> anyhow::Result<()> {
+fn lasso_degenerate_paths_preserve_selection_and_surface_click_matches_select() -> anyhow::Result<()>
+{
     let (mut editor, _dir) = setup()?;
     let v = editor.overlay().vertices[0].position;
     click(&mut editor, v, false)?;
@@ -318,7 +319,6 @@ fn lasso_surface_click_collinear_path_and_invalid_input_preserve_selection() -> 
     let objects = editor.document().unwrap().context().selections.clone();
     for path in [
         vec![v, v],
-        vec![p(256., 256.), p(256., 256.)],
         vec![p(1., 1.), p(200., 200.), p(400., 400.)],
         vec![v, p(v.x + 0.5, v.y), p(v.x, v.y + 0.5)],
     ] {
@@ -346,6 +346,16 @@ fn lasso_surface_click_collinear_path_and_invalid_input_preserve_selection() -> 
     );
     assert!(!editor.gesture_active());
     assert_eq!(selected(&editor), original);
+    shown(&mut editor)?;
+    click(&mut editor, p(256., 256.), false)?;
+    assert!(selected(&editor).is_empty());
+    let top = editor
+        .layers()
+        .into_iter()
+        .find(|l| l.name == "Second")
+        .unwrap()
+        .id;
+    assert_eq!(editor.document().unwrap().selected_id(), Some(top.as_str()));
     Ok(())
 }
 

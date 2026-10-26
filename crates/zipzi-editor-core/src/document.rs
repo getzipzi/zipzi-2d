@@ -580,6 +580,7 @@ impl Document {
             .binding(&binding)
             .ok_or_else(|| anyhow!("Binding no longer exists"))?;
         self.select_object(b.target.clone())?;
+        self.context.parameter_focus = None;
         self.context.active_binding = Some(binding.clone());
         self.context.inspected = Some(binding);
         Ok(())

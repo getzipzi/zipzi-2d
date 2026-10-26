@@ -21,6 +21,7 @@ fn geometry() -> OverlaySnapshot {
         ],
         vertices: vec![
             OverlayVertex {
+                editable: true,
                 kind: zipzi_editor_core::OverlayVertexKind::Mesh,
                 id: 3,
                 position: pt(20.25, 20.5),
@@ -28,6 +29,7 @@ fn geometry() -> OverlaySnapshot {
                 hovered: true,
             },
             OverlayVertex {
+                editable: true,
                 kind: zipzi_editor_core::OverlayVertexKind::Mesh,
                 id: 9,
                 position: pt(24.25, 22.5),
@@ -35,6 +37,7 @@ fn geometry() -> OverlaySnapshot {
                 hovered: false,
             },
             OverlayVertex {
+                editable: true,
                 kind: zipzi_editor_core::OverlayVertexKind::Mesh,
                 id: 11,
                 position: pt(64., 32.),
@@ -54,6 +57,7 @@ fn style() -> OverlayStyle {
         edge: color(0xa0b0c073),
         vertex: color(0xf0f0f0b0),
         selected: color(0xff4060c0),
+        restricted: color(0xb0b0b0ff),
     }
 }
 fn snap(v: f32) -> f32 {
@@ -291,7 +295,9 @@ impl canvas_overlay::Painter for ScenePainter {
 #[test]
 fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Result<()> {
     use canvas_overlay::Painter;
-    use zipzi_editor_core::{OverlayDeformer, OverlayGlue, OverlayVertexKind as K};
+    use zipzi_editor_core::{
+        GluePointState as S, OverlayDeformer, OverlayGlue, OverlayGluePoint, OverlayVertexKind as K,
+    };
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
         let mut gpui = MetalRenderer::new_headless(Default::default());
         for dark in [false, true] {
@@ -317,12 +323,15 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     (40., K::Mesh),
                     (60., K::Warp),
                     (100., K::RotationCenter),
+                    (20., K::Mesh),
+                    (40., K::Warp),
                 ]
                 .into_iter()
                 .enumerate()
                 .map(|(i, (x, kind))| OverlayVertex {
+                    editable: i < 4,
                     id: i as u32,
-                    position: pt(x, 50.),
+                    position: pt(x, if i < 4 { 50. } else { 20. }),
                     selected: i == 1,
                     hovered: true,
                     kind,
@@ -334,23 +343,49 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     hovered: false,
                 }],
                 glues: vec![OverlayGlue {
+                    points: [
+                        (130., 50., S::Editable),
+                        (150., 50., S::Restricted),
+                        (180., 50., S::Reference),
+                        (180., 50., S::Editable),
+                        (130., 72., S::Reference),
+                        (150., 72., S::Restricted),
+                    ]
+                    .into_iter()
+                    .map(|(x, y, state)| OverlayGluePoint {
+                        position: pt(x, y),
+                        state,
+                        selected: false,
+                        hovered: false,
+                    })
+                    .collect(),
                     pairs: vec![
                         (pt(130., 50.), pt(150., 50.)),
                         (pt(180., 50.), pt(180., 50.)),
+                        (pt(130., 72.), pt(150., 72.)),
                     ],
                     selected: true,
                     hovered: false,
                 }],
                 handles: std::iter::once(zipzi_editor_core::OverlayHandle {
+                    editable: true,
                     position: pt(80., 50.),
                     round: true,
                     hovered: false,
                     selected: true,
                 })
+                .chain(std::iter::once(zipzi_editor_core::OverlayHandle {
+                    editable: false,
+                    position: pt(70., 20.),
+                    round: true,
+                    selected: true,
+                    hovered: false,
+                }))
                 .chain([false, true].into_iter().flat_map(|round| {
                     [false, true].into_iter().flat_map(move |selected| {
                         [false, true].into_iter().map(move |hovered| {
                             zipzi_editor_core::OverlayHandle {
+                                editable: true,
                                 position: pt(
                                     20. + 30. * (u8::from(round) * 2 + u8::from(hovered)) as f32,
                                     if selected { 88. } else { 72. },
@@ -441,31 +476,57 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     "active circular and square handles have matching fill and border"
                 );
             }
+            for x in [260, 360] {
+                assert_eq!(
+                    image.get_pixel(x, 100).0,
+                    [255, 255, 255, 255],
+                    "Glue retains a white mesh vertex center"
+                );
+                assert_eq!(
+                    image.get_pixel(x + 4, 100).0,
+                    [0, 0, 0, 255],
+                    "Glue vertex border is black"
+                );
+            }
+            for x in [264, 364] {
+                assert_eq!(
+                    image.get_pixel(x, 104).0,
+                    [255, 208, 0, 255],
+                    "Glue has a compact, uniform yellow marker"
+                );
+            }
             assert_eq!(
-                image.get_pixel(260, 91).0,
+                image.get_pixel(304, 104).0,
+                [139, 139, 139, 255],
+                "restricted Glue point has a gray frame"
+            );
+            assert_eq!(
+                image.get_pixel(300, 99).0,
+                [176, 176, 176, 255],
+                "restricted Glue point keeps a plain gray center"
+            );
+            assert_ne!(
+                image.get_pixel(260, 144).0,
                 [255, 255, 255, 255],
-                "the 10px hollow Glue endpoint stays white even when selected"
+                "reference endpoint has no draggable white center"
             );
-            assert_eq!(
-                image.get_pixel(260, 100).0,
-                rgb(palette.surface),
-                "A endpoint is hollow"
+            assert_ne!(
+                image.get_pixel(265, 148).0,
+                [255, 208, 0, 255],
+                "reference endpoint uses a muted outline"
             );
-            assert_eq!(
-                image.get_pixel(300, 100).0,
-                rgb(palette.selected),
-                "B endpoint is solid"
-            );
-            assert_eq!(
-                image.get_pixel(358, 100).0,
-                rgb(palette.surface),
-                "coincident A half remains hollow"
-            );
-            assert_eq!(
-                image.get_pixel(362, 100).0,
-                rgb(palette.selected),
-                "coincident B half remains filled"
-            );
+            for x in [40, 80, 140] {
+                assert_eq!(
+                    image.get_pixel(x, 40).0,
+                    [176, 176, 176, 255],
+                    "restricted ordinary controls and handles have gray centers"
+                );
+                assert_eq!(
+                    image.get_pixel(x + 4, 40).0,
+                    [80, 80, 80, 255],
+                    "restricted controls keep a gray border"
+                );
+            }
             let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
                 "../../target/overlay-style-{}.png",
                 if dark { "dark" } else { "light" }
@@ -493,6 +554,16 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 &make_scene(&overlay, viewport, Some(texture)),
                 size(DevicePixels(192), DevicePixels(192)),
             )?;
+            assert_eq!(
+                metal_image.get_pixel(40, 40).0,
+                [176, 176, 176, 255],
+                "Metal displays a disabled mesh point in gray"
+            );
+            assert_eq!(
+                metal_image.get_pixel(44, 40).0,
+                [80, 80, 80, 255],
+                "Metal disabled mesh border matches the fallback"
+            );
             for (x, color) in [
                 (40, [255, 255, 255, 255]),
                 (44, [0, 0, 0, 255]),
@@ -538,6 +609,18 @@ fn mesh_passes_cache_independently_and_exclude_control_points() -> anyhow::Resul
             .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Vertices)?
             .unwrap();
         assert!(!std::ptr::eq(vertices.as_ref(), new_vertices.as_ref()));
+        overlay.vertices[0].editable = false;
+        let restricted = renderer
+            .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Vertices)?
+            .unwrap();
+        assert!(
+            !std::ptr::eq(new_vertices.as_ref(), restricted.as_ref()),
+            "editability invalidates the vertex texture"
+        );
+        let unchanged_edges = renderer
+            .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Edges)?
+            .unwrap();
+        assert!(std::ptr::eq(edges.as_ref(), unchanged_edges.as_ref()));
         for v in &mut overlay.vertices {
             v.kind = zipzi_editor_core::OverlayVertexKind::Warp;
         }

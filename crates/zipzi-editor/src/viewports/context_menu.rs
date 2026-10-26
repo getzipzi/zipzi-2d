@@ -102,6 +102,39 @@ impl ViewportSurface {
                     }),
             );
         }
+        if state.editor.original_points()
+            || state.editor.document().is_some_and(|d| {
+                d.context()
+                    .selections
+                    .iter()
+                    .any(|r| r.kind == zipzi_editor_core::ObjectKind::Mesh)
+            })
+        {
+            menu = menu.separator();
+            let checked = state.editor.original_points();
+            let owner = owner.downgrade();
+            let canvas = canvas.downgrade();
+            menu = menu.item(
+                PopupMenuItem::new(t!("editor.edit_original_points"))
+                    .checked(checked)
+                    .on_click(move |_, window, cx| {
+                        if let Some(owner) = owner.upgrade() {
+                            owner.update(cx, |owner, cx| {
+                                if !owner.editor.viewport_binding_valid(binding) {
+                                    return;
+                                }
+                                let result =
+                                    owner.editor.execute(EditorCommand::ToggleOriginalPoints);
+                                owner.complete_edit(result, cx);
+                            });
+                        }
+                        if let Some(canvas) = canvas.upgrade() {
+                            let focus = canvas.read(cx).focus.clone();
+                            window.defer(cx, move |window, cx| window.focus(&focus, cx));
+                        }
+                    }),
+            );
+        }
         menu
     }
 }

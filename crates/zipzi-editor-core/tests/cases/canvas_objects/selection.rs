@@ -8,6 +8,106 @@ use zipzi_core::{
 use zipzi_editor_core::*;
 
 #[test]
+fn selection_tools_share_region_modifiers_and_option_click_subtraction() -> anyhow::Result<()> {
+    for tool in [ToolId::Select, ToolId::Lasso] {
+        let (mut editor, _dir) = setup()?;
+        editor.execute(EditorCommand::SetTool(tool))?;
+        let vertices = editor.overlay().vertices;
+        let objects = editor.document().unwrap().context().selections.clone();
+        let positions = editor.document().unwrap().selected_vertex_positions();
+        let evaluations = editor.evaluation_count();
+        let area = |editor: &mut Editor, i: usize, shift, alt| {
+            let p = vertices[i].position;
+            select_area(
+                editor,
+                ViewportPoint {
+                    x: p.x - 12.,
+                    y: p.y - 12.,
+                },
+                ViewportPoint {
+                    x: p.x + 12.,
+                    y: p.y + 12.,
+                },
+                shift,
+                alt,
+            )
+        };
+        let selected = |editor: &Editor| {
+            editor
+                .overlay()
+                .vertices
+                .into_iter()
+                .filter(|v| v.selected)
+                .map(|v| v.id)
+                .collect::<Vec<_>>()
+        };
+        area(&mut editor, 0, false, false)?;
+        assert_eq!(selected(&editor), vec![vertices[0].id]);
+        area(&mut editor, 1, true, false)?;
+        assert_eq!(selected(&editor).len(), 2);
+        // Option wins over Shift, and repeated removal cannot select or start an edit.
+        for _ in 0..2 {
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point: vertices[0].position,
+                    shift: true,
+                    alt: true,
+                },
+            )?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Up {
+                    point: vertices[0].position,
+                },
+            )?;
+            assert_eq!(selected(&editor), vec![vertices[1].id]);
+        }
+        area(&mut editor, 0, true, false)?;
+        for _ in 0..2 {
+            area(&mut editor, 0, true, true)?;
+            assert_eq!(selected(&editor), vec![vertices[1].id]);
+        }
+        area(&mut editor, 1, false, true)?;
+        assert!(selected(&editor).is_empty());
+        assert_eq!(editor.document().unwrap().context().selections, objects);
+        assert_eq!(
+            editor.document().unwrap().selected_vertex_positions(),
+            positions
+        );
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        assert_eq!(editor.evaluation_count(), evaluations);
+    }
+    Ok(())
+}
+
+#[test]
+fn selection_tools_share_object_click_and_option_subtraction() -> anyhow::Result<()> {
+    for tool in [ToolId::Select, ToolId::Lasso] {
+        let (mut editor, _dir) = setup()?;
+        editor.execute(EditorCommand::SetTool(tool))?;
+        editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+        let point = ViewportPoint { x: 256., y: 256. };
+        click(&mut editor, point, false)?;
+        assert_eq!(editor.document().unwrap().context().selections.len(), 1);
+        for _ in 0..2 {
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point,
+                    shift: true,
+                    alt: true,
+                },
+            )?;
+            crate::support::pointer_input(&mut editor, CanvasInput::Up { point })?;
+            assert!(editor.document().unwrap().context().selections.is_empty());
+        }
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
+    Ok(())
+}
+
+#[test]
 fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> anyhow::Result<()> {
     let (mut editor, _) = setup()?;
     let before = editor.evaluation_count();
@@ -462,37 +562,86 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
         value: 0.5,
     })?;
     shown(&mut editor)?;
-    assert!(
-        editor
-            .overlay()
-            .unavailable
-            .unwrap()
-            .contains("stored keyform")
-    );
-    let p = editor.overlay().vertices[0].position;
-    click(&mut editor, p, false)?; // read-only controls can still be selected
-    crate::support::pointer_input(
-        &mut editor,
-        CanvasInput::Down {
-            point: p,
-            shift: false,
-            alt: false,
-        },
-    )?;
-    assert!(
-        crate::support::pointer_input(
-            &mut editor,
-            CanvasInput::Up {
-                point: ViewportPoint {
-                    x: p.x + 20.,
-                    y: p.y
-                }
-            }
-        )
-        .is_err()
-    );
-    assert!(!editor.gesture_active());
+    let hint = editor.overlay().unavailable.unwrap();
+    assert!(editor.overlay().unavailable_on_edit_only);
+    assert!(editor.overlay().vertices.iter().all(|v| !v.editable));
+    assert!(hint.contains("stored keyform"));
+    assert!(hint.contains("\"Pose\" (0.5)"));
+    assert_read_only_points_cannot_be_selected(&mut editor)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
+    Ok(())
+}
+
+fn assert_read_only_points_cannot_be_selected(editor: &mut Editor) -> anyhow::Result<()> {
+    let objects = editor.document().unwrap().context().selections.clone();
+    for tool in [ToolId::Select, ToolId::Lasso] {
+        editor.execute(EditorCommand::SetTool(tool))?;
+        let vertices = editor.overlay().vertices;
+        assert!(!vertices.is_empty());
+        assert!(vertices.iter().all(|v| !v.editable));
+        for shift in [false, true] {
+            let point = vertices[0].position;
+            crate::support::pointer_input(
+                editor,
+                CanvasInput::Move {
+                    point,
+                    left_down: false,
+                },
+            )?;
+            assert!(editor.canvas_hover_hint().is_some());
+            click(editor, point, shift)?;
+            assert!(editor.overlay().vertices.iter().all(|v| !v.selected));
+            let min = ViewportPoint {
+                x: vertices
+                    .iter()
+                    .map(|v| v.position.x)
+                    .reduce(f32::min)
+                    .unwrap()
+                    - 40.,
+                y: vertices
+                    .iter()
+                    .map(|v| v.position.y)
+                    .reduce(f32::min)
+                    .unwrap()
+                    - 40.,
+            };
+            let max = ViewportPoint {
+                x: vertices
+                    .iter()
+                    .map(|v| v.position.x)
+                    .reduce(f32::max)
+                    .unwrap()
+                    + 40.,
+                y: vertices
+                    .iter()
+                    .map(|v| v.position.y)
+                    .reduce(f32::max)
+                    .unwrap()
+                    + 40.,
+            };
+            select_area(editor, min, max, shift, false)?;
+            assert!(editor.overlay().vertices.iter().all(|v| !v.selected));
+            assert_eq!(editor.document().unwrap().context().selections, objects);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn selection_tools_skip_read_only_warp_points_in_coarse_and_fine_modes() -> anyhow::Result<()> {
+    for fine in [false, true] {
+        let (mut editor, _dir, _object, parameter) = bound_deformer_editor(false, false)?;
+        if fine {
+            editor.execute(EditorCommand::ToggleWarpFine)?;
+        }
+        editor.execute(EditorCommand::SetPreviewParameter {
+            parameter_id: parameter,
+            value: 0.5,
+        })?;
+        shown(&mut editor)?;
+        assert_read_only_points_cannot_be_selected(&mut editor)?;
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
     Ok(())
 }
 
@@ -585,5 +734,132 @@ fn deselect_command_clears_all_selection_and_cancel_gesture_preserves_selection(
     );
     assert!(editor.overlay().vertices.is_empty());
 
+    Ok(())
+}
+
+#[test]
+fn glue_original_points_switch_refreshes_controls_and_keeps_final_artwork() -> anyhow::Result<()> {
+    let (mut doc, _dir) = support::rectangle_document(true)?;
+    let id = |n| uuid::Uuid::from_u128(n).to_string();
+    doc.select(&id(909))?;
+    doc.set_preview_parameter(&id(904), 1.)?;
+    let mut editor = crate::support::editor_from_document(doc);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let final_frame = shown(&mut editor)?;
+    let final_point = editor.overlay().vertices[0].position;
+    assert_eq!(
+        editor.overlay().glues[0]
+            .points
+            .iter()
+            .map(|p| p.state)
+            .collect::<Vec<_>>(),
+        vec![GluePointState::Reference, GluePointState::Editable]
+    );
+    editor.execute(EditorCommand::ToggleOriginalPoints)?;
+    assert!(
+        editor.preview_if_needed()?.is_some(),
+        "changing control mode must request a fresh frame"
+    );
+    let raw_frame = shown(&mut editor)?;
+    let raw_point = editor.overlay().vertices[0].position;
+    assert_ne!(final_point, raw_point);
+    assert_eq!(
+        final_frame.geometry.source.viewport_frame.drawables,
+        raw_frame.geometry.source.viewport_frame.drawables
+    );
+    let before = editor.document().unwrap().selected_vertex_positions();
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: raw_point,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    let end = ViewportPoint {
+        x: raw_point.x + 12.,
+        y: raw_point.y,
+    };
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+    let after = editor.document().unwrap().selected_vertex_positions();
+    let delta = 12. / raw_frame.transform.scale;
+    assert!((after[0].1.x - before[0].1.x - delta).abs() < 0.003);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(
+        editor.document().unwrap().selected_vertex_positions(),
+        before
+    );
+    editor.execute(EditorCommand::ToggleOriginalPoints)?;
+    shown(&mut editor)?;
+    assert_eq!(editor.overlay().vertices[0].position, final_point);
+    Ok(())
+}
+
+#[test]
+fn glue_drag_keeps_last_valid_preview_when_inverse_cannot_continue() -> anyhow::Result<()> {
+    let (mut doc, _dir) = support::rectangle_document(true)?;
+    doc.select(&uuid::Uuid::from_u128(909).to_string())?;
+    let mut editor = crate::support::editor_from_document(doc);
+    editor.reset_view();
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    shown(&mut editor)?;
+    let start = editor.overlay().vertices[0].position;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: ViewportPoint {
+                x: start.x + 10.,
+                y: start.y,
+            },
+            left_down: true,
+        },
+    )?;
+    let accepted = editor.document().unwrap().selected_vertex_positions();
+    let invalid = ViewportPoint {
+        x: f32::MAX,
+        y: start.y,
+    };
+    assert!(!crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: invalid,
+            left_down: true
+        }
+    )?);
+    assert!(editor.gesture_active());
+    assert!(
+        editor
+            .overlay()
+            .interaction_label
+            .as_deref()
+            .is_some_and(|s| s.contains("finite"))
+    );
+    assert_eq!(
+        editor.document().unwrap().selected_vertex_positions(),
+        accepted
+    );
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: invalid })?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    assert_eq!(
+        editor.document().unwrap().selected_vertex_positions(),
+        accepted
+    );
     Ok(())
 }

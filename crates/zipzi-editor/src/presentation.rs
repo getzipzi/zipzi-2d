@@ -246,6 +246,7 @@ impl EditorView {
         }
         self.sync_viewport_notice(cx);
         workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
+        frame_trace::emit(frame.trace_id, "preview_frame_refresh", &[]);
         self.notify_viewport(binding.viewport, cx);
     }
     pub(crate) fn notify_viewport(&self, viewport: ViewportId, cx: &mut Context<Self>) {
@@ -265,7 +266,11 @@ impl EditorView {
             }
         }
     }
-    pub(crate) fn request_preview_for_input(&mut self, input: u64) {
+    /// Pose-only inputs may retain the current canvas when new modeling work
+    /// has been enqueued successfully; navigation uses immediate invalidation.
+    pub(crate) fn request_preview_for_input(&mut self, input: u64) -> bool {
+        let mut requested = false;
+        let mut failed = false;
         let bindings = self.editor.visible_viewport_bindings();
         for binding in bindings
             .iter()
@@ -293,7 +298,8 @@ impl EditorView {
                             ("height", height as u64),
                         ],
                     );
-                    self.send_viewport_request(preview::Request {
+                    requested = true;
+                    failed |= !self.send_viewport_request(preview::Request {
                         binding,
                         trace_id,
                         revision: preview.revision,
@@ -310,6 +316,7 @@ impl EditorView {
                 }
                 Ok(None) => {}
                 Err(error) => {
+                    failed = true;
                     self.viewport_frames
                         .entry(binding.viewport)
                         .or_default()
@@ -345,8 +352,9 @@ impl EditorView {
                 self.animation_content = None;
             }
         }
+        requested && !failed
     }
-    pub(crate) fn send_viewport_request(&mut self, request: preview::Request) {
+    pub(crate) fn send_viewport_request(&mut self, request: preview::Request) -> bool {
         let binding = request.binding;
         if self
             .requests
@@ -357,6 +365,8 @@ impl EditorView {
                 .entry(binding.viewport)
                 .or_default()
                 .error = Some(t!("editor.preview_stopped").into_owned());
+            return false;
         }
+        true
     }
 }

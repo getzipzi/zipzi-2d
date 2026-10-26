@@ -10,7 +10,7 @@ publish = false
 [features]
 debug-tools = ["dep:gpui-fps"]
 test-support = ["gpui-kit/test-support", "dep:tempfile", "image/png"]
-bench-instrumentation = ["zipzi-editor-core/bench-instrumentation"]
+bench-instrumentation = ["zipzi-editor-core/bench-instrumentation", "zipzi-editor-render/bench-instrumentation"]
 
 [dependencies]
 uuid.workspace = true

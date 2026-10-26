@@ -1,7 +1,7 @@
 //! Candidate-document edits and atomic publication.
 use std::collections::HashSet;
 
-use crate::session::{AuthoringSession, keys_in, object_exists_in};
+use crate::session::{keys_in, object_exists_in, AuthoringSession};
 use crate::types::*;
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::{
@@ -442,13 +442,35 @@ impl EditSession<'_> {
             document.create_transform(transform)
         })
     }
-    /// Replace a Warp and its ordinary keyforms in one validated operation.
+    /// Replace a Warp and its ordinary keyforms. Grid changes resample attached
+    /// BlendShape deltas through the same validated resize plan.
     pub fn replace_warp_authoring(
         &mut self,
         transform: Transform,
         binding: Option<SceneBinding>,
     ) -> Result<(), SdkError> {
         let id = transform.id.clone();
+        let current = self.candidate_document();
+        let resize = if current.blend_bindings_for_target(&id).is_empty() {
+            None
+        } else {
+            current
+                .get_transform(&id)
+                .and_then(|t| t.warp())
+                .zip(transform.warp())
+                .filter(|(old, new)| {
+                    (old.rows, old.columns, old.quad) != (new.rows, new.columns, new.quad)
+                })
+                .map(|(_, new)| (new.rows, new.columns, new.quad))
+        };
+        if let Some((rows, columns, quad)) = resize {
+            self.edit_scene_content(crate::SceneContentEdit::ResizeWarp {
+                transform_id: id.clone(),
+                rows,
+                columns,
+                quad,
+            })?;
+        }
         self.apply_authoring_change("replace_warp_authoring", &id, false, |document| {
             document.replace_warp_authoring(transform, binding)
         })

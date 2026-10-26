@@ -74,6 +74,7 @@ struct EditorView {
     animation_anchor: Option<(std::time::Instant, f32)>,
     animation_clock_running: bool,
     menu_state: menus::MenuState,
+    scene_creation_menus: menus::SceneCreationMenuCache,
     edit_error: Option<String>,
     message: String,
     status_message_task: Option<Task<()>>,
@@ -124,6 +125,7 @@ impl EditorView {
             animation_anchor: None,
             animation_clock_running: false,
             menu_state: menus::MenuState::default(),
+            scene_creation_menus: Default::default(),
             edit_error: None,
             message: if cx.global::<settings::Settings>().notices.is_empty() {
                 t!("editor.welcome").into_owned()
@@ -244,7 +246,7 @@ impl EditorView {
     fn sync_viewport_notice(&mut self, cx: &mut Context<Self>) {
         let notice = (self.editor.editing_context()
             == Some(zipzi_editor_core::EditingContext::Modeling))
-        .then(|| self.editor.overlay().unavailable)
+        .then(|| benchmark::parameter_overlay::capture(2, || self.editor.canvas_notice()))
         .flatten()
         .zip(self.editor.active_id())
         .map(|(reason, document)| (document, reason));
@@ -292,11 +294,19 @@ impl EditorView {
     }
 
     fn complete_preview_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
+        frame_trace::emit(frame_trace::current_input(), "preview_input_refresh", &[]);
         match result {
             Ok(()) => self.clear_edit_error(cx),
             Err(error) => self.set_edit_error(error.to_string(), cx),
         }
-        self.redraw_canvas(cx);
+        // Retain the displayed pose while its parameter preview is in flight.
+        // Focus-only changes and render errors still invalidate immediately.
+        let pending = self.request_preview_for_input(frame_trace::current_input());
+        self.sync_viewport_notice(cx);
+        if !pending || benchmark::parameter_overlay::eager_canvas() {
+            self.notify_canvas(cx);
+        }
+        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
         if let Some(dock) = &self.dock {
             for kind in [
                 zipzi_editor_core::PanelKind::Keyforms,

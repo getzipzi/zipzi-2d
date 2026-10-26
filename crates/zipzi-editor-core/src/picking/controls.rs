@@ -14,7 +14,18 @@ impl CanvasScene {
             && c.visible
             && (selection.contains(&c.object)
                 || match c.kind {
-                    ControlKind::Glue => tool == ToolId::Glue,
+                    ControlKind::Glue => {
+                        self.topology
+                            .glues
+                            .iter()
+                            .find(|g| g.object == c.object)
+                            .is_some_and(|g| {
+                                selection
+                                    .iter()
+                                    .any(|r| r.id == g.mesh_a || r.id == g.mesh_b)
+                            })
+                            || (tool == ToolId::Glue && selection.is_empty())
+                    }
                     _ => {
                         visibility.all
                             || visibility.ancestors

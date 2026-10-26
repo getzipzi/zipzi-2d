@@ -292,6 +292,7 @@ impl Focusable for ViewportSurface {
 }
 impl Render for ViewportSurface {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let _span = benchmark::parameter_overlay::ui_span("ui.viewport_render");
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };

@@ -413,6 +413,10 @@ impl Editor {
             .and_then(|e| e.session())
             .is_some_and(|s| s.modeling.tools.deformer_grid)
     }
+    pub fn original_points(&self) -> bool {
+        self.active_session()
+            .is_some_and(|s| s.modeling.tools.original_points)
+    }
     pub fn warp_fine(&self) -> bool {
         self.active
             .and_then(|id| self.entry(id).ok())

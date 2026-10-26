@@ -55,6 +55,21 @@ impl Editor {
             .zip(self.active_session())
             .map_or_else(Default::default, |(frame, session)| session.overlay(frame))
     }
+    pub fn canvas_hover_hint(&self) -> Option<String> {
+        let session = self.active_session()?;
+        if session.modeling.tools.dragging() {
+            return None;
+        }
+        let binding = session.modeling.tools.hovered_binding()?;
+        let frame = self.displayed_modeling_frame(binding)?;
+        session.modeling.tools.hover_hint(session.document(), frame)
+    }
+    /// Persistent edit restrictions for the primary presented canvas; no vertex/edge allocation.
+    pub fn canvas_notice(&self) -> Option<String> {
+        let frame = self.displayed_modeling_frame(self.primary_viewport_binding()?)?;
+        let session = self.active_session()?;
+        session.modeling.tools.notice(session.document(), frame)
+    }
     pub fn pick_candidates(
         &self,
         point: crate::ViewportPoint,
@@ -124,6 +139,9 @@ impl Editor {
         let session = self.active_session_mut().unwrap();
         session.fit_default_view(binding.viewport, metrics)?;
         let (mut scene, mut geometry) = session.scene()?;
+        if session.modeling.tools.original_points {
+            geometry = std::sync::Arc::new(geometry.with_original_points(&session.document)?);
+        }
         let view_state = session.view_state(binding.viewport);
         let scene_revision = session.scene_revision;
         let presentation = self.viewport_presentation_mut(binding.viewport).unwrap();

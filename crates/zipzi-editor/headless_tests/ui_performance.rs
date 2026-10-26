@@ -6,6 +6,100 @@ use gpui_kit::{AppContext as _, TestAppContext};
 use zipzi_editor_core::property as schema;
 
 #[gpui_kit::test]
+fn parameter_previews_refresh_the_canvas_only_when_the_new_frame_arrives(cx: &mut TestAppContext) {
+    use std::{cell::Cell, rc::Rc};
+    use zipzi_editor_core::EditorCommand;
+    let (document, assets) = super::document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let h = setup_with_document(cx, document, assets);
+    let canvas = h.view.read_with(cx, |view, _| {
+        view.dock.as_ref().unwrap().active_viewport().clone()
+    });
+    h.view.update(cx, |view, cx| {
+        view._frames = None;
+        view.requests = Some(crate::preview::RequestSender::deferred());
+        view.sync_viewport_notice(cx);
+    });
+    cx.run_until_parked();
+    let notifications = Rc::new(Cell::new(0));
+    let observed = notifications.clone();
+    let _observe =
+        cx.update(|cx| cx.observe(&canvas, move |_, _| observed.set(observed.get() + 1)));
+    let mut last_revision = None;
+    for value in [0.25, 0.5, 0.75] {
+        h.view.update(cx, |view, cx| {
+            let result = view.editor.execute(EditorCommand::SetPreviewParameter {
+                parameter_id: parameter.clone(),
+                value,
+            });
+            view.complete_preview_edit(result, cx);
+        });
+        cx.run_until_parked();
+        assert_eq!(notifications.get(), 0, "input refreshed the old canvas");
+        let request = h.view.read_with(cx, |view, _| {
+            view.requests.as_ref().unwrap().take_pending().unwrap()
+        });
+        assert_ne!(last_revision, Some(request.revision));
+        last_revision = Some(request.revision);
+        let expected_version = request.canvas.as_ref().unwrap().version;
+        h.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.document().unwrap().parameters()[0].value, value);
+        });
+        let device = metal::Device::system_default().unwrap();
+        let descriptor = metal::TextureDescriptor::new();
+        descriptor.set_width(1);
+        descriptor.set_height(1);
+        descriptor.set_pixel_format(metal::MTLPixelFormat::RGBA8Unorm);
+        let image = device.new_texture(&descriptor);
+        h.view.update(cx, |view, cx| {
+            view.receive_viewport_frame(
+                crate::preview::Frame {
+                    binding: Some(request.binding),
+                    trace_id: request.trace_id,
+                    revision: request.revision,
+                    canvas: request.canvas,
+                    animation: None,
+                    stats: (0, 0, 0),
+                    image: Ok(image),
+                },
+                cx,
+            )
+        });
+        cx.run_until_parked();
+        assert_eq!(
+            notifications.get(),
+            1,
+            "new canvas was not refreshed exactly once"
+        );
+        h.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.modeling_frame().unwrap().canvas.version,
+                expected_version
+            );
+        });
+        notifications.set(0);
+    }
+    // A missing worker must still refresh and expose the preview error.
+    h.view.update(cx, |view, cx| {
+        view.requests = None;
+        let result = view.editor.execute(EditorCommand::SetPreviewParameter {
+            parameter_id: parameter,
+            value: 0.,
+        });
+        view.complete_preview_edit(result, cx);
+    });
+    cx.run_until_parked();
+    assert!(notifications.get() > 0);
+    h.view.read_with(cx, |view, _| {
+        assert!(
+            view.viewport_frames[&view.viewport_slots[0]]
+                .error
+                .is_some()
+        )
+    });
+}
+
+#[gpui_kit::test]
 fn timeline_channel_scrubs_reuse_overview_and_do_not_notify_the_editor_owner(
     cx: &mut TestAppContext,
 ) {

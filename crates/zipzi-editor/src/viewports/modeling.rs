@@ -40,32 +40,50 @@ impl ModelingViewport {
     }
     fn content(owner: &EditorView, viewport: zipzi_editor_core::ViewportId) -> SurfaceContent {
         let frame = owner.modeling_frame_for(viewport);
-        let overlay = owner
-            .editor
-            .overlay_for_frame(frame.map(|f| f.canvas.version));
+        let overlay = benchmark::parameter_overlay::capture(1, || {
+            owner
+                .editor
+                .overlay_for_frame(frame.map(|f| f.canvas.version))
+        });
         let active_handle = overlay.active_handle;
-        let cursor = active_handle
-            .map(|handle| {
-                use zipzi_editor_core::DeformerHandle as H;
-                match handle {
-                    H::Move => CursorStyle::OpenHand,
-                    H::Rotate => CursorStyle::Arrow,
-                    H::RotationScale => CursorStyle::Crosshair,
-                    H::Scale(1 | 5) => CursorStyle::ResizeUpDown,
-                    H::Scale(3 | 7) => CursorStyle::ResizeLeftRight,
-                    H::Scale(0 | 4) => CursorStyle::ResizeUpLeftDownRight,
-                    H::Scale(_) => CursorStyle::ResizeUpRightDownLeft,
-                }
-            })
-            .or_else(|| {
-                if overlay.active_component.is_some() {
-                    Some(CursorStyle::Arrow)
-                } else if owner.editor.active_tool() == ToolId::Lasso {
-                    Some(CursorStyle::Crosshair)
-                } else {
-                    None
-                }
-            });
+        let cursor = if overlay.point_unavailable.is_some() {
+            Some(CursorStyle::OperationNotAllowed)
+        } else {
+            active_handle
+                .map(|handle| {
+                    use zipzi_editor_core::DeformerHandle as H;
+                    match handle {
+                        H::Move => CursorStyle::OpenHand,
+                        H::Rotate => CursorStyle::Arrow,
+                        H::RotationScale => CursorStyle::Crosshair,
+                        H::Scale(1 | 5) => CursorStyle::ResizeUpDown,
+                        H::Scale(3 | 7) => CursorStyle::ResizeLeftRight,
+                        H::Scale(0 | 4) => CursorStyle::ResizeUpLeftDownRight,
+                        H::Scale(_) => CursorStyle::ResizeUpRightDownLeft,
+                    }
+                })
+                .or_else(|| {
+                    if overlay.point_unavailable.is_some() {
+                        Some(CursorStyle::OperationNotAllowed)
+                    } else if overlay.active_component.is_some() {
+                        if overlay.glues.iter().flat_map(|g| &g.points).any(|p| {
+                            p.hovered && p.state == zipzi_editor_core::GluePointState::Editable
+                        }) {
+                            Some(if owner.editor.current_viewport_interaction().is_some() {
+                                CursorStyle::ClosedHand
+                            } else {
+                                CursorStyle::OpenHand
+                            })
+                        } else {
+                            Some(CursorStyle::Arrow)
+                        }
+                    } else if owner.editor.active_tool() == ToolId::Lasso {
+                        Some(CursorStyle::Crosshair)
+                    } else {
+                        None
+                    }
+                })
+        };
         SurfaceContent {
             image: frame.map(|f| (f.image.clone(), f.canvas.transform.metrics)),
             overlay,
@@ -175,6 +193,7 @@ impl ViewportSurface {
                             owner.redraw(cx);
                         }
                     } else if moving {
+                        crate::workspace::status_bar::StatusBar::sync(&owner.status_bar, owner, cx);
                         owner.notify_canvas(cx);
                     } else {
                         crate::workspace::status_bar::StatusBar::sync(&owner.status_bar, owner, cx);

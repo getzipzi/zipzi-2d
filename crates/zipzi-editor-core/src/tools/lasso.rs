@@ -3,26 +3,25 @@ use super::{
     OverlaySnapshot,
     gesture::Press,
     hints::*,
-    region::{SelectionOperation, SelectionRegion, select_region},
+    region::{SelectionRegion, select_click, select_region},
 };
-use crate::{CommandId, ComponentRef, Document, ViewportPoint};
+use crate::{CommandId, ComponentRef, Document, HitTarget, ViewportPoint};
 use anyhow::Result;
 
 pub(super) struct LassoGesture {
     pub press: Press,
     points: Vec<ViewportPoint>,
-    operation: SelectionOperation,
-    blank: bool,
+    target: Option<HitTarget>,
+    component_surface: bool,
 }
 impl LassoGesture {
-    pub fn new(press: Press, alt: bool, blank: bool) -> Self {
-        let operation = SelectionOperation::from_modifiers(press.shift, alt);
+    pub fn new(press: Press, target: Option<HitTarget>, component_surface: bool) -> Self {
         let points = vec![press.point];
         Self {
             press,
             points,
-            operation,
-            blank,
+            target,
+            component_surface,
         }
     }
     pub fn update(&mut self) {
@@ -38,14 +37,18 @@ impl LassoGesture {
         if self.points.last() != Some(&self.press.current) {
             self.points.push(self.press.current);
         }
-        if !self.press.dragged && self.blank {
-            // A true miss clears selection even with modifiers.
-            document.select_objects(Vec::new())?;
-            components.clear();
-        } else if self.press.dragged {
+        if self.press.dragged {
             if let Some(region) = SelectionRegion::lasso(&self.points) {
-                select_region(components, document, &self.press, &region, self.operation)?;
+                select_region(components, document, &self.press, &region)?;
             }
+        } else {
+            select_click(
+                components,
+                document,
+                &self.press,
+                &self.target,
+                self.component_surface,
+            )?;
         }
         Ok(())
     }

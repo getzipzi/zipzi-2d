@@ -288,6 +288,13 @@ impl DocumentSession {
             EditorCommand::SetObjectsLocked { objects, locked } => {
                 self.document.set_objects_locked(&objects, locked)
             }
+            EditorCommand::ToggleOriginalPoints => {
+                self.modeling.tools.cancel(&mut self.document);
+                self.modeling.tools.original_points = !self.modeling.tools.original_points;
+                self.modeling.tools.clear();
+                self.invalidate_scene();
+                return Ok(());
+            }
             EditorCommand::ToggleWarpFine => {
                 self.modeling.tools.warp_fine = !self.modeling.tools.warp_fine;
                 self.modeling.tools.clear();
@@ -362,6 +369,9 @@ impl DocumentSession {
             EditorCommand::Undo => self.document.undo(),
             EditorCommand::Redo => self.document.redo(),
         };
+        if selection && self.modeling.tools.original_points {
+            self.invalidate_scene();
+        }
         if selection || lock_or_history {
             self.modeling.tools.clear();
         }

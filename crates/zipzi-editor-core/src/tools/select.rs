@@ -2,7 +2,7 @@
 use super::{
     OverlaySnapshot,
     gesture::Press,
-    region::{SelectionOperation, SelectionRegion, select_region},
+    region::{SelectionOperation, SelectionRegion, select_click, select_region},
 };
 use super::{ToolController, hints::*};
 use crate::{CanvasFrame, ComponentRef, Document, HitTarget, ObjectKind, ViewportPoint};
@@ -11,6 +11,8 @@ use anyhow::Result;
 // Preserve the existing generic transform guidance during click/rectangle capture.
 pub(super) const CAPTURE_HINTS: &[InteractionHint] = &[
     InteractionHint::Drag(HintAction::Transform),
+    InteractionHint::Shift(HintAction::AddSelection),
+    InteractionHint::Alt(HintAction::RemoveSelection),
     InteractionHint::Command(crate::CommandId::CancelGesture),
 ];
 
@@ -26,32 +28,21 @@ impl SelectGesture {
         components: &mut Vec<ComponentRef>,
     ) -> Result<()> {
         let press = &self.press;
-        if !press.dragged && self.target.is_none() && !self.component_surface {
-            document.select_objects(Vec::new())?;
-            components.clear();
-        } else if press.dragged {
+        if press.dragged {
             select_region(
                 components,
                 document,
                 press,
                 &SelectionRegion::rectangle(press.point, press.current),
-                SelectionOperation::from_modifiers(press.shift, false),
             )?;
-        } else if let Some(HitTarget::Object(object)) = &self.target {
-            let mut selection = if press.shift {
-                press.selection.clone()
-            } else {
-                Vec::new()
-            };
-            if press.shift && selection.contains(object) {
-                selection.retain(|r| r != object);
-            } else {
-                selection.push(object.clone());
-            }
-            document.select_objects(selection)?;
-            components.clear();
-        } else if !press.shift {
-            components.clear();
+        } else {
+            select_click(
+                components,
+                document,
+                press,
+                &self.target,
+                self.component_surface,
+            )?;
         }
         Ok(())
     }
@@ -81,34 +72,34 @@ impl ToolController {
             .filter(|object| scene.in_isolation_scope(object))
             .cloned()
             .collect();
-        let hit = scene.hit_with_mode(
-            point,
-            t,
-            &selection,
-            self.active,
-            self.deformer_visibility,
-            self.warp_fine,
-            &locks,
-        );
+        let hit = self.canvas_hit(document, frame, point);
         self.hovered = hit.clone();
         self.hovered_binding = Some(frame.version.binding);
-        let component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
+        let mut component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
                     !locks.is_locked(selected) && ((selected.kind == ObjectKind::Mesh && selected == r)
                     || (selected.kind == ObjectKind::Deformer
                         && (selected == r || (r.kind == ObjectKind::Mesh && scene.ancestors(r).contains(selected)))))));
         // A selected surface permits component marquee selection without
         // replacing the shared object selection.
-        let hit = match hit {
-            Some(HitTarget::Object(_)) if component_surface => None,
+        let mut hit = match hit {
+            Some(HitTarget::Object(_)) if component_surface && !alt => None,
             hit => hit,
         };
+        let operation = SelectionOperation::from_modifiers(shift, alt);
+        let access = self.edit_access(document, scene, &selection);
         match &hit {
             Some(HitTarget::Component(c)) => {
-                if shift && self.components.contains(c) {
+                if operation == SelectionOperation::Remove
+                    || (operation == SelectionOperation::Add && self.components.contains(c))
+                {
                     self.components.retain(|v| v != c);
                     return;
                 }
-                if !self.components.contains(c) {
+                if !matches!(access.probe(c), Some(Ok(()))) {
+                    // Retain hover feedback, but a disabled point cannot capture an edit.
+                    hit = None;
+                    component_surface = true;
+                } else if !self.components.contains(c) {
                     if !shift {
                         self.components.clear();
                     }
@@ -124,14 +115,16 @@ impl ToolController {
                 transform: t,
                 scene: scene.clone(),
                 shift,
+                operation,
+                access,
                 warp_fine: self.warp_fine,
+                original_points: self.original_points,
                 selection,
                 current: point,
                 dragged: false,
             },
             hit,
             component_surface,
-            alt,
         );
     }
 }

@@ -102,6 +102,86 @@ fn native_action(h: &Harness, id: C, cx: &mut TestAppContext) -> (RunCommand, St
 }
 
 #[gpui_kit::test]
+fn creation_menu_cache_reuses_pose_previews_and_tracks_structural_changes(cx: &mut TestAppContext) {
+    let (document, assets) = super::document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let mesh = document.layers()[0].id.clone();
+    let h = setup_with_document(cx, document, assets);
+    invoke(&h, C::CreatePart, CommandSource::Direct, cx);
+    let part = inspected(&h, cx);
+    assert!(!native_action(&h, C::CreateOffscreen, cx).2);
+    let builds = |cx: &TestAppContext| {
+        h.view
+            .read_with(cx, |view, _| view.scene_creation_menus.builds)
+    };
+    let initial = builds(cx);
+    for value in [0.25, 0.5, 0.75] {
+        h.view.update(cx, |view, _| {
+            view.editor
+                .execute(EditorCommand::SetPreviewParameter {
+                    parameter_id: parameter.clone(),
+                    value,
+                })
+                .unwrap()
+        });
+        assert!(!native_action(&h, C::CreateOffscreen, cx).2);
+        assert_eq!(
+            builds(cx),
+            initial,
+            "pose-only updates rebuilt structural capabilities"
+        );
+    }
+    h.view.update(cx, |view, _| {
+        view.editor
+            .execute(EditorCommand::SetObjectsLocked {
+                objects: vec![part.clone()],
+                locked: true,
+            })
+            .unwrap()
+    });
+    let (_, reason, disabled) = native_action(&h, C::CreateMesh, cx);
+    assert!(disabled && reason.contains("Unlock"));
+    assert_eq!(builds(cx), initial + 1);
+    h.view.update(cx, |view, _| {
+        view.editor.execute(EditorCommand::Undo).unwrap()
+    });
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
+    assert_eq!(builds(cx), initial + 2);
+    h.view.update(cx, |view, _| {
+        view.editor.execute(EditorCommand::Select(mesh)).unwrap()
+    });
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
+    assert_eq!(builds(cx), initial + 3, "selection changes must invalidate");
+    h.view.update(cx, |view, _| {
+        view.editor
+            .execute(EditorCommand::PreviewName("Renamed".into()))
+            .unwrap()
+    });
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
+    assert_eq!(builds(cx), initial + 4, "candidate changes must invalidate");
+    h.view.update(cx, |view, _| {
+        view.editor.execute(EditorCommand::CancelEdit).unwrap()
+    });
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
+    assert_eq!(builds(cx), initial + 5);
+    h.view.update(cx, |view, _| {
+        view.editor
+            .execute(EditorCommand::SelectObjects(vec![]))
+            .unwrap()
+    });
+    assert!(native_action(&h, C::CreateOffscreen, cx).2);
+    assert_eq!(builds(cx), initial + 6);
+    h.view
+        .update(cx, |view, _| view.editor.new_document().unwrap());
+    assert!(native_action(&h, C::CreateOffscreen, cx).2);
+    assert_eq!(
+        builds(cx),
+        initial + 7,
+        "a new document must invalidate even with the same revision"
+    );
+}
+
+#[gpui_kit::test]
 fn native_create_menu_exposes_scene_and_parameter_commands_and_dispatches_targeted_actions(
     cx: &mut TestAppContext,
 ) {

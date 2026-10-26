@@ -52,6 +52,7 @@ pub enum EditorCommand {
     ToggleAncestorDeformers,
     ToggleDeformerGrid,
     ToggleWarpFine,
+    ToggleOriginalPoints,
     AdjustDeformer {
         object: crate::ObjectRef,
         adjustment: crate::DeformerAdjustment,

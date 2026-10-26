@@ -7,6 +7,9 @@ license = "GPL-3.0-only"
 # Distributed with Editor assets, workspace patches and licenses in the workspace source archive.
 publish = false
 
+[features]
+bench-instrumentation = ["zipzi-core/bench-instrumentation"]
+
 [dependencies]
 anyhow.workspace = true
 zipzi-editor-core.workspace = true

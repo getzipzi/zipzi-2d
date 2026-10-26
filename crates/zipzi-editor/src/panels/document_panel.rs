@@ -550,6 +550,11 @@ impl crate::docking::header::PanelHeader for DocumentPanel {
 }
 impl Render for DocumentPanel {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let _span = crate::benchmark::parameter_overlay::ui_span(match self.kind {
+            PanelKind::Keyforms => "ui.keyforms_render",
+            PanelKind::DrawOrder => "ui.draw_order_render",
+            _ => "ui.document_panel_render",
+        });
         self.row_sequence = 0;
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();

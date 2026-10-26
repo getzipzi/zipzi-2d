@@ -8,6 +8,10 @@ use std::{
     },
 };
 
+/// Labels carry preview identity with the Metal resource, across address reuse.
+/// Used only while a frame trace sink is installed.
+pub const PREVIEW_TEXTURE_LABEL_PREFIX: &str = "gpui-frame-trace-preview:";
+
 /// One timestamped boundary and its numeric correlation fields.
 pub struct Event {
     /// Host timestamp in nanoseconds.

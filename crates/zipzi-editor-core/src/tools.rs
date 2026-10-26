@@ -1,5 +1,6 @@
 //! Canvas interaction state machine. Object selection, component selection and
 //! write targets are independent; a click never opens a model transaction.
+mod access;
 mod controls;
 mod gesture;
 mod glue;
@@ -20,7 +21,8 @@ use gesture::Gesture;
 use std::sync::Arc;
 
 pub use overlay::{
-    OverlayDeformer, OverlayGlue, OverlayHandle, OverlaySnapshot, OverlayVertex, OverlayVertexKind,
+    GluePointState, OverlayDeformer, OverlayGlue, OverlayGluePoint, OverlayHandle, OverlaySnapshot,
+    OverlayVertex, OverlayVertexKind,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -55,12 +57,21 @@ pub struct ToolController {
     pub deformer_visibility: DeformerVisibility,
     pub deformer_grid: bool,
     pub warp_fine: bool,
+    pub original_points: bool,
     components: Vec<ComponentRef>,
     hovered: Option<HitTarget>,
     hovered_binding: Option<crate::ViewportBinding>,
     gesture: Option<Gesture>,
+    access_cache: std::sync::Mutex<Option<access::AccessCache>>,
+    #[cfg(test)]
+    access_builds: std::sync::atomic::AtomicUsize,
+    #[cfg(test)]
+    overlay_builds: std::sync::atomic::AtomicUsize,
 }
 impl ToolController {
+    pub(crate) fn hovered_binding(&self) -> Option<crate::ViewportBinding> {
+        self.hovered_binding
+    }
     pub(crate) fn interaction_viewport(&self) -> Option<crate::ViewportId> {
         self.gesture
             .as_ref()

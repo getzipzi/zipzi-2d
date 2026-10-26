@@ -140,6 +140,15 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
     let message = error
         .clone()
         .or(interaction_message)
+        .or_else(|| {
+            (!view.modal)
+                .then(|| {
+                    crate::benchmark::parameter_overlay::capture(3, || {
+                        view.editor.canvas_hover_hint()
+                    })
+                })
+                .flatten()
+        })
         .unwrap_or_else(|| view.message.clone());
     let hint_context = resolve_hint_context(view, cx);
     let bindings_digest = cx

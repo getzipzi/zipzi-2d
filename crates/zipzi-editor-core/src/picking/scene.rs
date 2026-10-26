@@ -8,6 +8,70 @@ use std::{
 use zipzi_core::evaluation::RenderCommand;
 
 impl CanvasScene {
+    fn capture_parameter_values(
+        source: &SceneSnapshot,
+        previous: Option<&Self>,
+    ) -> Arc<zipzi_core::PreviewValues> {
+        if let Some(previous) = previous
+            && previous.source.viewport_frame.parameters == source.viewport_frame.parameters
+        {
+            return previous.parameter_values.clone();
+        }
+        Arc::new(
+            source
+                .viewport_frame
+                .parameters
+                .iter()
+                .map(|p| (p.id.clone(), p.value))
+                .collect(),
+        )
+    }
+    /// Change control geometry only; the artwork and Glue preview keep the final pose.
+    pub(crate) fn with_original_points(&self, document: &Document) -> anyhow::Result<Self> {
+        let mut scene = self.clone();
+        let values = self.parameter_values();
+        let doc = document.model();
+        let mut meshes = self.meshes.to_vec();
+        for object in &document.context().selections {
+            if object.kind != K::Mesh {
+                continue;
+            }
+            let Some(&slot) = self.mesh_slots.get(&object.id) else {
+                continue;
+            };
+            let mesh = doc.get_mesh(&object.id).unwrap();
+            let space = crate::control_edit::ControlSpace::new(document, self, &mesh.deformer_id)?;
+            let local = zipzi_core::evaluation::authoring_mesh_positions(&doc, &object.id, values)
+                .map_err(|e| anyhow::anyhow!("{}", e.message))?;
+            let m = Arc::make_mut(&mut meshes[slot]);
+            m.vertices = mesh
+                .vertex_ids
+                .iter()
+                .copied()
+                .zip(local.into_iter().map(|p| space.to_model(p)))
+                .collect();
+            m.bounds = bounds(m.vertices.iter().map(|(_, p)| *p));
+            m.boundary = self.topology.meshes[&object.id]
+                .boundary
+                .iter()
+                .map(|&(a, b)| (m.vertices[a].1, m.vertices[b].1))
+                .collect();
+        }
+        scene.meshes = meshes.into();
+        for g in scene.topology.glues.iter() {
+            if let Some(control) = scene.controls.iter_mut().find(|c| c.object == g.object) {
+                control.points.clear();
+                for &(a, b) in &g.pairs {
+                    control.points.extend([
+                        scene.meshes[scene.mesh_slots[&g.mesh_a]].vertices[a].1,
+                        scene.meshes[scene.mesh_slots[&g.mesh_b]].vertices[b].1,
+                    ]);
+                }
+            }
+        }
+        Ok(scene)
+    }
+
     pub fn new(document: &Document, source: SceneSnapshot) -> Self {
         Self::build(document, source, None)
     }
@@ -151,7 +215,15 @@ impl CanvasScene {
                         .collect(),
                 )
             });
+        let parameter_values = Self::capture_parameter_values(&source, previous);
+        let glue_map = Arc::new(crate::mesh_edit::GlueMap::new(
+            &zipzi_core::evaluation::evaluated_glue_operations(
+                &document.model(),
+                &parameter_values,
+            ),
+        ));
         let mut scene = Self {
+            parameter_values,
             beziers: HashMap::new(),
             meshes,
             controls,
@@ -163,6 +235,7 @@ impl CanvasScene {
             visible_meshes,
             isolation_scope: None,
             topology,
+            glue_map,
         };
         let parameters = scene
             .source
@@ -213,8 +286,11 @@ impl CanvasScene {
             .enumerate()
             .map(|(i, t)| (t.asset_id.clone(), i))
             .collect();
+        let parameter_values = Self::capture_parameter_values(&source, Some(self));
         Self {
+            parameter_values,
             beziers: self.beziers.clone(),
+            glue_map: self.glue_map.clone(),
             meshes: self.meshes.clone(),
             controls,
             index: topology.index.clone(),

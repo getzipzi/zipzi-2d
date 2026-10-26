@@ -4,9 +4,9 @@ use gpui_kit::{
     Bounds, FillOptions, FillRule, Hsla, PathBuilder, PathStyle, Pixels, Point, Window, fill,
     point, px, rgb, rgba, size,
 };
-use zipzi_editor_core::{OverlaySnapshot, OverlayVertexKind, ViewportPoint};
+use zipzi_editor_core::{GluePointState, OverlaySnapshot, OverlayVertexKind, ViewportPoint};
 
-const GLUE_MARKER_RADIUS: f32 = 5.;
+const GLUE_MARKER_RADIUS: f32 = 3.25;
 
 /// The native regression tests paint these same primitives into a headless scene.
 pub(crate) trait Painter {
@@ -30,9 +30,9 @@ pub(crate) struct Palette {
     pub glue: Hsla,
     pub mesh_selected: Hsla,
     pub hollow: Hsla,
-    pub selected: Hsla,
+    pub restricted: Hsla,
+    pub restricted_border: Hsla,
     pub selection_region: Hsla,
-    pub surface: Hsla,
 }
 impl Palette {
     pub fn new(dark: bool) -> Self {
@@ -40,12 +40,12 @@ impl Palette {
             mesh: rgb(0x909090).into(),
             deformer: rgb(0x62c878).into(),
             deformer_frame: rgb(if dark { 0x669eff } else { 0x2864dc }).into(),
-            glue: rgb(0x00c8ff).into(),
+            glue: rgb(0xffd000).into(),
             mesh_selected: rgb(0xff0000).into(),
-            selected: rgb(0xff5000).into(),
             selection_region: rgb(if dark { 0xb0b0b0 } else { 0x606060 }).into(),
             hollow: rgb(0xffffff).into(),
-            surface: rgb(if dark { 0x25272b } else { 0xe9ebef }).into(),
+            restricted: rgb(0xb0b0b0).into(),
+            restricted_border: rgb(0x505050).into(),
         }
     }
     pub fn metal(self) -> zipzi_editor_render::OverlayStyle {
@@ -57,6 +57,7 @@ impl Palette {
             edge: color(self.mesh.opacity(0.45)),
             vertex: color(self.hollow),
             selected: color(self.mesh_selected),
+            restricted: color(self.restricted),
         }
     }
 }
@@ -120,7 +121,7 @@ pub(crate) fn paint_lines(
     );
     lines(&overlay.rotation_lines, 1., p.deformer.opacity(0.85));
     for glue in &overlay.glues {
-        let color = if glue.selected { p.selected } else { p.glue };
+        let color = p.glue;
         let dashed: Vec<_> = glue
             .pairs
             .iter()
@@ -216,6 +217,24 @@ fn marker(
         .border_color(if solid { color } else { rgb(0x000000).into() }),
     );
 }
+fn restricted_marker(
+    center: Point<Pixels>,
+    radius: f32,
+    round: bool,
+    p: Palette,
+    window: &mut impl Painter,
+) {
+    let r = px(radius);
+    window.paint_quad(
+        fill(
+            Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
+            p.restricted,
+        )
+        .corner_radii(if round { r } else { px(0.) })
+        .border_widths(px(1.))
+        .border_color(p.restricted_border),
+    );
+}
 fn ring(center: Point<Pixels>, r: f32, window: &mut impl Painter) {
     let r = px(r);
     window.paint_quad(
@@ -249,40 +268,6 @@ pub(crate) fn polygon_fill_path(
     })
 }
 
-fn diamond(
-    center: Point<Pixels>,
-    solid: bool,
-    half: bool,
-    color: Hsla,
-    p: Palette,
-    window: &mut impl Painter,
-) {
-    let points = |r: f32| {
-        [
-            center + point(px(0.), px(-r)),
-            center + point(px(r), px(0.)),
-            center + point(px(0.), px(r)),
-            center + point(px(-r), px(0.)),
-        ]
-    };
-    // Both states use the same outer silhouette; the hollow border stays inside it.
-    let outer = points(GLUE_MARKER_RADIUS);
-    if let Some(path) = polygon_fill_path(outer.into_iter()) {
-        window.paint_path(path, if solid { color } else { p.hollow });
-    }
-    if !solid {
-        let inner = points(GLUE_MARKER_RADIUS - std::f32::consts::SQRT_2);
-        if let Some(path) = polygon_fill_path(inner.into_iter()) {
-            window.paint_path(path, p.surface);
-        }
-    }
-    if half {
-        if let Some(path) = polygon_fill_path(outer[..3].iter().copied()) {
-            window.paint_path(path, color);
-        }
-    }
-}
-
 pub(crate) fn paint_markers(
     overlay: &OverlaySnapshot,
     origin: Point<Pixels>,
@@ -298,6 +283,28 @@ pub(crate) fn paint_markers(
             .filter(|v| (v.selected || v.hovered) == emphasized)
         {
             let center = origin + point(px(v.position.x), px(v.position.y));
+            if !v.editable {
+                if v.kind == OverlayVertexKind::Mesh && !mesh_fallback {
+                    continue;
+                }
+                let radius = zipzi_editor_render::OVERLAY_MARKER_RADIUS;
+                restricted_marker(center, radius, v.kind != OverlayVertexKind::Warp, p, window);
+                if v.kind == OverlayVertexKind::RotationCenter {
+                    let q = |x, y| ViewportPoint {
+                        x: v.position.x + x,
+                        y: v.position.y + y,
+                    };
+                    mesh_edges::paint_edges(
+                        &[(q(-6., 0.), q(6., 0.)), (q(0., -6.), q(0., 6.))],
+                        origin,
+                        |path| window.paint_path(path, p.restricted_border),
+                    );
+                }
+                if v.hovered {
+                    ring(center, radius + 2., window);
+                }
+                continue;
+            }
             let color = if v.kind == OverlayVertexKind::Mesh {
                 if v.selected {
                     p.mesh_selected
@@ -353,15 +360,25 @@ pub(crate) fn paint_markers(
     for handle in &overlay.handles {
         let center = origin + point(px(handle.position.x), px(handle.position.y));
         let color = p.deformer;
-        marker(
-            center,
-            zipzi_editor_render::OVERLAY_MARKER_RADIUS,
-            handle.round,
-            handle.selected,
-            color,
-            p,
-            window,
-        );
+        if handle.editable {
+            marker(
+                center,
+                zipzi_editor_render::OVERLAY_MARKER_RADIUS,
+                handle.round,
+                handle.selected,
+                color,
+                p,
+                window,
+            );
+        } else {
+            restricted_marker(
+                center,
+                zipzi_editor_render::OVERLAY_MARKER_RADIUS,
+                handle.round,
+                p,
+                window,
+            );
+        }
         if handle.hovered {
             ring(
                 center,
@@ -370,33 +387,51 @@ pub(crate) fn paint_markers(
             );
         }
     }
-    for emphasized in [false, true] {
-        for glue in overlay
-            .glues
-            .iter()
-            .filter(|g| (g.selected || g.hovered) == emphasized)
-        {
-            let color = if glue.selected { p.selected } else { p.glue };
-            for &(a, b) in &glue.pairs {
-                if ![a.x, a.y, b.x, b.y].iter().all(|v| v.is_finite()) {
-                    continue;
-                }
-                if (a.x - b.x).hypot(a.y - b.y) < 2. {
-                    let center = origin + point(px((a.x + b.x) * 0.5), px((a.y + b.y) * 0.5));
-                    diamond(center, false, true, color, p, window);
-                    if glue.hovered {
-                        ring(center, GLUE_MARKER_RADIUS + 2., window);
-                    }
-                } else {
-                    for (pos, solid) in [(a, false), (b, true)] {
-                        let center = origin + point(px(pos.x), px(pos.y));
-                        diamond(center, solid, false, color, p, window);
-                        if glue.hovered {
-                            ring(center, GLUE_MARKER_RADIUS + 2., window);
-                        }
-                    }
-                }
+    let mut endpoints: Vec<_> = overlay.glues.iter().flat_map(|g| g.points.iter()).collect();
+    endpoints.sort_by_key(|point| (point.state, point.selected, point.hovered));
+    let mut distinct: Vec<&zipzi_editor_core::OverlayGluePoint> = Vec::new();
+    for endpoint in endpoints.into_iter().rev() {
+        if !distinct.iter().any(|p| {
+            (p.position.x - endpoint.position.x).hypot(p.position.y - endpoint.position.y) < 0.5
+        }) {
+            distinct.push(endpoint);
+        }
+    }
+    for endpoint in distinct {
+        let pos = endpoint.position;
+        if !pos.x.is_finite() || !pos.y.is_finite() {
+            continue;
+        }
+        let center = origin + point(px(pos.x), px(pos.y));
+        let r = px(GLUE_MARKER_RADIUS);
+        let bounds = Bounds::new(center - point(r, r), size(r * 2., r * 2.));
+        match endpoint.state {
+            GluePointState::Editable => {
+                window.paint_quad(fill(bounds, p.glue));
+                marker(
+                    center,
+                    2.75,
+                    true,
+                    endpoint.selected,
+                    p.mesh_selected,
+                    p,
+                    window,
+                );
             }
+            GluePointState::Reference => {
+                window.paint_quad(
+                    fill(bounds, rgba(0))
+                        .border_widths(px(0.75))
+                        .border_color(p.glue.opacity(0.4)),
+                );
+            }
+            GluePointState::Restricted => {
+                window.paint_quad(fill(bounds, rgb(0x8b8b8b)));
+                restricted_marker(center, 2.75, true, p, window);
+            }
+        }
+        if endpoint.hovered {
+            ring(center, GLUE_MARKER_RADIUS + 1.5, window);
         }
     }
 }

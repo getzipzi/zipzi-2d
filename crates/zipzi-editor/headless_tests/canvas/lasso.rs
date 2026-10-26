@@ -57,13 +57,18 @@ fn draw(
     let view = harness.view.read(cx);
     assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
     assert!(view.editor.gesture_active());
-    assert!(!view.editor.overlay().lasso.is_empty());
-    assert!(view.editor.overlay().marquee.is_none());
+    let is_lasso = view.editor.active_tool() == ToolId::Lasso;
+    assert_eq!(!view.editor.overlay().lasso.is_empty(), is_lasso);
+    assert_eq!(view.editor.overlay().marquee.is_some(), !is_lasso);
     assert!(!view.editor.document().unwrap().has_pending_edit());
     assert_eq!(
         crate::workspace::status_bar::resolve_hint_context(view, cx),
         &[
-            zipzi_editor_core::InteractionHint::Drag(zipzi_editor_core::HintAction::LassoSelect),
+            zipzi_editor_core::InteractionHint::Drag(if is_lasso {
+                zipzi_editor_core::HintAction::LassoSelect
+            } else {
+                zipzi_editor_core::HintAction::Transform
+            }),
             zipzi_editor_core::InteractionHint::Shift(zipzi_editor_core::HintAction::AddSelection),
             zipzi_editor_core::InteractionHint::Alt(zipzi_editor_core::HintAction::RemoveSelection),
             zipzi_editor_core::InteractionHint::Command(
@@ -76,7 +81,7 @@ fn draw(
         window.dispatch_event(
             MouseUpEvent {
                 button: MouseButton::Left,
-                position: at(-12., 12.),
+                position: at(if is_lasso { -12. } else { 12. }, 12.),
                 modifiers,
                 click_count: 1,
             }
@@ -88,70 +93,80 @@ fn draw(
 }
 
 #[gpui_kit::test]
-fn toolbar_lasso_native_modifiers_and_select_shortcut_preserve_components(cx: &mut TestAppContext) {
-    let harness = setup(cx);
-    present_canvas(&harness, cx);
-    cx.update_window(harness.window, |_, window, cx| {
-        let vertices = harness.view.read(cx).editor.overlay().vertices;
-        let original = harness
-            .view
-            .read(cx)
-            .editor
-            .document()
-            .unwrap()
-            .selected_vertex_positions();
-        let evaluations = harness.view.read(cx).editor.evaluation_count();
-        window.click("tool_lasso", cx);
-        assert_eq!(harness.view.read(cx).editor.active_tool(), ToolId::Lasso);
-        draw(
-            &harness,
-            vertices[0].position,
-            Modifiers::default(),
-            true,
-            window,
-            cx,
-        );
-        assert_eq!(selected(&harness, cx), vec![vertices[0].id]);
-        draw(
-            &harness,
-            vertices[1].position,
-            Modifiers {
-                shift: true,
-                ..Default::default()
-            },
-            true,
-            window,
-            cx,
-        );
-        assert_eq!(selected(&harness, cx).len(), 2);
-        draw(
-            &harness,
-            vertices[0].position,
-            Modifiers {
-                alt: true,
-                ..Default::default()
-            },
-            true,
-            window,
-            cx,
-        );
-        assert_eq!(selected(&harness, cx), vec![vertices[1].id]);
-        window.press("v", cx);
-        assert_eq!(harness.view.read(cx).editor.active_tool(), ToolId::Select);
-        assert_eq!(selected(&harness, cx), vec![vertices[1].id]);
-        window.press("l", cx);
-        assert_eq!(harness.view.read(cx).editor.active_tool(), ToolId::Lasso);
-        assert_eq!(selected(&harness, cx), vec![vertices[1].id]);
-        let view = harness.view.read(cx);
-        assert_eq!(
-            view.editor.document().unwrap().selected_vertex_positions(),
-            original
-        );
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
-        assert_eq!(view.editor.evaluation_count(), evaluations);
-        assert!(!view.editor.gesture_active());
-    })
-    .unwrap();
+fn selection_tools_native_modifiers_and_shortcuts_preserve_components(cx: &mut TestAppContext) {
+    for tool in [ToolId::Select, ToolId::Lasso] {
+        let harness = setup(cx);
+        present_canvas(&harness, cx);
+        cx.update_window(harness.window, |_, window, cx| {
+            let vertices = harness.view.read(cx).editor.overlay().vertices;
+            let original = harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .selected_vertex_positions();
+            let evaluations = harness.view.read(cx).editor.evaluation_count();
+            window.click(
+                if tool == ToolId::Lasso {
+                    "tool_lasso"
+                } else {
+                    "tool_select"
+                },
+                cx,
+            );
+            assert_eq!(harness.view.read(cx).editor.active_tool(), tool);
+            draw(
+                &harness,
+                vertices[0].position,
+                Modifiers::default(),
+                true,
+                window,
+                cx,
+            );
+            assert_eq!(selected(&harness, cx), vec![vertices[0].id]);
+            draw(
+                &harness,
+                vertices[1].position,
+                Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+                true,
+                window,
+                cx,
+            );
+            assert_eq!(selected(&harness, cx).len(), 2);
+            draw(
+                &harness,
+                vertices[0].position,
+                Modifiers {
+                    alt: true,
+                    shift: true,
+                    ..Default::default()
+                },
+                true,
+                window,
+                cx,
+            );
+            assert_eq!(selected(&harness, cx), vec![vertices[1].id]);
+            window.press("v", cx);
+            assert_eq!(harness.view.read(cx).editor.active_tool(), ToolId::Select);
+            assert_eq!(selected(&harness, cx), vec![vertices[1].id]);
+            window.press("l", cx);
+            assert_eq!(harness.view.read(cx).editor.active_tool(), ToolId::Lasso);
+            assert_eq!(selected(&harness, cx), vec![vertices[1].id]);
+            let view = harness.view.read(cx);
+            assert_eq!(
+                view.editor.document().unwrap().selected_vertex_positions(),
+                original
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+            assert_eq!(view.editor.evaluation_count(), evaluations);
+            assert!(!view.editor.gesture_active());
+        })
+        .unwrap();
+    }
 }
 
 #[gpui_kit::test]

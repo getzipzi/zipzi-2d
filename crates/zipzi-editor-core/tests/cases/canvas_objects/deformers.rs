@@ -548,6 +548,9 @@ fn nested_deformer_adjustments_write_only_the_exact_keyform_in_both_canvas_direc
             })?;
             let interpolation = control_points(&mut editor, &object)?;
             assert!(editor.overlay().unavailable.is_some());
+            assert!(editor.overlay().vertices.iter().all(|v| !v.editable));
+            assert!(editor.overlay().handles.iter().all(|h| !h.editable));
+
             assert!(
                 editor
                     .execute(EditorCommand::AdjustDeformer {

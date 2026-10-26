@@ -7,6 +7,284 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+fn bound_parameter_slider_stays_quiet_until_a_canvas_edit_is_attempted(cx: &mut TestAppContext) {
+    let (document, assets) =
+        super::super::document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    assert_preview_slider_quiet_until_edit(
+        cx,
+        document,
+        assets,
+        parameter,
+        &["stored keyform", "Pose"],
+    );
+}
+
+#[gpui_kit::test]
+fn blendshape_parameter_slider_stays_quiet_until_a_canvas_edit_is_attempted(
+    cx: &mut TestAppContext,
+) {
+    let (document, assets) = super::super::document_fixture::rectangle_document(true).unwrap();
+    let parameter = document
+        .parameters()
+        .into_iter()
+        .find(|p| p.name == "Blend")
+        .unwrap()
+        .id;
+    assert_preview_slider_quiet_until_edit(cx, document, assets, parameter, &["BlendShape"]);
+}
+
+#[gpui_kit::test]
+fn glue_parameter_slider_and_connected_vertex_edit_stay_available(cx: &mut TestAppContext) {
+    let (mut document, assets) = super::super::document_fixture::rectangle_document(true).unwrap();
+    document
+        .select(&uuid::Uuid::from_u128(909).to_string())
+        .unwrap();
+    let parameter = document
+        .parameters()
+        .into_iter()
+        .find(|p| p.name == "Pose")
+        .unwrap()
+        .id;
+    assert_preview_slider_quiet_until_edit(cx, document, assets, parameter, &[]);
+}
+
+#[gpui_kit::test]
+fn blendshape_slider_selects_a_delta_keyform_for_canvas_editing(cx: &mut TestAppContext) {
+    let (document, assets) = super::super::document_fixture::rectangle_document(true).unwrap();
+    let parameter = document
+        .parameters()
+        .into_iter()
+        .find(|p| p.name == "Blend")
+        .unwrap()
+        .id;
+    assert_preview_slider_quiet_until_edit(cx, document, assets, parameter, &[]);
+}
+
+#[gpui_kit::test]
+fn blendshape_slider_zero_keyform_allows_base_editing(cx: &mut TestAppContext) {
+    let (document, assets) = super::super::document_fixture::rectangle_document(true).unwrap();
+    let parameter = document
+        .parameters()
+        .into_iter()
+        .find(|p| p.name == "Blend")
+        .unwrap()
+        .id;
+    assert_preview_slider_quiet_until_edit_at(cx, document, assets, parameter, &[], Some(0.));
+}
+
+fn assert_preview_slider_quiet_until_edit(
+    cx: &mut TestAppContext,
+    document: zipzi_editor_core::Document,
+    assets: tempfile::TempDir,
+    parameter: String,
+    expected_reason: &[&str],
+) {
+    assert_preview_slider_quiet_until_edit_at(
+        cx,
+        document,
+        assets,
+        parameter,
+        expected_reason,
+        None,
+    );
+}
+
+fn assert_preview_slider_quiet_until_edit_at(
+    cx: &mut TestAppContext,
+    document: zipzi_editor_core::Document,
+    assets: tempfile::TempDir,
+    parameter: String,
+    expected_reason: &[&str],
+    final_fraction: Option<f32>,
+) {
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+    let is_blend = document
+        .parameters()
+        .iter()
+        .find(|p| p.id == parameter)
+        .unwrap()
+        .name
+        == "Blend";
+    let final_fraction = final_fraction.unwrap_or(if is_blend && expected_reason.is_empty() {
+        1.
+    } else {
+        0.65
+    });
+    let harness = super::super::setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, _| window.activate_window())
+        .unwrap();
+    cx.run_until_parked();
+    present_canvas(&harness, cx);
+    harness
+        .view
+        .update(cx, |view, cx| view.set_status_message("Ready", cx));
+    let track = cx
+        .update_window(harness.window, |_, window, _| {
+            window
+                .within(format!("parameter-row-{parameter}"))
+                .find("slider-bar-container")
+                .bounds()
+        })
+        .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: point(track.left() + px(1.), track.center().y),
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })
+    .unwrap();
+    for fraction in [0.35, 0.65] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: point(track.left() + track.size.width * fraction, track.center().y),
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        present_canvas(&harness, cx);
+        harness.view.update(cx, |view, cx| {
+            for frame in view.viewport_frames.values_mut() {
+                frame.error = None;
+            }
+            // Frame adoption synchronizes these notices in the real preview worker.
+            view.sync_viewport_notice(cx);
+            crate::workspace::status_bar::StatusBar::sync(&view.status_bar, view, cx);
+            let value = view
+                .editor
+                .document()
+                .unwrap()
+                .parameters()
+                .into_iter()
+                .find(|p| p.id == parameter)
+                .unwrap()
+                .value;
+            assert!(value > 0. && value < 1.);
+            assert_eq!(
+                view.editor.overlay().unavailable.is_some(),
+                !expected_reason.is_empty() || is_blend
+            );
+            let blocked = !expected_reason.is_empty() || is_blend;
+            assert!(
+                view.editor
+                    .overlay()
+                    .vertices
+                    .iter()
+                    .all(|v| v.editable == !blocked)
+            );
+            assert!(view.edit_error.is_none());
+            assert_eq!(
+                view.status_bar.read(cx).displayed_message(),
+                Some(("Ready", false))
+            );
+        });
+    }
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: point(
+                    track.left() + track.size.width * final_fraction,
+                    track.center().y,
+                ),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: point(
+                    track.left() + track.size.width * final_fraction,
+                    track.center().y,
+                ),
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })
+    .unwrap();
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let p = harness
+            .view
+            .read_with(cx, |view, _| view.editor.overlay().vertices[0].position);
+        let start = window.find("canvas-body").bounds().origin + point(px(p.x), px(p.y));
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: start,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        harness
+            .view
+            .read_with(cx, |view, _| assert!(view.edit_error.is_none()));
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: start + point(px(-20.), px(10.)),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        harness.view.read_with(cx, |view, _| {
+            if expected_reason.is_empty() {
+                assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+                assert!(view.editor.document().unwrap().has_pending_edit());
+                return;
+            }
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+            assert!(!view.editor.document().unwrap().has_pending_edit());
+            assert!(view.editor.overlay().vertices.iter().all(|v| !v.selected));
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: start + point(px(-20.), px(10.)),
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        if expected_reason.is_empty() {
+            harness.view.read_with(cx, |view, _| {
+                assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+                assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+            });
+        }
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn viewport_transform_delta_updates_status_bar_and_clears_on_finish_or_cancel(
     cx: &mut TestAppContext,
 ) {
@@ -1103,4 +1381,70 @@ fn escape_under_canvas_select_clears_all_selection(cx: &mut TestAppContext) {
         });
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn glue_restricted_point_explains_its_parameter_on_hover_without_an_error(cx: &mut TestAppContext) {
+    use gpui_kit::MouseMoveEvent;
+    let (mut document, assets) = super::super::document_fixture::rectangle_document(true).unwrap();
+    document
+        .set_preview_parameter(&uuid::Uuid::from_u128(904).to_string(), 0.5)
+        .unwrap();
+    let harness = super::super::setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, _| window.activate_window())
+        .unwrap();
+    cx.run_until_parked();
+    present_canvas(&harness, cx);
+    harness.view.update(cx, |view, cx| {
+        for frame in view.viewport_frames.values_mut() {
+            frame.error = None;
+        }
+        view.set_status_message("Ready", cx);
+        assert!(
+            view.editor.overlay().glues[0]
+                .points
+                .iter()
+                .any(|p| p.state == zipzi_editor_core::GluePointState::Restricted)
+        );
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let p = harness
+            .view
+            .read_with(cx, |view, _| view.editor.overlay().vertices[0].position);
+        let position = window.find("canvas-body").bounds().origin + point(px(p.x), px(p.y));
+        window.dispatch_event(
+            MouseMoveEvent {
+                position,
+                pressed_button: None,
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        harness.view.read_with(cx, |view, cx| {
+            let overlay = view.editor.overlay();
+            let hint = overlay
+                .point_unavailable
+                .as_deref()
+                .expect("restricted Glue hover must explain its cause");
+            assert!(hint.contains("Pose") && hint.contains("0.5"), "{hint}");
+            assert!(view.edit_error.is_none());
+            assert_eq!(
+                view.status_bar.read(cx).displayed_message(),
+                Some((hint, false))
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+    })
+    .unwrap();
+    harness.view.update(cx, |view, cx| {
+        let binding = view.modeling_frame().unwrap().canvas.version.binding;
+        view.editor.hover_canvas(binding, None).unwrap();
+        crate::workspace::status_bar::StatusBar::sync(&view.status_bar, view, cx);
+        assert_eq!(
+            view.status_bar.read(cx).displayed_message(),
+            Some(("Ready", false))
+        );
+    });
 }

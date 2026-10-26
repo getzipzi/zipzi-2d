@@ -85,6 +85,7 @@ mod canvas_topology;
 pub use canvas_topology::{CanvasObject, CanvasObjectIndex};
 mod control_edit;
 mod deformer;
+mod mesh_edit;
 pub use deformer::*;
 
 mod warp_bezier;

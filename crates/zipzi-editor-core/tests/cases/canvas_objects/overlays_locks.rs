@@ -286,15 +286,15 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
                     GlueVertexPair {
                         vertex_a: Some(0),
                         vertex_b: Some(0),
-                        weight_a: 0.5,
-                        weight_b: 0.5,
+                        weight_a: 0.,
+                        weight_b: 1.,
                         ..Default::default()
                     },
                     GlueVertexPair {
                         vertex_a: Some(1),
                         vertex_b: Some(2),
-                        weight_a: 0.5,
-                        weight_b: 0.5,
+                        weight_a: 0.25,
+                        weight_b: 0.75,
                         ..Default::default()
                     },
                 ],
@@ -315,6 +315,12 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
         let overlay = editor.overlay();
         assert_eq!(overlay.glues.len(), 1);
         assert!(!overlay.glues[0].selected);
+        assert!(
+            overlay.glues[0]
+                .points
+                .iter()
+                .all(|p| p.state == GluePointState::Reference)
+        );
         let object = ObjectRef::new(ObjectKind::Glue, &id);
         editor.execute(EditorCommand::SelectObject(object.clone()))?;
         let overlay = editor.overlay();
@@ -325,6 +331,12 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
             "both connected mesh outlines are visible"
         );
         assert!(overlay.glues[0].selected);
+        assert!(
+            overlay.glues[0]
+                .points
+                .iter()
+                .all(|p| p.state == GluePointState::Reference)
+        );
         let pairs = &overlay.glues[0].pairs;
         assert_eq!(pairs.len(), 2);
         assert_eq!(
@@ -355,6 +367,212 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
         click(&mut editor, point, false)?;
         assert!(editor.overlay().vertices.is_empty());
         assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        editor.execute(EditorCommand::SelectObject(ObjectRef::new(
+            ObjectKind::Mesh,
+            &meshes[0],
+        )))?;
+        assert_eq!(
+            editor.overlay().glues[0]
+                .points
+                .iter()
+                .map(|p| p.state)
+                .collect::<Vec<_>>(),
+            vec![
+                GluePointState::Editable,
+                GluePointState::Reference,
+                GluePointState::Editable,
+                GluePointState::Reference
+            ]
+        );
+        editor.execute(EditorCommand::ToggleOriginalPoints)?;
+        shown(&mut editor)?;
+        assert_eq!(
+            editor.overlay().glues[0]
+                .points
+                .iter()
+                .map(|p| p.state)
+                .collect::<Vec<_>>(),
+            vec![
+                GluePointState::Editable,
+                GluePointState::Reference,
+                GluePointState::Editable,
+                GluePointState::Reference
+            ]
+        );
+        editor.execute(EditorCommand::ToggleOriginalPoints)?;
+        editor.execute(EditorCommand::SelectObject(ObjectRef::new(
+            ObjectKind::Mesh,
+            &meshes[1],
+        )))?;
+        let frame = shown(&mut editor)?;
+        let points = editor.overlay().glues[0].points.clone();
+        assert_eq!(
+            points[1].state,
+            if intensity == 1. {
+                GluePointState::Restricted
+            } else {
+                GluePointState::Editable
+            }
+        );
+        let point = frame
+            .transform
+            .to_viewport(frame.geometry.mesh(&meshes[1]).unwrap().vertices[0].1);
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point,
+                left_down: false,
+            },
+        )?;
+        assert_eq!(editor.canvas_hover_hint().is_some(), intensity == 1.);
+        if intensity == 1. {
+            assert!(
+                editor
+                    .overlay()
+                    .point_unavailable
+                    .as_deref()
+                    .unwrap()
+                    .contains("Glue")
+            );
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point,
+                    shift: false,
+                    alt: false,
+                },
+            )?;
+            assert!(!crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: point.x + 10.,
+                        y: point.y,
+                    },
+                    left_down: true,
+                },
+            )?);
+            crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
+            assert!(editor.overlay().vertices.iter().all(|v| !v.selected));
+            // Region selection must keep usable vertices on this mesh while
+            // excluding just the disabled Glue endpoints, in both tools.
+            for tool in [ToolId::Select, ToolId::Lasso] {
+                editor.execute(EditorCommand::SetTool(tool))?;
+                let vertices = editor.overlay().vertices;
+                assert!(vertices.iter().any(|v| v.editable));
+                assert!(vertices.iter().any(|v| !v.editable));
+                let min = ViewportPoint {
+                    x: vertices
+                        .iter()
+                        .map(|v| v.position.x)
+                        .reduce(f32::min)
+                        .unwrap()
+                        - 40.,
+                    y: vertices
+                        .iter()
+                        .map(|v| v.position.y)
+                        .reduce(f32::min)
+                        .unwrap()
+                        - 40.,
+                };
+                let max = ViewportPoint {
+                    x: vertices
+                        .iter()
+                        .map(|v| v.position.x)
+                        .reduce(f32::max)
+                        .unwrap()
+                        + 40.,
+                    y: vertices
+                        .iter()
+                        .map(|v| v.position.y)
+                        .reduce(f32::max)
+                        .unwrap()
+                        + 40.,
+                };
+                select_area(&mut editor, min, max, false, false)?;
+                assert!(
+                    editor
+                        .overlay()
+                        .vertices
+                        .iter()
+                        .all(|v| v.selected == v.editable)
+                );
+                click(&mut editor, point, false)?;
+                assert!(editor.overlay().vertices.iter().all(|v| !v.selected));
+            }
+            assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+            editor.execute(EditorCommand::SetTool(ToolId::Select))?;
+            editor.execute(EditorCommand::SelectObjects(
+                meshes
+                    .iter()
+                    .map(|id| ObjectRef::new(ObjectKind::Mesh, id))
+                    .collect(),
+            ))?;
+            shown(&mut editor)?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point,
+                    left_down: false,
+                },
+            )?;
+            assert_eq!(
+                editor.overlay().active_component.unwrap().object.id,
+                meshes[0],
+                "the visible editable handle must hit the controlling selected mesh"
+            );
+
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point: ViewportPoint {
+                        x: point.x - 6.,
+                        y: point.y - 6.,
+                    },
+                    shift: false,
+                    alt: false,
+                },
+            )?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Up {
+                    point: ViewportPoint {
+                        x: point.x + 6.,
+                        y: point.y + 6.,
+                    },
+                },
+            )?;
+            assert_eq!(
+                editor.overlay().glues[0].points[1].state,
+                GluePointState::Restricted
+            );
+            assert!(
+                editor
+                    .overlay()
+                    .vertices
+                    .iter()
+                    .filter(|v| !v.editable)
+                    .all(|v| !v.selected)
+            );
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point,
+                    shift: false,
+                    alt: false,
+                },
+            )?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Up {
+                    point: ViewportPoint {
+                        x: point.x + 8.,
+                        y: point.y,
+                    },
+                },
+            )?;
+            assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+        }
     }
     Ok(())
 }
@@ -467,7 +685,7 @@ fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -
 }
 
 #[test]
-fn locked_deformer_has_only_read_only_lines_and_blocks_control_adjustments() -> anyhow::Result<()> {
+fn locked_deformer_has_gray_controls_and_blocks_control_adjustments() -> anyhow::Result<()> {
     let (doc, _dir, warp, _, _) = rich_document()?;
     let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(ViewportMetrics {
@@ -484,8 +702,8 @@ fn locked_deformer_has_only_read_only_lines_and_blocks_control_adjustments() -> 
         locked: true,
     })?;
     let overlay = editor.overlay();
-    assert!(overlay.vertices.is_empty());
-    assert!(overlay.handles.is_empty());
+    assert!(!overlay.vertices.is_empty() && overlay.vertices.iter().all(|v| !v.editable));
+    assert!(!overlay.handles.is_empty() && overlay.handles.iter().all(|h| !h.editable));
     assert!(
         overlay
             .deformers

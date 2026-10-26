@@ -3,6 +3,7 @@
 use super::*;
 mod animation;
 mod deformation;
+pub(crate) mod parameter_overlay;
 #[cfg(feature = "test-support")]
 mod properties;
 use anyhow::{Context as _, ensure};
@@ -55,6 +56,7 @@ pub fn init() -> anyhow::Result<()> {
         ensure!(!automatic, "ZIPZI_WINDOW_BENCH requires ZIPZI_FRAME_TRACE");
         return Ok(());
     };
+    parameter_overlay::init(automatic)?;
     for (name, valid) in [
         ("GPUI_TRACE_DRAWABLES", ["2", "3"]),
         ("GPUI_TRACE_DISPLAY_SYNC", ["0", "1"]),
@@ -177,6 +179,7 @@ pub fn init() -> anyhow::Result<()> {
                 "model": config.map(|c| c.model.display().to_string()),
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
                 "parameters_only": config.map(|c| c.parameters_only),
+                "parameter_overlay": parameter_overlay::metadata(),
                 "animation_drag": std::env::var("ZIPZI_BENCH_ANIMATION_DRAG").ok(),
                 "properties": config.map(|c| c.properties),
                 "property_cases": property_cases,
@@ -367,6 +370,12 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 );
             }
             executor.timer(Duration::from_millis(500)).await;
+            if config.parameters_only {
+                view.update_in(cx, |view, window, cx| {
+                    parameter_overlay::prepare(view, window, cx)
+                })??;
+                executor.timer(Duration::from_millis(500)).await;
+            }
             #[cfg(feature = "test-support")]
             if config.properties {
                 properties::run(&view, cx, config).await?;
@@ -664,6 +673,11 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                     })?;
                 }
                 executor.timer(Duration::from_millis(500)).await;
+                if mode == 4 {
+                    view.update_in(cx, |view, _, cx| {
+                        parameter_overlay::finish_workload(view, cx)
+                    })??;
+                }
                 if drag.is_some() {
                     view.update_in(cx, |view, _, cx| -> anyhow::Result<()> {
                         ensure!(view.edit_error.is_none(), "could not commit canvas gesture");

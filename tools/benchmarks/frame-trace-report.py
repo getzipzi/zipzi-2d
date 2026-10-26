@@ -118,7 +118,8 @@ def analyze(records, budget_ms=1000 / 120):
             input_id = group.get("input_begin", {}).get("fields", {}).get("parent", 0)
         return 0, {}
 
-    # Pointer reuse is legal: select the last publication BEFORE this composition.
+    # New captures carry identity on the live Metal resource. Address history
+    # alone cannot distinguish a preview from an overlay reusing its address.
     # The compose scene owns the immutable texture until encoding is complete.
     publications = collections.defaultdict(list)
     compositions = collections.defaultdict(set)
@@ -126,10 +127,30 @@ def analyze(records, budget_ms=1000 / 120):
         if event["stage"] == "published":
             publications[event["fields"]["texture"]].append((event["at_ns"], event["id"]))
         elif event["stage"] == "compose_surface":
+            if "preview" in event["fields"]:
+                request_id = event["fields"]["preview"]
+                if request_id:
+                    publication = groups.get(request_id, {}).get("published")
+                    if (publication is None or publication["at_ns"] > event["at_ns"]
+                            or publication["fields"]["texture"] != event["fields"]["texture"]):
+                        issues.append(f"invalid preview surface identity {request_id}")
+                    else:
+                        compositions[request_id].add(event["id"])
+                continue
             history = publications[event["fields"]["texture"]]
             index = bisect.bisect_right(history, (event["at_ns"], math.inf)) - 1
             if index >= 0:
                 compositions[history[index][1]].add(event["id"])
+
+    surface_events = [e for e in events if e["stage"] == "compose_surface"]
+    tagged_surfaces = sum("preview" in e["fields"] for e in surface_events)
+    surface_identity = "preview_id" if tagged_surfaces else "legacy_pointer"
+    if tagged_surfaces and tagged_surfaces != len(surface_events):
+        issues.append("mixed preview identity and legacy pointer surfaces")
+    if not tagged_surfaces:
+        legacy_matches = collections.Counter(c for ids in compositions.values() for c in ids)
+        if any(count > 1 for count in legacy_matches.values()):
+            issues.append("ambiguous legacy texture pointers: non-preview surfaces may reuse preview addresses")
 
     rows, used_ticks = [], set()
     for request_id, group in list(groups.items()):
@@ -196,6 +217,7 @@ def analyze(records, budget_ms=1000 / 120):
         for group in groups.values() if "compose_begin" in group
     )
     summary = {"metadata": metadata, "budget_ms": budget_ms, "issues": issues,
+               "surface_identity": surface_identity,
                "window_frames_including_startup": dict(window_frames), "modes": {}}
     for mode in sorted({r["mode"] for r in rows}):
         selected = [r for r in rows if r["mode"] == mode and not r["warmup"]]

@@ -192,7 +192,9 @@ impl Document {
         };
         if old.warp().is_none()
             || t.warp().is_none()
-            || !self.blend_bindings_for_target(&t.id).is_empty()
+            || (!self.blend_bindings_for_target(&t.id).is_empty()
+                && old.warp().map(|w| (w.rows, w.columns, w.quad))
+                    != t.warp().map(|w| (w.rows, w.columns, w.quad)))
         {
             return self.failed(Status::error("INVALID_WARP_AUTHORING", &t.id));
         }

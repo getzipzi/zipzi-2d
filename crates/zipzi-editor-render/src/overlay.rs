@@ -20,6 +20,7 @@ pub struct OverlayStyle {
     pub edge: [f32; 4],
     pub vertex: [f32; 4],
     pub selected: [f32; 4],
+    pub restricted: [f32; 4],
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OverlayViewport {
@@ -38,6 +39,7 @@ struct Uniforms {
     edge: [f32; 4],
     vertex: [f32; 4],
     selected: [f32; 4],
+    restricted: [f32; 4],
 }
 #[derive(PartialEq)]
 struct Key {
@@ -53,6 +55,8 @@ pub struct MetalOverlayRenderer {
     edges: RenderPipelineState,
     markers: RenderPipelineState,
     cached: [Option<(Key, Texture)>; 3],
+    #[cfg(feature = "bench-instrumentation")]
+    pub command_observer: Option<fn(OverlayPass, &CommandBufferRef)>,
 }
 impl MetalOverlayRenderer {
     pub fn new(device: Device) -> Result<Self> {
@@ -91,6 +95,8 @@ impl MetalOverlayRenderer {
             edges,
             markers,
             cached: [None, None, None],
+            #[cfg(feature = "bench-instrumentation")]
+            command_observer: None,
         })
     }
     pub fn uses_device(&self, device: &DeviceRef) -> bool {
@@ -116,6 +122,8 @@ impl MetalOverlayRenderer {
         style: OverlayStyle,
         pass: OverlayPass,
     ) -> Result<Option<Texture>> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("overlay.metal_total");
         let OverlayViewport {
             extent,
             scale,
@@ -157,6 +165,8 @@ impl MetalOverlayRenderer {
         } else {
             &overlay.vertices
         };
+        #[cfg(feature = "bench-instrumentation")]
+        let key_span = zipzi_core::benchmark::span("overlay.metal_key");
         let key = Key {
             viewport,
             style,
@@ -179,11 +189,14 @@ impl MetalOverlayRenderer {
                         v.position.x,
                         v.position.y,
                         OVERLAY_MARKER_RADIUS,
-                        (u8::from(v.selected) + 2 * u8::from(v.hovered)) as f32,
+                        (u8::from(v.selected) + 2 * u8::from(v.hovered) + 4 * u8::from(!v.editable))
+                            as f32,
                     ]
                 })
                 .collect(),
         };
+        #[cfg(feature = "bench-instrumentation")]
+        drop(key_span);
         if key.edges.is_empty() && key.markers.is_empty() {
             self.cached[slot] = None;
             return Ok(None);
@@ -193,6 +206,8 @@ impl MetalOverlayRenderer {
                 return Ok(Some(image.clone()));
             }
         }
+        #[cfg(feature = "bench-instrumentation")]
+        let resource_span = zipzi_core::benchmark::span("overlay.metal_resources");
         let uniforms = Uniforms {
             viewport: [extent[0] as f32, extent[1] as f32],
             scale,
@@ -202,6 +217,7 @@ impl MetalOverlayRenderer {
             edge: style.edge,
             vertex: style.vertex,
             selected: style.selected,
+            restricted: style.restricted,
         };
         let td = TextureDescriptor::new();
         td.set_width(extent[0] as u64);
@@ -219,6 +235,10 @@ impl MetalOverlayRenderer {
         });
         td.set_usage(MTLTextureUsage::RenderTarget);
         let msaa = (!key.edges.is_empty()).then(|| self.device.new_texture(&td));
+        #[cfg(feature = "bench-instrumentation")]
+        drop(resource_span);
+        #[cfg(feature = "bench-instrumentation")]
+        let _encode_span = zipzi_core::benchmark::span("overlay.metal_encode");
         let command = queue.new_command_buffer();
         let pass = RenderPassDescriptor::new();
         let color = pass.color_attachments().object_at(0).unwrap();
@@ -269,8 +289,21 @@ impl MetalOverlayRenderer {
             color.set_store_action(MTLStoreAction::Store);
             encode(pass, &self.markers, &key.markers);
         }
+        #[cfg(feature = "bench-instrumentation")]
+        if let Some(observer) = self.command_observer {
+            observer(pass_kind(slot), command);
+        }
         command.commit();
         self.cached[slot] = Some((key, image.clone()));
         Ok(Some(image))
+    }
+}
+
+#[cfg(feature = "bench-instrumentation")]
+fn pass_kind(slot: usize) -> OverlayPass {
+    match slot {
+        0 => OverlayPass::All,
+        1 => OverlayPass::Edges,
+        _ => OverlayPass::Vertices,
     }
 }

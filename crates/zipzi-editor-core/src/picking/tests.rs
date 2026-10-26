@@ -38,6 +38,49 @@ fn fixture() -> anyhow::Result<(Document, tempfile::TempDir)> {
 }
 
 #[test]
+fn parameter_tables_share_unchanged_values_and_retain_each_frames_own_pose() -> anyhow::Result<()> {
+    let (mut document, _directory) = fixture()?;
+    let mut source = document.snapshot()?;
+    let parameter = uuid::Uuid::from_u128(20).to_string();
+    Arc::make_mut(&mut source.viewport_frame)
+        .parameters
+        .push(zipzi_core::EvaluatedParameter {
+            id: parameter.clone(),
+            value: 0.25,
+            ..Default::default()
+        });
+    let original = CanvasScene::new(&document, source.clone());
+    let clone = original.clone();
+    assert!(Arc::ptr_eq(
+        &original.parameter_values,
+        &clone.parameter_values
+    ));
+    let appearance = original.with_appearance(&document, source.clone());
+    assert!(Arc::ptr_eq(
+        &original.parameter_values,
+        &appearance.parameter_values
+    ));
+    let unchanged = original.with_positions(&document, source.clone());
+    assert!(Arc::ptr_eq(
+        &original.parameter_values,
+        &unchanged.parameter_values
+    ));
+
+    Arc::make_mut(&mut source.viewport_frame).parameters[0].value = 0.75;
+    let updated = original.with_positions(&document, source.clone());
+    let appearance = original.with_appearance(&document, source);
+    assert!(!Arc::ptr_eq(
+        &original.parameter_values,
+        &updated.parameter_values
+    ));
+    assert_eq!(original.parameter_values()[&parameter], 0.25);
+    assert_eq!(updated.parameter_values()[&parameter], 0.75);
+    assert_eq!(appearance.parameter_values()[&parameter], 0.75);
+    assert_eq!(clone.parameter_values()[&parameter], 0.25);
+    Ok(())
+}
+
+#[test]
 fn mesh_property_commits_reuse_geometry_and_publish_fresh_labels_and_visibility()
 -> anyhow::Result<()> {
     use crate::{DocumentSession, EditorCommand, ObjectKind, ObjectRef};
