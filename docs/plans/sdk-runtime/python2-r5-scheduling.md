@@ -44,4 +44,4 @@ Python Preview/空间/取消/大二进制定向回归另 4 项在两后端通过
 Python Session 别名/detach/关闭、断线响应恢复及其他客户端保护另 3 项通过，正反静态类型通过。
 
 尚待核销：持续后台批次与真实人工交互的 Release 延迟/工作量比较，以及最终配对发行复验。
-R6 Proposal review 和 R7 总验收仍未开始。
+随后 R6 已按用户 2026-10-27 的决定收缩并完成[Editor 直写与人工接续](python2-r6-handoff.md)交付，Proposal/专用 Review 后置。R5 性能/发行复验与 R7 总验收仍独立跟踪。

@@ -6,6 +6,8 @@
 
 **当前阶段：P3A-0–6、Runtime R4 收尾、P3B 与 P4 资源/工程范围已完成；R5/P5 同步实施中。** [P3B](p3b.md)补齐转换、场景绑定、集合和嵌套身份；[P4](p4.md)补齐大附件/图片的保存、另存和包往返。均复用 R4 实现，并通过相应源码、类型及两后端正常 wheel 隔离安装。P4 已提交为 `e1401632`，随后新增的[动画创作切片](../sdk-runtime/python2-r5-authoring.md)接通四个动画领域的 records/写入/Plan/地址，随后接通[独立 CPU Preview](../sdk-runtime/python2-r5-preview.md)与[CPU 空间查询](../sdk-runtime/python2-r5-spatial.md)，随后接通[GPU 观察/PNG 与 JSON 检查导出](../sdk-runtime/python2-r5-observation.md)，[客户端公平轮转/批次续执行及 Editor 隔离](../sdk-runtime/python2-r5-scheduling.md)已接通，原生性能与最终发行复验待收尾。
 
+2026-10-27：用户确认简化人机交接，[R6](../sdk-runtime-implementation-plan.md#r6editor-直写与人工接续) 改为“批量修改 → 直接提交到 Editor → 人工精修 → agent 读取最新版本接续”。随后已完成[简化闭环交付](../sdk-runtime/python2-r6-handoff.md)：随包示例、CPU 和隔离安装纯客户端/真实 Editor/Metal 验收通过，并修复满执行槽时的保存/加载拒绝清理。flush 复用 `Edit.commit().wait()`；Proposal/seal、专用对比和接受/拒绝流程后置，R5 性能与 R7 发行余项独立跟踪。
+
 以下保留早期切片的推进过程；旧 R4 未完成结论由[最终复验](../sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验)替代。早期执行主线接回 [Runtime R0–R4](../sdk-runtime/python2-r0-r4.md)。`1e0043f`
 已保存 P2 网格切片；其后的工作区补齐宿主发现/唯一启动、会话身份/列表/绑定，
 并通过安装纯包的真实 Editor 冷启动、重开及原生 UI 发布验收。其后工作区的

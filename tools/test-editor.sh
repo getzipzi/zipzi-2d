@@ -47,7 +47,7 @@ case "$mode" in
         prepare_runtime_client
         exec env -u ZIPZI_DEV_SESSION_DIR python3 "$repo_root/tools/workspace/cargo_domain.py" editor test --locked --features zipzi-editor/test-support \
             --test acceptance --test native_render --test headless_screenshot \
-            --test animation_acceptance --test timeline_acceptance --test runtime_interaction_acceptance --test runtime_ipc_acceptance "$@"
+            --test animation_acceptance --test timeline_acceptance --test runtime_interaction_acceptance --test runtime_ipc_acceptance --test runtime_handoff_acceptance "$@"
         ;;
     tools)
         exec python3 "$repo_root/tools/test_tools.py" "$@"

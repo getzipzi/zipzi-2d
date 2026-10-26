@@ -8,7 +8,7 @@ use std::{
 };
 use zipzi_editor_core::{Editor, EditorCommand};
 
-fn client(
+pub(super) fn client(
     h: &mut Harness,
     python: &Path,
     endpoint: &Path,
@@ -53,28 +53,9 @@ pub(super) fn run() -> anyhow::Result<()> {
         .context("ZIPZI_CLIENT_PYTHON must point to an isolated installed client")?;
     let python = Path::new(&python);
     ensure!(python.is_absolute(), "client interpreter must be absolute");
-    let endpoint = tempfile::Builder::new()
-        .prefix("zzipc-")
-        .tempdir_in("/tmp")?;
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(endpoint.path(), std::fs::Permissions::from_mode(0o700))?;
-    let mut h = Harness::new()?;
-    let host = crate::host::DesktopHost::new(false);
     let (document, _assets) = super::fixture::sample_document()?;
+    let (mut h, host, endpoint) = setup(document)?;
     let runtime = host.runtime.clone();
-    h.cx.update(|cx| {
-        cx.set_global(host.clone());
-        let owner = zipzi_runtime::local::Endpoint::new(endpoint.path(), "test")?
-            .claim()?
-            .context("endpoint occupied")?;
-        crate::ipc::start(owner, cx)?;
-        Ok::<_, anyhow::Error>(())
-    })?;
-    update(&mut h, |view, window, cx| {
-        view.host = Some(host.clone());
-        view.replace_editor(Editor::from_document(document), cx);
-        view.refresh_document(window, cx);
-    })?;
     let (session, mesh, before, revision) = h.view.read_with(&h.cx, |view, _| {
         let document = view.editor.document().unwrap();
         (
@@ -568,4 +549,31 @@ with zipzi.connect() as c:
         "R4 native IPC: installed zipzi -> mesh/parameter/binding/scene/group -> SDK reference/address -> candidate/formal CPU sweep -> human preview unchanged -> cursor events/UI Undo -> path reservation -> Metal render passed"
     );
     Ok(())
+}
+
+/// Real desktop IPC and native view, shared by R4 and the R6 handoff case.
+pub(super) fn setup(
+    document: zipzi_editor_core::Document,
+) -> anyhow::Result<(Harness, crate::host::DesktopHost, tempfile::TempDir)> {
+    let endpoint = tempfile::Builder::new()
+        .prefix("zzipc-")
+        .tempdir_in("/tmp")?;
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(endpoint.path(), std::fs::Permissions::from_mode(0o700))?;
+    let mut h = Harness::new()?;
+    let host = crate::host::DesktopHost::new(false);
+    h.cx.update(|cx| {
+        cx.set_global(host.clone());
+        let owner = zipzi_runtime::local::Endpoint::new(endpoint.path(), "test")?
+            .claim()?
+            .context("endpoint occupied")?;
+        crate::ipc::start(owner, cx)?;
+        Ok::<_, anyhow::Error>(())
+    })?;
+    update(&mut h, |view, window, cx| {
+        view.host = Some(host.clone());
+        view.replace_editor(Editor::from_document(document), cx);
+        view.refresh_document(window, cx);
+    })?;
+    Ok((h, host, endpoint))
 }

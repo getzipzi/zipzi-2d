@@ -272,6 +272,40 @@ impl Runtime {
         }
         Ok(work)
     }
+    /// Cancel an unentered host Job without borrowing an executor slot. Return
+    /// ownership and release reservations before the host reports admission
+    /// failure. An entered Job must use ordinary cooperative cancellation.
+    pub fn cancel_queued_job(&mut self, client: ClientId, job: JobId) -> Result<()> {
+        self.job_info(client, job)?;
+        let position = self
+            .queue
+            .iter()
+            .position(|work| work.job == job)
+            .ok_or(RuntimeError::Busy)?;
+        let Work {
+            job,
+            client,
+            session_id,
+            base,
+            session,
+            transfer,
+            task,
+            cancel,
+        } = self.queue.remove(position).unwrap();
+        cancel.store(true, Ordering::Release);
+        // Drop candidate/prepared roots before completion collects resources.
+        drop(task);
+        self.complete(Completion {
+            job,
+            client,
+            session_id,
+            base,
+            session,
+            transfer,
+            outcome: crate::jobs::WorkOutcome::Complete(Err(RuntimeError::Cancelled)),
+        });
+        Ok(())
+    }
     pub fn find_project(&self, path: &Path) -> Result<Option<SessionId>> {
         Ok(self.paths.get(&identity(path)?).copied())
     }

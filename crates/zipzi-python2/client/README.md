@@ -61,4 +61,21 @@ controls and ordered sample/seek/advance Jobs leave authored history and other
 views unchanged. Sources stay frozen until release. GPU image Jobs use
 `modeling.observe(poses, observation.View(...))` or Preview sampling `view=...`.
 `inspection.save` exports completed PNG/JSON evidence on the client without a
-live Runtime. Full batch fairness and Editor playback integration remain pending.
+live Runtime. Fair batch scheduling and Editor playback isolation have focused
+regression coverage; integrated Release performance remains pending.
+
+For direct Editor handoff, attach its resident Session, edit a batch and confirm
+`edit.commit().wait()`. The Editor refreshes the same document/history; people
+can undo or refine it, and the next agent Edit reads the current content. Saving
+is separate. The installed example lists explicit Session identities and renames
+one mesh through the existing Edit/Job contract:
+
+```sh
+python -I -m zipzi.docs.editor_handoff list
+python -I -m zipzi.docs.editor_handoff rename \
+  --runtime RUNTIME_UUID --session SESSION_SERIAL --mesh MESH_UUID --name "Refined face"
+```
+
+Use `--endpoint /absolute/path/to/profile.sock` before the subcommand for a
+specific host. Busy, stale-version and unknown-outcome recovery follow the
+ordinary client contract. Script exit retains committed content and resources.

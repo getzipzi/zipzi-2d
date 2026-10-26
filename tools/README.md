@@ -88,7 +88,7 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | SDK `full` or no argument | SDK formatting and complete 17-package Cargo test invocation (examples/doctests included) |
 | Editor `fast` | zipzi-editor-core library and synthetic integration |
 | Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
-| Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance、runtime_ipc_acceptance（自动安装隔离 Python 客户端） |
+| Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance、runtime_ipc_acceptance、runtime_handoff_acceptance（自动安装隔离 Python 客户端） |
 | Editor `tools` | All repository tooling tests (automatic discovery) |
 | Editor `full` or no argument | Editor formatting, tooling and complete three-package Cargo test invocation with test-support (examples/doctests included) |
 
@@ -144,7 +144,7 @@ compilation with test-support, and core synthetic tests. A Swift Metal-device
 probe controls UI/integration and native acceptance execution. A failed probe
 is a job failure. An absent device produces an explicit warning and job summary;
 it is not evidence that UI/native tests passed. On a Metal-capable runner,
-regression and all five acceptance targets must pass normally.
+regression and all configured acceptance targets must pass normally.
 
 Licensed model data is not uploaded to CI. Optional missing-model cases retain
 their existing skip behavior; `--nocapture` exposes their messages. Full model
@@ -169,8 +169,10 @@ SDK `fast`/`mesh` gates run CPU behavior, while observe/render tests need a GPU.
 Editor UI and native gates require macOS and Metal. Full local licensed-model
 requirements are documented in the [Editor README](../crates/zipzi-editor/README.md#local-model-acceptance).
 
-Editor `runtime_ipc_acceptance` now exercises the independent `zipzi-python2`
-client. Acceptance/full prepares its installed pure wheel unless
+Editor `runtime_ipc_acceptance` and `runtime_handoff_acceptance` exercise the independent `zipzi-python2`
+client. The handoff case covers Python batch publication, native human refinement,
+fresh-client continuation and shared history/Metal without licensed assets.
+Acceptance/full prepares its installed pure wheel unless
 `ZIPZI_CLIENT_PYTHON` supplies an isolated interpreter. It must contain the new
 distribution without `zipzi_native`; the acceptance test checks this explicitly.
 

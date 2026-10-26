@@ -273,6 +273,28 @@ request. `sessions.list()` and `sessions.attach(id)` work on both backends.
 desktop host. Modeling, resource and project routes also work through this
 connection. Packaged application location acceptance remains pending.
 
+### Direct Editor handoff (R6)
+
+Attach the intended resident Session, make a meaningful batch in one Edit, and
+wait for `edit.commit().wait()` (normal Edit context exit also commits and waits).
+The Editor refreshes from the same formal document and Undo/Redo history. A human
+can inspect, undo or refine it; the next agent Edit reads that latest state.
+Committing updates the in-memory document; saving remains a separate operation.
+Busy, stale-version and original-call recovery rules continue to apply.
+
+The installed package includes a runnable example. With the Editor running:
+
+```sh
+python -I -m zipzi.docs.editor_handoff list
+python -I -m zipzi.docs.editor_handoff rename \
+  --runtime RUNTIME_UUID --session SESSION_SERIAL --mesh MESH_UUID --name "Refined face"
+```
+
+Use the identities from discovery and explicitly select the target document and
+mesh. `--endpoint /absolute/path/to/profile.sock` before the subcommand selects a
+specific host. Script exit retains committed content and resources. See the
+[R6 handoff record](../../docs/plans/sdk-runtime/python2-r6-handoff.md) for tested scope.
+
 ```sh
 ./tools/test-sdk.sh python2-connected
 # Optional current production desktop host, in addition to CPU fault acceptance:

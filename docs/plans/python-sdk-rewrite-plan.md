@@ -1,6 +1,10 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25，2026-10-26 更新。状态：**P3A-0–6、Runtime R4、P3B 与 P4 资源/工程范围已完成；见 [P3B](python-sdk-rewrite/p3b.md)和 [P4](python-sdk-rewrite/p4.md) 核销记录。P5 与 Runtime R5 同步实施中，动画创作、独立 CPU Preview、空间查询、GPU 观察及基础 inspection 已接通，客户端公平轮转、批次续执行和 Editor 播放/Physics 隔离已接通并通过定向回归，原生性能及最终发行复验待收尾。P3A 本轮 P0 稳定性沿用用户明确豁免，模型/服务修订身份门禁按用户决定移除。** 结果见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+日期：2026-10-25，2026-10-27 更新。状态：**P3A-0–6、Runtime R4、P3B 与 P4 资源/工程范围已完成；见 [P3B](python-sdk-rewrite/p3b.md)和 [P4](python-sdk-rewrite/p4.md) 核销记录。P5 与 Runtime R5 同步实施中，动画创作、独立 CPU Preview、空间查询、GPU 观察及基础 inspection 已接通，客户端公平轮转、批次续执行和 Editor 播放/Physics 隔离已接通并通过定向回归，原生性能及最终发行复验待收尾。P3A 本轮 P0 稳定性沿用用户明确豁免，模型/服务修订身份门禁按用户决定移除。** 结果见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+
+2026-10-27 人机交接范围调整：用户确认前期直接将一批修改提交到 Editor 当前 Session，再由人检查/精修，agent 读取最新版本接续。[Runtime R6](sdk-runtime-implementation-plan.md#r6editor-直写与人工接续) 收缩为该闭环的补齐和验收。Connected 使用现有 `Edit.commit().wait()` 或 Edit 上下文管理器完成 flush；不新增 flush API。Proposal/seal、专用对比和接受/拒绝流程后置，不作为 Python 当前交付或 Runtime R7 的依赖。
+
+随后已交付[简化 R6 闭环](sdk-runtime/python2-r6-handoff.md)：随包 `zipzi.docs.editor_handoff` 示例、安装纯客户端与真实 Editor/Metal 的人工精修/agent 接续验收通过。R5/P5 性能余项及 P6/Runtime R7 的最终发行范围继续保留。
 
 **2026-10-26 收尾完成：**正式分发、生成摘要、当前文档及受影响验证已收敛。用户确认验收运行配置为 `gpt-6.1-sol/high`，明确删除模型/服务身份门禁；配置与可选服务元数据只记录，不参与通过或停止派发判定。固定功能门禁原评分 38/42、补充复核 41/42 和已有确定性/安装/Editor 证据保留。具体结果见 [P3A-6 完成决定](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。
 
@@ -83,7 +87,7 @@ P1 选定矩阵见[验收表](python-sdk-rewrite/p1-lifecycle-matrix.md)。P0 �
 | GPU Observer、离线 inspection 工作流 | Rust 设备/观察能力与 Python 文件/报告组织分开 | P5 |
 | 纯包/可选原生包、文档示例、CI、宿主发现 | 独立安装与构建验证；显式工作流和工具有可运行入口 | P6 |
 
-未选定能力标为计划项，不发布只会报“不支持”的空壳。Proposal/Review 等未来新增 Runtime 能力单列，不能把它们算成已获得的 Python 能力。
+未选定能力标为计划项，不发布只会报“不支持”的空壳。当前人机交接复用 Edit 的正式提交、Editor 刷新与共享历史；Proposal/专用 Review 属于后置设想，待实际需求明确再独立立项，也不能计为已有 Python 能力。
 
 ## 4. 新架构与边界
 

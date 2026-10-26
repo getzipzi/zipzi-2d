@@ -196,3 +196,38 @@ fn cancelling_entered_work_does_not_free_its_executor_slot_early() {
     assert_eq!(step(&mut rt, &mut workers), second);
     assert_eq!(rt.job_info(c, second).unwrap().state, JobState::Succeeded);
 }
+
+#[test]
+fn queued_ownership_cancellation_restores_session_without_an_executor_slot() {
+    let (mut rt, c, s) = fixture(1);
+    let dir = tempfile::tempdir().unwrap();
+    let active = rt.request_save(c, s, &dir.path().join("active")).unwrap();
+    let entered = rt.take_work(active).unwrap();
+    let other = rt
+        .create_session(
+            c,
+            &uuid::Uuid::new_v4().to_string(),
+            zipzi_core::ModelSetup::default(),
+        )
+        .unwrap();
+    let before = rt.session_info(other).unwrap();
+    let path = dir.path().join("rejected");
+    let queued = rt.request_save(c, other, &path).unwrap();
+    assert!(matches!(rt.take_work(queued), Err(RuntimeError::Busy)));
+    rt.cancel_queued_job(c, queued).unwrap();
+    assert_eq!(rt.job_info(c, queued).unwrap().state, JobState::Cancelled);
+    assert_eq!(rt.session_info(other).unwrap(), before);
+    assert!(!path.exists());
+    rt.release_job(c, queued).unwrap();
+    assert!(matches!(
+        rt.cancel_queued_job(c, active),
+        Err(RuntimeError::Busy)
+    ));
+    assert_eq!(rt.job_info(c, active).unwrap().state, JobState::Running);
+    assert!(rt.complete(entered.run()));
+    // The rejected target can be reserved again immediately after capacity returns.
+    let retry = rt.request_save(c, other, &path).unwrap();
+    let work = rt.take_work(retry).unwrap();
+    assert!(rt.complete(work.run()));
+    assert_eq!(rt.job_info(c, retry).unwrap().state, JobState::Succeeded);
+}

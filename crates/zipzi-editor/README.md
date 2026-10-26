@@ -155,3 +155,18 @@ ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python2/tools/connected.py --install-
 
 The native acceptance requires the isolated client installed by the first
 command and a working Metal device; it fails when prerequisites are absent.
+
+R6 direct handoff has a separate synthetic native case using the same installed
+client and production IPC/Editor/Metal chain:
+
+```sh
+ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python2/tools/connected.py --install-only) \
+  env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
+  --features test-support --test runtime_handoff_acceptance
+```
+
+It covers one Python batch of mesh/texture/Motion changes, human property text
+input and Timeline dragging, Undo/Redo, a new Python process reading and extending
+the refinement, the installed command-line example, and temporary image cleanup.
+Committed content and resources survive each client exit. No licensed model is
+required. [Scope and evidence](../../docs/plans/sdk-runtime/python2-r6-handoff.md).

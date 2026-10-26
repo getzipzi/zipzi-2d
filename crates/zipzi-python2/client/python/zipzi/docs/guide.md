@@ -67,6 +67,27 @@ leaves receipt None. Ordinary write or conversion failures make the candidate
 uncommittable even if caught: fix inputs and start a fresh Edit. Confirmed Busy
 or pre-execution budget refusals preserve the candidate; act on recovery_action.
 
+## Continue work in the Editor
+
+Connect to the desktop host, list resident Sessions and attach the intended
+`SessionId`. A batch submitted with `edit.commit().wait()` updates that same
+in-memory document and creates one Undo step when content changes. Normal Edit
+context exit also commits and waits. The Editor refreshes its views; a person can
+inspect, undo or refine the content, and the next Edit reads their current work.
+Saving remains separate. Busy, version conflicts and recovery follow the normal
+Edit/Job contract. Script exit retains committed content and its resources.
+
+The installed `editor_handoff.py` example selects the Session and mesh explicitly:
+
+```sh
+python -I -m zipzi.docs.editor_handoff list
+python -I -m zipzi.docs.editor_handoff rename \
+  --runtime RUNTIME_UUID --session SESSION_SERIAL --mesh MESH_UUID --name "Refined face"
+```
+
+Use `--endpoint /absolute/path/to/profile.sock` before the subcommand for a
+specific host. This example uses the ordinary commit path and shared history.
+
 ## Recover and wait
 
 Use `zipzi.recover_call(edit.meshes.create, spec)` when static result typing matters.

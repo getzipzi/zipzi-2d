@@ -1,7 +1,11 @@
 # SDK Runtime 与 Editor 同进程详细设计
 
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
-日期：2026 年 10 月 24 日。状态：**R0–R3 已交付，R4 实施中**。
+日期：2026 年 10 月 24 日，2026-10-27 更新。状态：**R0–R4 已交付，R5 余项实施中；R6 简化后的 Editor 直写与人工接续已交付，Proposal/专用 Review 后置**。
+
+2026-10-27 范围调整：按用户决定，前期由 agent 将一批 Edit 直接提交到 Editor 托管的正式 Session，人直接检查、Undo 或精修，agent 再读取最新版本继续。flush 复用既有 `Edit.commit().wait()`；本计划不新增 flush API 或 Proposal/Review 交接层。R6 的实现和验收范围见[分阶段实施计划](sdk-runtime-implementation-plan.md#r6editor-直写与人工接续)。
+
+随后已通过 CPU、隔离安装纯客户端及真实 Editor/Metal 闭环，具体范围与限制见 [R6 交付记录](sdk-runtime/python2-r6-handoff.md)。
 
 2026-10-25：Python 实现切换到独立 `crates/zipzi-python2`，按
 [R0–R4 接回记录](sdk-runtime/python2-r0-r4.md)补齐新客户端验收。新包 Local 也通过
@@ -14,7 +18,7 @@
 
 ## 1. 产品目标与已确定决策
 
-Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观察、诊断、修改和导出。Editor 是创作者 inspect、review 和精细调整的窗口。人的修改进入同一原生创作状态，供 agent 继续制作。
+Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观察、诊断、修改和导出。Editor 显示 agent 的正式提交，供创作者检查和精细调整。人的修改进入同一原生创作状态，供 agent 继续制作。
 
 确定采用以下架构：
 
@@ -28,7 +32,7 @@ Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观�
 
 原设计阶段只交付本文与实施计划，未创建 crate、改 API、调整包结构或修改现有行为。后续实施按分阶段计划另行记录。项目未发布，允许破坏式重构，不要求旧实验协议或旧包布局迁移。
 
-首期范围为本机 IPC、单个桌面宿主中的多文档、多客户端。网络服务、多人协同、自动语义合并、跨重启恢复完整 Undo 栈、任意脚本在宿主内执行均不属于本计划。Review 保留候选和只读快照；完整分支历史与选择性合并另行设计。
+首期范围为本机 IPC、单个桌面宿主中的多文档、多客户端，以及同一正式文档中的批次提交和人工接续。网络服务、多人协同、自动语义合并、跨重启恢复完整 Undo 栈、任意脚本在宿主内执行均不属于本计划。Proposal/专用 Review、完整分支历史和选择性合并待实际需求明确后另行设计。
 
 ## 2. 现状与证据
 
@@ -114,7 +118,7 @@ Runtime 管理 `SessionEntry`，其正式内容由一个 `AuthoringSession` 持�
 - `SessionId`：Runtime 中的运行期会话身份；不使用工程 UUID 或路径代替。
 - `Version`：保留 SDK 的 session/generation/revision，用于内容与提交校验。
 - `ClientId`：客户端实例；传输连接断开和客户端身份消失分开处理。
-- `EditId / PlanId / PreviewId / SnapshotId / JobId / ProposalId`：带所属会话、拥有者和生命周期的远端引用。
+- `EditId / PlanId / PreviewId / SnapshotId / JobId`：带所属会话、拥有者和生命周期的远端引用；后置的 Proposal 不属于本期对象种类。
 - `ViewId + context_revision`：Editor 上下文身份，和内容 Version 分开。
 
 对象存活判断沿用 SDK incarnation、地址 epoch 和 generation。Runtime token 仅负责路由和存活容器，不能让删除后 Undo 恢复的对象继续接受旧句柄。正式内容与候选还需区分 `SourceRef`，不能仅因 revision 相同而互用 Plan。
@@ -176,7 +180,7 @@ Python 可使用任意与其环境兼容的依赖。读取/写入顶点按数组
 
 - 已确认的普通编辑失败仍使整个候选失败；Python 参数转换失败等本地错误也必须禁止该 Edit 后续提交，即使远端清理暂时失败。NativeBackend 保留原有领域语义。
 - 明确未执行的 Busy 不消费 Edit，也不设置已关闭；调用方可在条件解除后使用新的 RequestId 重试。SDK 已消费候选的提交失败则遵循 Aborted/Stale 等实际终态，不能一律恢复为可编辑状态。
-- 超时、断线或响应不完整不能推导出操作失败。客户端进入 `OutcomeUnknown`，保存原 RequestId 与参数摘要，通过第 10.2 节的查询或同 ID 重送确认结果；此前不得发送后续 apply、commit、seal 或自动 abort/cancel。已取得 JobId 的操作等待/查询其终态，同样不能把接收成功误认为提交完成。
+- 超时、断线或响应不完整不能推导出操作失败。客户端进入 `OutcomeUnknown`，保存原 RequestId 与参数摘要，通过第 10.2 节的查询或同 ID 重送确认结果；此前不得发送后续 apply、commit 或自动 abort/cancel。已取得 JobId 的操作等待/查询其终态，同样不能把接收成功误认为提交完成。
 - 恢复后按实际结果转换状态：apply 成功可继续编辑，commit 成功进入 Committed，明确未执行的 Busy 回到可重试状态。结果过期、宿主重启等无法确认的情况明确报错，不能通过新 ID 重放或把未知结果冒充取消成功。
 - `with` 正常退出只对可编辑状态提交；已提交/已取消不再提交。普通业务异常离开且 Edit 状态确定时按约定取消；存在待确认操作时保留可恢复信息并传播错误，不盲目清理。abort/cancel 自身失败不得替换原异常，且不能将尚未确认的远端释放标为成功。上述状态必须通过公共 Edit 和上下文管理器验收，不能只测底层 transport。
 
@@ -206,7 +210,7 @@ Agent 长任务不持有跨整个脚本的写锁。人工结束手势后，外�
 
 ### 6.3 保存与替换
 
-保存、Save As、工程替换和 Session close 是会话级独占操作。首期存在未决可写候选或 Proposal 时返回 Busy，由操作发起者先完成/取消自己的操作或明确处理 Proposal；不跨客户端自动提交/丢弃。该保守限制避免保存迁移资源路径后旧候选继续使用旧资源上下文。
+保存、Save As、工程替换和 Session close 是会话级独占操作。首期存在未决可写候选时返回 Busy，由操作发起者先完成/取消自己的操作；不跨客户端自动提交/丢弃。该限制避免保存迁移资源路径后旧候选继续使用旧资源上下文。
 
 保存通过原 SDK 入口执行，保留历史和历史资源重定位。保存过程中不可接受新的写入；SDK 错误仍将同一会话归还。冻结读视图必须标明版本及 busy，不能冒充实时读。保存成功发布独立事件，即使内容 revision 未改变，也要更新路径和 modified 基线。
 
@@ -237,11 +241,11 @@ Editor 复用现有 receipt-driven projection 策略，集中处理对象索引�
 
 订阅原子地返回初始视图/版本与游标，后续事件从该游标继续。事件缓冲有界；慢客户端发生缺口时收到 `RESYNC_REQUIRED`，重新获取快照，不静默丢事件。没有窗口时事件仍正确产生；UI 重开从最新快照建立投影，不要求回放进程启动后的全部历史事件。
 
-## 9. Preview、Observer 与 Review
+## 9. Preview、Observer 与人工接续
 
 ### 9.1 独立观察
 
-`SourceRef` 明确区分正式会话、固定 Snapshot、候选 Edit 和 sealed Proposal。正式会话观察在开始时捕获具体 Version；整个观察批次固定来源。候选还带候选序号，结果中保存来源与参数/时间，避免仅比较正式 revision 接受过期候选帧。
+`SourceRef` 明确区分正式会话、固定 Snapshot 和候选 Edit。正式会话观察在开始时捕获具体 Version；整个观察批次固定来源。候选还带候选序号，结果中保存来源与参数/时间，避免仅比较正式 revision 接受过期候选帧。
 
 无状态 CPU 求值是建模闭环的基础能力，在 R4 交付正式/候选来源的显式参数批量采样和几何诊断，用于绑定、关键形和 BlendShape 验收。求值不推进播放钟、不改变任何 Preview 或正式历史，结果记录来源、Version、候选序号及参数；无需创建独立播放实例或依赖 GPU。R5 在此基础上增加有状态动画 Preview 与图像观察，不能让 R4 验收依赖后续阶段的实现。
 
@@ -251,15 +255,17 @@ SDK 提供正确的快照、候选求值和动画行为；sdk-observe 负责图�
 
 资源快照需保留可解析的内容及正确来源，特别是未保存内存图像、替换后的旧纹理、Undo 后的资源和候选新增图像。长批次不能在运行中读到被其他修改替换的资源字节。
 
-### 9.2 候选评审
+### 9.2 直接提交与人工接续
 
-普通 Edit 默认提交或取消。显式 seal 可将一个成功候选移交为 `Proposal`，记录基准、候选、标签、修改报告和必要资源。seal 消耗客户端的可写 Edit，Proposal 由 Runtime 明确保留，不因创建脚本正常结束而丢失；这是独立功能，不能仅依赖普通断连清理例外。
+Connected 客户端绑定 Editor 托管的目标 Session，在一个 Edit 中完成一批修改，通过既有 `commit().wait()` 确认正式发布。正常退出 `with session.edit(...)` 也沿用现有提交/等待行为。flush 是这次正式提交的工作流称呼，写入内存中的同一份文档；磁盘持久化继续使用既有保存入口。
 
-首期在 seal 时固定基准，而不是为每个普通 Edit 预先保留完整基准快照。Runtime 检查正式 Version 仍等于 edit 基准，捕获该版本的只读快照并固定基准/候选资源，完成预算检查后才消费 Edit、登记 Proposal；这一过程与正式发布协调，不能穿插一次提交后仍登记旧检查结果。若资源准备需要后台执行，先捕获明确来源，登记前再次校验版本。seal 前或准备期间基准已变化则返回 `STALE_VERSION`，不创建 Proposal，也不从当前正式内容或 Undo 栈猜测旧基准；候选可按事务契约保留只读诊断来源。Busy、资源固定或预算准备失败不消费 Edit，不留下半个 Proposal。seal 成功后的快照和资源随 Proposal 生命周期保持，后续正式变化只使其过期，不改写对比内容。
+一个有实际改动的成功批次形成一个 SDK 历史步骤。Editor 通过事件刷新视口、资源、属性和 Timeline，人直接检查、试播、Undo/Redo 和精修。Agent 随后查询最新 Version 与内容，基于人工精修后的状态创建下一轮 Edit；两者共享对象身份、正式资源和 Undo/Redo。
 
-Editor 可查看基准与候选、采样和播放。接受时仍经过 SDK 原子提交，形成一个历史步骤；拒绝不改变正式状态或历史。正式基准变化后标记 Stale，继续只读查看，接受被拒绝。首期人工精修发生在接受后的正式文档；直接编辑 Proposal、局部接受、自动合并和 Proposal 自有历史不在范围内。
+已有版本校验、手势占用、Busy 和完整调用恢复继续适用。外部提交不能静默打断人的手势，旧 Edit 不能覆盖新版本，丢响应通过原请求/Job 恢复。已提交内容在脚本退出后仍由正式 Session 和历史持有；未提交 Edit 与临时资源沿用普通清理规则。
 
-Agent 无窗口完成全部制作不依赖 Proposal。Review 是可选交接方式，不是所有 SDK 写入的强制人工审批。
+### 9.3 后置能力
+
+Proposal/seal、专用基准/候选对比和接受/拒绝 UI 暂不实施，也不作为 R6/R7 的依赖。未来出现明确的保留候选、对比或独立评审需求时，再单独设计所有权、版本、资源和交互契约。现有 Edit 候选读取、CPU/GPU 观察及独立 Preview 仍按已实现的契约使用。
 
 ## 10. IPC 与远端对象契约
 
@@ -287,7 +293,7 @@ Agent 无窗口完成全部制作不依赖 Proposal。Review 是可选交接方�
 
 Plan/Edit/Preview/Address token 在 Runtime 表中解析并检查所属会话、创建者、generation 与状态。普通只读数据按值返回，SDK 对象句柄的 incarnation 校验仍由 SDK 完成。释放幂等，失效 token 不重新分配给新对象。
 
-连接断开后先允许有界重连窗口，普通未提交 Edit 在窗口到期后取消，客户端临时 Plan/Preview/blob 随后回收；已提交内容不回滚，Proposal 按其显式生命周期保留。已进入提交点的请求即使断连也登记最终结果。实际宽限时间由 R0 的默认预算表冻结。
+连接断开后先允许有界重连窗口，普通未提交 Edit 在窗口到期后取消，客户端临时 Plan/Preview/blob 随后回收；已提交内容由正式 Session 和历史保留。已进入提交点的请求即使断连也登记最终结果。实际宽限时间由 R0 的默认预算表冻结。
 
 数量、字节、待执行消息、事件、请求结果、预览缓存与临时资产均有上限。预算错误在破坏已有状态前返回，已有 SDK history/authoring 限制继续生效；不能只限制每个候选而不限制多个候选的总占用。
 
@@ -327,13 +333,13 @@ EditorContextProvider 由 zipzi-editor-core/宿主适配提供，返回 ViewId�
 | zipzi-2d：`crates/zipzi-python` | facade/backend 分离、连接客户端、远端引用、可选原生扩展分发、API 清单与一致性测试 | 同一创作语义；连接 import 不要求 `_native` |
 | zipzi-2d：workspace、工具与文档 | 加 crate/锁文件，新增聚焦 Runtime/连接测试入口，更新构建与包文档 | 保留现有 focused test 策略 |
 | editor：`crates/zipzi-editor-core` | Document/Session/Workspace 所有权重构、Runtime 引用、事件驱动投影、每视图 Preview、上下文 provider | UI 交互策略留在此处；可测试且不依赖 GPUI |
-| editor：`crates/editor` | 应用级 Host、IPC 装配、窗口 attach/detach、任务反馈与 Review、输入边界适配 | UI 不直接取得托管 SDK 的可变引用 |
+| editor：`crates/editor` | 应用级 Host、IPC 装配、窗口 attach/detach、任务反馈、提交后刷新与人工接续、输入边界适配 | UI 不直接取得托管 SDK 的可变引用 |
 | editor：`crates/zipzi-editor-render` | 接收版本化来源，按需适配资源共享与结果失效 | 保留原生 Metal 输出；不承担编辑或网络 |
 | editor：测试、脚本、依赖文档 | 双客户端真实闭环、生命周期、性能、配对版本记录 | 不修改测试断言来掩盖架构回归 |
 
 ## 13. 已冻结行为与实施时需要测量的参数
 
-已冻结：同进程、薄 Runtime 独立 crate、单份正式模型/历史、Python 外部执行、正式提交串行、独立 Preview、显式候选 Review、无自动合并、本机协议、严格握手、窗口关闭保留会话。
+已冻结：同进程、薄 Runtime 独立 crate、单份正式模型/历史、Python 外部执行、正式提交串行、独立 Preview、批次直写与人工接续、无自动合并、本机协议、严格握手、窗口关闭保留会话。Proposal/专用 Review 按 2026-10-27 的范围调整后置。
 
 R0 必须给出可复现默认配置：并发候选/任务数量与总字节预算，blob 分块和消息上限，断连宽限期，请求/事件缓存窗口，客户端支持 Python 版本，以及昂贵操作的后台执行清单。参数依据现有 fixture 和 baseline 确定，属于实施调优，不要求用户再次决定架构。
 
