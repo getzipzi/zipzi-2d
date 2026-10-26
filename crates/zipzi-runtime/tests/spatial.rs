@@ -68,8 +68,10 @@ fn queries() -> Vec<Q> {
 }
 fn finish(rt: &mut Runtime, c: ClientId, j: JobId) -> std::sync::Arc<spatial::SpatialSampleBatch> {
     let mut executor = Manual::default();
-    rt.dispatch(&mut executor);
-    assert!(rt.complete(executor.0.pop_front().unwrap().run()));
+    while !rt.job_info(c, j).unwrap().state.is_terminal() {
+        rt.dispatch(&mut executor);
+        assert!(rt.complete(executor.0.pop_front().unwrap().run_quantum()));
+    }
     let JobValue::Spatial(data) = rt.job_info(c, j).unwrap().result.unwrap().unwrap() else {
         panic!("spatial batch")
     };

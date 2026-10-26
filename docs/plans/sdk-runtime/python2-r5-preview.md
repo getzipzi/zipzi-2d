@@ -94,3 +94,9 @@ SDK 现在提供规范采样的 Motion 输出上界（含短周期循环）；Ru
 定向验证：Runtime Preview/Observation 九项、SDK 动画 basic_playback 六项、
 sdk-observe capture 十一项，以及 Python Local/Connected 六项 GPU/inspection
 用例和正反静态类型检查通过。预算回归同时覆盖无 view 与 GPU view 的拒绝路径。
+
+## 后续收尾进展
+
+客户端公平轮转、批次续执行和 Editor 播放/Physics/双视口隔离现已通过定向回归，
+保存中关闭标签页的生命周期冲突已修复；具体证据及仍待完成的原生性能/发行复验见
+[调度与隔离记录](python2-r5-scheduling.md)。本切片原有数字描述当时的验证范围。

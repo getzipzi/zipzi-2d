@@ -1,7 +1,7 @@
 # SDK Runtime 分阶段实施计划
 
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
-日期：2026 年 10 月 24 日。状态：**R0–R4 已交付，R4 最后复验于 2026-10-26 完成；R5 与 Python P5 同步实施中，动画创作、独立 CPU Preview、空间查询、GPU 观察及基础 inspection 已接通，完整调度与 Editor 播放隔离待交付；R6–R7 尚未开始**。
+日期：2026 年 10 月 24 日。状态：**R0–R4 已交付，R4 最后复验于 2026-10-26 完成；R5 与 Python P5 同步实施中，动画创作、独立 CPU Preview、空间查询、GPU 观察及基础 inspection 已接通；批次调度与 Editor 播放隔离定向验证已补，原生 UI/性能及发行复验待收尾；R6–R7 尚未开始**。
 
 2026-10-26 Python 公共契约收尾：[P3A 已完成验收](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。用户确认运行配置 `gpt-6.1-sol/high` 并移除模型/服务身份门禁；既有确定性/安装/Editor/固定功能门禁证据和本轮 P0 稳定性豁免保留。随后完成独立的 R4 最后复验，见下节；P3A 完成与 R4 完成分别有记录。
 
@@ -12,6 +12,8 @@
 2026-10-26 后续：[独立 CPU Preview](sdk-runtime/python2-r5-preview.md)已提交为 `071aa0f8`，接通 Runtime/Python 的冻结来源、控制、采样/seek/advance Job、二进制恢复和释放。随后接通[CPU 空间查询](sdk-runtime/python2-r5-spatial.md)，覆盖正式/候选姿态及动画帧。Observer、完整公平调度和 Editor 播放隔离仍待交付，R5/P5 继续为实施中。
 
 2026-10-26 GPU 观察：空间查询已提交为 `0b826880`。随后接通正式/候选参数姿态和独立 Preview 的 GPU 图像 Job，以及本地 PNG/JSON inspection 导出；实际 Metal 像素、纹理来源与失败隔离通过定向验证，详见[观察切片记录](sdk-runtime/python2-r5-observation.md)。完整公平调度、Editor 播放隔离及 UI 性能仍待交付。
+
+2026-10-27 后续收尾：观察及 Preview 预算修复已提交为 `4c7666bf`。本轮接通客户端公平轮转及批次续执行，Local/Connected/桌面共同接线，复验人类播放/Physics/双视口隔离与外部 Motion 刷新、旧帧拒绝，见[调度与隔离记录](sdk-runtime/python2-r5-scheduling.md)。单个 SDK/GPU 原子单元仍采用协作取消，原生性能及最终发行验收继续保留，R5 尚未整体核销。
 
 以下 2026-10-25 条目保留历史推进过程；其中旧 R4 未完成状态由本轮最终记录替代。
 
@@ -58,7 +60,7 @@ BlendShape、长任务及资源/IO 仍待扩展，R4 尚未验收。
 | R2 | Editor 使用托管会话，窗口生命周期解耦 | R1 | 已交付，见 [R2 记录](sdk-runtime/r2-editor.md) |
 | R3 | 本机协议和 Python 最小完整闭环 | R2 | 已交付，见 [R3 记录](sdk-runtime/r3-ipc.md) |
 | R4 | Modeling、资源、Plan 与工程 IO 完整连接 | R3 | 已交付；最后布局/性能、当前 Python 接线和源码分发复验已完成，见 [最终复验](sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验) |
-| R5 | Animation、独立 Preview、Observer 和长任务 | R4 | 实施中；[动画创作](sdk-runtime/python2-r5-authoring.md)、[CPU Preview](sdk-runtime/python2-r5-preview.md)、[空间](sdk-runtime/python2-r5-spatial.md)与[GPU 观察](sdk-runtime/python2-r5-observation.md)已接通，完整调度和 Editor 验收待交付 |
+| R5 | Animation、独立 Preview、Observer 和长任务 | R4 | 实施中；[动画创作](sdk-runtime/python2-r5-authoring.md)、[CPU Preview](sdk-runtime/python2-r5-preview.md)、[空间](sdk-runtime/python2-r5-spatial.md)、[GPU 观察](sdk-runtime/python2-r5-observation.md)及[批次调度/隔离](sdk-runtime/python2-r5-scheduling.md)已接通，原生性能与发行复验待收尾 |
 | R6 | 候选 Review 与人工精修后接续 | R5 | 未开始 |
 | R7 | 完整创作、发行包、性能与生命周期总验收 | R6 | 未开始 |
 

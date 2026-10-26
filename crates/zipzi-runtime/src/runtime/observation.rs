@@ -44,11 +44,13 @@ mod tests {
             session_id: w.session_id,
             base: w.base,
             session: None,
-            result: Err(error(zipzi_sdk_observe::ObservationError {
-                code: "GPU_ADAPTER".into(),
-                message: "No test device".into(),
-                asset_id: None,
-            })),
+            outcome: crate::jobs::WorkOutcome::Complete(Err(error(
+                zipzi_sdk_observe::ObservationError {
+                    code: "GPU_ADAPTER".into(),
+                    message: "No test device".into(),
+                    asset_id: None,
+                },
+            ))),
         };
         drop(w);
         assert!(rt.complete(completion));

@@ -201,8 +201,11 @@ fn dispatch(host: host::DesktopHost, cx: &mut App) {
         cx.spawn(async move |cx| {
             let completion = task.await;
             cx.update(|cx| {
+                let terminal = completion.is_terminal();
                 host.runtime.write().complete(completion);
-                host.completed();
+                if terminal {
+                    host.completed();
+                }
                 dispatch(host, cx);
             });
         })

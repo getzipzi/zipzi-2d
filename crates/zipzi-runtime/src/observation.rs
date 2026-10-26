@@ -1,7 +1,7 @@
 //! Finite transport projections; all evaluation, view mapping and rendering are SDK-owned.
 use serde::{Deserialize, Serialize};
 use zipzi_core::PreviewValues;
-use zipzi_sdk_observe::{ObservationInput, Observer, ObserverConfig, ResolvedObservation};
+use zipzi_sdk_observe::{Observer, ObserverConfig, ResolvedObservation};
 
 #[derive(
     Debug,
@@ -189,39 +189,4 @@ pub(crate) fn render(
             })
             .collect(),
     })
-}
-pub(crate) fn sample(
-    source: &crate::SourceSnapshot,
-    requested: Vec<PreviewValues>,
-    view: ObservationView,
-    cancel: &std::sync::atomic::AtomicBool,
-    control: &zipzi_sdk::ConversionControl,
-) -> crate::Result<crate::JobValue> {
-    let mut inputs = Vec::with_capacity(requested.len());
-    for pose in &requested {
-        check(cancel)?;
-        inputs
-            .push(ObservationInput::capture_from_snapshot(&source.snapshot, pose).map_err(error)?);
-    }
-    check(cancel)?;
-    let captures =
-        ResolvedObservation::capture_many_with_control(inputs, control).map_err(error)?;
-    check(cancel)?;
-    let mut observer = observer(view)?;
-    let mut frames = Vec::with_capacity(captures.len());
-    for capture in &captures {
-        check(cancel)?;
-        frames.push(render(&mut observer, capture, view)?);
-    }
-    check(cancel)?;
-    Ok(crate::JobValue::Observed(std::sync::Arc::new(
-        ObservationSampleBatch {
-            source: source.source,
-            samples: ObservationBatch {
-                view,
-                requested,
-                frames,
-            },
-        },
-    )))
 }

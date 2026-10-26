@@ -4,7 +4,7 @@
 
 **本轮收尾完成：**[P3A-6](p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a) 已同步正式分发、生成摘要和当前文档，并通过受影响验证。用户确认模型配置 `gpt-6.1-sol/high` 并删除模型/服务身份门禁；固定功能成绩原评分 **38/42**、补充复核 **41/42**，token **16,093,048** 及原始失败记录保留。本轮 P0 稳定性沿用已有豁免。
 
-**当前阶段：P3A-0–6、Runtime R4 收尾、P3B 与 P4 资源/工程范围已完成；R5/P5 同步实施中。** [P3B](p3b.md)补齐转换、场景绑定、集合和嵌套身份；[P4](p4.md)补齐大附件/图片的保存、另存和包往返。均复用 R4 实现，并通过相应源码、类型及两后端正常 wheel 隔离安装。P4 已提交为 `e1401632`，随后新增的[动画创作切片](../sdk-runtime/python2-r5-authoring.md)接通四个动画领域的 records/写入/Plan/地址，随后接通[独立 CPU Preview](../sdk-runtime/python2-r5-preview.md)与[CPU 空间查询](../sdk-runtime/python2-r5-spatial.md)，随后接通[GPU 观察/PNG 与 JSON 检查导出](../sdk-runtime/python2-r5-observation.md)，完整调度与 Editor 接入尚未交付。
+**当前阶段：P3A-0–6、Runtime R4 收尾、P3B 与 P4 资源/工程范围已完成；R5/P5 同步实施中。** [P3B](p3b.md)补齐转换、场景绑定、集合和嵌套身份；[P4](p4.md)补齐大附件/图片的保存、另存和包往返。均复用 R4 实现，并通过相应源码、类型及两后端正常 wheel 隔离安装。P4 已提交为 `e1401632`，随后新增的[动画创作切片](../sdk-runtime/python2-r5-authoring.md)接通四个动画领域的 records/写入/Plan/地址，随后接通[独立 CPU Preview](../sdk-runtime/python2-r5-preview.md)与[CPU 空间查询](../sdk-runtime/python2-r5-spatial.md)，随后接通[GPU 观察/PNG 与 JSON 检查导出](../sdk-runtime/python2-r5-observation.md)，[客户端公平轮转/批次续执行及 Editor 隔离](../sdk-runtime/python2-r5-scheduling.md)已接通，原生性能与最终发行复验待收尾。
 
 以下保留早期切片的推进过程；旧 R4 未完成结论由[最终复验](../sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验)替代。早期执行主线接回 [Runtime R0–R4](../sdk-runtime/python2-r0-r4.md)。`1e0043f`
 已保存 P2 网格切片；其后的工作区补齐宿主发现/唯一启动、会话身份/列表/绑定，
@@ -42,7 +42,7 @@
 | P3A | P3A-0–6 已通过；确定性/恢复/发现/类型/文档/安装/当前 Editor 及固定 agent 功能门禁已达标 | 本轮 P0 稳定性沿用用户豁免；用户删除模型/服务身份门禁 |
 | P3B | [原定范围核销与补验完成](p3b.md)；复用 R4 实现，新增公共转换/场景绑定/集合/嵌套身份 recipe | 六项两后端定向回归、类型及正常 wheel 隔离安装已通过；无原定范围待办 |
 | P4 | [资源与工程核销和补验完成](p4.md)；大附件/图片持久化、Save As 历史规则、包往返、generation 和失败场景通过 | 独立附件便利子集合按需另列；动画/观察及完整平台/app 验收归后续阶段 |
-| P5 | [动画创作切片](../sdk-runtime/python2-r5-authoring.md)实施中；四领域类型化写入、records、Plan、地址和能力查询已接通 | [独立 CPU Preview/动画采样](../sdk-runtime/python2-r5-preview.md)和[CPU 空间查询](../sdk-runtime/python2-r5-spatial.md)及[GPU 观察/基础 inspection](../sdk-runtime/python2-r5-observation.md)已接通；完整调度和 Editor 验收仍待交付 |
+| P5 | [动画创作切片](../sdk-runtime/python2-r5-authoring.md)实施中；四领域类型化写入、records、Plan、地址和能力查询已接通 | [独立 CPU Preview/动画采样](../sdk-runtime/python2-r5-preview.md)和[CPU 空间查询](../sdk-runtime/python2-r5-spatial.md)及[GPU 观察/基础 inspection](../sdk-runtime/python2-r5-observation.md)已接通；[公平调度与 Editor 隔离](../sdk-runtime/python2-r5-scheduling.md)定向验证已通过，原生性能及最终发行复验待收尾 |
 | P7 | 未开始 | 按调整后的计划汇总全部能力和发行证据 |
 | P6 | 纯包/原生包分别构建；隔离安装 recipe；Runtime R3 宿主发现与真实 Editor 选定链路 | 完整版本/平台配对、发行 app 安装位置和全部领域安装验收 |
 

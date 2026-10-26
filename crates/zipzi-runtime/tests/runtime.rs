@@ -591,7 +591,10 @@ fn a08_background_save_result_survives_client_and_view_detach_and_success_wins_c
     let job = host.request_save(a, s, dir.path()).unwrap();
     let mut executor = Manual::default();
     host.dispatch(&mut executor);
-    host.detach_session(a, s).unwrap();
+    // Session detach cannot abandon a live Job. Client expiry (or closing the
+    // initiating view) still must not discard an already executed save.
+    assert_eq!(host.detach_session(a, s), Err(RuntimeError::Busy));
+    host.detach_editor_view(a, s).unwrap();
     let completion = executor.0.pop().unwrap().run(); // publication already happened
     host.cancel_job(a, job).unwrap();
     host.release_client(a);

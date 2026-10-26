@@ -236,13 +236,37 @@ impl Runtime {
         let running = self
             .jobs
             .values()
-            .filter(|j| j.info.state == JobState::Running)
+            .filter(|j| {
+                matches!(j.info.state, JobState::Running | JobState::Cancelling)
+                    && !self.queue.iter().any(|w| w.job == j.info.id)
+            })
             .count();
-        if running >= self.limits.running_jobs && self.jobs[&job].info.state != JobState::Cancelling
-        {
+        if running >= self.limits.running_jobs {
             return Err(RuntimeError::Busy);
         }
+        let read = self.jobs[&job].read_only;
+        if read {
+            let reads = self
+                .jobs
+                .values()
+                .filter(|j| {
+                    j.read_only
+                        && matches!(j.info.state, JobState::Running | JobState::Cancelling)
+                        && !self.queue.iter().any(|w| w.job == j.info.id)
+                })
+                .count();
+            if reads >= self.limits.running_jobs.saturating_sub(1).max(1)
+                || self.queue.iter().any(|w| !self.jobs[&w.job].read_only)
+                || self.next_read_index() != Some(position)
+            {
+                return Err(RuntimeError::Busy);
+            }
+        }
         let work = self.queue.remove(position).unwrap();
+        if read {
+            self.read_turns.pop_front();
+            self.read_turns.push_back(work.client);
+        }
         if self.jobs[&job].info.state != JobState::Cancelling {
             self.jobs.get_mut(&job).unwrap().info.state = JobState::Running;
         }

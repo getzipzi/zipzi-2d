@@ -7,6 +7,7 @@ use std::sync::{
     Arc,
 };
 use zipzi_sdk::{AuthoringSession, EditSession, Version};
+mod batches;
 
 pub trait Executor {
     /// Rejection returns the exact unexecuted work for a later dispatch attempt.
@@ -47,7 +48,7 @@ impl Work {
         match std::thread::Builder::new()
             .name(name.into())
             .stack_size(stack_bytes)
-            .spawn(move || owned.lock().unwrap().take().unwrap().run())
+            .spawn(move || owned.lock().unwrap().take().unwrap().run_quantum())
         {
             Ok(worker) => worker.join().unwrap_or_else(|_| Completion {
                 job,
@@ -56,9 +57,9 @@ impl Work {
                 base,
                 session: None,
                 transfer: None,
-                result: Err(RuntimeError::WorkerPanic(
+                outcome: WorkOutcome::Complete(Err(RuntimeError::WorkerPanic(
                     "worker panicked outside the SDK operation".into(),
-                )),
+                ))),
             }),
             Err(error) => {
                 let work = pending.lock().unwrap().take().unwrap();
@@ -69,7 +70,9 @@ impl Work {
                     base,
                     session: work.session,
                     transfer: work.transfer,
-                    result: Err(RuntimeError::ExecutorFailure(error.to_string())),
+                    outcome: WorkOutcome::Complete(Err(RuntimeError::ExecutorFailure(
+                        error.to_string(),
+                    ))),
                 }
             }
         }
@@ -85,6 +88,85 @@ impl Work {
     pub fn run(self) -> Completion {
         self.run_with_hook(|| {})
     }
+    /// Execute one batch sample, texture acquisition, or GPU frame and return
+    /// ownership to Runtime. Hosts must publish every completion and dispatch
+    /// again, including completions for jobs that have not reached a terminal state.
+    pub fn run_quantum(self) -> Completion {
+        self.run_quantum_with_hook(|| {})
+    }
+    pub(crate) fn run_quantum_with_hook(self, before: impl FnOnce()) -> Completion {
+        let Self {
+            job,
+            client,
+            session_id,
+            base,
+            session,
+            transfer,
+            task,
+            cancel,
+        } = self;
+        let task = match task {
+            Task::Read(task) => match batches::ReadBatch::from_task(task) {
+                Ok(batch) => batch,
+                Err(task) => {
+                    return Self {
+                        job,
+                        client,
+                        session_id,
+                        base,
+                        session,
+                        transfer,
+                        task: Task::Read(task),
+                        cancel,
+                    }
+                    .run_with_hook(before);
+                }
+            },
+            task => {
+                return Self {
+                    job,
+                    client,
+                    session_id,
+                    base,
+                    session,
+                    transfer,
+                    task,
+                    cancel,
+                }
+                .run_with_hook(before);
+            }
+        };
+        let mut batch = task;
+        let control = zipzi_sdk::ConversionControl::from_cancel_flag(cancel.clone());
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            crate::observation::check(&cancel)?;
+            before();
+            batch.step(&cancel, &control)
+        }))
+        .unwrap_or_else(|_| Err(RuntimeError::WorkerPanic("read worker panicked".into())));
+        let outcome = match result {
+            Ok(None) => WorkOutcome::Yielded(Box::new(Self {
+                job,
+                client,
+                session_id,
+                base,
+                session: None,
+                transfer: None,
+                task: Task::Read(ReadTask::Batch(batch)),
+                cancel,
+            })),
+            result => WorkOutcome::Complete(result.map(Option::unwrap)),
+        };
+        Completion {
+            job,
+            client,
+            session_id,
+            base,
+            session: None,
+            transfer: None,
+            outcome,
+        }
+    }
     #[cfg(feature = "test-support")]
     pub(crate) fn executor_failure(self, message: String) -> Completion {
         Completion {
@@ -94,7 +176,7 @@ impl Work {
             base: self.base,
             session: self.session,
             transfer: self.transfer,
-            result: Err(RuntimeError::ExecutorFailure(message)),
+            outcome: WorkOutcome::Complete(Err(RuntimeError::ExecutorFailure(message))),
         }
     }
     pub(crate) fn run_with_hook(self, before_io: impl FnOnce()) -> Completion {
@@ -187,7 +269,7 @@ impl Work {
                 base,
                 session: Some(session),
                 transfer,
-                result,
+                outcome: WorkOutcome::Complete(result),
             },
             Err(panic) => {
                 let message = panic
@@ -204,7 +286,7 @@ impl Work {
                     base,
                     session: None,
                     transfer,
-                    result: Err(RuntimeError::WorkerPanic(message)),
+                    outcome: WorkOutcome::Complete(Err(RuntimeError::WorkerPanic(message))),
                 }
             }
         }
@@ -220,13 +302,24 @@ pub struct Completion {
     pub(crate) session_id: SessionId,
     pub(crate) base: Version,
     pub(crate) session: Option<AuthoringSession>,
-    pub(crate) result: Result<JobValue>,
+    pub(crate) outcome: WorkOutcome,
+}
+pub(crate) enum WorkOutcome {
+    Complete(Result<JobValue>),
+    Yielded(Box<Work>),
 }
 impl Completion {
+    /// False when the Job yielded and needs another dispatch, without a public
+    /// result or event. Hosts can avoid waking views for these internal steps.
+    pub fn is_terminal(&self) -> bool {
+        matches!(self.outcome, WorkOutcome::Complete(_))
+    }
     /// Read-only preparation while an executor still owns the returned state.
     /// Hosts must publish this completion before attaching any resulting view.
     pub fn returned_session(&self) -> Option<&AuthoringSession> {
-        self.result.as_ref().ok()?;
+        let WorkOutcome::Complete(Ok(_)) = &self.outcome else {
+            return None;
+        };
         self.session.as_ref()
     }
 
@@ -236,6 +329,7 @@ impl Completion {
 }
 
 pub(crate) enum ReadTask {
+    Batch(Box<batches::ReadBatch>),
     Observe {
         source: crate::SourceSnapshot,
         parameters: Vec<zipzi_core::PreviewValues>,
@@ -300,45 +394,17 @@ impl Work {
                 return Err(RuntimeError::Cancelled);
             }
             before();
+            let task = match batches::ReadBatch::from_task(task) {
+                Ok(mut batch) => {
+                    return loop {
+                        if let Some(value) = batch.step(&cancel, &control)? {
+                            break Ok(value);
+                        }
+                    };
+                }
+                Err(task) => task,
+            };
             let value = match task {
-                ReadTask::Observe {
-                    source,
-                    parameters,
-                    view,
-                } => crate::observation::sample(&source, parameters, view, &cancel, &control)?,
-                ReadTask::Spatial {
-                    source,
-                    parameters,
-                    queries,
-                } => JobValue::Spatial(Arc::new(crate::spatial::SpatialSampleBatch {
-                    source: source.source,
-                    samples: source
-                        .snapshot
-                        .sample_spatial_with_control(parameters, queries, &control)?,
-                })),
-                ReadTask::Preview {
-                    preview_id,
-                    source,
-                    sequence,
-                    state,
-                    times,
-                    geometry,
-                    incremental,
-                    queries,
-                    view,
-                } => crate::runtime::previews::sample_preview(
-                    preview_id,
-                    &source,
-                    sequence,
-                    &state,
-                    times,
-                    geometry,
-                    incremental,
-                    &cancel,
-                    &queries,
-                    &control,
-                    view,
-                )?,
                 ReadTask::Image {
                     path,
                     bytes,
@@ -355,27 +421,6 @@ impl Work {
                     .map_err(crate::runtime::resources::preparation_error)?;
                     JobValue::PreparedImage(Arc::new(image))
                 }
-                ReadTask::Sample {
-                    source,
-                    parameters,
-                    checks,
-                } => {
-                    let state = match source.state {
-                        crate::SessionState::Ready => "ready",
-                        crate::SessionState::Busy(_) => "busy",
-                        crate::SessionState::Faulted(_) => "faulted",
-                        _ => "closed",
-                    };
-                    let samples = source
-                        .snapshot
-                        .sample_modeling_with_control(parameters, checks, &control)?;
-                    JobValue::Sampled(Arc::new(crate::authoring::ModelingSampleBatch {
-                        source: source.source,
-                        lease: None,
-                        state,
-                        samples,
-                    }))
-                }
                 ReadTask::Plan {
                     source,
                     intent,
@@ -389,6 +434,7 @@ impl Work {
                         bytes,
                     }))
                 }
+                _ => unreachable!("batch tasks handled above"),
             };
             if cancel.load(Ordering::Acquire) && !matches!(value, JobValue::Previewed(_)) {
                 Err(RuntimeError::Cancelled)
@@ -404,7 +450,7 @@ impl Work {
             base,
             session: None,
             transfer: None,
-            result,
+            outcome: WorkOutcome::Complete(result),
         }
     }
 }

@@ -72,8 +72,12 @@ the queue admission test is under `--lib host::tests::`.
 
 `request_open`, `request_save`, `request_commit`, `request_undo` and `request_redo`
 queue ownership-carrying jobs. The application owns an `Executor`; `dispatch`
-passes it `Work`, the worker calls `Work::run`, and the application delivers the
-returned `Completion` to `Runtime::complete`. Accepted work must always deliver
+passes it `Work`, the worker calls `Work::run_quantum` (or `run_on_thread`), and the application delivers the
+returned `Completion` to `Runtime::complete` before dispatching again. Batch
+continuations keep their Job Running and produce no result/event until terminal.
+`Completion::is_terminal` lets desktop hosts avoid waking views for internal steps.
+`Work::run` remains available to explicitly execute a whole batch synchronously.
+Accepted work must always deliver
 its completion; rejected submissions return the exact unexecuted work. Executors
 must not panic during submission. Runtime installs no thread pool or window hook.
 The CPU tests include a real threaded executor and filesystem panic injection.
@@ -278,5 +282,16 @@ default preview. One running read worker slot remains reserved for publication.
 [CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md) now reuse
 SDK geometry on frozen formal/candidate poses and exact Preview states, with
 cancellable workers, admission and binary results. [GPU observation](../../docs/plans/sdk-runtime/python2-r5-observation.md)
-adds explicit-view image Jobs and actual texture provenance. Full fair batch scheduling and Editor playback
-integration remain pending; R5 as a whole remains in progress.
+adds explicit-view image Jobs and actual texture provenance.
+
+Read dispatch rotates between clients and FIFO between each client's jobs and
+continuations. Modeling/spatial batches yield after each pose; Preview batches
+yield after each target; image batches also yield around shared texture acquisition
+and after each rendered frame. A batch keeps one Observer and one texture acquisition
+across dispatches, charged to its original Job. Publications take priority, including
+on a single-worker host. An entered SDK seek/plan, image decode, texture acquisition
+or GPU submission finishes or cooperatively cancels before yielding; this is not a
+fixed wall-clock time slice. The desktop animation worker and native Metal display
+keep their own state and queue. Focused regressions are `--test scheduling` and
+Editor `timeline::runtime_isolation`; [scope and evidence](../../docs/plans/sdk-runtime/python2-r5-scheduling.md).
+R5 remains in progress pending integrated native performance/acceptance work.

@@ -1,6 +1,6 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25，2026-10-26 更新。状态：**P3A-0–6、Runtime R4、P3B 与 P4 资源/工程范围已完成；见 [P3B](python-sdk-rewrite/p3b.md)和 [P4](python-sdk-rewrite/p4.md) 核销记录。P5 与 Runtime R5 同步实施中，动画创作、独立 CPU Preview、空间查询、GPU 观察及基础 inspection 已接通，完整调度与 Editor 接入待交付。P3A 本轮 P0 稳定性沿用用户明确豁免，模型/服务修订身份门禁按用户决定移除。** 结果见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+日期：2026-10-25，2026-10-26 更新。状态：**P3A-0–6、Runtime R4、P3B 与 P4 资源/工程范围已完成；见 [P3B](python-sdk-rewrite/p3b.md)和 [P4](python-sdk-rewrite/p4.md) 核销记录。P5 与 Runtime R5 同步实施中，动画创作、独立 CPU Preview、空间查询、GPU 观察及基础 inspection 已接通，客户端公平轮转、批次续执行和 Editor 播放/Physics 隔离已接通并通过定向回归，原生性能及最终发行复验待收尾。P3A 本轮 P0 稳定性沿用用户明确豁免，模型/服务修订身份门禁按用户决定移除。** 结果见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
 **2026-10-26 收尾完成：**正式分发、生成摘要、当前文档及受影响验证已收敛。用户确认验收运行配置为 `gpt-6.1-sol/high`，明确删除模型/服务身份门禁；配置与可选服务元数据只记录，不参与通过或停止派发判定。固定功能门禁原评分 38/42、补充复核 41/42 和已有确定性/安装/Editor 证据保留。具体结果见 [P3A-6 完成决定](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。
 
@@ -16,7 +16,7 @@
 
 **P4 资源与工程范围已核销。** 独立 worktree 中补齐大附件/图片的保存、另存、重开和包往返，确认 Save As 的磁盘历史路径规则；九项定向回归、类型和两后端隔离安装通过。复用 R4 产品实现，独立附件便利子集合仍按需另列；见 [P4 记录](python-sdk-rewrite/p4.md)。
 
-**P5 与 Runtime R5 同步推进中。** P4 提交 `e1401632` 后，首批接通四个动画创作领域及选取式 records、SDK Plan、地址和能力查询；使用已有两后端、Snapshot/Job 和完整调用恢复。具体实现、验证和剩余范围见 [R5/P5 动画创作记录](sdk-runtime/python2-r5-authoring.md)，整体阶段尚未完成。
+**P5 与 Runtime R5 同步推进中。** P4 提交 `e1401632` 后，首批接通四个动画创作领域及选取式 records、SDK Plan、地址和能力查询；使用已有两后端、Snapshot/Job 和完整调用恢复。具体实现、验证和剩余范围见 [R5/P5 动画创作记录](sdk-runtime/python2-r5-authoring.md)，后续已补[批次调度与 Editor 隔离](sdk-runtime/python2-r5-scheduling.md)，整体阶段尚未完成。
 
 当前 `zipzi-python2` 也没有兼容包袱：允许删除、重命名及改变返回类型，不保留旧别名、双入口、弃用期或迁移层；共享领域语义、资源正确性和独立行为预期继续保留。历史验收只证明当时的接口，不自动证明新契约通过。
 

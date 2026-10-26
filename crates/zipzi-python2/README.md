@@ -73,7 +73,8 @@ For focused regressions, run from the repository root:
 is connected in the first R5/P5 slice. [CPU Preview and animation sampling](../../docs/plans/sdk-runtime/python2-r5-preview.md)
 are connected on independent frozen sources. [CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md)
 cover formal/candidate poses and animated frames. [GPU observation and PNG/JSON inspection](../../docs/plans/sdk-runtime/python2-r5-observation.md) are connected;
-fair batch scheduling and Editor playback integration remain pending in R5/P5.
+[Fair batch scheduling and Editor playback isolation](../../docs/plans/sdk-runtime/python2-r5-scheduling.md)
+are connected and covered by focused regressions; integrated Release performance remains pending in R5/P5.
 Full platform/app distribution acceptance is also pending.
 See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence.
 

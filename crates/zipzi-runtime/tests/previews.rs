@@ -43,8 +43,10 @@ fn finish(
     job: JobId,
 ) -> std::sync::Arc<preview::PreviewSampleBatch> {
     let mut workers = Manual::default();
-    rt.dispatch(&mut workers);
-    assert!(rt.complete(workers.0.pop_front().unwrap().run()));
+    while !rt.job_info(c, job).unwrap().state.is_terminal() {
+        rt.dispatch(&mut workers);
+        assert!(rt.complete(workers.0.pop_front().unwrap().run_quantum()));
+    }
     let JobValue::Previewed(value) = rt.job_info(c, job).unwrap().result.unwrap().unwrap() else {
         panic!("preview result")
     };

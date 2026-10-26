@@ -92,3 +92,9 @@ GPU 测试及分发 recipe 均使用显式 `--observation`，默认 CPU 入口�
 完整持续批次公平调度、Editor Timeline/双视口/人工时钟与 Physics 隔离、旧候选帧拒绝、
 原生 UI 性能验收仍待交付。可重新渲染的 SDK scene bundle 等更完整 inspection 工作流，
 以及非 macOS/WGPU 设备验收另列；本轮 Metal 图像通过不代表整体 R5/P5 或 Editor 已完成。
+
+## 后续收尾进展
+
+客户端公平轮转、批次续执行和 Editor 播放/Physics/双视口隔离现已通过定向回归，
+保存中关闭标签页的生命周期冲突已修复；具体证据及仍待完成的原生性能/发行复验见
+[调度与隔离记录](python2-r5-scheduling.md)。本切片原有数字描述当时的验证范围。

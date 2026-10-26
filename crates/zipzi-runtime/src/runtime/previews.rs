@@ -13,6 +13,154 @@ pub(super) struct PreviewEntry {
     motion_output_bytes: usize,
     schedule_entries: usize,
 }
+
+/// A batch's simulation and GPU resources stay with its Job across dispatches.
+pub(crate) struct PreviewSampling {
+    preview_id: u64,
+    sequence: u64,
+    state: Arc<Mutex<zipzi_sdk::MotionPreview>>,
+    times: VecDeque<f32>,
+    geometry: bool,
+    incremental: bool,
+    queries: Vec<zipzi_sdk::SpatialQuery>,
+    view: Option<crate::observation::ObservationView>,
+    initialized: bool,
+    observer: Option<zipzi_sdk_observe::Observer>,
+    inputs: Vec<zipzi_sdk_observe::ObservationInput>,
+    captures: Option<VecDeque<zipzi_sdk_observe::ResolvedObservation>>,
+    frames: Vec<PreviewFrame>,
+}
+impl PreviewSampling {
+    pub(crate) fn new(
+        preview_id: u64,
+        sequence: u64,
+        state: Arc<Mutex<zipzi_sdk::MotionPreview>>,
+        times: Vec<f32>,
+        geometry: bool,
+        incremental: bool,
+        queries: Vec<zipzi_sdk::SpatialQuery>,
+        view: Option<crate::observation::ObservationView>,
+    ) -> Self {
+        Self {
+            preview_id,
+            sequence,
+            state,
+            times: times.into(),
+            geometry,
+            incremental,
+            queries,
+            view,
+            initialized: false,
+            observer: None,
+            inputs: vec![],
+            captures: None,
+            frames: vec![],
+        }
+    }
+    pub(crate) fn step(
+        &mut self,
+        source: &SourceSnapshot,
+        cancel: &AtomicBool,
+        control: &zipzi_sdk::ConversionControl,
+    ) -> Result<Option<JobValue>> {
+        crate::observation::check(cancel)?;
+        if !self.initialized {
+            zipzi_sdk::validate_spatial_queries(
+                source.snapshot.document(),
+                &self.queries,
+                control,
+            )?;
+            self.observer = self.view.map(crate::observation::observer).transpose()?;
+            self.initialized = true;
+        }
+        if let Some(time) = self.times.pop_front() {
+            let mut state = self
+                .state
+                .lock()
+                .map_err(|_| RuntimeError::WorkerPanic("preview worker panicked".into()))?;
+            let progress = |_, _| !cancel.load(Ordering::Acquire);
+            if self.incremental {
+                state.advance_to_with_progress(time, progress)
+            } else {
+                state.seek_with_progress(time, progress)
+            }
+            .map_err(animation_error)?;
+            let spatial = if self.queries.is_empty() {
+                vec![]
+            } else {
+                let frame = state
+                    .evaluate_drawables_including_hidden()
+                    .map_err(animation_error)?;
+                zipzi_sdk::query_spatial_frame(
+                    source.snapshot.document(),
+                    &frame,
+                    &self.queries,
+                    control,
+                )?
+            };
+            self.frames.push(PreviewFrame {
+                observation: None,
+                spatial,
+                preview_id: self.preview_id,
+                sequence: self.sequence,
+                index: self.frames.len(),
+                motion: state.snapshot().clone(),
+                geometry: if self.geometry {
+                    Some(state.evaluate_drawables().map_err(animation_error)?)
+                } else {
+                    None
+                },
+            });
+            if self.view.is_some() {
+                crate::observation::check(cancel)?;
+                self.inputs.push(
+                    zipzi_sdk_observe::ObservationInput::capture_motion_from_snapshot(
+                        &source.snapshot,
+                        &state,
+                        true,
+                    )
+                    .map_err(crate::observation::error)?,
+                );
+            }
+            if !self.times.is_empty() || self.view.is_some() {
+                return Ok(None);
+            }
+        } else if let Some(view) = self.view {
+            if self.captures.is_none() {
+                self.captures = Some(
+                    zipzi_sdk_observe::ResolvedObservation::capture_many_with_control(
+                        std::mem::take(&mut self.inputs),
+                        control,
+                    )
+                    .map_err(crate::observation::error)?
+                    .into(),
+                );
+                return Ok(None);
+            }
+            let captures = self.captures.as_mut().unwrap();
+            if let Some(capture) = captures.pop_front() {
+                let index = self.frames.len() - captures.len() - 1;
+                self.frames[index].observation = Some(crate::observation::render(
+                    self.observer.as_mut().unwrap(),
+                    &capture,
+                    view,
+                )?);
+            }
+            if !captures.is_empty() {
+                return Ok(None);
+            }
+        }
+        Ok(Some(JobValue::Previewed(Arc::new(PreviewSampleBatch {
+            source: source.source,
+            samples: PreviewBatch {
+                view: self.view,
+                sequence: self.sequence,
+                frames: std::mem::take(&mut self.frames),
+                queries: std::mem::take(&mut self.queries),
+            },
+        }))))
+    }
+}
 impl Runtime {
     pub fn preview_count(&self) -> usize {
         self.previews.len()
@@ -317,90 +465,4 @@ impl Runtime {
             serde_json::json!({"source":value.source,"blob":blob,"length":length,"signature":format!("{:032x}",PreviewBatch::SIGNATURE)}),
         )
     }
-}
-
-pub(crate) fn sample_preview(
-    preview_id: u64,
-    source: &SourceSnapshot,
-    sequence: u64,
-    state: &Mutex<zipzi_sdk::MotionPreview>,
-    times: Vec<f32>,
-    geometry: bool,
-    incremental: bool,
-    cancel: &AtomicBool,
-    queries: &[zipzi_sdk::SpatialQuery],
-    control: &zipzi_sdk::ConversionControl,
-    view: Option<crate::observation::ObservationView>,
-) -> Result<crate::JobValue> {
-    let mut state = state
-        .lock()
-        .map_err(|_| RuntimeError::WorkerPanic("preview worker panicked".into()))?;
-    zipzi_sdk::validate_spatial_queries(source.snapshot.document(), queries, control)?;
-    let mut observer = view.map(crate::observation::observer).transpose()?;
-    let mut inputs = Vec::new();
-    let mut frames = Vec::with_capacity(times.len());
-    for (index, time) in times.into_iter().enumerate() {
-        let progress = |_, _| !cancel.load(Ordering::Acquire);
-        if incremental {
-            state.advance_to_with_progress(time, progress)
-        } else {
-            state.seek_with_progress(time, progress)
-        }
-        .map_err(animation_error)?;
-        let spatial = if queries.is_empty() {
-            vec![]
-        } else {
-            let frame = state
-                .evaluate_drawables_including_hidden()
-                .map_err(animation_error)?;
-            zipzi_sdk::query_spatial_frame(source.snapshot.document(), &frame, queries, control)?
-        };
-        frames.push(PreviewFrame {
-            observation: None,
-            spatial,
-            preview_id,
-            sequence,
-            index,
-            motion: state.snapshot().clone(),
-            geometry: if geometry {
-                Some(state.evaluate_drawables().map_err(animation_error)?)
-            } else {
-                None
-            },
-        });
-        if view.is_some() {
-            crate::observation::check(cancel)?;
-            inputs.push(
-                zipzi_sdk_observe::ObservationInput::capture_motion_from_snapshot(
-                    &source.snapshot,
-                    &state,
-                    true,
-                )
-                .map_err(crate::observation::error)?,
-            );
-        }
-    }
-    if let Some(view) = view {
-        crate::observation::check(cancel)?;
-        let captures =
-            zipzi_sdk_observe::ResolvedObservation::capture_many_with_control(inputs, control)
-                .map_err(crate::observation::error)?;
-        for (frame, capture) in frames.iter_mut().zip(captures.iter()) {
-            crate::observation::check(cancel)?;
-            frame.observation = Some(crate::observation::render(
-                observer.as_mut().unwrap(),
-                capture,
-                view,
-            )?);
-        }
-    }
-    Ok(JobValue::Previewed(Arc::new(PreviewSampleBatch {
-        source: source.source,
-        samples: PreviewBatch {
-            view,
-            sequence,
-            frames,
-            queries: queries.to_vec(),
-        },
-    })))
 }

@@ -42,7 +42,7 @@ impl Control {
             return work.executor_failure("injected executor rejection".into());
         }
         let entered = std::cell::Cell::new(false);
-        let result = work.run_with_hook(|| {
+        let result = work.run_quantum_with_hook(|| {
             entered.set(true);
             self.entered.fetch_add(1, Ordering::SeqCst);
             if fault == 1 {

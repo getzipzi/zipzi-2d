@@ -24,7 +24,7 @@ mod sampling;
 mod spatial;
 mod typed;
 use crate::events::EventLog;
-use crate::jobs::Task;
+use crate::jobs::{Task, WorkOutcome};
 use crate::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
@@ -102,6 +102,7 @@ pub struct Runtime {
     edits: HashMap<EditId, EditEntry>,
     jobs: HashMap<JobId, JobEntry>,
     queue: VecDeque<Work>,
+    read_turns: VecDeque<ClientId>,
     registry: EventLog,
     image_budget: zipzi_project::ImageMemoryBudget,
     plans: HashMap<PlanId, modeling::PlanEntry>,
@@ -151,6 +152,7 @@ impl Runtime {
             edits: HashMap::new(),
             jobs: HashMap::new(),
             queue: VecDeque::new(),
+            read_turns: VecDeque::new(),
             registry,
         }
     }
@@ -290,6 +292,34 @@ impl Runtime {
             })
         {
             return Err(RuntimeError::Busy);
+        }
+        self.detach_editor_view(client, session)
+    }
+    /// Detach a host-owned view while its background Job continues. Unlike the
+    /// public client Session detach operation, this transfers no job ownership
+    /// and leaves Job results discoverable by the application host.
+    pub fn detach_editor_view(&mut self, client: ClientId, session: SessionId) -> Result<()> {
+        self.client(client)?;
+        if !self.entry(session)?.users.contains(&client) {
+            return Err(RuntimeError::WrongOwner);
+        }
+        if self
+            .edits
+            .values()
+            .any(|e| e.session == session && e.client == client)
+        {
+            return Err(RuntimeError::Busy);
+        }
+        // A view's independent simulations are no longer presented. Jobs keep
+        // their frozen roots until cancellation/completion, as on client expiry.
+        for preview in self
+            .previews
+            .values()
+            .filter(|p| p.client == client && p.source.source.session() == session)
+        {
+            if let Some(job) = preview.busy.and_then(|id| self.jobs.get(&id)) {
+                job.cancel.store(true, Ordering::Release);
+            }
         }
         self.object_refs
             .retain(|_, r| r.session != session || r.client != client);
@@ -1033,8 +1063,9 @@ impl Runtime {
         self.trim_events();
         Ok(job)
     }
-    /// FIFO dispatch. Executors and completion delivery are host-owned, with no
-    /// dependency on windows. Rejected submissions retain ownership in the queue.
+    /// Publications have a reserved slot; reads rotate between clients, then
+    /// FIFO between that client's jobs/continuations. Hosts execute run_quantum
+    /// and publish each completion. Rejection preserves the dispatch turn.
     pub fn dispatch(&mut self, executor: &mut impl Executor) {
         let mut running = self
             .jobs
@@ -1045,8 +1076,7 @@ impl Runtime {
             })
             .count();
         while running < self.limits.running_jobs {
-            // Keep an executor slot available for interactive publication. Read
-            // batches are FIFO, and cannot occupy every worker of a multi-worker host.
+            // Keep an executor slot available for interactive publication.
             let running_reads = self
                 .jobs
                 .values()
@@ -1061,26 +1091,50 @@ impl Runtime {
                 .iter()
                 .position(|w| !self.jobs[&w.job].read_only)
                 .or_else(|| {
-                    (running_reads < self.limits.running_jobs.saturating_sub(1).max(1)).then_some(0)
+                    (running_reads < self.limits.running_jobs.saturating_sub(1).max(1))
+                        .then(|| self.next_read_index())
+                        .flatten()
                 });
-            let Some(work) = index.and_then(|i| self.queue.remove(i)) else {
+            let Some(index) = index else {
                 break;
             };
+            let work = self.queue.remove(index).unwrap();
             let job = work.job;
+            let client = work.client;
             match executor.submit(work) {
                 Ok(()) => {
                     let entry = self.jobs.get_mut(&job).unwrap();
                     if entry.info.state != JobState::Cancelling {
                         entry.info.state = JobState::Running;
                     }
+                    if entry.read_only {
+                        self.read_turns.pop_front();
+                        self.read_turns.push_back(client);
+                    }
                     running += 1;
                 }
                 Err(work) => {
-                    self.queue.push_front(*work);
+                    self.queue.insert(index, *work);
                     break;
                 }
             }
         }
+    }
+    fn next_read_index(&mut self) -> Option<usize> {
+        self.read_turns.retain(|client| {
+            self.queue
+                .iter()
+                .any(|w| w.client == *client && self.jobs[&w.job].read_only)
+        });
+        for work in &self.queue {
+            if self.jobs[&work.job].read_only && !self.read_turns.contains(&work.client) {
+                self.read_turns.push_back(work.client);
+            }
+        }
+        let client = self.read_turns.front()?;
+        self.queue
+            .iter()
+            .position(|w| w.client == *client && self.jobs[&w.job].read_only)
     }
     pub fn job_info(&self, client: ClientId, job: JobId) -> Result<JobInfo> {
         self.client(client)?;
@@ -1110,7 +1164,7 @@ impl Runtime {
                 base: work.base,
                 session: None,
                 transfer: work.transfer,
-                result: Err(RuntimeError::Cancelled),
+                outcome: WorkOutcome::Complete(Err(RuntimeError::Cancelled)),
             });
         }
         Ok(())
@@ -1144,10 +1198,36 @@ impl Runtime {
             base,
             session: returned,
             transfer: _transfer,
-            mut result,
+            outcome,
         } = completion;
         let Some(record) = self.jobs.get(&job) else {
             return false;
+        };
+        let mut result = match outcome {
+            WorkOutcome::Complete(result) => result,
+            WorkOutcome::Yielded(work) => {
+                if !record.read_only
+                    || job.runtime_instance() != self.instance
+                    || record.info.client != client
+                    || record.info.session != session
+                    || record.base != base
+                    || record.info.state.is_terminal()
+                    || self.queue.iter().any(|w| w.job == job)
+                {
+                    return false;
+                }
+                if record.cancel.load(Ordering::Acquire) || !self.clients.contains(&client) {
+                    return self.complete_read(
+                        job,
+                        client,
+                        session,
+                        base,
+                        Err(RuntimeError::Cancelled),
+                    );
+                }
+                self.queue.push_back(*work);
+                return true;
+            }
         };
         if record.read_only {
             return self.complete_read(job, client, session, base, result);
@@ -1415,7 +1495,7 @@ mod tests {
             base,
             session: returned,
             transfer: None,
-            result: Err(RuntimeError::WorkerPanic("injected".into())),
+            outcome: WorkOutcome::Complete(Err(RuntimeError::WorkerPanic("injected".into()))),
         };
         let wrong = SessionId {
             runtime: runtime.instance_id(),

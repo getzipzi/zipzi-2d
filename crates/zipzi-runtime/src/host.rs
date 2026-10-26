@@ -207,7 +207,7 @@ impl Workers {
                             #[cfg(feature = "test-support")]
                             let completion = control.run(work);
                             #[cfg(not(feature = "test-support"))]
-                            let completion = work.run();
+                            let completion = work.run_quantum();
                             if complete
                                 .send(Message::Complete(Box::new(completion)))
                                 .is_err()

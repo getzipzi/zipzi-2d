@@ -84,8 +84,10 @@ fn replace(rt: &mut Runtime, c: ClientId, e: EditId, rgba: Vec<u8>) {
 }
 fn finish(rt: &mut Runtime, c: ClientId, j: JobId) -> JobValue {
     let mut exec = Manual::default();
-    rt.dispatch(&mut exec);
-    assert!(rt.complete(exec.0.pop_front().unwrap().run()));
+    while !rt.job_info(c, j).unwrap().state.is_terminal() {
+        rt.dispatch(&mut exec);
+        assert!(rt.complete(exec.0.pop_front().unwrap().run_quantum()));
+    }
     let value = rt.job_info(c, j).unwrap().result.unwrap().unwrap();
     rt.release_job(c, j).unwrap();
     value
@@ -103,6 +105,13 @@ fn frozen_formal_and_candidate_images_never_mix_texture_replacements() {
     let j = rt
         .request_observation(c, s, None, vec![Default::default(); 2], view(), None)
         .unwrap();
+    // Capture the first pose, then publish a new texture while this same batch
+    // is yielded. The remaining acquisition and rendering must stay frozen.
+    let mut exec = Manual::default();
+    rt.dispatch(&mut exec);
+    let completion = exec.0.pop_front().unwrap().run_quantum();
+    assert!(!completion.is_terminal());
+    assert!(rt.complete(completion));
     let e = rt.begin_edit(c, s, "green", None).unwrap();
     replace(&mut rt, c, e, vec![0, 255, 0, 255]);
     rt.commit_edit(c, e).unwrap();
@@ -126,6 +135,8 @@ fn frozen_formal_and_candidate_images_never_mix_texture_replacements() {
     let j = rt
         .request_observation(c, s, Some(e), vec![Default::default()], view(), None)
         .unwrap();
+    rt.dispatch(&mut exec);
+    assert!(rt.complete(exec.0.pop_front().unwrap().run_quantum()));
     replace(&mut rt, c, e, vec![255, 255, 0, 255]);
     rt.release_edit(c, e).unwrap();
     let JobValue::Observed(candidate) = finish(&mut rt, c, j) else {
