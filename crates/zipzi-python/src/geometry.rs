@@ -20,7 +20,7 @@ pub(crate) fn rectangle_grid_geometry(
     columns: usize,
     rows: usize,
 ) -> PyResult<MeshGeometryDataTuple> {
-    let (vertex_ids, positions, uvs, triangles) = source;
+    let (vertex_ids, positions, uvs, triangles, meshing) = source;
     let geometry = zipzi_sdk::rectangle_grid_geometry(
         &zipzi_sdk::MeshGeometry {
             vertex_ids,
@@ -30,6 +30,7 @@ pub(crate) fn rectangle_grid_geometry(
                 .collect(),
             uvs: uvs.into_iter().map(|(x, y)| Vec2::new(x, y)).collect(),
             triangles: triangles.into_iter().map(|(a, b, c)| [a, b, c]).collect(),
+            meshing: crate::conversion::meshing_from_tuple(meshing)?,
         },
         columns,
         rows,
@@ -44,5 +45,6 @@ pub(crate) fn rectangle_grid_geometry(
             .into_iter()
             .map(|[a, b, c]| (a, b, c))
             .collect(),
+        crate::conversion::meshing_tuple(geometry.meshing),
     ))
 }

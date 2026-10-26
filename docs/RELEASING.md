@@ -78,7 +78,8 @@ The public client distribution is **`zipzi`**, imported as `zipzi`. The optional
 native backend is **`zipzi-native`**, imported as `zipzi_native`. Their sources
 remain at `crates/zipzi-python2/client` and `crates/zipzi-python2`; the Rust adapter
 crate retains its internal `zipzi-python2` name. The old `crates/zipzi-python`
-adapter is not a public release target.
+adapter is deprecated and unmaintained, and is not a public release target.
+Its code and documentation are retained only for historical tests and experiments.
 
 Run **Actions → Prepare Python Packages → Run workflow** to produce source and
 wheel archives and installed Local/Connected acceptance evidence. This is

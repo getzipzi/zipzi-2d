@@ -56,6 +56,9 @@ class MeshPropertiesSnapshot(NamedTuple):
     version: Version
 
 
+MeshMeshingData = tuple[Sequence[int], Sequence[tuple[tuple[int, int], str]]]
+
+
 class MeshGeometryData(NamedTuple):
     """Source vertices, UVs, and triangles indexed by vertex ID."""
 
@@ -63,6 +66,7 @@ class MeshGeometryData(NamedTuple):
     positions: Sequence[Point]
     uvs: Sequence[Point]
     triangles: Sequence[tuple[int, int, int]]
+    meshing: MeshMeshingData | None = None
 
 
 class MeshDrawingData(NamedTuple):
@@ -219,6 +223,7 @@ class GeometrySnapshot(NamedTuple):
     triangles: list[tuple[int, int, int]]
     space: str
     parent_id: str | None
+    meshing: MeshMeshingData | None = None
 
 
 class GeometryIssue(NamedTuple):

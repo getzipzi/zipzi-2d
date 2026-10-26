@@ -117,11 +117,11 @@ class Reader:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
 
-INPUT_SIGNATURE = 'b0e6a81b763ab1aedf3e3ad23d41357a'
-MESH_SIGNATURE = 'cb015ab5a478573311b0ddac626078ea'
+INPUT_SIGNATURE = 'b91f5e3957fbc18897bd0ac033fe8f18'
+MESH_SIGNATURE = '6f011cf86dfd4d3f0ee05751e6a6cc13'
 BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
 SAMPLE_SIGNATURE = '33cfb73ff96616c25d9d5f06db944d7e'
-OUTPUT_SIGNATURE = '6e0fb0a4295a0654ba744c5193b9cf81'
+OUTPUT_SIGNATURE = 'aea652bacfef347a026e69670cce2126'
 
 def _point(value: object) -> tuple[object, object]:
     if isinstance(value, tuple):
@@ -129,6 +129,10 @@ def _point(value: object) -> tuple[object, object]:
         if len(v)!=2: raise ValueError("Expected a point")
         return v[0],v[1]
     return _field(value,"x"),_field(value,"y")
+
+def _mesh_meshing(value: m.MeshMeshing | None) -> meshes.Meshing | None:
+    if value is None: return None
+    return meshes.Meshing(value.boundary, tuple(meshes.Constraint(c.endpoints, meshes.ConstraintKind(c.kind.value)) for c in value.constraints))
 
 def _write_modelingcommand(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -321,6 +325,11 @@ def _write_mesh(value: object, w: Writer) -> None:
     items0=sequence(_field(value, 'triangles'))
     w.u32(len(items0))
     w.numeric('I', tuple(v for item in items0 for v in sequence(item)))
+    if _field(value, 'meshing') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_meshmeshing(_field(value, 'meshing'), w)
     w.text(_field(value, 'runtime_id'))
     w.text(_field(value, 'part_id'))
     w.text(_field(value, 'deformer_id'))
@@ -345,7 +354,7 @@ def _write_mesh(value: object, w: Writer) -> None:
         w.scalar('I', _field(value, 'raw_blend_mode'))
 
 def _read_mesh(r: Reader) -> m.Mesh:
-    return m.Mesh(id=r.text(), name=r.text(), texture_asset_id=_read_scenereference(r), vertex_ids=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('I', r.count()))), base_positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), uvs=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), triangles=cast('tuple[tuple[int, int, int], ...]', r.numeric('III', r.count())), runtime_id=r.text(), part_id=r.text(), deformer_id=r.text(), appearance=_read_appearance(r), draw_order=(number(r.scalar('f')) if r.optional() else None), blend_mode=_read_blendmode(r), enabled=r.boolean(), double_sided=r.boolean(), inverted_mask=r.boolean(), masks=tuple(r.text() for _ in range(r.count())), raw_blend_mode=(integer(r.scalar('I')) if r.optional() else None))
+    return m.Mesh(id=r.text(), name=r.text(), texture_asset_id=_read_scenereference(r), vertex_ids=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('I', r.count()))), base_positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), uvs=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), triangles=cast('tuple[tuple[int, int, int], ...]', r.numeric('III', r.count())), meshing=(_read_meshmeshing(r) if r.optional() else None), runtime_id=r.text(), part_id=r.text(), deformer_id=r.text(), appearance=_read_appearance(r), draw_order=(number(r.scalar('f')) if r.optional() else None), blend_mode=_read_blendmode(r), enabled=r.boolean(), double_sided=r.boolean(), inverted_mask=r.boolean(), masks=tuple(r.text() for _ in range(r.count())), raw_blend_mode=(integer(r.scalar('I')) if r.optional() else None))
 
 def _write_scenereference(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -377,6 +386,44 @@ def _write_vec2(value: object, w: Writer) -> None:
 
 def _read_vec2(r: Reader) -> m.Vec2:
     return m.Vec2(x=number(r.scalar('f')), y=number(r.scalar('f')))
+
+def _write_meshmeshing(value: object, w: Writer) -> None:
+    items0=sequence(_field(value, 'boundary'))
+    w.u32(len(items0))
+    w.numeric('I', tuple(items0))
+    items0=sequence(_field(value, 'constraints'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_meshconstraint(item0, w)
+
+def _read_meshmeshing(r: Reader) -> m.MeshMeshing:
+    return m.MeshMeshing(boundary=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('I', r.count()))), constraints=tuple(_read_meshconstraint(r) for _ in range(r.count())))
+
+def _write_meshconstraint(value: object, w: Writer) -> None:
+    items0=sequence(_field(value, 'endpoints'))
+    if len(items0)!=2: raise ValueError("Invalid binary array length")
+    w.numeric('I', tuple(items0))
+    _write_meshconstraintkind(_field(value, 'kind'), w)
+
+def _read_meshconstraint(r: Reader) -> m.MeshConstraint:
+    return m.MeshConstraint(endpoints=cast('tuple[int, int]', tuple(v[0] for v in r.numeric('I', 2))), kind=_read_meshconstraintkind(r))
+
+def _write_meshconstraintkind(value: object, w: Writer) -> None:
+    tag=string(_field(value,"value"))
+    if tag=='user':
+        w.u32(0)
+    elif tag=='edge_support':
+        w.u32(1)
+    else:
+        raise TypeError("Unexpected MeshConstraintKind variant")
+
+def _read_meshconstraintkind(r: Reader) -> m.MeshConstraintKind:
+    tag=r.u32()
+    if tag==0:
+        return m.MeshConstraintKind('user')
+    elif tag==1:
+        return m.MeshConstraintKind('edge_support')
+    raise ValueError("Unknown binary MeshConstraintKind variant")
 
 def _write_appearance(value: object, w: Writer) -> None:
     w.scalar('f', _field(value, 'opacity'))
@@ -2543,6 +2590,11 @@ def _write_geometrysnapshot(value: object, w: Writer) -> None:
     items0=sequence(_field(value, 'triangles'))
     w.u32(len(items0))
     w.numeric('I', tuple(v for item in items0 for v in sequence(item)))
+    if _field(value, 'meshing') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_meshmeshing(_field(value, 'meshing'), w)
     _write_geometryspace(_field(value, 'space'), w)
 
 def _write_version(value: object, w: Writer) -> None:
@@ -3049,9 +3101,14 @@ def _write_meshgeometry(value: object, w: Writer) -> None:
     items0=sequence(_field(value, 'triangles'))
     w.u32(len(items0))
     w.numeric('I', tuple(v for item in items0 for v in sequence(item)))
+    if _field(value, 'meshing') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_meshmeshing(_field(value, 'meshing'), w)
 
 def _read_meshgeometry(r: Reader) -> meshes.Geometry:
-    return meshes.Geometry(vertex_ids=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('I', r.count()))), positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), uvs=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), triangles=cast('tuple[tuple[int, int, int], ...]', r.numeric('III', r.count())))
+    return meshes.Geometry(vertex_ids=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('I', r.count()))), positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), uvs=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), triangles=cast('tuple[tuple[int, int, int], ...]', r.numeric('III', r.count())), meshing=_mesh_meshing((_read_meshmeshing(r) if r.optional() else None)))
 
 def _write_parametercreatespec(value: object, w: Writer) -> None:
     w.text(_field(value, 'name'))

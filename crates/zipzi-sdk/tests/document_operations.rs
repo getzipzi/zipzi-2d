@@ -345,7 +345,7 @@ fn model_space_and_source_reference_are_separate_project_fields() {
     let before = sdk.read_snapshot();
     let json = zipzi_project::encode_project(before.document()).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&json).unwrap();
-    assert_eq!(wire["format_version"], 20);
+    assert_eq!(wire["format_version"], 21);
     assert!(wire["document"].get("canvas").is_none());
     assert!(wire["document"].get("model_space").is_none());
     assert_eq!(wire["document"]["export_settings"]["pixels_per_unit"], 20.);

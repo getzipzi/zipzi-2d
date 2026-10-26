@@ -78,7 +78,7 @@ class Model:
                 raise ValueError('Unsupported public module')
             if binding["rust"] in self.bindings:
                 raise ValueError("Duplicate type binding")
-            if binding["form"] not in {"point", "record", "owned_record", "snapshot", "union", "query", "token", "source", "handle", "version"}:
+            if binding["form"] not in {"point", "record", "owned_record", "snapshot", "union", "enum", "query", "token", "source", "handle", "version"}:
                 raise ValueError("Unsupported public projection")
             self.bindings[binding["rust"]] = binding
         self.types = {}
@@ -111,11 +111,11 @@ class Model:
                 raise ValueError("Only the selected string-to-string map is supported")
             return
         if kind in {"sequence", "optional", "array"}:
-            if kind == "array" and (shape.get("length") != 3 or shape.get("item", {}).get("kind") != "u32"):
-                raise ValueError("Only selected u32 triangle arrays are supported")
+            if kind == "array" and (shape.get("length") not in {2, 3} or shape.get("item", {}).get("kind") != "u32"):
+                raise ValueError("Only selected u32 edge/triangle arrays are supported")
             self.visit(shape["item"])
             return
-        if kind not in {"record", "union", "opaque"} or shape.get("name") not in self.bindings:
+        if kind not in {"record", "serde_record", "serde_enum", "union", "opaque"} or shape.get("name") not in self.bindings:
             raise ValueError(f"Unselected/unsupported shape: {shape}")
         name = shape["name"]
         if name in self.types:
@@ -123,6 +123,10 @@ class Model:
                 raise ValueError("A Rust type has conflicting field descriptions")
             return
         self.types[name] = shape
+        if kind == "serde_enum":
+            if self.bindings[name]['form'] != 'enum' or shape.get('tag') is not None or any(v['fields'] for v in shape['variants']):
+                raise ValueError('Only selected unit enums are supported')
+            return
         fields = shape.get("fields", [])
         if kind == "union":
             if shape["tag"] not in {"op", "kind", "domain"}:
@@ -135,14 +139,14 @@ class Model:
         default_seen = False
         for field in fields:
             identifier(field['name'])
-            if field['name'] in {'read', 'kind'}:
+            if field['name'] == 'read' or (kind == 'union' and field['name'] == 'kind'):
                 raise ValueError('Field shadows generated API')
             default = field.get("default")
             if default is not None:
                 expected = {"null": "optional", "empty_string": "string"}.get(default.get("kind"))
                 if expected is None or field['shape'].get('kind') != expected:
                     raise ValueError("Unsupported or incompatible field default")
-            if kind == "record" and not self.resources:
+            if kind in {"record", "serde_record"} and not self.resources:
                 if default_seen and default is None:
                     raise ValueError("Required field follows defaulted constructor field")
                 default_seen |= default is not None
@@ -175,6 +179,8 @@ class Model:
         if kind == "array":
             return f"_array{shape['length']}({expr})"
         b = self.binding(shape)
+        if kind == "serde_enum":
+            return f"{b['name']}(string({expr}))"
         return f"_point({expr})" if b["form"] == "point" else f"{b['name']}.read({expr})"
 
     def wire(self, shape, expr):
@@ -187,7 +193,9 @@ class Model:
             if shape["item"]["kind"] in {"string", "u32", "f32", "array"}:
                 return expr
             return f"[{self.wire(shape['item'], 'item')} for item in {expr}]"
-        if kind == "record":
+        if kind == "serde_enum":
+            return expr + '.value'
+        if kind in {"record", "serde_record"}:
             point = self.binding(shape)["form"] == "point"
             fields = [f"{f['name']}={self.wire(f['shape'], expr + ('['+str(i)+']' if point else '.'+f['name']))}" for i, f in enumerate(shape["fields"])]
             return "dict(" + ", ".join(fields) + ")"
@@ -212,7 +220,9 @@ class Model:
             serial[0] += 1
             var = f"value{serial[0]}"
             return lines + [f"{pad}for {var} in {expr}:"] + self.checks(shape["item"], var, indent + 4, serial)
-        if kind == "record":
+        if kind == "serde_enum":
+            return [f"{pad}if not isinstance({expr}, {self.binding(shape)['name']}):", f'{pad}    raise TypeError("Invalid constraint kind")']
+        if kind in {"record", "serde_record"}:
             point = self.binding(shape)["form"] == "point"
             lines = []
             if point:
@@ -225,6 +235,11 @@ class Model:
 
     def native_read(self, shape, expr):
         kind = shape["kind"]
+        if kind == 'serde_enum':
+            arms = ', '.join('"'+v['name']+'" => '+self.binding(shape)['path']+'::'+v['rust_name'] for v in shape['variants'])
+            return '{ match '+expr+'.extract::<String>()?.as_str() { '+arms+', _ => return Err(pyo3::exceptions::PyValueError::new_err("Invalid constraint kind")) } }'
+        if kind == 'optional' and shape['item']['kind'] in {'record', 'serde_record'}:
+            return '{ let optional = '+expr+'; if optional.is_none() { None } else { Some('+self.native_read(shape['item'], 'optional')+') } }'
         if kind in {"string", "u32", "f32", "optional", "array"}:
             return expr + ".extract()?"
         if kind == "sequence":
@@ -235,17 +250,25 @@ class Model:
                 return f"read_triangles({expr})?"
             if item["kind"] == "record" and self.binding(item)["form"] == "point":
                 return f"read_points({expr})?"
+            if item['kind'] in {'record','serde_record'}:
+                return expr+'.try_iter()?.map(|item| Ok('+self.native_read(item,'item?')+')).collect::<PyResult<Vec<_>>>()?'
             raise ValueError("Unsupported native input array")
         return f"read_{self.binding(shape)['name'].lower()}(&{expr})?"
 
     def native_write(self, shape, expr):
         kind = shape["kind"]
+        if kind == 'serde_enum':
+            return 'match '+expr+' { '+', '.join(self.binding(shape)['path']+'::'+v['rust_name']+' => "'+v['name']+'"' for v in shape['variants'])+' }'
+        if kind == 'optional' and shape['item']['kind'] in {'record', 'serde_record'}:
+            return expr+'.map(|value| '+self.native_write(shape['item'], 'value').removesuffix('?')+').transpose()?'
         if kind in {"string", "u32", "f32", "optional", "array"}:
             return expr
         if kind == "sequence":
             item = shape["item"]
             if item["kind"] == "record" and self.binding(item)["form"] == "point":
                 return f"points(py, {expr})?"
+            if item['kind'] in {'record','serde_record'}:
+                return '{ let items = PyList::empty(py); for value in '+expr+' { items.append('+self.native_write(item,'value')+')?; } items }'
             return expr
         b = self.binding(shape)
         if b["form"] == "source":
@@ -261,11 +284,17 @@ def render_mesh(contract):
     if len(fields) != 2 or any(f["shape"]["kind"] != "f32" for f in fields):
         raise ValueError("Point adapter requires exactly two f32 fields")
     mesh = [HEADER.rstrip(), '"""Selected immutable mesh values, derived from Rust declarations."""',
-        'from dataclasses import dataclass', 'from collections.abc import Sequence', 'from .._values import integer, number, record, sequence, string', '',
+        'from dataclasses import dataclass', 'from collections.abc import Sequence', 'from enum import Enum', 'from .._values import integer, number, record, sequence, string', '',
         'Point = tuple[float, float]', '', 'def _point(value: object) -> Point:', '    r = record(value)',
         '    return (' + ', '.join(m.read(f["shape"], f'r["{f["name"]}"]') for f in fields) + ')', '',
         'def _array3(value: object) -> tuple[int, int, int]:', '    raw = sequence(value)', '    if len(raw) != 3:',
         '        raise ValueError("Invalid triangle")', '    return integer(raw[0]), integer(raw[1]), integer(raw[2])', '']
+    mesh += ['def _array2(value: object) -> tuple[int, int]:', '    raw = sequence(value)', '    if len(raw) != 2:', '        raise ValueError("Invalid edge")', '    return integer(raw[0]), integer(raw[1])', '']
+    for shape in m.types.values():
+        if shape['kind'] == 'serde_enum':
+            mesh += ['class '+m.binding(shape)['name']+'(str, Enum):', '    __module__ = "zipzi.meshes"']
+            mesh += ['    '+re.sub(r'(?<!^)(?=[A-Z])', '_', v['rust_name']).upper()+' = '+repr(v['name']) for v in shape['variants']]
+            mesh += ['']
     for shape in m.records:
         b = m.binding(shape)
         mesh += ['@dataclass(frozen=True'+(', init=False' if b['form']=='owned_record' else '')+')', f'class {b["name"]}:', f'    __module__ = "zipzi.{b["module"]}"']
@@ -279,10 +308,11 @@ def render_mesh(contract):
                 if shape['kind'] in {'sequence','array'}:return 'Sequence['+input_type(shape['item'])+']'
                 if shape['kind']=='record' and m.binding(shape)['form']=='point':return 'Sequence[float]'
                 return m.pytype(shape)
-            mesh += ['', '    def __init__(self, '+', '.join(f['name']+': '+input_type(f['shape']) for f in value_fields)+') -> None:']
+            mesh += ['', '    def __init__(self, '+', '.join(f['name']+': '+input_type(f['shape'])+(' = None' if f.get('default',{} ) and f['default']['kind']=='null' else '') for f in value_fields)+') -> None:']
             for f in value_fields:
                 expr=f['name'];item=f['shape'].get('item',{})
-                expr='tuple(tuple(item) for item in '+expr+')' if item.get('kind') in {'record','array'} else 'tuple('+expr+')'
+                if f['shape']['kind'] in {'sequence','array'}:
+                    expr='tuple(tuple(item) for item in '+expr+')' if item.get('kind') == 'array' or (item.get('kind')=='record' and m.binding(item)['form']=='point') else 'tuple('+expr+')'
                 mesh += ['        object.__setattr__(self, '+repr(f['name'])+', '+expr+')']
             mesh += ['        self.__post_init__()', '', '    def __post_init__(self) -> None:']
             # Constructor checks only ownership/shape; finite/range validation
@@ -297,7 +327,7 @@ def render_mesh(contract):
                 if size:
                     mesh += [f'        if any(not isinstance(item, tuple) or len(item) != {size} for item in {expr}):', '            raise TypeError("Invalid geometry array shape")']
         mesh += ['', '    @classmethod', f'    def read(cls, value: object) -> "{b["name"]}":', '        if isinstance(value,cls): return value', '        r = record(value)',
-            '        return cls(' + ', '.join(m.read(f['shape'], ('r.get("' + f['name'] + '", ' + ('None' if f['default']['kind'] == 'null' else '""') + ')') if f['default'] else f'r["{f["name"]}"]') for f in value_fields) + ')', '']
+            '        return cls(' + ', '.join(m.read(f['shape'], ('r.get("' + f['name'] + '", ' + ('None' if f['default']['kind'] == 'null' else '""') + ')') if f.get('default') else f'r["{f["name"]}"]') for f in value_fields) + ')', '']
     ops = [HEADER.rstrip(), 'from collections.abc import Sequence', 'from dataclasses import dataclass, field', 'from typing import Literal', 'import math',
         'from .meshes import Geometry, MeshSpec, Point', '']
     for v in m.union['variants']:
@@ -329,7 +359,7 @@ def render_mesh(contract):
     ops += ['    raise TypeError("Unknown mesh operation")', '']
     # Do not publish unused imports merely to make a template convenient.
     ops.remove('from .meshes import Geometry, MeshSpec, Point')
-    ops.insert(5, 'from .meshes import MeshSpec, Point')
+    ops.insert(5, 'from .meshes import MeshSpec, Point'+''.join(', '+m.binding(s)['name'] for s in m.types.values() if s['kind']=='serde_enum'))
     query = m.operation['input']
     fields = query['fields']
     def parameter_type(shape, native=False):
@@ -363,7 +393,7 @@ def render_mesh(contract):
             children.append(shape['item'])
         if kind == 'union':
             children += [f['shape'] for v in shape['variants'] for f in v['fields']]
-        result = {shape['name']} if kind == 'record' else set()
+        result = {shape['name']} if kind in {'record','serde_record'} else set()
         for child in children:
             result |= record_names(child)
         return result

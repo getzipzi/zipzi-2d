@@ -99,9 +99,11 @@ impl Document {
         if !identity_changed && self.same_content(&candidate) {
             return Ok(false);
         }
-        // Preserve geometry caches only when all persistent changes are known
-        // display metadata; identity and runtime inputs must still invalidate.
-        let metadata_only = if !identity_changed && declared_kind == ChangeKind::Metadata {
+        // Structural authoring metadata (for example meshing constraints) can also leave
+        // every evaluation input unchanged. Compare fields rather than trusting the category.
+        let metadata_only = if !identity_changed
+            && matches!(declared_kind, ChangeKind::Metadata | ChangeKind::Structure)
+        {
             self.same_content_except_visual_metadata(&candidate.content)
         } else {
             false
@@ -115,6 +117,12 @@ impl Document {
             self.remember_valid_structure();
         }
         Ok(true)
+    }
+
+    /// Whether persistent runtime inputs are equal, excluding authoring-only metadata such
+    /// as labels and modeling constraints. Does not evaluate poses or compare rendered pixels.
+    pub fn same_evaluation_inputs(&self, other: &Document) -> bool {
+        self.same_content_except_visual_metadata(&other.content)
     }
 
     fn same_content_except_visual_metadata(&self, content: &DocumentContent) -> bool {
@@ -225,6 +233,8 @@ impl Document {
                         && old.base_positions == new.base_positions
                         && old.uvs == new.uvs
                         && old.triangles == new.triangles
+                        // meshing describes authoring intent; triangles already capture
+                        // every connection used by evaluation and export.
                         && old.runtime_id == new.runtime_id
                         && old.part_id == new.part_id
                         && old.deformer_id == new.deformer_id

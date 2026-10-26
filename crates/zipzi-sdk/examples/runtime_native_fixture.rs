@@ -74,6 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     positions: mesh.base_positions.clone(),
                     uvs: mesh.uvs.clone(),
                     triangles: mesh.triangles.clone(),
+                    meshing: mesh.meshing.clone(),
                 },
                 12,
                 12,

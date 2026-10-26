@@ -585,7 +585,93 @@ impl Document {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zipzi_core::Vec2;
     use zipzi_sdk::{DocumentAuthoringEdit, DocumentValue, SceneEdit, SceneFieldValue};
+
+    #[test]
+    fn manual_mesh_constraint_only_receipt_invalidates_canvas_topology_through_history()
+    -> anyhow::Result<()> {
+        let mut document = Document::new_blank()?;
+        let id = Uuid::new_v4().to_string();
+        document.session.edit("Mesh", None, |edit| {
+            edit.create_mesh(zipzi_core::Mesh {
+                id: id.clone(),
+                vertex_ids: vec![0, 1, 2, 3],
+                base_positions: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(1., 0.),
+                    Vec2::new(1., 1.),
+                    Vec2::new(0., 1.),
+                ],
+                uvs: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(1., 0.),
+                    Vec2::new(1., 1.),
+                    Vec2::new(0., 1.),
+                ],
+                triangles: vec![[0, 1, 2], [0, 2, 3]],
+                meshing: Some(zipzi_core::MeshMeshing {
+                    boundary: vec![0, 1, 2, 3],
+                    constraints: vec![],
+                }),
+                ..Default::default()
+            })
+        })?;
+        document.after_history(true);
+        let before = document.canvas_topology();
+        let evaluation = document.session.evaluation_revision();
+        assert!(
+            document
+                .validate_mesh_alpha(&ObjectRef::new(ObjectKind::Mesh, &id))
+                .unwrap_err()
+                .to_string()
+                .contains("modeling topology")
+        );
+        let mut mesh = document.session.document().get_mesh(&id).unwrap().clone();
+        mesh.meshing
+            .as_mut()
+            .unwrap()
+            .constraints
+            .push(zipzi_core::MeshConstraint {
+                endpoints: [0, 2],
+                kind: zipzi_core::MeshConstraintKind::User,
+            });
+        let (_, receipt) = document
+            .session
+            .edit("Constrain", None, |edit| edit.replace_mesh(mesh))?;
+        document.consume_authoring_receipt(&receipt, false);
+        let constrained = document.canvas_topology();
+        assert!(!Arc::ptr_eq(&before, &constrained));
+        assert_eq!(document.session.evaluation_revision(), evaluation);
+        document.undo()?;
+        assert!(!Arc::ptr_eq(&constrained, &document.canvas_topology()));
+        assert!(
+            document
+                .model()
+                .get_mesh(&id)
+                .unwrap()
+                .meshing
+                .as_ref()
+                .unwrap()
+                .constraints
+                .is_empty()
+        );
+        document.redo()?;
+        assert_eq!(
+            document
+                .model()
+                .get_mesh(&id)
+                .unwrap()
+                .meshing
+                .as_ref()
+                .unwrap()
+                .constraints
+                .len(),
+            1
+        );
+        assert_eq!(document.session.evaluation_revision(), evaluation);
+        Ok(())
+    }
 
     #[test]
     fn mixed_document_and_scene_labels_refresh_canvas_through_history() -> anyhow::Result<()> {

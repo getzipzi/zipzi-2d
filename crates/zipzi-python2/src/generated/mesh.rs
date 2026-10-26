@@ -24,12 +24,80 @@ pub(crate) fn points(py: Python<'_>, values: Vec<zipzi_core::Vec2>) -> PyResult<
     Ok(result)
 }
 
+pub(crate) fn read_constraint(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::MeshConstraint> {
+    Ok(zipzi_core::MeshConstraint {
+        endpoints: value.getattr("endpoints")?.extract()?,
+        kind: {
+            match value.getattr("kind")?.extract::<String>()?.as_str() {
+                "user" => zipzi_core::MeshConstraintKind::User,
+                "edge_support" => zipzi_core::MeshConstraintKind::EdgeSupport,
+                _ => {
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        "Invalid constraint kind",
+                    ));
+                }
+            }
+        },
+    })
+}
+
+pub(crate) fn write_constraint(
+    py: Python<'_>,
+    value: zipzi_core::MeshConstraint,
+) -> PyResult<Bound<'_, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("endpoints", value.endpoints)?;
+    d.set_item(
+        "kind",
+        match value.kind {
+            zipzi_core::MeshConstraintKind::User => "user",
+            zipzi_core::MeshConstraintKind::EdgeSupport => "edge_support",
+        },
+    )?;
+    Ok(d)
+}
+
+pub(crate) fn read_meshing(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::MeshMeshing> {
+    Ok(zipzi_core::MeshMeshing {
+        boundary: read_ids(value.getattr("boundary")?)?,
+        constraints: value
+            .getattr("constraints")?
+            .try_iter()?
+            .map(|item| Ok(read_constraint(&item?)?))
+            .collect::<PyResult<Vec<_>>>()?,
+    })
+}
+
+pub(crate) fn write_meshing(
+    py: Python<'_>,
+    value: zipzi_core::MeshMeshing,
+) -> PyResult<Bound<'_, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("boundary", value.boundary)?;
+    d.set_item("constraints", {
+        let items = PyList::empty(py);
+        for value in value.constraints {
+            items.append(write_constraint(py, value)?)?;
+        }
+        items
+    })?;
+    Ok(d)
+}
+
 pub(crate) fn read_geometry(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::MeshGeometry> {
     Ok(zipzi_sdk::MeshGeometry {
         vertex_ids: read_ids(value.getattr("vertex_ids")?)?,
         positions: read_points(value.getattr("positions")?)?,
         uvs: read_points(value.getattr("uvs")?)?,
         triangles: read_triangles(value.getattr("triangles")?)?,
+        meshing: {
+            let optional = value.getattr("meshing")?;
+            if optional.is_none() {
+                None
+            } else {
+                Some(read_meshing(&optional)?)
+            }
+        },
     })
 }
 
@@ -42,6 +110,13 @@ pub(crate) fn write_geometry(
     d.set_item("positions", points(py, value.positions)?)?;
     d.set_item("uvs", points(py, value.uvs)?)?;
     d.set_item("triangles", value.triangles)?;
+    d.set_item(
+        "meshing",
+        value
+            .meshing
+            .map(|value| write_meshing(py, value))
+            .transpose()?,
+    )?;
     Ok(d)
 }
 

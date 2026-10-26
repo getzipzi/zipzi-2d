@@ -62,6 +62,8 @@ pub(super) struct MeshWire {
     pub(super) base_positions: Vec<[f32; 2]>,
     pub(super) uvs: Vec<[f32; 2]>,
     pub(super) triangles: Vec<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) meshing: Option<zipzi_core::MeshMeshing>,
     pub(super) properties: MeshPropertiesWire,
 }
 

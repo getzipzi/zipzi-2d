@@ -1,5 +1,5 @@
 use super::*;
-use crate::geometry::validate_render_mesh;
+use crate::geometry::{validate_mesh_meshing, validate_render_mesh};
 use crate::types::{
     BlendShapeBinding, BlendShapeTargetKind, ChangeKind, ChangeSet, EditResult, Glue, Mesh,
     MeshBinding, Status, VertexId,
@@ -121,7 +121,7 @@ impl Document {
                         return self.failed(Status::error(
                             "MISSING_VERTEX",
                             "Triangle references an unknown vertex ID.",
-                        ))
+                        ));
                     }
                 }
             }
@@ -129,6 +129,12 @@ impl Document {
         let s = validate_render_mesh(&mesh.base_positions, &mesh.uvs, &indices);
         if !s.is_ok() {
             return self.failed(s);
+        }
+        if let Some(meshing) = &mesh.meshing {
+            let s = validate_mesh_meshing(&mesh.vertex_ids, &mesh.uvs, &mesh.triangles, meshing);
+            if !s.is_ok() {
+                return self.failed(s);
+            }
         }
         let key = mesh.id.clone();
         self.mesh_runtime_ids
@@ -154,6 +160,10 @@ impl Document {
     }
 
     pub fn replace_mesh(&mut self, mesh: Mesh) -> EditResult {
+        self.replace_mesh_impl(mesh, false)
+    }
+
+    fn replace_mesh_impl(&mut self, mesh: Mesh, discard_meshing: bool) -> EditResult {
         if let Err(status) = self
             .authoring_unlocked(&mesh.id)
             .and_then(|_| self.authoring_unlocked(&mesh.part_id))
@@ -172,6 +182,12 @@ impl Document {
             Some(m) => m,
             None => return self.failed(Status::error("MISSING_MESH", "Mesh does not exist.")),
         };
+        if !discard_meshing && previous.meshing.is_some() && mesh.meshing.is_none() {
+            return self.failed(Status::error(
+                "MESH_MESHING_REQUIRED",
+                "Preserve modeling topology, or explicitly discard it through replace_mesh_topology.",
+            ));
+        }
         if self
             .binding_for_mesh(&mesh.id)
             .is_some_and(|b| !b.axes.is_empty())
@@ -277,7 +293,7 @@ impl Document {
                         return self.failed(Status::error(
                             "MISSING_VERTEX",
                             "Triangle references an unknown vertex ID.",
-                        ))
+                        ));
                     }
                 }
             }
@@ -285,6 +301,12 @@ impl Document {
         let s = validate_render_mesh(&mesh.base_positions, &mesh.uvs, &indices);
         if !s.is_ok() {
             return self.failed(s);
+        }
+        if let Some(meshing) = &mesh.meshing {
+            let s = validate_mesh_meshing(&mesh.vertex_ids, &mesh.uvs, &mesh.triangles, meshing);
+            if !s.is_ok() {
+                return self.failed(s);
+            }
         }
         let key = mesh.id.clone();
         let previous_runtime_id = previous.runtime_id.clone();
@@ -355,6 +377,7 @@ impl Document {
 
     /// Replace a mesh and every geometry dependency in one revision. Stable object
     /// IDs and collection order are preserved; failure leaves this document untouched.
+    /// This complete replacement explicitly permits discarding modeling topology with None.
     pub fn replace_mesh_topology(
         &mut self,
         mesh: Mesh,
@@ -446,7 +469,7 @@ impl Document {
             .retain(|id| candidate.content.bindings.contains_key(id));
         candidate.lookup.take();
         candidate.pair_lookup.take();
-        let result = candidate.replace_mesh(mesh);
+        let result = candidate.replace_mesh_impl(mesh, true);
         if !result.status.is_ok() {
             return self.failed(result.status);
         }

@@ -42,6 +42,7 @@ pub fn build(
                     positions: mesh.base_positions.clone(),
                     uvs: mesh.uvs.clone(),
                     triangles: mesh.triangles.clone(),
+                    meshing: mesh.meshing.clone(),
                 },
                 divisions,
                 divisions,

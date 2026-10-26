@@ -27,6 +27,43 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_manual_mesh_structure_roundtrips_local_connected_binary_history_and_project(self):
+        boundary = [10, 20, 30, 40]
+        support = meshes.Constraint((10, 30), meshes.ConstraintKind.EDGE_SUPPORT)
+        meshing = meshes.Meshing(boundary, [support])
+        boundary.reverse()
+        geometry = meshes.Geometry((10,20,30,40), ((0.,0.),(-1.,0.),(-1.,1.),(0.,1.)),
+            ((0.,0.),(1.,0.),(1.,1.),(0.,1.)), ((10,20,30),(10,30,40)), meshing)
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(1))
+                with session.edit("manual mesh") as edit:
+                    mesh = edit.meshes.create(meshes.MeshSpec("mesh", geometry, id=uid(2)))
+                    self.assertEqual(edit.meshes.get(mesh).value.geometry, geometry)
+                self.assertEqual(session.meshes.get(mesh).value.geometry, geometry)
+                before = session.modeling.records(m.ModelingQuery(meshes=(mesh,))).value.meshes[0]
+                self.assertEqual(before.meshing.boundary, (10,20,30,40))
+                user = replace(before.meshing, constraints=(replace(before.meshing.constraints[0], kind=m.MeshConstraintKind.USER),))
+                with session.edit("fix support") as edit:
+                    edit.apply(m.ModelingCommandReplaceMesh(mesh=replace(before, meshing=user)))
+                expected = replace(geometry, meshing=meshes.Meshing((10,20,30,40), [meshes.Constraint((10,30), meshes.ConstraintKind.USER)]))
+                self.assertEqual(session.meshes.get(mesh).value.geometry, expected)
+                self.assertEqual(session.info().history, (2,0))
+                session.undo().wait()
+                self.assertEqual(session.meshes.get(mesh).value.geometry, geometry)
+                session.redo().wait()
+                self.assertEqual(session.meshes.get(mesh).value.geometry, expected)
+                with session.edit("force borrowed binary response") as edit:
+                    edit.meshes.rename(mesh, "mesh" * 4096)
+                self.assertEqual(session.meshes.get(mesh).value.geometry, expected)
+                with self.assertRaises(zipzi.SdkFailure):
+                    with session.edit("do not discard structure") as edit:
+                        edit.apply(m.ModelingCommandReplaceMesh(mesh=replace(before, meshing=None)))
+                saved = session.project.save(self.folder / (mode + "-manual-mesh")).wait()
+                reopened = self.runtime(mode).sessions.open(saved.manifest).wait()
+                self.assertEqual(reopened.meshes.get(mesh).value.geometry, expected)
+
     def test_p3b_conversions_scene_bindings_and_independent_collections(self):
         import runpy
         recipe = runpy.run_path(str(Path(__file__).with_name("p3b_recipe.py")))["run"]
@@ -179,6 +216,8 @@ class PythonSdk(unittest.TestCase):
     def test_native_plan_admission_precedes_string_conversion_and_keeps_edit_usable(self):
         class OverBudgetText(str):
             def __len__(self):return 1<<30
+        class OverBudgetTuple(tuple):
+            def __len__(self):return 1<<30
         with self.runtime("local") as runtime:
             session=runtime.sessions.create(uid(1))
             with session.edit("preflight plan") as edit:
@@ -189,6 +228,12 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(rejected.exception.code,"BUDGET_EXCEEDED")
                 self.assertEqual(runtime.resources.usage().plans,0)
                 self.assertEqual(edit.meshes.get(mesh).source,source)
+                meshing = meshes.Meshing((7,99,42), ())
+                object.__setattr__(meshing, "boundary", OverBudgetTuple((7,99,42)))
+                with self.assertRaises(zipzi.SdkFailure) as rejected:
+                    edit.apply(meshes.Create(meshes.MeshSpec("Structured", replace(GEOMETRY, meshing=meshing))))
+                self.assertEqual(rejected.exception.code, "BUDGET_EXCEEDED")
+                self.assertEqual(edit.meshes.get(mesh).source, source)
                 edit.meshes.rename(mesh,"Usable")
             self.assertEqual(session.meshes.get(mesh).value.name,"Usable")
             self.assertEqual(session.info().history,(1,0))

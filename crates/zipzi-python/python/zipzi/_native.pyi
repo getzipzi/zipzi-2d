@@ -5,7 +5,8 @@ from typing import Mapping
 Version = tuple[int, int, int]
 Point = tuple[float, float]
 Mesh = tuple[str, str, list[int], list[Point], Version]
-MeshRecordData = tuple[str, str, str, tuple[list[int], list[Point], list[Point], list[tuple[int, int, int]]], tuple[str, str], Appearance, tuple[float | None, str, bool, bool, bool, list[str], int | None]]
+MeshMeshingData = tuple[list[int], list[tuple[tuple[int, int], str]]] | None
+MeshRecordData = tuple[str, str, str, tuple[list[int], list[Point], list[Point], list[tuple[int, int, int]], MeshMeshingData], tuple[str, str], Appearance, tuple[float | None, str, bool, bool, bool, list[str], int | None]]
 MeshRecord = tuple[MeshRecordData, str, Version]
 Parameter = tuple[str, str, float, float, float, bool, str, Version]
 Asset = tuple[str, str, str | None, int | None, int | None, str | None, Version]
@@ -140,7 +141,7 @@ class NativeEdit:
     def replace_mesh(self, data: MeshRecordData) -> None: ...
     def replace_topology(
         self,
-        source: tuple[Version, str, list[int], list[Point], list[Point], list[tuple[int, int, int]], str, str | None],
+        source: tuple[Version, str, list[int], list[Point], list[Point], list[tuple[int, int, int]], str, str | None, MeshMeshingData],
         mesh_data: MeshRecordData,
         binding_data: tuple[str, str, list[tuple[str, list[float]]], list[MeshForm]] | None,
         blend_data: list[BlendBindingData],
@@ -413,7 +414,7 @@ class NativeSession:
     def require_unique_mesh(self, name: str) -> Mesh: ...
     def geometry(
         self, id: str
-    ) -> tuple[Version, str, list[int], list[Point], list[Point], list[tuple[int, int, int]], str, str | None] | None: ...
+    ) -> tuple[Version, str, list[int], list[Point], list[Point], list[tuple[int, int, int]], str, str | None, MeshMeshingData] | None: ...
     def validate_structure(self) -> list[tuple[str, str, str]]: ...
     def history_state(self) -> tuple[int, int, int, int, int]: ...
     def history_lengths(self) -> tuple[int, int]: ...
@@ -461,7 +462,7 @@ def capabilities() -> dict[str, bool]:
     """Report available import, export, validation, and GPU observation features."""
     ...
 
-MeshGeometryData = tuple[list[int], list[Point], list[Point], list[tuple[int, int, int]]]
+MeshGeometryData = tuple[list[int], list[Point], list[Point], list[tuple[int, int, int]], MeshMeshingData]
 def rectangle_grid_geometry(source: MeshGeometryData, columns: int, rows: int) -> MeshGeometryData: ...
 
 class NativeMotionPlan:

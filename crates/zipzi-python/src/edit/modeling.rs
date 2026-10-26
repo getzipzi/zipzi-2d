@@ -4,17 +4,15 @@ use super::*;
 impl NativeEdit {
     fn apply_modeling_json(&mut self, py: Python<'_>, commands: &str) -> PyResult<()> {
         self.ensure_open(py, "apply_modeling")?;
-        let commands: Vec<zipzi_sdk::ModelingCommand> =
+        let commands: Vec<zipzi_runtime::modeling::ModelingCommand> =
             serde_json::from_str(commands).map_err(|e| {
                 self.failed = true;
                 PyValueError::new_err(e.to_string())
             })?;
-        let result = self
-            .commands
-            .workspace
-            .as_mut()
-            .expect("edit is open")
-            .apply_modeling(commands);
+        let edit = self.commands.workspace.as_mut().expect("edit is open");
+        let result = commands
+            .into_iter()
+            .try_for_each(|command| command.apply(edit));
         if let Err(error) = result {
             self.commands.error = Some(error.clone());
             return Err(sdk_failure(py, error));

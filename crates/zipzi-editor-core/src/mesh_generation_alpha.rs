@@ -210,6 +210,7 @@ mod tests {
                 Vec2::new(0., 1.),
             ],
             triangles: vec![[0, 1, 2], [0, 2, 3]],
+            meshing: None,
         }
     }
 

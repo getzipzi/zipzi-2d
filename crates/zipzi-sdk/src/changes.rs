@@ -631,6 +631,17 @@ fn summarize_impl(
             out.modified.push(entity(key.kind, id));
         }
     }
+    // Meshing is authoring intent, independent of the persisted triangles used by evaluation.
+    // Keep this refinement in the full summary so receipt and shadow comparisons agree; the
+    // MeshPublication fast path already requires meshing to be unchanged.
+    let meshing_changed = out.content_changes.iter().any(|c| {
+        c.domain == zipzi_core::document::SceneContentDomain::MeshTopology
+            && before.get_mesh(&c.entity.id).map(|m| &m.meshing)
+                != after.get_mesh(&c.entity.id).map(|m| &m.meshing)
+    });
+    if meshing_changed && before.same_evaluation_inputs(after) {
+        out.categories.remove(&ChangeCategory::EvaluationInputs);
+    }
     finish_summary(&mut out);
     out
 }

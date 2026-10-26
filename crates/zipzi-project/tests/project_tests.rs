@@ -1,5 +1,7 @@
 #[path = "project_tests/helpers.rs"]
 mod helpers;
+#[path = "project_tests/manual_mesh.rs"]
+mod manual_mesh;
 #[path = "project_tests/packaging_export.rs"]
 mod packaging_export;
 #[path = "project_tests/resources_codec.rs"]

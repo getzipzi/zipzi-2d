@@ -679,6 +679,9 @@ pub struct Mesh {
     /// Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
     /// array offsets.
     pub triangles: Vec<[VertexId; 3]>,
+    /// Optional single-region modeling topology in UV space; independent of posed positions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meshing: Option<MeshMeshing>,
     /// External format/runtime identifier retained for import/export; not the document object ID.
     pub runtime_id: String,
     /// Organizational Part owner ID; independent of the deformation parent. An empty string
@@ -716,6 +719,7 @@ impl Default for Mesh {
             base_positions: Vec::new(),
             uvs: Vec::new(),
             triangles: Vec::new(),
+            meshing: None,
             runtime_id: String::new(),
             part_id: String::new(),
             deformer_id: String::new(),
@@ -729,6 +733,35 @@ impl Default for Mesh {
             raw_blend_mode: None,
         }
     }
+}
+
+/// A canonical counterclockwise outer boundary and the internal edges retained by remeshing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+pub struct MeshMeshing {
+    /// Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.
+    pub boundary: Vec<VertexId>,
+    /// Internal constraints sorted by their canonical endpoint pairs; excludes boundary edges.
+    pub constraints: Vec<MeshConstraint>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+pub struct MeshConstraint {
+    /// Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.
+    pub endpoints: [VertexId; 2],
+    /// Whether this edge was fixed by the user or supplied by the edge-layout generator.
+    pub kind: MeshConstraintKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+pub enum MeshConstraintKind {
+    User,
+    EdgeSupport,
 }
 
 fn default_decimal_places() -> i32 {

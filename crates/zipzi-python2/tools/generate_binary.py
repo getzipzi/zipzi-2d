@@ -218,6 +218,9 @@ def render_binary(contract,header):
             key={'kind':'string'} if k=='string_map' else s['key'];return '{'+read(key,d+1)+': '+read(s['value'],d+1)+' for _ in range(r.count())}'
         return '_read_'+fn(s)+'(r)'
     out=[header.rstrip(),PRELUDE,'INPUT_SIGNATURE = '+repr(contract['input_signature']),'MESH_SIGNATURE = '+repr(contract['mesh_signature']),'BINDING_SIGNATURE = '+repr(contract['binding_signature']),'SAMPLE_SIGNATURE = '+repr(contract['sample_signature']),'OUTPUT_SIGNATURE = '+repr(contract['output_signature']),'','def _point(value: object) -> tuple[object, object]:','    if isinstance(value, tuple):','        v = sequence(cast(object,value))','        if len(v)!=2: raise ValueError("Expected a point")','        return v[0],v[1]','    return _field(value,"x"),_field(value,"y")','']
+    out+=['def _mesh_meshing(value: m.MeshMeshing | None) -> meshes.Meshing | None:',
+          '    if value is None: return None',
+          '    return meshes.Meshing(value.boundary, tuple(meshes.Constraint(c.endpoints, meshes.ConstraintKind(c.kind.value)) for c in value.constraints))', '']
 
     for s in types.values():
         if s['name'] in inputs and name(s) not in {'ParameterOperation','MeshBindingOperation','ResourceOperation'}:
@@ -259,7 +262,7 @@ def render_binary(contract,header):
             elif name(s) in {'MeshSnapshot','ImageSnapshot'}:
                 if fields(s)[0]['name']!='source': raise ValueError('Mesh source must precede its payload')
                 out+=['    return Snapshot('+read(fields(s)[0]['shape'])+', '+('meshes.Mesh' if name(s)=='MeshSnapshot' else 'resources.Image')+'('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(s)[1:])+'))']
-            else:out+=['    return '+typ(s)+'('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(s))+')']
+            else:out+=['    return '+typ(s)+'('+', '.join(attr(f)+'='+('_mesh_meshing('+read(f['shape'])+')' if name(s)=='MeshGeometry' and f['name']=='meshing' else read(f['shape'])) for f in fields(s))+')']
             out+=['']
     roots={name(s):s for s in contract['inputs']}
     def ordinal(root,variant):return next(i for i,v in enumerate(variants(roots[root])) if v['rust_name']==variant)

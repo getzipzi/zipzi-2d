@@ -11,8 +11,8 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = "zipzi-runtime-p3a-345-1"
 PACKAGE_VERSION = '0.1.0a1'
-CLIENT_SOURCE_SHA256 = 'b1eed9772d081bd092734c078f1aecdd878f5ba89379168276367eb6c7eed5c8'
-CONTRACT_SHA256 = '63f4b935b6edb2df03d84ed540b013888ef0f45ee1654bcb8dc41a75a879b6c9'
+CLIENT_SOURCE_SHA256 = 'b7d7e3d76a2c6828fcf5c2f1584785ca8e1435eff28912e9f6e4de2f8085854d'
+CONTRACT_SHA256 = 'f0df8f64ec52e02c67a6aed0380af0f2e7954361cb2db9f873bb1907612d26c5'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -54,7 +54,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a1; protocol zipzi-runtime-p3a-345-1; client source '
-                            'SHA-256 b1eed9772d081bd092734c078f1aecdd878f5ba89379168276367eb6c7eed5c8.',
+                            'SHA-256 b7d7e3d76a2c6828fcf5c2f1584785ca8e1435eff28912e9f6e4de2f8085854d.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -3903,10 +3903,13 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                  'fields': [],
                  'kind': 'callable',
                  'signature': '() -> Runtime'},
- 'zipzi.meshes': {'children': ('zipzi.meshes.Create',
+ 'zipzi.meshes': {'children': ('zipzi.meshes.Constraint',
+                               'zipzi.meshes.ConstraintKind',
+                               'zipzi.meshes.Create',
                                'zipzi.meshes.Geometry',
                                'zipzi.meshes.Mesh',
                                'zipzi.meshes.MeshSpec',
+                               'zipzi.meshes.Meshing',
                                'zipzi.meshes.Point',
                                'zipzi.meshes.Rename',
                                'zipzi.meshes.SetPositions',
@@ -3914,6 +3917,49 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                   'documentation': 'Mesh values are generated; selected Plan intents are generated.',
                   'kind': 'module',
                   'signature': ''},
+ 'zipzi.meshes.Constraint': {'children': ('zipzi.meshes.Constraint.__repr__', 'zipzi.meshes.Constraint.summary'),
+                             'documentation': 'Immutable owned Constraint value. Construction owns declared '
+                                              'collections; reading fields, repr and summary performs no IO.\n'
+                                              '\n'
+                                              'Fields:\n'
+                                              'endpoints: Two distinct vertex IDs in increasing order; the segment is '
+                                              'an actual triangle edge.\n'
+                                              'kind: Whether this edge was fixed by the user or supplied by the '
+                                              'edge-layout generator.',
+                             'example': 'docs/recipes.py',
+                             'fields': [('endpoints',
+                                         'Two distinct vertex IDs in increasing order; the segment is an actual '
+                                         'triangle edge.'),
+                                        ('kind',
+                                         'Whether this edge was fixed by the user or supplied by the edge-layout '
+                                         'generator.')],
+                             'kind': 'type',
+                             'signature': '(endpoints: Sequence[int], kind: ConstraintKind) -> None'},
+ 'zipzi.meshes.Constraint.__repr__': {'children': (),
+                                      'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                       'RPC/full scan.\n'
+                                                       '\n'
+                                                       'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                       'field access\n'
+                                                       'still exposes the owned full value; no host resource is '
+                                                       'created/released.',
+                                      'example': 'docs/recipes.py',
+                                      'fields': [],
+                                      'kind': 'callable',
+                                      'signature': '() -> str'},
+ 'zipzi.meshes.Constraint.summary': {'children': (),
+                                     'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                      'accessible.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [],
+                                     'kind': 'callable',
+                                     'signature': '() -> str'},
+ 'zipzi.meshes.ConstraintKind': {'children': (),
+                                 'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                                 'example': 'docs/recipes.py',
+                                 'fields': [],
+                                 'kind': 'type',
+                                 'signature': '()'},
  'zipzi.meshes.Create': {'children': ('zipzi.meshes.Create.__repr__', 'zipzi.meshes.Create.summary'),
                          'documentation': 'Immutable owned Create value. Construction owns declared collections; '
                                           'reading fields, repr and summary performs no IO.\n'
@@ -3960,21 +4006,32 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'Fields:\n'
                                             'vertex_ids: Stable vertex IDs in the same order as positions and UVs; IDs '
                                             'need not be contiguous.\n'
-                                            'positions: Model-space XY coordinates ordered by vertex_ids.\n'
+                                            'positions: Absolute XY coordinates in the mesh authoring space (model '
+                                            'space without a deformation\n'
+                                            "parent, otherwise the parent's local/parameter space), ordered by "
+                                            'vertex_ids.\n'
                                             'uvs: Texture UV coordinates ordered by vertex_ids.\n'
                                             'triangles: Triangle entries reference vertex_ids values, never offsets '
-                                            'into positions.',
+                                            'into positions.\n'
+                                            'meshing: Optional canonical UV boundary and retained internal structure '
+                                            'edges.',
                            'example': 'docs/recipes.py',
                            'fields': [('vertex_ids',
                                        'Stable vertex IDs in the same order as positions and UVs; IDs need not be '
                                        'contiguous.'),
-                                      ('positions', 'Model-space XY coordinates ordered by vertex_ids.'),
+                                      ('positions',
+                                       'Absolute XY coordinates in the mesh authoring space (model space without a '
+                                       'deformation\n'
+                                       "parent, otherwise the parent's local/parameter space), ordered by vertex_ids."),
                                       ('uvs', 'Texture UV coordinates ordered by vertex_ids.'),
                                       ('triangles',
-                                       'Triangle entries reference vertex_ids values, never offsets into positions.')],
+                                       'Triangle entries reference vertex_ids values, never offsets into positions.'),
+                                      ('meshing',
+                                       'Optional canonical UV boundary and retained internal structure edges.')],
                            'kind': 'type',
                            'signature': '(vertex_ids: Sequence[int], positions: Sequence[Sequence[float]], uvs: '
-                                        'Sequence[Sequence[float]], triangles: Sequence[Sequence[int]]) -> None'},
+                                        'Sequence[Sequence[float]], triangles: Sequence[Sequence[int]], meshing: '
+                                        'Meshing | None=None) -> None'},
  'zipzi.meshes.Geometry.__repr__': {'children': (),
                                     'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                      'RPC/full scan.\n'
@@ -4090,6 +4147,43 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '() -> str'},
+ 'zipzi.meshes.Meshing': {'children': ('zipzi.meshes.Meshing.__repr__', 'zipzi.meshes.Meshing.summary'),
+                          'documentation': 'Immutable owned Meshing value. Construction owns declared collections; '
+                                           'reading fields, repr and summary performs no IO.\n'
+                                           '\n'
+                                           'Fields:\n'
+                                           'boundary: Closed UV boundary without a repeated endpoint, starting at its '
+                                           'smallest vertex ID.\n'
+                                           'constraints: Internal constraints sorted by their canonical endpoint '
+                                           'pairs; excludes boundary edges.',
+                          'example': 'docs/recipes.py',
+                          'fields': [('boundary',
+                                      'Closed UV boundary without a repeated endpoint, starting at its smallest vertex '
+                                      'ID.'),
+                                     ('constraints',
+                                      'Internal constraints sorted by their canonical endpoint pairs; excludes '
+                                      'boundary edges.')],
+                          'kind': 'type',
+                          'signature': '(boundary: Sequence[int], constraints: Sequence[Constraint]) -> None'},
+ 'zipzi.meshes.Meshing.__repr__': {'children': (),
+                                   'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                    'RPC/full scan.\n'
+                                                    '\n'
+                                                    'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                    'field access\n'
+                                                    'still exposes the owned full value; no host resource is '
+                                                    'created/released.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'signature': '() -> str'},
+ 'zipzi.meshes.Meshing.summary': {'children': (),
+                                  'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                   'accessible.',
+                                  'example': 'docs/recipes.py',
+                                  'fields': [],
+                                  'kind': 'callable',
+                                  'signature': '() -> str'},
  'zipzi.meshes.Point': {'children': (),
                         'documentation': 'Typed public API entry.',
                         'example': 'docs/recipes.py',
@@ -4433,6 +4527,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.ImportFormat',
                                  'zipzi.modeling.Mesh',
                                  'zipzi.modeling.MeshBinding',
+                                 'zipzi.modeling.MeshConstraint',
+                                 'zipzi.modeling.MeshConstraintKind',
                                  'zipzi.modeling.MeshGridEdit',
                                  'zipzi.modeling.MeshGridEditAddAxis',
                                  'zipzi.modeling.MeshGridEditCreate',
@@ -4442,6 +4538,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.MeshGridEditRemoveAxis',
                                  'zipzi.modeling.MeshGridEditReorderAxes',
                                  'zipzi.modeling.MeshKeyform',
+                                 'zipzi.modeling.MeshMeshing',
                                  'zipzi.modeling.Model3Settings',
                                  'zipzi.modeling.ModelHitArea',
                                  'zipzi.modeling.ModelParameterGroup',
@@ -10200,6 +10297,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                       'triangles: Triangle triples of stable vertex IDs; preserve '
                                                       'winding and do not substitute position-\n'
                                                       'array offsets.\n'
+                                                      'meshing: Optional canonical UV boundary and retained internal '
+                                                      'structure edges.\n'
                                                       'space: Coordinate space of positions; local-space variants '
                                                       'carry the controlling transform ID.',
                                      'example': 'docs/recipes.py',
@@ -10220,13 +10319,17 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'Triangle triples of stable vertex IDs; preserve winding and do not '
                                                  'substitute position-\n'
                                                  'array offsets.'),
+                                                ('meshing',
+                                                 'Optional canonical UV boundary and retained internal structure '
+                                                 'edges.'),
                                                 ('space',
                                                  'Coordinate space of positions; local-space variants carry the '
                                                  'controlling transform ID.')],
                                      'kind': 'type',
                                      'signature': '(version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], '
                                                   'positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: '
-                                                  'tuple[tuple[int, int, int], ...], space: GeometrySpace)'},
+                                                  'tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = '
+                                                  'None, space: GeometrySpace)'},
  'zipzi.modeling.GeometrySnapshot.__repr__': {'children': (),
                                               'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                'with no RPC/full scan.\n'
@@ -11039,6 +11142,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'triangles: Triangle triples of stable vertex IDs; preserve winding and do '
                                           'not substitute position-\n'
                                           'array offsets.\n'
+                                          'meshing: Optional single-region modeling topology in UV space; independent '
+                                          'of posed positions.\n'
                                           'runtime_id: External format/runtime identifier retained for import/export; '
                                           'not the document object ID.\n'
                                           'part_id: Organizational Part owner ID; independent of the deformation '
@@ -11083,6 +11188,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                      'Triangle triples of stable vertex IDs; preserve winding and do not substitute '
                                      'position-\n'
                                      'array offsets.'),
+                                    ('meshing',
+                                     'Optional single-region modeling topology in UV space; independent of posed '
+                                     'positions.'),
                                     ('runtime_id',
                                      'External format/runtime identifier retained for import/export; not the document '
                                      'object ID.'),
@@ -11112,10 +11220,11 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                          'kind': 'type',
                          'signature': '(id: str, name: str, texture_asset_id: SceneReference, vertex_ids: tuple[int, '
                                       '...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: '
-                                      'tuple[tuple[int, int, int], ...], runtime_id: str, part_id: str, deformer_id: '
-                                      'str, appearance: Appearance, draw_order: float | None = None, blend_mode: '
-                                      'BlendMode, enabled: bool, double_sided: bool, inverted_mask: bool, masks: '
-                                      'tuple[str, ...], raw_blend_mode: int | None = None)'},
+                                      'tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, '
+                                      'runtime_id: str, part_id: str, deformer_id: str, appearance: Appearance, '
+                                      'draw_order: float | None = None, blend_mode: BlendMode, enabled: bool, '
+                                      'double_sided: bool, inverted_mask: bool, masks: tuple[str, ...], '
+                                      'raw_blend_mode: int | None = None)'},
  'zipzi.modeling.Mesh.__repr__': {'children': (),
                                   'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                    'RPC/full scan.\n'
@@ -11185,6 +11294,51 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '() -> str'},
+ 'zipzi.modeling.MeshConstraint': {'children': ('zipzi.modeling.MeshConstraint.__repr__',
+                                                'zipzi.modeling.MeshConstraint.summary'),
+                                   'documentation': 'Immutable owned MeshConstraint value. Construction owns declared '
+                                                    'collections; reading fields, repr and summary performs no IO.\n'
+                                                    '\n'
+                                                    'Fields:\n'
+                                                    'endpoints: Two distinct vertex IDs in increasing order; the '
+                                                    'segment is an actual triangle edge.\n'
+                                                    'kind: Whether this edge was fixed by the user or supplied by the '
+                                                    'edge-layout generator.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [('endpoints',
+                                               'Two distinct vertex IDs in increasing order; the segment is an actual '
+                                               'triangle edge.'),
+                                              ('kind',
+                                               'Whether this edge was fixed by the user or supplied by the edge-layout '
+                                               'generator.')],
+                                   'kind': 'type',
+                                   'signature': '(endpoints: tuple[int, int], kind: MeshConstraintKind)'},
+ 'zipzi.modeling.MeshConstraint.__repr__': {'children': (),
+                                            'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                             'no RPC/full scan.\n'
+                                                             '\n'
+                                                             'Large arrays and bytes show bounded samples/counts. '
+                                                             'Explicit field access\n'
+                                                             'still exposes the owned full value; no host resource is '
+                                                             'created/released.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
+ 'zipzi.modeling.MeshConstraint.summary': {'children': (),
+                                           'documentation': 'Return a bounded, local summary; full fields remain '
+                                                            'explicitly accessible.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
+ 'zipzi.modeling.MeshConstraintKind': {'children': (),
+                                       'documentation': 'Immutable typed value. See field semantics and the linked '
+                                                        'workflow.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [],
+                                       'kind': 'type',
+                                       'signature': '()'},
  'zipzi.modeling.MeshGridEdit': {'children': (),
                                  'documentation': 'Typed public API entry.',
                                  'example': 'docs/recipes.py',
@@ -11521,6 +11675,44 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                          'kind': 'callable',
                                          'signature': '() -> str'},
  'zipzi.modeling.MeshKeyform.summary': {'children': (),
+                                        'documentation': 'Return a bounded, local summary; full fields remain '
+                                                         'explicitly accessible.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'callable',
+                                        'signature': '() -> str'},
+ 'zipzi.modeling.MeshMeshing': {'children': ('zipzi.modeling.MeshMeshing.__repr__',
+                                             'zipzi.modeling.MeshMeshing.summary'),
+                                'documentation': 'Immutable owned MeshMeshing value. Construction owns declared '
+                                                 'collections; reading fields, repr and summary performs no IO.\n'
+                                                 '\n'
+                                                 'Fields:\n'
+                                                 'boundary: Closed UV boundary without a repeated endpoint, starting '
+                                                 'at its smallest vertex ID.\n'
+                                                 'constraints: Internal constraints sorted by their canonical endpoint '
+                                                 'pairs; excludes boundary edges.',
+                                'example': 'docs/recipes.py',
+                                'fields': [('boundary',
+                                            'Closed UV boundary without a repeated endpoint, starting at its smallest '
+                                            'vertex ID.'),
+                                           ('constraints',
+                                            'Internal constraints sorted by their canonical endpoint pairs; excludes '
+                                            'boundary edges.')],
+                                'kind': 'type',
+                                'signature': '(boundary: tuple[int, ...], constraints: tuple[MeshConstraint, ...])'},
+ 'zipzi.modeling.MeshMeshing.__repr__': {'children': (),
+                                         'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                          'RPC/full scan.\n'
+                                                          '\n'
+                                                          'Large arrays and bytes show bounded samples/counts. '
+                                                          'Explicit field access\n'
+                                                          'still exposes the owned full value; no host resource is '
+                                                          'created/released.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [],
+                                         'kind': 'callable',
+                                         'signature': '() -> str'},
+ 'zipzi.modeling.MeshMeshing.summary': {'children': (),
                                         'documentation': 'Return a bounded, local summary; full fields remain '
                                                          'explicitly accessible.',
                                         'example': 'docs/recipes.py',
@@ -21457,7 +21649,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                          'performs no IO.\n'
                                                          '\n'
                                                          'Fields:\n'
-                                                         'mesh: Complete replacement mesh geometry and metadata.\n'
+                                                         'mesh: Complete replacement mesh geometry and metadata. '
+                                                         'Setting meshing to None explicitly\n'
+                                                         'discards previous modeling topology; ordinary mesh '
+                                                         'replacements must preserve it.\n'
                                                          'binding: Optional replacement ordinary mesh binding; None '
                                                          'supplies no ordinary binding.\n'
                                                          'blend_bindings: Complete replacement BlendShape bindings for '
@@ -21468,7 +21663,11 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                          'Some(new_id) remaps an identity and None explicitly\n'
                                                          'removes it.',
                                         'example': 'docs/recipes.py',
-                                        'fields': [('mesh', 'Complete replacement mesh geometry and metadata.'),
+                                        'fields': [('mesh',
+                                                    'Complete replacement mesh geometry and metadata. Setting meshing '
+                                                    'to None explicitly\n'
+                                                    'discards previous modeling topology; ordinary mesh replacements '
+                                                    'must preserve it.'),
                                                    ('binding',
                                                     'Optional replacement ordinary mesh binding; None supplies no '
                                                     'ordinary binding.'),

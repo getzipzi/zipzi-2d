@@ -95,7 +95,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
     for name,shape in contract['runtime'].items():bind('discovery',name,shape)
     def compiled_fields(file,node):
         shape=class_shapes.get((file,node.name))
-        if shape is None:return []
+        if shape is None or shape.get('kind') == 'serde_enum':return []
         selected={n.target.id for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_')}
         fields=[dict(f,name=f['name']+('_' if keyword.iskeyword(f['name']) else ''))
                 for f in shape['fields'] if f['name']+('_' if keyword.iskeyword(f['name']) else '') in selected and not f.get('skip')]

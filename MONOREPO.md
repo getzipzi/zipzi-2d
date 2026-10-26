@@ -23,7 +23,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | `zipzi-sdk` | Transactional Rust authoring API |
 | [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
 | `zipzi-sdk-observe` | Immutable inspection and GPU capture |
-| `zipzi-python` | Python bindings and independently built wheel |
+| [`zipzi-python`](crates/zipzi-python/README.md) | Deprecated, unmaintained adapter retained for historical tests and experiments; use `zipzi-python2` |
 | [`zipzi-python2`](crates/zipzi-python2/README.md) | Independent typed Python client and optional Runtime-native adapter |
 | `cubism-matrix-zipzi` | SDK comparison benchmark runner |
 | [`zipzi-editor-core`](crates/zipzi-editor-core/README.md) | UI-independent Editor state and SDK coordination |

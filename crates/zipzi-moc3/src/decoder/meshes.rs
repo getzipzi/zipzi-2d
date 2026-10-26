@@ -306,6 +306,7 @@ impl<'a> Moc3DecoderContext<'a> {
                         inverted_mask,
                         masks: Vec::new(),
                         raw_blend_mode,
+                        meshing: None,
                     })
                     .status
             );

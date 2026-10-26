@@ -179,7 +179,7 @@ fn empty_images_are_native_resources_and_save_without_fake_pixels() {
     assert!(reopened.asset(&id(10)).unwrap().content.is_none());
     let text = zipzi_project::encode_project(reopened.document()).unwrap();
     let json: serde_json::Value = serde_json::from_str(&text).unwrap();
-    assert_eq!(json["format_version"], 20);
+    assert_eq!(json["format_version"], 21);
     assert!(json["document"]["assets"][0]["content"].is_null());
     assert!(json["document"]["assets"][0].get("width").is_none());
     std::fs::remove_dir_all(dir).unwrap();

@@ -328,6 +328,10 @@ impl ExtraBytes for Mesh {
             + self.base_positions.extra_bytes()
             + self.uvs.extra_bytes()
             + self.triangles.capacity() * size_of::<[u32; 3]>()
+            + self.meshing.as_ref().map_or(0, |m| {
+                m.boundary.capacity() * size_of::<u32>()
+                    + m.constraints.capacity() * size_of::<crate::MeshConstraint>()
+            })
             + self.runtime_id.capacity()
             + self.part_id.capacity()
             + self.deformer_id.capacity()
@@ -517,6 +521,30 @@ impl ExtraBytes for super::super::PhysicsTarget {
 mod tests {
     use super::*;
     use std::sync::Arc;
+
+    #[test]
+    fn manual_mesh_history_charges_boundary_and_constraint_spare_capacity() {
+        let mut mesh = Mesh {
+            meshing: Some(crate::MeshMeshing {
+                boundary: vec![0, 1, 2],
+                constraints: vec![],
+            }),
+            ..Default::default()
+        };
+        let before = mesh.extra_bytes();
+        let meshing = mesh.meshing.as_mut().unwrap();
+        let old_boundary_capacity = meshing.boundary.capacity();
+        meshing.boundary.reserve_exact(4096);
+        meshing.constraints.reserve_exact(8192);
+        let growth = (meshing.boundary.capacity() - old_boundary_capacity) * size_of::<u32>()
+            + meshing.constraints.capacity() * size_of::<crate::MeshConstraint>();
+        assert_eq!(mesh.extra_bytes(), before + growth);
+        // Snapshot clones own only the used elements; each retained allocation is measured
+        // independently, rather than borrowing the source's capacity or ignoring its metadata.
+        let snapshot = mesh.clone();
+        assert!(snapshot.extra_bytes() < mesh.extra_bytes());
+        assert!(snapshot.extra_bytes() >= 3 * size_of::<u32>());
+    }
 
     #[test]
     fn nested_spare_capacity_is_charged_even_when_rigs_are_shared() {

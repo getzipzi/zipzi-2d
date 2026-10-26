@@ -5,7 +5,7 @@ from pathlib import Path
 
 PUBLIC_EXPORTS = {'meshes': ('Mesh values are generated; selected Plan intents are generated.',
             ['from ._generated.meshes import Geometry as Geometry, MeshSpec as '
-             'MeshSpec, Point as Point, Mesh as Mesh',
+             'MeshSpec, Point as Point, Mesh as Mesh, Meshing as Meshing, Constraint as Constraint, ConstraintKind as ConstraintKind',
              'from ._generated.mesh_ops import Create as Create, Rename as '
              'Rename, SetPositions as SetPositions',
              'from ._generated.discovery import ObjectSummary as Summary'],
@@ -13,6 +13,9 @@ PUBLIC_EXPORTS = {'meshes': ('Mesh values are generated; selected Plan intents a
              'MeshSpec',
              'Point',
              'Mesh',
+             'Meshing',
+             'Constraint',
+             'ConstraintKind',
              'Create',
              'Rename',
              'SetPositions',

@@ -438,7 +438,12 @@ impl Runtime {
                 mesh.vertex_ids.len() * std::mem::size_of::<u32>()
                     + (mesh.base_positions.len() + mesh.uvs.len())
                         * std::mem::size_of::<zipzi_core::Vec2>()
-                    + mesh.triangles.len() * std::mem::size_of::<[u32; 3]>(),
+                    + mesh.triangles.len() * std::mem::size_of::<[u32; 3]>()
+                    + mesh.meshing.as_ref().map_or(0, |m| {
+                        m.boundary.len() * std::mem::size_of::<u32>()
+                            + m.constraints.len()
+                                * std::mem::size_of::<zipzi_core::MeshConstraint>()
+                    }),
             );
             Ok(MeshSnapshot {
                 source,
@@ -449,6 +454,7 @@ impl Runtime {
                     positions: mesh.base_positions.clone(),
                     uvs: mesh.uvs.clone(),
                     triangles: mesh.triangles.clone(),
+                    meshing: mesh.meshing.clone(),
                 },
             })
         })

@@ -142,6 +142,12 @@ impl crate::DocumentSession {
         // frame; subsequent viewport requests must carry the new resources.
         if result.receipt.changed
             && (self.document.evaluation_revision() != evaluation
+                || result
+                    .receipt
+                    .changes
+                    .content_changes
+                    .iter()
+                    .any(|c| c.domain == zipzi_core::document::SceneContentDomain::MeshTopology)
                 || !Arc::ptr_eq(&textures, &self.document.textures.snapshot()))
         {
             self.invalidate_scene();

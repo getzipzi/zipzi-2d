@@ -823,6 +823,11 @@ pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Mesh> 
                     })?)
             })
             .collect::<PyResult<Vec<_>>>()?,
+        meshing: if value.getattr("meshing")?.is_none() {
+            None
+        } else {
+            Some(read_meshmeshing(&value.getattr("meshing")?)?)
+        },
         runtime_id: value.getattr("runtime_id")?.extract()?,
         part_id: value.getattr("part_id")?.extract()?,
         deformer_id: value.getattr("deformer_id")?.extract()?,
@@ -915,6 +920,12 @@ fn write_mesh_in(
             })?;
         }
         out.into_any().unbind()
+    })?;
+    out.set_item("meshing", {
+        match (&value.meshing).as_ref() {
+            Some(item) => write_meshmeshing_in(py, (item), classes)?,
+            None => py.None(),
+        }
     })?;
     out.set_item(
         "runtime_id",
@@ -1068,6 +1079,142 @@ fn write_vec2_in(
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     Ok(classes.getattr("Vec2")?.call1((value.x, value.y))?.unbind())
+}
+
+pub fn read_meshmeshing(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::MeshMeshing> {
+    Ok(zipzi_core::types::MeshMeshing {
+        boundary: value
+            .getattr("boundary")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?,
+        constraints: value
+            .getattr("constraints")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_meshconstraint(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?,
+    })
+}
+
+pub fn write_meshmeshing(
+    py: Python<'_>,
+    value: &zipzi_core::types::MeshMeshing,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_meshmeshing_in(py, value, &classes)
+}
+fn write_meshmeshing_in(
+    py: Python<'_>,
+    value: &zipzi_core::types::MeshMeshing,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("boundary", {
+        let out = PyList::empty(py);
+        for item0 in (&value.boundary) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("constraints", {
+        let out = PyList::empty(py);
+        for item0 in (&value.constraints) {
+            out.append(write_meshconstraint_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("MeshMeshing")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_meshconstraint(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::types::MeshConstraint> {
+    Ok(zipzi_core::types::MeshConstraint {
+        endpoints: value
+            .getattr("endpoints")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(item0.extract()?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .try_into()
+            .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid fixed array length"))?,
+        kind: read_meshconstraintkind(&value.getattr("kind")?)?,
+    })
+}
+
+pub fn write_meshconstraint(
+    py: Python<'_>,
+    value: &zipzi_core::types::MeshConstraint,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_meshconstraint_in(py, value, &classes)
+}
+fn write_meshconstraint_in(
+    py: Python<'_>,
+    value: &zipzi_core::types::MeshConstraint,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("endpoints", {
+        let out = PyList::empty(py);
+        for item0 in (&value.endpoints) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "kind",
+        write_meshconstraintkind_in(py, (&value.kind), classes)?,
+    )?;
+    Ok(classes
+        .getattr("MeshConstraint")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_meshconstraintkind(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::types::MeshConstraintKind> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "user" => Ok(zipzi_core::types::MeshConstraintKind::User),
+        "edge_support" => Ok(zipzi_core::types::MeshConstraintKind::EdgeSupport),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
+        )),
+    }
+}
+
+pub fn write_meshconstraintkind(
+    py: Python<'_>,
+    value: &zipzi_core::types::MeshConstraintKind,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_meshconstraintkind_in(py, value, &classes)
+}
+fn write_meshconstraintkind_in(
+    py: Python<'_>,
+    value: &zipzi_core::types::MeshConstraintKind,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::types::MeshConstraintKind::User => "user",
+        zipzi_core::types::MeshConstraintKind::EdgeSupport => "edge_support",
+    };
+    Ok(classes
+        .getattr("MeshConstraintKind")?
+        .call1((name,))?
+        .unbind())
 }
 
 pub fn read_appearance(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Appearance> {
@@ -10266,6 +10413,11 @@ pub fn read_geometrysnapshot(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Ge
                     })?)
             })
             .collect::<PyResult<Vec<_>>>()?,
+        meshing: if value.getattr("meshing")?.is_none() {
+            None
+        } else {
+            Some(read_meshmeshing(&value.getattr("meshing")?)?)
+        },
         space: read_geometryspace(&value.getattr("space")?)?,
     })
 }
@@ -10325,6 +10477,12 @@ fn write_geometrysnapshot_in(
             })?;
         }
         out.into_any().unbind()
+    })?;
+    out.set_item("meshing", {
+        match (&value.meshing).as_ref() {
+            Some(item) => write_meshmeshing_in(py, (item), classes)?,
+            None => py.None(),
+        }
     })?;
     out.set_item(
         "space",
@@ -14711,6 +14869,11 @@ pub fn measure_mesh(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             }
             bytes
         })
+        .saturating_add(if (value.getattr("meshing")?).is_none() {
+            0usize
+        } else {
+            measure_meshmeshing(&(value.getattr("meshing")?))?
+        })
         .saturating_add(
             (value.getattr("runtime_id")?)
                 .len()?
@@ -14777,6 +14940,43 @@ pub fn measure_scenereference(value: &Bound<'_, PyAny>) -> PyResult<usize> {
 
 pub fn measure_vec2(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(256usize.saturating_add(16usize).saturating_add(16usize))
+}
+
+pub fn measure_meshmeshing(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("boundary")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(16usize);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("constraints")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_meshconstraint(&(v0))?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_meshconstraint(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("endpoints")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(16usize);
+            }
+            bytes
+        })
+        .saturating_add(measure_meshconstraintkind(&(value.getattr("kind")?))?))
+}
+
+pub fn measure_meshconstraintkind(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
 }
 
 pub fn measure_appearance(value: &Bound<'_, PyAny>) -> PyResult<usize> {
@@ -18192,6 +18392,11 @@ pub fn measure_geometrysnapshot(value: &Bound<'_, PyAny>) -> PyResult<usize> {
                 });
             }
             bytes
+        })
+        .saturating_add(if (value.getattr("meshing")?).is_none() {
+            0usize
+        } else {
+            measure_meshmeshing(&(value.getattr("meshing")?))?
         })
         .saturating_add(measure_geometryspace(&(value.getattr("space")?))?))
 }

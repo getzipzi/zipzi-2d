@@ -619,6 +619,7 @@ impl AuthoringSession {
             uvs: mesh.uvs.clone(),
             triangles: mesh.triangles.clone(),
             space,
+            meshing: mesh.meshing.clone(),
         })
     }
     pub fn history_lengths(&self) -> (usize, usize) {

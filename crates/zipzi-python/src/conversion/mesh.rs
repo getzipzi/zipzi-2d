@@ -5,7 +5,7 @@ pub(crate) fn mesh_from_record(
     runtime_id: String,
 ) -> PyResult<zipzi_core::Mesh> {
     let (id, name, texture_asset_id, geometry, (part_id, deformer_id), appearance, drawing) = data;
-    let (vertex_ids, positions, uvs, triangles) = geometry;
+    let (vertex_ids, positions, uvs, triangles, meshing) = geometry;
     let (draw_order, blend_mode, enabled, double_sided, inverted_mask, masks, raw_blend_mode) =
         drawing;
     Ok(zipzi_core::Mesh {
@@ -30,6 +30,7 @@ pub(crate) fn mesh_from_record(
         inverted_mask,
         masks,
         raw_blend_mode,
+        meshing: meshing_from_tuple(meshing)?,
     })
 }
 
@@ -50,6 +51,7 @@ pub(crate) fn mesh_record_tuple(mesh: zipzi_core::Mesh, version: Version) -> Mes
                     .into_iter()
                     .map(|v| (v[0], v[1], v[2]))
                     .collect(),
+                meshing_tuple(mesh.meshing),
             ),
             (mesh.part_id, mesh.deformer_id),
             appearance_tuple(mesh.appearance),
@@ -66,6 +68,56 @@ pub(crate) fn mesh_record_tuple(mesh: zipzi_core::Mesh, version: Version) -> Mes
         mesh.runtime_id,
         version_tuple(version),
     )
+}
+
+pub(crate) fn meshing_from_tuple(
+    value: MeshMeshingTuple,
+) -> PyResult<Option<zipzi_core::MeshMeshing>> {
+    value
+        .map(|(boundary, constraints)| {
+            Ok(zipzi_core::MeshMeshing {
+                boundary,
+                constraints: constraints
+                    .into_iter()
+                    .map(|(endpoints, kind)| {
+                        Ok(zipzi_core::MeshConstraint {
+                            endpoints,
+                            kind: match kind.as_str() {
+                                "user" => zipzi_core::MeshConstraintKind::User,
+                                "edge_support" => zipzi_core::MeshConstraintKind::EdgeSupport,
+                                _ => {
+                                    return Err(PyValueError::new_err(
+                                        "Invalid mesh constraint kind",
+                                    ));
+                                }
+                            },
+                        })
+                    })
+                    .collect::<PyResult<_>>()?,
+            })
+        })
+        .transpose()
+}
+
+pub(crate) fn meshing_tuple(value: Option<zipzi_core::MeshMeshing>) -> MeshMeshingTuple {
+    value.map(|m| {
+        (
+            m.boundary,
+            m.constraints
+                .into_iter()
+                .map(|c| {
+                    (
+                        c.endpoints,
+                        match c.kind {
+                            zipzi_core::MeshConstraintKind::User => "user",
+                            zipzi_core::MeshConstraintKind::EdgeSupport => "edge_support",
+                        }
+                        .to_owned(),
+                    )
+                })
+                .collect(),
+        )
+    })
 }
 
 pub(crate) fn version_tuple(version: Version) -> (u64, u64, u64) {

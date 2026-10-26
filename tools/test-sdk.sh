@@ -11,10 +11,10 @@ Usage: ./tools/test-sdk.sh [fast|runtime|mesh|regression|stress|python|python2|p
   mesh        alpha mesh daily cases, including vertex-budget boundaries
   regression  SDK libraries/integration, excluding the random stress remainder
   stress      complete alpha mesh suite, including the entire fixed-seed matrix
-  python      build/install current Debug extension, then Python SDK tests
+  python      deprecated legacy adapter: build Debug extension and run historical tests
   python2     independent Runtime-backed Python package; Local/Connected and static types
   python2-connected  installed pure new client; subprocess discovery/start/session acceptance
-  wheel       build/install a Release wheel and run SDK acceptance
+  wheel       deprecated legacy adapter: build Release wheel and run historical acceptance
   full        formatting, complete Rust suite and CPU wheel acceptance (default)
 
 Examples:

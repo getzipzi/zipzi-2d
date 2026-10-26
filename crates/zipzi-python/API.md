@@ -1,6 +1,11 @@
-# Python API reference
+# Python API reference (deprecated)
 
-This reference describes the public `zipzi` package in this repository. Use
+**Deprecated:** this reference covers the unmaintained `zipzi-python` adapter.
+For the maintained API, see the [Python2 SDK](../zipzi-python2/README.md) and its
+[API reference](../zipzi-python2/client/python/zipzi/docs/reference.md).
+The examples below are historical and do not establish current Runtime compatibility.
+
+This reference describes the legacy `zipzi` package in this directory. Use
 `import zipzi`; `zipzi._native` is an implementation module. The typed Python
 records and wrappers are exposed by [`python/zipzi/__init__.py`](python/zipzi/__init__.py);
 geometry builders and editing recipes live in separate Python modules.
@@ -754,7 +759,7 @@ zero-byte file. Imported path conveniences bind loaded files to stable IDs.
 contains persistent axis IDs, samples with `{id, value}` (and constraint
 `weight`), keyform sample ID combinations, and shared table `base_sample_id`.
 Numeric `keys`, parallel weights and base indices in the tuple snapshots are
-compiled views. Native projects use directory-project version 20.
+compiled views. Native projects use directory-project version 21.
 
 `Session.plan_binding_authoring(intent)` and `Edit.binding_authoring(intent)`
 accept the Rust `BindingAuthoringEdit` enum representation. `Grid` supports

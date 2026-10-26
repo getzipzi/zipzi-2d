@@ -48,6 +48,7 @@ fn mesh_create_spec_allocates_identity_and_keeps_defaults_in_sdk() {
         positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
         uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
         triangles: vec![[42, 7, 99]],
+        meshing: None,
     };
     let id = MeshOperation::Create {
         spec: MeshCreateSpec {
@@ -358,6 +359,7 @@ fn rectangle_grid_rejects_invalid_geometry_and_overflow() {
         positions: mesh.base_positions,
         uvs: mesh.uvs,
         triangles: mesh.triangles,
+        meshing: mesh.meshing,
     };
     assert!(rectangle_grid_geometry(&source, usize::MAX, 1).is_err());
     assert!(rectangle_grid_geometry(&source, 0, 1).is_err());

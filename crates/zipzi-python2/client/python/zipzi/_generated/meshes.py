@@ -3,6 +3,7 @@ from .._presentation import CompactValue
 """Selected immutable mesh values, derived from Rust declarations."""
 from dataclasses import dataclass
 from collections.abc import Sequence
+from enum import Enum
 from .._values import integer, number, record, sequence, string
 
 Point = tuple[float, float]
@@ -17,20 +18,79 @@ def _array3(value: object) -> tuple[int, int, int]:
         raise ValueError("Invalid triangle")
     return integer(raw[0]), integer(raw[1]), integer(raw[2])
 
+def _array2(value: object) -> tuple[int, int]:
+    raw = sequence(value)
+    if len(raw) != 2:
+        raise ValueError("Invalid edge")
+    return integer(raw[0]), integer(raw[1])
+
+class ConstraintKind(str, Enum):
+    __module__ = "zipzi.meshes"
+    USER = 'user'
+    EDGE_SUPPORT = 'edge_support'
+
+@dataclass(frozen=True, init=False, repr=False)
+class Constraint(CompactValue):
+    'Immutable owned Constraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nendpoints: Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.\nkind: Whether this edge was fixed by the user or supplied by the edge-layout generator.'
+    __module__ = "zipzi.meshes"
+    endpoints: tuple[int, int]
+    kind: ConstraintKind
+
+    def __init__(self, endpoints: Sequence[int], kind: ConstraintKind) -> None:
+        object.__setattr__(self, 'endpoints', tuple(endpoints))
+        object.__setattr__(self, 'kind', kind)
+        self.__post_init__()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.endpoints, tuple):
+            raise TypeError("Geometry arrays must be tuples")
+
+    @classmethod
+    def _read(cls, value: object) -> "Constraint":
+        if isinstance(value,cls): return value
+        r = record(value)
+        return cls(_array2(r["endpoints"]), ConstraintKind(string(r["kind"])))
+
+@dataclass(frozen=True, init=False, repr=False)
+class Meshing(CompactValue):
+    'Immutable owned Meshing value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nboundary: Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.\nconstraints: Internal constraints sorted by their canonical endpoint pairs; excludes boundary edges.'
+    __module__ = "zipzi.meshes"
+    boundary: tuple[int, ...]
+    constraints: tuple[Constraint, ...]
+
+    def __init__(self, boundary: Sequence[int], constraints: Sequence[Constraint]) -> None:
+        object.__setattr__(self, 'boundary', tuple(boundary))
+        object.__setattr__(self, 'constraints', tuple(constraints))
+        self.__post_init__()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.boundary, tuple):
+            raise TypeError("Geometry arrays must be tuples")
+        if not isinstance(self.constraints, tuple):
+            raise TypeError("Geometry arrays must be tuples")
+
+    @classmethod
+    def _read(cls, value: object) -> "Meshing":
+        if isinstance(value,cls): return value
+        r = record(value)
+        return cls(tuple(integer(item) for item in sequence(r["boundary"])), tuple(Constraint._read(item) for item in sequence(r["constraints"])))
+
 @dataclass(frozen=True, init=False, repr=False)
 class Geometry(CompactValue):
-    'Immutable owned Geometry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvertex_ids: Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.\npositions: Model-space XY coordinates ordered by vertex_ids.\nuvs: Texture UV coordinates ordered by vertex_ids.\ntriangles: Triangle entries reference vertex_ids values, never offsets into positions.'
+    "Immutable owned Geometry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvertex_ids: Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.\npositions: Absolute XY coordinates in the mesh authoring space (model space without a deformation\nparent, otherwise the parent's local/parameter space), ordered by vertex_ids.\nuvs: Texture UV coordinates ordered by vertex_ids.\ntriangles: Triangle entries reference vertex_ids values, never offsets into positions.\nmeshing: Optional canonical UV boundary and retained internal structure edges."
     __module__ = "zipzi.meshes"
     vertex_ids: tuple[int, ...]
     positions: tuple[Point, ...]
     uvs: tuple[Point, ...]
     triangles: tuple[tuple[int, int, int], ...]
+    meshing: Meshing | None = None
 
-    def __init__(self, vertex_ids: Sequence[int], positions: Sequence[Sequence[float]], uvs: Sequence[Sequence[float]], triangles: Sequence[Sequence[int]]) -> None:
+    def __init__(self, vertex_ids: Sequence[int], positions: Sequence[Sequence[float]], uvs: Sequence[Sequence[float]], triangles: Sequence[Sequence[int]], meshing: Meshing | None = None) -> None:
         object.__setattr__(self, 'vertex_ids', tuple(vertex_ids))
         object.__setattr__(self, 'positions', tuple(tuple(item) for item in positions))
         object.__setattr__(self, 'uvs', tuple(tuple(item) for item in uvs))
         object.__setattr__(self, 'triangles', tuple(tuple(item) for item in triangles))
+        object.__setattr__(self, 'meshing', meshing)
         self.__post_init__()
 
     def __post_init__(self) -> None:
@@ -53,7 +113,7 @@ class Geometry(CompactValue):
     def _read(cls, value: object) -> "Geometry":
         if isinstance(value,cls): return value
         r = record(value)
-        return cls(tuple(integer(item) for item in sequence(r["vertex_ids"])), tuple(_point(item) for item in sequence(r["positions"])), tuple(_point(item) for item in sequence(r["uvs"])), tuple(_array3(item) for item in sequence(r["triangles"])))
+        return cls(tuple(integer(item) for item in sequence(r["vertex_ids"])), tuple(_point(item) for item in sequence(r["positions"])), tuple(_point(item) for item in sequence(r["uvs"])), tuple(_array3(item) for item in sequence(r["triangles"])), None if r.get("meshing", None) is None else Meshing._read(r.get("meshing", None)))
 
 @dataclass(frozen=True, repr=False)
 class MeshSpec(CompactValue):
