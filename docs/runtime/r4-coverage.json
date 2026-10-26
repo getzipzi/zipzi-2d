@@ -1,11 +1,11 @@
 {
   "schema": 2,
   "stage": "R4",
-  "status": "in_progress",
-  "date": "2026-10-25",
+  "status": "passed",
+  "date": "2026-10-26",
   "implementation": "crates/zipzi-python2",
-  "contract": "zipzi-runtime-r4-3",
-  "native_contract": "zipzi-python2-10",
+  "contract": "zipzi-runtime-p3a-345-1",
+  "native_contract": "zipzi-python2-14",
   "record": "docs/plans/sdk-runtime/python2-r4-complete.md",
   "modeling_commands": [
     "CreateAsset",
@@ -55,13 +55,12 @@
   "python_entrypoints": [
     "Edit.apply/apply_many",
     "Modeling.records",
-    "Meshes.get/get_many",
+    "Meshes.get/get_many/list",
     "Bindings.get/get_many/list",
     "Session.reference/address/capabilities",
     "ObjectRef.capabilities",
     "FieldAddress.plan",
-    "Modeling.plan/plan_async/sample/sample_async",
-    "Edit.apply_plan",
+    "Session/Edit.plan/plan_async; Modeling.sample/sample_async",
     "Runtime.resources.prepare_buffer/prepare_image/load_png/prepare_png",
     "Buffer.read",
     "Images.snapshot",
@@ -70,7 +69,6 @@
     "Project.run/open/replace/save/export/diagnose",
     "Session.editor_context",
     "ConnectedBackend shared recipes",
-    "Images.snapshot",
     "Runtime.resources.usage",
     "Edit.cancel",
     "Session.undo/redo"
@@ -86,7 +84,7 @@
       "python": [
         "Edit.apply/apply_many",
         "Modeling.records",
-        "Meshes.get/get_many",
+        "Meshes.get/get_many/list",
         "Bindings.get/get_many/list"
       ],
       "shared": "Exhaustive ModelingCommand dispatch to SDK; compiled ApiShape/BinaryWire; direct selected output",
@@ -122,8 +120,8 @@
         "A17"
       ],
       "python": [
-        "Modeling.plan/plan_async/sample/sample_async",
-        "Edit.apply_plan"
+        "Session/Edit.plan/plan_async; Modeling.sample/sample_async",
+        "Edit.apply/apply_many"
       ],
       "shared": "SDK costs/losses and evaluator; fixed source/Version/edit sequence; cancellable read workers",
       "evidence": [
@@ -209,17 +207,18 @@
       ]
     }
   ],
-  "pending_exit_requirements": [
-    "以最新 Box 布局重建正常/探针 Release，复验 Native batch_100 延迟与 batch_100/plan 堆峰值；当前 P0 报告是修复前失败结果",
-    "最新布局修复后的 Native/Connected 行为、受影响的 Editor 后台批次路径和最终源码包/wheel 安装复验",
-    "对图片二进制协议相对旧 P0 固定 RPC/JSON/复制计数的变化完成单独判定；不宣称旧计数门禁通过"
-  ],
+  "pending_exit_requirements": [],
   "later_stages": [
     "Runtime R5 independent Preview/animation/Observer",
     "Runtime R6 Proposal/review",
-    "Runtime R7 complete platform/app release matrix",
-    "Python P3A public API/agent contract refactor"
+    "Runtime R7 complete platform/app release matrix"
   ],
-  "wrapup": "用户要求直接收尾；最后布局修复通过 Runtime 回归，Release P0/最终发行复验尚未完成",
-  "results": "docs/plans/sdk-runtime/python2-r4-complete-results.json"
+  "wrapup": "R4 主体先于 P3A/P3B 拆分；2026-10-26 完成 Box/普通批次 Release 复验、当前 Editor API 接线及正式源码包/wheel 安装复验。历史 P1 小查询与图片二进制口径差异单列，不伪报旧比较通过。",
+  "python_contract": {
+    "stage": "P3A",
+    "status": "accepted",
+    "record": "docs/plans/python-sdk-rewrite/p3a-6.md",
+    "chronology": "R4 Modeling/resources/IO implementation preceded the Python P3A/P3B split; P3A changed the public wrapper contract"
+  },
+  "record_section": "2026-10-26-r4-最终复验"
 }

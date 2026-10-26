@@ -1,9 +1,13 @@
 # SDK Runtime 分阶段实施计划
 
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
-日期：2026 年 10 月 24 日。状态：**R0–R3 已交付，R4 实施中，R5–R7 尚未开始**。
+日期：2026 年 10 月 24 日。状态：**R0–R4 已交付，R4 最后复验于 2026-10-26 完成，R5–R7 尚未开始**。
 
-2026-10-26 Python 公共契约收尾：[P3A 已完成验收](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。用户确认运行配置 `gpt-6.1-sol/high` 并移除模型/服务身份门禁；既有确定性/安装/Editor/固定功能门禁证据和本轮 P0 稳定性豁免保留。下一步核对 P3B/P4 与 R4 最后布局修复后的实际剩余验证，Runtime R4 状态不因 P3A 完成而自动改变。
+2026-10-26 Python 公共契约收尾：[P3A 已完成验收](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。用户确认运行配置 `gpt-6.1-sol/high` 并移除模型/服务身份门禁；既有确定性/安装/Editor/固定功能门禁证据和本轮 P0 稳定性豁免保留。随后完成独立的 R4 最后复验，见下节；P3A 完成与 R4 完成分别有记录。
+
+2026-10-26 R4 收尾：R4 完整 Modeling/地址/资源/IO 在 Python P3A/P3B 拆分前已实现。本轮修复 Editor 原生验收的旧 API 接线，优化普通网格操作分派，并完成 Box 布局相关 Release 复验、当前安装两后端全 R4 recipe、配对源码包/wheel 及真实 Editor/Metal 验收。R4 已交付，具体数字、旧 P0 口径限制和后续边界见 [R4 最终复验](sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验)。R5/P5 继续交付动画/独立 Preview/Observer；已有 R4 能力不重复列为 P3B/P4 新开发。
+
+以下 2026-10-25 条目保留历史推进过程；其中旧 R4 未完成状态由本轮最终记录替代。
 
 2026-10-25 本轮收尾：[R4 完整连接实现与验收记录](sdk-runtime/python2-r4-complete.md)已接通完整 Modeling/地址/资源/IO、可取消读取及 Editor 投影，并取得两后端、安装和十对 UI 性能证据。P0 最后发现的普通批次/Plan 临时堆问题已做 Box 布局修复并通过 Runtime 回归；按用户“直接收尾”要求，未继续最后的 Release 与发行复验，**R4 仍为实施中**。具体未通过项与冻结产物见该记录，不将 Python P3A 标为完成。
 
@@ -47,7 +51,7 @@ BlendShape、长任务及资源/IO 仍待扩展，R4 尚未验收。
 | R1 | 无 UI 的 Runtime 核心与 SDK 补强 | R0 | 已交付进程内/CPU 核心，见 R1 记录 |
 | R2 | Editor 使用托管会话，窗口生命周期解耦 | R1 | 已交付，见 [R2 记录](sdk-runtime/r2-editor.md) |
 | R3 | 本机协议和 Python 最小完整闭环 | R2 | 已交付，见 [R3 记录](sdk-runtime/r3-ipc.md) |
-| R4 | Modeling、资源、Plan 与工程 IO 完整连接 | R3 | 主体已连接；最后性能/发行复验待完成，见 [本轮收尾](sdk-runtime/python2-r4-complete.md) |
+| R4 | Modeling、资源、Plan 与工程 IO 完整连接 | R3 | 已交付；最后布局/性能、当前 Python 接线和源码分发复验已完成，见 [最终复验](sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验) |
 | R5 | Animation、独立 Preview、Observer 和长任务 | R4 | 未开始 |
 | R6 | 候选 Review 与人工精修后接续 | R5 | 未开始 |
 | R7 | 完整创作、发行包、性能与生命周期总验收 | R6 | 未开始 |

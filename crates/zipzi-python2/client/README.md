@@ -31,8 +31,8 @@ canonical binding queries and explicit formal/candidate CPU pose batches are
 available through `bindings` and `modeling.sample`. Sampling retains its exact
 source and leaves human Preview/history unchanged. Canonical Modeling commands,
 source-bound references/addresses, binary Buffers, cancellable reads and project
-import/export routes are also implemented. Runtime R4's remaining performance and
-distribution exit gates are tracked separately from implemented capabilities.
+import/export routes are also implemented. Runtime R4 validation and the later
+platform/application distribution acceptance are tracked separately.
 
 Read results use `zipzi.Snapshot[T]` (`source`, `value`) and `zipzi.Batch[T]`
 (`source`, `items`). Domain payloads have no Source field. Use

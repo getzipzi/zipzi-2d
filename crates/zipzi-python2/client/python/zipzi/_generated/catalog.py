@@ -11,7 +11,7 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = "zipzi-runtime-p3a-345-1"
 PACKAGE_VERSION = '0.1.0a1'
-CLIENT_SOURCE_SHA256 = '83a8b5f3d6f2d4cd7674fa370c3cf2bd5e1f21bfaa9072d57209fd3f6ef83859'
+CLIENT_SOURCE_SHA256 = 'b1eed9772d081bd092734c078f1aecdd878f5ba89379168276367eb6c7eed5c8'
 CONTRACT_SHA256 = '63f4b935b6edb2df03d84ed540b013888ef0f45ee1654bcb8dc41a75a879b6c9'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
@@ -54,7 +54,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a1; protocol zipzi-runtime-p3a-345-1; client source '
-                            'SHA-256 83a8b5f3d6f2d4cd7674fa370c3cf2bd5e1f21bfaa9072d57209fd3f6ef83859.',
+                            'SHA-256 b1eed9772d081bd092734c078f1aecdd878f5ba89379168276367eb6c7eed5c8.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},

@@ -25,19 +25,20 @@ OPERATION_TYPES = (Create, Rename, SetPositions, CreateParameter, PatchParameter
     *_scene_codec.OPERATION_TYPES, *_modeling_codec.OPERATION_TYPES)
 
 def validate(op: WireOperation) -> None:
-    if isinstance(op, _modeling_codec.OPERATION_TYPES): _modeling_codec.validate_ModelingCommand(op)
+    # Ordinary mesh batches should not scan every canonical modeling/scene type.
+    if isinstance(op, (Create, Rename, SetPositions)): validate_mesh(op)
+    elif isinstance(op, _modeling_codec.OPERATION_TYPES): _modeling_codec.validate_ModelingCommand(op)
     elif isinstance(op, _scene_codec.OPERATION_TYPES): _scene_codec.validate(op)
     elif isinstance(op, (CreateParameter, PatchParameter)): validate_parameter(op)
     elif isinstance(op, (CreateMeshBinding, SetMeshKeyform)): validate_binding(op)
     elif isinstance(op, (CreateImage, ReplaceImage, RenameImage, ApplyPlan)): validate_resource(op)
-    elif isinstance(op, (Create, Rename, SetPositions)): validate_mesh(op)
     else: raise TypeError('Expected domain operation')
 
 def wire(op: WireOperation) -> dict[str, object]:
+    if isinstance(op, (Create, Rename, SetPositions)): return dict(domain='mesh', operation=mesh_wire(op))
     if isinstance(op, _modeling_codec.OPERATION_TYPES): return dict(domain='modeling', operation=_modeling_codec.encode_ModelingCommand(op))
     if isinstance(op, _scene_codec.OPERATION_TYPES): return _scene_codec.wire(op)
     if isinstance(op, (CreateParameter, PatchParameter)): return dict(domain='parameter', operation=parameter_wire(op))
     if isinstance(op, (CreateMeshBinding, SetMeshKeyform)): return dict(domain='mesh_binding', operation=binding_wire(op))
     if isinstance(op, (CreateImage, ReplaceImage, RenameImage, ApplyPlan)): return resource_wire(op)
-    if isinstance(op, (Create, Rename, SetPositions)): return dict(domain='mesh', operation=mesh_wire(op))
     raise TypeError('Expected domain operation')
