@@ -35,7 +35,7 @@ def number(value: object) -> float:
 
 @dataclass(frozen=True, repr=False)
 class SessionId(CompactValue):
-    """Runtime-scoped identity, independent of paths and document UUIDs."""
+    'Runtime-scoped Session identity, independent of paths and persistent document UUIDs.\n\nFields:\nruntime: Canonical UUID of the Runtime instance that allocated the handle.\nserial: Positive u64 Session serial within that Runtime; not the document UUID or SDK session_id.'
     runtime: str
     serial: int
 
@@ -53,6 +53,7 @@ class SessionId(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ConnectionLimits(CompactValue):
+    'Handshake limits reported by the connected host; values are facts, not client-side overrides.\n\nFields:\nframe_bytes: Maximum encoded control frame length in bytes.\nreconnect_seconds: Connection reconnection/grace window in seconds.\nresult_seconds: Retention window in seconds for acknowledged request outcomes.\nresults_per_client: Maximum retained request outcomes for one client.\nresult_bytes_per_client: Maximum retained outcome bytes for one client.\nresult_bytes_total: Maximum retained outcome bytes across the host.\nbinary_bytes_per_client: Maximum retained binary response bytes for one client.\nbinary_bytes_total: Maximum retained binary response bytes across the host.'
     frame_bytes: int
     reconnect_seconds: float
     result_seconds: float
@@ -70,6 +71,7 @@ class ConnectionLimits(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ConnectionInfo(CompactValue):
+    'Immutable successful connection handshake; reading fields does not query the host again.\n\nFields:\nruntime: Canonical UUID of the connected Runtime instance.\nhost_pid: Operating-system process ID of the host, not the client.\nsdk_build: Host SDK build identity used by strict pairing checks.\nprotocol: Negotiated exact protocol pairing identifier; incompatible pairs are rejected.\ncapabilities: Finite capability names announced by the host handshake.\nlimits: Host transport/outcome-retention limits with explicit units.'
     runtime: str
     host_pid: int
     sdk_build: str
@@ -85,6 +87,7 @@ class ConnectionInfo(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class Version(CompactValue):
+    'Exact SDK document version; compare the complete value rather than revision alone.\n\nFields:\nsession_id: SDK authoring-session identity, distinct from the Runtime Session serial.\ngeneration: Document incarnation within the SDK session; replacing/opening content invalidates older generations.\nrevision: Document revision within this generation; not a Runtime event cursor or Edit sequence.'
     session_id: int
     generation: int
     revision: int
@@ -96,6 +99,7 @@ class Version(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class Source(CompactValue):
+    'Exact immutable formal or candidate source used by a read or plan; copying it performs no IO.\n\nFields:\nruntime: Canonical UUID of the Runtime instance owning the source.\nsession: Runtime Session serial; together with runtime identifies the resident document.\nversion: Exact formal version, or the formal base version captured by the candidate.\nedit: Candidate Edit serial; None means a formal document source.\nsequence: Exact candidate sequence; formal sources use the default 0. Later candidate writes invalidate old sequences.'
     runtime: str
     session: int
     version: Version
@@ -127,6 +131,7 @@ class Source(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class Receipt(CompactValue):
+    'Confirmed publication result returned by a completed commit; constructing a DTO does not publish.\n\nFields:\nbefore: Exact formal SDK version before publication.\nafter: Exact formal SDK version after publication; may equal before when changed is false.\nchanged: Whether publication changed the document; false does not create a new content edit.\nlabel: History label attached to the committed edit.\nobject_ids: Stable document IDs reported as affected by this publication.'
     before: Version
     after: Version
     changed: bool
@@ -143,6 +148,7 @@ class Receipt(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class SaveReceipt(CompactValue):
+    'Confirmed save outcome; inspect durable and the actual host manifest path.\n\nFields:\nmanifest: Absolute manifest path reported by the host; not a path resolved on the client.\ndurable: Whether the save achieved its persistence guarantee; completion alone does not imply true.\nbefore: SDK version captured before saving.\nafter: SDK version reported after saving.'
     manifest: Path
     durable: bool
     before: Version
@@ -157,6 +163,7 @@ class SaveReceipt(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class SessionInfo(CompactValue):
+    'Immutable Session metadata captured by the host; reading it does not refresh the Session.\n\nFields:\nversion: Exact SDK version captured with this metadata.\nmodified: Whether the document has unsaved changes; default Session.close refuses a modified document.\nhistory: Pair of undo-step and redo-step counts, in that order.\nid: Runtime-scoped Session identity; not the persistent document UUID.\nstate: Captured lifecycle state: ready, busy, faulted, closing or closed.\npath: Host project path; None means the Session has no associated project path.'
     version: Version
     modified: bool
     history: tuple[int, int]
@@ -178,6 +185,7 @@ class SessionInfo(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class WriteResult(CompactValue):
+    'Confirmed candidate write result; it is not a formal commit receipt.\n\nFields:\nsource: Exact candidate source after the accepted write call.\nids: Operation result IDs in operation order; may name newly created or existing objects.'
     source: Source
     ids: tuple[str, ...]
 

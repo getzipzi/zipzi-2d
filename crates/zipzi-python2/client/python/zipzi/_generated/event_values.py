@@ -10,7 +10,7 @@ Point = tuple[float, float]
 
 @dataclass(frozen=True, init=False, repr=False)
 class Cursor(CompactValue):
-    'Immutable owned Cursor value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Owned events Cursor value; reading fields, repr and summary performs no IO.\n\nFields:\nruntime: Runtime instance identity; handles and cursors from another instance cannot be substituted.\nsession: None is the registry stream; it has no cross-session ordering guarantee.\nsequence: Monotonic sequence within the selected registry or Session stream; no cross-stream\nordering is implied.'
     __module__ = "zipzi.events"
     runtime: str
     session: SessionId | None
@@ -44,7 +44,7 @@ def encode_Cursor(value: Cursor) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Origin(CompactValue):
-    'Immutable owned Origin value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Owned events Origin value; reading fields, repr and summary performs no IO.\n\nFields:\nruntime: Runtime instance that allocated this handle; handles are invalid across instances.\nserial: Runtime-allocated serial, meaningful only together with the instance and handle kind.'
     __module__ = "zipzi.events"
     runtime: str
     serial: int
@@ -72,7 +72,7 @@ def encode_Origin(value: Origin) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Published(CompactValue):
-    'Immutable owned Published value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Declared by Published.value; opaque value.'
+    'Owned events Published value; reading fields, repr and summary performs no IO.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\nreceipt: Confirmed edit publication receipt, including before/after versions and changes.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['published']] = 'published'
     cursor: Cursor
@@ -95,7 +95,7 @@ class Published(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Saved(CompactValue):
-    'Immutable owned Saved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Declared by Saved.value; opaque value.'
+    'Owned events Saved value; reading fields, repr and summary performs no IO.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\nreceipt: Save receipt with persistence paths, warnings and durability status.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['saved']] = 'saved'
     cursor: Cursor
@@ -118,7 +118,7 @@ class Saved(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class StateChanged(CompactValue):
-    'Immutable owned StateChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Declared by StateChanged.value; opaque value.'
+    'Owned events StateChanged value; reading fields, repr and summary performs no IO.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Session metadata captured at this lifecycle state transition.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['state_changed']] = 'state_changed'
     cursor: Cursor
@@ -141,7 +141,7 @@ class StateChanged(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Created(CompactValue):
-    'Immutable owned Created value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Declared by Created.value; opaque value.'
+    'Owned events Created value; reading fields, repr and summary performs no IO.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Session metadata captured when the Session was created.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['created']] = 'created'
     cursor: Cursor
@@ -164,7 +164,7 @@ class Created(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Closed(CompactValue):
-    'Immutable owned Closed value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Declared by Closed.value; opaque value.'
+    'Owned events Closed value; reading fields, repr and summary performs no IO.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Final Session metadata captured when the document closed.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['closed']] = 'closed'
     cursor: Cursor

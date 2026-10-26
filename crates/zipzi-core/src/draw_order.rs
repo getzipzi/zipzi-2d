@@ -18,7 +18,9 @@ pub struct DrawOrderGroup {
     pub owner: String,
     /// Stable mesh/Part IDs, in tie-breaking order. A Part references its group.
     pub items: Vec<String>,
+    /// Inclusive lower drawing-order bound for this group.
     pub min_order: i32,
+    /// Inclusive upper drawing-order bound for this group.
     pub max_order: i32,
 }
 

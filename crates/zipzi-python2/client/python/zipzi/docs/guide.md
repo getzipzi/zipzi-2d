@@ -21,7 +21,8 @@ windows or GPU observer. `runtime.connection` is cached handshake information.
 
 Use `runtime.sessions.list()` and attach an explicit `SessionId`. Create with
 `runtime.sessions.create()` when the task needs a new document; shared Rust code
-allocates its persistent UUID. Never guess an existing object's UUID.
+allocates its persistent UUID. A freshly initialized document is unsaved and
+modified; save it or explicitly discard it when closing. Never guess an existing object's UUID.
 
 Every collection has `list(name=None, limit=128, cursor=None)`, `get(id, expected=None)`
 and `get_many(ids, expected=None)`. A name filter is case-sensitive and exact.

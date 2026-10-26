@@ -1,21 +1,19 @@
 """Handwritten ownership/known-state wrappers. Runtime remains authoritative."""
 from ._generated import modeling as _modeling_codec
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Generic, Literal, TypeVar, overload
-from . import bindings, sampling, events, meshes, ops, parameters, _plans as plans, resources, scene, references, modeling
+from typing import TypeVar, overload
+from . import events, ops, _plans as plans, resources, references, modeling
 from ._errors import Busy, JobTimeout, OutcomeUnknown, SdkFailure
-from ._values import ConnectionInfo, Receipt, SaveReceipt, Source, SessionId, SessionInfo, WriteResult, record, sequence
-from .backends import Backend, JobKind
+from ._values import ConnectionInfo, Receipt, SaveReceipt, SessionId, SessionInfo, WriteResult, record, sequence
+from .backends import Backend
 from ._recovery import RecoveryOwner
-from ._calls import Call, known, project, single_id
+from ._calls import Call, known
 from . import _operations as operations
 from ._generated.planning import ModelingPlanOperation, MODELING_PLAN_TYPES
-from ._results import Batch, Snapshot
+from ._results import Snapshot
 from . import _queries as queries
 from enum import Enum
-import math
-import time
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -25,7 +23,7 @@ def absolute(path: Path) -> Path:
         raise ValueError("Path must be absolute on the execution host")
     return path
 
-from ._jobs import Job, JobState
+from ._jobs import Job, JobState as JobState
 
 from ._generated.facades import Meshes, EditableMeshes, Images, EditableImages, Parameters, EditableParameters, Bindings, EditableBindings, Scene, Modeling
 from ._generated.discovery import RuntimeCapabilities, RuntimeLimits
@@ -76,6 +74,7 @@ class Runtime:
         """Query current Runtime count, byte and scan budgets. Values are estimates, not process RSS limits."""
         return known(lambda: RuntimeLimits._read(self._backend.runtime_limits(self)),lambda: RuntimeLimits._read(self._backend.recover(self)))
     def events_since(self, cursor: events.Cursor, *, limit: int = 128) -> tuple[events.Event, ...]:
+        'Read a bounded event page after an exact registry/session Cursor. Limit is 1..256; Runtime identity or retained-history gaps raise RESYNC_REQUIRED. Recover a lost response to obtain its original page.'
         events.check_limit(limit)
         return known(lambda: events.batch(self._backend.events(cursor, limit, self), cursor),
             lambda: events.batch(self._backend.recover(self), cursor))

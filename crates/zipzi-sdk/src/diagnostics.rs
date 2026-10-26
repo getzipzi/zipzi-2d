@@ -8,7 +8,9 @@ use crate::{AuthoringSession, SdkError};
     Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape,
 )]
 pub struct GeometryBounds {
+    /// Minimum XY corner of the geometry bounds in the snapshot coordinate space.
     pub min: Vec2,
+    /// Maximum XY corner of the geometry bounds in the snapshot coordinate space.
     pub max: Vec2,
 }
 
@@ -61,8 +63,12 @@ pub enum GeometryDiagnosticKind {
     zipzi_api_derive::BinaryOutput,
 )]
 pub struct GeometryDiagnostic {
+    /// Typed geometry diagnostic category.
     pub kind: GeometryDiagnosticKind,
+    /// Stable ID of the target mesh in this document.
     pub mesh_id: String,
+    /// Optional zero-based index of the offending triangle; None means the diagnostic is not
+    /// triangle-specific.
     pub triangle_index: Option<usize>,
 }
 

@@ -38,7 +38,7 @@ class Job(RecoveryOwner, Generic[T]):
         def resume() -> "Job[T]":
             job._token = record(backend.recover(job))["job"]
             return job
-        return known(start, resume)
+        return known(_start, resume)
 
     def _request_unknown(self, action: str, error: OutcomeUnknown) -> None:
         super()._request_unknown(action, error)
@@ -105,6 +105,7 @@ class Job(RecoveryOwner, Generic[T]):
             self._request("cancel", lambda: self._backend.cancel_job(self._token, self), lambda _: None)
 
     def state(self) -> JobState:
+        'Query the accepted Job status without consuming its result slot. Confirmed terminal status is cached. A lost status response must be recovered before wait or cancel; this does not imply publication success.'
         if self._failure is not None:
             if not self._terminal_failure:
                 raise self._failure

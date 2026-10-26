@@ -12,7 +12,7 @@ Point = tuple[float, float]
 
 @dataclass(frozen=True, repr=False)
 class Pose(CompactValue):
-    'Immutable owned Pose value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Owned effective parameter pose; reading it performs no IO.\n\nFields:\nvalues: Immutable parameter-ID/value pairs sorted by parameter ID; IDs are document parameter IDs and values use each parameter domain.'
     __module__ = "zipzi.sampling"
     values: tuple[tuple[str, float], ...]
 
@@ -25,7 +25,7 @@ class Pose(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Checks(CompactValue):
-    'Immutable owned Checks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmin_triangle_area: Area in authored coordinates: model units squared at the root, or\nthe appropriate rotation-local / Warp-parameter units under a parent.\nmodel_bounds: Optional expected model bounds for root meshes only.'
+    'Owned sampling Checks value; reading fields, repr and summary performs no IO.\n\nFields:\nmin_triangle_area: Area in authored coordinates: model units squared at the root, or\nthe appropriate rotation-local / Warp-parameter units under a parent.\nmodel_bounds: Optional expected model bounds for root meshes only.'
     __module__ = "zipzi.sampling"
     min_triangle_area: float
     model_bounds: tuple[Point, Point] | None
@@ -56,7 +56,7 @@ def encode_Checks(value: Checks) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Parameter(CompactValue):
-    "Immutable owned Parameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Declared by zipzi_core::types::Parameter.id; string value.\nruntime_id: Declared by zipzi_core::types::Parameter.runtime_id; string value.\nname: Declared by zipzi_core::types::Parameter.name; string value.\nminimum: Declared by zipzi_core::types::Parameter.minimum; f32 value.\nmaximum: Declared by zipzi_core::types::Parameter.maximum; f32 value.\ndefault_value: Declared by zipzi_core::types::Parameter.default_value; f32 value.\ndecimal_places: Declared by zipzi_core::types::Parameter.decimal_places; i32 value; default 6.\nkind: Declared by zipzi_core::types::Parameter.kind; serde_enum value; default 'normal'.\nrepeat: Declared by zipzi_core::types::Parameter.repeat; bool value; default False."
+    'Owned sampling Parameter value; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nrequested: Requested parameter value before range/repeat handling, in the parameter domain.\nvalue: Effective parameter value after native range/repeat handling, in the parameter domain.\nclamped: Whether the effective parameter value differs due to range clamping.'
     __module__ = "zipzi.sampling"
     id: str
     requested: float
@@ -82,7 +82,7 @@ class BlendMode(str, Enum):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Drawable(CompactValue):
-    'Immutable owned Drawable value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Declared by zipzi_core::evaluation::types::Drawable.id; string value.\nruntime_id: Declared by zipzi_core::evaluation::types::Drawable.runtime_id; string value.\npart_id: Declared by zipzi_core::evaluation::types::Drawable.part_id; string value.\nraw_blend_mode: Declared by zipzi_core::evaluation::types::Drawable.raw_blend_mode; optional value.\ntexture_asset_id: Declared by zipzi_core::evaluation::types::Drawable.texture_asset_id; string value.\ntexture_slot: Declared by zipzi_core::evaluation::types::Drawable.texture_slot; i32 value.\nrenderable: Geometry remains editable when this resource cannot contribute color.\npositions: Declared by zipzi_core::evaluation::types::Drawable.positions; sequence value.\nuvs: Declared by zipzi_core::evaluation::types::Drawable.uvs; shared value.\nindices: Declared by zipzi_core::evaluation::types::Drawable.indices; shared value.\ndraw_order: Declared by zipzi_core::evaluation::types::Drawable.draw_order; i32 value.\nrender_order: Declared by zipzi_core::evaluation::types::Drawable.render_order; i32 value.\nopacity: Declared by zipzi_core::evaluation::types::Drawable.opacity; f32 value.\nmultiply_color: Declared by zipzi_core::evaluation::types::Drawable.multiply_color; array value.\nscreen_color: Declared by zipzi_core::evaluation::types::Drawable.screen_color; array value.\nblend_mode: Declared by zipzi_core::evaluation::types::Drawable.blend_mode; serde_enum value.\nenabled: Declared by zipzi_core::evaluation::types::Drawable.enabled; bool value.\nvisible: Declared by zipzi_core::evaluation::types::Drawable.visible; bool value.\ndouble_sided: Declared by zipzi_core::evaluation::types::Drawable.double_sided; bool value.\ninverted_mask: Declared by zipzi_core::evaluation::types::Drawable.inverted_mask; bool value.\nmasks: Declared by zipzi_core::evaluation::types::Drawable.masks; sequence value.'
+    'Owned sampling Drawable value; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\npart_id: Organizational Part owner ID; independent of the deformation parent. An empty string\nrepresents the root/unassigned container.\nraw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.\ntexture_asset_id: Resolved image-asset object ID used by this drawable; separate from its evaluated\ntexture slot.\ntexture_slot: Resolved texture slot index; separate from the persistent texture asset ID.\nrenderable: Geometry remains editable when this resource cannot contribute color.\npositions: Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.\nuvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.\nindices: Flattened triangle indices into evaluated positions/UVs; these are offsets, not\nauthoring vertex IDs.\ndraw_order: Evaluated integer drawing-order coordinate before final render sorting.\nrender_order: Final evaluated drawing sequence rank after hierarchy and group ordering.\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.\nscreen_color: Evaluated RGBA screen factors, channel order R, G, B, A.\nblend_mode: Compositing mode used when drawing this object.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nvisible: Whether the evaluated object is visible after hierarchical visibility rules.\ndouble_sided: Whether both triangle faces contribute to drawing.\ninverted_mask: Whether to invert the combined clipping mask for this drawable.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.'
     __module__ = "zipzi.sampling"
     id: str
     runtime_id: str
@@ -136,7 +136,7 @@ class Drawable(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Offscreen(CompactValue):
-    'Immutable owned Offscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Declared by zipzi_core::types::Offscreen.id; string value.\nruntime_id: Declared by zipzi_core::types::Offscreen.runtime_id; string value.\nname: Declared by zipzi_core::types::Offscreen.name; string value.\npart_id: Declared by zipzi_core::types::Offscreen.part_id; string value.\nenabled: Controls visibility of the composited group without changing its contents.\nblend_mode: Declared by zipzi_core::types::Offscreen.blend_mode; u32 value.\nflags: Declared by zipzi_core::types::Offscreen.flags; u8 value.\nmasks: Declared by zipzi_core::types::Offscreen.masks; sequence value.\npart_keyform_indices: Declared by zipzi_core::types::Offscreen.part_keyform_indices; sequence value.\nkeyforms: Declared by zipzi_core::types::Offscreen.keyforms; sequence value.'
+    'Owned sampling Offscreen value; reading fields, repr and summary performs no IO.\n\nFields:\nrenderable: Whether required content is available for rendering; unavailable textures do not make\ngeometry uneditable.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nowner_part_id: Stable Part ID whose contents are composited by this Offscreen.\nparent_offscreen_id: Enclosing Offscreen ID; None means output is composited directly to the main target.\nrender_order: Final evaluated drawing sequence rank after hierarchy and group ordering.\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nblend_mode: Compositing mode used when drawing this object.\nflags: Preserved format-specific Offscreen compositing flags.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.\nmultiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.\nscreen_color: Evaluated RGBA screen factors, channel order R, G, B, A.'
     __module__ = "zipzi.sampling"
     renderable: bool
     id: str
@@ -180,7 +180,7 @@ class RenderKind(str, Enum):
 
 @dataclass(frozen=True, repr=False)
 class RenderCommand(CompactValue):
-    'Immutable owned RenderCommand value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'One ordered native render-plan command.\n\nFields:\nkind: BeginOffscreen, DrawMesh or EndOffscreen; begin/end commands delimit compositing scopes.\nid: Stable mesh ID for DrawMesh, or Offscreen ID for begin/end commands.'
     __module__ = "zipzi.sampling"
     kind: RenderKind
     id: str
@@ -195,7 +195,7 @@ def read_RenderCommand(value: object) -> RenderCommand:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Deformer(CompactValue):
-    'Immutable owned Deformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    "Owned sampling Deformer value; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\npoints: Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.\nrotation_axis: Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle."
     __module__ = "zipzi.sampling"
     id: str
     enabled: bool
@@ -215,7 +215,7 @@ class Deformer(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Frame(CompactValue):
-    'Immutable owned Frame value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Owned sampling Frame value; reading fields, repr and summary performs no IO.\n\nFields:\nsource_revision: Revision used to evaluate this immutable snapshot; later name edits may reuse it.\nparameters: Requested/effective/clamped parameter records for this evaluated pose.\ndrawables: Evaluated drawable records in this pose, including their immutable geometry and appearance.\noffscreens: Evaluated Offscreen compositing records for this pose.\nrender_plan: Ordered render commands; Offscreen begin/end delimit the compositing scopes.\ndeformers: Editor controls evaluated in the same pose as the drawables.'
     __module__ = "zipzi.sampling"
     source_revision: int
     parameters: tuple[Parameter, ...]
@@ -245,7 +245,7 @@ class DiagnosticKind(str, Enum):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Diagnostic(CompactValue):
-    'Immutable owned Diagnostic value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Owned sampling Diagnostic value; reading fields, repr and summary performs no IO.\n\nFields:\nkind: Typed geometry diagnostic category.\nmesh_id: Stable ID of the target mesh in this document.\ntriangle_index: Optional zero-based index of the offending triangle; None means the diagnostic is not\ntriangle-specific.'
     __module__ = "zipzi.sampling"
     kind: DiagnosticKind
     mesh_id: str
@@ -263,7 +263,7 @@ class Diagnostic(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Result(CompactValue):
-    'Immutable owned Result value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Owned sampling Result value; reading fields, repr and summary performs no IO.\n\nFields:\nstate: Captured sampling source state, distinguishing formal content from an Edit candidate.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nparameters: Effective parameter maps in the same order as requested poses; each map is keyed by\ndocument parameter ID.\nframes: CPU-evaluated frames in the same order as requested parameter maps.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.'
     __module__ = "zipzi.sampling"
     state: str
     version: Version

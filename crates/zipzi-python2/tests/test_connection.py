@@ -53,7 +53,7 @@ class InstalledConnection(unittest.TestCase):
     def test_installed_complete_calls_keep_projection_job_and_cached_edit_state(self):
         geometry = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
                                    ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
-        for operation in ("apply_authoring", "scene_snapshot", "commit", "job"):
+        for operation in ("apply_authoring", "read_selection", "commit", "job"):
             with self.subTest(operation=operation), patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE=operation):
                 with zipzi.connect(endpoint=self.folder / operation / "test.sock", start=True, host=self.host) as runtime:
                     session = runtime.sessions.create("79200000-0000-4000-8000-000000000050")
@@ -288,7 +288,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     self.endpoint.unlink()
 
     def test_installed_parameter_and_event_recovery_preserves_original_request(self):
-        for operation in ("subscribe", "events", "parameter_snapshot", "apply_authoring", "commit", "job"):
+        for operation in ("subscribe", "events", "read_selection", "apply_authoring", "commit", "job"):
             with self.subTest(operation=operation), patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE=operation):
                 endpoint = self.folder / operation / "test.sock"
                 with zipzi.connect(endpoint=endpoint, start=True, host=self.host) as runtime:
@@ -319,7 +319,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                     else:
                         with edit:
                             edit.apply_many(operations)
-                    if operation == "parameter_snapshot":
+                    if operation == "read_selection":
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                             session.parameters.get(parameter)
                         value = lost.exception.recover()

@@ -3,6 +3,7 @@ import ast
 import re
 import pprint
 import hashlib
+import keyword
 from copy import deepcopy
 from pathlib import Path
 
@@ -26,7 +27,7 @@ def compact(source):
     return '\n'.join(result)+'\n'
 
 
-def render_catalog(contract,output,header,package):
+def render_catalog(contract,output,header,package,dto_names,modeling_name):
     # Read sources rather than importing them: generation never creates Runtime,
     # imports native code, introspects private tokens or depends on an installed wheel.
     sources={p.relative_to(package).as_posix():p.read_text() for p in (package/'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts}
@@ -38,6 +39,7 @@ def render_catalog(contract,output,header,package):
             tree=ast.parse(content)
             names=[n.name for n in tree.body if isinstance(n,ast.ClassDef) and not n.name.startswith('_')]
             names += [n.target.id for n in tree.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and 'TypeAlias' in ast.unparse(n.annotation)]
+            names += ['ExtensionValue']
             output[path]=content+'\n__all__ = '+repr(names)+'\n'
             sources[path]=output[path]
     read_classes=set()
@@ -51,22 +53,87 @@ def render_catalog(contract,output,header,package):
         content=re.sub(pattern,r'\1._read',content)
         content=content.replace('    def read(', '    def _read(').replace('    def wire(', '    def _wire(').replace('.wire()', '._wire()')
         output[path]=content;sources[path]=content
-    docs={}
-    def visit(s):
-        if isinstance(s,dict):
-            if 'name' in s and 'fields' in s:
-                docs.setdefault(s['name'].rsplit('::',1)[-1],[(f['name'],f.get('doc') or ('Declared by '+s['name']+'.'+f['name']+'; '+f['shape']['kind']+' value'+('; default '+repr(f['default']) if f.get('default') is not None else '')+'.')) for f in s['fields'] if not f.get('skip')])
-            for value in s.values():visit(value)
-        elif isinstance(s,list):
-            for value in s:visit(value)
+    shapes={}
+    def visit(value):
+        if isinstance(value,dict):
+            if isinstance(value.get('kind'),str) and value['kind'] in {'record','serde_record','union','serde_enum'}:shapes[value['name']]=value
+            for item in value.values():visit(item)
+        elif isinstance(value,list):
+            for item in value:visit(item)
     visit(contract)
+    class_shapes={}
+    def bind(file,name,shape):class_shapes[(file,name)]=shape
+    def variants(shape,file,prefix=''):
+        for variant in shape.get('variants',[]):
+            fields=variant['fields']
+            if file=='resource_ops':
+                # Keep the reviewed ImageCreateSpec flattening used by resource_ops.
+                fields=[item for f in fields for item in (f['shape']['fields'] if f['name']=='spec' else [f])]
+            bind(file,prefix+variant['rust_name'],dict(name=shape['name']+'::'+variant['rust_name'],fields=fields))
+    for section,file in ((contract,'meshes'),(contract['resources'],'resource_values'),(contract['scene'],'scene')):
+        for binding in section['bindings']:
+            shape=shapes.get(binding['rust'])
+            if shape is None:continue
+            if binding['form']=='union':
+                destination='mesh_ops' if file=='meshes' else 'resource_ops' if file=='resource_values' else file
+                variants(shape,destination)
+            else:
+                destination='plan_values' if binding['name'] in {'PlanCost','PlanReport'} else file
+                bind(destination,binding['name'],shape)
+    for rust,shape in shapes.items():
+        if rust in {s['name'] for s in contract['modeling']['roots']} or rust.startswith(('zipzi_core::','zipzi_sdk::','zipzi_runtime::')):
+            short=modeling_name(rust)
+            if shape['kind'] in {'union','serde_enum'}:variants(shape,'modeling',short)
+            else:bind('modeling',short,shape)
+        for domain,file in [('parameters','parameter_values'),('bindings','binding_values'),('sampling','sampling_values'),('references','reference_values')]:
+            name=dto_names[domain].get(rust.rsplit('::',1)[-1])
+            if name is None:continue
+            if shape['kind'] in {'union','serde_enum'}:variants(shape,file)
+            else:bind(file,name,shape)
+    for name,shape in contract['runtime'].items():bind('discovery',name,shape)
+    def compiled_fields(file,node):
+        shape=class_shapes.get((file,node.name))
+        if shape is None:return []
+        selected={n.target.id for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_')}
+        fields=[dict(f,name=f['name']+('_' if keyword.iskeyword(f['name']) else ''))
+                for f in shape['fields'] if f['name']+('_' if keyword.iskeyword(f['name']) else '') in selected and not f.get('skip')]
+        if (file,node.name)==('plan_values','PlanReport'):
+            # The bound Plan wrapper adds its captured Runtime source to the SDK report.
+            snapshot=shapes['zipzi_runtime::authoring::PlanSnapshot']
+            fields=[next(f for f in snapshot['fields'] if f['name']=='source')]+fields
+        if 'kind' in selected and not any(f['name']=='kind' for f in fields):
+            fields=fields+[dict(name='kind',doc='Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.')]
+        missing=[f['name'] for f in fields if not f.get('doc','').strip()]
+        if missing:
+            raise ValueError('Missing semantic field documentation: '+shape['name']+'.'+', '.join(missing))
+        return [(f['name'],f['doc']) for f in fields]
+    def python_fields(node,selected=None):
+        declared=[n.target.id for n in node.body if isinstance(n,ast.AnnAssign)
+                  and isinstance(n.target,ast.Name) and not n.target.id.startswith('_')
+                  and not (isinstance(n.annotation,ast.Subscript)
+                           and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})]
+        if selected is not None:declared=[name for name in declared if name in selected]
+        if not declared:return []
+        text=ast.get_docstring(node) or ''
+        field_text=text.partition('Fields:\n')[2]
+        documented={}
+        current=None
+        for line in field_text.splitlines():
+            match=re.fullmatch(r'([A-Za-z_]\w*):\s*(.+)',line)
+            if match:
+                current=match[1];documented[current]=match[2]
+            elif current and line.strip():documented[current]+=' '+line.strip()
+        missing=[name for name in declared if name not in documented]
+        if missing:
+            raise ValueError('Missing semantic field documentation: '+node.name+'.'+', '.join(missing))
+        return [(name,documented[name]) for name in declared]
     aliases={'MeshSpec':'MeshCreateSpec','Geometry':'MeshGeometry','ParameterSpec':'ParameterCreateSpec','MeshBindingSpec':'MeshBindingCreateSpec','Checks':'GeometryChecks'}
     for path,content in list(output.items()):
         if not path.endswith('.py') or '/_generated/' not in path or '@dataclass' not in content:continue
         tree=ast.parse(content);lines=content.splitlines(True);edits=[]
         for node in tree.body:
             if not isinstance(node,ast.ClassDef) or ast.get_docstring(node) or not any(isinstance(n,ast.Name) and n.id=='CompactValue' for n in node.bases):continue
-            fs=docs.get(aliases.get(node.name,node.name),[])
+            fs=compiled_fields(Path(path).stem,node)
             text='Immutable owned '+node.name+' value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
             if fs:text+='\n\nFields:\n'+'\n'.join(name+': '+doc for name,doc in fs)
             edits.append((node.body[0].lineno-1,'    '+repr(text)+'\n'))
@@ -84,7 +151,7 @@ def render_catalog(contract,output,header,package):
         if init:
             if any(a.arg in {'backend','token','session','edit'} for a in init.args.args[1:]) and node.name in {'Runtime','Session','Edit','Job','Plan','PreparedImage','ImageLease','Buffer','ObjectRef','LabelAddress','FieldAddress'}:return '(factory-owned; use the documented public entry)'
             return signature(init)
-        fields=[n for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_') and not (isinstance(n.annotation,ast.Subscript) and ast.unparse(n.annotation.value)=='ClassVar')]
+        fields=[n for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_') and not (isinstance(n.annotation,ast.Subscript) and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})]
         return '('+', '.join(n.target.id+': '+ast.unparse(n.annotation)+(' = '+ast.unparse(n.value) if n.value else '') for n in fields)+')'
     for module,tree in trees.items():
         table={}
@@ -123,8 +190,14 @@ def render_catalog(contract,output,header,package):
         text=ast.get_docstring(node) if isinstance(node,(ast.ClassDef,ast.FunctionDef)) else ''
         fields=field_docs or []
         if isinstance(node,ast.ClassDef):
-            fields=fields or docs.get(node.name,[])
-            if not fields:fields=[(n.target.id, 'Owned '+ast.unparse(n.annotation)+' value.') for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_')]
+            fields=fields or compiled_fields(node_modules.get(id(node),'').rsplit('.',1)[-1],node)
+            if not fields:fields=python_fields(node)
+            else:
+                selected={n.target.id for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name)
+                          and not n.target.id.startswith('_') and not (isinstance(n.annotation,ast.Subscript)
+                          and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})}
+                extra=selected-set(dict(fields))
+                if extra:fields+=python_fields(node,extra)
         catalog[path]=dict(kind=kind,signature=signature(node) if kind in {'type','callable'} else '',documentation=text or ('Immutable typed value. See field semantics and the linked workflow.' if kind=='type' else 'Typed public API entry.'),fields=fields,children=[],example='docs/recipes.py')
         if isinstance(node,ast.ClassDef):
             for child in public_methods(node).values():
@@ -144,7 +217,8 @@ def render_catalog(contract,output,header,package):
             for n in trees[module].body:
                 if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='__all__' for t in n.targets):names+=ast.literal_eval(n.value)
         elif module=='modeling':
-            names=[n.name for n in trees['_generated.modeling'].body if isinstance(n,ast.ClassDef) and not n.name.startswith('_')]
+            names=['ExtensionValue']
+            names+=[n.name for n in trees['_generated.modeling'].body if isinstance(n,ast.ClassDef) and not n.name.startswith('_')]
             names += [n.target.id for n in trees['_generated.modeling'].body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and 'TypeAlias' in ast.unparse(n.annotation)]
         else:
             for name,node in symbols[module].items():

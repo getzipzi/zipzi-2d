@@ -2,8 +2,7 @@
 
 Host discovery/start ownership lives in _endpoint; request recovery never launches.
 """
-from .._generated.plan_intents import Intent, wire as intent_wire
-from .._generated import modeling, binary as typed_binary
+from .._generated import binary as typed_binary
 import hashlib
 import json
 from pathlib import Path
@@ -12,15 +11,12 @@ import struct
 import threading
 import time
 from typing import Literal
-from .. import _operations as ops, sampling, scene
+from .. import _operations as ops
 from .._generated.backend_bindings import ConnectedBindings
-from .._generated.planning import encode_modeling
-from .._generated.planning import ModelingPlanOperation
 from .._errors import Busy, JobTimeout, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
 from ._transfers import Transfer
-from ..events import Cursor
 
 CONTRACT = "zipzi-runtime-p3a-345-1"
 MAX_FRAME = 16 << 20

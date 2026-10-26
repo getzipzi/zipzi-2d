@@ -4,7 +4,7 @@ from ._presentation import CompactValue
 
 @dataclass(frozen=True,repr=False)
 class ApiDescription(CompactValue):
-    """One versioned offline API entry with its signature, semantics and children."""
+    'One installed offline API entry; it describes the client package rather than probing host support.\n\nFields:\npath: Canonical public API path under zipzi.\nkind: Directory entry category such as module, type, callable or value.\nsignature: Rendered public signature; empty for entries without a callable/type signature.\ndocumentation: Semantic docstring for this installed entry.\nfields: Ordered pairs of public field name and semantic description; empty when no value fields are declared.\nchildren: Canonical child entry paths for further bounded describe queries.\nexample: Package-relative workflow/example reference; empty when no example is assigned.'
     __module__='zipzi'
     path:str
     kind:str

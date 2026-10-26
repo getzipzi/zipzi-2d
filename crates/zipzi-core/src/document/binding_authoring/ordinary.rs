@@ -15,9 +15,12 @@ use crate::{
     zipzi_api_derive::BinaryWire,
 )]
 pub enum BindingGridTarget {
-    Mesh(String),
-    Scene(String),
-    Glue(String),
+    Mesh(#[doc = "Stable ID of the target mesh whose ordinary grid is being created."] String),
+    Scene(
+        /// Stable ID of the target scene transform or Part whose ordinary grid is being created.
+         String,
+    ),
+    Glue(#[doc = "Stable ID of the target Glue whose ordinary grid is being created."] String),
 }
 #[derive(
     Debug,
@@ -30,13 +33,21 @@ pub enum BindingGridTarget {
 )]
 pub enum BindingGridEdit {
     /// Explicitly discard owned shapes and return to the unchanged base target.
-    Delete { owner: String },
+    Delete {
+        /// Stable owner ID for the addressed drawing group, collection or reference selection.
+        owner: String,
+    },
     Create {
+        /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
+        /// Explicit base/ordinary/BlendShape content selector; default Base edits the
+        /// undeformed base shape.
         target: BindingGridTarget,
     },
     Edit {
+        /// Stable owner ID for the addressed drawing group, collection or reference selection.
         owner: String,
+        /// Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.
         operation: GridOperation,
     },
 }

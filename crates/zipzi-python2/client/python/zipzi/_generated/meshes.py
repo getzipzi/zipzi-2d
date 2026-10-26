@@ -57,7 +57,7 @@ class Geometry(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class MeshSpec(CompactValue):
-    "Immutable owned MeshSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Declared by zipzi_sdk::mesh_edit::MeshCreateSpec.name; string value.\ngeometry: Declared by zipzi_sdk::mesh_edit::MeshCreateSpec.geometry; record value.\ntexture_asset_id: Declared by zipzi_sdk::mesh_edit::MeshCreateSpec.texture_asset_id; string value; default {'kind': 'empty_string'}.\nid: Declared by zipzi_sdk::mesh_edit::MeshCreateSpec.id; optional value; default {'kind': 'null'}."
+    'Immutable owned MeshSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\ngeometry: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not\nposition offsets.\ntexture_asset_id: Image-asset ID used by this mesh; the default empty string leaves its texture\nreference unassigned.\nid: Optional new mesh UUID; None allocates a fresh UUID in the SDK when the create\noperation executes.'
     __module__ = "zipzi.meshes"
     name: str
     geometry: Geometry
@@ -72,7 +72,7 @@ class MeshSpec(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class Mesh(CompactValue):
-    'Immutable owned Mesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Declared by zipzi_core::types::Mesh.id; string value.\nname: Declared by zipzi_core::types::Mesh.name; string value.\ntexture_asset_id: Declared by zipzi_core::types::Mesh.texture_asset_id; serde_enum value.\nvertex_ids: Declared by zipzi_core::types::Mesh.vertex_ids; sequence value.\nbase_positions: Declared by zipzi_core::types::Mesh.base_positions; sequence value.\nuvs: Declared by zipzi_core::types::Mesh.uvs; sequence value.\ntriangles: Declared by zipzi_core::types::Mesh.triangles; sequence value.\nruntime_id: Declared by zipzi_core::types::Mesh.runtime_id; string value.\npart_id: Declared by zipzi_core::types::Mesh.part_id; string value.\ndeformer_id: Declared by zipzi_core::types::Mesh.deformer_id; string value.\nappearance: Declared by zipzi_core::types::Mesh.appearance; serde_record value.\ndraw_order: Declared by zipzi_core::types::Mesh.draw_order; optional value.\nblend_mode: Declared by zipzi_core::types::Mesh.blend_mode; serde_enum value.\nenabled: Declared by zipzi_core::types::Mesh.enabled; bool value.\ndouble_sided: Declared by zipzi_core::types::Mesh.double_sided; bool value.\ninverted_mask: Declared by zipzi_core::types::Mesh.inverted_mask; bool value.\nmasks: Declared by zipzi_core::types::Mesh.masks; sequence value.\nraw_blend_mode: Declared by zipzi_core::types::Mesh.raw_blend_mode; optional value.'
+    'Immutable owned Mesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ngeometry: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not\nposition offsets.'
     __module__ = "zipzi.meshes"
     id: str
     name: str

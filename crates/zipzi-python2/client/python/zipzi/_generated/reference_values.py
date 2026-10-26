@@ -10,7 +10,7 @@ Point = tuple[float, float]
 
 @dataclass(frozen=True, repr=False)
 class Capability(CompactValue):
-    'Immutable owned Capability value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Current native capability state; inspect it before invoking the operation.\n\nFields:\nstate: Available, temporarily unavailable, or unsupported for this object/domain.\ncode: Stable refusal reason; None for the available state.'
     __module__ = "zipzi.references"
     state: Literal["available", "unavailable", "unsupported"]
     code: str | None = None
@@ -24,7 +24,7 @@ class Capability(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class SceneCapabilities(CompactValue):
-    'Immutable owned SceneCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ninspect: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.inspect; serde_enum value.\npatch: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.patch; serde_enum value.\nmove_object: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.move_object; serde_enum value.\nreparent: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reparent; serde_enum value.\nreorder: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reorder; serde_enum value.\nduplicate: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.duplicate; serde_enum value.\ndelete: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.delete; serde_enum value.\ndissolve: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.dissolve; serde_enum value.'
+    'Owned references SceneCapabilities value; reading fields, repr and summary performs no IO.\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\nmove_object: Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.\nreparent: Current capability to change its deformation parent; inspect its state/reason before\ninvoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\ndissolve: Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.'
     __module__ = "zipzi.references"
     inspect: Capability
     patch: Capability

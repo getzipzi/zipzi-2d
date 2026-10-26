@@ -436,7 +436,7 @@ def render(contract):
     output.update(_dto_codegen.render_dtos(contract['dtos'], HEADER))
     output.update(_api_codegen.render_api(contract, HEADER, RUST_HEADER))
     output['src/generated/mod.rs'] += 'pub mod scene;\npub mod modeling;\npub mod discovery;\n'
-    output.update(_catalog_codegen.render_catalog(contract, output, HEADER, PACKAGE))
+    output.update(_catalog_codegen.render_catalog(contract, output, HEADER, PACKAGE, _dto_codegen.NAMES, _modeling_codegen.public_name))
     # rustfmt only sees generated scratch files, never handwritten sources.
     import tempfile
     with tempfile.TemporaryDirectory(prefix='zipzi-codegen-') as folder:

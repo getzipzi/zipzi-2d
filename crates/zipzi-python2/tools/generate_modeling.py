@@ -4,6 +4,9 @@ import keyword
 import json
 TARGETS=frozenset({'client/python/zipzi/_generated/modeling.py','src/generated/modeling.rs'})
 
+def public_name(rust_name):
+    return ''.join(re.findall(r'(?:^|::)([A-Z][A-Za-z0-9_]*)',rust_name)) if '<' in rust_name else rust_name.rsplit('::',1)[-1]
+
 def render_modeling(contract, header, rust_header):
     shapes={}
     def visit(s):
@@ -38,7 +41,7 @@ def render_modeling(contract, header, rust_header):
         if 'value' in s and isinstance(s['value'],dict):mark(s['value'])
     for index in contract.get('input_roots',[0,1,2]):mark(contract['roots'][index])
     for s in contract.get('native_only_roots',[]):mark(s)
-    names={n:''.join(re.findall(r'(?:^|::)([A-Z][A-Za-z0-9_]*)', n)) if '<' in n else n.rsplit('::',1)[-1] for n in shapes}
+    names={n:public_name(n) for n in shapes}
     if len(set(names.values()))!=len(names):raise ValueError('Duplicate selected modeling name')
     def path(s):
         n=s['name']
@@ -361,4 +364,18 @@ def render_modeling(contract, header, rust_header):
         rust += ['pub fn read_objectkind_name(value:&str)->PyResult<zipzi_sdk::ObjectKind> {match value {']
         rust += ['    "'+v['name']+'"=>Ok(zipzi_sdk::ObjectKind::'+v['rust_name']+'),' for v in variants(object_kind)]
         rust += ['    _=>Err(pyo3::exceptions::PyValueError::new_err("Unknown object kind")),','}}']
+    # Class annotations resolve through the public module after __module__ is
+    # assigned. Keep implementation typing names private in both namespaces.
+    py.insert(2, 'from typing import ClassVar as _ClassVar')
+    py.insert(3, 'from collections.abc import Mapping as _Mapping')
+    py.insert(4, 'from .._values import Version as _Version')
+    py.insert(5, 'from builtins import bytes as _Bytes')
+    for index,line in enumerate(py):
+        if line.startswith('from typing import ClassVar,'):py[index]=line.replace('ClassVar, ','')
+        if re.match(r'    [A-Za-z_]\w*:',line):
+            for name in ('ClassVar','Mapping','Version'):
+                line=re.sub(r'\b'+name+r'\b','_'+name,line)
+            field,colon,annotation=line.partition(':')
+            line=field+colon+re.sub(r'\bbytes\b','_Bytes',annotation)
+            py[index]=line
     return {'client/python/zipzi/_generated/modeling.py' :'\n'.join(py),'src/generated/modeling.rs':'\n'.join(rust)}

@@ -161,7 +161,12 @@ class P3AContract(unittest.TestCase):
                 runtime = self.runtime(mode)
                 for n in range(40):
                     session = runtime.sessions.create(support.uid(n + 1))
-                    closed = session.close()
+                    # A newly initialized document is unsaved and modified.
+                    # Default close must protect it before an explicit discard.
+                    with self.assertRaises(zipzi.SdkFailure) as refused:
+                        session.close()
+                    self.assertEqual(refused.exception.code, "MODIFIED")
+                    closed = session.close(discard_modified=True)
                     self.assertIsInstance(closed, zipzi.SessionInfo)
                     self.assertEqual(closed.id, session.id)
                     self.assertEqual(session.close(), closed)

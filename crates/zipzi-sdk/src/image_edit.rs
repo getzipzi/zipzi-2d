@@ -7,7 +7,9 @@ zipzi_core::api_record! {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
 pub struct ImageCreateSpec {
+    /// Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
     pub id: Option<String>,
+    /// Human-readable display name; use the stable ID for identity because names can change.
     pub name: String,
 }
 }

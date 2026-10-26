@@ -271,7 +271,7 @@ class P3ARecovery(unittest.TestCase):
                 self.assertEqual(session.info().history, (0, 0))
 
     def test_caught_read_or_independent_preparation_unknown_preserves_its_original_owner(self):
-        for operation in ("mesh_snapshot", "prepare_image"):
+        for operation in ("read_selection", "prepare_image"):
             with self.subTest(operation=operation):
                 runtime = self.runtime("connected", drop=operation)
                 session = runtime.sessions.create(support.uid(1))
@@ -280,7 +280,7 @@ class P3ARecovery(unittest.TestCase):
                     with session.edit("read/preparation loss") as edit:
                         id = edit.meshes.create(meshes.MeshSpec("Face", support.GEOMETRY))
                         try:
-                            if operation == "mesh_snapshot":
+                            if operation == "read_selection":
                                 edit.meshes.get(id)
                             else:
                                 runtime.resources.prepare_image(1, 1, b"rgba")
@@ -289,7 +289,7 @@ class P3ARecovery(unittest.TestCase):
                 self.assertIs(escaped.exception, original)
                 self.assertEqual(edit.state, zipzi.EditState.editing)
                 result = escaped.exception.recover()
-                if operation == "mesh_snapshot":
+                if operation == "read_selection":
                     self.assertIsInstance(result, zipzi.Snapshot)
                     self.assertEqual(result.value.name, "Face")
                 else:

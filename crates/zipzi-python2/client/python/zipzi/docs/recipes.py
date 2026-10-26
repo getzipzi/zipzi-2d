@@ -38,11 +38,11 @@ def author_and_save(runtime:zipzi.Runtime,folder:Path)->zipzi.SaveReceipt:
 
 
 def close_repeatedly(runtime:zipzi.Runtime)->None:
-    for _ in range(40):runtime.sessions.create().close()
+    for _ in range(40):runtime.sessions.create().close(discard_modified=True)
 
 
 def read_all(session:zipzi.Session)->tuple[str,...]:
-    result=[];cursor=None;source=None
+    result: list[str]=[];cursor=None;source=None
     while True:
         page=session.meshes.list(cursor=cursor)
         if source is None:source=page.source

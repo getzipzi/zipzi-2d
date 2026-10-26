@@ -63,20 +63,25 @@ Python [P3A-0](../../docs/plans/python-sdk-rewrite/p3a-0.md) has passed its free
 cached state and JobTimeout with source/type/installed evidence. P3A-1 is accepted;
 the user waived this round's final performance noise blocker. Raw failed measurements
 and the original P0 policy remain unchanged.
-P3A-3–6 and the overall API/agent contract remain unaccepted.
+P3A-3–6 and the overall API/agent contract remain unaccepted; current selected
+passes and unmet gates are recorded in [P3A-6](../../docs/plans/python-sdk-rewrite/p3a-6.md).
 
 [P3A-2](../../docs/plans/python-sdk-rewrite/p3a-2.md) is accepted. Existing reads
 use root `Snapshot[T]`/`Batch[T]` with pure payloads and exact empty-batch sources.
 Domain operations, the common plan/apply path, generated parameter/binding/sampling/
 event/reference DTOs and root `PlanCost`/`PlanReport` are implemented.
-`Page`/`PageCursor` are value shapes; collection pagination remains P3A-4.
+Collection pagination uses `Page[Summary]`/`PageCursor` and has focused P3A-6
+evidence for more than 256 objects, exact source, bounded scans and stale cursors.
 
 
-P3A-3/4/5 implementation is staged; **not accepted**. It adds generated uniform
+P3A-3/4/5 was committed as `8500d9fe`; **overall acceptance remains open**. It adds generated uniform
 facades/backend registration and unique transport hooks, exact-source metadata
 pages and selected reads, Runtime capabilities/limits, Session close/detach and
 alias invalidation, bounded owned-value output, private codecs/factories, and the
 offline catalog/reference/guide/recipes. Agent fixture inputs, installed packet
 preparation and bounded recording are present; independent runs and external
-fault-controller integration have not been executed. Only generation and build
-work was performed. Earlier P3A-0–2 acceptance is not reused as proof for these APIs.
+fault-controller integration have not been executed. Subsequent P3A-6 selected
+checks cover both backends, response losses, pagination/close, strict types,
+paired source distribution/wheels and the current production Editor. Offline
+field semantics and installed automatic D02 checks now pass. Complete documentation
+review, P0 workload comparability and independent agent execution remain pending. Earlier P3A-0–2 acceptance is not reused as proof for these APIs.

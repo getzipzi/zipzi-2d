@@ -55,11 +55,23 @@ impl ImageLoadToken {
 }
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct ResourceCapabilities {
+    /// Current capability to read the current typed record; inspect its state/reason before
+    /// invoking the operation.
     pub inspect: CapabilityState,
+    /// Current capability to modify fields through a captured address; inspect its state/reason
+    /// before invoking the operation.
     pub patch: CapabilityState,
+    /// Current capability to load the referenced resource contents; inspect its state/reason
+    /// before invoking the operation.
     pub load_content: CapabilityState,
+    /// Current capability to duplicate this object; inspect its state/reason before invoking
+    /// the operation.
     pub duplicate: CapabilityState,
+    /// Current capability to delete this object; inspect its state/reason before invoking the
+    /// operation.
     pub delete: CapabilityState,
+    /// Current capability to change its collection order; inspect its state/reason before
+    /// invoking the operation.
     pub reorder: CapabilityState,
 }
 impl AuthoringSession {

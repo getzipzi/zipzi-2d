@@ -77,10 +77,12 @@ class LabelAddress(Owned):
 
     @property
     def id(self) -> str:
+        'Return the cached target UUID without IO. Field epoch and incarnation remain part of this address; the ID alone cannot replace them.'
         return self._id
 
     @property
     def expected(self) -> str:
+        'Return the captured label text without IO. A later SDK label/context/identity change invalidates the address; capture a new address instead of silently refreshing its precondition.'
         return self._expected
 
     @classmethod

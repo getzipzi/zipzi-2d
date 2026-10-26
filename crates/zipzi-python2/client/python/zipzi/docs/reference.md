@@ -14,15 +14,24 @@ Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() o
 
 `(path: str, kind: str, signature: str, documentation: str, fields: tuple[tuple[str, str], ...] = (), children: tuple[str, ...] = (), example: str = '')`
 
-One versioned offline API entry with its signature, semantics and children.
+One installed offline API entry; it describes the client package rather than probing host support.
 
-- `path`: Owned str value.
-- `kind`: Owned str value.
-- `signature`: Owned str value.
-- `documentation`: Owned str value.
-- `fields`: Owned tuple[tuple[str, str], ...] value.
-- `children`: Owned tuple[str, ...] value.
-- `example`: Owned str value.
+Fields:
+path: Canonical public API path under zipzi.
+kind: Directory entry category such as module, type, callable or value.
+signature: Rendered public signature; empty for entries without a callable/type signature.
+documentation: Semantic docstring for this installed entry.
+fields: Ordered pairs of public field name and semantic description; empty when no value fields are declared.
+children: Canonical child entry paths for further bounded describe queries.
+example: Package-relative workflow/example reference; empty when no example is assigned.
+
+- `path`: Canonical public API path under zipzi.
+- `kind`: Directory entry category such as module, type, callable or value.
+- `signature`: Rendered public signature; empty for entries without a callable/type signature.
+- `documentation`: Semantic docstring for this installed entry.
+- `fields`: Ordered pairs of public field name and semantic description; empty when no value fields are declared.
+- `children`: Canonical child entry paths for further bounded describe queries.
+- `example`: Package-relative workflow/example reference; empty when no example is assigned.
 
 ## zipzi.ApiDescription.summary
 
@@ -35,10 +44,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(source: Source, items: tuple[T, ...])`
 
-Ordered values, including duplicates, sharing one exact source.
+Ordered owned values sharing one exact source; duplicates and empty selections retain their semantics.
 
-- `source`: Owned Source value.
-- `items`: Owned tuple[T, ...] value.
+Fields:
+source: Exact source shared by the whole selection, including an empty batch.
+items: Owned payloads in requested-ID order, preserving duplicates; a missing item rejects a selected read as a whole.
+
+- `source`: Exact source shared by the whole selection, including an empty batch.
+- `items`: Owned payloads in requested-ID order, preserving duplicates; a missing item rejects a selected read as a whole.
 
 ## zipzi.Batch.summary
 
@@ -65,21 +78,21 @@ Release this owned handle once, without mutating formal model content. A lost re
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.Buffer.read
 
 `(offset: int=0, length: int | None=None) -> bytes`
 
-Typed public API entry.
+Read immutable bytes from offset for length bytes; None reads the remaining bytes. Bounds and transfer budgets apply before download. Recover the original multi-stage read after transport loss; close the Buffer after use.
 
 
 ## zipzi.Buffer.size
 
 `() -> int`
 
-Typed public API entry.
+Return the cached immutable byte length without reading the host buffer or allocating a copy.
 
 
 ## zipzi.Busy
@@ -93,14 +106,22 @@ Confirmed refusal before execution; the caller may submit a new request.
 
 `(runtime: str, host_pid: int, sdk_build: str, protocol: str, capabilities: tuple[str, ...], limits: ConnectionLimits)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Immutable successful connection handshake; reading fields does not query the host again.
 
-- `runtime`: Owned str value.
-- `host_pid`: Owned int value.
-- `sdk_build`: Owned str value.
-- `protocol`: Owned str value.
-- `capabilities`: Owned tuple[str, ...] value.
-- `limits`: Owned ConnectionLimits value.
+Fields:
+runtime: Canonical UUID of the connected Runtime instance.
+host_pid: Operating-system process ID of the host, not the client.
+sdk_build: Host SDK build identity used by strict pairing checks.
+protocol: Negotiated exact protocol pairing identifier; incompatible pairs are rejected.
+capabilities: Finite capability names announced by the host handshake.
+limits: Host transport/outcome-retention limits with explicit units.
+
+- `runtime`: Canonical UUID of the connected Runtime instance.
+- `host_pid`: Operating-system process ID of the host, not the client.
+- `sdk_build`: Host SDK build identity used by strict pairing checks.
+- `protocol`: Negotiated exact protocol pairing identifier; incompatible pairs are rejected.
+- `capabilities`: Finite capability names announced by the host handshake.
+- `limits`: Host transport/outcome-retention limits with explicit units.
 
 ## zipzi.ConnectionInfo.summary
 
@@ -113,16 +134,26 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(frame_bytes: int, reconnect_seconds: float, result_seconds: float, results_per_client: int, result_bytes_per_client: int, result_bytes_total: int, binary_bytes_per_client: int, binary_bytes_total: int)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Handshake limits reported by the connected host; values are facts, not client-side overrides.
 
-- `frame_bytes`: Owned int value.
-- `reconnect_seconds`: Owned float value.
-- `result_seconds`: Owned float value.
-- `results_per_client`: Owned int value.
-- `result_bytes_per_client`: Owned int value.
-- `result_bytes_total`: Owned int value.
-- `binary_bytes_per_client`: Owned int value.
-- `binary_bytes_total`: Owned int value.
+Fields:
+frame_bytes: Maximum encoded control frame length in bytes.
+reconnect_seconds: Connection reconnection/grace window in seconds.
+result_seconds: Retention window in seconds for acknowledged request outcomes.
+results_per_client: Maximum retained request outcomes for one client.
+result_bytes_per_client: Maximum retained outcome bytes for one client.
+result_bytes_total: Maximum retained outcome bytes across the host.
+binary_bytes_per_client: Maximum retained binary response bytes for one client.
+binary_bytes_total: Maximum retained binary response bytes across the host.
+
+- `frame_bytes`: Maximum encoded control frame length in bytes.
+- `reconnect_seconds`: Connection reconnection/grace window in seconds.
+- `result_seconds`: Retention window in seconds for acknowledged request outcomes.
+- `results_per_client`: Maximum retained request outcomes for one client.
+- `result_bytes_per_client`: Maximum retained outcome bytes for one client.
+- `result_bytes_total`: Maximum retained outcome bytes across the host.
+- `binary_bytes_per_client`: Maximum retained binary response bytes for one client.
+- `binary_bytes_total`: Maximum retained binary response bytes across the host.
 
 ## zipzi.ConnectionLimits.summary
 
@@ -137,8 +168,6 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 One mutable candidate owned by one sequential caller. Use session.edit. Successful writes advance sequence; publication is a separate Job and ordinary failures cannot be caught into a successful commit.
 
-- `owner`: Declared by Edit.owner; string value.
-- `operation`: Declared by Edit.operation; serde_enum value.
 
 ## zipzi.Edit.apply
 
@@ -333,7 +362,7 @@ Apply a typed parameters operation to this candidate. Commit publishes separatel
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.Edit.plan
@@ -419,7 +448,6 @@ Pin immutable pixels with an explicit lease; close the lease when finished.
 
 Immutable typed value. See field semantics and the linked workflow.
 
-- `value`: Declared by Scene.value; string value.
 
 ## zipzi.Edit.scene.get
 
@@ -481,14 +509,14 @@ Wait for the actual outcome and release its Runtime result slot.
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.Job.state
 
 `() -> JobState`
 
-Typed public API entry.
+Query the accepted Job status without consuming its result slot. Confirmed terminal status is cached. A lost status response must be recovered before wait or cancel; this does not imply publication success.
 
 
 ## zipzi.Job.wait
@@ -581,11 +609,16 @@ resolution raises NO_PENDING_REQUEST.
 
 `(source: Source, items: tuple[T, ...], next_cursor: PageCursor | None = None)`
 
-A bounded metadata page at one exact source; continue with next_cursor.
+Bounded metadata page from one exact source; an empty page may still have a continuation.
 
-- `source`: Owned Source value.
-- `items`: Owned tuple[T, ...] value.
-- `next_cursor`: Owned PageCursor | None value.
+Fields:
+source: Exact formal version or candidate sequence captured for this page.
+items: Metadata records in native storage order; excludes geometry, keyforms and pixel payloads.
+next_cursor: Opaque continuation for the same domain/filter/source; None ends the scan. Stale cursors require restarting discovery.
+
+- `source`: Exact formal version or candidate sequence captured for this page.
+- `items`: Metadata records in native storage order; excludes geometry, keyforms and pixel payloads.
+- `next_cursor`: Opaque continuation for the same domain/filter/source; None ends the scan. Stale cursors require restarting discovery.
 
 ## zipzi.Page.summary
 
@@ -612,11 +645,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(request_id: int, digest: str, operation: str)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Immutable identity of the original request whose outcome is unknown; recover through its owning call.
 
-- `request_id`: Owned int value.
-- `digest`: Owned str value.
-- `operation`: Owned str value.
+Fields:
+request_id: Original client request number; do not allocate a fresh write request to probe the outcome.
+digest: Digest binding the request identity to its original payload; not the payload itself.
+operation: Original protocol operation name used for diagnostics and recovery ownership.
+
+- `request_id`: Original client request number; do not allocate a fresh write request to probe the outcome.
+- `digest`: Digest binding the request identity to its original payload; not the payload itself.
+- `operation`: Original protocol operation name used for diagnostics and recovery ownership.
 
 ## zipzi.Plan
 
@@ -636,14 +674,14 @@ Release this owned handle once, without mutating formal model content. A lost re
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.Plan.report
 
 `() -> PlanReport`
 
-Typed public API entry.
+Return the immutable cached report, exact Source, SDK version, affected/copied IDs, cost, losses and no-op state. No IO occurs; the report remains readable after Plan close or invalidation.
 
 
 ## zipzi.PlanCost
@@ -652,10 +690,16 @@ Typed public API entry.
 
 Immutable owned PlanCost value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `sample_combinations`: Owned int value.
-- `payload_bytes`: Owned int value.
-- `temporary_bytes`: Owned int value.
-- `history_bytes`: Owned int value.
+Fields:
+sample_combinations: Number of shape-sample combinations the conversion must process.
+payload_bytes: Estimated owned result payload in bytes; not total process RSS.
+temporary_bytes: Estimated temporary working storage in bytes; not total process RSS.
+history_bytes: Includes the SDK's complete previous checkpoint and new candidate.
+
+- `sample_combinations`: Number of shape-sample combinations the conversion must process.
+- `payload_bytes`: Estimated owned result payload in bytes; not total process RSS.
+- `temporary_bytes`: Estimated temporary working storage in bytes; not total process RSS.
+- `history_bytes`: Includes the SDK's complete previous checkpoint and new candidate.
 
 ## zipzi.PlanCost.summary
 
@@ -670,13 +714,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned PlanReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `source`: Owned Source value.
-- `version`: Owned Version value.
-- `affected_ids`: Owned tuple[str, ...] value.
-- `copied_ids`: Owned tuple[tuple[str, str], ...] value.
-- `cost`: Owned PlanCost | None value.
-- `losses`: Owned tuple[str, ...] value.
-- `no_op`: Owned bool | None value.
+Fields:
+source: Exact formal or candidate source captured for this result; later host changes do not
+rewrite it.
+version: Exact SDK version captured for this value; not a best-effort latest-version marker.
+affected_ids: Stable IDs conservatively affected by the planned operation.
+copied_ids: Mapping from original object IDs to the new IDs allocated for copied objects.
+cost: Native plan cost estimates; inspect losses separately before applying the plan.
+losses: Explicit semantic losses predicted by conversion; empty means no losses were reported.
+no_op: Whether applying the plan would leave the document unchanged.
+
+- `source`: Exact formal or candidate source captured for this result; later host changes do not
+rewrite it.
+- `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
+- `affected_ids`: Stable IDs conservatively affected by the planned operation.
+- `copied_ids`: Mapping from original object IDs to the new IDs allocated for copied objects.
+- `cost`: Native plan cost estimates; inspect losses separately before applying the plan.
+- `losses`: Explicit semantic losses predicted by conversion; empty means no losses were reported.
+- `no_op`: Whether applying the plan would leave the document unchanged.
 
 ## zipzi.PlanReport.summary
 
@@ -710,7 +765,7 @@ Cached image height in pixels; no IO.
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.PreparedImage.pixels
@@ -731,13 +786,20 @@ Cached image width in pixels; no IO.
 
 `(before: Version, after: Version, changed: bool, label: str, object_ids: tuple[str, ...])`
 
-Immutable typed value. See field semantics and the linked workflow.
+Confirmed publication result returned by a completed commit; constructing a DTO does not publish.
 
-- `before`: Owned Version value.
-- `after`: Owned Version value.
-- `changed`: Owned bool value.
-- `label`: Owned str value.
-- `object_ids`: Owned tuple[str, ...] value.
+Fields:
+before: Exact formal SDK version before publication.
+after: Exact formal SDK version after publication; may equal before when changed is false.
+changed: Whether publication changed the document; false does not create a new content edit.
+label: History label attached to the committed edit.
+object_ids: Stable document IDs reported as affected by this publication.
+
+- `before`: Exact formal SDK version before publication.
+- `after`: Exact formal SDK version after publication; may equal before when changed is false.
+- `changed`: Whether publication changed the document; false does not create a new content edit.
+- `label`: History label attached to the committed edit.
+- `object_ids`: Stable document IDs reported as affected by this publication.
 
 ## zipzi.Receipt.summary
 
@@ -789,7 +851,7 @@ Immutable negotiated host metadata; local runtimes return None.
 
 `(cursor: events.Cursor, *, limit: int=128) -> tuple[events.Event, ...]`
 
-Typed public API entry.
+Read a bounded event page after an exact registry/session Cursor. Limit is 1..256; Runtime identity or retained-history gaps raise RESYNC_REQUIRED. Recover a lost response to obtain its original page.
 
 
 ## zipzi.Runtime.limits
@@ -897,21 +959,21 @@ Capture current registry metadata and an independent cursor. Poll bounded pages;
 Immutable owned RuntimeCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-domains: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.domains; sequence value.
-pagination: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.pagination; bool value.
-source_checked_reads: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.source_checked_reads; bool value.
-session_close: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.session_close; bool value.
-binary_arrays: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.binary_arrays; bool value.
-editor_windows: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.editor_windows; bool value.
-gpu: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.gpu; bool value.
+domains: Finite domain names supported by this host; absence means the domain is unavailable.
+pagination: Whether this host supports source-bound bounded collection pagination.
+source_checked_reads: Whether selected reads accept an exact expected Source.
+session_close: Whether this host supports explicit Session detach/close.
+binary_arrays: Whether this host supports the paired binary array transport.
+editor_windows: Whether Session window display is supported by this host.
+gpu: Whether GPU operations are available from this host; CPU sampling is independent.
 
-- `domains`: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.domains; sequence value.
-- `pagination`: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.pagination; bool value.
-- `source_checked_reads`: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.source_checked_reads; bool value.
-- `session_close`: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.session_close; bool value.
-- `binary_arrays`: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.binary_arrays; bool value.
-- `editor_windows`: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.editor_windows; bool value.
-- `gpu`: Declared by zipzi_runtime::runtime::collections::RuntimeCapabilities.gpu; bool value.
+- `domains`: Finite domain names supported by this host; absence means the domain is unavailable.
+- `pagination`: Whether this host supports source-bound bounded collection pagination.
+- `source_checked_reads`: Whether selected reads accept an exact expected Source.
+- `session_close`: Whether this host supports explicit Session detach/close.
+- `binary_arrays`: Whether this host supports the paired binary array transport.
+- `editor_windows`: Whether Session window display is supported by this host.
+- `gpu`: Whether GPU operations are available from this host; CPU sampling is independent.
 
 ## zipzi.RuntimeCapabilities.summary
 
@@ -930,56 +992,56 @@ Fields:
 collection_records: Maximum records returned by one collection page or selected batch.
 collection_bytes: Maximum escaped metadata bytes in one collection page.
 collection_scan: Maximum entries examined by one collection page.
-clients: Declared by zipzi_runtime::config::RuntimeLimits.clients; usize value.
-sessions: Declared by zipzi_runtime::config::RuntimeLimits.sessions; usize value.
-edits_per_client_session: Declared by zipzi_runtime::config::RuntimeLimits.edits_per_client_session; usize value.
-edits_per_session: Declared by zipzi_runtime::config::RuntimeLimits.edits_per_session; usize value.
-edits_total: Declared by zipzi_runtime::config::RuntimeLimits.edits_total; usize value.
-candidate_bytes: Declared by zipzi_runtime::config::RuntimeLimits.candidate_bytes; usize value.
-frozen_bytes: Declared by zipzi_runtime::config::RuntimeLimits.frozen_bytes; usize value.
-accounted_bytes: Declared by zipzi_runtime::config::RuntimeLimits.accounted_bytes; usize value.
-image_bytes: Declared by zipzi_runtime::config::RuntimeLimits.image_bytes; usize value.
-plans_per_client: Declared by zipzi_runtime::config::RuntimeLimits.plans_per_client; usize value.
-references_per_client: Declared by zipzi_runtime::config::RuntimeLimits.references_per_client; usize value.
-prepared_images_per_client: Declared by zipzi_runtime::config::RuntimeLimits.prepared_images_per_client; usize value.
-plan_bytes: Declared by zipzi_runtime::config::RuntimeLimits.plan_bytes; usize value.
-blob_bytes: Declared by zipzi_runtime::config::RuntimeLimits.blob_bytes; usize value.
-blobs_per_client: Declared by zipzi_runtime::config::RuntimeLimits.blobs_per_client; usize value.
-history_bytes: Declared by zipzi_runtime::config::RuntimeLimits.history_bytes; usize value.
-jobs_total: Declared by zipzi_runtime::config::RuntimeLimits.jobs_total; usize value.
-jobs_per_client: Declared by zipzi_runtime::config::RuntimeLimits.jobs_per_client; usize value.
-running_jobs: Declared by zipzi_runtime::config::RuntimeLimits.running_jobs; usize value.
-session_events: Declared by zipzi_runtime::config::RuntimeLimits.session_events; usize value.
-session_event_bytes: Declared by zipzi_runtime::config::RuntimeLimits.session_event_bytes; usize value.
-registry_events: Declared by zipzi_runtime::config::RuntimeLimits.registry_events; usize value.
-registry_event_bytes: Declared by zipzi_runtime::config::RuntimeLimits.registry_event_bytes; usize value.
+clients: Maximum registered clients; this is a count, not a byte limit.
+sessions: Maximum resident document Sessions; this is a count, not a byte limit.
+edits_per_client_session: Maximum simultaneous candidates per client/Session pair; this is a count, not a byte limit.
+edits_per_session: Maximum simultaneous candidates per Session; this is a count, not a byte limit.
+edits_total: Maximum simultaneous candidates in this Runtime; this is a count, not a byte limit.
+candidate_bytes: Conservative byte limit for candidate document storage; not RSS or GPU memory.
+frozen_bytes: Conservative byte limit for frozen snapshots and queued work; not RSS or GPU memory.
+accounted_bytes: Conservative byte limit for aggregate Runtime-accounted storage; not RSS or GPU memory.
+image_bytes: Conservative byte limit for retained image storage; not RSS or GPU memory.
+plans_per_client: Maximum retained plans per client; this is a count, not a byte limit.
+references_per_client: Maximum retained object/field references per client; this is a count, not a byte limit.
+prepared_images_per_client: Maximum prepared images per client; this is a count, not a byte limit.
+plan_bytes: Conservative byte limit for retained plan storage; not RSS or GPU memory.
+blob_bytes: Conservative byte limit for retained binary blob storage; not RSS or GPU memory.
+blobs_per_client: Maximum retained binary blobs per client; this is a count, not a byte limit.
+history_bytes: Conservative byte limit for retained undo/redo history; not RSS or GPU memory.
+jobs_total: Maximum retained Jobs in the Runtime; this is a count, not a byte limit.
+jobs_per_client: Maximum retained Jobs per client; this is a count, not a byte limit.
+running_jobs: Maximum concurrently running host Jobs; this is a count, not a byte limit.
+session_events: Maximum retained events per Session stream; this is a count, not a byte limit.
+session_event_bytes: Conservative byte limit for event payloads per Session stream; not RSS or GPU memory.
+registry_events: Maximum retained events in the registry stream; this is a count, not a byte limit.
+registry_event_bytes: Conservative byte limit for registry event payloads; not RSS or GPU memory.
 
 - `collection_records`: Maximum records returned by one collection page or selected batch.
 - `collection_bytes`: Maximum escaped metadata bytes in one collection page.
 - `collection_scan`: Maximum entries examined by one collection page.
-- `clients`: Declared by zipzi_runtime::config::RuntimeLimits.clients; usize value.
-- `sessions`: Declared by zipzi_runtime::config::RuntimeLimits.sessions; usize value.
-- `edits_per_client_session`: Declared by zipzi_runtime::config::RuntimeLimits.edits_per_client_session; usize value.
-- `edits_per_session`: Declared by zipzi_runtime::config::RuntimeLimits.edits_per_session; usize value.
-- `edits_total`: Declared by zipzi_runtime::config::RuntimeLimits.edits_total; usize value.
-- `candidate_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.candidate_bytes; usize value.
-- `frozen_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.frozen_bytes; usize value.
-- `accounted_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.accounted_bytes; usize value.
-- `image_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.image_bytes; usize value.
-- `plans_per_client`: Declared by zipzi_runtime::config::RuntimeLimits.plans_per_client; usize value.
-- `references_per_client`: Declared by zipzi_runtime::config::RuntimeLimits.references_per_client; usize value.
-- `prepared_images_per_client`: Declared by zipzi_runtime::config::RuntimeLimits.prepared_images_per_client; usize value.
-- `plan_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.plan_bytes; usize value.
-- `blob_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.blob_bytes; usize value.
-- `blobs_per_client`: Declared by zipzi_runtime::config::RuntimeLimits.blobs_per_client; usize value.
-- `history_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.history_bytes; usize value.
-- `jobs_total`: Declared by zipzi_runtime::config::RuntimeLimits.jobs_total; usize value.
-- `jobs_per_client`: Declared by zipzi_runtime::config::RuntimeLimits.jobs_per_client; usize value.
-- `running_jobs`: Declared by zipzi_runtime::config::RuntimeLimits.running_jobs; usize value.
-- `session_events`: Declared by zipzi_runtime::config::RuntimeLimits.session_events; usize value.
-- `session_event_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.session_event_bytes; usize value.
-- `registry_events`: Declared by zipzi_runtime::config::RuntimeLimits.registry_events; usize value.
-- `registry_event_bytes`: Declared by zipzi_runtime::config::RuntimeLimits.registry_event_bytes; usize value.
+- `clients`: Maximum registered clients; this is a count, not a byte limit.
+- `sessions`: Maximum resident document Sessions; this is a count, not a byte limit.
+- `edits_per_client_session`: Maximum simultaneous candidates per client/Session pair; this is a count, not a byte limit.
+- `edits_per_session`: Maximum simultaneous candidates per Session; this is a count, not a byte limit.
+- `edits_total`: Maximum simultaneous candidates in this Runtime; this is a count, not a byte limit.
+- `candidate_bytes`: Conservative byte limit for candidate document storage; not RSS or GPU memory.
+- `frozen_bytes`: Conservative byte limit for frozen snapshots and queued work; not RSS or GPU memory.
+- `accounted_bytes`: Conservative byte limit for aggregate Runtime-accounted storage; not RSS or GPU memory.
+- `image_bytes`: Conservative byte limit for retained image storage; not RSS or GPU memory.
+- `plans_per_client`: Maximum retained plans per client; this is a count, not a byte limit.
+- `references_per_client`: Maximum retained object/field references per client; this is a count, not a byte limit.
+- `prepared_images_per_client`: Maximum prepared images per client; this is a count, not a byte limit.
+- `plan_bytes`: Conservative byte limit for retained plan storage; not RSS or GPU memory.
+- `blob_bytes`: Conservative byte limit for retained binary blob storage; not RSS or GPU memory.
+- `blobs_per_client`: Maximum retained binary blobs per client; this is a count, not a byte limit.
+- `history_bytes`: Conservative byte limit for retained undo/redo history; not RSS or GPU memory.
+- `jobs_total`: Maximum retained Jobs in the Runtime; this is a count, not a byte limit.
+- `jobs_per_client`: Maximum retained Jobs per client; this is a count, not a byte limit.
+- `running_jobs`: Maximum concurrently running host Jobs; this is a count, not a byte limit.
+- `session_events`: Maximum retained events per Session stream; this is a count, not a byte limit.
+- `session_event_bytes`: Conservative byte limit for event payloads per Session stream; not RSS or GPU memory.
+- `registry_events`: Maximum retained events in the registry stream; this is a count, not a byte limit.
+- `registry_event_bytes`: Conservative byte limit for registry event payloads; not RSS or GPU memory.
 
 ## zipzi.RuntimeLimits.summary
 
@@ -992,12 +1054,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(manifest: Path, durable: bool, before: Version, after: Version)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Confirmed save outcome; inspect durable and the actual host manifest path.
 
-- `manifest`: Owned Path value.
-- `durable`: Owned bool value.
-- `before`: Owned Version value.
-- `after`: Owned Version value.
+Fields:
+manifest: Absolute manifest path reported by the host; not a path resolved on the client.
+durable: Whether the save achieved its persistence guarantee; completion alone does not imply true.
+before: SDK version captured before saving.
+after: SDK version reported after saving.
+
+- `manifest`: Absolute manifest path reported by the host; not a path resolved on the client.
+- `durable`: Whether the save achieved its persistence guarantee; completion alone does not imply true.
+- `before`: SDK version captured before saving.
+- `after`: SDK version reported after saving.
 
 ## zipzi.SaveReceipt.summary
 
@@ -1306,7 +1374,6 @@ Pin immutable pixels with an explicit lease; close the lease when finished.
 
 Immutable typed value. See field semantics and the linked workflow.
 
-- `value`: Declared by Scene.value; string value.
 
 ## zipzi.Session.scene.get
 
@@ -1354,10 +1421,14 @@ Submit one formal history undo and return Job[Receipt]. Wait for confirmed conte
 
 `(runtime: str, serial: int)`
 
-Runtime-scoped identity, independent of paths and document UUIDs.
+Runtime-scoped Session identity, independent of paths and persistent document UUIDs.
 
-- `runtime`: Owned str value.
-- `serial`: Owned int value.
+Fields:
+runtime: Canonical UUID of the Runtime instance that allocated the handle.
+serial: Positive u64 Session serial within that Runtime; not the document UUID or SDK session_id.
+
+- `runtime`: Canonical UUID of the Runtime instance that allocated the handle.
+- `serial`: Positive u64 Session serial within that Runtime; not the document UUID or SDK session_id.
 
 ## zipzi.SessionId.summary
 
@@ -1370,14 +1441,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(version: Version, modified: bool, history: tuple[int, int], id: SessionId, state: str, path: Path | None)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Immutable Session metadata captured by the host; reading it does not refresh the Session.
 
-- `version`: Owned Version value.
-- `modified`: Owned bool value.
-- `history`: Owned tuple[int, int] value.
-- `id`: Owned SessionId value.
-- `state`: Owned str value.
-- `path`: Owned Path | None value.
+Fields:
+version: Exact SDK version captured with this metadata.
+modified: Whether the document has unsaved changes; default Session.close refuses a modified document.
+history: Pair of undo-step and redo-step counts, in that order.
+id: Runtime-scoped Session identity; not the persistent document UUID.
+state: Captured lifecycle state: ready, busy, faulted, closing or closed.
+path: Host project path; None means the Session has no associated project path.
+
+- `version`: Exact SDK version captured with this metadata.
+- `modified`: Whether the document has unsaved changes; default Session.close refuses a modified document.
+- `history`: Pair of undo-step and redo-step counts, in that order.
+- `id`: Runtime-scoped Session identity; not the persistent document UUID.
+- `state`: Captured lifecycle state: ready, busy, faulted, closing or closed.
+- `path`: Host project path; None means the Session has no associated project path.
 
 ## zipzi.SessionInfo.summary
 
@@ -1390,10 +1469,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(source: Source, value: T)`
 
-One owned domain value at an exact formal or candidate source.
+One owned domain value at an exact formal or candidate source; field access performs no IO.
 
-- `source`: Owned Source value.
-- `value`: Owned T value.
+Fields:
+source: Exact source captured atomically with the payload.
+value: Owned immutable domain payload; retain source separately when planning or checking freshness.
+
+- `source`: Exact source captured atomically with the payload.
+- `value`: Owned immutable domain payload; retain source separately when planning or checking freshness.
 
 ## zipzi.Snapshot.summary
 
@@ -1406,13 +1489,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(runtime: str, session: int, version: Version, edit: int | None = None, sequence: int = 0)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Exact immutable formal or candidate source used by a read or plan; copying it performs no IO.
 
-- `runtime`: Owned str value.
-- `session`: Owned int value.
-- `version`: Owned Version value.
-- `edit`: Owned int | None value.
-- `sequence`: Owned int value.
+Fields:
+runtime: Canonical UUID of the Runtime instance owning the source.
+session: Runtime Session serial; together with runtime identifies the resident document.
+version: Exact formal version, or the formal base version captured by the candidate.
+edit: Candidate Edit serial; None means a formal document source.
+sequence: Exact candidate sequence; formal sources use the default 0. Later candidate writes invalidate old sequences.
+
+- `runtime`: Canonical UUID of the Runtime instance owning the source.
+- `session`: Runtime Session serial; together with runtime identifies the resident document.
+- `version`: Exact formal version, or the formal base version captured by the candidate.
+- `edit`: Candidate Edit serial; None means a formal document source.
+- `sequence`: Exact candidate sequence; formal sources use the default 0. Later candidate writes invalidate old sequences.
 
 ## zipzi.Source.summary
 
@@ -1425,11 +1515,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(session_id: int, generation: int, revision: int)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Exact SDK document version; compare the complete value rather than revision alone.
 
-- `session_id`: Owned int value.
-- `generation`: Owned int value.
-- `revision`: Owned int value.
+Fields:
+session_id: SDK authoring-session identity, distinct from the Runtime Session serial.
+generation: Document incarnation within the SDK session; replacing/opening content invalidates older generations.
+revision: Document revision within this generation; not a Runtime event cursor or Edit sequence.
+
+- `session_id`: SDK authoring-session identity, distinct from the Runtime Session serial.
+- `generation`: Document incarnation within the SDK session; replacing/opening content invalidates older generations.
+- `revision`: Document revision within this generation; not a Runtime event cursor or Edit sequence.
 
 ## zipzi.Version.summary
 
@@ -1442,10 +1537,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(source: Source, ids: tuple[str, ...])`
 
-Immutable typed value. See field semantics and the linked workflow.
+Confirmed candidate write result; it is not a formal commit receipt.
 
-- `source`: Owned Source value.
-- `ids`: Owned tuple[str, ...] value.
+Fields:
+source: Exact candidate source after the accepted write call.
+ids: Operation result IDs in operation order; may name newly created or existing objects.
+
+- `source`: Exact candidate source after the accepted write call.
+- `ids`: Operation result IDs in operation order; may name newly created or existing objects.
 
 ## zipzi.WriteResult.summary
 
@@ -1465,16 +1564,18 @@ Numeric binding inputs and canonical values from one Rust declaration.
 
 `(opacity: float, multiply: Sequence[float], screen: Sequence[float]) -> None`
 
-Immutable owned Appearance value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings Appearance value; reading fields, repr and summary performs no IO.
 
 Fields:
-opacity: Declared by zipzi_core::types::Appearance.opacity; f32 value.
-multiply: Declared by zipzi_core::types::Appearance.multiply; array value.
-screen: Declared by zipzi_core::types::Appearance.screen; array value.
+opacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+multiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
+screen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
-- `opacity`: Declared by zipzi_core::types::Appearance.opacity; f32 value.
-- `multiply`: Declared by zipzi_core::types::Appearance.multiply; array value.
-- `screen`: Declared by zipzi_core::types::Appearance.screen; array value.
+- `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+- `multiply`: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
+- `screen`: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
 ## zipzi.bindings.Appearance.summary
 
@@ -1487,10 +1588,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(parameter_id: str, keys: Sequence[float]) -> None`
 
-Immutable owned Axis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings Axis value; reading fields, repr and summary performs no IO.
 
-- `parameter_id`: Owned str value.
-- `keys`: Owned tuple[float, ...] value.
+Fields:
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+keys: Strictly increasing finite parameter sample values for this axis, in parameter units;
+not sample indices.
+
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `keys`: Strictly increasing finite parameter sample values for this axis, in parameter units;
+not sample indices.
 
 ## zipzi.bindings.Axis.summary
 
@@ -1503,11 +1610,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(id: str, samples: Sequence[Sample], parameter_id: str) -> None`
 
-Immutable owned AxisSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings AxisSnapshot value; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `samples`: Owned tuple[Sample, ...] value.
-- `parameter_id`: Owned str value.
+Fields:
+id: Stable axis UUID; an empty ID is allocated during native binding normalization.
+samples: Ordered stable samples with strictly increasing finite parameter values.
+parameter_id: Document parameter ID driving the axis; an empty string represents a pending/unassigned
+axis.
+
+- `id`: Stable axis UUID; an empty ID is allocated during native binding normalization.
+- `samples`: Ordered stable samples with strictly increasing finite parameter values.
+- `parameter_id`: Document parameter ID driving the axis; an empty string represents a pending/unassigned
+axis.
 
 ## zipzi.bindings.AxisSnapshot.summary
 
@@ -1520,14 +1634,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(spec: MeshBindingSpec) -> None`
 
-Immutable owned Create value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings Create value; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by Create.id; string value.
-target: Declared by Create.target; serde_enum value.
+spec: Creation specification; native admission supplies identities/defaults and rejects
+invalid input.
 
-- `id`: Declared by Create.id; string value.
-- `target`: Declared by Create.target; serde_enum value.
+- `spec`: Creation specification; native admission supplies identities/defaults and rejects
+invalid input.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.bindings.Create.summary
 
@@ -1540,14 +1655,30 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(keys: Sequence[float], positions: Sequence[Point], opacity: float | None=None, multiply: Sequence[float] | None=None, screen: Sequence[float] | None=None, draw_order: float | None=None) -> None`
 
-Immutable owned Keyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings Keyform value; reading fields, repr and summary performs no IO.
 
-- `keys`: Owned tuple[float, ...] value.
-- `positions`: Owned tuple[Point, ...] value.
-- `opacity`: Owned float | None value.
-- `multiply`: Owned tuple[float, float, float] | None value.
-- `screen`: Owned tuple[float, float, float] | None value.
-- `draw_order`: Owned float | None value.
+Fields:
+keys: One actual parameter sample value per binding axis, in axis order; each must match a
+declared axis sample.
+positions: Absolute mesh-local positions, one per target mesh vertex in vertex_ids order; not
+displacement vectors.
+opacity: Optional finite nonnegative opacity factor; None uses the native neutral default 1.
+Values above 1 are retained for import roundtrips.
+multiply: Optional RGB multiply factors; None uses neutral (1, 1, 1).
+screen: Optional RGB screen factors; None uses neutral (0, 0, 0).
+draw_order: Optional keyform drawing-order coordinate; None leaves the order unspecified for native
+evaluation.
+
+- `keys`: One actual parameter sample value per binding axis, in axis order; each must match a
+declared axis sample.
+- `positions`: Absolute mesh-local positions, one per target mesh vertex in vertex_ids order; not
+displacement vectors.
+- `opacity`: Optional finite nonnegative opacity factor; None uses the native neutral default 1.
+Values above 1 are retained for import roundtrips.
+- `multiply`: Optional RGB multiply factors; None uses neutral (1, 1, 1).
+- `screen`: Optional RGB screen factors; None uses neutral (0, 0, 0).
+- `draw_order`: Optional keyform drawing-order coordinate; None leaves the order unspecified for native
+evaluation.
 
 ## zipzi.bindings.Keyform.summary
 
@@ -1560,12 +1691,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(samples: Sequence[str], positions: Sequence[Point], appearance: Appearance, draw_order: float | None) -> None`
 
-Immutable owned KeyformSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings KeyformSnapshot value; reading fields, repr and summary performs no IO.
 
-- `samples`: Owned tuple[str, ...] value.
-- `positions`: Owned tuple[Point, ...] value.
-- `appearance`: Owned Appearance value.
-- `draw_order`: Owned float | None value.
+Fields:
+samples: Stable sample IDs, one per active binding axis in axis order; not numeric sample
+coordinates.
+positions: Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.
+appearance: Opacity and multiply/screen color factors for this object or shape.
+draw_order: Optional keyform drawing-order coordinate; None lets native evaluation use its
+unoverridden order.
+
+- `samples`: Stable sample IDs, one per active binding axis in axis order; not numeric sample
+coordinates.
+- `positions`: Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.
+- `appearance`: Opacity and multiply/screen color factors for this object or shape.
+- `draw_order`: Optional keyform drawing-order coordinate; None lets native evaluation use its
+unoverridden order.
 
 ## zipzi.bindings.KeyformSnapshot.summary
 
@@ -1578,18 +1719,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(id: str, mesh_id: str, axes: Sequence[AxisSnapshot], keyforms: Sequence[KeyformSnapshot]) -> None`
 
-Immutable owned MeshBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings MeshBinding value; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::MeshBinding.id; string value.
-mesh_id: Declared by zipzi_core::types::MeshBinding.mesh_id; string value.
-axes: Declared by zipzi_core::types::MeshBinding.axes; sequence value.
-keyforms: Declared by zipzi_core::types::MeshBinding.keyforms; sequence value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+mesh_id: Stable ID of the target mesh in this document.
+axes: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
+keyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
 
-- `id`: Declared by zipzi_core::types::MeshBinding.id; string value.
-- `mesh_id`: Declared by zipzi_core::types::MeshBinding.mesh_id; string value.
-- `axes`: Declared by zipzi_core::types::MeshBinding.axes; sequence value.
-- `keyforms`: Declared by zipzi_core::types::MeshBinding.keyforms; sequence value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `axes`: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
+- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
 
 ## zipzi.bindings.MeshBinding.summary
 
@@ -1602,18 +1747,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(mesh_id: str, axes: Sequence[Axis], keyforms: Sequence[Keyform], id: str | None=None) -> None`
 
-Immutable owned MeshBindingSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings MeshBindingSpec value; reading fields, repr and summary performs no IO.
 
 Fields:
-mesh_id: Declared by zipzi_sdk::mesh_binding_edit::MeshBindingCreateSpec.mesh_id; string value.
-axes: Declared by zipzi_sdk::mesh_binding_edit::MeshBindingCreateSpec.axes; sequence value.
-keyforms: Declared by zipzi_sdk::mesh_binding_edit::MeshBindingCreateSpec.keyforms; sequence value.
-id: Declared by zipzi_sdk::mesh_binding_edit::MeshBindingCreateSpec.id; optional value.
+mesh_id: Stable ID of the target mesh in this document.
+axes: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
+keyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
+id: Optional new binding UUID; None allocates a fresh UUID when the create operation executes.
 
-- `mesh_id`: Owned str value.
-- `axes`: Owned tuple[Axis, ...] value.
-- `keyforms`: Owned tuple[Keyform, ...] value.
-- `id`: Owned str | None value.
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `axes`: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
+- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
+- `id`: Optional new binding UUID; None allocates a fresh UUID when the create operation executes.
 
 ## zipzi.bindings.MeshBindingSpec.summary
 
@@ -1626,10 +1775,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(id: str, value: float) -> None`
 
-Immutable owned Sample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings Sample value; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `value`: Owned float value.
+Fields:
+id: Stable sample UUID within the binding axis; distinct from its numeric value.
+value: Finite sample coordinate in the driving parameter domain; axis samples are strictly
+increasing.
+
+- `id`: Stable sample UUID within the binding axis; distinct from its numeric value.
+- `value`: Finite sample coordinate in the driving parameter domain; axis samples are strictly
+increasing.
 
 ## zipzi.bindings.Sample.summary
 
@@ -1642,11 +1797,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(id: str, keyform: Keyform) -> None`
 
-Immutable owned SetKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned bindings SetKeyform value; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[Literal['set_mesh_keyform']] value.
-- `id`: Owned str value.
-- `keyform`: Owned Keyform value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+keyform: Complete shape sample to insert or replace; unrelated samples are retained.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.bindings.SetKeyform.summary
 
@@ -1723,12 +1884,21 @@ Bounded cursor streams; polling never drains another client's events.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
 
-Immutable owned Closed value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned events Closed value; reading fields, repr and summary performs no IO.
 
 Fields:
-value: Declared by Closed.value; opaque value.
+cursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and
+stream.
+client: Originating client identity; None means no client was attributed to the event.
+job: Related Job identity; None means this event has no associated Job.
+operation: Runtime operation identity used to correlate a published event with its original operation.
+info: Final Session metadata captured when the document closed.
 
-- `value`: Declared by Closed.value; opaque value.
+- `cursor`: Exact event-stream position captured for this event; cursors are scoped to Runtime and stream.
+- `client`: Originating client identity; None means no client was attributed to the event.
+- `job`: Related Job identity; None means this event has no associated Job.
+- `operation`: Runtime operation identity used to correlate a published event with its original operation.
+- `info`: Final Session metadata captured when the document closed.
 
 ## zipzi.events.Closed.summary
 
@@ -1741,12 +1911,21 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
 
-Immutable owned Created value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned events Created value; reading fields, repr and summary performs no IO.
 
 Fields:
-value: Declared by Created.value; opaque value.
+cursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and
+stream.
+client: Originating client identity; None means no client was attributed to the event.
+job: Related Job identity; None means this event has no associated Job.
+operation: Runtime operation identity used to correlate a published event with its original operation.
+info: Session metadata captured when the Session was created.
 
-- `value`: Declared by Created.value; opaque value.
+- `cursor`: Exact event-stream position captured for this event; cursors are scoped to Runtime and stream.
+- `client`: Originating client identity; None means no client was attributed to the event.
+- `job`: Related Job identity; None means this event has no associated Job.
+- `operation`: Runtime operation identity used to correlate a published event with its original operation.
+- `info`: Session metadata captured when the Session was created.
 
 ## zipzi.events.Created.summary
 
@@ -1759,11 +1938,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(runtime: str, session: SessionId | None, sequence: int) -> None`
 
-Immutable owned Cursor value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned events Cursor value; reading fields, repr and summary performs no IO.
 
-- `runtime`: Owned str value.
-- `session`: Owned SessionId | None value.
-- `sequence`: Owned int value.
+Fields:
+runtime: Runtime instance identity; handles and cursors from another instance cannot be substituted.
+session: None is the registry stream; it has no cross-session ordering guarantee.
+sequence: Monotonic sequence within the selected registry or Session stream; no cross-stream
+ordering is implied.
+
+- `runtime`: Runtime instance identity; handles and cursors from another instance cannot be substituted.
+- `session`: None is the registry stream; it has no cross-session ordering guarantee.
+- `sequence`: Monotonic sequence within the selected registry or Session stream; no cross-stream ordering is implied.
 
 ## zipzi.events.Cursor.summary
 
@@ -1783,10 +1968,14 @@ Typed public API entry.
 
 `(runtime: str, serial: int) -> None`
 
-Immutable owned Origin value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned events Origin value; reading fields, repr and summary performs no IO.
 
-- `runtime`: Owned str value.
-- `serial`: Owned int value.
+Fields:
+runtime: Runtime instance that allocated this handle; handles are invalid across instances.
+serial: Runtime-allocated serial, meaningful only together with the instance and handle kind.
+
+- `runtime`: Runtime instance that allocated this handle; handles are invalid across instances.
+- `serial`: Runtime-allocated serial, meaningful only together with the instance and handle kind.
 
 ## zipzi.events.Origin.summary
 
@@ -1799,12 +1988,21 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, receipt: Receipt) -> None`
 
-Immutable owned Published value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned events Published value; reading fields, repr and summary performs no IO.
 
 Fields:
-value: Declared by Published.value; opaque value.
+cursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and
+stream.
+client: Originating client identity; None means no client was attributed to the event.
+job: Related Job identity; None means this event has no associated Job.
+operation: Runtime operation identity used to correlate a published event with its original operation.
+receipt: Confirmed edit publication receipt, including before/after versions and changes.
 
-- `value`: Declared by Published.value; opaque value.
+- `cursor`: Exact event-stream position captured for this event; cursors are scoped to Runtime and stream.
+- `client`: Originating client identity; None means no client was attributed to the event.
+- `job`: Related Job identity; None means this event has no associated Job.
+- `operation`: Runtime operation identity used to correlate a published event with its original operation.
+- `receipt`: Confirmed edit publication receipt, including before/after versions and changes.
 
 ## zipzi.events.Published.summary
 
@@ -1824,28 +2022,28 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `() -> Cursor`
 
-Typed public API entry.
+Return this subscription's cached exact cursor without IO. Recover initial subscription before using it; cursors belong to one Runtime and registry/session stream.
 
 
 ## zipzi.events.RegistrySubscription.initial
 
 `() -> T`
 
-Typed public API entry.
+Return the immutable metadata captured at subscribe/resync, without IO. Later poll calls advance the cursor but do not silently refresh this initial value.
 
 
 ## zipzi.events.RegistrySubscription.pending_request
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.events.RegistrySubscription.poll
 
 `(*, limit: int=128) -> tuple[Event, ...]`
 
-Typed public API entry.
+Read up to limit events after this independent cursor, with limit in 1..256. Advance only after a complete valid page; gaps require explicit resync. Recover the original call after a lost response.
 
 
 ## zipzi.events.RegistrySubscription.resync
@@ -1859,12 +2057,21 @@ Explicitly replace the initial metadata and cursor atomically.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, receipt: SaveReceipt) -> None`
 
-Immutable owned Saved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned events Saved value; reading fields, repr and summary performs no IO.
 
 Fields:
-value: Declared by Saved.value; opaque value.
+cursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and
+stream.
+client: Originating client identity; None means no client was attributed to the event.
+job: Related Job identity; None means this event has no associated Job.
+operation: Runtime operation identity used to correlate a published event with its original operation.
+receipt: Save receipt with persistence paths, warnings and durability status.
 
-- `value`: Declared by Saved.value; opaque value.
+- `cursor`: Exact event-stream position captured for this event; cursors are scoped to Runtime and stream.
+- `client`: Originating client identity; None means no client was attributed to the event.
+- `job`: Related Job identity; None means this event has no associated Job.
+- `operation`: Runtime operation identity used to correlate a published event with its original operation.
+- `receipt`: Save receipt with persistence paths, warnings and durability status.
 
 ## zipzi.events.Saved.summary
 
@@ -1884,28 +2091,28 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `() -> Cursor`
 
-Typed public API entry.
+Return this subscription's cached exact cursor without IO. Recover initial subscription before using it; cursors belong to one Runtime and registry/session stream.
 
 
 ## zipzi.events.SessionSubscription.initial
 
 `() -> T`
 
-Typed public API entry.
+Return the immutable metadata captured at subscribe/resync, without IO. Later poll calls advance the cursor but do not silently refresh this initial value.
 
 
 ## zipzi.events.SessionSubscription.pending_request
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.events.SessionSubscription.poll
 
 `(*, limit: int=128) -> tuple[Event, ...]`
 
-Typed public API entry.
+Read up to limit events after this independent cursor, with limit in 1..256. Advance only after a complete valid page; gaps require explicit resync. Recover the original call after a lost response.
 
 
 ## zipzi.events.SessionSubscription.resync
@@ -1919,12 +2126,21 @@ Explicitly replace the initial metadata and cursor atomically.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
 
-Immutable owned StateChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned events StateChanged value; reading fields, repr and summary performs no IO.
 
 Fields:
-value: Declared by StateChanged.value; opaque value.
+cursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and
+stream.
+client: Originating client identity; None means no client was attributed to the event.
+job: Related Job identity; None means this event has no associated Job.
+operation: Runtime operation identity used to correlate a published event with its original operation.
+info: Session metadata captured at this lifecycle state transition.
 
-- `value`: Declared by StateChanged.value; opaque value.
+- `cursor`: Exact event-stream position captured for this event; cursors are scoped to Runtime and stream.
+- `client`: Originating client identity; None means no client was attributed to the event.
+- `job`: Related Job identity; None means this event has no associated Job.
+- `operation`: Runtime operation identity used to correlate a published event with its original operation.
+- `info`: Session metadata captured at this lifecycle state transition.
 
 ## zipzi.events.StateChanged.summary
 
@@ -1937,7 +2153,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `() -> Runtime`
 
-Typed public API entry.
+Explicitly create an owned in-process Runtime with the paired optional native wheel. Importing zipzi alone does not start it. Use as a context manager; close releases its sessions without saving or connecting to another host.
 
 
 ## zipzi.meshes
@@ -1954,11 +2170,13 @@ Mesh values are generated; selected Plan intents are generated.
 Immutable owned Create value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by Create.id; string value.
-target: Declared by Create.target; serde_enum value.
+spec: Creation specification; native admission supplies identities/defaults and
+rejects invalid input.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
-- `id`: Declared by Create.id; string value.
-- `target`: Declared by Create.target; serde_enum value.
+- `spec`: Creation specification; native admission supplies identities/defaults and
+rejects invalid input.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.meshes.Create.summary
 
@@ -1979,10 +2197,10 @@ positions: Model-space XY coordinates ordered by vertex_ids.
 uvs: Texture UV coordinates ordered by vertex_ids.
 triangles: Triangle entries reference vertex_ids values, never offsets into positions.
 
-- `vertex_ids`: Owned tuple[int, ...] value.
-- `positions`: Owned tuple[Point, ...] value.
-- `uvs`: Owned tuple[Point, ...] value.
-- `triangles`: Owned tuple[tuple[int, int, int], ...] value.
+- `vertex_ids`: Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
+- `positions`: Model-space XY coordinates ordered by vertex_ids.
+- `uvs`: Texture UV coordinates ordered by vertex_ids.
+- `triangles`: Triangle entries reference vertex_ids values, never offsets into positions.
 
 ## zipzi.meshes.Geometry.summary
 
@@ -1998,43 +2216,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned Mesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Mesh.id; string value.
-name: Declared by zipzi_core::types::Mesh.name; string value.
-texture_asset_id: Declared by zipzi_core::types::Mesh.texture_asset_id; serde_enum value.
-vertex_ids: Declared by zipzi_core::types::Mesh.vertex_ids; sequence value.
-base_positions: Declared by zipzi_core::types::Mesh.base_positions; sequence value.
-uvs: Declared by zipzi_core::types::Mesh.uvs; sequence value.
-triangles: Declared by zipzi_core::types::Mesh.triangles; sequence value.
-runtime_id: Declared by zipzi_core::types::Mesh.runtime_id; string value.
-part_id: Declared by zipzi_core::types::Mesh.part_id; string value.
-deformer_id: Declared by zipzi_core::types::Mesh.deformer_id; string value.
-appearance: Declared by zipzi_core::types::Mesh.appearance; serde_record value.
-draw_order: Declared by zipzi_core::types::Mesh.draw_order; optional value.
-blend_mode: Declared by zipzi_core::types::Mesh.blend_mode; serde_enum value.
-enabled: Declared by zipzi_core::types::Mesh.enabled; bool value.
-double_sided: Declared by zipzi_core::types::Mesh.double_sided; bool value.
-inverted_mask: Declared by zipzi_core::types::Mesh.inverted_mask; bool value.
-masks: Declared by zipzi_core::types::Mesh.masks; sequence value.
-raw_blend_mode: Declared by zipzi_core::types::Mesh.raw_blend_mode; optional value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+geometry: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not
+position offsets.
 
-- `id`: Declared by zipzi_core::types::Mesh.id; string value.
-- `name`: Declared by zipzi_core::types::Mesh.name; string value.
-- `texture_asset_id`: Declared by zipzi_core::types::Mesh.texture_asset_id; serde_enum value.
-- `vertex_ids`: Declared by zipzi_core::types::Mesh.vertex_ids; sequence value.
-- `base_positions`: Declared by zipzi_core::types::Mesh.base_positions; sequence value.
-- `uvs`: Declared by zipzi_core::types::Mesh.uvs; sequence value.
-- `triangles`: Declared by zipzi_core::types::Mesh.triangles; sequence value.
-- `runtime_id`: Declared by zipzi_core::types::Mesh.runtime_id; string value.
-- `part_id`: Declared by zipzi_core::types::Mesh.part_id; string value.
-- `deformer_id`: Declared by zipzi_core::types::Mesh.deformer_id; string value.
-- `appearance`: Declared by zipzi_core::types::Mesh.appearance; serde_record value.
-- `draw_order`: Declared by zipzi_core::types::Mesh.draw_order; optional value.
-- `blend_mode`: Declared by zipzi_core::types::Mesh.blend_mode; serde_enum value.
-- `enabled`: Declared by zipzi_core::types::Mesh.enabled; bool value.
-- `double_sided`: Declared by zipzi_core::types::Mesh.double_sided; bool value.
-- `inverted_mask`: Declared by zipzi_core::types::Mesh.inverted_mask; bool value.
-- `masks`: Declared by zipzi_core::types::Mesh.masks; sequence value.
-- `raw_blend_mode`: Declared by zipzi_core::types::Mesh.raw_blend_mode; optional value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `geometry`: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not
+position offsets.
 
 ## zipzi.meshes.Mesh.summary
 
@@ -2050,15 +2240,21 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned MeshSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-name: Declared by zipzi_sdk::mesh_edit::MeshCreateSpec.name; string value.
-geometry: Declared by zipzi_sdk::mesh_edit::MeshCreateSpec.geometry; record value.
-texture_asset_id: Declared by zipzi_sdk::mesh_edit::MeshCreateSpec.texture_asset_id; string value; default {'kind': 'empty_string'}.
-id: Declared by zipzi_sdk::mesh_edit::MeshCreateSpec.id; optional value; default {'kind': 'null'}.
+name: Human-readable display name; use the stable ID for identity because names can change.
+geometry: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not
+position offsets.
+texture_asset_id: Image-asset ID used by this mesh; the default empty string leaves its texture
+reference unassigned.
+id: Optional new mesh UUID; None allocates a fresh UUID in the SDK when the create
+operation executes.
 
-- `name`: Owned str value.
-- `geometry`: Owned Geometry value.
-- `texture_asset_id`: Owned str value.
-- `id`: Owned str | None value.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `geometry`: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not
+position offsets.
+- `texture_asset_id`: Image-asset ID used by this mesh; the default empty string leaves its texture
+reference unassigned.
+- `id`: Optional new mesh UUID; None allocates a fresh UUID in the SDK when the create
+operation executes.
 
 ## zipzi.meshes.MeshSpec.summary
 
@@ -2080,10 +2276,20 @@ Typed public API entry.
 
 Immutable owned Rename value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `expected_name`: Owned str | None value.
-- `kind`: Owned Literal['rename'] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can
+change.
+expected_name: Required current display name; None disables this name precondition.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can
+change.
+- `expected_name`: Required current display name; None disables this name precondition.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.meshes.Rename.summary
 
@@ -2098,10 +2304,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SetPositions value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `vertex_ids`: Owned tuple[int, ...] value.
-- `positions`: Owned tuple[Point, ...] value.
-- `kind`: Owned Literal['set_positions'] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+vertex_ids: Stable vertex IDs selecting which positions to replace; values are paired with
+positions in the supplied order.
+positions: Replacement absolute mesh-local XY positions aligned with the supplied
+vertex_ids selection.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `vertex_ids`: Stable vertex IDs selecting which positions to replace; values are paired with
+positions in the supplied order.
+- `positions`: Replacement absolute mesh-local XY positions aligned with the supplied
+vertex_ids selection.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.meshes.SetPositions.summary
 
@@ -2171,7 +2389,12 @@ Typed public API entry.
 
 Immutable owned AddressPatchAttachmentPath value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `path`: Owned str value.
+Fields:
+path: Normalized package-relative attachment path using forward slashes; absolute paths
+and .. components are invalid.
+
+- `path`: Normalized package-relative attachment path using forward slashes; absolute paths
+and .. components are invalid.
 
 ## zipzi.modeling.AddressPatchAttachmentPath.summary
 
@@ -2186,7 +2409,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `patch`: Owned BindingFieldPatch value.
+Fields:
+patch: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
+
+- `patch`: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
 
 ## zipzi.modeling.AddressPatchBinding.summary
 
@@ -2201,7 +2427,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned SceneContentValue value.
+Fields:
+value: Scalar value in the referenced parameter domain.
+
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.AddressPatchContent.summary
 
@@ -2216,7 +2445,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned DocumentValue value.
+Fields:
+value: Scalar value in the referenced parameter domain.
+
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.AddressPatchDocument.summary
 
@@ -2231,7 +2463,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchDrawingRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `range`: Owned tuple[int, int] value.
+Fields:
+range: Inclusive lower and upper drawing-order bounds, in that order.
+
+- `range`: Inclusive lower and upper drawing-order bounds, in that order.
 
 ## zipzi.modeling.AddressPatchDrawingRange.summary
 
@@ -2246,7 +2481,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `intent`: Owned OrganizationEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
 
 ## zipzi.modeling.AddressPatchOrganization.summary
 
@@ -2261,7 +2501,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchReference value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `fields`: Owned ReferenceFields value.
+Fields:
+fields: Typed replacement metadata fields; their variant must match the addressed reference
+kind.
+
+- `fields`: Typed replacement metadata fields; their variant must match the addressed reference
+kind.
 
 ## zipzi.modeling.AddressPatchReference.summary
 
@@ -2276,7 +2521,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchResourceName value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can change.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
 
 ## zipzi.modeling.AddressPatchResourceName.summary
 
@@ -2291,8 +2539,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned SceneFieldValue value.
-- `clear_glue_pairs`: Owned bool value.
+Fields:
+value: Scalar value in the referenced parameter domain.
+clear_glue_pairs: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.
+
+- `value`: Scalar value in the referenced parameter domain.
+- `clear_glue_pairs`: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.
 
 ## zipzi.modeling.AddressPatchScene.summary
 
@@ -2307,7 +2559,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressPatchSelection value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `targets`: Owned tuple[str, ...] value.
+Fields:
+targets: Complete replacement ordered target-ID selection; an empty list explicitly clears it.
+
+- `targets`: Complete replacement ordered target-ID selection; an empty list explicitly clears it.
 
 ## zipzi.modeling.AddressPatchSelection.summary
 
@@ -2329,7 +2584,12 @@ Typed public API entry.
 
 Immutable owned AddressSelectorAttachmentPath value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
 
 ## zipzi.modeling.AddressSelectorAttachmentPath.summary
 
@@ -2344,7 +2604,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
 
 ## zipzi.modeling.AddressSelectorBinding.summary
 
@@ -2359,8 +2624,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `target`: Owned SceneContentTarget value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+target: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
 
 ## zipzi.modeling.AddressSelectorContent.summary
 
@@ -2375,7 +2648,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `field`: Owned DocumentField value.
+Fields:
+field: Explicit field discriminator; must match the addressed object/domain.
+
+- `field`: Explicit field discriminator; must match the addressed object/domain.
 
 ## zipzi.modeling.AddressSelectorDocument.summary
 
@@ -2390,7 +2666,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
 
 ## zipzi.modeling.AddressSelectorDrawingGroup.summary
 
@@ -2405,7 +2684,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
 
 ## zipzi.modeling.AddressSelectorOrganization.summary
 
@@ -2420,7 +2704,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorReference value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
 
 ## zipzi.modeling.AddressSelectorReference.summary
 
@@ -2435,7 +2724,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorResourceName value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
 
 ## zipzi.modeling.AddressSelectorResourceName.summary
 
@@ -2450,8 +2744,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `field`: Owned SceneField value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+field: Explicit field discriminator; must match the addressed object/domain.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `field`: Explicit field discriminator; must match the addressed object/domain.
 
 ## zipzi.modeling.AddressSelectorScene.summary
 
@@ -2466,8 +2766,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AddressSelectorSelection value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
-- `field`: Owned ReferenceSelectionField value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+field: Explicit field discriminator; must match the addressed object/domain.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+- `field`: Explicit field discriminator; must match the addressed object/domain.
 
 ## zipzi.modeling.AddressSelectorSelection.summary
 
@@ -2483,13 +2787,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned Appearance value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-opacity: Declared by zipzi_core::types::Appearance.opacity; f32 value.
-multiply: Declared by zipzi_core::types::Appearance.multiply; array value.
-screen: Declared by zipzi_core::types::Appearance.screen; array value.
+opacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+multiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
+screen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
-- `opacity`: Declared by zipzi_core::types::Appearance.opacity; f32 value.
-- `multiply`: Declared by zipzi_core::types::Appearance.multiply; array value.
-- `screen`: Declared by zipzi_core::types::Appearance.screen; array value.
+- `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+- `multiply`: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
+- `screen`: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
 ## zipzi.modeling.Appearance.summary
 
@@ -2505,17 +2811,27 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned AttachmentCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-inspect: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.inspect; serde_enum value.
-patch: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.patch; serde_enum value.
-duplicate: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.duplicate; serde_enum value.
-delete: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.delete; serde_enum value.
-load_content: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.load_content; serde_enum value.
+inspect: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+patch: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+duplicate: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+delete: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+load_content: Current capability to load the referenced resource contents; inspect its state/reason
+before invoking the operation.
 
-- `inspect`: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.inspect; serde_enum value.
-- `patch`: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.patch; serde_enum value.
-- `duplicate`: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.duplicate; serde_enum value.
-- `delete`: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.delete; serde_enum value.
-- `load_content`: Declared by zipzi_sdk::motion_authoring::AttachmentCapabilities.load_content; serde_enum value.
+- `inspect`: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+- `patch`: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+- `duplicate`: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+- `delete`: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+- `load_content`: Current capability to load the referenced resource contents; inspect its state/reason
+before invoking the operation.
 
 ## zipzi.modeling.AttachmentCapabilities.summary
 
@@ -2537,8 +2853,14 @@ Typed public API entry.
 
 Immutable owned AttachmentEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `path`: Owned str value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+path: Normalized package-relative attachment path using forward slashes; absolute paths
+and .. components are invalid.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `path`: Normalized package-relative attachment path using forward slashes; absolute paths
+and .. components are invalid.
 
 ## zipzi.modeling.AttachmentEditCreate.summary
 
@@ -2553,7 +2875,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AttachmentEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
 
 ## zipzi.modeling.AttachmentEditDelete.summary
 
@@ -2568,8 +2895,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AttachmentEditDeleteWithReplacement value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `replacement`: Owned str | None value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+replacement: Replacement attachment ID for existing references; None explicitly removes those
+references.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `replacement`: Replacement attachment ID for existing references; None explicitly removes those
+references.
 
 ## zipzi.modeling.AttachmentEditDeleteWithReplacement.summary
 
@@ -2584,9 +2919,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AttachmentEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `source`: Owned str value.
-- `id`: Owned str value.
-- `path`: Owned str value.
+Fields:
+source: Stable ID of the existing source object to duplicate, not a filesystem path.
+id: New stable UUID for this object; it must not conflict with an existing identity.
+path: Normalized package-relative attachment path using forward slashes; absolute paths
+and .. components are invalid.
+
+- `source`: Stable ID of the existing source object to duplicate, not a filesystem path.
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `path`: Normalized package-relative attachment path using forward slashes; absolute paths
+and .. components are invalid.
 
 ## zipzi.modeling.AttachmentEditDuplicate.summary
 
@@ -2601,8 +2943,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AttachmentEditReorder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `before`: Owned str | None value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.AttachmentEditReorder.summary
 
@@ -2617,8 +2967,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AttachmentEditReplace value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `expected`: Owned PackageAttachment value.
-- `attachment`: Owned PackageAttachment value.
+Fields:
+expected: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+attachment: Complete package attachment record to replace; bytes may be explicitly unavailable.
+
+- `expected`: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+- `attachment`: Complete package attachment record to replace; bytes may be explicitly unavailable.
 
 ## zipzi.modeling.AttachmentEditReplace.summary
 
@@ -2633,8 +2989,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AttachmentEditSetSound value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `registration`: Owned str value.
-- `reference`: Owned AttachmentRef | None value.
+Fields:
+registration: Motion-registration ID whose sound attachment is being changed.
+reference: Resolved attachment identity or explicitly unresolved package path.
+
+- `registration`: Motion-registration ID whose sound attachment is being changed.
+- `reference`: Resolved attachment identity or explicitly unresolved package path.
 
 ## zipzi.modeling.AttachmentEditSetSound.summary
 
@@ -2649,7 +3009,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AttachmentEditSetUserData value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `reference`: Owned AttachmentRef | None value.
+Fields:
+reference: Resolved attachment identity or explicitly unresolved package path.
+
+- `reference`: Resolved attachment identity or explicitly unresolved package path.
 
 ## zipzi.modeling.AttachmentEditSetUserData.summary
 
@@ -2671,7 +3034,10 @@ Typed public API entry.
 
 Immutable owned AttachmentRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `attachment_id`: Owned str value.
+Fields:
+attachment_id: Stable package-attachment ID, distinct from its relative package path.
+
+- `attachment_id`: Stable package-attachment ID, distinct from its relative package path.
 
 ## zipzi.modeling.AttachmentRefResolved.summary
 
@@ -2686,7 +3052,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AttachmentRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `path`: Owned str value.
+Fields:
+path: Normalized package-relative attachment path using forward slashes; absolute paths
+and .. components are invalid.
+
+- `path`: Normalized package-relative attachment path using forward slashes; absolute paths
+and .. components are invalid.
 
 ## zipzi.modeling.AttachmentRefUnresolved.summary
 
@@ -2708,7 +3079,10 @@ Typed public API entry.
 
 Immutable owned AxisReductionResample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned float value.
+Fields:
+value: Parameter coordinate used to resample the old grid while reducing an axis.
+
+- `value`: Parameter coordinate used to resample the old grid while reducing an axis.
 
 ## zipzi.modeling.AxisReductionResample.summary
 
@@ -2723,7 +3097,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned AxisReductionSlice value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned float value.
+Fields:
+value: Parameter coordinate at which to slice the old grid while removing an axis.
+
+- `value`: Parameter coordinate at which to slice the old grid while removing an axis.
 
 ## zipzi.modeling.AxisReductionSlice.summary
 
@@ -2745,7 +3122,12 @@ Typed public API entry.
 
 Immutable owned BindingAuthoringEditBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned BlendAuthoringEdit value.
+Fields:
+value: Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source
+rather than mutating this value.
+
+- `value`: Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source
+rather than mutating this value.
 
 ## zipzi.modeling.BindingAuthoringEditBlend.summary
 
@@ -2760,7 +3142,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingAuthoringEditGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned BindingGridEdit value.
+Fields:
+value: Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit
+source rather than mutating this value.
+
+- `value`: Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit
+source rather than mutating this value.
 
 ## zipzi.modeling.BindingAuthoringEditGrid.summary
 
@@ -2775,7 +3162,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingAuthoringEditMeshGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned MeshGridEdit value.
+Fields:
+value: Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit
+source rather than mutating this value.
+
+- `value`: Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit
+source rather than mutating this value.
 
 ## zipzi.modeling.BindingAuthoringEditMeshGrid.summary
 
@@ -2790,7 +3182,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingAuthoringEditParameterRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned ParameterRangeEdit value.
+Fields:
+value: Typed intent for parameter range conversion; apply/plan it against a Session/Edit
+source rather than mutating this value.
+
+- `value`: Typed intent for parameter range conversion; apply/plan it against a Session/Edit
+source rather than mutating this value.
 
 ## zipzi.modeling.BindingAuthoringEditParameterRange.summary
 
@@ -2805,7 +3202,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingAuthoringEditReparent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned ReparentEdit value.
+Fields:
+value: Typed intent for deformation reparenting; apply/plan it against a Session/Edit
+source rather than mutating this value.
+
+- `value`: Typed intent for deformation reparenting; apply/plan it against a Session/Edit
+source rather than mutating this value.
 
 ## zipzi.modeling.BindingAuthoringEditReparent.summary
 
@@ -2821,13 +3223,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned BindingAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::BindingAxis.id; string value; default ''.
-samples: Declared by zipzi_core::types::BindingAxis.samples; sequence value; default [].
-parameter_id: Declared by zipzi_core::types::BindingAxis.parameter_id; string value.
+id: Stable axis UUID; an empty ID is allocated during native binding normalization.
+samples: Ordered stable samples with strictly increasing finite parameter values.
+parameter_id: Document parameter ID driving the axis; an empty string represents a pending/unassigned
+axis.
 
-- `id`: Declared by zipzi_core::types::BindingAxis.id; string value; default ''.
-- `samples`: Declared by zipzi_core::types::BindingAxis.samples; sequence value; default [].
-- `parameter_id`: Declared by zipzi_core::types::BindingAxis.parameter_id; string value.
+- `id`: Stable axis UUID; an empty ID is allocated during native binding normalization.
+- `samples`: Ordered stable samples with strictly increasing finite parameter values.
+- `parameter_id`: Document parameter ID driving the axis; an empty string represents a pending/unassigned
+axis.
 
 ## zipzi.modeling.BindingAxis.summary
 
@@ -2843,21 +3247,35 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned BindingCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-inspect: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.inspect; serde_enum value.
-patch: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.patch; serde_enum value.
-create_child: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.create_child; serde_enum value.
-reorder: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.reorder; serde_enum value.
-delete: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.delete; serde_enum value.
-repair: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.repair; serde_enum value.
-preview: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.preview; serde_enum value.
+inspect: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+patch: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+create_child: Current capability to create children in this collection; inspect its state/reason
+before invoking the operation.
+reorder: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
+delete: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+repair: Current capability to repair an unresolved or unavailable binding; inspect its
+state/reason before invoking the operation.
+preview: Current capability to evaluate a conversion preview; inspect its state/reason before
+invoking the operation.
 
-- `inspect`: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.inspect; serde_enum value.
-- `patch`: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.patch; serde_enum value.
-- `create_child`: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.create_child; serde_enum value.
-- `reorder`: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.reorder; serde_enum value.
-- `delete`: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.delete; serde_enum value.
-- `repair`: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.repair; serde_enum value.
-- `preview`: Declared by zipzi_sdk::binding_authoring::BindingCapabilities.preview; serde_enum value.
+- `inspect`: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+- `patch`: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+- `create_child`: Current capability to create children in this collection; inspect its state/reason
+before invoking the operation.
+- `reorder`: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
+- `delete`: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+- `repair`: Current capability to repair an unresolved or unavailable binding; inspect its
+state/reason before invoking the operation.
+- `preview`: Current capability to evaluate a conversion preview; inspect its state/reason before
+invoking the operation.
 
 ## zipzi.modeling.BindingCapabilities.summary
 
@@ -2879,8 +3297,12 @@ Typed public API entry.
 
 Immutable owned BindingFieldPatchAxisParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parameter_id`: Owned str value.
-- `reduction`: Owned AxisReduction | None value.
+Fields:
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+reduction: Explicit parameter-domain reduction used when removing or replacing an axis.
+
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
 
 ## zipzi.modeling.BindingFieldPatchAxisParameter.summary
 
@@ -2895,8 +3317,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingFieldPatchConstraintSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned float value.
-- `weight`: Owned float value.
+Fields:
+value: Scalar value in the referenced parameter domain.
+weight: Dimensionless interpolation weight applied to the referenced source vertex.
+
+- `value`: Scalar value in the referenced parameter domain.
+- `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
 
 ## zipzi.modeling.BindingFieldPatchConstraintSample.summary
 
@@ -2911,7 +3337,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingFieldPatchSampleValue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned float value.
+Fields:
+value: Scalar value in the referenced parameter domain.
+
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.BindingFieldPatchSampleValue.summary
 
@@ -2933,8 +3362,14 @@ Typed public API entry.
 
 Immutable owned BindingGridEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `target`: Owned BindingGridTarget value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+target: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
 
 ## zipzi.modeling.BindingGridEditCreate.summary
 
@@ -2949,7 +3384,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingGridEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
 
 ## zipzi.modeling.BindingGridEditDelete.summary
 
@@ -2964,8 +3402,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingGridEditEdit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
-- `operation`: Owned GridOperation value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+operation: Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+- `operation`: Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.
 
 ## zipzi.modeling.BindingGridEditEdit.summary
 
@@ -2987,7 +3429,10 @@ Typed public API entry.
 
 Immutable owned BindingGridTargetGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned str value.
+Fields:
+value: Stable ID of the target Glue whose ordinary grid is being created.
+
+- `value`: Stable ID of the target Glue whose ordinary grid is being created.
 
 ## zipzi.modeling.BindingGridTargetGlue.summary
 
@@ -3002,7 +3447,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingGridTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned str value.
+Fields:
+value: Stable ID of the target mesh whose ordinary grid is being created.
+
+- `value`: Stable ID of the target mesh whose ordinary grid is being created.
 
 ## zipzi.modeling.BindingGridTargetMesh.summary
 
@@ -3017,7 +3465,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BindingGridTargetScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned str value.
+Fields:
+value: Stable ID of the target scene transform or Part whose ordinary grid is being created.
+
+- `value`: Stable ID of the target scene transform or Part whose ordinary grid is being created.
 
 ## zipzi.modeling.BindingGridTargetScene.summary
 
@@ -3033,11 +3484,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned BindingSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::BindingSample.id; string value.
-value: Declared by zipzi_core::types::BindingSample.value; f32 value.
+id: Stable sample UUID within the binding axis; distinct from its numeric value.
+value: Finite sample coordinate in the driving parameter domain; axis samples are strictly
+increasing.
 
-- `id`: Declared by zipzi_core::types::BindingSample.id; string value.
-- `value`: Declared by zipzi_core::types::BindingSample.value; f32 value.
+- `id`: Stable sample UUID within the binding axis; distinct from its numeric value.
+- `value`: Finite sample coordinate in the driving parameter domain; axis samples are strictly
+increasing.
 
 ## zipzi.modeling.BindingSample.summary
 
@@ -3059,9 +3512,16 @@ Typed public API entry.
 
 Immutable owned BlendAuthoringEditConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `parameter_id`: Owned str value.
-- `samples`: Owned tuple[ConstraintSample, ...] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+samples: Replacement ordered parameter samples and constraint weights.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `samples`: Replacement ordered parameter samples and constraint weights.
 
 ## zipzi.modeling.BlendAuthoringEditConstraint.summary
 
@@ -3076,10 +3536,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendAuthoringEditCreateBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `target_id`: Owned str value.
-- `target_kind`: Owned BlendShapeTargetKind value.
-- `key_table_id`: Owned str value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+target_id: Stable object ID driven by this binding; the declared target kind determines its domain.
+target_kind: Category of the BlendShape target; must agree with target_id and keyform payload kind.
+key_table_id: Stable BlendShape key-table ID controlling the binding.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `target_id`: Stable object ID driven by this binding; the declared target kind determines its domain.
+- `target_kind`: Category of the BlendShape target; must agree with target_id and keyform payload kind.
+- `key_table_id`: Stable BlendShape key-table ID controlling the binding.
 
 ## zipzi.modeling.BlendAuthoringEditCreateBinding.summary
 
@@ -3094,7 +3560,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendAuthoringEditCreateConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `constraint`: Owned BlendShapeConstraint value.
+Fields:
+constraint: Complete BlendShape constraint with its driving parameter and weighted samples.
+
+- `constraint`: Complete BlendShape constraint with its driving parameter and weighted samples.
 
 ## zipzi.modeling.BlendAuthoringEditCreateConstraint.summary
 
@@ -3109,7 +3578,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendAuthoringEditCreateTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `table`: Owned BlendShapeKeyTable value.
+Fields:
+table: Complete BlendShape key table with stable sample IDs and an explicit base sample.
+
+- `table`: Complete BlendShape key table with stable sample IDs and an explicit base sample.
 
 ## zipzi.modeling.BlendAuthoringEditCreateTable.summary
 
@@ -3124,9 +3596,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendAuthoringEditSetBindingTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `key_table_id`: Owned str value.
-- `reset`: Owned bool value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+key_table_id: Stable BlendShape key-table ID controlling the binding.
+reset: Whether to reset shape data when switching the binding to another key table.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `key_table_id`: Stable BlendShape key-table ID controlling the binding.
+- `reset`: Whether to reset shape data when switching the binding to another key table.
 
 ## zipzi.modeling.BlendAuthoringEditSetBindingTable.summary
 
@@ -3141,8 +3620,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendAuthoringEditTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `operation`: Owned BlendTableOperation value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+operation: Typed sample/base/parameter edit to perform on this BlendShape key table.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `operation`: Typed sample/base/parameter edit to perform on this BlendShape key table.
 
 ## zipzi.modeling.BlendAuthoringEditTable.summary
 
@@ -3165,19 +3650,21 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned BlendShapeBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::BlendShapeBinding.id; string value.
-target_id: Declared by zipzi_core::types::BlendShapeBinding.target_id; string value.
-target_kind: Declared by zipzi_core::types::BlendShapeBinding.target_kind; serde_enum value.
-key_table_id: Declared by zipzi_core::types::BlendShapeBinding.key_table_id; string value.
-constraint_ids: Declared by zipzi_core::types::BlendShapeBinding.constraint_ids; sequence value.
-keyforms: Declared by zipzi_core::types::BlendShapeBinding.keyforms; serde_enum value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+target_id: Stable object ID driven by this binding; the declared target kind determines its domain.
+target_kind: Category of the BlendShape target; must agree with target_id and keyform payload kind.
+key_table_id: Stable BlendShape key-table ID controlling the binding.
+constraint_ids: Ordered IDs of BlendShape constraints applied to this binding.
+keyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
 
-- `id`: Declared by zipzi_core::types::BlendShapeBinding.id; string value.
-- `target_id`: Declared by zipzi_core::types::BlendShapeBinding.target_id; string value.
-- `target_kind`: Declared by zipzi_core::types::BlendShapeBinding.target_kind; serde_enum value.
-- `key_table_id`: Declared by zipzi_core::types::BlendShapeBinding.key_table_id; string value.
-- `constraint_ids`: Declared by zipzi_core::types::BlendShapeBinding.constraint_ids; sequence value.
-- `keyforms`: Declared by zipzi_core::types::BlendShapeBinding.keyforms; serde_enum value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `target_id`: Stable object ID driven by this binding; the declared target kind determines its domain.
+- `target_kind`: Category of the BlendShape target; must agree with target_id and keyform payload kind.
+- `key_table_id`: Stable BlendShape key-table ID controlling the binding.
+- `constraint_ids`: Ordered IDs of BlendShape constraints applied to this binding.
+- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
 
 ## zipzi.modeling.BlendShapeBinding.summary
 
@@ -3193,13 +3680,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned BlendShapeConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-samples: Declared by zipzi_core::types::BlendShapeConstraint.samples; sequence value; default [].
-id: Declared by zipzi_core::types::BlendShapeConstraint.id; string value.
-parameter_id: Declared by zipzi_core::types::BlendShapeConstraint.parameter_id; string value.
+samples: Ordered parameter samples with weights used to attenuate the BlendShape contribution.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
 
-- `samples`: Declared by zipzi_core::types::BlendShapeConstraint.samples; sequence value; default [].
-- `id`: Declared by zipzi_core::types::BlendShapeConstraint.id; string value.
-- `parameter_id`: Declared by zipzi_core::types::BlendShapeConstraint.parameter_id; string value.
+- `samples`: Ordered parameter samples with weights used to attenuate the BlendShape contribution.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 
 ## zipzi.modeling.BlendShapeConstraint.summary
 
@@ -3215,15 +3702,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned BlendShapeKeyTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-samples: Declared by zipzi_core::types::BlendShapeKeyTable.samples; sequence value; default [].
-base_sample_id: Declared by zipzi_core::types::BlendShapeKeyTable.base_sample_id; string value; default ''.
-id: Declared by zipzi_core::types::BlendShapeKeyTable.id; string value.
-parameter_id: Declared by zipzi_core::types::BlendShapeKeyTable.parameter_id; string value.
+samples: Ordered stable parameter samples with strictly increasing finite values; base_sample_id
+names the neutral sample.
+base_sample_id: Sample ID defining the neutral/base shape in this key table.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
 
-- `samples`: Declared by zipzi_core::types::BlendShapeKeyTable.samples; sequence value; default [].
-- `base_sample_id`: Declared by zipzi_core::types::BlendShapeKeyTable.base_sample_id; string value; default ''.
-- `id`: Declared by zipzi_core::types::BlendShapeKeyTable.id; string value.
-- `parameter_id`: Declared by zipzi_core::types::BlendShapeKeyTable.parameter_id; string value.
+- `samples`: Ordered stable parameter samples with strictly increasing finite values; base_sample_id
+names the neutral sample.
+- `base_sample_id`: Sample ID defining the neutral/base shape in this key table.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 
 ## zipzi.modeling.BlendShapeKeyTable.summary
 
@@ -3252,8 +3741,14 @@ Typed public API entry.
 
 Immutable owned BlendTableOperationDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `sample_id`: Owned str value.
-- `replacement_base`: Owned str | None value.
+Fields:
+sample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+replacement_base: Replacement base sample ID when deleting the current base; None supplies no replacement.
+
+- `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+- `replacement_base`: Replacement base sample ID when deleting the current base; None supplies no replacement.
 
 ## zipzi.modeling.BlendTableOperationDelete.summary
 
@@ -3268,7 +3763,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendTableOperationInsert value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `sample`: Owned BindingSample value.
+Fields:
+sample: New stable sample UUID and finite parameter coordinate to insert into this key table.
+
+- `sample`: New stable sample UUID and finite parameter coordinate to insert into this key table.
 
 ## zipzi.modeling.BlendTableOperationInsert.summary
 
@@ -3283,8 +3781,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendTableOperationMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `sample_id`: Owned str value.
-- `value`: Owned float value.
+Fields:
+sample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+value: Scalar value in the referenced parameter domain.
+
+- `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.BlendTableOperationMove.summary
 
@@ -3299,8 +3803,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendTableOperationRemapParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parameter_id`: Owned str value.
-- `policy`: Owned ParameterRangePolicy value.
+Fields:
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+policy: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
+
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
 
 ## zipzi.modeling.BlendTableOperationRemapParameter.summary
 
@@ -3315,7 +3825,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendTableOperationSetBase value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `sample_id`: Owned str value.
+Fields:
+sample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+
+- `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
 
 ## zipzi.modeling.BlendTableOperationSetBase.summary
 
@@ -3330,7 +3845,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned BlendTableOperationSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parameter_id`: Owned str value.
+Fields:
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 
 ## zipzi.modeling.BlendTableOperationSetParameter.summary
 
@@ -3346,17 +3864,21 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned Canvas value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-width: Declared by zipzi_core::types::Canvas.width; f32 value.
-height: Declared by zipzi_core::types::Canvas.height; f32 value.
-origin: Declared by zipzi_core::types::Canvas.origin; record value.
-pixels_per_unit: Declared by zipzi_core::types::Canvas.pixels_per_unit; f32 value.
-flag: Declared by zipzi_core::types::Canvas.flag; u8 value; default 1.
+width: Source canvas width in pixels.
+height: Source canvas height in pixels.
+origin: Source canvas origin in the imported pixel coordinate system; this metadata does not
+redefine model space.
+pixels_per_unit: Positive pixels-per-unit value retained from the source format for import/export;
+this metadata does not rescale model geometry or change evaluation.
+flag: Preserved imported source-canvas flag; no implicit interpretation is applied by this DTO.
 
-- `width`: Declared by zipzi_core::types::Canvas.width; f32 value.
-- `height`: Declared by zipzi_core::types::Canvas.height; f32 value.
-- `origin`: Declared by zipzi_core::types::Canvas.origin; record value.
-- `pixels_per_unit`: Declared by zipzi_core::types::Canvas.pixels_per_unit; f32 value.
-- `flag`: Declared by zipzi_core::types::Canvas.flag; u8 value; default 1.
+- `width`: Source canvas width in pixels.
+- `height`: Source canvas height in pixels.
+- `origin`: Source canvas origin in the imported pixel coordinate system; this metadata does not
+redefine model space.
+- `pixels_per_unit`: Positive pixels-per-unit value retained from the source format for import/export;
+this metadata does not rescale model geometry or change evaluation.
+- `flag`: Preserved imported source-canvas flag; no implicit interpretation is applied by this DTO.
 
 ## zipzi.modeling.Canvas.summary
 
@@ -3378,7 +3900,12 @@ Typed public API entry.
 
 Immutable owned CapabilitiesAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned AttachmentCapabilities value.
+Fields:
+value: Current package attachments and their references capability states and reasons; do
+not infer support from method presence.
+
+- `value`: Current package attachments and their references capability states and reasons; do
+not infer support from method presence.
 
 ## zipzi.modeling.CapabilitiesAttachment.summary
 
@@ -3393,7 +3920,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilitiesBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned BindingCapabilities value.
+Fields:
+value: Current parameter bindings and grid conversions capability states and reasons; do
+not infer support from method presence.
+
+- `value`: Current parameter bindings and grid conversions capability states and reasons; do
+not infer support from method presence.
 
 ## zipzi.modeling.CapabilitiesBinding.summary
 
@@ -3408,7 +3940,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilitiesCollection value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned CollectionCapabilities value.
+Fields:
+value: Current collection capability states and reasons; do not infer support from method
+presence.
+
+- `value`: Current collection capability states and reasons; do not infer support from method
+presence.
 
 ## zipzi.modeling.CapabilitiesCollection.summary
 
@@ -3423,7 +3960,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilitiesContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned SceneContentCapabilities value.
+Fields:
+value: Current geometry and topology content capability states and reasons; do not infer
+support from method presence.
+
+- `value`: Current geometry and topology content capability states and reasons; do not infer
+support from method presence.
 
 ## zipzi.modeling.CapabilitiesContent.summary
 
@@ -3438,7 +3980,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilitiesDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned CapabilityState value.
+Fields:
+value: Current document configuration and metadata repair capability states and reasons; do
+not infer support from method presence.
+
+- `value`: Current document configuration and metadata repair capability states and reasons; do
+not infer support from method presence.
 
 ## zipzi.modeling.CapabilitiesDocument.summary
 
@@ -3453,7 +4000,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilitiesOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned OrganizationCapabilities value.
+Fields:
+value: Current organization and parameter groups capability states and reasons; do not
+infer support from method presence.
+
+- `value`: Current organization and parameter groups capability states and reasons; do not
+infer support from method presence.
 
 ## zipzi.modeling.CapabilitiesOrganization.summary
 
@@ -3468,7 +4020,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilitiesReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned ReferenceCapabilities value.
+Fields:
+value: Current metadata references and selections capability states and reasons; do not
+infer support from method presence.
+
+- `value`: Current metadata references and selections capability states and reasons; do not
+infer support from method presence.
 
 ## zipzi.modeling.CapabilitiesReferences.summary
 
@@ -3483,7 +4040,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilitiesResource value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned ResourceCapabilities value.
+Fields:
+value: Current image asset metadata and references capability states and reasons; do not
+infer support from method presence.
+
+- `value`: Current image asset metadata and references capability states and reasons; do not
+infer support from method presence.
 
 ## zipzi.modeling.CapabilitiesResource.summary
 
@@ -3498,7 +4060,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilitiesScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned SceneCapabilities value.
+Fields:
+value: Current scene lifecycle, hierarchy and drawing capability states and reasons; do not
+infer support from method presence.
+
+- `value`: Current scene lifecycle, hierarchy and drawing capability states and reasons; do not
+infer support from method presence.
 
 ## zipzi.modeling.CapabilitiesScene.summary
 
@@ -3541,7 +4108,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilityStateUnavailable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `code`: Owned str value.
+Fields:
+code: Stable reason code explaining why this operation is currently unavailable.
+
+- `code`: Stable reason code explaining why this operation is currently unavailable.
 
 ## zipzi.modeling.CapabilityStateUnavailable.summary
 
@@ -3556,7 +4126,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CapabilityStateUnsupported value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `code`: Owned str value.
+Fields:
+code: Stable reason code explaining why this operation is unsupported for this object/domain.
+
+- `code`: Stable reason code explaining why this operation is unsupported for this object/domain.
 
 ## zipzi.modeling.CapabilityStateUnsupported.summary
 
@@ -3572,11 +4145,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned CdiCombinedSet value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::document::display_info::CdiCombinedSet.id; string value.
-members: Declared by zipzi_core::document::display_info::CdiCombinedSet.members; sequence value.
+id: Stable UUID of this CDI combined set; not the identity of its target.
+members: Ordered stable reference-entry records; entry identity is distinct from the referenced
+object identity.
 
-- `id`: Declared by zipzi_core::document::display_info::CdiCombinedSet.id; string value.
-- `members`: Declared by zipzi_core::document::display_info::CdiCombinedSet.members; sequence value.
+- `id`: Stable UUID of this CDI combined set; not the identity of its target.
+- `members`: Ordered stable reference-entry records; entry identity is distinct from the referenced
+object identity.
 
 ## zipzi.modeling.CdiCombinedSet.summary
 
@@ -3587,18 +4162,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.CdiNamespaceIds
 
-`(parameters: Mapping[str, str], parts: Mapping[str, str], groups: Mapping[str, str])`
+`(parameters: _Mapping[str, str], parts: _Mapping[str, str], groups: _Mapping[str, str])`
 
 Immutable owned CdiNamespaceIds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-parameters: Declared by zipzi_core::document::display_info::CdiNamespaceIds.parameters; string_map value.
-parts: Declared by zipzi_core::document::display_info::CdiNamespaceIds.parts; string_map value.
-groups: Declared by zipzi_core::document::display_info::CdiNamespaceIds.groups; string_map value.
+parameters: Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.
+parts: Imported Part document-ID to runtime-ID map, retained to validate opaque metadata.
+groups: Imported group document-ID to runtime-ID map, retained to validate opaque metadata.
 
-- `parameters`: Declared by zipzi_core::document::display_info::CdiNamespaceIds.parameters; string_map value.
-- `parts`: Declared by zipzi_core::document::display_info::CdiNamespaceIds.parts; string_map value.
-- `groups`: Declared by zipzi_core::document::display_info::CdiNamespaceIds.groups; string_map value.
+- `parameters`: Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.
+- `parts`: Imported Part document-ID to runtime-ID map, retained to validate opaque metadata.
+- `groups`: Imported group document-ID to runtime-ID map, retained to validate opaque metadata.
 
 ## zipzi.modeling.CdiNamespaceIds.summary
 
@@ -3616,13 +4191,22 @@ Typed public API entry.
 
 ## zipzi.modeling.CdiParameterEntryResolved
 
-`(parameter_id: str, group_id: str | None = None, extensions: Mapping[str, ExtensionValue])`
+`(parameter_id: str, group_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiParameterEntryResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parameter_id`: Owned str value.
-- `group_id`: Owned str | None value.
-- `extensions`: Owned Mapping[str, ExtensionValue] value.
+Fields:
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+group_id: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing
+known fields.
+
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `group_id`: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing
+known fields.
 
 ## zipzi.modeling.CdiParameterEntryResolved.summary
 
@@ -3633,14 +4217,26 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.CdiParameterEntryUnresolved
 
-`(runtime_id: str, name: str, group_id: str | None = None, extensions: Mapping[str, ExtensionValue])`
+`(runtime_id: str, name: str, group_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiParameterEntryUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `runtime_id`: Owned str value.
-- `name`: Owned str value.
-- `group_id`: Owned str | None value.
-- `extensions`: Owned Mapping[str, ExtensionValue] value.
+Fields:
+runtime_id: External format/runtime identifier retained for import/export; not the document
+object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+group_id: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing
+known fields.
+
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document
+object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `group_id`: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing
+known fields.
 
 ## zipzi.modeling.CdiParameterEntryUnresolved.summary
 
@@ -3651,22 +4247,26 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.CdiParameterGroup
 
-`(id: str, runtime_id: str, name: str, parent_id: str | None = None, extensions: Mapping[str, ExtensionValue])`
+`(id: str, runtime_id: str, name: str, parent_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::document::display_info::CdiParameterGroup.id; string value.
-runtime_id: Declared by zipzi_core::document::display_info::CdiParameterGroup.runtime_id; string value.
-name: Declared by zipzi_core::document::display_info::CdiParameterGroup.name; string value.
-parent_id: Declared by zipzi_core::document::display_info::CdiParameterGroup.parent_id; optional value.
-extensions: Declared by zipzi_core::document::display_info::CdiParameterGroup.extensions; string_map value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 
-- `id`: Declared by zipzi_core::document::display_info::CdiParameterGroup.id; string value.
-- `runtime_id`: Declared by zipzi_core::document::display_info::CdiParameterGroup.runtime_id; string value.
-- `name`: Declared by zipzi_core::document::display_info::CdiParameterGroup.name; string value.
-- `parent_id`: Declared by zipzi_core::document::display_info::CdiParameterGroup.parent_id; optional value.
-- `extensions`: Declared by zipzi_core::document::display_info::CdiParameterGroup.extensions; string_map value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 
 ## zipzi.modeling.CdiParameterGroup.summary
 
@@ -3688,7 +4288,10 @@ Typed public API entry.
 
 Immutable owned CdiParameterRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parameter_id`: Owned str value.
+Fields:
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 
 ## zipzi.modeling.CdiParameterRefResolved.summary
 
@@ -3703,7 +4306,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CdiParameterRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `runtime_id`: Owned str value.
+Fields:
+runtime_id: External format/runtime identifier retained for import/export; not the document
+object ID.
+
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document
+object ID.
 
 ## zipzi.modeling.CdiParameterRefUnresolved.summary
 
@@ -3735,12 +4343,18 @@ Typed public API entry.
 
 ## zipzi.modeling.CdiPartEntryResolved
 
-`(part_id: str, extensions: Mapping[str, ExtensionValue])`
+`(part_id: str, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiPartEntryResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `part_id`: Owned str value.
-- `extensions`: Owned Mapping[str, ExtensionValue] value.
+Fields:
+part_id: Resolved stable document Part ID; use an Unresolved entry to preserve an external runtime identifier.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing
+known fields.
+
+- `part_id`: Resolved stable document Part ID; use an Unresolved entry to preserve an external runtime identifier.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing
+known fields.
 
 ## zipzi.modeling.CdiPartEntryResolved.summary
 
@@ -3751,13 +4365,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.CdiPartEntryUnresolved
 
-`(runtime_id: str, name: str, extensions: Mapping[str, ExtensionValue])`
+`(runtime_id: str, name: str, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiPartEntryUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `runtime_id`: Owned str value.
-- `name`: Owned str value.
-- `extensions`: Owned Mapping[str, ExtensionValue] value.
+Fields:
+runtime_id: External format/runtime identifier retained for import/export; not the document
+object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing
+known fields.
+
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document
+object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing
+known fields.
 
 ## zipzi.modeling.CdiPartEntryUnresolved.summary
 
@@ -3773,13 +4396,19 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned CollectionCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-create: Declared by zipzi_sdk::authoring_collections::CollectionCapabilities.create; serde_enum value.
-move_into: Declared by zipzi_sdk::authoring_collections::CollectionCapabilities.move_into; serde_enum value.
-reorder: Declared by zipzi_sdk::authoring_collections::CollectionCapabilities.reorder; serde_enum value.
+create: Current capability to create objects in this collection; inspect its state/reason before
+invoking the operation.
+move_into: Current capability to move existing objects into this collection; inspect its
+state/reason before invoking the operation.
+reorder: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
 
-- `create`: Declared by zipzi_sdk::authoring_collections::CollectionCapabilities.create; serde_enum value.
-- `move_into`: Declared by zipzi_sdk::authoring_collections::CollectionCapabilities.move_into; serde_enum value.
-- `reorder`: Declared by zipzi_sdk::authoring_collections::CollectionCapabilities.reorder; serde_enum value.
+- `create`: Current capability to create objects in this collection; inspect its state/reason before
+invoking the operation.
+- `move_into`: Current capability to move existing objects into this collection; inspect its
+state/reason before invoking the operation.
+- `reorder`: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
 
 ## zipzi.modeling.CollectionCapabilities.summary
 
@@ -3815,7 +4444,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CollectionQueryDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `field`: Owned DocumentField value.
+Fields:
+field: Explicit field discriminator; must match the addressed object/domain.
+
+- `field`: Explicit field discriminator; must match the addressed object/domain.
 
 ## zipzi.modeling.CollectionQueryDocument.summary
 
@@ -3830,7 +4462,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CollectionQueryOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `collection`: Owned OrganizationCollection value.
+Fields:
+collection: Explicit native collection selector; it does not imply loading every object payload.
+
+- `collection`: Explicit native collection selector; it does not imply loading every object payload.
 
 ## zipzi.modeling.CollectionQueryOrganization.summary
 
@@ -3845,7 +4480,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CollectionQueryReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `collection`: Owned ReferenceCollection value.
+Fields:
+collection: Explicit native collection selector; it does not imply loading every object payload.
+
+- `collection`: Explicit native collection selector; it does not imply loading every object payload.
 
 ## zipzi.modeling.CollectionQueryReferences.summary
 
@@ -3874,7 +4512,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CollectionQueryScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `collection`: Owned SceneCollection value.
+Fields:
+collection: Explicit native collection selector; it does not imply loading every object payload.
+
+- `collection`: Explicit native collection selector; it does not imply loading every object payload.
 
 ## zipzi.modeling.CollectionQueryScene.summary
 
@@ -3890,13 +4531,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ConstraintSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::ConstraintSample.id; string value.
-value: Declared by zipzi_core::types::ConstraintSample.value; f32 value.
-weight: Declared by zipzi_core::types::ConstraintSample.weight; f32 value.
+id: Stable constraint-sample UUID.
+value: Finite parameter coordinate for this constraint sample.
+weight: Dimensionless BlendShape constraint weight at this parameter sample.
 
-- `id`: Declared by zipzi_core::types::ConstraintSample.id; string value.
-- `value`: Declared by zipzi_core::types::ConstraintSample.value; f32 value.
-- `weight`: Declared by zipzi_core::types::ConstraintSample.weight; f32 value.
+- `id`: Stable constraint-sample UUID.
+- `value`: Finite parameter coordinate for this constraint sample.
+- `weight`: Dimensionless BlendShape constraint weight at this parameter sample.
 
 ## zipzi.modeling.ConstraintSample.summary
 
@@ -3912,13 +4553,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ConversionDomain value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-parameter_id: Declared by zipzi_core::document::binding_authoring::report::ConversionDomain.parameter_id; string value.
-minimum: Declared by zipzi_core::document::binding_authoring::report::ConversionDomain.minimum; f32 value.
-maximum: Declared by zipzi_core::document::binding_authoring::report::ConversionDomain.maximum; f32 value.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+minimum: Lower endpoint of the parameter domain, in parameter units.
+maximum: Upper endpoint of the parameter domain, in parameter units.
 
-- `parameter_id`: Declared by zipzi_core::document::binding_authoring::report::ConversionDomain.parameter_id; string value.
-- `minimum`: Declared by zipzi_core::document::binding_authoring::report::ConversionDomain.minimum; f32 value.
-- `maximum`: Declared by zipzi_core::document::binding_authoring::report::ConversionDomain.maximum; f32 value.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `minimum`: Lower endpoint of the parameter domain, in parameter units.
+- `maximum`: Upper endpoint of the parameter domain, in parameter units.
 
 ## zipzi.modeling.ConversionDomain.summary
 
@@ -3934,11 +4575,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned DeltaGlueKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-sample_id: Declared by zipzi_core::types::DeltaGlueKeyform.sample_id; string value; default ''.
-intensity: Declared by zipzi_core::types::DeltaGlueKeyform.intensity; f32 value.
+sample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+intensity: Additive Glue intensity delta; zero is neutral.
 
-- `sample_id`: Declared by zipzi_core::types::DeltaGlueKeyform.sample_id; string value; default ''.
-- `intensity`: Declared by zipzi_core::types::DeltaGlueKeyform.intensity; f32 value.
+- `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+- `intensity`: Additive Glue intensity delta; zero is neutral.
 
 ## zipzi.modeling.DeltaGlueKeyform.summary
 
@@ -3960,7 +4601,12 @@ Typed public API entry.
 
 Immutable owned DeltaKeyformsGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned tuple[DeltaGlueKeyform, ...] value.
+Fields:
+value: Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
+
+- `value`: Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
 
 ## zipzi.modeling.DeltaKeyformsGlue.summary
 
@@ -3975,7 +4621,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeltaKeyformsMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned tuple[DeltaMeshKeyform, ...] value.
+Fields:
+value: Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
+
+- `value`: Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
 
 ## zipzi.modeling.DeltaKeyformsMesh.summary
 
@@ -3990,7 +4641,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeltaKeyformsOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned tuple[DeltaOffscreenKeyform, ...] value.
+Fields:
+value: Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
+
+- `value`: Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
 
 ## zipzi.modeling.DeltaKeyformsOffscreen.summary
 
@@ -4005,7 +4661,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeltaKeyformsPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned tuple[DeltaPartKeyform, ...] value.
+Fields:
+value: Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
+
+- `value`: Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
 
 ## zipzi.modeling.DeltaKeyformsPart.summary
 
@@ -4020,7 +4681,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeltaKeyformsRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned tuple[DeltaRotationKeyform, ...] value.
+Fields:
+value: Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
+
+- `value`: Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
 
 ## zipzi.modeling.DeltaKeyformsRotation.summary
 
@@ -4035,7 +4701,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeltaKeyformsWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned tuple[DeltaWarpKeyform, ...] value.
+Fields:
+value: Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
+
+- `value`: Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;
+channels describe deltas from the base shape.
 
 ## zipzi.modeling.DeltaKeyformsWarp.summary
 
@@ -4051,19 +4722,23 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned DeltaMeshKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-sample_id: Declared by zipzi_core::types::DeltaMeshKeyform.sample_id; string value; default ''.
-positions: Declared by zipzi_core::types::DeltaMeshKeyform.positions; sequence value.
-opacity: Declared by zipzi_core::types::DeltaMeshKeyform.opacity; optional value.
-draw_order: Declared by zipzi_core::types::DeltaMeshKeyform.draw_order; optional value.
-multiply: Declared by zipzi_core::types::DeltaMeshKeyform.multiply; optional value.
-screen: Declared by zipzi_core::types::DeltaMeshKeyform.screen; optional value.
+sample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+positions: Per-vertex XY displacement vectors in mesh vertex order.
+opacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.
+draw_order: Additive drawing-order delta; zero is neutral. None supplies no delta for this channel.
+multiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
+screen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
 
-- `sample_id`: Declared by zipzi_core::types::DeltaMeshKeyform.sample_id; string value; default ''.
-- `positions`: Declared by zipzi_core::types::DeltaMeshKeyform.positions; sequence value.
-- `opacity`: Declared by zipzi_core::types::DeltaMeshKeyform.opacity; optional value.
-- `draw_order`: Declared by zipzi_core::types::DeltaMeshKeyform.draw_order; optional value.
-- `multiply`: Declared by zipzi_core::types::DeltaMeshKeyform.multiply; optional value.
-- `screen`: Declared by zipzi_core::types::DeltaMeshKeyform.screen; optional value.
+- `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+- `positions`: Per-vertex XY displacement vectors in mesh vertex order.
+- `opacity`: Additive opacity delta; zero is neutral. None supplies no delta for this channel.
+- `draw_order`: Additive drawing-order delta; zero is neutral. None supplies no delta for this channel.
+- `multiply`: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
+- `screen`: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
 
 ## zipzi.modeling.DeltaMeshKeyform.summary
 
@@ -4079,15 +4754,19 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned DeltaOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-sample_id: Declared by zipzi_core::types::DeltaOffscreenKeyform.sample_id; string value; default ''.
-opacity: Declared by zipzi_core::types::DeltaOffscreenKeyform.opacity; f32 value.
-multiply: Declared by zipzi_core::types::DeltaOffscreenKeyform.multiply; optional value.
-screen: Declared by zipzi_core::types::DeltaOffscreenKeyform.screen; optional value.
+sample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+opacity: Additive opacity delta; zero is neutral.
+multiply: RGB multiply factors stored as multipliers with neutral (1, 1, 1); None supplies
+no multiply-color delta. Native conversion subtracts 1 before additive blending.
+screen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
 
-- `sample_id`: Declared by zipzi_core::types::DeltaOffscreenKeyform.sample_id; string value; default ''.
-- `opacity`: Declared by zipzi_core::types::DeltaOffscreenKeyform.opacity; f32 value.
-- `multiply`: Declared by zipzi_core::types::DeltaOffscreenKeyform.multiply; optional value.
-- `screen`: Declared by zipzi_core::types::DeltaOffscreenKeyform.screen; optional value.
+- `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+- `opacity`: Additive opacity delta; zero is neutral.
+- `multiply`: RGB multiply factors stored as multipliers with neutral (1, 1, 1); None supplies
+no multiply-color delta. Native conversion subtracts 1 before additive blending.
+- `screen`: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
 
 ## zipzi.modeling.DeltaOffscreenKeyform.summary
 
@@ -4103,11 +4782,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned DeltaPartKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-sample_id: Declared by zipzi_core::types::DeltaPartKeyform.sample_id; string value; default ''.
-draw_order: Declared by zipzi_core::types::DeltaPartKeyform.draw_order; f32 value.
+sample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+draw_order: Additive drawing-order delta; zero is neutral.
 
-- `sample_id`: Declared by zipzi_core::types::DeltaPartKeyform.sample_id; string value; default ''.
-- `draw_order`: Declared by zipzi_core::types::DeltaPartKeyform.draw_order; f32 value.
+- `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+- `draw_order`: Additive drawing-order delta; zero is neutral.
 
 ## zipzi.modeling.DeltaPartKeyform.summary
 
@@ -4123,21 +4802,27 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned DeltaRotationKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-sample_id: Declared by zipzi_core::types::DeltaRotationKeyform.sample_id; string value; default ''.
-origin: Declared by zipzi_core::types::DeltaRotationKeyform.origin; optional value.
-angle: Declared by zipzi_core::types::DeltaRotationKeyform.angle; optional value.
-scale: Declared by zipzi_core::types::DeltaRotationKeyform.scale; optional value.
-opacity: Declared by zipzi_core::types::DeltaRotationKeyform.opacity; optional value.
-multiply: Declared by zipzi_core::types::DeltaRotationKeyform.multiply; optional value.
-screen: Declared by zipzi_core::types::DeltaRotationKeyform.screen; optional value.
+sample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+origin: Translation delta of the rotation origin in parent coordinates. None supplies no delta
+for this channel.
+angle: Additive rotation-angle delta in degrees. None supplies no delta for this channel.
+scale: Additive scale delta; zero is neutral. None supplies no delta for this channel.
+opacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.
+multiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
+screen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
 
-- `sample_id`: Declared by zipzi_core::types::DeltaRotationKeyform.sample_id; string value; default ''.
-- `origin`: Declared by zipzi_core::types::DeltaRotationKeyform.origin; optional value.
-- `angle`: Declared by zipzi_core::types::DeltaRotationKeyform.angle; optional value.
-- `scale`: Declared by zipzi_core::types::DeltaRotationKeyform.scale; optional value.
-- `opacity`: Declared by zipzi_core::types::DeltaRotationKeyform.opacity; optional value.
-- `multiply`: Declared by zipzi_core::types::DeltaRotationKeyform.multiply; optional value.
-- `screen`: Declared by zipzi_core::types::DeltaRotationKeyform.screen; optional value.
+- `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+- `origin`: Translation delta of the rotation origin in parent coordinates. None supplies no delta
+for this channel.
+- `angle`: Additive rotation-angle delta in degrees. None supplies no delta for this channel.
+- `scale`: Additive scale delta; zero is neutral. None supplies no delta for this channel.
+- `opacity`: Additive opacity delta; zero is neutral. None supplies no delta for this channel.
+- `multiply`: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
+- `screen`: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
 
 ## zipzi.modeling.DeltaRotationKeyform.summary
 
@@ -4153,17 +4838,21 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned DeltaWarpKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-sample_id: Declared by zipzi_core::types::DeltaWarpKeyform.sample_id; string value; default ''.
-points: Declared by zipzi_core::types::DeltaWarpKeyform.points; sequence value.
-opacity: Declared by zipzi_core::types::DeltaWarpKeyform.opacity; optional value.
-multiply: Declared by zipzi_core::types::DeltaWarpKeyform.multiply; optional value.
-screen: Declared by zipzi_core::types::DeltaWarpKeyform.screen; optional value.
+sample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+points: Per-point XY displacement vectors in row-major warp point order.
+opacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.
+multiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
+screen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
 
-- `sample_id`: Declared by zipzi_core::types::DeltaWarpKeyform.sample_id; string value; default ''.
-- `points`: Declared by zipzi_core::types::DeltaWarpKeyform.points; sequence value.
-- `opacity`: Declared by zipzi_core::types::DeltaWarpKeyform.opacity; optional value.
-- `multiply`: Declared by zipzi_core::types::DeltaWarpKeyform.multiply; optional value.
-- `screen`: Declared by zipzi_core::types::DeltaWarpKeyform.screen; optional value.
+- `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
+- `points`: Per-point XY displacement vectors in row-major warp point order.
+- `opacity`: Additive opacity delta; zero is neutral. None supplies no delta for this channel.
+- `multiply`: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
+- `screen`: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this
+channel.
 
 ## zipzi.modeling.DeltaWarpKeyform.summary
 
@@ -4174,25 +4863,33 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DisplayInfo
 
-`(origin: DisplayInfoOrigin, parameters: tuple[CdiParameterEntry, ...] | None = None, parameter_groups: tuple[CdiParameterGroup, ...] | None = None, parts: tuple[CdiPartEntry, ...] | None = None, combined_parameters: tuple[CdiCombinedSet, ...] | None = None, extensions: Mapping[str, ExtensionValue], opaque_source_ids: CdiNamespaceIds | None = None)`
+`(origin: DisplayInfoOrigin, parameters: tuple[CdiParameterEntry, ...] | None = None, parameter_groups: tuple[CdiParameterGroup, ...] | None = None, parts: tuple[CdiPartEntry, ...] | None = None, combined_parameters: tuple[CdiCombinedSet, ...] | None = None, extensions: _Mapping[str, ExtensionValue], opaque_source_ids: CdiNamespaceIds | None = None)`
 
 Immutable owned DisplayInfo value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-origin: Declared by zipzi_core::document::display_info::DisplayInfo.origin; serde_enum value.
+origin: Import/generation provenance of these display metadata records.
 parameters: `None` and `Some([])` retain CDI collection omission and emptiness.
-parameter_groups: Declared by zipzi_core::document::display_info::DisplayInfo.parameter_groups; optional value.
-parts: Declared by zipzi_core::document::display_info::DisplayInfo.parts; optional value.
-combined_parameters: Declared by zipzi_core::document::display_info::DisplayInfo.combined_parameters; optional value.
-extensions: Declared by zipzi_core::document::display_info::DisplayInfo.extensions; string_map value.
+parameter_groups: Optional ordered CDI parameter groups metadata; None preserves omission and an empty
+list explicitly preserves emptiness.
+parts: Optional ordered CDI parts metadata; None preserves omission and an empty list
+explicitly preserves emptiness.
+combined_parameters: Optional ordered CDI combined parameters metadata; None preserves omission and an empty
+list explicitly preserves emptiness.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 opaque_source_ids: Complete namespace identity at import when opaque extensions exist.
 
-- `origin`: Declared by zipzi_core::document::display_info::DisplayInfo.origin; serde_enum value.
+- `origin`: Import/generation provenance of these display metadata records.
 - `parameters`: `None` and `Some([])` retain CDI collection omission and emptiness.
-- `parameter_groups`: Declared by zipzi_core::document::display_info::DisplayInfo.parameter_groups; optional value.
-- `parts`: Declared by zipzi_core::document::display_info::DisplayInfo.parts; optional value.
-- `combined_parameters`: Declared by zipzi_core::document::display_info::DisplayInfo.combined_parameters; optional value.
-- `extensions`: Declared by zipzi_core::document::display_info::DisplayInfo.extensions; string_map value.
+- `parameter_groups`: Optional ordered CDI parameter groups metadata; None preserves omission and an empty
+list explicitly preserves emptiness.
+- `parts`: Optional ordered CDI parts metadata; None preserves omission and an empty list
+explicitly preserves emptiness.
+- `combined_parameters`: Optional ordered CDI combined parameters metadata; None preserves omission and an empty
+list explicitly preserves emptiness.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 - `opaque_source_ids`: Complete namespace identity at import when opaque extensions exist.
 
 ## zipzi.modeling.DisplayInfo.summary
@@ -4222,8 +4919,14 @@ Typed public API entry.
 
 Immutable owned DocumentAuthoringEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `expected`: Owned DocumentValue value.
-- `value`: Owned DocumentValue value.
+Fields:
+expected: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+value: Scalar value in the referenced parameter domain.
+
+- `expected`: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.DocumentAuthoringEditPatch.summary
 
@@ -4238,8 +4941,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DocumentAuthoringEditRepairCdiParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `runtime_id`: Owned str value.
-- `parameter_id`: Owned str | None value.
+Fields:
+runtime_id: External format/runtime identifier retained for import/export; not the document
+object ID.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document
+object ID.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
 
 ## zipzi.modeling.DocumentAuthoringEditRepairCdiParameter.summary
 
@@ -4254,8 +4963,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DocumentAuthoringEditRepairCdiPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `runtime_id`: Owned str value.
-- `part_id`: Owned str | None value.
+Fields:
+runtime_id: External format/runtime identifier retained for import/export; not the document
+object ID.
+part_id: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
+
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document
+object ID.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
 
 ## zipzi.modeling.DocumentAuthoringEditRepairCdiPart.summary
 
@@ -4270,8 +4987,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DocumentAuthoringEditRepairMissingAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `path`: Owned str value.
-- `attachment_id`: Owned str | None value.
+Fields:
+path: Unresolved imported attachment path to repair; this command does not read client-
+side files.
+attachment_id: Stable package-attachment ID, distinct from its relative package path.
+
+- `path`: Unresolved imported attachment path to repair; this command does not read client-
+side files.
+- `attachment_id`: Stable package-attachment ID, distinct from its relative package path.
 
 ## zipzi.modeling.DocumentAuthoringEditRepairMissingAttachment.summary
 
@@ -4300,7 +5023,10 @@ Typed public API entry.
 
 Immutable owned DocumentValueExportSettings value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned ExportSettings value.
+Fields:
+value: Replacement export-frame scale and padding settings.
+
+- `value`: Replacement export-frame scale and padding settings.
 
 ## zipzi.modeling.DocumentValueExportSettings.summary
 
@@ -4311,11 +5037,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DocumentValueLayout
 
-`(value: Mapping[str, float] | None = None)`
+`(value: _Mapping[str, float] | None = None)`
 
 Immutable owned DocumentValueLayout value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned Mapping[str, float] | None value.
+Fields:
+value: Replacement model3 layout map; None explicitly removes the layout.
+
+- `value`: Replacement model3 layout map; None explicitly removes the layout.
 
 ## zipzi.modeling.DocumentValueLayout.summary
 
@@ -4330,7 +5059,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DocumentValueSourceCanvas value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned Canvas | None value.
+Fields:
+value: Replacement source-canvas metadata; None explicitly removes the canvas provenance.
+
+- `value`: Replacement source-canvas metadata; None explicitly removes the canvas provenance.
 
 ## zipzi.modeling.DocumentValueSourceCanvas.summary
 
@@ -4348,13 +5080,13 @@ Immutable owned DrawOrderGroup value. Construction owns declared collections; re
 Fields:
 owner: Empty for the root; otherwise the stable ID of the Part driving this group.
 items: Stable mesh/Part IDs, in tie-breaking order. A Part references its group.
-min_order: Declared by zipzi_core::draw_order::DrawOrderGroup.min_order; i32 value.
-max_order: Declared by zipzi_core::draw_order::DrawOrderGroup.max_order; i32 value.
+min_order: Inclusive lower drawing-order bound for this group.
+max_order: Inclusive upper drawing-order bound for this group.
 
 - `owner`: Empty for the root; otherwise the stable ID of the Part driving this group.
 - `items`: Stable mesh/Part IDs, in tie-breaking order. A Part references its group.
-- `min_order`: Declared by zipzi_core::draw_order::DrawOrderGroup.min_order; i32 value.
-- `max_order`: Declared by zipzi_core::draw_order::DrawOrderGroup.max_order; i32 value.
+- `min_order`: Inclusive lower drawing-order bound for this group.
+- `max_order`: Inclusive upper drawing-order bound for this group.
 
 ## zipzi.modeling.DrawOrderGroup.summary
 
@@ -4370,49 +5102,57 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned Drawable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::evaluation::types::Drawable.id; string value.
-runtime_id: Declared by zipzi_core::evaluation::types::Drawable.runtime_id; string value.
-part_id: Declared by zipzi_core::evaluation::types::Drawable.part_id; string value.
-raw_blend_mode: Declared by zipzi_core::evaluation::types::Drawable.raw_blend_mode; optional value.
-texture_asset_id: Declared by zipzi_core::evaluation::types::Drawable.texture_asset_id; string value.
-texture_slot: Declared by zipzi_core::evaluation::types::Drawable.texture_slot; i32 value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+part_id: Organizational Part owner ID; independent of the deformation parent. An empty string
+represents the root/unassigned container.
+raw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.
+texture_asset_id: Resolved image-asset object ID used by this drawable; separate from its evaluated
+texture slot.
+texture_slot: Resolved texture slot index; separate from the persistent texture asset ID.
 renderable: Geometry remains editable when this resource cannot contribute color.
-positions: Declared by zipzi_core::evaluation::types::Drawable.positions; sequence value.
-uvs: Declared by zipzi_core::evaluation::types::Drawable.uvs; shared value.
-indices: Declared by zipzi_core::evaluation::types::Drawable.indices; shared value.
-draw_order: Declared by zipzi_core::evaluation::types::Drawable.draw_order; i32 value.
-render_order: Declared by zipzi_core::evaluation::types::Drawable.render_order; i32 value.
-opacity: Declared by zipzi_core::evaluation::types::Drawable.opacity; f32 value.
-multiply_color: Declared by zipzi_core::evaluation::types::Drawable.multiply_color; array value.
-screen_color: Declared by zipzi_core::evaluation::types::Drawable.screen_color; array value.
-blend_mode: Declared by zipzi_core::evaluation::types::Drawable.blend_mode; serde_enum value.
-enabled: Declared by zipzi_core::evaluation::types::Drawable.enabled; bool value.
-visible: Declared by zipzi_core::evaluation::types::Drawable.visible; bool value.
-double_sided: Declared by zipzi_core::evaluation::types::Drawable.double_sided; bool value.
-inverted_mask: Declared by zipzi_core::evaluation::types::Drawable.inverted_mask; bool value.
-masks: Declared by zipzi_core::evaluation::types::Drawable.masks; sequence value.
+positions: Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.
+uvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+indices: Flattened triangle indices into evaluated positions/UVs; these are offsets, not
+authoring vertex IDs.
+draw_order: Evaluated integer drawing-order coordinate before final render sorting.
+render_order: Final evaluated drawing sequence rank after hierarchy and group ordering.
+opacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+multiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.
+screen_color: Evaluated RGBA screen factors, channel order R, G, B, A.
+blend_mode: Compositing mode used when drawing this object.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+visible: Whether the evaluated object is visible after hierarchical visibility rules.
+double_sided: Whether both triangle faces contribute to drawing.
+inverted_mask: Whether to invert the combined clipping mask for this drawable.
+masks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
 
-- `id`: Declared by zipzi_core::evaluation::types::Drawable.id; string value.
-- `runtime_id`: Declared by zipzi_core::evaluation::types::Drawable.runtime_id; string value.
-- `part_id`: Declared by zipzi_core::evaluation::types::Drawable.part_id; string value.
-- `raw_blend_mode`: Declared by zipzi_core::evaluation::types::Drawable.raw_blend_mode; optional value.
-- `texture_asset_id`: Declared by zipzi_core::evaluation::types::Drawable.texture_asset_id; string value.
-- `texture_slot`: Declared by zipzi_core::evaluation::types::Drawable.texture_slot; i32 value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. An empty string
+represents the root/unassigned container.
+- `raw_blend_mode`: Original format-specific blend-mode code; None means no preserved raw code.
+- `texture_asset_id`: Resolved image-asset object ID used by this drawable; separate from its evaluated
+texture slot.
+- `texture_slot`: Resolved texture slot index; separate from the persistent texture asset ID.
 - `renderable`: Geometry remains editable when this resource cannot contribute color.
-- `positions`: Declared by zipzi_core::evaluation::types::Drawable.positions; sequence value.
-- `uvs`: Declared by zipzi_core::evaluation::types::Drawable.uvs; shared value.
-- `indices`: Declared by zipzi_core::evaluation::types::Drawable.indices; shared value.
-- `draw_order`: Declared by zipzi_core::evaluation::types::Drawable.draw_order; i32 value.
-- `render_order`: Declared by zipzi_core::evaluation::types::Drawable.render_order; i32 value.
-- `opacity`: Declared by zipzi_core::evaluation::types::Drawable.opacity; f32 value.
-- `multiply_color`: Declared by zipzi_core::evaluation::types::Drawable.multiply_color; array value.
-- `screen_color`: Declared by zipzi_core::evaluation::types::Drawable.screen_color; array value.
-- `blend_mode`: Declared by zipzi_core::evaluation::types::Drawable.blend_mode; serde_enum value.
-- `enabled`: Declared by zipzi_core::evaluation::types::Drawable.enabled; bool value.
-- `visible`: Declared by zipzi_core::evaluation::types::Drawable.visible; bool value.
-- `double_sided`: Declared by zipzi_core::evaluation::types::Drawable.double_sided; bool value.
-- `inverted_mask`: Declared by zipzi_core::evaluation::types::Drawable.inverted_mask; bool value.
-- `masks`: Declared by zipzi_core::evaluation::types::Drawable.masks; sequence value.
+- `positions`: Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.
+- `uvs`: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+- `indices`: Flattened triangle indices into evaluated positions/UVs; these are offsets, not
+authoring vertex IDs.
+- `draw_order`: Evaluated integer drawing-order coordinate before final render sorting.
+- `render_order`: Final evaluated drawing sequence rank after hierarchy and group ordering.
+- `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+- `multiply_color`: Evaluated RGBA multiply factors, channel order R, G, B, A.
+- `screen_color`: Evaluated RGBA screen factors, channel order R, G, B, A.
+- `blend_mode`: Compositing mode used when drawing this object.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `visible`: Whether the evaluated object is visible after hierarchical visibility rules.
+- `double_sided`: Whether both triangle faces contribute to drawing.
+- `inverted_mask`: Whether to invert the combined clipping mask for this drawable.
+- `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
 
 ## zipzi.modeling.Drawable.summary
 
@@ -4429,17 +5169,17 @@ Immutable owned DrawableFrame value. Construction owns declared collections; rea
 
 Fields:
 source_revision: Revision used to evaluate this immutable snapshot; later name edits may reuse it.
-parameters: Declared by zipzi_core::evaluation::types::DrawableFrame.parameters; sequence value.
-drawables: Declared by zipzi_core::evaluation::types::DrawableFrame.drawables; sequence value.
-offscreens: Declared by zipzi_core::evaluation::types::DrawableFrame.offscreens; sequence value.
-render_plan: Declared by zipzi_core::evaluation::types::DrawableFrame.render_plan; sequence value.
+parameters: Requested/effective/clamped parameter records for this evaluated pose.
+drawables: Evaluated drawable records in this pose, including their immutable geometry and appearance.
+offscreens: Evaluated Offscreen compositing records for this pose.
+render_plan: Ordered render commands; Offscreen begin/end delimit the compositing scopes.
 deformers: Editor controls evaluated in the same pose as the drawables.
 
 - `source_revision`: Revision used to evaluate this immutable snapshot; later name edits may reuse it.
-- `parameters`: Declared by zipzi_core::evaluation::types::DrawableFrame.parameters; sequence value.
-- `drawables`: Declared by zipzi_core::evaluation::types::DrawableFrame.drawables; sequence value.
-- `offscreens`: Declared by zipzi_core::evaluation::types::DrawableFrame.offscreens; sequence value.
-- `render_plan`: Declared by zipzi_core::evaluation::types::DrawableFrame.render_plan; sequence value.
+- `parameters`: Requested/effective/clamped parameter records for this evaluated pose.
+- `drawables`: Evaluated drawable records in this pose, including their immutable geometry and appearance.
+- `offscreens`: Evaluated Offscreen compositing records for this pose.
+- `render_plan`: Ordered render commands; Offscreen begin/end delimit the compositing scopes.
 - `deformers`: Editor controls evaluated in the same pose as the drawables.
 
 ## zipzi.modeling.DrawableFrame.summary
@@ -4451,26 +5191,26 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.EditorContext
 
-`(version: Version, view_id: str, selected_ids: tuple[str, ...], workspace: str, editing_context: str, active_tool: str, pending_interaction: bool)`
+`(version: _Version, view_id: str, selected_ids: tuple[str, ...], workspace: str, editing_context: str, active_tool: str, pending_interaction: bool)`
 
 Immutable owned EditorContext value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-version: Declared by zipzi_runtime::editor_context::EditorContext.version; opaque value.
-view_id: Declared by zipzi_runtime::editor_context::EditorContext.view_id; string value.
-selected_ids: Declared by zipzi_runtime::editor_context::EditorContext.selected_ids; sequence value.
-workspace: Declared by zipzi_runtime::editor_context::EditorContext.workspace; string value.
-editing_context: Declared by zipzi_runtime::editor_context::EditorContext.editing_context; string value.
-active_tool: Declared by zipzi_runtime::editor_context::EditorContext.active_tool; string value.
-pending_interaction: Declared by zipzi_runtime::editor_context::EditorContext.pending_interaction; bool value.
+version: Exact SDK version captured for this value; not a best-effort latest-version marker.
+view_id: Identity of the Editor view that supplied this UI context.
+selected_ids: Stable document IDs selected in that Editor view, in its selection order.
+workspace: Editor workspace name captured with the context.
+editing_context: Active Editor editing context captured with the view.
+active_tool: Editor tool name captured with the context.
+pending_interaction: Whether an unfinished UI interaction was present when the context was captured.
 
-- `version`: Declared by zipzi_runtime::editor_context::EditorContext.version; opaque value.
-- `view_id`: Declared by zipzi_runtime::editor_context::EditorContext.view_id; string value.
-- `selected_ids`: Declared by zipzi_runtime::editor_context::EditorContext.selected_ids; sequence value.
-- `workspace`: Declared by zipzi_runtime::editor_context::EditorContext.workspace; string value.
-- `editing_context`: Declared by zipzi_runtime::editor_context::EditorContext.editing_context; string value.
-- `active_tool`: Declared by zipzi_runtime::editor_context::EditorContext.active_tool; string value.
-- `pending_interaction`: Declared by zipzi_runtime::editor_context::EditorContext.pending_interaction; bool value.
+- `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
+- `view_id`: Identity of the Editor view that supplied this UI context.
+- `selected_ids`: Stable document IDs selected in that Editor view, in its selection order.
+- `workspace`: Editor workspace name captured with the context.
+- `editing_context`: Active Editor editing context captured with the view.
+- `active_tool`: Editor tool name captured with the context.
+- `pending_interaction`: Whether an unfinished UI interaction was present when the context was captured.
 
 ## zipzi.modeling.EditorContext.summary
 
@@ -4481,7 +5221,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.EditorState
 
-`(objects: Mapping[str, ObjectEditorState] = field(default_factory=lambda: {key0: read_ObjectEditorState(v0) for key0, v0 in record({}).items()}))`
+`(objects: _Mapping[str, ObjectEditorState] = field(default_factory=lambda: {key0: read_ObjectEditorState(v0) for key0, v0 in record({}).items()}))`
 
 Immutable owned EditorState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -4504,16 +5244,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned EvaluatedDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::evaluation::types::EvaluatedDeformer.id; string value.
-enabled: Declared by zipzi_core::evaluation::types::EvaluatedDeformer.enabled; bool value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
 points: Final model coordinates (X-right/Y-up), matching
 Drawable::positions. Warp points are row-major; rotation points are the
 transformed origin and unit X/Y axes.
 rotation_axis: Unit direction of the rotation's local X axis in model space, evaluated
 without translation or scale so tiny imported scales retain their angle.
 
-- `id`: Declared by zipzi_core::evaluation::types::EvaluatedDeformer.id; string value.
-- `enabled`: Declared by zipzi_core::evaluation::types::EvaluatedDeformer.enabled; bool value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 - `points`: Final model coordinates (X-right/Y-up), matching
 Drawable::positions. Warp points are row-major; rotation points are the
 transformed origin and unit X/Y axes.
@@ -4534,15 +5274,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned EvaluatedParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::evaluation::types::EvaluatedParameter.id; string value.
-requested: Declared by zipzi_core::evaluation::types::EvaluatedParameter.requested; f32 value.
-value: Declared by zipzi_core::evaluation::types::EvaluatedParameter.value; f32 value.
-clamped: Declared by zipzi_core::evaluation::types::EvaluatedParameter.clamped; bool value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+requested: Requested parameter value before range/repeat handling, in the parameter domain.
+value: Effective parameter value after native range/repeat handling, in the parameter domain.
+clamped: Whether the effective parameter value differs due to range clamping.
 
-- `id`: Declared by zipzi_core::evaluation::types::EvaluatedParameter.id; string value.
-- `requested`: Declared by zipzi_core::evaluation::types::EvaluatedParameter.requested; f32 value.
-- `value`: Declared by zipzi_core::evaluation::types::EvaluatedParameter.value; f32 value.
-- `clamped`: Declared by zipzi_core::evaluation::types::EvaluatedParameter.clamped; bool value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `requested`: Requested parameter value before range/repeat handling, in the parameter domain.
+- `value`: Effective parameter value after native range/repeat handling, in the parameter domain.
+- `clamped`: Whether the effective parameter value differs due to range clamping.
 
 ## zipzi.modeling.EvaluatedParameter.summary
 
@@ -4565,25 +5305,34 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned ExportSettings value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-pixels_per_unit: Declared by zipzi_core::types::ExportSettings.pixels_per_unit; f32 value.
+pixels_per_unit: Positive model-length to Cubism-runtime-unit conversion scale at the file boundary;
+model units themselves remain canvas-pixel lengths.
 bounds: Optional stable rectangle [left, bottom, right, top] in model units.
 Specified bounds bypass automatic padding; pixel edges round outwards.
-padding_fraction: Declared by zipzi_core::types::ExportSettings.padding_fraction; f32 value.
-padding_pixels: Declared by zipzi_core::types::ExportSettings.padding_pixels; f32 value.
-minimum_extent: Declared by zipzi_core::types::ExportSettings.minimum_extent; f32 value.
+padding_fraction: Fractional export padding relative to the frame extent; dimensionless.
+padding_pixels: Additional export padding measured in pixels.
+minimum_extent: Finite nonnegative minimum automatic export extent in model units; native default is 256.
 
-- `pixels_per_unit`: Declared by zipzi_core::types::ExportSettings.pixels_per_unit; f32 value.
+- `pixels_per_unit`: Positive model-length to Cubism-runtime-unit conversion scale at the file boundary;
+model units themselves remain canvas-pixel lengths.
 - `bounds`: Optional stable rectangle [left, bottom, right, top] in model units.
 Specified bounds bypass automatic padding; pixel edges round outwards.
-- `padding_fraction`: Declared by zipzi_core::types::ExportSettings.padding_fraction; f32 value.
-- `padding_pixels`: Declared by zipzi_core::types::ExportSettings.padding_pixels; f32 value.
-- `minimum_extent`: Declared by zipzi_core::types::ExportSettings.minimum_extent; f32 value.
+- `padding_fraction`: Fractional export padding relative to the frame extent; dimensionless.
+- `padding_pixels`: Additional export padding measured in pixels.
+- `minimum_extent`: Finite nonnegative minimum automatic export extent in model units; native default is 256.
 
 ## zipzi.modeling.ExportSettings.summary
 
 `() -> str`
 
 Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ExtensionValue
+
+``
+
+Typed public API entry.
 
 
 ## zipzi.modeling.GeometryDiagnostic
@@ -4593,13 +5342,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned GeometryDiagnostic value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-kind: Declared by zipzi_sdk::diagnostics::GeometryDiagnostic.kind; serde_enum value.
-mesh_id: Declared by zipzi_sdk::diagnostics::GeometryDiagnostic.mesh_id; string value.
-triangle_index: Declared by zipzi_sdk::diagnostics::GeometryDiagnostic.triangle_index; optional value.
+kind: Typed geometry diagnostic category.
+mesh_id: Stable ID of the target mesh in this document.
+triangle_index: Optional zero-based index of the offending triangle; None means the diagnostic is not
+triangle-specific.
 
-- `kind`: Declared by zipzi_sdk::diagnostics::GeometryDiagnostic.kind; serde_enum value.
-- `mesh_id`: Declared by zipzi_sdk::diagnostics::GeometryDiagnostic.mesh_id; string value.
-- `triangle_index`: Declared by zipzi_sdk::diagnostics::GeometryDiagnostic.triangle_index; optional value.
+- `kind`: Typed geometry diagnostic category.
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `triangle_index`: Optional zero-based index of the offending triangle; None means the diagnostic is not
+triangle-specific.
 
 ## zipzi.modeling.GeometryDiagnostic.summary
 
@@ -4617,26 +5368,28 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.GeometrySnapshot
 
-`(version: Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], space: GeometrySpace)`
+`(version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], space: GeometrySpace)`
 
 Immutable owned GeometrySnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-version: Declared by zipzi_sdk::types::GeometrySnapshot.version; opaque value.
-mesh_id: Declared by zipzi_sdk::types::GeometrySnapshot.mesh_id; string value.
-vertex_ids: Declared by zipzi_sdk::types::GeometrySnapshot.vertex_ids; sequence value.
-positions: Declared by zipzi_sdk::types::GeometrySnapshot.positions; sequence value.
-uvs: Declared by zipzi_sdk::types::GeometrySnapshot.uvs; sequence value.
-triangles: Declared by zipzi_sdk::types::GeometrySnapshot.triangles; sequence value.
-space: Declared by zipzi_sdk::types::GeometrySnapshot.space; serde_enum value.
+version: Exact SDK version captured for this value; not a best-effort latest-version marker.
+mesh_id: Stable ID of the target mesh in this document.
+vertex_ids: Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
+positions: Absolute XY vertices in the explicitly recorded GeometrySpace, aligned with vertex_ids.
+uvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+triangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
+array offsets.
+space: Coordinate space of positions; local-space variants carry the controlling transform ID.
 
-- `version`: Declared by zipzi_sdk::types::GeometrySnapshot.version; opaque value.
-- `mesh_id`: Declared by zipzi_sdk::types::GeometrySnapshot.mesh_id; string value.
-- `vertex_ids`: Declared by zipzi_sdk::types::GeometrySnapshot.vertex_ids; sequence value.
-- `positions`: Declared by zipzi_sdk::types::GeometrySnapshot.positions; sequence value.
-- `uvs`: Declared by zipzi_sdk::types::GeometrySnapshot.uvs; sequence value.
-- `triangles`: Declared by zipzi_sdk::types::GeometrySnapshot.triangles; sequence value.
-- `space`: Declared by zipzi_sdk::types::GeometrySnapshot.space; serde_enum value.
+- `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `vertex_ids`: Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
+- `positions`: Absolute XY vertices in the explicitly recorded GeometrySpace, aligned with vertex_ids.
+- `uvs`: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+- `triangles`: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
+array offsets.
+- `space`: Coordinate space of positions; local-space variants carry the controlling transform ID.
 
 ## zipzi.modeling.GeometrySnapshot.summary
 
@@ -4672,7 +5425,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GeometrySpaceRotationLocal value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned str value.
+Fields:
+value: Stable rotation-transform ID defining the local position space.
+
+- `value`: Stable rotation-transform ID defining the local position space.
 
 ## zipzi.modeling.GeometrySpaceRotationLocal.summary
 
@@ -4687,7 +5443,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GeometrySpaceWarpParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned str value.
+Fields:
+value: Stable warp-transform ID defining the parameter/lattice position space.
+
+- `value`: Stable warp-transform ID defining the parameter/lattice position space.
 
 ## zipzi.modeling.GeometrySpaceWarpParameter.summary
 
@@ -4703,23 +5462,23 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned Glue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Glue.id; string value.
-runtime_id: Declared by zipzi_core::types::Glue.runtime_id; string value.
-name: Declared by zipzi_core::types::Glue.name; string value.
-mesh_a_id: Declared by zipzi_core::types::Glue.mesh_a_id; serde_enum value.
-mesh_b_id: Declared by zipzi_core::types::Glue.mesh_b_id; serde_enum value.
-pairs: Declared by zipzi_core::types::Glue.pairs; sequence value.
-intensity: Declared by zipzi_core::types::Glue.intensity; f32 value.
-binding: Declared by zipzi_core::types::Glue.binding; optional value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+mesh_a_id: Stable mesh ID for the A endpoint of this Glue.
+mesh_b_id: Stable mesh ID for the B endpoint of this Glue.
+pairs: Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.
+intensity: Glue influence factor; 0 disables the connection and 1 applies its full influence.
+binding: Optional parameter-driven Glue binding; None leaves the Glue intensity static.
 
-- `id`: Declared by zipzi_core::types::Glue.id; string value.
-- `runtime_id`: Declared by zipzi_core::types::Glue.runtime_id; string value.
-- `name`: Declared by zipzi_core::types::Glue.name; string value.
-- `mesh_a_id`: Declared by zipzi_core::types::Glue.mesh_a_id; serde_enum value.
-- `mesh_b_id`: Declared by zipzi_core::types::Glue.mesh_b_id; serde_enum value.
-- `pairs`: Declared by zipzi_core::types::Glue.pairs; sequence value.
-- `intensity`: Declared by zipzi_core::types::Glue.intensity; f32 value.
-- `binding`: Declared by zipzi_core::types::Glue.binding; optional value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `mesh_a_id`: Stable mesh ID for the A endpoint of this Glue.
+- `mesh_b_id`: Stable mesh ID for the B endpoint of this Glue.
+- `pairs`: Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.
+- `intensity`: Glue influence factor; 0 disables the connection and 1 applies its full influence.
+- `binding`: Optional parameter-driven Glue binding; None leaves the Glue intensity static.
 
 ## zipzi.modeling.Glue.summary
 
@@ -4735,10 +5494,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned GlueBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-axes: Declared by zipzi_core::types::GlueBinding.axes; sequence value.
+axes: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
 keyforms: First axis varies fastest, as in MOC3 ordinary bindings.
 
-- `axes`: Declared by zipzi_core::types::GlueBinding.axes; sequence value.
+- `axes`: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
 - `keyforms`: First axis varies fastest, as in MOC3 ordinary bindings.
 
 ## zipzi.modeling.GlueBinding.summary
@@ -4755,11 +5516,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned GlueKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-samples: Declared by zipzi_core::types::GlueKeyform.samples; sequence value; default [].
-intensity: Declared by zipzi_core::types::GlueKeyform.intensity; f32 value.
+samples: Stable sample IDs in active binding-axis order; not numeric coordinates.
+intensity: Glue influence factor; 0 disables the connection and 1 applies its full influence.
 
-- `samples`: Declared by zipzi_core::types::GlueKeyform.samples; sequence value; default [].
-- `intensity`: Declared by zipzi_core::types::GlueKeyform.intensity; f32 value.
+- `samples`: Stable sample IDs in active binding-axis order; not numeric coordinates.
+- `intensity`: Glue influence factor; 0 disables the connection and 1 applies its full influence.
 
 ## zipzi.modeling.GlueKeyform.summary
 
@@ -4775,17 +5536,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned GlueVertexPair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::GlueVertexPair.id; string value.
-vertex_a: Declared by zipzi_core::types::GlueVertexPair.vertex_a; optional value.
-vertex_b: Declared by zipzi_core::types::GlueVertexPair.vertex_b; optional value.
-weight_a: Declared by zipzi_core::types::GlueVertexPair.weight_a; f32 value.
-weight_b: Declared by zipzi_core::types::GlueVertexPair.weight_b; f32 value.
+id: Stable UUID of this Glue pair; not the identity of its target.
+vertex_a: Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.
+vertex_b: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.
+weight_a: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.
+weight_b: Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.
 
-- `id`: Declared by zipzi_core::types::GlueVertexPair.id; string value.
-- `vertex_a`: Declared by zipzi_core::types::GlueVertexPair.vertex_a; optional value.
-- `vertex_b`: Declared by zipzi_core::types::GlueVertexPair.vertex_b; optional value.
-- `weight_a`: Declared by zipzi_core::types::GlueVertexPair.weight_a; f32 value.
-- `weight_b`: Declared by zipzi_core::types::GlueVertexPair.weight_b; f32 value.
+- `id`: Stable UUID of this Glue pair; not the identity of its target.
+- `vertex_a`: Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.
+- `vertex_b`: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.
+- `weight_a`: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.
+- `weight_b`: Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.
 
 ## zipzi.modeling.GlueVertexPair.summary
 
@@ -4807,7 +5568,12 @@ Typed public API entry.
 
 Immutable owned GridOperationAddAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `axis`: Owned BindingAxis value.
+Fields:
+axis: Axis definition with a parameter ID and ordered samples; axis identity is distinct
+from the parameter ID.
+
+- `axis`: Axis definition with a parameter ID and ordered samples; axis identity is distinct
+from the parameter ID.
 
 ## zipzi.modeling.GridOperationAddAxis.summary
 
@@ -4822,7 +5588,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GridOperationDeleteSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `sample_id`: Owned str value.
+Fields:
+sample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+
+- `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
 
 ## zipzi.modeling.GridOperationDeleteSample.summary
 
@@ -4837,9 +5608,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GridOperationInsertSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `axis_id`: Owned str value.
-- `id`: Owned str value.
-- `value`: Owned float value.
+Fields:
+axis_id: Stable axis ID owned by this binding, not a parameter or sample ID.
+id: New stable UUID for this object; it must not conflict with an existing identity.
+value: Scalar value in the referenced parameter domain.
+
+- `axis_id`: Stable axis ID owned by this binding, not a parameter or sample ID.
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.GridOperationInsertSample.summary
 
@@ -4854,8 +5630,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GridOperationMoveSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `sample_id`: Owned str value.
-- `value`: Owned float value.
+Fields:
+sample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+value: Scalar value in the referenced parameter domain.
+
+- `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.GridOperationMoveSample.summary
 
@@ -4870,9 +5652,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GridOperationRemapParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `axis_id`: Owned str value.
-- `parameter_id`: Owned str value.
-- `policy`: Owned ParameterRangePolicy value.
+Fields:
+axis_id: Stable axis ID owned by this binding, not a parameter or sample ID.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+policy: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
+
+- `axis_id`: Stable axis ID owned by this binding, not a parameter or sample ID.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
 
 ## zipzi.modeling.GridOperationRemapParameter.summary
 
@@ -4887,9 +5676,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GridOperationRemoveAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `axis_id`: Owned str value.
-- `reduction`: Owned AxisReduction | None value.
-- `keep_pending`: Owned bool value.
+Fields:
+axis_id: Stable axis ID owned by this binding, not a parameter or sample ID.
+reduction: Explicit parameter-domain reduction used when removing or replacing an axis.
+keep_pending: Keep an axis with no parameter as pending instead of removing it from the binding.
+
+- `axis_id`: Stable axis ID owned by this binding, not a parameter or sample ID.
+- `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
+- `keep_pending`: Keep an axis with no parameter as pending instead of removing it from the binding.
 
 ## zipzi.modeling.GridOperationRemoveAxis.summary
 
@@ -4904,7 +5698,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GridOperationReorderAxes value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `axis_ids`: Owned tuple[str, ...] value.
+Fields:
+axis_ids: Axis IDs in the requested new axis order; IDs refer to axes, not parameters.
+
+- `axis_ids`: Axis IDs in the requested new axis order; IDs refer to axes, not parameters.
 
 ## zipzi.modeling.GridOperationReorderAxes.summary
 
@@ -4919,9 +5716,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GridOperationSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `axis_id`: Owned str value.
-- `parameter_id`: Owned str value.
-- `reduction`: Owned AxisReduction | None value.
+Fields:
+axis_id: Stable axis ID owned by this binding, not a parameter or sample ID.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+reduction: Explicit parameter-domain reduction used when removing or replacing an axis.
+
+- `axis_id`: Stable axis ID owned by this binding, not a parameter or sample ID.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
 
 ## zipzi.modeling.GridOperationSetParameter.summary
 
@@ -4937,12 +5739,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned HierarchyOrder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-organization: Declared by zipzi_core::document::hierarchy_order::HierarchyOrder.organization; sequence value; default [].
-deformation: Declared by zipzi_core::document::hierarchy_order::HierarchyOrder.deformation; sequence value; default [].
+organization: Partial organization-palette order expressed as object IDs; unlisted IDs keep their
+source order.
+deformation: Partial deformation-palette order expressed as object IDs; does not reparent objects.
 glues: Management order only. Glue evaluation retains its native execution order.
 
-- `organization`: Declared by zipzi_core::document::hierarchy_order::HierarchyOrder.organization; sequence value; default [].
-- `deformation`: Declared by zipzi_core::document::hierarchy_order::HierarchyOrder.deformation; sequence value; default [].
+- `organization`: Partial organization-palette order expressed as object IDs; unlisted IDs keep their
+source order.
+- `deformation`: Partial deformation-palette order expressed as object IDs; does not reparent objects.
 - `glues`: Management order only. Glue evaluation retains its native execution order.
 
 ## zipzi.modeling.HierarchyOrder.summary
@@ -4960,14 +5764,14 @@ Immutable owned ImageAsset value. Construction owns declared collections; readin
 
 Fields:
 unresolved_source: Original imported path or external slot when no decoded content exists.
-id: Declared by zipzi_core::types::ImageAsset.id; string value.
-name: Declared by zipzi_core::types::ImageAsset.name; string value.
-content: Declared by zipzi_core::types::ImageAsset.content; optional value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+content: Image content metadata; None explicitly represents an asset with no loaded image content.
 
 - `unresolved_source`: Original imported path or external slot when no decoded content exists.
-- `id`: Declared by zipzi_core::types::ImageAsset.id; string value.
-- `name`: Declared by zipzi_core::types::ImageAsset.name; string value.
-- `content`: Declared by zipzi_core::types::ImageAsset.content; optional value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `content`: Image content metadata; None explicitly represents an asset with no loaded image content.
 
 ## zipzi.modeling.ImageAsset.summary
 
@@ -4983,15 +5787,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ImageContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-source: Declared by zipzi_core::types::ImageContent.source; string value.
-width: Declared by zipzi_core::types::ImageContent.width; u32 value.
-height: Declared by zipzi_core::types::ImageContent.height; u32 value.
-sha256: Declared by zipzi_core::types::ImageContent.sha256; string value.
+source: Stored resource location, normally a package-relative path or generated memory-resource
+locator; reading metadata does not open it.
+width: Image width in pixels; prepared image content requires a positive dimension.
+height: Image height in pixels; prepared image content requires a positive dimension.
+sha256: Hexadecimal SHA-256 of the stored image content; an empty string means no recorded digest.
 
-- `source`: Declared by zipzi_core::types::ImageContent.source; string value.
-- `width`: Declared by zipzi_core::types::ImageContent.width; u32 value.
-- `height`: Declared by zipzi_core::types::ImageContent.height; u32 value.
-- `sha256`: Declared by zipzi_core::types::ImageContent.sha256; string value.
+- `source`: Stored resource location, normally a package-relative path or generated memory-resource
+locator; reading metadata does not open it.
+- `width`: Image width in pixels; prepared image content requires a positive dimension.
+- `height`: Image height in pixels; prepared image content requires a positive dimension.
+- `sha256`: Hexadecimal SHA-256 of the stored image content; an empty string means no recorded digest.
 
 ## zipzi.modeling.ImageContent.summary
 
@@ -5014,43 +5820,51 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned Mesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Mesh.id; string value.
-name: Declared by zipzi_core::types::Mesh.name; string value.
-texture_asset_id: Declared by zipzi_core::types::Mesh.texture_asset_id; serde_enum value.
-vertex_ids: Declared by zipzi_core::types::Mesh.vertex_ids; sequence value.
-base_positions: Declared by zipzi_core::types::Mesh.base_positions; sequence value.
-uvs: Declared by zipzi_core::types::Mesh.uvs; sequence value.
-triangles: Declared by zipzi_core::types::Mesh.triangles; sequence value.
-runtime_id: Declared by zipzi_core::types::Mesh.runtime_id; string value.
-part_id: Declared by zipzi_core::types::Mesh.part_id; string value.
-deformer_id: Declared by zipzi_core::types::Mesh.deformer_id; string value.
-appearance: Declared by zipzi_core::types::Mesh.appearance; serde_record value.
-draw_order: Declared by zipzi_core::types::Mesh.draw_order; optional value.
-blend_mode: Declared by zipzi_core::types::Mesh.blend_mode; serde_enum value.
-enabled: Declared by zipzi_core::types::Mesh.enabled; bool value.
-double_sided: Declared by zipzi_core::types::Mesh.double_sided; bool value.
-inverted_mask: Declared by zipzi_core::types::Mesh.inverted_mask; bool value.
-masks: Declared by zipzi_core::types::Mesh.masks; sequence value.
-raw_blend_mode: Declared by zipzi_core::types::Mesh.raw_blend_mode; optional value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+texture_asset_id: Image-asset reference; resolved values name the asset object ID and unresolved values
+preserve an external texture identifier.
+vertex_ids: Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
+base_positions: Absolute base-shape XY positions in the mesh authoring space, ordered by vertex_ids.
+uvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+triangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
+array offsets.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+part_id: Organizational Part owner ID; independent of the deformation parent. An empty string
+represents the root/unassigned container.
+deformer_id: Parent deformation transform ID; an empty string means model space.
+appearance: Opacity and multiply/screen color factors for this object or shape.
+draw_order: Drawing-order coordinate; distinct from the final evaluated render_order. None leaves
+this channel unspecified for native evaluation.
+blend_mode: Compositing mode used when drawing this object.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+double_sided: Whether both triangle faces contribute to drawing.
+inverted_mask: Whether to invert the combined clipping mask for this drawable.
+masks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
+raw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.
 
-- `id`: Declared by zipzi_core::types::Mesh.id; string value.
-- `name`: Declared by zipzi_core::types::Mesh.name; string value.
-- `texture_asset_id`: Declared by zipzi_core::types::Mesh.texture_asset_id; serde_enum value.
-- `vertex_ids`: Declared by zipzi_core::types::Mesh.vertex_ids; sequence value.
-- `base_positions`: Declared by zipzi_core::types::Mesh.base_positions; sequence value.
-- `uvs`: Declared by zipzi_core::types::Mesh.uvs; sequence value.
-- `triangles`: Declared by zipzi_core::types::Mesh.triangles; sequence value.
-- `runtime_id`: Declared by zipzi_core::types::Mesh.runtime_id; string value.
-- `part_id`: Declared by zipzi_core::types::Mesh.part_id; string value.
-- `deformer_id`: Declared by zipzi_core::types::Mesh.deformer_id; string value.
-- `appearance`: Declared by zipzi_core::types::Mesh.appearance; serde_record value.
-- `draw_order`: Declared by zipzi_core::types::Mesh.draw_order; optional value.
-- `blend_mode`: Declared by zipzi_core::types::Mesh.blend_mode; serde_enum value.
-- `enabled`: Declared by zipzi_core::types::Mesh.enabled; bool value.
-- `double_sided`: Declared by zipzi_core::types::Mesh.double_sided; bool value.
-- `inverted_mask`: Declared by zipzi_core::types::Mesh.inverted_mask; bool value.
-- `masks`: Declared by zipzi_core::types::Mesh.masks; sequence value.
-- `raw_blend_mode`: Declared by zipzi_core::types::Mesh.raw_blend_mode; optional value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `texture_asset_id`: Image-asset reference; resolved values name the asset object ID and unresolved values
+preserve an external texture identifier.
+- `vertex_ids`: Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
+- `base_positions`: Absolute base-shape XY positions in the mesh authoring space, ordered by vertex_ids.
+- `uvs`: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+- `triangles`: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
+array offsets.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. An empty string
+represents the root/unassigned container.
+- `deformer_id`: Parent deformation transform ID; an empty string means model space.
+- `appearance`: Opacity and multiply/screen color factors for this object or shape.
+- `draw_order`: Drawing-order coordinate; distinct from the final evaluated render_order. None leaves
+this channel unspecified for native evaluation.
+- `blend_mode`: Compositing mode used when drawing this object.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `double_sided`: Whether both triangle faces contribute to drawing.
+- `inverted_mask`: Whether to invert the combined clipping mask for this drawable.
+- `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
+- `raw_blend_mode`: Original format-specific blend-mode code; None means no preserved raw code.
 
 ## zipzi.modeling.Mesh.summary
 
@@ -5066,15 +5880,19 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned MeshBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::MeshBinding.id; string value.
-mesh_id: Declared by zipzi_core::types::MeshBinding.mesh_id; string value.
-axes: Declared by zipzi_core::types::MeshBinding.axes; sequence value.
-keyforms: Declared by zipzi_core::types::MeshBinding.keyforms; sequence value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+mesh_id: Stable ID of the target mesh in this document.
+axes: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
+keyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
 
-- `id`: Declared by zipzi_core::types::MeshBinding.id; string value.
-- `mesh_id`: Declared by zipzi_core::types::MeshBinding.mesh_id; string value.
-- `axes`: Declared by zipzi_core::types::MeshBinding.axes; sequence value.
-- `keyforms`: Declared by zipzi_core::types::MeshBinding.keyforms; sequence value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `axes`: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
+- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
 
 ## zipzi.modeling.MeshBinding.summary
 
@@ -5096,8 +5914,14 @@ Typed public API entry.
 
 Immutable owned MeshGridEditAddAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `binding_id`: Owned str value.
-- `axis`: Owned BindingAxis value.
+Fields:
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+axis: Axis definition with a parameter ID and ordered samples; axis identity is distinct
+from the parameter ID.
+
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `axis`: Axis definition with a parameter ID and ordered samples; axis identity is distinct
+from the parameter ID.
 
 ## zipzi.modeling.MeshGridEditAddAxis.summary
 
@@ -5112,8 +5936,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MeshGridEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `mesh_id`: Owned str value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+mesh_id: Stable ID of the target mesh in this document.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `mesh_id`: Stable ID of the target mesh in this document.
 
 ## zipzi.modeling.MeshGridEditCreate.summary
 
@@ -5128,9 +5956,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MeshGridEditDeleteSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `binding_id`: Owned str value.
-- `parameter_id`: Owned str value.
-- `value`: Owned float value.
+Fields:
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+value: Scalar value in the referenced parameter domain.
+
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.MeshGridEditDeleteSample.summary
 
@@ -5145,9 +5978,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MeshGridEditInsertSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `binding_id`: Owned str value.
-- `parameter_id`: Owned str value.
-- `value`: Owned float value.
+Fields:
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+value: Scalar value in the referenced parameter domain.
+
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.MeshGridEditInsertSample.summary
 
@@ -5162,10 +6000,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MeshGridEditMoveSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `binding_id`: Owned str value.
-- `parameter_id`: Owned str value.
-- `from_`: Owned float value.
-- `to`: Owned float value.
+Fields:
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+from_: Existing sample value in the parameter domain, not a sample-array index.
+to: New sample value in the same parameter domain.
+
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `from_`: Existing sample value in the parameter domain, not a sample-array index.
+- `to`: New sample value in the same parameter domain.
 
 ## zipzi.modeling.MeshGridEditMoveSample.summary
 
@@ -5180,9 +6024,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MeshGridEditRemoveAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `binding_id`: Owned str value.
-- `parameter_id`: Owned str value.
-- `reduction`: Owned AxisReduction value.
+Fields:
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+reduction: Explicit parameter-domain reduction used when removing or replacing an axis.
+
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
 
 ## zipzi.modeling.MeshGridEditRemoveAxis.summary
 
@@ -5197,8 +6046,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MeshGridEditReorderAxes value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `binding_id`: Owned str value.
-- `parameter_ids`: Owned tuple[str, ...] value.
+Fields:
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+parameter_ids: Document parameter IDs in the requested axis order.
+
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `parameter_ids`: Document parameter IDs in the requested axis order.
 
 ## zipzi.modeling.MeshGridEditReorderAxes.summary
 
@@ -5214,15 +6067,19 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned MeshKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-samples: Declared by zipzi_core::types::MeshKeyform.samples; sequence value; default [].
-positions: Declared by zipzi_core::types::MeshKeyform.positions; sequence value.
-appearance: Declared by zipzi_core::types::MeshKeyform.appearance; serde_record value.
-draw_order: Declared by zipzi_core::types::MeshKeyform.draw_order; optional value.
+samples: Stable sample IDs, one per active binding axis in axis order; not numeric sample
+coordinates.
+positions: Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.
+appearance: Opacity and multiply/screen color factors for this object or shape.
+draw_order: Optional keyform drawing-order coordinate; None lets native evaluation use its
+unoverridden order.
 
-- `samples`: Declared by zipzi_core::types::MeshKeyform.samples; sequence value; default [].
-- `positions`: Declared by zipzi_core::types::MeshKeyform.positions; sequence value.
-- `appearance`: Declared by zipzi_core::types::MeshKeyform.appearance; serde_record value.
-- `draw_order`: Declared by zipzi_core::types::MeshKeyform.draw_order; optional value.
+- `samples`: Stable sample IDs, one per active binding axis in axis order; not numeric sample
+coordinates.
+- `positions`: Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.
+- `appearance`: Opacity and multiply/screen color factors for this object or shape.
+- `draw_order`: Optional keyform drawing-order coordinate; None lets native evaluation use its
+unoverridden order.
 
 ## zipzi.modeling.MeshKeyform.summary
 
@@ -5233,26 +6090,32 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.Model3Settings
 
-`(groups: tuple[ModelParameterGroup, ...] | None = None, layout: Mapping[str, float] | None = None, hit_areas: tuple[ModelHitArea, ...] | None = None, user_data: AttachmentRef | None = None, extensions: Mapping[str, ExtensionValue], source_runtime_ids: Mapping[str, str] | None = None, source_content: str | None = None)`
+`(groups: tuple[ModelParameterGroup, ...] | None = None, layout: _Mapping[str, float] | None = None, hit_areas: tuple[ModelHitArea, ...] | None = None, user_data: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue], source_runtime_ids: _Mapping[str, str] | None = None, source_content: str | None = None)`
 
 Immutable owned Model3Settings value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-groups: Declared by zipzi_core::document::model3::Model3Settings.groups; optional value.
-layout: Declared by zipzi_core::document::model3::Model3Settings.layout; optional value.
-hit_areas: Declared by zipzi_core::document::model3::Model3Settings.hit_areas; optional value.
-user_data: Declared by zipzi_core::document::model3::Model3Settings.user_data; optional value.
-extensions: Declared by zipzi_core::document::model3::Model3Settings.extensions; string_map value.
+groups: Optional ordered model3 parameter groups; None preserves omission rather than an empty list.
+layout: Optional model3 numeric layout map; None preserves omission and an empty map is
+explicitly empty.
+hit_areas: Optional ordered named hit-area records with stable mesh references; None preserves
+omission.
+user_data: Optional model3 user-data attachment reference; None means the field was omitted.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 source_runtime_ids: Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.
-source_content: Declared by zipzi_core::document::model3::Model3Settings.source_content; optional value.
+source_content: Preserved opaque imported model3 source metadata; None means none was retained.
 
-- `groups`: Declared by zipzi_core::document::model3::Model3Settings.groups; optional value.
-- `layout`: Declared by zipzi_core::document::model3::Model3Settings.layout; optional value.
-- `hit_areas`: Declared by zipzi_core::document::model3::Model3Settings.hit_areas; optional value.
-- `user_data`: Declared by zipzi_core::document::model3::Model3Settings.user_data; optional value.
-- `extensions`: Declared by zipzi_core::document::model3::Model3Settings.extensions; string_map value.
+- `groups`: Optional ordered model3 parameter groups; None preserves omission rather than an empty list.
+- `layout`: Optional model3 numeric layout map; None preserves omission and an empty map is
+explicitly empty.
+- `hit_areas`: Optional ordered named hit-area records with stable mesh references; None preserves
+omission.
+- `user_data`: Optional model3 user-data attachment reference; None means the field was omitted.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 - `source_runtime_ids`: Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.
-- `source_content`: Declared by zipzi_core::document::model3::Model3Settings.source_content; optional value.
+- `source_content`: Preserved opaque imported model3 source metadata; None means none was retained.
 
 ## zipzi.modeling.Model3Settings.summary
 
@@ -5263,20 +6126,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ModelHitArea
 
-`(id: str, name: str, mesh: ModelTargetRef, extensions: Mapping[str, ExtensionValue] = field(default_factory=lambda: {key0: _read_extension(v0) for key0, v0 in record({}).items()}))`
+`(id: str, name: str, mesh: ModelTargetRef, extensions: _Mapping[str, ExtensionValue] = field(default_factory=lambda: {key0: _read_extension(v0) for key0, v0 in record({}).items()}))`
 
 Immutable owned ModelHitArea value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::document::model3::ModelHitArea.id; string value.
-name: Declared by zipzi_core::document::model3::ModelHitArea.name; string value.
-mesh: Declared by zipzi_core::document::model3::ModelHitArea.mesh; serde_enum value.
-extensions: Declared by zipzi_core::document::model3::ModelHitArea.extensions; string_map value; default {}.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+mesh: Resolved mesh target or preserved unresolved mesh runtime identifier.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 
-- `id`: Declared by zipzi_core::document::model3::ModelHitArea.id; string value.
-- `name`: Declared by zipzi_core::document::model3::ModelHitArea.name; string value.
-- `mesh`: Declared by zipzi_core::document::model3::ModelHitArea.mesh; serde_enum value.
-- `extensions`: Declared by zipzi_core::document::model3::ModelHitArea.extensions; string_map value; default {}.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `mesh`: Resolved mesh target or preserved unresolved mesh runtime identifier.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 
 ## zipzi.modeling.ModelHitArea.summary
 
@@ -5287,20 +6152,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ModelParameterGroup
 
-`(id: str, name: str, parameters: tuple[ReferenceEntryModelTargetRef, ...], extensions: Mapping[str, ExtensionValue] = field(default_factory=lambda: {key0: _read_extension(v0) for key0, v0 in record({}).items()}))`
+`(id: str, name: str, parameters: tuple[ReferenceEntryModelTargetRef, ...], extensions: _Mapping[str, ExtensionValue] = field(default_factory=lambda: {key0: _read_extension(v0) for key0, v0 in record({}).items()}))`
 
 Immutable owned ModelParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::document::model3::ModelParameterGroup.id; string value.
-name: Declared by zipzi_core::document::model3::ModelParameterGroup.name; string value.
-parameters: Declared by zipzi_core::document::model3::ModelParameterGroup.parameters; sequence value.
-extensions: Declared by zipzi_core::document::model3::ModelParameterGroup.extensions; string_map value; default {}.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+parameters: Ordered stable reference-entry records selecting model parameters; entry IDs are
+distinct from parameter IDs.
+extensions: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 
-- `id`: Declared by zipzi_core::document::model3::ModelParameterGroup.id; string value.
-- `name`: Declared by zipzi_core::document::model3::ModelParameterGroup.name; string value.
-- `parameters`: Declared by zipzi_core::document::model3::ModelParameterGroup.parameters; sequence value.
-- `extensions`: Declared by zipzi_core::document::model3::ModelParameterGroup.extensions; string_map value; default {}.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `parameters`: Ordered stable reference-entry records selecting model parameters; entry IDs are
+distinct from parameter IDs.
+- `extensions`: Preserved opaque import/export extension fields; retain unknown keys when editing known
+fields.
 
 ## zipzi.modeling.ModelParameterGroup.summary
 
@@ -5316,11 +6185,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ModelSetup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-source_canvas: Declared by zipzi_core::types::ModelSetup.source_canvas; optional value.
-export: Declared by zipzi_core::types::ModelSetup.export; serde_record value.
+source_canvas: Optional imported canvas metadata; None means this model has no source-canvas provenance.
+export: Export-frame settings; padding is applied when computing an exported frame.
 
-- `source_canvas`: Declared by zipzi_core::types::ModelSetup.source_canvas; optional value.
-- `export`: Declared by zipzi_core::types::ModelSetup.export; serde_record value.
+- `source_canvas`: Optional imported canvas metadata; None means this model has no source-canvas provenance.
+- `export`: Export-frame settings; padding is applied when computing an exported frame.
 
 ## zipzi.modeling.ModelSetup.summary
 
@@ -5342,7 +6211,10 @@ Typed public API entry.
 
 Immutable owned ModelTargetRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `object_id`: Owned str value.
+Fields:
+object_id: Stable document ID of the object described or selected by this value.
+
+- `object_id`: Stable document ID of the object described or selected by this value.
 
 ## zipzi.modeling.ModelTargetRefResolved.summary
 
@@ -5357,7 +6229,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelTargetRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `runtime_id`: Owned str value.
+Fields:
+runtime_id: External format/runtime identifier retained for import/export; not the document
+object ID.
+
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document
+object ID.
 
 ## zipzi.modeling.ModelTargetRefUnresolved.summary
 
@@ -5393,8 +6270,14 @@ Typed public API entry.
 
 Immutable owned ModelingCommandAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `intent`: Owned AttachmentEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandAttachment.summary
 
@@ -5409,8 +6292,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `intent`: Owned BindingAuthoringEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandBinding.summary
 
@@ -5425,8 +6314,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `intent`: Owned SceneContentEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandContent.summary
 
@@ -5441,8 +6336,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `asset`: Owned ImageAsset value.
+Fields:
+asset: Complete asset record to create with native identity validation; this DTO alone does
+not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `asset`: Complete asset record to create with native identity validation; this DTO alone does
+not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateAsset.summary
 
@@ -5457,8 +6358,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `binding`: Owned MeshBinding value.
+Fields:
+binding: Complete binding record to create with native identity validation; this DTO alone
+does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `binding`: Complete binding record to create with native identity validation; this DTO alone
+does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateBinding.summary
 
@@ -5473,8 +6380,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateBlendBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `binding`: Owned BlendShapeBinding value.
+Fields:
+binding: Complete blend binding record to create with native identity validation; this DTO
+alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `binding`: Complete blend binding record to create with native identity validation; this DTO
+alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateBlendBinding.summary
 
@@ -5489,8 +6402,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateBlendConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `constraint`: Owned BlendShapeConstraint value.
+Fields:
+constraint: Complete blend constraint record to create with native identity validation; this DTO
+alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `constraint`: Complete blend constraint record to create with native identity validation; this DTO
+alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateBlendConstraint.summary
 
@@ -5505,8 +6424,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateBlendKeyTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `table`: Owned BlendShapeKeyTable value.
+Fields:
+table: Complete blend key table record to create with native identity validation; this DTO
+alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `table`: Complete blend key table record to create with native identity validation; this DTO
+alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateBlendKeyTable.summary
 
@@ -5521,8 +6446,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `glue`: Owned Glue value.
+Fields:
+glue: Complete glue record to create with native identity validation; this DTO alone does
+not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `glue`: Complete glue record to create with native identity validation; this DTO alone does
+not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateGlue.summary
 
@@ -5537,8 +6468,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `mesh`: Owned Mesh value.
+Fields:
+mesh: Complete mesh record to create with native identity validation; this DTO alone does
+not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh`: Complete mesh record to create with native identity validation; this DTO alone does
+not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateMesh.summary
 
@@ -5553,8 +6490,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `offscreen`: Owned Offscreen value.
+Fields:
+offscreen: Complete offscreen record to create with native identity validation; this DTO alone
+does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `offscreen`: Complete offscreen record to create with native identity validation; this DTO alone
+does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateOffscreen.summary
 
@@ -5569,8 +6512,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `parameter`: Owned Parameter value.
+Fields:
+parameter: Complete parameter record to create with native identity validation; this DTO alone
+does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `parameter`: Complete parameter record to create with native identity validation; this DTO alone
+does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateParameter.summary
 
@@ -5585,8 +6534,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreatePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `part`: Owned Part value.
+Fields:
+part: Complete part record to create with native identity validation; this DTO alone does
+not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `part`: Complete part record to create with native identity validation; this DTO alone does
+not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreatePart.summary
 
@@ -5601,8 +6556,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateSceneBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `binding`: Owned SceneBinding value.
+Fields:
+binding: Complete scene binding record to create with native identity validation; this DTO
+alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `binding`: Complete scene binding record to create with native identity validation; this DTO
+alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateSceneBinding.summary
 
@@ -5617,8 +6578,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandCreateTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `transform`: Owned Transform value.
+Fields:
+transform: Complete transform record to create with native identity validation; this DTO alone
+does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `transform`: Complete transform record to create with native identity validation; this DTO alone
+does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandCreateTransform.summary
 
@@ -5633,8 +6600,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `intent`: Owned DocumentAuthoringEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandDocument.summary
 
@@ -5649,8 +6622,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandEraseObject value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `id`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandEraseObject.summary
 
@@ -5665,8 +6644,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `intent`: Owned OrganizationEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandOrganization.summary
 
@@ -5681,8 +6666,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `intent`: Owned ReferenceEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReferences.summary
 
@@ -5697,10 +6688,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandRemeshRectangleGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `id`: Owned str value.
-- `columns`: Owned int value.
-- `rows`: Owned int value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+columns: Positive rectangle-grid subdivision count horizontally; resulting geometry must
+satisfy native vertex/working-set limits.
+rows: Positive rectangle-grid subdivision count vertically; resulting geometry must
+satisfy native vertex/working-set limits.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `columns`: Positive rectangle-grid subdivision count horizontally; resulting geometry must
+satisfy native vertex/working-set limits.
+- `rows`: Positive rectangle-grid subdivision count vertically; resulting geometry must
+satisfy native vertex/working-set limits.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandRemeshRectangleGrid.summary
 
@@ -5715,9 +6718,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandRenameMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `id`: Owned str value.
-- `name`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandRenameMesh.summary
 
@@ -5732,8 +6742,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `asset`: Owned ImageAsset value.
+Fields:
+asset: Complete asset record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `asset`: Complete asset record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceAsset.summary
 
@@ -5748,8 +6764,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `binding`: Owned MeshBinding value.
+Fields:
+binding: Complete binding record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `binding`: Complete binding record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceBinding.summary
 
@@ -5764,8 +6786,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceBlendBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `binding`: Owned BlendShapeBinding value.
+Fields:
+binding: Complete blend binding record to replace the existing object while preserving its
+stable identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `binding`: Complete blend binding record to replace the existing object while preserving its
+stable identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceBlendBinding.summary
 
@@ -5780,8 +6808,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceBlendConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `constraint`: Owned BlendShapeConstraint value.
+Fields:
+constraint: Complete blend constraint record to replace the existing object while preserving its
+stable identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `constraint`: Complete blend constraint record to replace the existing object while preserving its
+stable identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceBlendConstraint.summary
 
@@ -5796,8 +6830,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceBlendKeyTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `table`: Owned BlendShapeKeyTable value.
+Fields:
+table: Complete blend key table record to replace the existing object while preserving its
+stable identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `table`: Complete blend key table record to replace the existing object while preserving its
+stable identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceBlendKeyTable.summary
 
@@ -5812,8 +6852,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceDrawOrderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `groups`: Owned tuple[DrawOrderGroup, ...] value.
+Fields:
+groups: Complete drawing-order group list; native validation checks root/owner membership
+and ranges. This is a required list, not an optional grouping override.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `groups`: Complete drawing-order group list; native validation checks root/owner membership
+and ranges. This is a required list, not an optional grouping override.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceDrawOrderGroups.summary
 
@@ -5828,8 +6874,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceEditorState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `state`: Owned EditorState value.
+Fields:
+state: Complete Editor visibility/lock metadata to replace.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `state`: Complete Editor visibility/lock metadata to replace.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceEditorState.summary
 
@@ -5844,8 +6894,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `glue`: Owned Glue value.
+Fields:
+glue: Complete glue record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `glue`: Complete glue record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceGlue.summary
 
@@ -5860,8 +6916,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceHierarchyOrder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `order`: Owned HierarchyOrder value.
+Fields:
+order: Replacement organization/deformation palette order; not runtime draw order.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `order`: Replacement organization/deformation palette order; not runtime draw order.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceHierarchyOrder.summary
 
@@ -5876,8 +6936,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `mesh`: Owned Mesh value.
+Fields:
+mesh: Complete mesh record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh`: Complete mesh record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceMesh.summary
 
@@ -5892,8 +6958,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceModelSetup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `setup`: Owned ModelSetup value.
+Fields:
+setup: Model source-canvas and export-frame configuration.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `setup`: Model source-canvas and export-frame configuration.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceModelSetup.summary
 
@@ -5908,8 +6978,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `offscreen`: Owned Offscreen value.
+Fields:
+offscreen: Complete offscreen record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `offscreen`: Complete offscreen record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceOffscreen.summary
 
@@ -5924,8 +7000,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `parameter`: Owned Parameter value.
+Fields:
+parameter: Complete parameter record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `parameter`: Complete parameter record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceParameter.summary
 
@@ -5940,8 +7022,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplacePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `part`: Owned Part value.
+Fields:
+part: Complete part record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `part`: Complete part record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplacePart.summary
 
@@ -5956,8 +7044,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceSceneBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `binding`: Owned SceneBinding value.
+Fields:
+binding: Complete scene binding record to replace the existing object while preserving its
+stable identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `binding`: Complete scene binding record to replace the existing object while preserving its
+stable identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceSceneBinding.summary
 
@@ -5972,9 +7066,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceTopology value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `source`: Owned GeometrySnapshot value.
-- `replacement`: Owned TopologyReplacement value.
+Fields:
+source: Exact geometry snapshot the topology replacement was planned against; stale source
+versions are rejected.
+replacement: Coordinated replacement geometry, bindings, Glues and vertex mapping from the
+remeshing plan.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `source`: Exact geometry snapshot the topology replacement was planned against; stale source
+versions are rejected.
+- `replacement`: Coordinated replacement geometry, bindings, Glues and vertex mapping from the
+remeshing plan.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceTopology.summary
 
@@ -5989,8 +7092,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandReplaceTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `transform`: Owned Transform value.
+Fields:
+transform: Complete transform record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `transform`: Complete transform record to replace the existing object while preserving its stable
+identity; this DTO alone does not publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandReplaceTransform.summary
 
@@ -6005,8 +7114,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandResource value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `intent`: Owned ResourceEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandResource.summary
 
@@ -6021,8 +7136,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `intent`: Owned SceneEdit value.
+Fields:
+intent: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `intent`: Typed domain edit executed against the candidate; constructing this intent does not
+mutate or publish.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandScene.summary
 
@@ -6037,9 +7158,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandSetMeshKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `id`: Owned str value.
-- `keyform`: Owned MeshKeyform value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+keyform: Complete shape sample to insert or replace; unrelated samples are retained.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandSetMeshKeyform.summary
 
@@ -6054,9 +7182,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandSetSceneKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `id`: Owned str value.
-- `keyform`: Owned SceneKeyform value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+keyform: Complete shape sample to insert or replace; unrelated samples are retained.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandSetSceneKeyform.summary
 
@@ -6071,10 +7206,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ModelingCommandUpdatePositions value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[str] value.
-- `id`: Owned str value.
-- `vertex_ids`: Owned tuple[int, ...] value.
-- `positions`: Owned tuple[Vec2, ...] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+vertex_ids: Stable vertex IDs selecting which positions to replace; values are paired with
+positions in the supplied order.
+positions: Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `vertex_ids`: Stable vertex IDs selecting which positions to replace; values are paired with
+positions in the supplied order.
+- `positions`: Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.ModelingCommandUpdatePositions.summary
 
@@ -6090,35 +7235,63 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-assets: Declared by zipzi_sdk::modeling::ModelingQuery.assets; sequence value; default [].
-meshes: Declared by zipzi_sdk::modeling::ModelingQuery.meshes; sequence value; default [].
-parameters: Declared by zipzi_sdk::modeling::ModelingQuery.parameters; sequence value; default [].
-parts: Declared by zipzi_sdk::modeling::ModelingQuery.parts; sequence value; default [].
-transforms: Declared by zipzi_sdk::modeling::ModelingQuery.transforms; sequence value; default [].
-bindings: Declared by zipzi_sdk::modeling::ModelingQuery.bindings; sequence value; default [].
-scene_bindings: Declared by zipzi_sdk::modeling::ModelingQuery.scene_bindings; sequence value; default [].
-blend_key_tables: Declared by zipzi_sdk::modeling::ModelingQuery.blend_key_tables; sequence value; default [].
-blend_constraints: Declared by zipzi_sdk::modeling::ModelingQuery.blend_constraints; sequence value; default [].
-blend_bindings: Declared by zipzi_sdk::modeling::ModelingQuery.blend_bindings; sequence value; default [].
-glues: Declared by zipzi_sdk::modeling::ModelingQuery.glues; sequence value; default [].
-offscreens: Declared by zipzi_sdk::modeling::ModelingQuery.offscreens; sequence value; default [].
-parameter_groups: Declared by zipzi_sdk::modeling::ModelingQuery.parameter_groups; sequence value; default [].
-attachments: Declared by zipzi_sdk::modeling::ModelingQuery.attachments; sequence value; default [].
+assets: Explicit IDs of image assets to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+meshes: Explicit IDs of meshes to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+parameters: Explicit IDs of parameters to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+parts: Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,
+while collection IDs remain discoverable.
+transforms: Explicit IDs of deformation transforms to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+bindings: Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+scene_bindings: Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+blend_key_tables: Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+blend_constraints: Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+blend_bindings: Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+glues: Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+offscreens: Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests
+no payloads, while collection IDs remain discoverable.
+parameter_groups: Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+attachments: Explicit IDs of package attachments to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
 
-- `assets`: Declared by zipzi_sdk::modeling::ModelingQuery.assets; sequence value; default [].
-- `meshes`: Declared by zipzi_sdk::modeling::ModelingQuery.meshes; sequence value; default [].
-- `parameters`: Declared by zipzi_sdk::modeling::ModelingQuery.parameters; sequence value; default [].
-- `parts`: Declared by zipzi_sdk::modeling::ModelingQuery.parts; sequence value; default [].
-- `transforms`: Declared by zipzi_sdk::modeling::ModelingQuery.transforms; sequence value; default [].
-- `bindings`: Declared by zipzi_sdk::modeling::ModelingQuery.bindings; sequence value; default [].
-- `scene_bindings`: Declared by zipzi_sdk::modeling::ModelingQuery.scene_bindings; sequence value; default [].
-- `blend_key_tables`: Declared by zipzi_sdk::modeling::ModelingQuery.blend_key_tables; sequence value; default [].
-- `blend_constraints`: Declared by zipzi_sdk::modeling::ModelingQuery.blend_constraints; sequence value; default [].
-- `blend_bindings`: Declared by zipzi_sdk::modeling::ModelingQuery.blend_bindings; sequence value; default [].
-- `glues`: Declared by zipzi_sdk::modeling::ModelingQuery.glues; sequence value; default [].
-- `offscreens`: Declared by zipzi_sdk::modeling::ModelingQuery.offscreens; sequence value; default [].
-- `parameter_groups`: Declared by zipzi_sdk::modeling::ModelingQuery.parameter_groups; sequence value; default [].
-- `attachments`: Declared by zipzi_sdk::modeling::ModelingQuery.attachments; sequence value; default [].
+- `assets`: Explicit IDs of image assets to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+- `meshes`: Explicit IDs of meshes to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+- `parameters`: Explicit IDs of parameters to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+- `parts`: Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,
+while collection IDs remain discoverable.
+- `transforms`: Explicit IDs of deformation transforms to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+- `bindings`: Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+- `scene_bindings`: Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+- `blend_key_tables`: Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+- `blend_constraints`: Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+- `blend_bindings`: Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+- `glues`: Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no
+payloads, while collection IDs remain discoverable.
+- `offscreens`: Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests
+no payloads, while collection IDs remain discoverable.
+- `parameter_groups`: Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
+- `attachments`: Explicit IDs of package attachments to read, in result-slot order; an empty list
+requests no payloads, while collection IDs remain discoverable.
 
 ## zipzi.modeling.ModelingQuery.summary
 
@@ -6129,20 +7302,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ModelingSamples
 
-`(version: Version, parameters: tuple[Mapping[str, float], ...], frames: tuple[DrawableFrame, ...], diagnostics: tuple[GeometryDiagnostic, ...])`
+`(version: _Version, parameters: tuple[_Mapping[str, float], ...], frames: tuple[DrawableFrame, ...], diagnostics: tuple[GeometryDiagnostic, ...])`
 
 Immutable owned ModelingSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-version: Declared by zipzi_sdk::modeling::ModelingSamples.version; opaque value.
-parameters: Declared by zipzi_sdk::modeling::ModelingSamples.parameters; sequence value.
-frames: Declared by zipzi_sdk::modeling::ModelingSamples.frames; sequence value.
-diagnostics: Declared by zipzi_sdk::modeling::ModelingSamples.diagnostics; sequence value.
+version: Exact SDK version captured for this value; not a best-effort latest-version marker.
+parameters: Effective parameter maps in the same order as requested poses; each map is keyed by
+document parameter ID.
+frames: CPU-evaluated frames in the same order as requested parameter maps.
+diagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.
 
-- `version`: Declared by zipzi_sdk::modeling::ModelingSamples.version; opaque value.
-- `parameters`: Declared by zipzi_sdk::modeling::ModelingSamples.parameters; sequence value.
-- `frames`: Declared by zipzi_sdk::modeling::ModelingSamples.frames; sequence value.
-- `diagnostics`: Declared by zipzi_sdk::modeling::ModelingSamples.diagnostics; sequence value.
+- `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
+- `parameters`: Effective parameter maps in the same order as requested poses; each map is keyed by
+document parameter ID.
+- `frames`: CPU-evaluated frames in the same order as requested parameter maps.
+- `diagnostics`: Structured diagnostics from this query or operation; an empty list means none were reported.
 
 ## zipzi.modeling.ModelingSamples.summary
 
@@ -6158,15 +7333,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned NewMeshVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-vertex_id: Declared by zipzi_core::document::scene_content::NewMeshVertex.vertex_id; u32 value.
-position: Declared by zipzi_core::document::scene_content::NewMeshVertex.position; record value.
-uv: Declared by zipzi_core::document::scene_content::NewMeshVertex.uv; record value.
-seed: Declared by zipzi_core::document::scene_content::NewMeshVertex.seed; serde_enum value.
+vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
+position: Absolute XY authoring position for this vertex, not a displacement.
+uv: Texture UV pair for this vertex; not a model-space position.
+seed: Explicit policy for initializing this new vertex in dependent ordinary/BlendShape keyforms.
 
-- `vertex_id`: Declared by zipzi_core::document::scene_content::NewMeshVertex.vertex_id; u32 value.
-- `position`: Declared by zipzi_core::document::scene_content::NewMeshVertex.position; record value.
-- `uv`: Declared by zipzi_core::document::scene_content::NewMeshVertex.uv; record value.
-- `seed`: Declared by zipzi_core::document::scene_content::NewMeshVertex.seed; serde_enum value.
+- `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
+- `position`: Absolute XY authoring position for this vertex, not a displacement.
+- `uv`: Texture UV pair for this vertex; not a model-space position.
+- `seed`: Explicit policy for initializing this new vertex in dependent ordinary/BlendShape keyforms.
 
 ## zipzi.modeling.NewMeshVertex.summary
 
@@ -6182,11 +7357,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ObjectEditorState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-hidden_in_editor: Declared by zipzi_core::document::editor_state::ObjectEditorState.hidden_in_editor; bool value; default False.
-locked: Declared by zipzi_core::document::editor_state::ObjectEditorState.locked; bool value; default False.
+hidden_in_editor: Editor-only hiding flag; does not replace the model enabled/visibility state.
+locked: Authoring lock state; native edit admission and capabilities enforce the lock.
 
-- `hidden_in_editor`: Declared by zipzi_core::document::editor_state::ObjectEditorState.hidden_in_editor; bool value; default False.
-- `locked`: Declared by zipzi_core::document::editor_state::ObjectEditorState.locked; bool value; default False.
+- `hidden_in_editor`: Editor-only hiding flag; does not replace the model enabled/visibility state.
+- `locked`: Authoring lock state; native edit admission and capabilities enforce the lock.
 
 ## zipzi.modeling.ObjectEditorState.summary
 
@@ -6209,27 +7384,29 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned Offscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Offscreen.id; string value.
-runtime_id: Declared by zipzi_core::types::Offscreen.runtime_id; string value.
-name: Declared by zipzi_core::types::Offscreen.name; string value.
-part_id: Declared by zipzi_core::types::Offscreen.part_id; string value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+part_id: Owning Part object ID; it must name an existing Part rather than a root sentinel.
 enabled: Controls visibility of the composited group without changing its contents.
-blend_mode: Declared by zipzi_core::types::Offscreen.blend_mode; u32 value.
-flags: Declared by zipzi_core::types::Offscreen.flags; u8 value.
-masks: Declared by zipzi_core::types::Offscreen.masks; sequence value.
-part_keyform_indices: Declared by zipzi_core::types::Offscreen.part_keyform_indices; sequence value.
-keyforms: Declared by zipzi_core::types::Offscreen.keyforms; sequence value.
+blend_mode: Compositing mode used when drawing this object.
+flags: Preserved format-specific Offscreen compositing flags.
+masks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
+part_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.
+keyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
 
-- `id`: Declared by zipzi_core::types::Offscreen.id; string value.
-- `runtime_id`: Declared by zipzi_core::types::Offscreen.runtime_id; string value.
-- `name`: Declared by zipzi_core::types::Offscreen.name; string value.
-- `part_id`: Declared by zipzi_core::types::Offscreen.part_id; string value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `part_id`: Owning Part object ID; it must name an existing Part rather than a root sentinel.
 - `enabled`: Controls visibility of the composited group without changing its contents.
-- `blend_mode`: Declared by zipzi_core::types::Offscreen.blend_mode; u32 value.
-- `flags`: Declared by zipzi_core::types::Offscreen.flags; u8 value.
-- `masks`: Declared by zipzi_core::types::Offscreen.masks; sequence value.
-- `part_keyform_indices`: Declared by zipzi_core::types::Offscreen.part_keyform_indices; sequence value.
-- `keyforms`: Declared by zipzi_core::types::Offscreen.keyforms; sequence value.
+- `blend_mode`: Compositing mode used when drawing this object.
+- `flags`: Preserved format-specific Offscreen compositing flags.
+- `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
+- `part_keyform_indices`: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.
+- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
+table.
 
 ## zipzi.modeling.Offscreen.summary
 
@@ -6275,11 +7452,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.OffscreenDeletePolicyRemap
 
-`(replacements: Mapping[int, int | None])`
+`(replacements: _Mapping[int, int | None])`
 
 Immutable owned OffscreenDeletePolicyRemap value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `replacements`: Owned Mapping[int, int | None] value.
+Fields:
+replacements: Deleted-keyform-slot to replacement-slot map; None selects neutral/unmapped for that
+slot.
+
+- `replacements`: Deleted-keyform-slot to replacement-slot map; None selects neutral/unmapped for that
+slot.
 
 ## zipzi.modeling.OffscreenDeletePolicyRemap.summary
 
@@ -6295,33 +7477,37 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned OffscreenFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-renderable: Declared by zipzi_core::evaluation::types::OffscreenFrame.renderable; bool value; default True.
-id: Declared by zipzi_core::evaluation::types::OffscreenFrame.id; string value.
-runtime_id: Declared by zipzi_core::evaluation::types::OffscreenFrame.runtime_id; string value.
-owner_part_id: Declared by zipzi_core::evaluation::types::OffscreenFrame.owner_part_id; string value.
-parent_offscreen_id: Declared by zipzi_core::evaluation::types::OffscreenFrame.parent_offscreen_id; optional value.
-render_order: Declared by zipzi_core::evaluation::types::OffscreenFrame.render_order; i32 value.
-opacity: Declared by zipzi_core::evaluation::types::OffscreenFrame.opacity; f32 value.
-enabled: Declared by zipzi_core::evaluation::types::OffscreenFrame.enabled; bool value.
-blend_mode: Declared by zipzi_core::evaluation::types::OffscreenFrame.blend_mode; u32 value.
-flags: Declared by zipzi_core::evaluation::types::OffscreenFrame.flags; u8 value.
-masks: Declared by zipzi_core::evaluation::types::OffscreenFrame.masks; sequence value.
-multiply_color: Declared by zipzi_core::evaluation::types::OffscreenFrame.multiply_color; array value.
-screen_color: Declared by zipzi_core::evaluation::types::OffscreenFrame.screen_color; array value.
+renderable: Whether required content is available for rendering; unavailable textures do not make
+geometry uneditable.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+owner_part_id: Stable Part ID whose contents are composited by this Offscreen.
+parent_offscreen_id: Enclosing Offscreen ID; None means output is composited directly to the main target.
+render_order: Final evaluated drawing sequence rank after hierarchy and group ordering.
+opacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+blend_mode: Compositing mode used when drawing this object.
+flags: Preserved format-specific Offscreen compositing flags.
+masks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
+multiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.
+screen_color: Evaluated RGBA screen factors, channel order R, G, B, A.
 
-- `renderable`: Declared by zipzi_core::evaluation::types::OffscreenFrame.renderable; bool value; default True.
-- `id`: Declared by zipzi_core::evaluation::types::OffscreenFrame.id; string value.
-- `runtime_id`: Declared by zipzi_core::evaluation::types::OffscreenFrame.runtime_id; string value.
-- `owner_part_id`: Declared by zipzi_core::evaluation::types::OffscreenFrame.owner_part_id; string value.
-- `parent_offscreen_id`: Declared by zipzi_core::evaluation::types::OffscreenFrame.parent_offscreen_id; optional value.
-- `render_order`: Declared by zipzi_core::evaluation::types::OffscreenFrame.render_order; i32 value.
-- `opacity`: Declared by zipzi_core::evaluation::types::OffscreenFrame.opacity; f32 value.
-- `enabled`: Declared by zipzi_core::evaluation::types::OffscreenFrame.enabled; bool value.
-- `blend_mode`: Declared by zipzi_core::evaluation::types::OffscreenFrame.blend_mode; u32 value.
-- `flags`: Declared by zipzi_core::evaluation::types::OffscreenFrame.flags; u8 value.
-- `masks`: Declared by zipzi_core::evaluation::types::OffscreenFrame.masks; sequence value.
-- `multiply_color`: Declared by zipzi_core::evaluation::types::OffscreenFrame.multiply_color; array value.
-- `screen_color`: Declared by zipzi_core::evaluation::types::OffscreenFrame.screen_color; array value.
+- `renderable`: Whether required content is available for rendering; unavailable textures do not make
+geometry uneditable.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `owner_part_id`: Stable Part ID whose contents are composited by this Offscreen.
+- `parent_offscreen_id`: Enclosing Offscreen ID; None means output is composited directly to the main target.
+- `render_order`: Final evaluated drawing sequence rank after hierarchy and group ordering.
+- `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `blend_mode`: Compositing mode used when drawing this object.
+- `flags`: Preserved format-specific Offscreen compositing flags.
+- `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
+- `multiply_color`: Evaluated RGBA multiply factors, channel order R, G, B, A.
+- `screen_color`: Evaluated RGBA screen factors, channel order R, G, B, A.
 
 ## zipzi.modeling.OffscreenFrame.summary
 
@@ -6337,13 +7523,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned OffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-opacity: Declared by zipzi_core::types::OffscreenKeyform.opacity; f32 value.
-multiply: Declared by zipzi_core::types::OffscreenKeyform.multiply; optional value.
-screen: Declared by zipzi_core::types::OffscreenKeyform.screen; optional value.
+opacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+multiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
+screen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
-- `opacity`: Declared by zipzi_core::types::OffscreenKeyform.opacity; f32 value.
-- `multiply`: Declared by zipzi_core::types::OffscreenKeyform.multiply; optional value.
-- `screen`: Declared by zipzi_core::types::OffscreenKeyform.screen; optional value.
+- `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+- `multiply`: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
+- `screen`: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
 ## zipzi.modeling.OffscreenKeyform.summary
 
@@ -6359,11 +7547,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned OffscreenMappingPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-slot: Declared by zipzi_core::document::scene_content::OffscreenMappingPatch.slot; serde_enum value.
-keyform: Declared by zipzi_core::document::scene_content::OffscreenMappingPatch.keyform; i32 value.
+slot: Static Part slot or stable Part-binding sample combination to remap.
+keyform: Offscreen keyform-array index; -1 explicitly selects the neutral/unmapped state.
 
-- `slot`: Declared by zipzi_core::document::scene_content::OffscreenMappingPatch.slot; serde_enum value.
-- `keyform`: Declared by zipzi_core::document::scene_content::OffscreenMappingPatch.keyform; i32 value.
+- `slot`: Static Part slot or stable Part-binding sample combination to remap.
+- `keyform`: Offscreen keyform-array index; -1 explicitly selects the neutral/unmapped state.
 
 ## zipzi.modeling.OffscreenMappingPatch.summary
 
@@ -6379,23 +7567,39 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned OrganizationCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-inspect: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.inspect; serde_enum value.
-patch: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.patch; serde_enum value.
-create_child: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.create_child; serde_enum value.
-move_object: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.move_object; serde_enum value.
-reorder: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.reorder; serde_enum value.
-duplicate: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.duplicate; serde_enum value.
-delete: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.delete; serde_enum value.
-dissolve: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.dissolve; serde_enum value.
+inspect: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+patch: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+create_child: Current capability to create children in this collection; inspect its state/reason
+before invoking the operation.
+move_object: Current capability to move this object between collections; inspect its state/reason
+before invoking the operation.
+reorder: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
+duplicate: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+delete: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+dissolve: Current capability to remove its container while preserving contents; inspect its
+state/reason before invoking the operation.
 
-- `inspect`: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.inspect; serde_enum value.
-- `patch`: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.patch; serde_enum value.
-- `create_child`: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.create_child; serde_enum value.
-- `move_object`: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.move_object; serde_enum value.
-- `reorder`: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.reorder; serde_enum value.
-- `duplicate`: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.duplicate; serde_enum value.
-- `delete`: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.delete; serde_enum value.
-- `dissolve`: Declared by zipzi_sdk::organization_authoring::OrganizationCapabilities.dissolve; serde_enum value.
+- `inspect`: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+- `patch`: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+- `create_child`: Current capability to create children in this collection; inspect its state/reason
+before invoking the operation.
+- `move_object`: Current capability to move this object between collections; inspect its state/reason
+before invoking the operation.
+- `reorder`: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
+- `duplicate`: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+- `delete`: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+- `dissolve`: Current capability to remove its container while preserving contents; inspect its
+state/reason before invoking the operation.
 
 ## zipzi.modeling.OrganizationCapabilities.summary
 
@@ -6417,7 +7621,12 @@ Typed public API entry.
 
 Immutable owned OrganizationCollectionParameterGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parent_id`: Owned str | None value.
+Fields:
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
 
 ## zipzi.modeling.OrganizationCollectionParameterGroups.summary
 
@@ -6432,7 +7641,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationCollectionParameters value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `group_id`: Owned str | None value.
+Fields:
+group_id: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+
+- `group_id`: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
 
 ## zipzi.modeling.OrganizationCollectionParameters.summary
 
@@ -6447,7 +7661,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationCollectionPartMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `part_id`: Owned str | None value.
+Fields:
+part_id: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
+
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
 
 ## zipzi.modeling.OrganizationCollectionPartMembers.summary
 
@@ -6476,8 +7695,14 @@ Typed public API entry.
 
 Immutable owned OrganizationEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `group`: Owned CdiParameterGroup value.
-- `before`: Owned str | None value.
+Fields:
+group: Complete CDI parameter-group metadata record to create or replace.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `group`: Complete CDI parameter-group metadata record to create or replace.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.OrganizationEditCreateGroup.summary
 
@@ -6492,9 +7717,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationEditCreateParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parameter`: Owned Parameter value.
-- `group_id`: Owned str | None value.
-- `before`: Owned str | None value.
+Fields:
+parameter: Complete parameter record with identity, finite range, default and runtime behavior.
+group_id: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `parameter`: Complete parameter record with identity, finite range, default and runtime behavior.
+- `group_id`: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.OrganizationEditCreateParameter.summary
 
@@ -6509,8 +7743,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationEditCreatePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `part`: Owned Part value.
-- `before`: Owned str | None value.
+Fields:
+part: Complete Part record, including identity, hierarchy context and enabled/drawing state.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `part`: Complete Part record, including identity, hierarchy context and enabled/drawing state.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.OrganizationEditCreatePart.summary
 
@@ -6525,8 +7765,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `policy`: Owned OrganizationDeletePolicy value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+policy: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
 
 ## zipzi.modeling.OrganizationEditDelete.summary
 
@@ -6541,9 +7789,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `destination`: Owned OrganizationCollection value.
-- `before`: Owned str | None value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+destination: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `destination`: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.OrganizationEditDuplicate.summary
 
@@ -6558,9 +7817,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `destination`: Owned OrganizationCollection value.
-- `before`: Owned str | None value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+destination: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `destination`: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.OrganizationEditMove.summary
 
@@ -6575,8 +7845,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationEditPatchGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `expected`: Owned CdiParameterGroup value.
-- `group`: Owned CdiParameterGroup value.
+Fields:
+expected: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+group: Complete CDI parameter-group metadata record to create or replace.
+
+- `expected`: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+- `group`: Complete CDI parameter-group metadata record to create or replace.
 
 ## zipzi.modeling.OrganizationEditPatchGroup.summary
 
@@ -6591,8 +7867,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OrganizationEditSetParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parameter_id`: Owned str value.
-- `group_id`: Owned str | None value.
+Fields:
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+group_id: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `group_id`: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
 
 ## zipzi.modeling.OrganizationEditSetParameterGroup.summary
 
@@ -6603,56 +7885,88 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.OwnedModelingRecords
 
-`(document_id: str, setup: ModelSetup, hierarchy_order: HierarchyOrder, editor_state: EditorState, display_info: DisplayInfo, model3_settings: Model3Settings, draw_order_groups: tuple[DrawOrderGroup, ...] | None = None, ids: Mapping[str, tuple[str, ...]], assets: tuple[ImageAsset | None, ...], meshes: tuple[Mesh | None, ...], parameters: tuple[Parameter | None, ...], parts: tuple[Part | None, ...], transforms: tuple[Transform | None, ...], bindings: tuple[MeshBinding | None, ...], scene_bindings: tuple[SceneBinding | None, ...], blend_key_tables: tuple[BlendShapeKeyTable | None, ...], blend_constraints: tuple[BlendShapeConstraint | None, ...], blend_bindings: tuple[BlendShapeBinding | None, ...], glues: tuple[Glue | None, ...], offscreens: tuple[Offscreen | None, ...], parameter_groups: tuple[CdiParameterGroup | None, ...], attachments: tuple[PackageAttachment | None, ...])`
+`(document_id: str, setup: ModelSetup, hierarchy_order: HierarchyOrder, editor_state: EditorState, display_info: DisplayInfo, model3_settings: Model3Settings, draw_order_groups: tuple[DrawOrderGroup, ...] | None = None, ids: _Mapping[str, tuple[str, ...]], assets: tuple[ImageAsset | None, ...], meshes: tuple[Mesh | None, ...], parameters: tuple[Parameter | None, ...], parts: tuple[Part | None, ...], transforms: tuple[Transform | None, ...], bindings: tuple[MeshBinding | None, ...], scene_bindings: tuple[SceneBinding | None, ...], blend_key_tables: tuple[BlendShapeKeyTable | None, ...], blend_constraints: tuple[BlendShapeConstraint | None, ...], blend_bindings: tuple[BlendShapeBinding | None, ...], glues: tuple[Glue | None, ...], offscreens: tuple[Offscreen | None, ...], parameter_groups: tuple[CdiParameterGroup | None, ...], attachments: tuple[PackageAttachment | None, ...])`
 
 Immutable owned OwnedModelingRecords value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-document_id: Declared by zipzi_sdk::modeling::OwnedModelingRecords.document_id; string value.
-setup: Declared by zipzi_sdk::modeling::OwnedModelingRecords.setup; serde_record value.
-hierarchy_order: Declared by zipzi_sdk::modeling::OwnedModelingRecords.hierarchy_order; serde_record value.
-editor_state: Declared by zipzi_sdk::modeling::OwnedModelingRecords.editor_state; serde_record value.
-display_info: Declared by zipzi_sdk::modeling::OwnedModelingRecords.display_info; serde_record value.
-model3_settings: Declared by zipzi_sdk::modeling::OwnedModelingRecords.model3_settings; serde_record value.
-draw_order_groups: Declared by zipzi_sdk::modeling::OwnedModelingRecords.draw_order_groups; optional value.
-ids: Declared by zipzi_sdk::modeling::OwnedModelingRecords.ids; string_map value.
-assets: Declared by zipzi_sdk::modeling::OwnedModelingRecords.assets; sequence value.
-meshes: Declared by zipzi_sdk::modeling::OwnedModelingRecords.meshes; sequence value.
-parameters: Declared by zipzi_sdk::modeling::OwnedModelingRecords.parameters; sequence value.
-parts: Declared by zipzi_sdk::modeling::OwnedModelingRecords.parts; sequence value.
-transforms: Declared by zipzi_sdk::modeling::OwnedModelingRecords.transforms; sequence value.
-bindings: Declared by zipzi_sdk::modeling::OwnedModelingRecords.bindings; sequence value.
-scene_bindings: Declared by zipzi_sdk::modeling::OwnedModelingRecords.scene_bindings; sequence value.
-blend_key_tables: Declared by zipzi_sdk::modeling::OwnedModelingRecords.blend_key_tables; sequence value.
-blend_constraints: Declared by zipzi_sdk::modeling::OwnedModelingRecords.blend_constraints; sequence value.
-blend_bindings: Declared by zipzi_sdk::modeling::OwnedModelingRecords.blend_bindings; sequence value.
-glues: Declared by zipzi_sdk::modeling::OwnedModelingRecords.glues; sequence value.
-offscreens: Declared by zipzi_sdk::modeling::OwnedModelingRecords.offscreens; sequence value.
-parameter_groups: Declared by zipzi_sdk::modeling::OwnedModelingRecords.parameter_groups; sequence value.
-attachments: Declared by zipzi_sdk::modeling::OwnedModelingRecords.attachments; sequence value.
+document_id: Stable document UUID; not a Runtime Session handle.
+setup: Model source-canvas and export-frame configuration.
+hierarchy_order: Independent organization/deformation palette ranks; does not alter model relationships.
+editor_state: Owned authoring visibility/lock metadata; separate from evaluated model appearance.
+display_info: Owned CDI display metadata, including explicit imported unresolved references.
+model3_settings: Owned model3 export metadata and reference registrations.
+draw_order_groups: Optional drawing-order groups; None leaves grouping absent instead of supplying an empty
+group list.
+ids: Domain-name-to-ID directory of document collections; identities remain available even
+when no record payloads were requested.
+assets: Owned image assets aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+meshes: Owned meshes aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+parameters: Owned parameters aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+parts: Owned Parts aligned with the corresponding query ID list; None marks a missing requested
+ID and an empty query returns no payloads.
+transforms: Owned deformation transforms aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+bindings: Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+scene_bindings: Owned scene bindings aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+blend_key_tables: Owned BlendShape key tables aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+blend_constraints: Owned BlendShape constraints aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+blend_bindings: Owned BlendShape bindings aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+glues: Owned Glue objects aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+offscreens: Owned Offscreen objects aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+parameter_groups: Owned CDI parameter groups aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+attachments: Owned package attachments aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
 
-- `document_id`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.document_id; string value.
-- `setup`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.setup; serde_record value.
-- `hierarchy_order`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.hierarchy_order; serde_record value.
-- `editor_state`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.editor_state; serde_record value.
-- `display_info`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.display_info; serde_record value.
-- `model3_settings`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.model3_settings; serde_record value.
-- `draw_order_groups`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.draw_order_groups; optional value.
-- `ids`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.ids; string_map value.
-- `assets`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.assets; sequence value.
-- `meshes`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.meshes; sequence value.
-- `parameters`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.parameters; sequence value.
-- `parts`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.parts; sequence value.
-- `transforms`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.transforms; sequence value.
-- `bindings`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.bindings; sequence value.
-- `scene_bindings`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.scene_bindings; sequence value.
-- `blend_key_tables`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.blend_key_tables; sequence value.
-- `blend_constraints`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.blend_constraints; sequence value.
-- `blend_bindings`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.blend_bindings; sequence value.
-- `glues`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.glues; sequence value.
-- `offscreens`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.offscreens; sequence value.
-- `parameter_groups`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.parameter_groups; sequence value.
-- `attachments`: Declared by zipzi_sdk::modeling::OwnedModelingRecords.attachments; sequence value.
+- `document_id`: Stable document UUID; not a Runtime Session handle.
+- `setup`: Model source-canvas and export-frame configuration.
+- `hierarchy_order`: Independent organization/deformation palette ranks; does not alter model relationships.
+- `editor_state`: Owned authoring visibility/lock metadata; separate from evaluated model appearance.
+- `display_info`: Owned CDI display metadata, including explicit imported unresolved references.
+- `model3_settings`: Owned model3 export metadata and reference registrations.
+- `draw_order_groups`: Optional drawing-order groups; None leaves grouping absent instead of supplying an empty
+group list.
+- `ids`: Domain-name-to-ID directory of document collections; identities remain available even
+when no record payloads were requested.
+- `assets`: Owned image assets aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+- `meshes`: Owned meshes aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+- `parameters`: Owned parameters aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+- `parts`: Owned Parts aligned with the corresponding query ID list; None marks a missing requested
+ID and an empty query returns no payloads.
+- `transforms`: Owned deformation transforms aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+- `bindings`: Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+- `scene_bindings`: Owned scene bindings aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+- `blend_key_tables`: Owned BlendShape key tables aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+- `blend_constraints`: Owned BlendShape constraints aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+- `blend_bindings`: Owned BlendShape bindings aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+- `glues`: Owned Glue objects aligned with the corresponding query ID list; None marks a missing
+requested ID and an empty query returns no payloads.
+- `offscreens`: Owned Offscreen objects aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+- `parameter_groups`: Owned CDI parameter groups aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
+- `attachments`: Owned package attachments aligned with the corresponding query ID list; None marks a
+missing requested ID and an empty query returns no payloads.
 
 ## zipzi.modeling.OwnedModelingRecords.summary
 
@@ -6663,18 +7977,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.PackageAttachment
 
-`(id: str, path: str, bytes: bytes | None = None)`
+`(id: str, path: str, bytes: _Bytes | None = None)`
 
 Immutable owned PackageAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::document::attachments::PackageAttachment.id; string value.
-path: Declared by zipzi_core::document::attachments::PackageAttachment.path; string value.
-bytes: Declared by zipzi_core::document::attachments::PackageAttachment.bytes; optional value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+path: Normalized package-relative path using forward slashes; absolute paths, empty components
+and .. are invalid.
+bytes: Optional owned file contents; None preserves an unavailable attachment, not an empty file.
 
-- `id`: Declared by zipzi_core::document::attachments::PackageAttachment.id; string value.
-- `path`: Declared by zipzi_core::document::attachments::PackageAttachment.path; string value.
-- `bytes`: Declared by zipzi_core::document::attachments::PackageAttachment.bytes; optional value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `path`: Normalized package-relative path using forward slashes; absolute paths, empty components
+and .. are invalid.
+- `bytes`: Optional owned file contents; None preserves an unavailable attachment, not an empty file.
 
 ## zipzi.modeling.PackageAttachment.summary
 
@@ -6690,25 +8006,25 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned Parameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Parameter.id; string value.
-runtime_id: Declared by zipzi_core::types::Parameter.runtime_id; string value.
-name: Declared by zipzi_core::types::Parameter.name; string value.
-minimum: Declared by zipzi_core::types::Parameter.minimum; f32 value.
-maximum: Declared by zipzi_core::types::Parameter.maximum; f32 value.
-default_value: Declared by zipzi_core::types::Parameter.default_value; f32 value.
-decimal_places: Declared by zipzi_core::types::Parameter.decimal_places; i32 value; default 6.
-kind: Declared by zipzi_core::types::Parameter.kind; serde_enum value; default 'normal'.
-repeat: Declared by zipzi_core::types::Parameter.repeat; bool value; default False.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+minimum: Lower endpoint of the parameter domain, in model-defined parameter units.
+maximum: Upper endpoint of the parameter domain, in the same units as minimum.
+default_value: Default parameter value used when no override is supplied.
+decimal_places: Decimal precision used for runtime parameter handling; native default is 6.
+kind: Normal or BlendShape parameter behavior; native default is Normal.
+repeat: Whether parameter values repeat across the declared range; native default is false.
 
-- `id`: Declared by zipzi_core::types::Parameter.id; string value.
-- `runtime_id`: Declared by zipzi_core::types::Parameter.runtime_id; string value.
-- `name`: Declared by zipzi_core::types::Parameter.name; string value.
-- `minimum`: Declared by zipzi_core::types::Parameter.minimum; f32 value.
-- `maximum`: Declared by zipzi_core::types::Parameter.maximum; f32 value.
-- `default_value`: Declared by zipzi_core::types::Parameter.default_value; f32 value.
-- `decimal_places`: Declared by zipzi_core::types::Parameter.decimal_places; i32 value; default 6.
-- `kind`: Declared by zipzi_core::types::Parameter.kind; serde_enum value; default 'normal'.
-- `repeat`: Declared by zipzi_core::types::Parameter.repeat; bool value; default False.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `minimum`: Lower endpoint of the parameter domain, in model-defined parameter units.
+- `maximum`: Upper endpoint of the parameter domain, in the same units as minimum.
+- `default_value`: Default parameter value used when no override is supplied.
+- `decimal_places`: Decimal precision used for runtime parameter handling; native default is 6.
+- `kind`: Normal or BlendShape parameter behavior; native default is Normal.
+- `repeat`: Whether parameter values repeat across the declared range; native default is false.
 
 ## zipzi.modeling.Parameter.summary
 
@@ -6731,17 +8047,17 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned ParameterRangeEdit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-parameter_id: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.parameter_id; string value.
-minimum: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.minimum; f32 value.
-maximum: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.maximum; f32 value.
-default_value: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.default_value; f32 value.
-policy: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.policy; serde_enum value.
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+minimum: Lower endpoint of the parameter domain, in parameter units.
+maximum: Upper endpoint of the parameter domain, in parameter units.
+default_value: Default parameter value within the declared domain.
+policy: Explicit native conflict/conversion policy; no implicit removal or remapping is requested.
 
-- `parameter_id`: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.parameter_id; string value.
-- `minimum`: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.minimum; f32 value.
-- `maximum`: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.maximum; f32 value.
-- `default_value`: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.default_value; f32 value.
-- `policy`: Declared by zipzi_core::document::binding_authoring::range::ParameterRangeEdit.policy; serde_enum value.
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `minimum`: Lower endpoint of the parameter domain, in parameter units.
+- `maximum`: Upper endpoint of the parameter domain, in parameter units.
+- `default_value`: Default parameter value within the declared domain.
+- `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is requested.
 
 ## zipzi.modeling.ParameterRangeEdit.summary
 
@@ -6764,19 +8080,21 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned Part value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Part.id; string value.
-runtime_id: Declared by zipzi_core::types::Part.runtime_id; string value.
-name: Declared by zipzi_core::types::Part.name; string value.
-parent_id: Declared by zipzi_core::types::Part.parent_id; string value.
-enabled: Declared by zipzi_core::types::Part.enabled; bool value.
-draw_order: Declared by zipzi_core::types::Part.draw_order; f32 value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. An empty
+string represents the root/unassigned container.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+draw_order: Drawing-order coordinate; distinct from the final evaluated render_order.
 
-- `id`: Declared by zipzi_core::types::Part.id; string value.
-- `runtime_id`: Declared by zipzi_core::types::Part.runtime_id; string value.
-- `name`: Declared by zipzi_core::types::Part.name; string value.
-- `parent_id`: Declared by zipzi_core::types::Part.parent_id; string value.
-- `enabled`: Declared by zipzi_core::types::Part.enabled; bool value.
-- `draw_order`: Declared by zipzi_core::types::Part.draw_order; f32 value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. An empty
+string represents the root/unassigned container.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `draw_order`: Drawing-order coordinate; distinct from the final evaluated render_order.
 
 ## zipzi.modeling.Part.summary
 
@@ -6810,11 +8128,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned PartKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-samples: Declared by zipzi_core::types::PartKeyform.samples; sequence value; default [].
-draw_order: Declared by zipzi_core::types::PartKeyform.draw_order; f32 value.
+samples: Stable sample IDs in active binding-axis order; not numeric coordinates.
+draw_order: Drawing-order coordinate; distinct from the final evaluated render_order.
 
-- `samples`: Declared by zipzi_core::types::PartKeyform.samples; sequence value; default [].
-- `draw_order`: Declared by zipzi_core::types::PartKeyform.draw_order; f32 value.
+- `samples`: Stable sample IDs in active binding-axis order; not numeric coordinates.
+- `draw_order`: Drawing-order coordinate; distinct from the final evaluated render_order.
 
 ## zipzi.modeling.PartKeyform.summary
 
@@ -6836,7 +8154,10 @@ Typed public API entry.
 
 Immutable owned PartKeyformSlotSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `samples`: Owned tuple[str, ...] value.
+Fields:
+samples: Stable sample IDs selecting one ordinary-binding combination, in active axis order.
+
+- `samples`: Stable sample IDs selecting one ordinary-binding combination, in active axis order.
 
 ## zipzi.modeling.PartKeyformSlotSamples.summary
 
@@ -6865,8 +8186,9 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable typed value. See field semantics and the linked workflow.
 
-- `x`: Declared by zipzi_core::types::PreciseVec2.x; f64 value.
-- `y`: Declared by zipzi_core::types::PreciseVec2.y; f64 value.
+- `x`: Horizontal coordinate; its space and units are determined by the containing geometry or
+pose.
+- `y`: Vertical coordinate; its space and units are determined by the containing geometry or pose.
 
 ## zipzi.modeling.ProjectDiagnostic
 
@@ -6875,15 +8197,15 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned ProjectDiagnostic value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-severity: Declared by zipzi_runtime::project_io::ProjectDiagnostic.severity; string value.
-code: Declared by zipzi_runtime::project_io::ProjectDiagnostic.code; string value.
-object_id: Declared by zipzi_runtime::project_io::ProjectDiagnostic.object_id; string value.
-message: Declared by zipzi_runtime::project_io::ProjectDiagnostic.message; string value.
+severity: Diagnostic severity label; inspect code for stable programmatic handling.
+code: Machine-readable reason or diagnostic code; use it instead of matching human-readable text.
+object_id: Stable document object ID related to this diagnostic; empty if no object was attributed.
+message: Human-readable diagnostic detail; code is the stable programmatic discriminator.
 
-- `severity`: Declared by zipzi_runtime::project_io::ProjectDiagnostic.severity; string value.
-- `code`: Declared by zipzi_runtime::project_io::ProjectDiagnostic.code; string value.
-- `object_id`: Declared by zipzi_runtime::project_io::ProjectDiagnostic.object_id; string value.
-- `message`: Declared by zipzi_runtime::project_io::ProjectDiagnostic.message; string value.
+- `severity`: Diagnostic severity label; inspect code for stable programmatic handling.
+- `code`: Machine-readable reason or diagnostic code; use it instead of matching human-readable text.
+- `object_id`: Stable document object ID related to this diagnostic; empty if no object was attributed.
+- `message`: Human-readable diagnostic detail; code is the stable programmatic discriminator.
 
 ## zipzi.modeling.ProjectDiagnostic.summary
 
@@ -6894,26 +8216,34 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ProjectReport
 
-`(before: Version, after: Version, warnings: tuple[str, ...], diagnostics: tuple[ProjectDiagnostic, ...], published: bool, durable: bool, paths: tuple[str, ...])`
+`(before: _Version, after: _Version, warnings: tuple[str, ...], diagnostics: tuple[ProjectDiagnostic, ...], published: bool, durable: bool, paths: tuple[str, ...])`
 
 Immutable owned ProjectReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-before: Declared by zipzi_runtime::project_io::ProjectReport.before; opaque value.
-after: Declared by zipzi_runtime::project_io::ProjectReport.after; opaque value.
-warnings: Declared by zipzi_runtime::project_io::ProjectReport.warnings; sequence value.
-diagnostics: Declared by zipzi_runtime::project_io::ProjectReport.diagnostics; sequence value.
-published: Declared by zipzi_runtime::project_io::ProjectReport.published; bool value.
-durable: Declared by zipzi_runtime::project_io::ProjectReport.durable; bool value.
-paths: Declared by zipzi_runtime::project_io::ProjectReport.paths; sequence value.
+before: Exact SDK version before the operation.
+after: Exact SDK version after the operation; may equal before for a no-op or nonpublishing
+operation.
+warnings: Nonfatal operation warnings retained even when an output was produced.
+diagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.
+published: Whether the operation published its result; inspect durable separately for persistence
+guarantees.
+durable: Whether the reported persistence step achieved its durability guarantee; job completion
+alone does not imply true.
+paths: Host-side output paths actually reported by the operation; no client-side path
+translation is implied.
 
-- `before`: Declared by zipzi_runtime::project_io::ProjectReport.before; opaque value.
-- `after`: Declared by zipzi_runtime::project_io::ProjectReport.after; opaque value.
-- `warnings`: Declared by zipzi_runtime::project_io::ProjectReport.warnings; sequence value.
-- `diagnostics`: Declared by zipzi_runtime::project_io::ProjectReport.diagnostics; sequence value.
-- `published`: Declared by zipzi_runtime::project_io::ProjectReport.published; bool value.
-- `durable`: Declared by zipzi_runtime::project_io::ProjectReport.durable; bool value.
-- `paths`: Declared by zipzi_runtime::project_io::ProjectReport.paths; sequence value.
+- `before`: Exact SDK version before the operation.
+- `after`: Exact SDK version after the operation; may equal before for a no-op or nonpublishing
+operation.
+- `warnings`: Nonfatal operation warnings retained even when an output was produced.
+- `diagnostics`: Structured diagnostics from this query or operation; an empty list means none were reported.
+- `published`: Whether the operation published its result; inspect durable separately for persistence
+guarantees.
+- `durable`: Whether the reported persistence step achieved its durability guarantee; job completion
+alone does not imply true.
+- `paths`: Host-side output paths actually reported by the operation; no client-side path
+translation is implied.
 
 ## zipzi.modeling.ProjectReport.summary
 
@@ -6949,13 +8279,26 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ProjectRequestExport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `path`: Owned str value.
-- `format`: Owned ExportFormat value.
-- `name`: Owned str value.
-- `object_id`: Owned str | None value.
-- `allow_loss`: Owned bool value.
-- `bake_animation`: Owned bool value.
-- `auto_frame_rate`: Owned bool value.
+Fields:
+path: Host-side filesystem path for this IO request; resolve it explicitly on the host.
+format: Explicit import/export format; does not change based on the installed backend.
+name: Human-readable display name; use the stable ID for identity because names can change.
+object_id: Stable document ID of the object described or selected by this value.
+allow_loss: Explicit permission to export despite format-conversion losses; false rejects
+unsupported loss.
+bake_animation: Whether export may bake animation into the destination representation.
+auto_frame_rate: Whether export may choose a frame rate automatically instead of requiring an
+explicit one.
+
+- `path`: Host-side filesystem path for this IO request; resolve it explicitly on the host.
+- `format`: Explicit import/export format; does not change based on the installed backend.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `object_id`: Stable document ID of the object described or selected by this value.
+- `allow_loss`: Explicit permission to export despite format-conversion losses; false rejects
+unsupported loss.
+- `bake_animation`: Whether export may bake animation into the destination representation.
+- `auto_frame_rate`: Whether export may choose a frame rate automatically instead of requiring an
+explicit one.
 
 ## zipzi.modeling.ProjectRequestExport.summary
 
@@ -6970,9 +8313,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ProjectRequestImport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `path`: Owned str value.
-- `format`: Owned ImportFormat value.
-- `textures`: Owned tuple[TextureSlot, ...] value.
+Fields:
+path: Host-side filesystem path for this IO request; resolve it explicitly on the host.
+format: Explicit import/export format; does not change based on the installed backend.
+textures: Explicit external texture-slot to host-file mappings used by imports requiring
+separate images.
+
+- `path`: Host-side filesystem path for this IO request; resolve it explicitly on the host.
+- `format`: Explicit import/export format; does not change based on the installed backend.
+- `textures`: Explicit external texture-slot to host-file mappings used by imports requiring
+separate images.
 
 ## zipzi.modeling.ProjectRequestImport.summary
 
@@ -6987,8 +8337,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ProjectRequestNew value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `document_id`: Owned str value.
-- `setup`: Owned ModelSetup value.
+Fields:
+document_id: Stable document UUID; not a Runtime Session handle.
+setup: Model source-canvas and export-frame configuration.
+
+- `document_id`: Stable document UUID; not a Runtime Session handle.
+- `setup`: Model source-canvas and export-frame configuration.
 
 ## zipzi.modeling.ProjectRequestNew.summary
 
@@ -7003,7 +8357,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ProjectRequestOpen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `path`: Owned str value.
+Fields:
+path: Host-side filesystem path for this IO request; resolve it explicitly on the host.
+
+- `path`: Host-side filesystem path for this IO request; resolve it explicitly on the host.
 
 ## zipzi.modeling.ProjectRequestOpen.summary
 
@@ -7019,21 +8376,35 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ReferenceCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-inspect: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.inspect; serde_enum value.
-patch: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.patch; serde_enum value.
-create_child: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.create_child; serde_enum value.
-move_object: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.move_object; serde_enum value.
-duplicate: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.duplicate; serde_enum value.
-delete: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.delete; serde_enum value.
-dissolve: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.dissolve; serde_enum value.
+inspect: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+patch: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+create_child: Current capability to create children in this collection; inspect its state/reason
+before invoking the operation.
+move_object: Current capability to move this object between collections; inspect its state/reason
+before invoking the operation.
+duplicate: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+delete: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+dissolve: Current capability to remove its container while preserving contents; inspect its
+state/reason before invoking the operation.
 
-- `inspect`: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.inspect; serde_enum value.
-- `patch`: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.patch; serde_enum value.
-- `create_child`: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.create_child; serde_enum value.
-- `move_object`: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.move_object; serde_enum value.
-- `duplicate`: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.duplicate; serde_enum value.
-- `delete`: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.delete; serde_enum value.
-- `dissolve`: Declared by zipzi_sdk::reference_authoring::ReferenceCapabilities.dissolve; serde_enum value.
+- `inspect`: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+- `patch`: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+- `create_child`: Current capability to create children in this collection; inspect its state/reason
+before invoking the operation.
+- `move_object`: Current capability to move this object between collections; inspect its state/reason
+before invoking the operation.
+- `duplicate`: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+- `delete`: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+- `dissolve`: Current capability to remove its container while preserving contents; inspect its
+state/reason before invoking the operation.
 
 ## zipzi.modeling.ReferenceCapabilities.summary
 
@@ -7055,7 +8426,10 @@ Typed public API entry.
 
 Immutable owned ReferenceCollectionCdiCombinedMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `set_id`: Owned str value.
+Fields:
+set_id: Stable CDI combined-parameter set ID owning the selected members.
+
+- `set_id`: Stable CDI combined-parameter set ID owning the selected members.
 
 ## zipzi.modeling.ReferenceCollectionCdiCombinedMembers.summary
 
@@ -7112,7 +8486,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceCollectionModelParameterMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `group_id`: Owned str value.
+Fields:
+group_id: Existing model3 parameter-group object ID; this collection has no root/unassigned group.
+
+- `group_id`: Existing model3 parameter-group object ID; this collection has no root/unassigned group.
 
 ## zipzi.modeling.ReferenceCollectionModelParameterMembers.summary
 
@@ -7134,8 +8511,14 @@ Typed public API entry.
 
 Immutable owned ReferenceEditCreateCdiCombinedSet value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `before`: Owned str | None value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ReferenceEditCreateCdiCombinedSet.summary
 
@@ -7150,9 +8533,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditCreateMember value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `collection`: Owned ReferenceCollection value.
-- `before`: Owned str | None value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+collection: Explicit native collection selector; it does not imply loading every object payload.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `collection`: Explicit native collection selector; it does not imply loading every object payload.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ReferenceEditCreateMember.summary
 
@@ -7167,9 +8557,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditCreateModelHitArea value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `before`: Owned str | None value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+name: Human-readable display name; use the stable ID for identity because names can change.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ReferenceEditCreateModelHitArea.summary
 
@@ -7184,9 +8581,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditCreateModelParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `before`: Owned str | None value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+name: Human-readable display name; use the stable ID for identity because names can change.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ReferenceEditCreateModelParameterGroup.summary
 
@@ -7201,7 +8605,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
 
 ## zipzi.modeling.ReferenceEditDelete.summary
 
@@ -7216,9 +8625,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditDissolve value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `destination`: Owned str value.
-- `before`: Owned str | None value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+destination: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `destination`: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ReferenceEditDissolve.summary
 
@@ -7233,9 +8653,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `destination`: Owned ReferenceCollection value.
-- `before`: Owned str | None value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+destination: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `destination`: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ReferenceEditDuplicate.summary
 
@@ -7250,9 +8681,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `destination`: Owned ReferenceCollection value.
-- `before`: Owned str | None value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+destination: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `destination`: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ReferenceEditMove.summary
 
@@ -7267,9 +8709,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `expected`: Owned ReferenceFields value.
-- `fields`: Owned ReferenceFields value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+expected: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+fields: Typed replacement metadata fields; their variant must match the addressed reference
+kind.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `expected`: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+- `fields`: Typed replacement metadata fields; their variant must match the addressed reference
+kind.
 
 ## zipzi.modeling.ReferenceEditPatch.summary
 
@@ -7284,10 +8737,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEditReplaceSelection value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
-- `field`: Owned ReferenceSelectionField value.
-- `expected`: Owned tuple[str, ...] value.
-- `targets`: Owned tuple[str, ...] value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+field: Explicit field discriminator; must match the addressed object/domain.
+expected: Exact current ordered target-ID selection; a mismatch rejects the edit.
+targets: Complete replacement ordered target-ID selection; an empty list explicitly clears it.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+- `field`: Explicit field discriminator; must match the addressed object/domain.
+- `expected`: Exact current ordered target-ID selection; a mismatch rejects the edit.
+- `targets`: Complete replacement ordered target-ID selection; an empty list explicitly clears it.
 
 ## zipzi.modeling.ReferenceEditReplaceSelection.summary
 
@@ -7302,8 +8761,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEntryCdiParameterRef value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `target`: Owned CdiParameterRef value.
+Fields:
+id: Stable UUID of this reference entry; not the identity of its target.
+target: Resolved document target or preserved unresolved runtime identifier; entry identity
+remains independent of the target.
+
+- `id`: Stable UUID of this reference entry; not the identity of its target.
+- `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
+remains independent of the target.
 
 ## zipzi.modeling.ReferenceEntryCdiParameterRef.summary
 
@@ -7318,8 +8783,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceEntryModelTargetRef value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `target`: Owned ModelTargetRef value.
+Fields:
+id: Stable UUID of this reference entry; not the identity of its target.
+target: Resolved document target or preserved unresolved runtime identifier; entry identity
+remains independent of the target.
+
+- `id`: Stable UUID of this reference entry; not the identity of its target.
+- `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
+remains independent of the target.
 
 ## zipzi.modeling.ReferenceEntryModelTargetRef.summary
 
@@ -7341,7 +8812,12 @@ Typed public API entry.
 
 Immutable owned ReferenceFieldsCdiCombinedMember value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `target`: Owned CdiParameterRef value.
+Fields:
+target: Resolved document target or preserved unresolved runtime identifier; entry identity
+remains independent of the target.
+
+- `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
+remains independent of the target.
 
 ## zipzi.modeling.ReferenceFieldsCdiCombinedMember.summary
 
@@ -7356,8 +8832,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceFieldsModelHitArea value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
-- `mesh`: Owned ModelTargetRef value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can change.
+mesh: Resolved mesh target or preserved unresolved mesh runtime identifier.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `mesh`: Resolved mesh target or preserved unresolved mesh runtime identifier.
 
 ## zipzi.modeling.ReferenceFieldsModelHitArea.summary
 
@@ -7372,7 +8852,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceFieldsModelParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can change.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
 
 ## zipzi.modeling.ReferenceFieldsModelParameterGroup.summary
 
@@ -7387,7 +8870,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReferenceFieldsModelParameterMember value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `target`: Owned ModelTargetRef value.
+Fields:
+target: Resolved document target or preserved unresolved runtime identifier; entry identity
+remains independent of the target.
+
+- `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
+remains independent of the target.
 
 ## zipzi.modeling.ReferenceFieldsModelParameterMember.summary
 
@@ -7416,7 +8904,10 @@ Typed public API entry.
 
 Immutable owned RenderCommandBeginOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 
 ## zipzi.modeling.RenderCommandBeginOffscreen.summary
 
@@ -7431,7 +8922,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned RenderCommandDrawMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
 
 ## zipzi.modeling.RenderCommandDrawMesh.summary
 
@@ -7446,7 +8940,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned RenderCommandEndOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 
 ## zipzi.modeling.RenderCommandEndOffscreen.summary
 
@@ -7457,20 +8954,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ReparentContext
 
-`(parameter_values: Mapping[str, float], parameter_domain: tuple[ConversionDomain, ...], edit_time_seconds: float)`
+`(parameter_values: _Mapping[str, float], parameter_domain: tuple[ConversionDomain, ...], edit_time_seconds: float)`
 
 Immutable owned ReparentContext value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-parameter_values: Declared by zipzi_core::document::binding_authoring::reparent::ReparentContext.parameter_values; string_map value.
+parameter_values: Parameter-ID-to-value map used for the reparenting reference pose; values use each
+parameter domain.
 parameter_domain: Empty for PreserveEditState. For domain preservation every unfixed
 dependency must have an explicit finite interval.
-edit_time_seconds: Declared by zipzi_core::document::binding_authoring::reparent::ReparentContext.edit_time_seconds; f64 value.
+edit_time_seconds: Finite reference pose time in seconds; zero is the default reference time.
 
-- `parameter_values`: Declared by zipzi_core::document::binding_authoring::reparent::ReparentContext.parameter_values; string_map value.
+- `parameter_values`: Parameter-ID-to-value map used for the reparenting reference pose; values use each
+parameter domain.
 - `parameter_domain`: Empty for PreserveEditState. For domain preservation every unfixed
 dependency must have an explicit finite interval.
-- `edit_time_seconds`: Declared by zipzi_core::document::binding_authoring::reparent::ReparentContext.edit_time_seconds; f64 value.
+- `edit_time_seconds`: Finite reference pose time in seconds; zero is the default reference time.
 
 ## zipzi.modeling.ReparentContext.summary
 
@@ -7486,18 +8985,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned ReparentEdit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-sources: Declared by zipzi_core::document::binding_authoring::reparent::ReparentEdit.sources; sequence value.
+sources: Stable IDs of objects to reparent; source order is retained in the planned selection.
 parent_id: Empty means the model root. Part organization is an independent relation.
-strategy: Declared by zipzi_core::document::binding_authoring::reparent::ReparentEdit.strategy; serde_enum value.
+strategy: Explicit reparenting/conversion strategy, including how shape differences are preserved
+or reported.
 placement: Optional placement in the resulting deformation collection.
 tolerance: Absolute position error in model units, before Glue postprocessing.
 relative_tolerance: Relative error times the original affected geometry's model-space scale.
 context: Required for preservation. These are frozen native parameter inputs;
 Motion/Physics must first be resolved to parameters by the caller.
 
-- `sources`: Declared by zipzi_core::document::binding_authoring::reparent::ReparentEdit.sources; sequence value.
+- `sources`: Stable IDs of objects to reparent; source order is retained in the planned selection.
 - `parent_id`: Empty means the model root. Part organization is an independent relation.
-- `strategy`: Declared by zipzi_core::document::binding_authoring::reparent::ReparentEdit.strategy; serde_enum value.
+- `strategy`: Explicit reparenting/conversion strategy, including how shape differences are preserved
+or reported.
 - `placement`: Optional placement in the resulting deformation collection.
 - `tolerance`: Absolute position error in model units, before Glue postprocessing.
 - `relative_tolerance`: Relative error times the original affected geometry's model-space scale.
@@ -7543,19 +9044,31 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned ResourceCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-inspect: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.inspect; serde_enum value.
-patch: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.patch; serde_enum value.
-load_content: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.load_content; serde_enum value.
-duplicate: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.duplicate; serde_enum value.
-delete: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.delete; serde_enum value.
-reorder: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.reorder; serde_enum value.
+inspect: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+patch: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+load_content: Current capability to load the referenced resource contents; inspect its state/reason
+before invoking the operation.
+duplicate: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+delete: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+reorder: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
 
-- `inspect`: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.inspect; serde_enum value.
-- `patch`: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.patch; serde_enum value.
-- `load_content`: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.load_content; serde_enum value.
-- `duplicate`: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.duplicate; serde_enum value.
-- `delete`: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.delete; serde_enum value.
-- `reorder`: Declared by zipzi_sdk::resource_authoring::ResourceCapabilities.reorder; serde_enum value.
+- `inspect`: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+- `patch`: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+- `load_content`: Current capability to load the referenced resource contents; inspect its state/reason
+before invoking the operation.
+- `duplicate`: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+- `delete`: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+- `reorder`: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
 
 ## zipzi.modeling.ResourceCapabilities.summary
 
@@ -7577,9 +9090,16 @@ Typed public API entry.
 
 Immutable owned ResourceEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `before`: Owned str | None value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+name: Human-readable display name; use the stable ID for identity because names can change.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ResourceEditCreate.summary
 
@@ -7594,8 +9114,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ResourceEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `replacement`: Owned SceneReference | None value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+replacement: None rejects deletion while referenced; Some explicitly redirects users to a
+resolved target or an unresolved/detached reference.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `replacement`: None rejects deletion while referenced; Some explicitly redirects users to a
+resolved target or an unresolved/detached reference.
 
 ## zipzi.modeling.ResourceEditDelete.summary
 
@@ -7610,10 +9138,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ResourceEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `source`: Owned str value.
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `before`: Owned str | None value.
+Fields:
+source: Stable ID of the existing source object to duplicate, not a filesystem path.
+id: New stable UUID for this object; it must not conflict with an existing identity.
+name: Human-readable display name; use the stable ID for identity because names can change.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `source`: Stable ID of the existing source object to duplicate, not a filesystem path.
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ResourceEditDuplicate.summary
 
@@ -7628,9 +9164,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ResourceEditPatchName value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `expected`: Owned str value.
-- `name`: Owned str value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+expected: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+name: Human-readable display name; use the stable ID for identity because names can change.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `expected`: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
 
 ## zipzi.modeling.ResourceEditPatchName.summary
 
@@ -7645,8 +9190,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ResourceEditReorder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `before`: Owned str | None value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.ResourceEditReorder.summary
 
@@ -7661,9 +9214,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ResourceEditSetContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `expected`: Owned ImageContent | None value.
-- `content`: Owned ImageContent | None value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+expected: Exact current image-content metadata precondition; None requires the asset to have
+no loaded content.
+content: Image content metadata; None explicitly represents an asset with no loaded image
+content.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `expected`: Exact current image-content metadata precondition; None requires the asset to have
+no loaded content.
+- `content`: Image content metadata; None explicitly represents an asset with no loaded image
+content.
 
 ## zipzi.modeling.ResourceEditSetContent.summary
 
@@ -7679,13 +9243,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned RotationKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-samples: Declared by zipzi_core::types::RotationKeyform.samples; sequence value; default [].
-rotation: Declared by zipzi_core::types::RotationKeyform.rotation; serde_record value.
-appearance: Declared by zipzi_core::types::RotationKeyform.appearance; serde_record value.
+samples: Stable sample IDs in active binding-axis order; not numeric coordinates.
+rotation: Rotation pose containing origin, angle in degrees, scale and axis reflections.
+appearance: Opacity and multiply/screen color factors for this object or shape.
 
-- `samples`: Declared by zipzi_core::types::RotationKeyform.samples; sequence value; default [].
-- `rotation`: Declared by zipzi_core::types::RotationKeyform.rotation; serde_record value.
-- `appearance`: Declared by zipzi_core::types::RotationKeyform.appearance; serde_record value.
+- `samples`: Stable sample IDs in active binding-axis order; not numeric coordinates.
+- `rotation`: Rotation pose containing origin, angle in degrees, scale and axis reflections.
+- `appearance`: Opacity and multiply/screen color factors for this object or shape.
 
 ## zipzi.modeling.RotationKeyform.summary
 
@@ -7701,17 +9265,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned RotationPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-origin: Declared by zipzi_core::types::RotationPose.origin; serde_record value.
-angle: Declared by zipzi_core::types::RotationPose.angle; f32 value.
-scale: Declared by zipzi_core::types::RotationPose.scale; f32 value.
-reflect_x: Declared by zipzi_core::types::RotationPose.reflect_x; bool value.
-reflect_y: Declared by zipzi_core::types::RotationPose.reflect_y; bool value.
+origin: Rotation origin in parent authoring coordinates, stored at f64 precision; default is (0, 0).
+angle: Rotation angle in degrees; not radians.
+scale: Dimensionless rotation-transform scale; 1 is identity.
+reflect_x: Reflect the local X axis about the rotation origin when true.
+reflect_y: Reflect the local Y axis about the rotation origin when true.
 
-- `origin`: Declared by zipzi_core::types::RotationPose.origin; serde_record value.
-- `angle`: Declared by zipzi_core::types::RotationPose.angle; f32 value.
-- `scale`: Declared by zipzi_core::types::RotationPose.scale; f32 value.
-- `reflect_x`: Declared by zipzi_core::types::RotationPose.reflect_x; bool value.
-- `reflect_y`: Declared by zipzi_core::types::RotationPose.reflect_y; bool value.
+- `origin`: Rotation origin in parent authoring coordinates, stored at f64 precision; default is (0, 0).
+- `angle`: Rotation angle in degrees; not radians.
+- `scale`: Dimensionless rotation-transform scale; 1 is identity.
+- `reflect_x`: Reflect the local X axis about the rotation origin when true.
+- `reflect_y`: Reflect the local Y axis about the rotation origin when true.
 
 ## zipzi.modeling.RotationPose.summary
 
@@ -7727,11 +9291,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned RotationTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-base_angle: Declared by zipzi_core::types::RotationTransform.base_angle; f32 value.
-pose: Declared by zipzi_core::types::RotationTransform.pose; serde_record value.
+base_angle: Reference angle in degrees used to orient the rotation control.
+pose: Base rotation pose; its origin is expressed in the parent authoring space.
 
-- `base_angle`: Declared by zipzi_core::types::RotationTransform.base_angle; f32 value.
-- `pose`: Declared by zipzi_core::types::RotationTransform.pose; serde_record value.
+- `base_angle`: Reference angle in degrees used to orient the rotation control.
+- `pose`: Base rotation pose; its origin is expressed in the parent authoring space.
 
 ## zipzi.modeling.RotationTransform.summary
 
@@ -7747,13 +9311,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned SceneBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::SceneBinding.id; string value.
-axes: Declared by zipzi_core::types::SceneBinding.axes; sequence value.
-track: Declared by zipzi_core::types::SceneBinding.track; serde_enum value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+axes: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
+track: Typed Warp, Rotation or Part keyform track; the track target determines shape
+interpretation.
 
-- `id`: Declared by zipzi_core::types::SceneBinding.id; string value.
-- `axes`: Declared by zipzi_core::types::SceneBinding.axes; sequence value.
-- `track`: Declared by zipzi_core::types::SceneBinding.track; serde_enum value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `axes`: Ordered parameter axes; keyform coordinates follow this order and samples retain their
+own identities.
+- `track`: Typed Warp, Rotation or Part keyform track; the track target determines shape
+interpretation.
 
 ## zipzi.modeling.SceneBinding.summary
 
@@ -7769,23 +9337,39 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned SceneCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-inspect: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.inspect; serde_enum value.
-patch: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.patch; serde_enum value.
-move_object: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.move_object; serde_enum value.
-reparent: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reparent; serde_enum value.
-reorder: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reorder; serde_enum value.
-duplicate: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.duplicate; serde_enum value.
-delete: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.delete; serde_enum value.
-dissolve: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.dissolve; serde_enum value.
+inspect: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+patch: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+move_object: Current capability to move this object between collections; inspect its state/reason
+before invoking the operation.
+reparent: Current capability to change its deformation parent; inspect its state/reason before
+invoking the operation.
+reorder: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
+duplicate: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+delete: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+dissolve: Current capability to remove its container while preserving contents; inspect its
+state/reason before invoking the operation.
 
-- `inspect`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.inspect; serde_enum value.
-- `patch`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.patch; serde_enum value.
-- `move_object`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.move_object; serde_enum value.
-- `reparent`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reparent; serde_enum value.
-- `reorder`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reorder; serde_enum value.
-- `duplicate`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.duplicate; serde_enum value.
-- `delete`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.delete; serde_enum value.
-- `dissolve`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.dissolve; serde_enum value.
+- `inspect`: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+- `patch`: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+- `move_object`: Current capability to move this object between collections; inspect its state/reason
+before invoking the operation.
+- `reparent`: Current capability to change its deformation parent; inspect its state/reason before
+invoking the operation.
+- `reorder`: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
+- `duplicate`: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+- `delete`: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+- `dissolve`: Current capability to remove its container while preserving contents; inspect its
+state/reason before invoking the operation.
 
 ## zipzi.modeling.SceneCapabilities.summary
 
@@ -7807,7 +9391,12 @@ Typed public API entry.
 
 Immutable owned SceneCollectionDeformation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parent_id`: Owned str | None value.
+Fields:
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
 
 ## zipzi.modeling.SceneCollectionDeformation.summary
 
@@ -7822,7 +9411,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneCollectionDrawing value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
 
 ## zipzi.modeling.SceneCollectionDrawing.summary
 
@@ -7865,7 +9457,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneCollectionOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `part_id`: Owned str | None value.
+Fields:
+part_id: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
+
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
 
 ## zipzi.modeling.SceneCollectionOrganization.summary
 
@@ -7881,13 +9478,19 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned SceneContentCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-inspect: Declared by zipzi_sdk::scene_content::SceneContentCapabilities.inspect; serde_enum value.
-edit: Declared by zipzi_sdk::scene_content::SceneContentCapabilities.edit; serde_enum value.
-topology: Declared by zipzi_sdk::scene_content::SceneContentCapabilities.topology; serde_enum value.
+inspect: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+edit: Current capability to edit geometry/content through this address; inspect its
+state/reason before invoking the operation.
+topology: Current capability to change topology while preserving or explicitly resolving
+dependencies; inspect its state/reason before invoking the operation.
 
-- `inspect`: Declared by zipzi_sdk::scene_content::SceneContentCapabilities.inspect; serde_enum value.
-- `edit`: Declared by zipzi_sdk::scene_content::SceneContentCapabilities.edit; serde_enum value.
-- `topology`: Declared by zipzi_sdk::scene_content::SceneContentCapabilities.topology; serde_enum value.
+- `inspect`: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+- `edit`: Current capability to edit geometry/content through this address; inspect its
+state/reason before invoking the operation.
+- `topology`: Current capability to change topology while preserving or explicitly resolving
+dependencies; inspect its state/reason before invoking the operation.
 
 ## zipzi.modeling.SceneContentCapabilities.summary
 
@@ -7909,8 +9512,14 @@ Typed public API entry.
 
 Immutable owned SceneContentEditDeleteGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `glue_id`: Owned str value.
-- `ids`: Owned tuple[str, ...] value.
+Fields:
+glue_id: Stable Glue object ID owning the affected vertex pairs.
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+
+- `glue_id`: Stable Glue object ID owning the affected vertex pairs.
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
 
 ## zipzi.modeling.SceneContentEditDeleteGluePairs.summary
 
@@ -7925,9 +9534,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditDeleteMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `vertices`: Owned tuple[int, ...] value.
-- `policy`: Owned VertexDeletePolicy value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+vertices: Stable vertex IDs in this mesh, not offsets into positions.
+policy: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `vertices`: Stable vertex IDs in this mesh, not offsets into positions.
+- `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
 
 ## zipzi.modeling.SceneContentEditDeleteMeshVertices.summary
 
@@ -7942,9 +9558,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditDeleteOffscreenKeyforms value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `slots`: Owned tuple[int, ...] value.
-- `policy`: Owned OffscreenDeletePolicy value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+slots: Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part
+mappings.
+policy: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `slots`: Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part
+mappings.
+- `policy`: Explicit native conflict/conversion policy; no implicit removal or remapping is
+requested.
 
 ## zipzi.modeling.SceneContentEditDeleteOffscreenKeyforms.summary
 
@@ -7959,8 +9584,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditDeleteTriangles value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `slots`: Owned tuple[int, ...] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+slots: Zero-based content-array positions selected by this operation.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `slots`: Zero-based content-array positions selected by this operation.
 
 ## zipzi.modeling.SceneContentEditDeleteTriangles.summary
 
@@ -7975,9 +9604,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditDuplicateGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `glue_id`: Owned str value.
-- `ids`: Owned tuple[str, ...] value.
-- `before`: Owned str | None value.
+Fields:
+glue_id: Stable Glue object ID owning the affected vertex pairs.
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `glue_id`: Stable Glue object ID owning the affected vertex pairs.
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.SceneContentEditDuplicateGluePairs.summary
 
@@ -7992,9 +9630,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditDuplicateOffscreenKeyforms value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `slots`: Owned tuple[int, ...] value.
-- `before`: Owned int | None value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+slots: Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part
+mappings.
+before: Optional zero-based array slot before which to insert; None appends. The anchor must
+belong to the selected destination.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `slots`: Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part
+mappings.
+- `before`: Optional zero-based array slot before which to insert; None appends. The anchor must
+belong to the selected destination.
 
 ## zipzi.modeling.SceneContentEditDuplicateOffscreenKeyforms.summary
 
@@ -8009,9 +9656,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditInsertGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `glue_id`: Owned str value.
-- `pair`: Owned GlueVertexPair value.
-- `before`: Owned str | None value.
+Fields:
+glue_id: Stable Glue object ID owning the affected vertex pairs.
+pair: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected
+meshes.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `glue_id`: Stable Glue object ID owning the affected vertex pairs.
+- `pair`: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected
+meshes.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.SceneContentEditInsertGluePair.summary
 
@@ -8026,9 +9682,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditInsertMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `vertices`: Owned tuple[NewMeshVertex, ...] value.
-- `before`: Owned int | None value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+vertices: New vertex records in insertion order; each has a stable vertex ID and explicit
+dependent-shape seed.
+before: Optional stable vertex ID before which to insert new vertices; None appends. This is
+not a position-array index.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `vertices`: New vertex records in insertion order; each has a stable vertex ID and explicit
+dependent-shape seed.
+- `before`: Optional stable vertex ID before which to insert new vertices; None appends. This is
+not a position-array index.
 
 ## zipzi.modeling.SceneContentEditInsertMeshVertices.summary
 
@@ -8043,9 +9708,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditInsertOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `value`: Owned OffscreenKeyform value.
-- `before`: Owned int | None value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+value: Scalar value in the referenced parameter domain.
+before: Optional zero-based array slot before which to insert; None appends. The anchor must
+belong to the selected destination.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `value`: Scalar value in the referenced parameter domain.
+- `before`: Optional zero-based array slot before which to insert; None appends. The anchor must
+belong to the selected destination.
 
 ## zipzi.modeling.SceneContentEditInsertOffscreenKeyform.summary
 
@@ -8060,9 +9732,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditInsertTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `vertices`: Owned tuple[int, int, int] value.
-- `before`: Owned int | None value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+vertices: Triangle corners as three stable vertex IDs; not position-array indices.
+before: Optional zero-based array slot before which to insert; None appends. The anchor must
+belong to the selected destination.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `vertices`: Triangle corners as three stable vertex IDs; not position-array indices.
+- `before`: Optional zero-based array slot before which to insert; None appends. The anchor must
+belong to the selected destination.
 
 ## zipzi.modeling.SceneContentEditInsertTriangle.summary
 
@@ -8077,9 +9756,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `target`: Owned ShapeTarget value.
-- `updates`: Owned tuple[VertexContentPatch, ...] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+target: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+updates: Ordered content patches applied together by the native edit.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+- `updates`: Ordered content patches applied together by the native edit.
 
 ## zipzi.modeling.SceneContentEditMeshVertices.summary
 
@@ -8094,9 +9780,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditMoveGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `glue_id`: Owned str value.
-- `ids`: Owned tuple[str, ...] value.
-- `before`: Owned str | None value.
+Fields:
+glue_id: Stable Glue object ID owning the affected vertex pairs.
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `glue_id`: Stable Glue object ID owning the affected vertex pairs.
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.SceneContentEditMoveGluePairs.summary
 
@@ -8111,8 +9806,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditPatchGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `glue_id`: Owned str value.
-- `pair`: Owned GlueVertexPair value.
+Fields:
+glue_id: Stable Glue object ID owning the affected vertex pairs.
+pair: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected
+meshes.
+
+- `glue_id`: Stable Glue object ID owning the affected vertex pairs.
+- `pair`: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected
+meshes.
 
 ## zipzi.modeling.SceneContentEditPatchGluePair.summary
 
@@ -8127,9 +9828,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditPatchOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `slot`: Owned int value.
-- `value`: Owned OffscreenKeyform value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+slot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
+object ID.
+value: Scalar value in the referenced parameter domain.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
+object ID.
+- `value`: Scalar value in the referenced parameter domain.
 
 ## zipzi.modeling.SceneContentEditPatchOffscreenKeyform.summary
 
@@ -8144,9 +9852,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditPatchTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `slot`: Owned int value.
-- `vertices`: Owned tuple[int, int, int] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+slot: Zero-based position within the addressed content array; not a stable object ID.
+vertices: Triangle corners as three stable vertex IDs; not position-array indices.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `slot`: Zero-based position within the addressed content array; not a stable object ID.
+- `vertices`: Triangle corners as three stable vertex IDs; not position-array indices.
 
 ## zipzi.modeling.SceneContentEditPatchTriangle.summary
 
@@ -8161,8 +9874,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditReorderMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `order`: Owned tuple[int, ...] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+order: Complete new order of stable vertex IDs; preserves identities and associated per-
+vertex payload.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `order`: Complete new order of stable vertex IDs; preserves identities and associated per-
+vertex payload.
 
 ## zipzi.modeling.SceneContentEditReorderMeshVertices.summary
 
@@ -8177,8 +9896,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditReorderOffscreenKeyforms value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `order`: Owned tuple[int, ...] value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+order: Permutation of zero-based Offscreen keyform slots; native execution remaps
+references consistently.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `order`: Permutation of zero-based Offscreen keyform slots; native execution remaps
+references consistently.
 
 ## zipzi.modeling.SceneContentEditReorderOffscreenKeyforms.summary
 
@@ -8193,8 +9918,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditReplaceTriangles value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `triangles`: Owned tuple[tuple[int, int, int], ...] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+triangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute
+position-array offsets.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `triangles`: Triangle triples of stable vertex IDs; preserve winding and do not substitute
+position-array offsets.
 
 ## zipzi.modeling.SceneContentEditReplaceTriangles.summary
 
@@ -8209,10 +9940,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditResizeWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `transform_id`: Owned str value.
-- `rows`: Owned int value.
-- `columns`: Owned int value.
-- `quad`: Owned bool value.
+Fields:
+transform_id: Stable deformation-transform ID in this document.
+rows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
+columns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
+quad: Whether to use the quad warp interpolation mode for the lattice.
+
+- `transform_id`: Stable deformation-transform ID in this document.
+- `rows`: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
+- `columns`: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
+- `quad`: Whether to use the quad warp interpolation mode for the lattice.
 
 ## zipzi.modeling.SceneContentEditResizeWarp.summary
 
@@ -8227,8 +9964,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditSetOffscreenMapping value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `updates`: Owned tuple[OffscreenMappingPatch, ...] value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+updates: Ordered content patches applied together by the native edit.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `updates`: Ordered content patches applied together by the native edit.
 
 ## zipzi.modeling.SceneContentEditSetOffscreenMapping.summary
 
@@ -8243,10 +9984,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditTransferGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `glue_id`: Owned str value.
-- `destination`: Owned str value.
-- `pairs`: Owned tuple[GlueVertexPair, ...] value.
-- `before`: Owned str | None value.
+Fields:
+glue_id: Stable Glue object ID owning the affected vertex pairs.
+destination: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+pairs: Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `glue_id`: Stable Glue object ID owning the affected vertex pairs.
+- `destination`: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+- `pairs`: Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.SceneContentEditTransferGluePairs.summary
 
@@ -8261,9 +10012,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditWarpBezier value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `transform_id`: Owned str value.
-- `target`: Owned ShapeTarget value.
-- `controller`: Owned WarpBezier | None value.
+Fields:
+transform_id: Stable deformation-transform ID in this document.
+target: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+controller: Complete authoring Bezier controller; its baked lattice is updated by the native edit.
+
+- `transform_id`: Stable deformation-transform ID in this document.
+- `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+- `controller`: Complete authoring Bezier controller; its baked lattice is updated by the native edit.
 
 ## zipzi.modeling.SceneContentEditWarpBezier.summary
 
@@ -8278,10 +10036,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentEditWarpPoints value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `transform_id`: Owned str value.
-- `target`: Owned ShapeTarget value.
-- `updates`: Owned tuple[WarpPointPatch, ...] value.
-- `clear_bezier`: Owned bool value.
+Fields:
+transform_id: Stable deformation-transform ID in this document.
+target: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+updates: Ordered content patches applied together by the native edit.
+clear_bezier: Explicitly remove the authoring Bezier controller when editing baked lattice points.
+
+- `transform_id`: Stable deformation-transform ID in this document.
+- `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+- `updates`: Ordered content patches applied together by the native edit.
+- `clear_bezier`: Explicitly remove the authoring Bezier controller when editing baked lattice points.
 
 ## zipzi.modeling.SceneContentEditWarpPoints.summary
 
@@ -8303,7 +10069,10 @@ Typed public API entry.
 
 Immutable owned SceneContentTargetGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `pair_id`: Owned str value.
+Fields:
+pair_id: Stable Glue pair ID, not its offset in the pair array.
+
+- `pair_id`: Stable Glue pair ID, not its offset in the pair array.
 
 ## zipzi.modeling.SceneContentTargetGluePair.summary
 
@@ -8318,7 +10087,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentTargetOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `slot`: Owned int value.
+Fields:
+slot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
+object ID.
+
+- `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
+object ID.
 
 ## zipzi.modeling.SceneContentTargetOffscreenKeyform.summary
 
@@ -8333,7 +10107,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentTargetOffscreenMapping value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `slot`: Owned PartKeyformSlot value.
+Fields:
+slot: Static Part slot or stable Part-binding sample combination, not an Offscreen array
+offset.
+
+- `slot`: Static Part slot or stable Part-binding sample combination, not an Offscreen array
+offset.
 
 ## zipzi.modeling.SceneContentTargetOffscreenMapping.summary
 
@@ -8348,7 +10127,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentTargetTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `slot`: Owned int value.
+Fields:
+slot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
+object ID.
+
+- `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
+object ID.
 
 ## zipzi.modeling.SceneContentTargetTriangle.summary
 
@@ -8363,8 +10147,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentTargetVertexPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `vertex_id`: Owned int value.
-- `shape`: Owned ShapeTarget value.
+Fields:
+vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
+shape: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
+shape.
+
+- `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
+- `shape`: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
+shape.
 
 ## zipzi.modeling.SceneContentTargetVertexPosition.summary
 
@@ -8379,7 +10169,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentTargetVertexUv value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `vertex_id`: Owned int value.
+Fields:
+vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
+
+- `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
 
 ## zipzi.modeling.SceneContentTargetVertexUv.summary
 
@@ -8394,9 +10187,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentTargetWarpBezierControl value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `node`: Owned int value.
-- `component`: Owned int value.
-- `shape`: Owned ShapeTarget value.
+Fields:
+node: Zero-based Bezier node offset in the row-major controller array.
+component: Bezier component: 0 is the anchor, 1..4 are left, right, up and down handles.
+shape: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
+shape.
+
+- `node`: Zero-based Bezier node offset in the row-major controller array.
+- `component`: Bezier component: 0 is the anchor, 1..4 are left, right, up and down handles.
+- `shape`: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
+shape.
 
 ## zipzi.modeling.SceneContentTargetWarpBezierControl.summary
 
@@ -8411,9 +10211,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentTargetWarpPoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `row`: Owned int value.
-- `column`: Owned int value.
-- `shape`: Owned ShapeTarget value.
+Fields:
+row: Zero-based lattice point row, in the inclusive range 0..rows.
+column: Zero-based lattice point column, in the inclusive range 0..columns.
+shape: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
+shape.
+
+- `row`: Zero-based lattice point row, in the inclusive range 0..rows.
+- `column`: Zero-based lattice point column, in the inclusive range 0..columns.
+- `shape`: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base
+shape.
 
 ## zipzi.modeling.SceneContentTargetWarpPoint.summary
 
@@ -8435,7 +10242,10 @@ Typed public API entry.
 
 Immutable owned SceneContentValueGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned GlueVertexPair value.
+Fields:
+value: Complete replacement Glue pair with its identity and endpoint vertices.
+
+- `value`: Complete replacement Glue pair with its identity and endpoint vertices.
 
 ## zipzi.modeling.SceneContentValueGluePair.summary
 
@@ -8450,7 +10260,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentValueMapping value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned int value.
+Fields:
+value: Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.
+
+- `value`: Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.
 
 ## zipzi.modeling.SceneContentValueMapping.summary
 
@@ -8465,7 +10278,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentValueOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned OffscreenKeyform value.
+Fields:
+value: Complete replacement Offscreen appearance sample.
+
+- `value`: Complete replacement Offscreen appearance sample.
 
 ## zipzi.modeling.SceneContentValueOffscreenKeyform.summary
 
@@ -8480,7 +10296,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentValuePoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned Vec2 value.
+Fields:
+value: Replacement XY value in the selected shape/UV space; BlendShape targets use deltas.
+
+- `value`: Replacement XY value in the selected shape/UV space; BlendShape targets use deltas.
 
 ## zipzi.modeling.SceneContentValuePoint.summary
 
@@ -8495,7 +10314,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneContentValueTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned tuple[int, int, int] value.
+Fields:
+value: Replacement triangle as three stable vertex IDs, not position-array indices.
+
+- `value`: Replacement triangle as three stable vertex IDs, not position-array indices.
 
 ## zipzi.modeling.SceneContentValueTriangle.summary
 
@@ -8524,8 +10346,16 @@ Typed public API entry.
 
 Immutable owned SceneCreateGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `a`: Owned SceneReference value.
-- `b`: Owned SceneReference value.
+Fields:
+a: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved
+references retain runtime identifiers.
+b: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved
+references retain runtime identifiers.
+
+- `a`: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved
+references retain runtime identifiers.
+- `b`: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved
+references retain runtime identifiers.
 
 ## zipzi.modeling.SceneCreateGlue.summary
 
@@ -8540,7 +10370,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneCreateMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `texture`: Owned SceneReference value.
+Fields:
+texture: Image-asset reference; resolved values use asset IDs and unresolved values retain
+external texture identifiers.
+
+- `texture`: Image-asset reference; resolved values use asset IDs and unresolved values retain
+external texture identifiers.
 
 ## zipzi.modeling.SceneCreateMesh.summary
 
@@ -8583,7 +10418,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneCreateWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `bounds`: Owned tuple[float, float, float, float] | None value.
+Fields:
+bounds: Optional [left, bottom, right, top] warp bounds in parent coordinates; None requests
+native defaults.
+
+- `bounds`: Optional [left, bottom, right, top] warp bounds in parent coordinates; None requests
+native defaults.
 
 ## zipzi.modeling.SceneCreateWarp.summary
 
@@ -8605,13 +10445,30 @@ Typed public API entry.
 
 Immutable owned SceneEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `object`: Owned SceneCreate value.
-- `part_id`: Owned str | None value.
-- `parent_id`: Owned str | None value.
-- `before`: Owned str | None value.
-- `deformation_before`: Owned str | None value.
+Fields:
+id: New stable UUID for this object; it must not conflict with an existing identity.
+name: Human-readable display name; use the stable ID for identity because names can change.
+object: Native scene object kind and its creation options; not a persisted full object record.
+part_id: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+before: Stable anchor in the organization collection (`part_id`), or the
+connection collection for Glue. None appends to that collection.
+deformation_before: Independent stable anchor in the deformation collection (`parent_id`).
+Only Mesh/Warp/Rotation support this position; None appends.
+
+- `id`: New stable UUID for this object; it must not conflict with an existing identity.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `object`: Native scene object kind and its creation options; not a persisted full object record.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+- `before`: Stable anchor in the organization collection (`part_id`), or the
+connection collection for Glue. None appends to that collection.
+- `deformation_before`: Independent stable anchor in the deformation collection (`parent_id`).
+Only Mesh/Warp/Rotation support this position; None appends.
 
 ## zipzi.modeling.SceneEditCreate.summary
 
@@ -8626,8 +10483,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `scope`: Owned SceneCopyScope value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+scope: Native copy/delete scope specifying whether dependent deformation descendants are
+included.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `scope`: Native copy/delete scope specifying whether dependent deformation descendants are
+included.
 
 ## zipzi.modeling.SceneEditDelete.summary
 
@@ -8642,7 +10507,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditDissolveDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
 
 ## zipzi.modeling.SceneEditDissolveDrawingGroup.summary
 
@@ -8657,10 +10525,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `scope`: Owned SceneCopyScope value.
-- `destination`: Owned OrganizationCollection | None value.
-- `before`: Owned str | None value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+scope: Native copy/delete scope specifying whether dependent deformation descendants are
+included.
+destination: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `scope`: Native copy/delete scope specifying whether dependent deformation descendants are
+included.
+- `destination`: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.SceneEditDuplicate.summary
 
@@ -8675,8 +10557,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditDuplicateDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `source`: Owned str value.
-- `target`: Owned str value.
+Fields:
+source: Exact formal or candidate source captured for this result; later host changes do not
+rewrite it.
+target: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
+
+- `source`: Exact formal or candidate source captured for this result; later host changes do not
+rewrite it.
+- `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
+undeformed base shape.
 
 ## zipzi.modeling.SceneEditDuplicateDrawingGroup.summary
 
@@ -8691,9 +10581,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditEnsureDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
-- `parent`: Owned str value.
-- `before`: Owned str | None value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+parent: Drawing-group parent owner; an empty string selects the root drawing group.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+- `parent`: Drawing-group parent owner; an empty string selects the root drawing group.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.SceneEditEnsureDrawingGroup.summary
 
@@ -8708,9 +10605,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `destination`: Owned SceneCollection value.
-- `before`: Owned str | None value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+destination: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
+are not identities.
+- `destination`: Explicit destination collection; organization, deformation and drawing memberships
+are independent.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.modeling.SceneEditMove.summary
 
@@ -8725,10 +10633,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `expected`: Owned SceneFieldValue value.
-- `value`: Owned SceneFieldValue value.
-- `clear_glue_pairs`: Owned bool value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+expected: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+value: Scalar value in the referenced parameter domain.
+clear_glue_pairs: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `expected`: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+- `value`: Scalar value in the referenced parameter domain.
+- `clear_glue_pairs`: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.
 
 ## zipzi.modeling.SceneEditPatch.summary
 
@@ -8743,7 +10661,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditReparent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `edit`: Owned ReparentEdit value.
+Fields:
+edit: Edit candidate handle; None selects formal document state.
+
+- `edit`: Edit candidate handle; None selects formal document state.
 
 ## zipzi.modeling.SceneEditReparent.summary
 
@@ -8758,9 +10679,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditSetDrawingRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `owner`: Owned str value.
-- `expected`: Owned tuple[int, int] value.
-- `range`: Owned tuple[int, int] value.
+Fields:
+owner: Stable owner ID for the addressed drawing group, collection or reference selection.
+expected: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+range: Inclusive lower and upper drawing-order bounds, in that order.
+
+- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+- `expected`: Exact current field value used as an optimistic precondition; stale values reject
+the edit.
+- `range`: Inclusive lower and upper drawing-order bounds, in that order.
 
 ## zipzi.modeling.SceneEditSetDrawingRange.summary
 
@@ -8775,9 +10703,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneEditTransferOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `part_id`: Owned str value.
-- `part_keyform_indices`: Owned tuple[int, ...] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+part_id: Destination Part object ID; it must name an existing Part.
+part_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `part_id`: Destination Part object ID; it must name an existing Part.
+- `part_keyform_indices`: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.
 
 ## zipzi.modeling.SceneEditTransferOffscreen.summary
 
@@ -8806,7 +10741,10 @@ Typed public API entry.
 
 Immutable owned SceneFieldValueAppearance value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned Appearance value.
+Fields:
+value: Replacement opacity and RGB color factors.
+
+- `value`: Replacement opacity and RGB color factors.
 
 ## zipzi.modeling.SceneFieldValueAppearance.summary
 
@@ -8821,8 +10759,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueContext value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `part_id`: Owned str | None value.
-- `parent_id`: Owned str | None value.
+Fields:
+part_id: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects
+the root/unassigned container.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
 
 ## zipzi.modeling.SceneFieldValueContext.summary
 
@@ -8837,7 +10783,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueEnabled value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned bool value.
+Fields:
+value: Replacement model evaluation enabled flag.
+
+- `value`: Replacement model evaluation enabled flag.
 
 ## zipzi.modeling.SceneFieldValueEnabled.summary
 
@@ -8852,8 +10801,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueGlueEndpoints value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `a`: Owned SceneReference value.
-- `b`: Owned SceneReference value.
+Fields:
+a: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved
+references retain runtime identifiers.
+b: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved
+references retain runtime identifiers.
+
+- `a`: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved
+references retain runtime identifiers.
+- `b`: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved
+references retain runtime identifiers.
 
 ## zipzi.modeling.SceneFieldValueGlueEndpoints.summary
 
@@ -8868,7 +10825,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueGlueIntensity value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned float value.
+Fields:
+value: Replacement Glue influence factor.
+
+- `value`: Replacement Glue influence factor.
 
 ## zipzi.modeling.SceneFieldValueGlueIntensity.summary
 
@@ -8883,7 +10843,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueLabel value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned str value.
+Fields:
+value: Replacement display label.
+
+- `value`: Replacement display label.
 
 ## zipzi.modeling.SceneFieldValueLabel.summary
 
@@ -8898,7 +10861,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueMasks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned tuple[str, ...] value.
+Fields:
+value: Complete ordered clipping-mask mesh selection.
+
+- `value`: Complete ordered clipping-mask mesh selection.
 
 ## zipzi.modeling.SceneFieldValueMasks.summary
 
@@ -8913,11 +10879,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueMeshDrawing value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `draw_order`: Owned float | None value.
-- `blend_mode`: Owned BlendMode value.
-- `raw_blend_mode`: Owned int | None value.
-- `double_sided`: Owned bool value.
-- `inverted_mask`: Owned bool value.
+Fields:
+draw_order: Drawing-order coordinate; distinct from the final evaluated render_order. None
+leaves this channel unspecified for native evaluation.
+blend_mode: Compositing mode used when drawing this object.
+raw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.
+double_sided: Whether both triangle faces contribute to drawing.
+inverted_mask: Whether to invert the combined clipping mask for this drawable.
+
+- `draw_order`: Drawing-order coordinate; distinct from the final evaluated render_order. None
+leaves this channel unspecified for native evaluation.
+- `blend_mode`: Compositing mode used when drawing this object.
+- `raw_blend_mode`: Original format-specific blend-mode code; None means no preserved raw code.
+- `double_sided`: Whether both triangle faces contribute to drawing.
+- `inverted_mask`: Whether to invert the combined clipping mask for this drawable.
 
 ## zipzi.modeling.SceneFieldValueMeshDrawing.summary
 
@@ -8932,10 +10907,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `blend_mode`: Owned int value.
-- `flags`: Owned int value.
-- `keyforms`: Owned tuple[OffscreenKeyform, ...] value.
-- `part_keyform_indices`: Owned tuple[int, ...] value.
+Fields:
+blend_mode: Compositing mode used when drawing this object.
+flags: Preserved format-specific Offscreen compositing flags.
+keyforms: Shape samples for this binding; coordinate/sample identities must match its axes or
+key table.
+part_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.
+
+- `blend_mode`: Compositing mode used when drawing this object.
+- `flags`: Preserved format-specific Offscreen compositing flags.
+- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or
+key table.
+- `part_keyform_indices`: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.
 
 ## zipzi.modeling.SceneFieldValueOffscreen.summary
 
@@ -8950,7 +10933,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned RotationTransform value.
+Fields:
+value: Complete replacement rotation definition.
+
+- `value`: Complete replacement rotation definition.
 
 ## zipzi.modeling.SceneFieldValueRotation.summary
 
@@ -8965,7 +10951,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueRuntimeId value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned str value.
+Fields:
+value: Replacement external runtime identifier; an empty string explicitly clears it.
+
+- `value`: Replacement external runtime identifier; an empty string explicitly clears it.
 
 ## zipzi.modeling.SceneFieldValueRuntimeId.summary
 
@@ -8980,7 +10969,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned SceneReference value.
+Fields:
+value: Resolved image-asset reference or explicitly unresolved texture runtime identifier.
+
+- `value`: Resolved image-asset reference or explicitly unresolved texture runtime identifier.
 
 ## zipzi.modeling.SceneFieldValueTexture.summary
 
@@ -8995,7 +10987,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneFieldValueWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned WarpTransform value.
+Fields:
+value: Complete replacement warp lattice and controller definition.
+
+- `value`: Complete replacement warp lattice and controller definition.
 
 ## zipzi.modeling.SceneFieldValueWarp.summary
 
@@ -9017,7 +11012,10 @@ Typed public API entry.
 
 Immutable owned SceneKeyformPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned PartKeyform value.
+Fields:
+value: Complete Part ordinary-binding keyform; samples identify the active axis combination.
+
+- `value`: Complete Part ordinary-binding keyform; samples identify the active axis combination.
 
 ## zipzi.modeling.SceneKeyformPart.summary
 
@@ -9032,7 +11030,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneKeyformRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned RotationKeyform value.
+Fields:
+value: Complete Rotation ordinary-binding keyform; samples identify the active axis
+combination.
+
+- `value`: Complete Rotation ordinary-binding keyform; samples identify the active axis
+combination.
 
 ## zipzi.modeling.SceneKeyformRotation.summary
 
@@ -9047,7 +11050,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneKeyformWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned WarpKeyform value.
+Fields:
+value: Complete Warp ordinary-binding keyform; samples identify the active axis combination.
+
+- `value`: Complete Warp ordinary-binding keyform; samples identify the active axis combination.
 
 ## zipzi.modeling.SceneKeyformWarp.summary
 
@@ -9069,7 +11075,10 @@ Typed public API entry.
 
 Immutable owned SceneReferenceResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `object_id`: Owned str value.
+Fields:
+object_id: Stable document ID of the object described or selected by this value.
+
+- `object_id`: Stable document ID of the object described or selected by this value.
 
 ## zipzi.modeling.SceneReferenceResolved.summary
 
@@ -9084,7 +11093,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneReferenceUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `runtime_id`: Owned str value.
+Fields:
+runtime_id: External format/runtime identifier retained for import/export; not the document
+object ID.
+
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document
+object ID.
 
 ## zipzi.modeling.SceneReferenceUnresolved.summary
 
@@ -9120,8 +11134,12 @@ Typed public API entry.
 
 Immutable owned SceneTrackPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `target_id`: Owned PartId value.
-- `keyforms`: Owned tuple[PartKeyform, ...] value.
+Fields:
+target_id: Stable Part ID driven by this ordinary binding.
+keyforms: Ordered Part shape records whose samples refer to this binding's active axes.
+
+- `target_id`: Stable Part ID driven by this ordinary binding.
+- `keyforms`: Ordered Part shape records whose samples refer to this binding's active axes.
 
 ## zipzi.modeling.SceneTrackPart.summary
 
@@ -9136,8 +11154,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneTrackRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `target_id`: Owned TransformId value.
-- `keyforms`: Owned tuple[RotationKeyform, ...] value.
+Fields:
+target_id: Stable rotation transform ID driven by this ordinary binding.
+keyforms: Ordered Rotation shape records whose samples refer to this binding's active axes.
+
+- `target_id`: Stable rotation transform ID driven by this ordinary binding.
+- `keyforms`: Ordered Rotation shape records whose samples refer to this binding's active axes.
 
 ## zipzi.modeling.SceneTrackRotation.summary
 
@@ -9152,8 +11174,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SceneTrackWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `target_id`: Owned TransformId value.
-- `keyforms`: Owned tuple[WarpKeyform, ...] value.
+Fields:
+target_id: Stable warp transform ID driven by this ordinary binding.
+keyforms: Ordered Warp shape records whose samples refer to this binding's active axes.
+
+- `target_id`: Stable warp transform ID driven by this ordinary binding.
+- `keyforms`: Ordered Warp shape records whose samples refer to this binding's active axes.
 
 ## zipzi.modeling.SceneTrackWarp.summary
 
@@ -9189,8 +11215,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ShapeTargetBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `binding_id`: Owned str value.
-- `sample_id`: Owned str value.
+Fields:
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+sample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
 
 ## zipzi.modeling.ShapeTargetBlend.summary
 
@@ -9205,8 +11237,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ShapeTargetOrdinary value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `binding_id`: Owned str value.
-- `samples`: Owned tuple[str, ...] value.
+Fields:
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+samples: Stable sample IDs selecting one ordinary-binding combination, in active axis order.
+
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `samples`: Stable sample IDs selecting one ordinary-binding combination, in active axis order.
 
 ## zipzi.modeling.ShapeTargetOrdinary.summary
 
@@ -9222,11 +11258,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned TextureSlot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-slot: Declared by zipzi_runtime::project_io::TextureSlot.slot; usize value.
-path: Declared by zipzi_runtime::project_io::TextureSlot.path; string value.
+slot: Zero-based external texture slot number used by the import format.
+path: Host-side image file path supplying this external texture slot.
 
-- `slot`: Declared by zipzi_runtime::project_io::TextureSlot.slot; usize value.
-- `path`: Declared by zipzi_runtime::project_io::TextureSlot.path; string value.
+- `slot`: Zero-based external texture slot number used by the import format.
+- `path`: Host-side image file path supplying this external texture slot.
 
 ## zipzi.modeling.TextureSlot.summary
 
@@ -9237,22 +11273,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.TopologyReplacement
 
-`(mesh: Mesh, binding: MeshBinding | None = None, blend_bindings: tuple[BlendShapeBinding, ...], glues: tuple[Glue, ...], vertex_mapping: Mapping[int, int | None])`
+`(mesh: Mesh, binding: MeshBinding | None = None, blend_bindings: tuple[BlendShapeBinding, ...], glues: tuple[Glue, ...], vertex_mapping: _Mapping[int, int | None])`
 
 Immutable owned TopologyReplacement value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-mesh: Declared by zipzi_sdk::types::TopologyReplacement.mesh; serde_record value.
-binding: Declared by zipzi_sdk::types::TopologyReplacement.binding; optional value.
-blend_bindings: Declared by zipzi_sdk::types::TopologyReplacement.blend_bindings; sequence value.
-glues: Declared by zipzi_sdk::types::TopologyReplacement.glues; sequence value.
-vertex_mapping: Declared by zipzi_sdk::types::TopologyReplacement.vertex_mapping; index_map value.
+mesh: Complete replacement mesh geometry and metadata.
+binding: Optional replacement ordinary mesh binding; None supplies no ordinary binding.
+blend_bindings: Complete replacement BlendShape bindings for the remeshed object.
+glues: Complete replacement Glue records affected by the remesh.
+vertex_mapping: Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly
+removes it.
 
-- `mesh`: Declared by zipzi_sdk::types::TopologyReplacement.mesh; serde_record value.
-- `binding`: Declared by zipzi_sdk::types::TopologyReplacement.binding; optional value.
-- `blend_bindings`: Declared by zipzi_sdk::types::TopologyReplacement.blend_bindings; sequence value.
-- `glues`: Declared by zipzi_sdk::types::TopologyReplacement.glues; sequence value.
-- `vertex_mapping`: Declared by zipzi_sdk::types::TopologyReplacement.vertex_mapping; index_map value.
+- `mesh`: Complete replacement mesh geometry and metadata.
+- `binding`: Optional replacement ordinary mesh binding; None supplies no ordinary binding.
+- `blend_bindings`: Complete replacement BlendShape bindings for the remeshed object.
+- `glues`: Complete replacement Glue records affected by the remesh.
+- `vertex_mapping`: Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly
+removes it.
 
 ## zipzi.modeling.TopologyReplacement.summary
 
@@ -9268,23 +11306,29 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned Transform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Transform.id; string value.
-runtime_id: Declared by zipzi_core::types::Transform.runtime_id; string value.
-name: Declared by zipzi_core::types::Transform.name; string value.
-part_id: Declared by zipzi_core::types::Transform.part_id; optional value.
-parent_id: Declared by zipzi_core::types::Transform.parent_id; optional value.
-data: Declared by zipzi_core::types::Transform.data; serde_enum value.
-enabled: Declared by zipzi_core::types::Transform.enabled; bool value.
-appearance: Declared by zipzi_core::types::Transform.appearance; serde_record value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+part_id: Organizational Part owner ID; independent of the deformation parent. None selects the
+root/unassigned container.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+data: Typed Warp or Rotation deformation definition; its variant determines lattice versus
+rotation-pose interpretation.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+appearance: Opacity and multiply/screen color factors for this object or shape.
 
-- `id`: Declared by zipzi_core::types::Transform.id; string value.
-- `runtime_id`: Declared by zipzi_core::types::Transform.runtime_id; string value.
-- `name`: Declared by zipzi_core::types::Transform.name; string value.
-- `part_id`: Declared by zipzi_core::types::Transform.part_id; optional value.
-- `parent_id`: Declared by zipzi_core::types::Transform.parent_id; optional value.
-- `data`: Declared by zipzi_core::types::Transform.data; serde_enum value.
-- `enabled`: Declared by zipzi_core::types::Transform.enabled; bool value.
-- `appearance`: Declared by zipzi_core::types::Transform.appearance; serde_record value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None selects the
+root/unassigned container.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+- `data`: Typed Warp or Rotation deformation definition; its variant determines lattice versus
+rotation-pose interpretation.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `appearance`: Opacity and multiply/screen color factors for this object or shape.
 
 ## zipzi.modeling.Transform.summary
 
@@ -9306,7 +11350,10 @@ Typed public API entry.
 
 Immutable owned TransformDataRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned RotationTransform value.
+Fields:
+value: Rotation deformation definition with its reference angle and base pose.
+
+- `value`: Rotation deformation definition with its reference angle and base pose.
 
 ## zipzi.modeling.TransformDataRotation.summary
 
@@ -9321,7 +11368,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned TransformDataWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `value`: Owned WarpTransform value.
+Fields:
+value: Warp deformation definition with its baked lattice and optional authoring controller.
+
+- `value`: Warp deformation definition with its baked lattice and optional authoring controller.
 
 ## zipzi.modeling.TransformDataWarp.summary
 
@@ -9354,8 +11404,9 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable typed value. See field semantics and the linked workflow.
 
-- `x`: Declared by zipzi_core::types::Vec2.x; f32 value.
-- `y`: Declared by zipzi_core::types::Vec2.y; f32 value.
+- `x`: Horizontal coordinate; its space and units are determined by the containing geometry or
+pose.
+- `y`: Vertical coordinate; its space and units are determined by the containing geometry or pose.
 
 ## zipzi.modeling.VertexContentPatch
 
@@ -9364,13 +11415,15 @@ Immutable typed value. See field semantics and the linked workflow.
 Immutable owned VertexContentPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-vertex_id: Declared by zipzi_core::document::scene_content::VertexContentPatch.vertex_id; u32 value.
-position: Declared by zipzi_core::document::scene_content::VertexContentPatch.position; optional value.
-uv: Declared by zipzi_core::document::scene_content::VertexContentPatch.uv; optional value.
+vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
+position: Replacement XY value: absolute for Base/Ordinary, displacement for BlendShape.
+None preserves the current value in the selected shape.
+uv: Optional texture UV pair; None preserves the current UV.
 
-- `vertex_id`: Declared by zipzi_core::document::scene_content::VertexContentPatch.vertex_id; u32 value.
-- `position`: Declared by zipzi_core::document::scene_content::VertexContentPatch.position; optional value.
-- `uv`: Declared by zipzi_core::document::scene_content::VertexContentPatch.uv; optional value.
+- `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
+- `position`: Replacement XY value: absolute for Base/Ordinary, displacement for BlendShape.
+None preserves the current value in the selected shape.
+- `uv`: Optional texture UV pair; None preserves the current UV.
 
 ## zipzi.modeling.VertexContentPatch.summary
 
@@ -9413,7 +11466,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned VertexSeedInterpolate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `weights`: Owned tuple[VertexWeight, ...] value.
+Fields:
+weights: Source vertex IDs and interpolation weights used to seed dependent shape content.
+
+- `weights`: Source vertex IDs and interpolation weights used to seed dependent shape content.
 
 ## zipzi.modeling.VertexSeedInterpolate.summary
 
@@ -9429,11 +11485,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned VertexWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-vertex_id: Declared by zipzi_core::document::scene_content::VertexWeight.vertex_id; u32 value.
-weight: Declared by zipzi_core::document::scene_content::VertexWeight.weight; f32 value.
+vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
+weight: Dimensionless interpolation weight applied to the referenced source vertex.
 
-- `vertex_id`: Declared by zipzi_core::document::scene_content::VertexWeight.vertex_id; u32 value.
-- `weight`: Declared by zipzi_core::document::scene_content::VertexWeight.weight; f32 value.
+- `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
+- `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
 
 ## zipzi.modeling.VertexWeight.summary
 
@@ -9449,13 +11505,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned WarpBezier value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-rows: Declared by zipzi_core::warp_bezier::WarpBezier.rows; u32 value.
-columns: Declared by zipzi_core::warp_bezier::WarpBezier.columns; u32 value.
-nodes: Declared by zipzi_core::warp_bezier::WarpBezier.nodes; sequence value.
+rows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
+columns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
+nodes: Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.
 
-- `rows`: Declared by zipzi_core::warp_bezier::WarpBezier.rows; u32 value.
-- `columns`: Declared by zipzi_core::warp_bezier::WarpBezier.columns; u32 value.
-- `nodes`: Declared by zipzi_core::warp_bezier::WarpBezier.nodes; sequence value.
+- `rows`: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
+- `columns`: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
+- `nodes`: Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.
 
 ## zipzi.modeling.WarpBezier.summary
 
@@ -9471,10 +11527,10 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned WarpBezierNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-position: Declared by zipzi_core::warp_bezier::WarpBezierNode.position; record value.
+position: Absolute Bezier anchor position in lattice coordinates; not a handle offset.
 handles: Absolute positions: left, right, up, down in lattice coordinates.
 
-- `position`: Declared by zipzi_core::warp_bezier::WarpBezierNode.position; record value.
+- `position`: Absolute Bezier anchor position in lattice coordinates; not a handle offset.
 - `handles`: Absolute positions: left, right, up, down in lattice coordinates.
 
 ## zipzi.modeling.WarpBezierNode.summary
@@ -9491,15 +11547,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned WarpKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-bezier: Declared by zipzi_core::types::WarpKeyform.bezier; optional value.
-samples: Declared by zipzi_core::types::WarpKeyform.samples; sequence value; default [].
-positions: Declared by zipzi_core::types::WarpKeyform.positions; sequence value.
-appearance: Declared by zipzi_core::types::WarpKeyform.appearance; serde_record value.
+bezier: Optional Bezier controller for this warp shape; None means this shape has no controller.
+samples: Stable sample IDs in active binding-axis order.
+positions: Absolute warp lattice positions in row-major point order; not displacement vectors.
+appearance: Opacity and multiply/screen color factors for this object or shape.
 
-- `bezier`: Declared by zipzi_core::types::WarpKeyform.bezier; optional value.
-- `samples`: Declared by zipzi_core::types::WarpKeyform.samples; sequence value; default [].
-- `positions`: Declared by zipzi_core::types::WarpKeyform.positions; sequence value.
-- `appearance`: Declared by zipzi_core::types::WarpKeyform.appearance; serde_record value.
+- `bezier`: Optional Bezier controller for this warp shape; None means this shape has no controller.
+- `samples`: Stable sample IDs in active binding-axis order.
+- `positions`: Absolute warp lattice positions in row-major point order; not displacement vectors.
+- `appearance`: Opacity and multiply/screen color factors for this object or shape.
 
 ## zipzi.modeling.WarpKeyform.summary
 
@@ -9515,13 +11571,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned WarpPointPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-row: Declared by zipzi_core::document::scene_content::WarpPointPatch.row; u32 value.
-column: Declared by zipzi_core::document::scene_content::WarpPointPatch.column; u32 value.
-point: Declared by zipzi_core::document::scene_content::WarpPointPatch.point; record value.
+row: Zero-based lattice point row, in the inclusive range 0..rows.
+column: Zero-based lattice point column, in the inclusive range 0..columns.
+point: Replacement lattice XY value: absolute for Base/Ordinary, displacement for BlendShape.
 
-- `row`: Declared by zipzi_core::document::scene_content::WarpPointPatch.row; u32 value.
-- `column`: Declared by zipzi_core::document::scene_content::WarpPointPatch.column; u32 value.
-- `point`: Declared by zipzi_core::document::scene_content::WarpPointPatch.point; record value.
+- `row`: Zero-based lattice point row, in the inclusive range 0..rows.
+- `column`: Zero-based lattice point column, in the inclusive range 0..columns.
+- `point`: Replacement lattice XY value: absolute for Base/Ordinary, displacement for BlendShape.
 
 ## zipzi.modeling.WarpPointPatch.summary
 
@@ -9537,17 +11593,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned WarpTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-bezier: Declared by zipzi_core::types::WarpTransform.bezier; optional value.
-rows: Declared by zipzi_core::types::WarpTransform.rows; u32 value.
-columns: Declared by zipzi_core::types::WarpTransform.columns; u32 value.
-quad: Declared by zipzi_core::types::WarpTransform.quad; bool value.
-points: Declared by zipzi_core::types::WarpTransform.points; sequence value.
+bezier: Optional authoring Bezier controller; None leaves the baked lattice without a controller.
+rows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
+columns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
+quad: Whether to use the quad warp interpolation mode for the lattice.
+points: Absolute lattice points in row-major order; index = row * (columns + 1) + column.
 
-- `bezier`: Declared by zipzi_core::types::WarpTransform.bezier; optional value.
-- `rows`: Declared by zipzi_core::types::WarpTransform.rows; u32 value.
-- `columns`: Declared by zipzi_core::types::WarpTransform.columns; u32 value.
-- `quad`: Declared by zipzi_core::types::WarpTransform.quad; bool value.
-- `points`: Declared by zipzi_core::types::WarpTransform.points; sequence value.
+- `bezier`: Optional authoring Bezier controller; None leaves the baked lattice without a controller.
+- `rows`: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
+- `columns`: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
+- `quad`: Whether to use the quad warp interpolation mode for the lattice.
+- `points`: Absolute lattice points in row-major order; index = row * (columns + 1) + column.
 
 ## zipzi.modeling.WarpTransform.summary
 
@@ -9588,14 +11644,15 @@ Parameter values and operations projected from the shared Rust declarations.
 
 `(spec: ParameterSpec) -> None`
 
-Immutable owned Create value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned parameters Create value; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by Create.id; string value.
-target: Declared by Create.target; serde_enum value.
+spec: Creation specification; native admission supplies identities/defaults and rejects
+invalid input.
 
-- `id`: Declared by Create.id; string value.
-- `target`: Declared by Create.target; serde_enum value.
+- `spec`: Creation specification; native admission supplies identities/defaults and rejects
+invalid input.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.parameters.Create.summary
 
@@ -9615,28 +11672,28 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int, kind: Kind, repeat: bool) -> None`
 
-Immutable owned Parameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned parameters Parameter value; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Parameter.id; string value.
-runtime_id: Declared by zipzi_core::types::Parameter.runtime_id; string value.
-name: Declared by zipzi_core::types::Parameter.name; string value.
-minimum: Declared by zipzi_core::types::Parameter.minimum; f32 value.
-maximum: Declared by zipzi_core::types::Parameter.maximum; f32 value.
-default_value: Declared by zipzi_core::types::Parameter.default_value; f32 value.
-decimal_places: Declared by zipzi_core::types::Parameter.decimal_places; i32 value; default 6.
-kind: Declared by zipzi_core::types::Parameter.kind; serde_enum value; default 'normal'.
-repeat: Declared by zipzi_core::types::Parameter.repeat; bool value; default False.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+name: Human-readable display name; use the stable ID for identity because names can change.
+minimum: Lower endpoint of the parameter domain, in model-defined parameter units.
+maximum: Upper endpoint of the parameter domain, in the same units as minimum.
+default_value: Default parameter value used when no override is supplied.
+decimal_places: Decimal precision used for runtime parameter handling; native default is 6.
+kind: Normal or BlendShape parameter behavior; native default is Normal.
+repeat: Whether parameter values repeat across the declared range; native default is false.
 
-- `id`: Declared by zipzi_core::types::Parameter.id; string value.
-- `runtime_id`: Declared by zipzi_core::types::Parameter.runtime_id; string value.
-- `name`: Declared by zipzi_core::types::Parameter.name; string value.
-- `minimum`: Declared by zipzi_core::types::Parameter.minimum; f32 value.
-- `maximum`: Declared by zipzi_core::types::Parameter.maximum; f32 value.
-- `default_value`: Declared by zipzi_core::types::Parameter.default_value; f32 value.
-- `decimal_places`: Declared by zipzi_core::types::Parameter.decimal_places; i32 value; default 6.
-- `kind`: Declared by zipzi_core::types::Parameter.kind; serde_enum value; default 'normal'.
-- `repeat`: Declared by zipzi_core::types::Parameter.repeat; bool value; default False.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `minimum`: Lower endpoint of the parameter domain, in model-defined parameter units.
+- `maximum`: Upper endpoint of the parameter domain, in the same units as minimum.
+- `default_value`: Default parameter value used when no override is supplied.
+- `decimal_places`: Decimal precision used for runtime parameter handling; native default is 6.
+- `kind`: Normal or BlendShape parameter behavior; native default is Normal.
+- `repeat`: Whether parameter values repeat across the declared range; native default is false.
 
 ## zipzi.parameters.Parameter.summary
 
@@ -9649,26 +11706,44 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(name: str | None=None, minimum: float | None=None, maximum: float | None=None, default_value: float | None=None, runtime_id: str | None=None, kind: Kind | None=None, decimal_places: int | None=None, repeat: bool | None=None) -> None`
 
-Immutable owned ParameterPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned parameters ParameterPatch value; reading fields, repr and summary performs no IO.
 
 Fields:
-name: Declared by zipzi_sdk::parameter_edit::ParameterPatch.name; optional value.
-minimum: Declared by zipzi_sdk::parameter_edit::ParameterPatch.minimum; optional value.
-maximum: Declared by zipzi_sdk::parameter_edit::ParameterPatch.maximum; optional value.
-default_value: Declared by zipzi_sdk::parameter_edit::ParameterPatch.default_value; optional value.
-runtime_id: Declared by zipzi_sdk::parameter_edit::ParameterPatch.runtime_id; optional value.
-kind: Declared by zipzi_sdk::parameter_edit::ParameterPatch.kind; optional value.
-decimal_places: Declared by zipzi_sdk::parameter_edit::ParameterPatch.decimal_places; optional value.
-repeat: Declared by zipzi_sdk::parameter_edit::ParameterPatch.repeat; optional value.
+name: Human-readable display name; use the stable ID for identity because names can change.
+None preserves the current value; it does not reset the field to its default.
+minimum: Lower endpoint of the parameter domain, in model-defined parameter units. None preserves
+the current value; it does not reset the field to its default.
+maximum: Upper endpoint of the parameter domain, in the same units as minimum. None preserves the
+current value; it does not reset the field to its default.
+default_value: Default parameter value in its declared domain; native validation checks it against
+minimum and maximum. None preserves the current value; it does not reset the field to
+its default.
+runtime_id: Replacement external runtime identifier; an empty string explicitly clears it. None
+preserves the current value; it does not reset the field to its default.
+kind: Replacement parameter kind. None preserves the current value; it does not reset the
+field to its default.
+decimal_places: Replacement decimal precision for runtime parameter handling. None preserves the current
+value; it does not reset the field to its default.
+repeat: Replacement repeat flag; false explicitly disables repeating. None preserves the current
+value; it does not reset the field to its default.
 
-- `name`: Declared by zipzi_sdk::parameter_edit::ParameterPatch.name; optional value.
-- `minimum`: Declared by zipzi_sdk::parameter_edit::ParameterPatch.minimum; optional value.
-- `maximum`: Declared by zipzi_sdk::parameter_edit::ParameterPatch.maximum; optional value.
-- `default_value`: Declared by zipzi_sdk::parameter_edit::ParameterPatch.default_value; optional value.
-- `runtime_id`: Declared by zipzi_sdk::parameter_edit::ParameterPatch.runtime_id; optional value.
-- `kind`: Declared by zipzi_sdk::parameter_edit::ParameterPatch.kind; optional value.
-- `decimal_places`: Declared by zipzi_sdk::parameter_edit::ParameterPatch.decimal_places; optional value.
-- `repeat`: Declared by zipzi_sdk::parameter_edit::ParameterPatch.repeat; optional value.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+None preserves the current value; it does not reset the field to its default.
+- `minimum`: Lower endpoint of the parameter domain, in model-defined parameter units. None preserves
+the current value; it does not reset the field to its default.
+- `maximum`: Upper endpoint of the parameter domain, in the same units as minimum. None preserves the
+current value; it does not reset the field to its default.
+- `default_value`: Default parameter value in its declared domain; native validation checks it against
+minimum and maximum. None preserves the current value; it does not reset the field to
+its default.
+- `runtime_id`: Replacement external runtime identifier; an empty string explicitly clears it. None
+preserves the current value; it does not reset the field to its default.
+- `kind`: Replacement parameter kind. None preserves the current value; it does not reset the
+field to its default.
+- `decimal_places`: Replacement decimal precision for runtime parameter handling. None preserves the current
+value; it does not reset the field to its default.
+- `repeat`: Replacement repeat flag; false explicitly disables repeating. None preserves the current
+value; it does not reset the field to its default.
 
 ## zipzi.parameters.ParameterPatch.summary
 
@@ -9681,28 +11756,32 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(name: str, minimum: float, maximum: float, default_value: float, id: str | None=None, runtime_id: str | None=None, kind: Kind | None=None, decimal_places: int | None=None, repeat: bool | None=None) -> None`
 
-Immutable owned ParameterSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned parameters ParameterSpec value; reading fields, repr and summary performs no IO.
 
 Fields:
-name: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.name; string value.
-minimum: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.minimum; f32 value.
-maximum: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.maximum; f32 value.
-default_value: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.default_value; f32 value.
-id: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.id; optional value.
-runtime_id: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.runtime_id; optional value.
-kind: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.kind; optional value.
-decimal_places: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.decimal_places; optional value.
-repeat: Declared by zipzi_sdk::parameter_edit::ParameterCreateSpec.repeat; optional value.
+name: Human-readable display name; use the stable ID for identity because names can change.
+minimum: Lower endpoint of the parameter domain, in model-defined parameter units.
+maximum: Upper endpoint of the parameter domain, in the same units as minimum.
+default_value: Default parameter value in its declared domain; native validation checks it against
+minimum and maximum.
+id: Optional new parameter UUID; None allocates a fresh UUID when the create operation executes.
+runtime_id: Optional external runtime identifier; None uses the native default empty string.
+kind: Optional parameter kind; None uses Normal.
+decimal_places: Optional decimal precision for runtime parameter handling; None uses the native default
+of 6.
+repeat: Optional range-repeat flag; None uses the native default false.
 
-- `name`: Owned str value.
-- `minimum`: Owned float value.
-- `maximum`: Owned float value.
-- `default_value`: Owned float value.
-- `id`: Owned str | None value.
-- `runtime_id`: Owned str | None value.
-- `kind`: Owned Kind | None value.
-- `decimal_places`: Owned int | None value.
-- `repeat`: Owned bool | None value.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `minimum`: Lower endpoint of the parameter domain, in model-defined parameter units.
+- `maximum`: Upper endpoint of the parameter domain, in the same units as minimum.
+- `default_value`: Default parameter value in its declared domain; native validation checks it against
+minimum and maximum.
+- `id`: Optional new parameter UUID; None allocates a fresh UUID when the create operation executes.
+- `runtime_id`: Optional external runtime identifier; None uses the native default empty string.
+- `kind`: Optional parameter kind; None uses Normal.
+- `decimal_places`: Optional decimal precision for runtime parameter handling; None uses the native default
+of 6.
+- `repeat`: Optional range-repeat flag; None uses the native default false.
 
 ## zipzi.parameters.ParameterSpec.summary
 
@@ -9715,11 +11794,17 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(id: str, patch: ParameterPatch) -> None`
 
-Immutable owned Patch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned parameters Patch value; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned ClassVar[Literal['patch_parameter']] value.
-- `id`: Owned str value.
-- `patch`: Owned ParameterPatch value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+patch: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `patch`: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.parameters.Patch.summary
 
@@ -9790,10 +11875,14 @@ Runtime-scoped SDK handles and explicit scene label addresses.
 
 `(state: Literal['available', 'unavailable', 'unsupported'], code: str | None = None)`
 
-Immutable owned Capability value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Current native capability state; inspect it before invoking the operation.
 
-- `state`: Owned Literal['available', 'unavailable', 'unsupported'] value.
-- `code`: Owned str | None value.
+Fields:
+state: Available, temporarily unavailable, or unsupported for this object/domain.
+code: Stable refusal reason; None for the available state.
+
+- `state`: Available, temporarily unavailable, or unsupported for this object/domain.
+- `code`: Stable refusal reason; None for the available state.
 
 ## zipzi.references.Capability.summary
 
@@ -9820,7 +11909,7 @@ Release this owned handle once, without mutating formal model content. A lost re
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.references.FieldAddress.plan
@@ -9848,21 +11937,21 @@ Release this owned handle once, without mutating formal model content. A lost re
 
 `() -> str`
 
-Typed public API entry.
+Return the captured label text without IO. A later SDK label/context/identity change invalidates the address; capture a new address instead of silently refreshing its precondition.
 
 
 ## zipzi.references.LabelAddress.id
 
 `() -> str`
 
-Typed public API entry.
+Return the cached target UUID without IO. Field epoch and incarnation remain part of this address; the ID alone cannot replace them.
 
 
 ## zipzi.references.LabelAddress.pending_request
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.references.LabelAddress.plan
@@ -9925,7 +12014,7 @@ Capture a label address bound to this reference incarnation and field epoch. Clo
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.references.ObjectRef.resolve
@@ -9946,26 +12035,42 @@ Query SDK scene capability states for this live reference. Unavailable and unsup
 
 `(inspect: Capability, patch: Capability, move_object: Capability, reparent: Capability, reorder: Capability, duplicate: Capability, delete: Capability, dissolve: Capability) -> None`
 
-Immutable owned SceneCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned references SceneCapabilities value; reading fields, repr and summary performs no IO.
 
 Fields:
-inspect: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.inspect; serde_enum value.
-patch: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.patch; serde_enum value.
-move_object: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.move_object; serde_enum value.
-reparent: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reparent; serde_enum value.
-reorder: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reorder; serde_enum value.
-duplicate: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.duplicate; serde_enum value.
-delete: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.delete; serde_enum value.
-dissolve: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.dissolve; serde_enum value.
+inspect: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+patch: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+move_object: Current capability to move this object between collections; inspect its state/reason
+before invoking the operation.
+reparent: Current capability to change its deformation parent; inspect its state/reason before
+invoking the operation.
+reorder: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
+duplicate: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+delete: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+dissolve: Current capability to remove its container while preserving contents; inspect its
+state/reason before invoking the operation.
 
-- `inspect`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.inspect; serde_enum value.
-- `patch`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.patch; serde_enum value.
-- `move_object`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.move_object; serde_enum value.
-- `reparent`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reparent; serde_enum value.
-- `reorder`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.reorder; serde_enum value.
-- `duplicate`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.duplicate; serde_enum value.
-- `delete`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.delete; serde_enum value.
-- `dissolve`: Declared by zipzi_sdk::scene_authoring::SceneCapabilities.dissolve; serde_enum value.
+- `inspect`: Current capability to read the current typed record; inspect its state/reason before
+invoking the operation.
+- `patch`: Current capability to modify fields through a captured address; inspect its state/reason
+before invoking the operation.
+- `move_object`: Current capability to move this object between collections; inspect its state/reason
+before invoking the operation.
+- `reparent`: Current capability to change its deformation parent; inspect its state/reason before
+invoking the operation.
+- `reorder`: Current capability to change its collection order; inspect its state/reason before
+invoking the operation.
+- `duplicate`: Current capability to duplicate this object; inspect its state/reason before invoking
+the operation.
+- `delete`: Current capability to delete this object; inspect its state/reason before invoking the
+operation.
+- `dissolve`: Current capability to remove its container while preserving contents; inspect its
+state/reason before invoking the operation.
 
 ## zipzi.references.SceneCapabilities.summary
 
@@ -9987,10 +12092,18 @@ Prepared images own independent leases; pixel snapshots are immutable values.
 
 Immutable owned CreateImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
-- `image`: Owned resources.PreparedImage value.
-- `id`: Owned str | None value.
-- `kind`: Owned Literal['create_image'] value.
+Fields:
+id: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
+name: Human-readable display name; use the stable ID for identity because names can change.
+image: Client-owned prepared-image handle; creating an operation value does not transfer
+ownership.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `image`: Client-owned prepared-image handle; creating an operation value does not transfer
+ownership.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.resources.CreateImage.summary
 
@@ -10005,9 +12118,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned Image value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `pixels`: Owned ImagePixels value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+pixels: Owned decoded image pixels; reading this value does not perform another host request.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `pixels`: Owned decoded image pixels; reading this value does not perform another host request.
 
 ## zipzi.resources.Image.summary
 
@@ -10022,7 +12140,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Explicit host lease that pins captured pixels across replacement/history eviction.
 
-- `source`: Owned Source value.
+Close the lease or use its context manager when finished with the pixels.
+
+Fields:
+source: Exact formal or candidate source captured with the pixels; reading this cached value performs no IO.
+
+- `source`: Exact formal or candidate source captured with the pixels; reading this cached value performs no IO.
 
 ## zipzi.resources.ImageLease.close
 
@@ -10042,7 +12165,7 @@ Cached image height in pixels; no IO.
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.resources.ImageLease.pixels
@@ -10066,13 +12189,15 @@ Cached image width in pixels; no IO.
 Immutable owned ImagePixels value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-width: Declared by zipzi_runtime::authoring::ImagePixels.width; u32 value.
-height: Declared by zipzi_runtime::authoring::ImagePixels.height; u32 value.
-rgba: Declared by zipzi_runtime::authoring::ImagePixels.rgba; bytes value.
+width: Image width in pixels; prepared image content requires a positive dimension.
+height: Image height in pixels; prepared image content requires a positive dimension.
+rgba: Owned tightly packed RGBA8 pixels in row-major order, top row first; length is width *
+height * 4 bytes, with straight alpha.
 
-- `width`: Declared by zipzi_runtime::authoring::ImagePixels.width; u32 value.
-- `height`: Declared by zipzi_runtime::authoring::ImagePixels.height; u32 value.
-- `rgba`: Declared by zipzi_runtime::authoring::ImagePixels.rgba; bytes value.
+- `width`: Image width in pixels; prepared image content requires a positive dimension.
+- `height`: Image height in pixels; prepared image content requires a positive dimension.
+- `rgba`: Owned tightly packed RGBA8 pixels in row-major order, top row first; length is width *
+height * 4 bytes, with straight alpha.
 
 ## zipzi.resources.ImagePixels.summary
 
@@ -10106,7 +12231,7 @@ Cached image height in pixels; no IO.
 
 `() -> PendingRequest | None`
 
-Typed public API entry.
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
 
 
 ## zipzi.resources.PreparedImage.pixels
@@ -10129,10 +12254,18 @@ Cached image width in pixels; no IO.
 
 Immutable owned RenameImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `expected_name`: Owned str | None value.
-- `kind`: Owned Literal['rename_image'] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+expected_name: Required current display name; None disables this name precondition.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `expected_name`: Required current display name; None disables this name precondition.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.resources.RenameImage.summary
 
@@ -10147,9 +12280,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReplaceImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `image`: Owned resources.PreparedImage value.
-- `kind`: Owned Literal['replace_image'] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+image: Client-owned prepared-image handle; creating an operation value does not transfer
+ownership.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `image`: Client-owned prepared-image handle; creating an operation value does not transfer
+ownership.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.resources.ReplaceImage.summary
 
@@ -10202,15 +12344,26 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned Usage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `allocations`: Owned int value.
-- `resource_entries`: Owned int value.
-- `prepared_images`: Owned int value.
-- `plans`: Owned int value.
-- `rgba_bytes`: Owned int value.
-- `png_bytes`: Owned int value.
-- `blob_bytes`: Owned int value.
-- `preparing_bytes`: Owned int value.
-- `transfer_bytes`: Owned int value.
+Fields:
+allocations: Number of distinct retained allocations counted by Runtime resource accounting.
+resource_entries: Number of retained resource-accounting entries, including history/lease holders.
+prepared_images: Runtime-wide number of retained client-owned prepared image handles.
+plans: Runtime-wide number of retained client-owned plans, not operations inside each plan.
+rgba_bytes: Retained decoded RGBA storage in bytes under Runtime accounting.
+png_bytes: Retained encoded PNG storage in bytes under Runtime accounting.
+blob_bytes: Retained immutable binary blob storage in bytes under Runtime accounting.
+preparing_bytes: Reserved bytes for resource preparation that has not yet finished.
+transfer_bytes: Reserved bytes for in-progress binary transfers.
+
+- `allocations`: Number of distinct retained allocations counted by Runtime resource accounting.
+- `resource_entries`: Number of retained resource-accounting entries, including history/lease holders.
+- `prepared_images`: Runtime-wide number of retained client-owned prepared image handles.
+- `plans`: Runtime-wide number of retained client-owned plans, not operations inside each plan.
+- `rgba_bytes`: Retained decoded RGBA storage in bytes under Runtime accounting.
+- `png_bytes`: Retained encoded PNG storage in bytes under Runtime accounting.
+- `blob_bytes`: Retained immutable binary blob storage in bytes under Runtime accounting.
+- `preparing_bytes`: Reserved bytes for resource preparation that has not yet finished.
+- `transfer_bytes`: Reserved bytes for in-progress binary transfers.
 
 ## zipzi.resources.Usage.summary
 
@@ -10237,15 +12390,16 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(min_triangle_area: float=0.0, model_bounds: tuple[Point, Point] | None=None) -> None`
 
-Immutable owned Checks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned sampling Checks value; reading fields, repr and summary performs no IO.
 
 Fields:
 min_triangle_area: Area in authored coordinates: model units squared at the root, or
 the appropriate rotation-local / Warp-parameter units under a parent.
 model_bounds: Optional expected model bounds for root meshes only.
 
-- `min_triangle_area`: Owned float value.
-- `model_bounds`: Owned tuple[Point, Point] | None value.
+- `min_triangle_area`: Area in authored coordinates: model units squared at the root, or
+the appropriate rotation-local / Warp-parameter units under a parent.
+- `model_bounds`: Optional expected model bounds for root meshes only.
 
 ## zipzi.sampling.Checks.summary
 
@@ -10258,12 +12412,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(id: str, enabled: bool, points: Sequence[Point], rotation_axis: Point | None) -> None`
 
-Immutable owned Deformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned sampling Deformer value; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `enabled`: Owned bool value.
-- `points`: Owned tuple[Point, ...] value.
-- `rotation_axis`: Owned Point | None value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+points: Final model coordinates (X-right/Y-up), matching
+Drawable::positions. Warp points are row-major; rotation points are the
+transformed origin and unit X/Y axes.
+rotation_axis: Unit direction of the rotation's local X axis in model space, evaluated
+without translation or scale so tiny imported scales retain their angle.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `points`: Final model coordinates (X-right/Y-up), matching
+Drawable::positions. Warp points are row-major; rotation points are the
+transformed origin and unit X/Y axes.
+- `rotation_axis`: Unit direction of the rotation's local X axis in model space, evaluated
+without translation or scale so tiny imported scales retain their angle.
 
 ## zipzi.sampling.Deformer.summary
 
@@ -10276,11 +12442,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(kind: DiagnosticKind, mesh_id: str, triangle_index: int | None) -> None`
 
-Immutable owned Diagnostic value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned sampling Diagnostic value; reading fields, repr and summary performs no IO.
 
-- `kind`: Owned DiagnosticKind value.
-- `mesh_id`: Owned str value.
-- `triangle_index`: Owned int | None value.
+Fields:
+kind: Typed geometry diagnostic category.
+mesh_id: Stable ID of the target mesh in this document.
+triangle_index: Optional zero-based index of the offending triangle; None means the diagnostic is not
+triangle-specific.
+
+- `kind`: Typed geometry diagnostic category.
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `triangle_index`: Optional zero-based index of the offending triangle; None means the diagnostic is not
+triangle-specific.
 
 ## zipzi.sampling.Diagnostic.summary
 
@@ -10300,52 +12473,60 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None, texture_asset_id: str, texture_slot: int, renderable: bool, positions: Sequence[Point], uvs: Sequence[Point], indices: Sequence[int], draw_order: int, render_order: int, opacity: float, multiply_color: Sequence[float], screen_color: Sequence[float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: bool, masks: Sequence[str]) -> None`
 
-Immutable owned Drawable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned sampling Drawable value; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::evaluation::types::Drawable.id; string value.
-runtime_id: Declared by zipzi_core::evaluation::types::Drawable.runtime_id; string value.
-part_id: Declared by zipzi_core::evaluation::types::Drawable.part_id; string value.
-raw_blend_mode: Declared by zipzi_core::evaluation::types::Drawable.raw_blend_mode; optional value.
-texture_asset_id: Declared by zipzi_core::evaluation::types::Drawable.texture_asset_id; string value.
-texture_slot: Declared by zipzi_core::evaluation::types::Drawable.texture_slot; i32 value.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+part_id: Organizational Part owner ID; independent of the deformation parent. An empty string
+represents the root/unassigned container.
+raw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.
+texture_asset_id: Resolved image-asset object ID used by this drawable; separate from its evaluated
+texture slot.
+texture_slot: Resolved texture slot index; separate from the persistent texture asset ID.
 renderable: Geometry remains editable when this resource cannot contribute color.
-positions: Declared by zipzi_core::evaluation::types::Drawable.positions; sequence value.
-uvs: Declared by zipzi_core::evaluation::types::Drawable.uvs; shared value.
-indices: Declared by zipzi_core::evaluation::types::Drawable.indices; shared value.
-draw_order: Declared by zipzi_core::evaluation::types::Drawable.draw_order; i32 value.
-render_order: Declared by zipzi_core::evaluation::types::Drawable.render_order; i32 value.
-opacity: Declared by zipzi_core::evaluation::types::Drawable.opacity; f32 value.
-multiply_color: Declared by zipzi_core::evaluation::types::Drawable.multiply_color; array value.
-screen_color: Declared by zipzi_core::evaluation::types::Drawable.screen_color; array value.
-blend_mode: Declared by zipzi_core::evaluation::types::Drawable.blend_mode; serde_enum value.
-enabled: Declared by zipzi_core::evaluation::types::Drawable.enabled; bool value.
-visible: Declared by zipzi_core::evaluation::types::Drawable.visible; bool value.
-double_sided: Declared by zipzi_core::evaluation::types::Drawable.double_sided; bool value.
-inverted_mask: Declared by zipzi_core::evaluation::types::Drawable.inverted_mask; bool value.
-masks: Declared by zipzi_core::evaluation::types::Drawable.masks; sequence value.
+positions: Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.
+uvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+indices: Flattened triangle indices into evaluated positions/UVs; these are offsets, not
+authoring vertex IDs.
+draw_order: Evaluated integer drawing-order coordinate before final render sorting.
+render_order: Final evaluated drawing sequence rank after hierarchy and group ordering.
+opacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+multiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.
+screen_color: Evaluated RGBA screen factors, channel order R, G, B, A.
+blend_mode: Compositing mode used when drawing this object.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+visible: Whether the evaluated object is visible after hierarchical visibility rules.
+double_sided: Whether both triangle faces contribute to drawing.
+inverted_mask: Whether to invert the combined clipping mask for this drawable.
+masks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
 
-- `id`: Declared by zipzi_core::evaluation::types::Drawable.id; string value.
-- `runtime_id`: Declared by zipzi_core::evaluation::types::Drawable.runtime_id; string value.
-- `part_id`: Declared by zipzi_core::evaluation::types::Drawable.part_id; string value.
-- `raw_blend_mode`: Declared by zipzi_core::evaluation::types::Drawable.raw_blend_mode; optional value.
-- `texture_asset_id`: Declared by zipzi_core::evaluation::types::Drawable.texture_asset_id; string value.
-- `texture_slot`: Declared by zipzi_core::evaluation::types::Drawable.texture_slot; i32 value.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. An empty string
+represents the root/unassigned container.
+- `raw_blend_mode`: Original format-specific blend-mode code; None means no preserved raw code.
+- `texture_asset_id`: Resolved image-asset object ID used by this drawable; separate from its evaluated
+texture slot.
+- `texture_slot`: Resolved texture slot index; separate from the persistent texture asset ID.
 - `renderable`: Geometry remains editable when this resource cannot contribute color.
-- `positions`: Declared by zipzi_core::evaluation::types::Drawable.positions; sequence value.
-- `uvs`: Declared by zipzi_core::evaluation::types::Drawable.uvs; shared value.
-- `indices`: Declared by zipzi_core::evaluation::types::Drawable.indices; shared value.
-- `draw_order`: Declared by zipzi_core::evaluation::types::Drawable.draw_order; i32 value.
-- `render_order`: Declared by zipzi_core::evaluation::types::Drawable.render_order; i32 value.
-- `opacity`: Declared by zipzi_core::evaluation::types::Drawable.opacity; f32 value.
-- `multiply_color`: Declared by zipzi_core::evaluation::types::Drawable.multiply_color; array value.
-- `screen_color`: Declared by zipzi_core::evaluation::types::Drawable.screen_color; array value.
-- `blend_mode`: Declared by zipzi_core::evaluation::types::Drawable.blend_mode; serde_enum value.
-- `enabled`: Declared by zipzi_core::evaluation::types::Drawable.enabled; bool value.
-- `visible`: Declared by zipzi_core::evaluation::types::Drawable.visible; bool value.
-- `double_sided`: Declared by zipzi_core::evaluation::types::Drawable.double_sided; bool value.
-- `inverted_mask`: Declared by zipzi_core::evaluation::types::Drawable.inverted_mask; bool value.
-- `masks`: Declared by zipzi_core::evaluation::types::Drawable.masks; sequence value.
+- `positions`: Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.
+- `uvs`: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+- `indices`: Flattened triangle indices into evaluated positions/UVs; these are offsets, not
+authoring vertex IDs.
+- `draw_order`: Evaluated integer drawing-order coordinate before final render sorting.
+- `render_order`: Final evaluated drawing sequence rank after hierarchy and group ordering.
+- `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+- `multiply_color`: Evaluated RGBA multiply factors, channel order R, G, B, A.
+- `screen_color`: Evaluated RGBA screen factors, channel order R, G, B, A.
+- `blend_mode`: Compositing mode used when drawing this object.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `visible`: Whether the evaluated object is visible after hierarchical visibility rules.
+- `double_sided`: Whether both triangle faces contribute to drawing.
+- `inverted_mask`: Whether to invert the combined clipping mask for this drawable.
+- `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
 
 ## zipzi.sampling.Drawable.summary
 
@@ -10358,14 +12539,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(source_revision: int, parameters: Sequence[Parameter], drawables: Sequence[Drawable], offscreens: Sequence[Offscreen], render_plan: Sequence[RenderCommand], deformers: Sequence[Deformer]) -> None`
 
-Immutable owned Frame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned sampling Frame value; reading fields, repr and summary performs no IO.
 
-- `source_revision`: Owned int value.
-- `parameters`: Owned tuple[Parameter, ...] value.
-- `drawables`: Owned tuple[Drawable, ...] value.
-- `offscreens`: Owned tuple[Offscreen, ...] value.
-- `render_plan`: Owned tuple[RenderCommand, ...] value.
-- `deformers`: Owned tuple[Deformer, ...] value.
+Fields:
+source_revision: Revision used to evaluate this immutable snapshot; later name edits may reuse it.
+parameters: Requested/effective/clamped parameter records for this evaluated pose.
+drawables: Evaluated drawable records in this pose, including their immutable geometry and appearance.
+offscreens: Evaluated Offscreen compositing records for this pose.
+render_plan: Ordered render commands; Offscreen begin/end delimit the compositing scopes.
+deformers: Editor controls evaluated in the same pose as the drawables.
+
+- `source_revision`: Revision used to evaluate this immutable snapshot; later name edits may reuse it.
+- `parameters`: Requested/effective/clamped parameter records for this evaluated pose.
+- `drawables`: Evaluated drawable records in this pose, including their immutable geometry and appearance.
+- `offscreens`: Evaluated Offscreen compositing records for this pose.
+- `render_plan`: Ordered render commands; Offscreen begin/end delimit the compositing scopes.
+- `deformers`: Editor controls evaluated in the same pose as the drawables.
 
 ## zipzi.sampling.Frame.summary
 
@@ -10378,30 +12567,40 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(renderable: bool, id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: str | None, render_order: int, opacity: float, enabled: bool, blend_mode: int, flags: int, masks: Sequence[str], multiply_color: Sequence[float], screen_color: Sequence[float]) -> None`
 
-Immutable owned Offscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned sampling Offscreen value; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Offscreen.id; string value.
-runtime_id: Declared by zipzi_core::types::Offscreen.runtime_id; string value.
-name: Declared by zipzi_core::types::Offscreen.name; string value.
-part_id: Declared by zipzi_core::types::Offscreen.part_id; string value.
-enabled: Controls visibility of the composited group without changing its contents.
-blend_mode: Declared by zipzi_core::types::Offscreen.blend_mode; u32 value.
-flags: Declared by zipzi_core::types::Offscreen.flags; u8 value.
-masks: Declared by zipzi_core::types::Offscreen.masks; sequence value.
-part_keyform_indices: Declared by zipzi_core::types::Offscreen.part_keyform_indices; sequence value.
-keyforms: Declared by zipzi_core::types::Offscreen.keyforms; sequence value.
+renderable: Whether required content is available for rendering; unavailable textures do not make
+geometry uneditable.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+owner_part_id: Stable Part ID whose contents are composited by this Offscreen.
+parent_offscreen_id: Enclosing Offscreen ID; None means output is composited directly to the main target.
+render_order: Final evaluated drawing sequence rank after hierarchy and group ordering.
+opacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+blend_mode: Compositing mode used when drawing this object.
+flags: Preserved format-specific Offscreen compositing flags.
+masks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
+multiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.
+screen_color: Evaluated RGBA screen factors, channel order R, G, B, A.
 
-- `id`: Declared by zipzi_core::types::Offscreen.id; string value.
-- `runtime_id`: Declared by zipzi_core::types::Offscreen.runtime_id; string value.
-- `name`: Declared by zipzi_core::types::Offscreen.name; string value.
-- `part_id`: Declared by zipzi_core::types::Offscreen.part_id; string value.
-- `enabled`: Controls visibility of the composited group without changing its contents.
-- `blend_mode`: Declared by zipzi_core::types::Offscreen.blend_mode; u32 value.
-- `flags`: Declared by zipzi_core::types::Offscreen.flags; u8 value.
-- `masks`: Declared by zipzi_core::types::Offscreen.masks; sequence value.
-- `part_keyform_indices`: Declared by zipzi_core::types::Offscreen.part_keyform_indices; sequence value.
-- `keyforms`: Declared by zipzi_core::types::Offscreen.keyforms; sequence value.
+- `renderable`: Whether required content is available for rendering; unavailable textures do not make
+geometry uneditable.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document object ID.
+- `owner_part_id`: Stable Part ID whose contents are composited by this Offscreen.
+- `parent_offscreen_id`: Enclosing Offscreen ID; None means output is composited directly to the main target.
+- `render_order`: Final evaluated drawing sequence rank after hierarchy and group ordering.
+- `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `blend_mode`: Compositing mode used when drawing this object.
+- `flags`: Preserved format-specific Offscreen compositing flags.
+- `masks`: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.
+- `multiply_color`: Evaluated RGBA multiply factors, channel order R, G, B, A.
+- `screen_color`: Evaluated RGBA screen factors, channel order R, G, B, A.
 
 ## zipzi.sampling.Offscreen.summary
 
@@ -10414,28 +12613,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(id: str, requested: float, value: float, clamped: bool) -> None`
 
-Immutable owned Parameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned sampling Parameter value; reading fields, repr and summary performs no IO.
 
 Fields:
-id: Declared by zipzi_core::types::Parameter.id; string value.
-runtime_id: Declared by zipzi_core::types::Parameter.runtime_id; string value.
-name: Declared by zipzi_core::types::Parameter.name; string value.
-minimum: Declared by zipzi_core::types::Parameter.minimum; f32 value.
-maximum: Declared by zipzi_core::types::Parameter.maximum; f32 value.
-default_value: Declared by zipzi_core::types::Parameter.default_value; f32 value.
-decimal_places: Declared by zipzi_core::types::Parameter.decimal_places; i32 value; default 6.
-kind: Declared by zipzi_core::types::Parameter.kind; serde_enum value; default 'normal'.
-repeat: Declared by zipzi_core::types::Parameter.repeat; bool value; default False.
+id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+requested: Requested parameter value before range/repeat handling, in the parameter domain.
+value: Effective parameter value after native range/repeat handling, in the parameter domain.
+clamped: Whether the effective parameter value differs due to range clamping.
 
-- `id`: Declared by zipzi_core::types::Parameter.id; string value.
-- `runtime_id`: Declared by zipzi_core::types::Parameter.runtime_id; string value.
-- `name`: Declared by zipzi_core::types::Parameter.name; string value.
-- `minimum`: Declared by zipzi_core::types::Parameter.minimum; f32 value.
-- `maximum`: Declared by zipzi_core::types::Parameter.maximum; f32 value.
-- `default_value`: Declared by zipzi_core::types::Parameter.default_value; f32 value.
-- `decimal_places`: Declared by zipzi_core::types::Parameter.decimal_places; i32 value; default 6.
-- `kind`: Declared by zipzi_core::types::Parameter.kind; serde_enum value; default 'normal'.
-- `repeat`: Declared by zipzi_core::types::Parameter.repeat; bool value; default False.
+- `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
+- `requested`: Requested parameter value before range/repeat handling, in the parameter domain.
+- `value`: Effective parameter value after native range/repeat handling, in the parameter domain.
+- `clamped`: Whether the effective parameter value differs due to range clamping.
 
 ## zipzi.sampling.Parameter.summary
 
@@ -10448,9 +12637,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(values: tuple[tuple[str, float], ...])`
 
-Immutable owned Pose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned effective parameter pose; reading it performs no IO.
 
-- `values`: Owned tuple[tuple[str, float], ...] value.
+Fields:
+values: Immutable parameter-ID/value pairs sorted by parameter ID; IDs are document parameter IDs and values use each parameter domain.
+
+- `values`: Immutable parameter-ID/value pairs sorted by parameter ID; IDs are document parameter IDs and values use each parameter domain.
 
 ## zipzi.sampling.Pose.summary
 
@@ -10463,10 +12655,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 `(kind: RenderKind, id: str)`
 
-Immutable owned RenderCommand value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+One ordered native render-plan command.
 
-- `kind`: Owned RenderKind value.
-- `id`: Owned str value.
+Fields:
+kind: BeginOffscreen, DrawMesh or EndOffscreen; begin/end commands delimit compositing scopes.
+id: Stable mesh ID for DrawMesh, or Offscreen ID for begin/end commands.
+
+- `kind`: BeginOffscreen, DrawMesh or EndOffscreen; begin/end commands delimit compositing scopes.
+- `id`: Stable mesh ID for DrawMesh, or Offscreen ID for begin/end commands.
 
 ## zipzi.sampling.RenderCommand.summary
 
@@ -10486,13 +12682,22 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(state: str, version: Version, parameters: tuple[Pose, ...], frames: Sequence[Frame], diagnostics: Sequence[Diagnostic]) -> None`
 
-Immutable owned Result value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+Owned sampling Result value; reading fields, repr and summary performs no IO.
 
-- `state`: Owned str value.
-- `version`: Owned Version value.
-- `parameters`: Owned tuple[Pose, ...] value.
-- `frames`: Owned tuple[Frame, ...] value.
-- `diagnostics`: Owned tuple[Diagnostic, ...] value.
+Fields:
+state: Captured sampling source state, distinguishing formal content from an Edit candidate.
+version: Exact SDK version captured for this value; not a best-effort latest-version marker.
+parameters: Effective parameter maps in the same order as requested poses; each map is keyed by
+document parameter ID.
+frames: CPU-evaluated frames in the same order as requested parameter maps.
+diagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.
+
+- `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
+- `parameters`: Effective parameter maps in the same order as requested poses; each map is keyed by
+document parameter ID.
+- `frames`: CPU-evaluated frames in the same order as requested parameter maps.
+- `diagnostics`: Structured diagnostics from this query or operation; an empty list means none were reported.
+- `state`: Captured sampling source state, distinguishing formal content from an Edit candidate.
 
 ## zipzi.sampling.Result.summary
 
@@ -10514,11 +12719,20 @@ Typed scene/organization intentions and immutable metadata projections.
 
 Immutable owned CreateBlendTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `parameter_id`: Owned str value.
-- `samples`: Owned tuple[Sample, ...] value.
-- `base_sample_id`: Owned str value.
-- `id`: Owned str | None value.
-- `kind`: Owned Literal['scene_create_blend_table'] value.
+Fields:
+parameter_id: Stable document parameter ID, not its exported runtime identifier.
+samples: Strictly increasing finite parameter samples with stable IDs; base_sample_id
+must name one of them.
+base_sample_id: Sample ID defining the neutral/base shape in this key table.
+id: Optional new object UUID; None allocates a fresh identity in the SDK.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
+- `samples`: Strictly increasing finite parameter samples with stable IDs; base_sample_id
+must name one of them.
+- `base_sample_id`: Sample ID defining the neutral/base shape in this key table.
+- `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.CreateBlendTable.summary
 
@@ -10533,12 +12747,28 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CreateGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
-- `a`: Owned str value.
-- `b`: Owned str value.
-- `part_id`: Owned str | None value.
-- `id`: Owned str | None value.
-- `kind`: Owned Literal['scene_create_glue'] value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can
+change.
+a: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and
+unresolved references retain runtime identifiers.
+b: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and
+unresolved references retain runtime identifiers.
+part_id: Organizational Part owner ID; independent of the deformation parent. None
+selects the root/unassigned container.
+id: Optional new object UUID; None allocates a fresh identity in the SDK.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can
+change.
+- `a`: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and
+unresolved references retain runtime identifiers.
+- `b`: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and
+unresolved references retain runtime identifiers.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None
+selects the root/unassigned container.
+- `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.CreateGlue.summary
 
@@ -10553,10 +12783,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CreateMeshBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `table_id`: Owned str value.
-- `id`: Owned str | None value.
-- `kind`: Owned Literal['scene_create_mesh_blend'] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+table_id: Stable BlendShape key-table ID in this document.
+id: Optional new object UUID; None allocates a fresh identity in the SDK.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `table_id`: Stable BlendShape key-table ID in this document.
+- `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.CreateMeshBlend.summary
 
@@ -10571,10 +12807,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CreateOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
-- `part_id`: Owned str value.
-- `id`: Owned str | None value.
-- `kind`: Owned Literal['scene_create_offscreen'] value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can
+change.
+part_id: Owning Part object ID; it must name an existing Part.
+id: Optional new object UUID; None allocates a fresh identity in the SDK.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can
+change.
+- `part_id`: Owning Part object ID; it must name an existing Part.
+- `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.CreateOffscreen.summary
 
@@ -10589,8 +12833,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CreateParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `spec`: Owned ParameterGroupSpec value.
-- `kind`: Owned Literal['scene_create_parameter_group'] value.
+Fields:
+spec: Creation specification; native admission supplies identities/defaults and
+rejects invalid input.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `spec`: Creation specification; native admission supplies identities/defaults and
+rejects invalid input.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.CreateParameterGroup.summary
 
@@ -10605,8 +12855,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CreatePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `spec`: Owned PartSpec value.
-- `kind`: Owned Literal['scene_create_part'] value.
+Fields:
+spec: Creation specification; native admission supplies identities/defaults and
+rejects invalid input.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `spec`: Creation specification; native admission supplies identities/defaults and
+rejects invalid input.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.CreatePart.summary
 
@@ -10621,10 +12877,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CreateRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
-- `placement`: Owned Placement value.
-- `id`: Owned str | None value.
-- `kind`: Owned Literal['scene_create_rotation'] value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can
+change.
+placement: Explicit organizational and deformation placement, with independent ordering
+anchors.
+id: Optional new object UUID; None allocates a fresh identity in the SDK.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can
+change.
+- `placement`: Explicit organizational and deformation placement, with independent ordering
+anchors.
+- `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.CreateRotation.summary
 
@@ -10639,11 +12905,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned CreateWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
-- `placement`: Owned Placement value.
-- `bounds`: Owned tuple[float, float, float, float] | None value.
-- `id`: Owned str | None value.
-- `kind`: Owned Literal['scene_create_warp'] value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can
+change.
+placement: Explicit organizational and deformation placement, with independent ordering
+anchors.
+bounds: Optional [left, bottom, right, top] warp bounds in parent coordinates; None
+requests native defaults.
+id: Optional new object UUID; None allocates a fresh identity in the SDK.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can
+change.
+- `placement`: Explicit organizational and deformation placement, with independent ordering
+anchors.
+- `bounds`: Optional [left, bottom, right, top] warp bounds in parent coordinates; None
+requests native defaults.
+- `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.CreateWarp.summary
 
@@ -10658,9 +12937,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeleteGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `glue_id`: Owned str value.
-- `ids`: Owned tuple[str, ...] value.
-- `kind`: Owned Literal['scene_delete_glue_pairs'] value.
+Fields:
+glue_id: Stable Glue object ID owning the affected vertex pairs.
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `glue_id`: Stable Glue object ID owning the affected vertex pairs.
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.DeleteGluePairs.summary
 
@@ -10675,10 +12961,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeleteMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `vertices`: Owned tuple[int, ...] value.
-- `remove_dependents`: Owned bool value.
-- `kind`: Owned Literal['scene_delete_mesh_vertices'] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+vertices: Stable vertex IDs in this mesh, not offsets into positions.
+remove_dependents: Explicitly remove dependent topology/keyform/Glue content; false rejects
+referenced-vertex deletion.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `vertices`: Stable vertex IDs in this mesh, not offsets into positions.
+- `remove_dependents`: Explicitly remove dependent topology/keyform/Glue content; false rejects
+referenced-vertex deletion.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.DeleteMeshVertices.summary
 
@@ -10693,9 +12987,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeleteOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `dissolve`: Owned bool value.
-- `kind`: Owned Literal['scene_delete_organization'] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+dissolve: Preserve contained objects by dissolving their organization container instead of
+deleting its contents.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `dissolve`: Preserve contained objects by dissolving their organization container instead of
+deleting its contents.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.DeleteOrganization.summary
 
@@ -10710,9 +13013,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DeleteScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `subtree`: Owned bool value.
-- `kind`: Owned Literal['scene_delete_scene'] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+subtree: Include the deformation subtree when true; false affects only the selected objects.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `subtree`: Include the deformation subtree when true; false affects only the selected objects.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.DeleteScene.summary
 
@@ -10727,11 +13037,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned DuplicateScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `subtree`: Owned bool value.
-- `part_id`: Owned str | None value.
-- `before`: Owned str | None value.
-- `kind`: Owned Literal['scene_duplicate_scene'] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+subtree: Include the deformation subtree when true; false affects only the selected objects.
+part_id: Organizational Part owner ID; independent of the deformation parent. None
+selects the root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `subtree`: Include the deformation subtree when true; false affects only the selected objects.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None
+selects the root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.DuplicateScene.summary
 
@@ -10746,11 +13069,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned GluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `weight_a`: Owned float value.
-- `weight_b`: Owned float value.
-- `id`: Owned str | None value.
-- `vertex_a`: Owned int | None value.
-- `vertex_b`: Owned int | None value.
+Fields:
+weight_a: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.
+weight_b: Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.
+id: Optional new Glue-pair UUID; None allocates a fresh pair identity in the SDK.
+vertex_a: Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.
+vertex_b: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.
+
+- `weight_a`: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.
+- `weight_b`: Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.
+- `id`: Optional new Glue-pair UUID; None allocates a fresh pair identity in the SDK.
+- `vertex_a`: Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.
+- `vertex_b`: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.
 
 ## zipzi.scene.GluePair.summary
 
@@ -10765,10 +13095,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned InsertGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `glue_id`: Owned str value.
-- `pair`: Owned GluePair value.
-- `before`: Owned str | None value.
-- `kind`: Owned Literal['scene_insert_glue_pair'] value.
+Fields:
+glue_id: Stable Glue object ID owning the affected vertex pairs.
+pair: Complete Glue pair to insert or replace; endpoint IDs belong to the two
+connected meshes.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `glue_id`: Stable Glue object ID owning the affected vertex pairs.
+- `pair`: Complete Glue pair to insert or replace; endpoint IDs belong to the two
+connected meshes.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.InsertGluePair.summary
 
@@ -10783,13 +13123,24 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned InsertMeshVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `vertex_id`: Owned int value.
-- `position`: Owned tuple[float, float] value.
-- `uv`: Owned tuple[float, float] value.
-- `weights`: Owned tuple[VertexWeight, ...] value.
-- `before`: Owned int | None value.
-- `kind`: Owned Literal['scene_insert_mesh_vertex'] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
+position: Absolute XY authoring position for this vertex, not a displacement.
+uv: Texture UV pair for this vertex; not a model-space position.
+weights: Source vertex IDs and interpolation weights used to seed dependent shape content.
+before: Optional stable vertex ID before which to insert new vertices; None appends.
+This is not a position-array index.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
+- `position`: Absolute XY authoring position for this vertex, not a displacement.
+- `uv`: Texture UV pair for this vertex; not a model-space position.
+- `weights`: Source vertex IDs and interpolation weights used to seed dependent shape content.
+- `before`: Optional stable vertex ID before which to insert new vertices; None appends.
+This is not a position-array index.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.InsertMeshVertex.summary
 
@@ -10804,10 +13155,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned InsertOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `value`: Owned OffscreenForm value.
-- `before`: Owned int | None value.
-- `kind`: Owned Literal['scene_insert_offscreen_keyform'] value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+value: Scalar value in the referenced parameter domain.
+before: Optional stable vertex ID before which to insert new vertices; None appends.
+This is not a position-array index.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `value`: Scalar value in the referenced parameter domain.
+- `before`: Optional stable vertex ID before which to insert new vertices; None appends.
+This is not a position-array index.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.InsertOffscreenKeyform.summary
 
@@ -10822,10 +13181,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MoveDeformation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `parent_id`: Owned str | None value.
-- `before`: Owned str | None value.
-- `kind`: Owned Literal['scene_move_deformation'] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order.
+None selects the root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order.
+None selects the root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.MoveDeformation.summary
 
@@ -10840,10 +13211,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MoveParameterGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `parent_id`: Owned str | None value.
-- `before`: Owned str | None value.
-- `kind`: Owned Literal['scene_move_parameter_groups'] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order.
+None selects the root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order.
+None selects the root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.MoveParameterGroups.summary
 
@@ -10858,10 +13241,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MoveParameters value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `group_id`: Owned str | None value.
-- `before`: Owned str | None value.
-- `kind`: Owned Literal['scene_move_parameters'] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+group_id: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `group_id`: Parameter-group ID in the document metadata hierarchy. None selects the
+root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.MoveParameters.summary
 
@@ -10876,10 +13271,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned MoveToPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `part_id`: Owned str | None value.
-- `before`: Owned str | None value.
-- `kind`: Owned Literal['scene_move_to_part'] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+part_id: Organizational Part owner ID; independent of the deformation parent. None
+selects the root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `part_id`: Organizational Part owner ID; independent of the deformation parent. None
+selects the root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.MoveToPart.summary
 
@@ -10894,9 +13301,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned OffscreenForm value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `opacity`: Owned float value.
-- `multiply`: Owned tuple[float, float, float] | None value.
-- `screen`: Owned tuple[float, float, float] | None value.
+Fields:
+opacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+multiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
+screen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
+
+- `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
+above 1 are retained without clamping.
+- `multiply`: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.
+- `screen`: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.
 
 ## zipzi.scene.OffscreenForm.summary
 
@@ -10918,11 +13332,22 @@ Typed public API entry.
 
 Immutable owned ParameterGroupSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
-- `id`: Owned str | None value.
-- `runtime_id`: Owned str | None value.
-- `parent_id`: Owned str | None value.
-- `before`: Owned str | None value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can change.
+id: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
+runtime_id: Optional external group identifier; None uses the native default empty string.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `id`: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
+- `runtime_id`: Optional external group identifier; None uses the native default empty string.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.scene.ParameterGroupSpec.summary
 
@@ -10937,10 +13362,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned PartSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `name`: Owned str value.
-- `id`: Owned str | None value.
-- `parent_id`: Owned str | None value.
-- `before`: Owned str | None value.
+Fields:
+name: Human-readable display name; use the stable ID for identity because names can change.
+id: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
+
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `id`: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
+selects the root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
+the selected destination.
 
 ## zipzi.scene.PartSpec.summary
 
@@ -10955,10 +13390,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned PatchOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `slot`: Owned int value.
-- `value`: Owned OffscreenForm value.
-- `kind`: Owned Literal['scene_patch_offscreen_keyform'] value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+slot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
+object ID.
+value: Scalar value in the referenced parameter domain.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
+object ID.
+- `value`: Scalar value in the referenced parameter domain.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.PatchOffscreenKeyform.summary
 
@@ -10973,10 +13416,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned Placement value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `part_id`: Owned str | None value.
-- `parent_id`: Owned str | None value.
-- `before`: Owned str | None value.
-- `deformation_before`: Owned str | None value.
+Fields:
+part_id: Optional organizational Part ID; None uses the root organization.
+parent_id: Optional deformation-parent transform ID; None uses model space.
+before: Optional organization-order sibling ID; None appends in the selected organization
+collection.
+deformation_before: Optional deformation-order sibling ID; None appends in the selected deformation
+collection.
+
+- `part_id`: Optional organizational Part ID; None uses the root organization.
+- `parent_id`: Optional deformation-parent transform ID; None uses model space.
+- `before`: Optional organization-order sibling ID; None appends in the selected organization
+collection.
+- `deformation_before`: Optional deformation-order sibling ID; None appends in the selected deformation
+collection.
 
 ## zipzi.scene.Placement.summary
 
@@ -10991,9 +13444,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReorderMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `order`: Owned tuple[int, ...] value.
-- `kind`: Owned Literal['scene_reorder_mesh_vertices'] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+order: Complete new order of stable vertex IDs; preserves identities and associated
+per-vertex payload.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `order`: Complete new order of stable vertex IDs; preserves identities and associated
+per-vertex payload.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.ReorderMeshVertices.summary
 
@@ -11008,10 +13468,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReparentLocal value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `ids`: Owned tuple[str, ...] value.
-- `parent_id`: Owned str | None value.
-- `before`: Owned str | None value.
-- `kind`: Owned Literal['scene_reparent_local'] value.
+Fields:
+ids: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+parent_id: Parent object ID in this hierarchy; independent of storage and drawing order.
+None selects the root/unassigned container.
+before: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `ids`: Ordered stable object IDs selected for this operation; visible names and row
+numbers are not identities.
+- `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order.
+None selects the root/unassigned container.
+- `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
+to the selected destination.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.ReparentLocal.summary
 
@@ -11026,9 +13498,16 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned ReplaceTriangles value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `triangles`: Owned tuple[tuple[int, int, int], ...] value.
-- `kind`: Owned Literal['scene_replace_triangles'] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+triangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute
+position-array offsets.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `triangles`: Triangle triples of stable vertex IDs; preserve winding and do not substitute
+position-array offsets.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.ReplaceTriangles.summary
 
@@ -11043,8 +13522,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned Sample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `value`: Owned float value.
+Fields:
+id: Stable UUID assigned to this parameter sample.
+value: Finite parameter sample coordinate in the driving parameter domain.
+
+- `id`: Stable UUID assigned to this parameter sample.
+- `value`: Finite parameter sample coordinate in the driving parameter domain.
 
 ## zipzi.scene.Sample.summary
 
@@ -11059,11 +13542,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SetMeshBlendVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `mesh_id`: Owned str value.
-- `binding_id`: Owned str value.
-- `sample_id`: Owned str value.
-- `updates`: Owned tuple[VertexPatch, ...] value.
-- `kind`: Owned Literal['scene_set_mesh_blend_vertices'] value.
+Fields:
+mesh_id: Stable ID of the target mesh in this document.
+binding_id: Stable binding ID owning the addressed axes or keyforms.
+sample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+updates: Ordered content patches applied together by the native edit.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh_id`: Stable ID of the target mesh in this document.
+- `binding_id`: Stable binding ID owning the addressed axes or keyforms.
+- `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
+parameter value.
+- `updates`: Ordered content patches applied together by the native edit.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.SetMeshBlendVertices.summary
 
@@ -11078,9 +13570,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SetOffscreenStaticKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `offscreen_id`: Owned str value.
-- `keyform`: Owned int value.
-- `kind`: Owned Literal['scene_set_offscreen_static_keyform'] value.
+Fields:
+offscreen_id: Stable Offscreen object ID; not a texture asset ID.
+keyform: Complete shape sample to insert or replace; unrelated samples are retained.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
+- `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.SetOffscreenStaticKeyform.summary
 
@@ -11095,10 +13592,20 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SetSceneEnabled value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `expected`: Owned bool value.
-- `enabled`: Owned bool value.
-- `kind`: Owned Literal['scene_set_scene_enabled'] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+expected: Exact current field value used as an optimistic precondition; stale values
+reject the edit.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `expected`: Exact current field value used as an optimistic precondition; stale values
+reject the edit.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.SetSceneEnabled.summary
 
@@ -11113,10 +13620,22 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned SetSceneLabel value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `expected`: Owned str value.
-- `name`: Owned str value.
-- `kind`: Owned Literal['scene_set_scene_label'] value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+expected: Exact current field value used as an optimistic precondition; stale values
+reject the edit.
+name: Human-readable display name; use the stable ID for identity because names can
+change.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `expected`: Exact current field value used as an optimistic precondition; stale values
+reject the edit.
+- `name`: Human-readable display name; use the stable ID for identity because names can
+change.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.scene.SetSceneLabel.summary
 
@@ -11131,13 +13650,28 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned Summary value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `id`: Owned str value.
-- `name`: Owned str value.
-- `runtime_id`: Owned str value.
-- `object_kind`: Owned str value.
-- `enabled`: Owned bool value.
-- `part_id`: Owned str | None value.
-- `parent_id`: Owned str | None value.
+Fields:
+id: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+name: Human-readable display name; use the stable ID for identity because names can change.
+runtime_id: External format/runtime identifier retained for import/export; not the document
+object ID.
+object_kind: Object category for this metadata record; use it to select the corresponding domain API.
+part_id: Optional organizational Part ID; None means root or not applicable for this object kind.
+parent_id: Optional deformation parent for meshes/transforms or organization parent for
+Parts/groups; None means root or not applicable.
+enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+
+- `id`: Stable document object ID used by references; it is distinct from the exported
+runtime_id.
+- `name`: Human-readable display name; use the stable ID for identity because names can change.
+- `runtime_id`: External format/runtime identifier retained for import/export; not the document
+object ID.
+- `object_kind`: Object category for this metadata record; use it to select the corresponding domain API.
+- `part_id`: Optional organizational Part ID; None means root or not applicable for this object kind.
+- `parent_id`: Optional deformation parent for meshes/transforms or organization parent for
+Parts/groups; None means root or not applicable.
+- `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 
 ## zipzi.scene.Summary.summary
 
@@ -11152,9 +13686,14 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Immutable owned VertexPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `vertex_id`: Owned int value.
-- `position`: Owned tuple[float, float] | None value.
-- `uv`: Owned tuple[float, float] | None value.
+Fields:
+vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
+position: Optional BlendShape XY displacement for this vertex; None preserves its delta.
+uv: UV edits require the base-shape content API; keep None for BlendShape patches.
+
+- `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
+- `position`: Optional BlendShape XY displacement for this vertex; None preserves its delta.
+- `uv`: UV edits require the base-shape content API; keep None for BlendShape patches.
 
 ## zipzi.scene.VertexPatch.summary
 
@@ -11170,11 +13709,11 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable owned VertexWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
-vertex_id: Declared by zipzi_core::document::scene_content::VertexWeight.vertex_id; u32 value.
-weight: Declared by zipzi_core::document::scene_content::VertexWeight.weight; f32 value.
+vertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.
+weight: Dimensionless interpolation weight applied to the referenced source vertex.
 
-- `vertex_id`: Declared by zipzi_core::document::scene_content::VertexWeight.vertex_id; u32 value.
-- `weight`: Declared by zipzi_core::document::scene_content::VertexWeight.weight; f32 value.
+- `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
+- `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
 
 ## zipzi.scene.VertexWeight.summary
 

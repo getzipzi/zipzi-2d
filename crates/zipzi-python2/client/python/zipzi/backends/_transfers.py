@@ -8,7 +8,7 @@ from .._values import Source
 from .._values import integer, record, string
 from .._generated import binary as typed_binary
 if TYPE_CHECKING:
-    from .connected import ConnectedBackend
+    pass
 
 class TransferBackend(Protocol):
     def _request(self, value: dict[str,object], owner: object, operation: str) -> object: ...

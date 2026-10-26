@@ -94,13 +94,13 @@ class Images(Collection[resources.Image]):
 class EditableImages(Images):
     def create_image(self, name: str, image: resources.PreparedImage, *, id: str | None = None) -> str:
         """Apply a typed resources operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit."""
-        return project(lambda: self._write(lambda: resources.CreateImage(name,image,id)),single_id,operation='resources.create_image',inputs=(name,image,id))
+        return project(lambda: self._write(lambda: resources.CreateImage(name=name,image=image,id=id)),single_id,operation='resources.create_image',inputs=(name,image,id,))
     def replace_image(self, id: str, image: resources.PreparedImage) -> WriteResult:
         """Apply a typed resources operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit."""
-        return self._write(lambda: resources.ReplaceImage(id,image))
+        return self._write(lambda: resources.ReplaceImage(id=id,image=image))
     def rename_image(self, id: str, name: str, *, expected_name: str | None = None) -> WriteResult:
         """Apply a typed resources operation to this candidate. Commit publishes separately; ordinary write failures require a new Edit."""
-        return self._write(lambda: resources.RenameImage(id,name,expected_name=expected_name))
+        return self._write(lambda: resources.RenameImage(id=id,name=name,expected_name=expected_name))
 
 class Scene(Collection[scene.Summary]):
     def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):

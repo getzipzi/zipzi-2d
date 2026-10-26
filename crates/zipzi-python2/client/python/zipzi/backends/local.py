@@ -1,17 +1,12 @@
 """Direct mechanical PyO3 conversion; local authoring does not serialize JSON."""
-from .._generated.plan_intents import Intent, wire as intent_wire
-from .._generated import modeling
 from importlib import import_module
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 import time
-from .. import _operations as ops, sampling, scene
+from .. import _operations as ops
 from .._generated.backend_bindings import LocalBindings
-from .._generated.planning import ModelingPlanOperation
 from .._errors import JobTimeout, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
 from .._values import ConnectionInfo, SessionId, Source
 from . import JobKind
-from ..events import Cursor
 if TYPE_CHECKING:
     from ._native_types import NativeModule, SessionToken
 

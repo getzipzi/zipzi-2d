@@ -103,7 +103,7 @@ def render_resources(contract, Model, header, rust_header):
         if default is None:
             return ''
         return ' = ' + {'null': 'None', 'empty_string': '""'}[default['kind']]
-    ops=[header.rstrip(),'from __future__ import annotations','from dataclasses import dataclass, field','from typing import Literal',
+    ops=[header.rstrip(),'from dataclasses import dataclass, field','from typing import Literal',
          'from .. import resources', 'from .. import _plans as plans','']
     for v in resource_union['variants']:
         ops+=['@dataclass(frozen=True)',f'class {v["rust_name"]}:','    __module__ = "zipzi.'+('_generated.resource_ops' if v['rust_name']=='ApplyPlan' else 'resources')+'"']

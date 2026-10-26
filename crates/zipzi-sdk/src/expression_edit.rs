@@ -24,8 +24,14 @@ impl ExpressionEditPlan {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub enum CapabilityState {
     Available,
-    Unsupported { code: &'static str },
-    Unavailable { code: &'static str },
+    Unsupported {
+        /// Stable reason code explaining why this operation is unsupported for this object/domain.
+        code: &'static str,
+    },
+    Unavailable {
+        /// Stable reason code explaining why this operation is currently unavailable.
+        code: &'static str,
+    },
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExpressionCapabilities {

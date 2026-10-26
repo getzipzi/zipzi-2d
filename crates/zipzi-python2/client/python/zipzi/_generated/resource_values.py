@@ -8,7 +8,7 @@ def _bytes(value: object) -> bytes:
 
 @dataclass(frozen=True, repr=False)
 class Usage(CompactValue):
-    'Immutable owned Usage value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned Usage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nallocations: Number of distinct retained allocations counted by Runtime resource accounting.\nresource_entries: Number of retained resource-accounting entries, including history/lease holders.\nprepared_images: Runtime-wide number of retained client-owned prepared image handles.\nplans: Runtime-wide number of retained client-owned plans, not operations inside each plan.\nrgba_bytes: Retained decoded RGBA storage in bytes under Runtime accounting.\npng_bytes: Retained encoded PNG storage in bytes under Runtime accounting.\nblob_bytes: Retained immutable binary blob storage in bytes under Runtime accounting.\npreparing_bytes: Reserved bytes for resource preparation that has not yet finished.\ntransfer_bytes: Reserved bytes for in-progress binary transfers.'
     __module__ = "zipzi.resources"
     allocations: int
     resource_entries: int
@@ -27,7 +27,7 @@ class Usage(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ImagePixels(CompactValue):
-    'Immutable owned ImagePixels value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwidth: Declared by zipzi_runtime::authoring::ImagePixels.width; u32 value.\nheight: Declared by zipzi_runtime::authoring::ImagePixels.height; u32 value.\nrgba: Declared by zipzi_runtime::authoring::ImagePixels.rgba; bytes value.'
+    'Immutable owned ImagePixels value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwidth: Image width in pixels; prepared image content requires a positive dimension.\nheight: Image height in pixels; prepared image content requires a positive dimension.\nrgba: Owned tightly packed RGBA8 pixels in row-major order, top row first; length is width *\nheight * 4 bytes, with straight alpha.'
     __module__ = "zipzi.resources"
     width: int
     height: int
@@ -40,7 +40,7 @@ class ImagePixels(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class Image(CompactValue):
-    'Immutable owned Image value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned Image value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\npixels: Owned decoded image pixels; reading this value does not perform another host request.'
     __module__ = "zipzi.resources"
     id: str
     name: str

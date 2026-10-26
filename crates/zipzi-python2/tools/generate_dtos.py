@@ -145,8 +145,13 @@ def render_dtos(contract, header):
             lines += ['@dataclass(frozen=True)', 'class Pose:', '    __module__ = "zipzi.sampling"',
                       '    values: tuple[tuple[str, '+typ(params['value'])+'], ...]', '', '    def __post_init__(self) -> None:', '        object.__setattr__(self, "values", tuple(tuple(item) for item in self.values))', '',
                       '    @classmethod', '    def read(cls, value: object) -> "Pose":', '        return cls(tuple(sorted((key, '+read(params['value'],'item')+') for key, item in _mapping(value).items())))','']
+            lines.insert(lines.index('class Pose:')+1,'    '+repr('Owned effective parameter pose; reading it performs no IO.\n\nFields:\nvalues: Immutable parameter-ID/value pairs sorted by parameter ID; IDs are document parameter IDs and values use each parameter domain.'))
         def record_class(n,fs,kind=None,variant=None):
             lines.extend(['@dataclass(frozen=True, init=False)', 'class '+n+':','    __module__ = "zipzi.'+domain+'"'])
+            missing=[f['name'] for f in fs if not f.get('doc','').strip()]
+            if missing:raise ValueError('Missing semantic field documentation: '+n+'.'+', '.join(missing))
+            text='Owned '+domain+' '+n+' value; reading fields, repr and summary performs no IO.\n\nFields:\n'+'\n'.join(f['name']+': '+f['doc'] for f in fs)
+            lines.insert(len(lines)-1,'    '+repr(text))
             if kind is not None:lines.extend(['    kind: ClassVar[Literal['+repr(kind)+']] = '+repr(kind)])
             if variant is not None:lines.append('    _variant: ClassVar[str] = '+repr(variant))
             for f in fs:lines.append('    '+f['name']+': '+f.get('_type',typ(f['shape'])))
@@ -194,13 +199,13 @@ def render_dtos(contract, header):
             if n=='Capability':
                 vs=variants(s)
                 if {v['rust_name'] for v in vs}!={'Available','Unavailable','Unsupported'}:raise ValueError('Capability states changed')
-                lines+=['@dataclass(frozen=True)','class Capability:','    __module__ = "zipzi.references"','    state: Literal["available", "unavailable", "unsupported"]','    code: str | None = None','','    @classmethod','    def read(cls, value: object) -> "Capability":', '        tag, content = _variant(value)','        if tag == "Available": return cls("available")','        if tag not in {"Unavailable", "Unsupported"}: raise ValueError("Unknown capability")','        return cls("unavailable" if tag == "Unavailable" else "unsupported", _text(_get(content, "code")))',''];continue
+                lines+=['@dataclass(frozen=True)','class Capability:','    '+repr('Current native capability state; inspect it before invoking the operation.\n\nFields:\nstate: Available, temporarily unavailable, or unsupported for this object/domain.\ncode: Stable refusal reason; None for the available state.'),'    __module__ = "zipzi.references"','    state: Literal["available", "unavailable", "unsupported"]','    code: str | None = None','','    @classmethod','    def read(cls, value: object) -> "Capability":', '        tag, content = _variant(value)','        if tag == "Available": return cls("available")','        if tag not in {"Unavailable", "Unsupported"}: raise ValueError("Unknown capability")','        return cls("unavailable" if tag == "Unavailable" else "unsupported", _text(_get(content, "code")))',''];continue
             if n=='RenderCommand':
                 vs=variants(s)
                 if any(len(v['fields'])!=1 or v['fields'][0]['shape']['kind']!='string' for v in vs):raise ValueError('Unreviewed render command projection')
                 lines+=['class RenderKind(str, Enum):','    __module__ = "zipzi.sampling"']
                 for v in vs:lines+=['    '+re.sub(r'(?<!^)(?=[A-Z])','_',v['rust_name']).upper()+' = '+repr(v['name'])]
-                lines+=['','@dataclass(frozen=True)','class RenderCommand:','    __module__ = "zipzi.sampling"','    kind: RenderKind','    id: str','','def read_RenderCommand(value: object) -> RenderCommand:', '    if isinstance(value, RenderCommand): return value','    tag, content = _variant(value)']
+                lines+=['','@dataclass(frozen=True)','class RenderCommand:','    '+repr('One ordered native render-plan command.\n\nFields:\nkind: BeginOffscreen, DrawMesh or EndOffscreen; begin/end commands delimit compositing scopes.\nid: Stable mesh ID for DrawMesh, or Offscreen ID for begin/end commands.'),'    __module__ = "zipzi.sampling"','    kind: RenderKind','    id: str','','def read_RenderCommand(value: object) -> RenderCommand:', '    if isinstance(value, RenderCommand): return value','    tag, content = _variant(value)']
                 for v in vs:lines+=['    if tag == '+repr(v['name'])+': return RenderCommand(RenderKind(tag), _text(_get(content, '+repr(v['fields'][0]['name'])+')))']
                 lines+=['    raise ValueError("Unknown render command")',''];continue
             if s['kind'] in {'union','serde_enum'}:

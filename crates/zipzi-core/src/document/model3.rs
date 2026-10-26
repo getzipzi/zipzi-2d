@@ -10,8 +10,15 @@ use std::collections::BTreeMap;
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ModelTargetRef {
     Unspecified,
-    Resolved { object_id: String },
-    Unresolved { runtime_id: String },
+    Resolved {
+        /// Stable document ID of the object described or selected by this value.
+        object_id: String,
+    },
+    Unresolved {
+        /// External format/runtime identifier retained for import/export; not the document
+        /// object ID.
+        runtime_id: String,
+    },
 }
 impl ModelTargetRef {
     pub fn object_id(&self) -> Option<&str> {
@@ -26,10 +33,16 @@ impl ModelTargetRef {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ModelParameterGroup {
+    /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
+    /// Human-readable display name; use the stable ID for identity because names can change.
     pub name: String,
+    /// Ordered stable reference-entry records selecting model parameters; entry IDs are
+    /// distinct from parameter IDs.
     pub parameters: Vec<super::ReferenceEntry<ModelTargetRef>>,
     #[serde(default)]
+    /// Preserved opaque import/export extension fields; retain unknown keys when editing known
+    /// fields.
     pub extensions: BTreeMap<String, Value>,
 }
 
@@ -37,10 +50,15 @@ pub struct ModelParameterGroup {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ModelHitArea {
+    /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
+    /// Human-readable display name; use the stable ID for identity because names can change.
     pub name: String,
+    /// Resolved mesh target or preserved unresolved mesh runtime identifier.
     pub mesh: ModelTargetRef,
     #[serde(default)]
+    /// Preserved opaque import/export extension fields; retain unknown keys when editing known
+    /// fields.
     pub extensions: BTreeMap<String, Value>,
 }
 
@@ -48,13 +66,22 @@ pub struct ModelHitArea {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct Model3Settings {
+    /// Optional ordered model3 parameter groups; None preserves omission rather than an empty list.
     pub groups: Option<Vec<ModelParameterGroup>>,
+    /// Optional model3 numeric layout map; None preserves omission and an empty map is
+    /// explicitly empty.
     pub layout: Option<BTreeMap<String, f64>>,
+    /// Optional ordered named hit-area records with stable mesh references; None preserves
+    /// omission.
     pub hit_areas: Option<Vec<ModelHitArea>>,
+    /// Optional model3 user-data attachment reference; None means the field was omitted.
     pub user_data: Option<super::AttachmentRef>,
+    /// Preserved opaque import/export extension fields; retain unknown keys when editing known
+    /// fields.
     pub extensions: BTreeMap<String, Value>,
     /// Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.
     pub source_runtime_ids: Option<BTreeMap<String, String>>,
+    /// Preserved opaque imported model3 source metadata; None means none was retained.
     pub source_content: Option<String>,
 }
 impl Model3Settings {

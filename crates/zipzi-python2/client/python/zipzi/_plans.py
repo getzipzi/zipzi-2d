@@ -29,6 +29,7 @@ class Plan(Owned):
 
     @property
     def report(self) -> PlanReport:
+        'Return the immutable cached report, exact Source, SDK version, affected/copied IDs, cost, losses and no-op state. No IO occurs; the report remains readable after Plan close or invalidation.'
         assert self._report is not None
         return self._report
 

@@ -9,10 +9,17 @@ zipzi_core::api_record! {
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
     pub struct MeshCreateSpec {
+        /// Human-readable display name; use the stable ID for identity because names can change.
         pub name: String,
+        /// Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not
+        /// position offsets.
         pub geometry: MeshGeometry,
         #[serde(default)]
+        /// Image-asset ID used by this mesh; the default empty string leaves its texture
+        /// reference unassigned.
         pub texture_asset_id: String,
+        /// Optional new mesh UUID; None allocates a fresh UUID in the SDK when the create
+        /// operation executes.
         pub id: Option<String>,
     }
 }
@@ -21,9 +28,32 @@ zipzi_core::api_union! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(zipzi_api_derive::BinaryWire)]
     pub enum MeshOperation {
-        Create { spec: MeshCreateSpec },
-        Rename { id: String, name: String, expected_name: Option<String> },
-        SetPositions { id: String, vertex_ids: Vec<u32>, positions: Vec<Vec2> },
+        Create {
+            /// Creation specification; native admission supplies identities/defaults and
+            /// rejects invalid input.
+            spec: MeshCreateSpec,
+        },
+        Rename {
+            /// Stable document object ID used by references; it is distinct from the exported
+            /// runtime_id.
+            id: String,
+            /// Human-readable display name; use the stable ID for identity because names can
+            /// change.
+            name: String,
+            /// Required current display name; None disables this name precondition.
+            expected_name: Option<String>,
+        },
+        SetPositions {
+            /// Stable document object ID used by references; it is distinct from the exported
+            /// runtime_id.
+            id: String,
+            /// Stable vertex IDs selecting which positions to replace; values are paired with
+            /// positions in the supplied order.
+            vertex_ids: Vec<u32>,
+            /// Replacement absolute mesh-local XY positions aligned with the supplied
+            /// vertex_ids selection.
+            positions: Vec<Vec2>,
+        },
     }
 }
 

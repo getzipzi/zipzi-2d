@@ -840,24 +840,28 @@ impl Protocol {
                     return Err(RuntimeError::Budget("collection_records"));
                 }
                 match domain {
-                    CollectionDomain::Meshes => self.execute(
-                        rt,
-                        client,
-                        Operation::MeshSnapshots(crate::authoring::MeshBatchQuery {
-                            session,
-                            edit,
-                            ids,
-                        }),
-                    )?,
-                    CollectionDomain::Bindings => self.execute(
-                        rt,
-                        client,
-                        Operation::MeshBindingSnapshot(crate::authoring::MeshBindingQuery {
-                            session,
-                            edit,
-                            ids: Some(ids),
-                        }),
-                    )?,
+                    CollectionDomain::Meshes => {
+                        return self.execute(
+                            rt,
+                            client,
+                            Operation::MeshSnapshots(crate::authoring::MeshBatchQuery {
+                                session,
+                                edit,
+                                ids,
+                            }),
+                        );
+                    }
+                    CollectionDomain::Bindings => {
+                        return self.execute(
+                            rt,
+                            client,
+                            Operation::MeshBindingSnapshot(crate::authoring::MeshBindingQuery {
+                                session,
+                                edit,
+                                ids: Some(ids),
+                            }),
+                        );
+                    }
                     _ => match rt.read_selection(client, session, edit, domain, ids, expected)? {
                         Selection::Parameters(v) => json!(v),
                         Selection::Scene(v) => json!(v),

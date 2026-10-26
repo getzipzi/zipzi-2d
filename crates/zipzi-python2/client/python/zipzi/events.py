@@ -45,12 +45,14 @@ class _Subscription(RecoveryOwner, Generic[T]):
 
     @property
     def cursor(self) -> Cursor:
+        "Return this subscription's cached exact cursor without IO. Recover initial subscription before using it; cursors belong to one Runtime and registry/session stream."
         if self._cursor is None:
             raise SdkFailure("NOT_SUBSCRIBED", "Recover the subscription first")
         return self._cursor
 
     @property
     def initial(self) -> T:
+        'Return the immutable metadata captured at subscribe/resync, without IO. Later poll calls advance the cursor but do not silently refresh this initial value.'
         return self._initial
 
     def _reset(self, raw: object) -> T:
@@ -73,6 +75,7 @@ class _Subscription(RecoveryOwner, Generic[T]):
         return self._request("resync", lambda: self._backend.subscribe(self._token, self), self._reset)
 
     def poll(self, *, limit: int = 128) -> tuple[Event, ...]:
+        'Read up to limit events after this independent cursor, with limit in 1..256. Advance only after a complete valid page; gaps require explicit resync. Recover the original call after a lost response.'
         check_limit(limit)
         cursor = self.cursor
         def decode(raw: object) -> tuple[Event, ...]:

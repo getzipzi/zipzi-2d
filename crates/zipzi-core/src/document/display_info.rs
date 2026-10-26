@@ -20,12 +20,21 @@ pub enum DisplayInfoOrigin {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct DisplayInfo {
+    /// Import/generation provenance of these display metadata records.
     pub origin: DisplayInfoOrigin,
     /// `None` and `Some([])` retain CDI collection omission and emptiness.
     pub parameters: Option<Vec<CdiParameterEntry>>,
+    /// Optional ordered CDI parameter groups metadata; None preserves omission and an empty
+    /// list explicitly preserves emptiness.
     pub parameter_groups: Option<Vec<CdiParameterGroup>>,
+    /// Optional ordered CDI parts metadata; None preserves omission and an empty list
+    /// explicitly preserves emptiness.
     pub parts: Option<Vec<CdiPartEntry>>,
+    /// Optional ordered CDI combined parameters metadata; None preserves omission and an empty
+    /// list explicitly preserves emptiness.
     pub combined_parameters: Option<Vec<CdiCombinedSet>>,
+    /// Preserved opaque import/export extension fields; retain unknown keys when editing known
+    /// fields.
     pub extensions: BTreeMap<String, Value>,
     /// Complete namespace identity at import when opaque extensions exist.
     pub opaque_source_ids: Option<CdiNamespaceIds>,
@@ -35,10 +44,17 @@ pub struct DisplayInfo {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct CdiParameterGroup {
+    /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
+    /// External format/runtime identifier retained for import/export; not the document object ID.
     pub runtime_id: String,
+    /// Human-readable display name; use the stable ID for identity because names can change.
     pub name: String,
+    /// Parent object ID in this hierarchy; independent of storage and drawing order. None
+    /// selects the root/unassigned container.
     pub parent_id: Option<String>,
+    /// Preserved opaque import/export extension fields; retain unknown keys when editing known
+    /// fields.
     pub extensions: BTreeMap<String, Value>,
 }
 
@@ -47,14 +63,26 @@ pub struct CdiParameterGroup {
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub enum CdiParameterEntry {
     Resolved {
+        /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
+        /// Parameter-group ID in the document metadata hierarchy. None selects the
+        /// root/unassigned container.
         group_id: Option<String>,
+        /// Preserved opaque import/export extension fields; retain unknown keys when editing
+        /// known fields.
         extensions: BTreeMap<String, Value>,
     },
     Unresolved {
+        /// External format/runtime identifier retained for import/export; not the document
+        /// object ID.
         runtime_id: String,
+        /// Human-readable display name; use the stable ID for identity because names can change.
         name: String,
+        /// Parameter-group ID in the document metadata hierarchy. None selects the
+        /// root/unassigned container.
         group_id: Option<String>,
+        /// Preserved opaque import/export extension fields; retain unknown keys when editing
+        /// known fields.
         extensions: BTreeMap<String, Value>,
     },
 }
@@ -80,12 +108,20 @@ impl CdiParameterEntry {
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub enum CdiPartEntry {
     Resolved {
+        /// Resolved stable document Part ID; use an Unresolved entry to preserve an external runtime identifier.
         part_id: String,
+        /// Preserved opaque import/export extension fields; retain unknown keys when editing
+        /// known fields.
         extensions: BTreeMap<String, Value>,
     },
     Unresolved {
+        /// External format/runtime identifier retained for import/export; not the document
+        /// object ID.
         runtime_id: String,
+        /// Human-readable display name; use the stable ID for identity because names can change.
         name: String,
+        /// Preserved opaque import/export extension fields; retain unknown keys when editing
+        /// known fields.
         extensions: BTreeMap<String, Value>,
     },
 }
@@ -103,15 +139,25 @@ impl CdiPartEntry {
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum CdiParameterRef {
     Unspecified,
-    Resolved { parameter_id: String },
-    Unresolved { runtime_id: String },
+    Resolved {
+        /// Stable document parameter ID, not its exported runtime identifier.
+        parameter_id: String,
+    },
+    Unresolved {
+        /// External format/runtime identifier retained for import/export; not the document
+        /// object ID.
+        runtime_id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct CdiCombinedSet {
+    /// Stable UUID of this CDI combined set; not the identity of its target.
     pub id: String,
+    /// Ordered stable reference-entry records; entry identity is distinct from the referenced
+    /// object identity.
     pub members: Vec<super::ReferenceEntry<CdiParameterRef>>,
 }
 
@@ -119,8 +165,11 @@ pub struct CdiCombinedSet {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct CdiNamespaceIds {
+    /// Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.
     pub parameters: BTreeMap<String, String>,
+    /// Imported Part document-ID to runtime-ID map, retained to validate opaque metadata.
     pub parts: BTreeMap<String, String>,
+    /// Imported group document-ID to runtime-ID map, retained to validate opaque metadata.
     pub groups: BTreeMap<String, String>,
 }
 
