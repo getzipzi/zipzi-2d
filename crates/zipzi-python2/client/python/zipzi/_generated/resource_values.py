@@ -8,8 +8,9 @@ def _bytes(value: object) -> bytes:
 
 @dataclass(frozen=True, repr=False)
 class Usage(CompactValue):
-    'Immutable owned Usage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nallocations: Number of distinct retained allocations counted by Runtime resource accounting.\nresource_entries: Number of retained resource-accounting entries, including history/lease holders.\nprepared_images: Runtime-wide number of retained client-owned prepared image handles.\nplans: Runtime-wide number of retained client-owned plans, not operations inside each plan.\nrgba_bytes: Retained decoded RGBA storage in bytes under Runtime accounting.\npng_bytes: Retained encoded PNG storage in bytes under Runtime accounting.\nblob_bytes: Retained immutable binary blob storage in bytes under Runtime accounting.\npreparing_bytes: Reserved bytes for resource preparation that has not yet finished.\ntransfer_bytes: Reserved bytes for in-progress binary transfers.'
+    'Immutable owned Usage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npreviews: Runtime-wide retained independent Preview leases; active Jobs can retain workspace after release.\nallocations: Number of distinct retained allocations counted by Runtime resource accounting.\nresource_entries: Number of retained resource-accounting entries, including history/lease holders.\nprepared_images: Runtime-wide number of retained client-owned prepared image handles.\nplans: Runtime-wide number of retained client-owned plans, not operations inside each plan.\nrgba_bytes: Retained decoded RGBA storage in bytes under Runtime accounting.\npng_bytes: Retained encoded PNG storage in bytes under Runtime accounting.\nblob_bytes: Retained immutable binary blob storage in bytes under Runtime accounting.\npreparing_bytes: Reserved bytes for resource preparation that has not yet finished.\ntransfer_bytes: Reserved bytes for in-progress binary transfers.'
     __module__ = "zipzi.resources"
+    previews: int
     allocations: int
     resource_entries: int
     prepared_images: int
@@ -23,7 +24,7 @@ class Usage(CompactValue):
     @classmethod
     def _read(cls, value: object) -> "Usage":
         r = record(value)
-        return cls(integer(r["allocations"]), integer(r["resource_entries"]), integer(r["prepared_images"]), integer(r["plans"]), integer(r["rgba_bytes"]), integer(r["png_bytes"]), integer(r["blob_bytes"]), integer(r["preparing_bytes"]), integer(r["transfer_bytes"]))
+        return cls(integer(r["previews"]), integer(r["allocations"]), integer(r["resource_entries"]), integer(r["prepared_images"]), integer(r["plans"]), integer(r["rgba_bytes"]), integer(r["png_bytes"]), integer(r["blob_bytes"]), integer(r["preparing_bytes"]), integer(r["transfer_bytes"]))
 
 @dataclass(frozen=True, repr=False)
 class ImagePixels(CompactValue):

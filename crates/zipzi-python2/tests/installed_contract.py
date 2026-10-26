@@ -20,7 +20,7 @@ def audit()->dict[str,object]:
     counts={'symbols':0,'callables':0,'fields':0}
     if '/site-packages/zipzi/' not in zipzi.__file__:raise RuntimeError('Audit requires an installed wheel')
     if importlib.util.find_spec('zipzi_native') is not None:raise RuntimeError('Offline audit must use the pure wheel only')
-    modules=[zipzi,*[getattr(zipzi,n) for n in ('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops')]]
+    modules=[zipzi,*[getattr(zipzi,n) for n in ('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops','animation')]]
     def visit(path:str,value:object,constructor:bool=True)->None:
         counts['symbols']+=1
         if path not in CATALOG:failures['D01'].append(path+': missing from installed catalog')
@@ -80,7 +80,7 @@ def audit()->dict[str,object]:
     if len(geometry.positions)!=1000:failures['D07'].append('Explicit geometry fields changed')
     from zipzi._generated.catalog import PACKAGE_VERSION,CONTRACT,CONTRACT_SHA256,CLIENT_SOURCE_SHA256
     if PACKAGE_VERSION!=metadata.version('zipzi'):failures['D08'].append('Installed package/catalog version mismatch')
-    if CONTRACT!='zipzi-runtime-r5-authoring-1' or not re.fullmatch('[0-9a-f]{64}',CONTRACT_SHA256):failures['D08'].append('Missing exact protocol/contract identity')
+    if CONTRACT!='zipzi-runtime-r5-preview-1' or not re.fullmatch('[0-9a-f]{64}',CONTRACT_SHA256):failures['D08'].append('Missing exact protocol/contract identity')
     package=resources.files('zipzi')
     fingerprint=hashlib.sha256()
     package_path=Path(zipzi.__file__).parent

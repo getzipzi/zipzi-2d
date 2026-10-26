@@ -32,7 +32,7 @@ class LocalBackend(LocalBindings):
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:
             raise SdkFailure("CONTRACT_MISMATCH", "Native module lacks the typed Runtime contract") from e
-        if self._native.contract != "zipzi-python2-15":
+        if self._native.contract != "zipzi-python2-16":
             self._native.close()
             raise SdkFailure("CONTRACT_MISMATCH", "Native contract differs")
 
@@ -45,7 +45,7 @@ class LocalBackend(LocalBindings):
         return unwrap(self._native.apply(edit, operations))
     def _transport_prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
         return unwrap(self._native.prepare_image(width, height, rgba))
-    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None:
+    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer", "preview"], token: object, owner: object) -> None:
         unwrap(self._native.release_handle(kind, token))
     def _test_control(self, action: str) -> object:
         return unwrap(self._native._test_control(action))

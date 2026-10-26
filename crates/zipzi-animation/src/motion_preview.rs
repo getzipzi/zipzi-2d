@@ -18,7 +18,15 @@ use crate::seek_cache::{Checkpoint, SeekCache};
 use crate::{AnimationError, CompiledCurve, SeekCacheStats};
 
 /// A motion event crossed during the last update, returned without side effects.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct MotionEventFired {
     /// Source clip UUID.
     pub motion_id: String,
@@ -29,7 +37,15 @@ pub struct MotionEventFired {
 }
 
 /// Combined values after Motion, Expression, Physics and Pose evaluation.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct MotionSnapshot {
     /// Optional inspector observations. Collected explicitly by a host after
     /// evaluation. Advance/seek results leave this empty; populate it with
@@ -59,12 +75,25 @@ pub struct MotionSnapshot {
     pub motion_positions: Vec<MotionPlaybackPosition>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct MotionPlaybackPosition {
+    /// Source motion clip UUID for this SDK playback position.
     pub motion_id: String,
+    /// SDK local sample time in seconds, including the loop tail.
     pub local_time: f32,
+    /// SDK loop period in seconds, including the FPS tail.
     pub period: f32,
+    /// Canonical SDK loop index; exact seams belong to the preceding loop.
     pub loop_index: u64,
+    /// Absolute preview-clock time at the start of this cycle.
     pub cycle_origin: f32,
 }
 

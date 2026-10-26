@@ -117,9 +117,37 @@ slots. Set `physics=True` or `pose=True` to select those singleton payloads.
 `session.plan/plan_async` and `edit.plan/plan_async` accept the four domain edit
 commands. Field addresses retain native identity/context/field epochs: editing a
 field and undoing it does not revive the old address. Large curves use the same
-bounded binary transfer and original-call recovery as mesh data. Independent
-animation Preview/playback and GPU observation are not available in this slice;
-native object preview eligibility does not imply a host Preview API is present.
+bounded binary transfer and original-call recovery as mesh data.
+
+`session.preview()` or `edit.preview()` captures an independent frozen animation
+source. Create a new Preview for new authored content; commit/cancel does not
+refresh an existing one. Controls use generated, keyword-only values:
+
+```python
+from zipzi import animation
+
+with session.preview() as preview:
+    preview.apply(animation.SetParameter(id=parameter_id, value=.5))
+    result = preview.sample((0., .25, .5)).wait()
+    frame = result.value.frames[-1]
+    assert frame.preview_id == preview.id
+    assert result.source == preview.source
+```
+
+ScheduleMotion/ScheduleRegistration/ScheduleExpression use absolute activation
+times, which cannot precede the current SDK clock. Reset returns to zero and
+retains schedules. Activations start on the first update at/after their time;
+use `frame.motion.motion_positions` for actual local sample coordinates.
+`seek(time)` and `advance_to(time)` return a one-frame batch Job; `sample(times)`
+returns 1..64 frames, retaining order/duplicates/backward targets. Geometry is
+optional (`geometry=False`). Model opacity remains a separate SDK channel.
+
+Pending work refuses changes to that Preview. An interrupted SDK seek preserves its
+prior state; cancellation after a completed batch reports its success, while a cancelled batch can retain completed targets, and incremental
+advance can retain completed steps. Cancelled output is discarded. Close the
+Preview to release its lease and cancel pending work, then wait/close the Job.
+Other clients/views and authored history are unaffected. GPU observation and
+Editor per-view playback integration remain pending.
 
 Save with `session.project.save(absolute_host_path).wait()` and inspect `durable`
 and the receipt version. Paths refer to the execution host, not the client machine.

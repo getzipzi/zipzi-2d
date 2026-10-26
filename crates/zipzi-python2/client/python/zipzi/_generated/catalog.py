@@ -9,10 +9,10 @@ class _Entry(TypedDict):
     fields: NotRequired[Sequence[tuple[str,str]]]
     children: tuple[str,...]
     example: NotRequired[str]
-CONTRACT = "zipzi-runtime-r5-authoring-1"
+CONTRACT = "zipzi-runtime-r5-preview-1"
 PACKAGE_VERSION = '0.1.0a1'
-CLIENT_SOURCE_SHA256 = 'a00c21b756f438e4cf357c2379fe7d9cb9528e339b053a567812604ff6ffb325'
-CONTRACT_SHA256 = 'a5da252b5e1e7a84d2147c537c11f5557c0e7e6e82ce577062c4e49109bf1dc7'
+CLIENT_SOURCE_SHA256 = 'fac8b762de929ba4721cf98c16e63b05b833ebca489d45bef94506331da678c9'
+CONTRACT_SHA256 = '9dd6269bfe28383210fb69b6485930282af8b16903ef4d7aa45a24120188319a'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -53,8 +53,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.recover_call'),
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
-                            'then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-authoring-1; client '
-                            'source SHA-256 a00c21b756f438e4cf357c2379fe7d9cb9528e339b053a567812604ff6ffb325.',
+                            'then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-preview-1; client '
+                            'source SHA-256 fac8b762de929ba4721cf98c16e63b05b833ebca489d45bef94506331da678c9.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -314,6 +314,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                              'zipzi.Edit.pending_request',
                              'zipzi.Edit.plan',
                              'zipzi.Edit.plan_async',
+                             'zipzi.Edit.preview',
                              'zipzi.Edit.receipt',
                              'zipzi.Edit.resources',
                              'zipzi.Edit.scene',
@@ -784,6 +785,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                            'fields': [],
                            'kind': 'callable',
                            'signature': '(operation: ModelingPlanOperation) -> Job[plans.Plan]'},
+ 'zipzi.Edit.preview': {'children': (),
+                        'documentation': 'Capture this candidate and its exact sequence as an independent Preview. '
+                                         'Subsequent writes/commit/cancel do not rewrite its frozen content. Preview '
+                                         'errors do not abort the candidate.',
+                        'example': 'docs/recipes.py',
+                        'fields': [],
+                        'kind': 'callable',
+                        'signature': '(*, expected: Source | None=None) -> Preview'},
  'zipzi.Edit.receipt': {'children': (),
                         'documentation': 'Cached confirmed commit receipt, or None before success/after cancel.',
                         'example': 'docs/recipes.py',
@@ -1810,6 +1819,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'collections; reading fields, repr and summary performs no IO.\n'
                                           '\n'
                                           'Fields:\n'
+                                          'previews_per_client: Maximum independent frozen animation Previews owned by '
+                                          'one client.\n'
+                                          'preview_bytes: Conservative aggregate Preview storage limit, including '
+                                          'replay/cache workspace.\n'
+                                          'preview_schedule_entries: Maximum retained activations per Preview; Reset '
+                                          'retains schedules.\n'
+                                          'preview_seek_cache_bytes: SDK checkpoint-cache budget per Preview; '
+                                          'transient replay state is charged separately.\n'
                                           'collection_records: Maximum records returned by one collection page or '
                                           'selected batch.\n'
                                           'collection_bytes: Maximum escaped metadata bytes in one collection page.\n'
@@ -1860,7 +1877,16 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'registry_event_bytes: Conservative byte limit for registry event payloads; '
                                           'not RSS or GPU memory.',
                          'example': 'docs/recipes.py',
-                         'fields': [('collection_records',
+                         'fields': [('previews_per_client',
+                                     'Maximum independent frozen animation Previews owned by one client.'),
+                                    ('preview_bytes',
+                                     'Conservative aggregate Preview storage limit, including replay/cache workspace.'),
+                                    ('preview_schedule_entries',
+                                     'Maximum retained activations per Preview; Reset retains schedules.'),
+                                    ('preview_seek_cache_bytes',
+                                     'SDK checkpoint-cache budget per Preview; transient replay state is charged '
+                                     'separately.'),
+                                    ('collection_records',
                                      'Maximum records returned by one collection page or selected batch.'),
                                     ('collection_bytes', 'Maximum escaped metadata bytes in one collection page.'),
                                     ('collection_scan', 'Maximum entries examined by one collection page.'),
@@ -1918,14 +1944,15 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                     ('registry_event_bytes',
                                      'Conservative byte limit for registry event payloads; not RSS or GPU memory.')],
                          'kind': 'type',
-                         'signature': '(collection_records: int, collection_bytes: int, collection_scan: int, clients: '
-                                      'int, sessions: int, edits_per_client_session: int, edits_per_session: int, '
-                                      'edits_total: int, candidate_bytes: int, frozen_bytes: int, accounted_bytes: '
-                                      'int, image_bytes: int, plans_per_client: int, references_per_client: int, '
-                                      'prepared_images_per_client: int, plan_bytes: int, blob_bytes: int, '
-                                      'blobs_per_client: int, history_bytes: int, jobs_total: int, jobs_per_client: '
-                                      'int, running_jobs: int, session_events: int, session_event_bytes: int, '
-                                      'registry_events: int, registry_event_bytes: int)'},
+                         'signature': '(previews_per_client: int, preview_bytes: int, preview_schedule_entries: int, '
+                                      'preview_seek_cache_bytes: int, collection_records: int, collection_bytes: int, '
+                                      'collection_scan: int, clients: int, sessions: int, edits_per_client_session: '
+                                      'int, edits_per_session: int, edits_total: int, candidate_bytes: int, '
+                                      'frozen_bytes: int, accounted_bytes: int, image_bytes: int, plans_per_client: '
+                                      'int, references_per_client: int, prepared_images_per_client: int, plan_bytes: '
+                                      'int, blob_bytes: int, blobs_per_client: int, history_bytes: int, jobs_total: '
+                                      'int, jobs_per_client: int, running_jobs: int, session_events: int, '
+                                      'session_event_bytes: int, registry_events: int, registry_event_bytes: int)'},
  'zipzi.RuntimeLimits.__repr__': {'children': (),
                                   'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                    'RPC/full scan.\n'
@@ -2021,6 +2048,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                 'zipzi.Session.parameters',
                                 'zipzi.Session.plan',
                                 'zipzi.Session.plan_async',
+                                'zipzi.Session.preview',
                                 'zipzi.Session.redo',
                                 'zipzi.Session.reference',
                                 'zipzi.Session.resources',
@@ -2372,6 +2400,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                               'fields': [],
                               'kind': 'callable',
                               'signature': '(operation: ModelingPlanOperation) -> Job[plans.Plan]'},
+ 'zipzi.Session.preview': {'children': (),
+                           'documentation': 'Capture an independent frozen formal animation Preview. Close it '
+                                            'explicitly; later edits never refresh it, and playback never changes '
+                                            'document history.',
+                           'example': 'docs/recipes.py',
+                           'fields': [],
+                           'kind': 'callable',
+                           'signature': '(*, expected: Source | None=None) -> Preview'},
  'zipzi.Session.project': {'children': ('zipzi.Session.project.diagnose',
                                         'zipzi.Session.project.export',
                                         'zipzi.Session.project.open',
@@ -2859,6 +2895,517 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                'fields': [],
                                'kind': 'callable',
                                'signature': '() -> str'},
+ 'zipzi.animation': {'children': ('zipzi.animation.Batch',
+                                  'zipzi.animation.Command',
+                                  'zipzi.animation.Frame',
+                                  'zipzi.animation.Preview',
+                                  'zipzi.animation.Reset',
+                                  'zipzi.animation.ScheduleExpression',
+                                  'zipzi.animation.ScheduleMotion',
+                                  'zipzi.animation.ScheduleParameter',
+                                  'zipzi.animation.ScheduleRegistration',
+                                  'zipzi.animation.SetParameter',
+                                  'zipzi.animation.SetPhysics',
+                                  'zipzi.animation.State'),
+                     'documentation': 'Independent frozen animation controls and CPU playback results.',
+                     'kind': 'module',
+                     'signature': ''},
+ 'zipzi.animation.Batch': {'children': ('zipzi.animation.Batch.__repr__', 'zipzi.animation.Batch.summary'),
+                           'documentation': 'Immutable owned PreviewBatch value. Construction owns declared '
+                                            'collections; reading fields, repr and summary performs no IO.\n'
+                                            '\n'
+                                            'Fields:\n'
+                                            'sequence: Accepted sample request ordinal shared by these ordered '
+                                            'frames.\n'
+                                            'frames: Owned frames in requested target order, retaining duplicate and '
+                                            'backward targets.',
+                           'example': 'docs/recipes.py',
+                           'fields': [('sequence', 'Accepted sample request ordinal shared by these ordered frames.'),
+                                      ('frames',
+                                       'Owned frames in requested target order, retaining duplicate and backward '
+                                       'targets.')],
+                           'kind': 'type',
+                           'signature': '(sequence: int, frames: tuple[PreviewFrame, ...])'},
+ 'zipzi.animation.Batch.__repr__': {'children': (),
+                                    'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                     'RPC/full scan.\n'
+                                                     '\n'
+                                                     'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                     'field access\n'
+                                                     'still exposes the owned full value; no host resource is '
+                                                     'created/released.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [],
+                                    'kind': 'callable',
+                                    'signature': '() -> str'},
+ 'zipzi.animation.Batch.summary': {'children': (),
+                                   'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                    'accessible.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'signature': '() -> str'},
+ 'zipzi.animation.Command': {'children': (),
+                             'documentation': 'Typed public API entry.',
+                             'example': 'docs/recipes.py',
+                             'fields': [],
+                             'kind': 'value',
+                             'signature': ''},
+ 'zipzi.animation.Frame': {'children': ('zipzi.animation.Frame.__repr__', 'zipzi.animation.Frame.summary'),
+                           'documentation': 'Immutable owned PreviewFrame value. Construction owns declared '
+                                            'collections; reading fields, repr and summary performs no IO.\n'
+                                            '\n'
+                                            'Fields:\n'
+                                            'preview_id: Runtime-wide Preview serial; pair with the outer '
+                                            'Source.runtime for view identity.\n'
+                                            'sequence: Accepted sample request ordinal; pair with the outer Source and '
+                                            'Preview identity.\n'
+                                            'index: Zero-based target slot in the ordered sample request.\n'
+                                            'motion: SDK Motion/Expression/Physics/Pose result and actual sample '
+                                            'coordinates.\n'
+                                            'geometry: Evaluated CPU geometry when requested; model_opacity remains a '
+                                            'separate SDK channel.',
+                           'example': 'docs/recipes.py',
+                           'fields': [('preview_id',
+                                       'Runtime-wide Preview serial; pair with the outer Source.runtime for view '
+                                       'identity.'),
+                                      ('sequence',
+                                       'Accepted sample request ordinal; pair with the outer Source and Preview '
+                                       'identity.'),
+                                      ('index', 'Zero-based target slot in the ordered sample request.'),
+                                      ('motion',
+                                       'SDK Motion/Expression/Physics/Pose result and actual sample coordinates.'),
+                                      ('geometry',
+                                       'Evaluated CPU geometry when requested; model_opacity remains a separate SDK '
+                                       'channel.')],
+                           'kind': 'type',
+                           'signature': '(preview_id: int, sequence: int, index: int, motion: MotionSnapshot, '
+                                        'geometry: DrawableFrame | None = None)'},
+ 'zipzi.animation.Frame.__repr__': {'children': (),
+                                    'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                     'RPC/full scan.\n'
+                                                     '\n'
+                                                     'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                     'field access\n'
+                                                     'still exposes the owned full value; no host resource is '
+                                                     'created/released.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [],
+                                    'kind': 'callable',
+                                    'signature': '() -> str'},
+ 'zipzi.animation.Frame.summary': {'children': (),
+                                   'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                    'accessible.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'signature': '() -> str'},
+ 'zipzi.animation.Preview': {'children': ('zipzi.animation.Preview.__enter__',
+                                          'zipzi.animation.Preview.__exit__',
+                                          'zipzi.animation.Preview.advance_to',
+                                          'zipzi.animation.Preview.apply',
+                                          'zipzi.animation.Preview.close',
+                                          'zipzi.animation.Preview.id',
+                                          'zipzi.animation.Preview.info',
+                                          'zipzi.animation.Preview.pending_request',
+                                          'zipzi.animation.Preview.sample',
+                                          'zipzi.animation.Preview.seek',
+                                          'zipzi.animation.Preview.source'),
+                             'documentation': 'Independent frozen animation runtime. Create through Session.preview or '
+                                              'Edit.preview.\n'
+                                              '\n'
+                                              'Close explicitly or use with. Edits never refresh this source. Playback '
+                                              'and\n'
+                                              'physics state belong to this Preview; authored content/history are '
+                                              'unchanged.\n'
+                                              'Each accepted sample request increments its operation ordinal, '
+                                              'including a\n'
+                                              'cancelled request. A busy Preview refuses controls and concurrent '
+                                              'samples.',
+                             'example': 'docs/recipes.py',
+                             'fields': [],
+                             'kind': 'type',
+                             'signature': '(factory-owned; use the documented public entry)'},
+ 'zipzi.animation.Preview.__enter__': {'children': (),
+                                       'documentation': 'Validate this owned Preview and return it; scope exit closes '
+                                                        'it and cancels pending playback work.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [],
+                                       'kind': 'callable',
+                                       'signature': '() -> Preview'},
+ 'zipzi.animation.Preview.__exit__': {'children': (),
+                                      'documentation': 'Close the owned lease on scope exit; never suppress the body '
+                                                       'exception.\n'
+                                                       '\n'
+                                                       'Python supplies the context arguments. Closing can '
+                                                       'synchronously contact\n'
+                                                       'the host. On normal exit an unknown release remains '
+                                                       'recoverable and is\n'
+                                                       'raised; during an existing exception cleanup failure is added '
+                                                       'as a note.\n'
+                                                       'Retain the handle for pending cleanup. No formal document '
+                                                       'write occurs.',
+                                      'example': 'docs/recipes.py',
+                                      'fields': [],
+                                      'kind': 'callable',
+                                      'signature': '(kind: object, exception: BaseException | None, traceback: object) '
+                                                   '-> None'},
+ 'zipzi.animation.Preview.advance_to': {'children': (),
+                                        'documentation': 'Submit SDK canonical incremental playback. Cancellation may '
+                                                         'retain completed simulation steps; discard cancelled output. '
+                                                         'Backward targets use canonical seek.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'callable',
+                                        'signature': '(time: float, *, geometry: bool=True) -> '
+                                                     'Job[Snapshot[m.PreviewBatch]]'},
+ 'zipzi.animation.Preview.apply': {'children': (),
+                                   'documentation': 'Apply one typed animation control in this Preview. SDK validation '
+                                                    'errors preserve its usable state; commands never publish model '
+                                                    'history.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'signature': '(command: m.PreviewCommand) -> Snapshot[m.PreviewState]'},
+ 'zipzi.animation.Preview.close': {'children': (),
+                                   'documentation': 'Release this owned handle once, without mutating formal model '
+                                                    'content. A lost release response keeps the original recovery '
+                                                    'owner; confirmed close is idempotent and later use fails.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'signature': '() -> None'},
+ 'zipzi.animation.Preview.id': {'children': (),
+                                'documentation': 'Read the Runtime-wide serial without IO; combine with source.runtime '
+                                                 'to compare returned frames across views.',
+                                'example': 'docs/recipes.py',
+                                'fields': [],
+                                'kind': 'callable',
+                                'signature': '() -> int'},
+ 'zipzi.animation.Preview.info': {'children': (),
+                                  'documentation': "Read this Preview's accepted ordinal and actual SDK clock. Busy "
+                                                   'work refuses this read.',
+                                  'example': 'docs/recipes.py',
+                                  'fields': [],
+                                  'kind': 'callable',
+                                  'signature': '() -> Snapshot[m.PreviewState]'},
+ 'zipzi.animation.Preview.pending_request': {'children': (),
+                                             'documentation': "Return cached metadata for this owner's original "
+                                                              'pending request, or None. Reading does not send IO or '
+                                                              'recover work; retain the original OutcomeUnknown to '
+                                                              'resume it.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> PendingRequest | None'},
+ 'zipzi.animation.Preview.sample': {'children': (),
+                                    'documentation': 'Submit 1..64 canonical seeks in target order; wait for a '
+                                                     'frozen-source batch.\n'
+                                                     '\n'
+                                                     'Duplicates/backward times are retained. CPU geometry is '
+                                                     'optional. A cancelled\n'
+                                                     'batch discards output and retains completed targets; each '
+                                                     'individual SDK\n'
+                                                     'seek is transactional when interrupted; cancellation after the '
+                                                     'whole batch\n'
+                                                     'completes reports success. Close/wait the Job to release its\n'
+                                                     'result slot. Cancellation never changes authored content or '
+                                                     'another view.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [],
+                                    'kind': 'callable',
+                                    'signature': '(times: Sequence[float], *, geometry: bool=True) -> '
+                                                 'Job[Snapshot[m.PreviewBatch]]'},
+ 'zipzi.animation.Preview.seek': {'children': (),
+                                  'documentation': 'Submit one canonical seek and return a one-frame batch Job; an '
+                                                   'interrupted SDK seek preserves its prior state; late cancellation '
+                                                   'reports the completed outcome.',
+                                  'example': 'docs/recipes.py',
+                                  'fields': [],
+                                  'kind': 'callable',
+                                  'signature': '(time: float, *, geometry: bool=True) -> '
+                                               'Job[Snapshot[m.PreviewBatch]]'},
+ 'zipzi.animation.Preview.source': {'children': (),
+                                    'documentation': 'Read the cached exact frozen Source without IO or refreshing the '
+                                                     'model.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [],
+                                    'kind': 'callable',
+                                    'signature': '() -> Source'},
+ 'zipzi.animation.Reset': {'children': ('zipzi.animation.Reset.__repr__', 'zipzi.animation.Reset.summary'),
+                           'documentation': 'Immutable owned PreviewCommandReset value. Construction owns declared '
+                                            'collections; reading fields, repr and summary performs no IO.',
+                           'example': 'docs/recipes.py',
+                           'fields': [],
+                           'kind': 'type',
+                           'signature': '()'},
+ 'zipzi.animation.Reset.__repr__': {'children': (),
+                                    'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                     'RPC/full scan.\n'
+                                                     '\n'
+                                                     'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                     'field access\n'
+                                                     'still exposes the owned full value; no host resource is '
+                                                     'created/released.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [],
+                                    'kind': 'callable',
+                                    'signature': '() -> str'},
+ 'zipzi.animation.Reset.summary': {'children': (),
+                                   'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                    'accessible.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'signature': '() -> str'},
+ 'zipzi.animation.ScheduleExpression': {'children': ('zipzi.animation.ScheduleExpression.__repr__',
+                                                     'zipzi.animation.ScheduleExpression.summary'),
+                                        'documentation': 'Immutable owned PreviewCommandScheduleExpression value. '
+                                                         'Construction owns declared collections; reading fields, repr '
+                                                         'and summary performs no IO.\n'
+                                                         '\n'
+                                                         'Fields:\n'
+                                                         'id: Native expression asset UUID.\n'
+                                                         "time: Absolute activation time in seconds on this Preview's "
+                                                         'clock.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [('id', 'Native expression asset UUID.'),
+                                                   ('time',
+                                                    "Absolute activation time in seconds on this Preview's clock.")],
+                                        'kind': 'type',
+                                        'signature': '(id: str, time: float)'},
+ 'zipzi.animation.ScheduleExpression.__repr__': {'children': (),
+                                                 'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                  'with no RPC/full scan.\n'
+                                                                  '\n'
+                                                                  'Large arrays and bytes show bounded samples/counts. '
+                                                                  'Explicit field access\n'
+                                                                  'still exposes the owned full value; no host '
+                                                                  'resource is created/released.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'callable',
+                                                 'signature': '() -> str'},
+ 'zipzi.animation.ScheduleExpression.summary': {'children': (),
+                                                'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                 'explicitly accessible.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'callable',
+                                                'signature': '() -> str'},
+ 'zipzi.animation.ScheduleMotion': {'children': ('zipzi.animation.ScheduleMotion.__repr__',
+                                                 'zipzi.animation.ScheduleMotion.summary'),
+                                    'documentation': 'Immutable owned PreviewCommandScheduleMotion value. Construction '
+                                                     'owns declared collections; reading fields, repr and summary '
+                                                     'performs no IO.\n'
+                                                     '\n'
+                                                     'Fields:\n'
+                                                     "id: Clip UUID; uses the clip's own fades.\n"
+                                                     "time: Absolute activation time in seconds on this Preview's "
+                                                     'clock.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [('id', "Clip UUID; uses the clip's own fades."),
+                                               ('time',
+                                                "Absolute activation time in seconds on this Preview's clock.")],
+                                    'kind': 'type',
+                                    'signature': '(id: str, time: float)'},
+ 'zipzi.animation.ScheduleMotion.__repr__': {'children': (),
+                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                              'no RPC/full scan.\n'
+                                                              '\n'
+                                                              'Large arrays and bytes show bounded samples/counts. '
+                                                              'Explicit field access\n'
+                                                              'still exposes the owned full value; no host resource is '
+                                                              'created/released.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.animation.ScheduleMotion.summary': {'children': (),
+                                            'documentation': 'Return a bounded, local summary; full fields remain '
+                                                             'explicitly accessible.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
+ 'zipzi.animation.ScheduleParameter': {'children': ('zipzi.animation.ScheduleParameter.__repr__',
+                                                    'zipzi.animation.ScheduleParameter.summary'),
+                                       'documentation': 'Immutable owned PreviewCommandScheduleParameter value. '
+                                                        'Construction owns declared collections; reading fields, repr '
+                                                        'and summary performs no IO.\n'
+                                                        '\n'
+                                                        'Fields:\n'
+                                                        'id: Document parameter UUID for an SDK input activation.\n'
+                                                        "time: Absolute activation time in seconds on this Preview's "
+                                                        'clock.\n'
+                                                        'value: Finite parameter input in the authored parameter '
+                                                        'domain.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [('id', 'Document parameter UUID for an SDK input activation.'),
+                                                  ('time',
+                                                   "Absolute activation time in seconds on this Preview's clock."),
+                                                  ('value',
+                                                   'Finite parameter input in the authored parameter domain.')],
+                                       'kind': 'type',
+                                       'signature': '(id: str, time: float, value: float)'},
+ 'zipzi.animation.ScheduleParameter.__repr__': {'children': (),
+                                                'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                 'with no RPC/full scan.\n'
+                                                                 '\n'
+                                                                 'Large arrays and bytes show bounded samples/counts. '
+                                                                 'Explicit field access\n'
+                                                                 'still exposes the owned full value; no host resource '
+                                                                 'is created/released.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'callable',
+                                                'signature': '() -> str'},
+ 'zipzi.animation.ScheduleParameter.summary': {'children': (),
+                                               'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                'explicitly accessible.',
+                                               'example': 'docs/recipes.py',
+                                               'fields': [],
+                                               'kind': 'callable',
+                                               'signature': '() -> str'},
+ 'zipzi.animation.ScheduleRegistration': {'children': ('zipzi.animation.ScheduleRegistration.__repr__',
+                                                       'zipzi.animation.ScheduleRegistration.summary'),
+                                          'documentation': 'Immutable owned PreviewCommandScheduleRegistration value. '
+                                                           'Construction owns declared collections; reading fields, '
+                                                           'repr and summary performs no IO.\n'
+                                                           '\n'
+                                                           'Fields:\n'
+                                                           "id: Registration UUID; uses the registration's SDK fade "
+                                                           'overrides.\n'
+                                                           'time: Absolute activation time in seconds on this '
+                                                           "Preview's clock.",
+                                          'example': 'docs/recipes.py',
+                                          'fields': [('id',
+                                                      "Registration UUID; uses the registration's SDK fade overrides."),
+                                                     ('time',
+                                                      "Absolute activation time in seconds on this Preview's clock.")],
+                                          'kind': 'type',
+                                          'signature': '(id: str, time: float)'},
+ 'zipzi.animation.ScheduleRegistration.__repr__': {'children': (),
+                                                   'documentation': 'Return a local summary capped at 1,024 '
+                                                                    'characters, with no RPC/full scan.\n'
+                                                                    '\n'
+                                                                    'Large arrays and bytes show bounded '
+                                                                    'samples/counts. Explicit field access\n'
+                                                                    'still exposes the owned full value; no host '
+                                                                    'resource is created/released.',
+                                                   'example': 'docs/recipes.py',
+                                                   'fields': [],
+                                                   'kind': 'callable',
+                                                   'signature': '() -> str'},
+ 'zipzi.animation.ScheduleRegistration.summary': {'children': (),
+                                                  'documentation': 'Return a bounded, local summary; full fields '
+                                                                   'remain explicitly accessible.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [],
+                                                  'kind': 'callable',
+                                                  'signature': '() -> str'},
+ 'zipzi.animation.SetParameter': {'children': ('zipzi.animation.SetParameter.__repr__',
+                                               'zipzi.animation.SetParameter.summary'),
+                                  'documentation': 'Immutable owned PreviewCommandSetParameter value. Construction '
+                                                   'owns declared collections; reading fields, repr and summary '
+                                                   'performs no IO.\n'
+                                                   '\n'
+                                                   'Fields:\n'
+                                                   'id: Document parameter UUID; the SDK validates existence and '
+                                                   'domain.\n'
+                                                   "value: Finite base value in the parameter's authored domain.",
+                                  'example': 'docs/recipes.py',
+                                  'fields': [('id', 'Document parameter UUID; the SDK validates existence and domain.'),
+                                             ('value', "Finite base value in the parameter's authored domain.")],
+                                  'kind': 'type',
+                                  'signature': '(id: str, value: float)'},
+ 'zipzi.animation.SetParameter.__repr__': {'children': (),
+                                           'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                            'no RPC/full scan.\n'
+                                                            '\n'
+                                                            'Large arrays and bytes show bounded samples/counts. '
+                                                            'Explicit field access\n'
+                                                            'still exposes the owned full value; no host resource is '
+                                                            'created/released.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
+ 'zipzi.animation.SetParameter.summary': {'children': (),
+                                          'documentation': 'Return a bounded, local summary; full fields remain '
+                                                           'explicitly accessible.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'callable',
+                                          'signature': '() -> str'},
+ 'zipzi.animation.SetPhysics': {'children': ('zipzi.animation.SetPhysics.__repr__',
+                                             'zipzi.animation.SetPhysics.summary'),
+                                'documentation': 'Immutable owned PreviewCommandSetPhysics value. Construction owns '
+                                                 'declared collections; reading fields, repr and summary performs no '
+                                                 'IO.\n'
+                                                 '\n'
+                                                 'Fields:\n'
+                                                 'enabled: Enable the SDK Physics stage in this Preview only.\n'
+                                                 'stabilized_start: Use the SDK stabilized-start policy on canonical '
+                                                 'replay.',
+                                'example': 'docs/recipes.py',
+                                'fields': [('enabled', 'Enable the SDK Physics stage in this Preview only.'),
+                                           ('stabilized_start',
+                                            'Use the SDK stabilized-start policy on canonical replay.')],
+                                'kind': 'type',
+                                'signature': '(enabled: bool, stabilized_start: bool)'},
+ 'zipzi.animation.SetPhysics.__repr__': {'children': (),
+                                         'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                          'RPC/full scan.\n'
+                                                          '\n'
+                                                          'Large arrays and bytes show bounded samples/counts. '
+                                                          'Explicit field access\n'
+                                                          'still exposes the owned full value; no host resource is '
+                                                          'created/released.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [],
+                                         'kind': 'callable',
+                                         'signature': '() -> str'},
+ 'zipzi.animation.SetPhysics.summary': {'children': (),
+                                        'documentation': 'Return a bounded, local summary; full fields remain '
+                                                         'explicitly accessible.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'callable',
+                                        'signature': '() -> str'},
+ 'zipzi.animation.State': {'children': ('zipzi.animation.State.__repr__', 'zipzi.animation.State.summary'),
+                           'documentation': 'Immutable owned PreviewState value. Construction owns declared '
+                                            'collections; reading fields, repr and summary performs no IO.\n'
+                                            '\n'
+                                            'Fields:\n'
+                                            'sequence: Monotonic accepted operation ordinal, including cancelled '
+                                            'sample requests.\n'
+                                            'time: Actual SDK clock after the last completed operation, in seconds.',
+                           'example': 'docs/recipes.py',
+                           'fields': [('sequence',
+                                       'Monotonic accepted operation ordinal, including cancelled sample requests.'),
+                                      ('time', 'Actual SDK clock after the last completed operation, in seconds.')],
+                           'kind': 'type',
+                           'signature': '(sequence: int, time: float)'},
+ 'zipzi.animation.State.__repr__': {'children': (),
+                                    'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                     'RPC/full scan.\n'
+                                                     '\n'
+                                                     'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                     'field access\n'
+                                                     'still exposes the owned full value; no host resource is '
+                                                     'created/released.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [],
+                                    'kind': 'callable',
+                                    'signature': '() -> str'},
+ 'zipzi.animation.State.summary': {'children': (),
+                                   'documentation': 'Return a bounded, local summary; full fields remain explicitly '
+                                                    'accessible.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'signature': '() -> str'},
  'zipzi.bindings': {'children': ('zipzi.bindings.Appearance',
                                  'zipzi.bindings.Axis',
                                  'zipzi.bindings.AxisSnapshot',
@@ -4671,8 +5218,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.MotionEditSetTrackTarget',
                                  'zipzi.modeling.MotionEditTransferKeys',
                                  'zipzi.modeling.MotionEvent',
+                                 'zipzi.modeling.MotionEventFired',
                                  'zipzi.modeling.MotionGroup',
                                  'zipzi.modeling.MotionKey',
+                                 'zipzi.modeling.MotionPlaybackPosition',
                                  'zipzi.modeling.MotionPoint',
                                  'zipzi.modeling.MotionRegistration',
                                  'zipzi.modeling.MotionSegment',
@@ -4680,6 +5229,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.MotionSegmentInverseStepped',
                                  'zipzi.modeling.MotionSegmentLinear',
                                  'zipzi.modeling.MotionSegmentStepped',
+                                 'zipzi.modeling.MotionSnapshot',
                                  'zipzi.modeling.MotionTrack',
                                  'zipzi.modeling.MotionTrackTarget',
                                  'zipzi.modeling.MotionTrackTargetModel',
@@ -4756,6 +5306,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.PhysicsNode',
                                  'zipzi.modeling.PhysicsNormalization',
                                  'zipzi.modeling.PhysicsOutput',
+                                 'zipzi.modeling.PhysicsOutputSnapshot',
                                  'zipzi.modeling.PhysicsPatch',
                                  'zipzi.modeling.PhysicsProperty',
                                  'zipzi.modeling.PhysicsPropertyAngleNormalization',
@@ -4778,6 +5329,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.PhysicsPropertyVertexRadius',
                                  'zipzi.modeling.PhysicsRange',
                                  'zipzi.modeling.PhysicsRigPatch',
+                                 'zipzi.modeling.PhysicsRigSnapshot',
                                  'zipzi.modeling.PhysicsSetting',
                                  'zipzi.modeling.PhysicsTarget',
                                  'zipzi.modeling.PhysicsTargetResolved',
@@ -4813,6 +5365,17 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.PosePartRefUnresolved',
                                  'zipzi.modeling.PosePartRefUnspecified',
                                  'zipzi.modeling.PreciseVec2',
+                                 'zipzi.modeling.PreviewBatch',
+                                 'zipzi.modeling.PreviewCommand',
+                                 'zipzi.modeling.PreviewCommandReset',
+                                 'zipzi.modeling.PreviewCommandScheduleExpression',
+                                 'zipzi.modeling.PreviewCommandScheduleMotion',
+                                 'zipzi.modeling.PreviewCommandScheduleParameter',
+                                 'zipzi.modeling.PreviewCommandScheduleRegistration',
+                                 'zipzi.modeling.PreviewCommandSetParameter',
+                                 'zipzi.modeling.PreviewCommandSetPhysics',
+                                 'zipzi.modeling.PreviewFrame',
+                                 'zipzi.modeling.PreviewState',
                                  'zipzi.modeling.ProjectDiagnostic',
                                  'zipzi.modeling.ProjectReport',
                                  'zipzi.modeling.ProjectRequest',
@@ -17448,6 +18011,41 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '() -> str'},
+ 'zipzi.modeling.MotionEventFired': {'children': ('zipzi.modeling.MotionEventFired.__repr__',
+                                                  'zipzi.modeling.MotionEventFired.summary'),
+                                     'documentation': 'Immutable owned MotionEventFired value. Construction owns '
+                                                      'declared collections; reading fields, repr and summary performs '
+                                                      'no IO.\n'
+                                                      '\n'
+                                                      'Fields:\n'
+                                                      'motion_id: Source clip UUID.\n'
+                                                      'event_id: Source event UUID.\n'
+                                                      'value: User-authored event text.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [('motion_id', 'Source clip UUID.'),
+                                                ('event_id', 'Source event UUID.'),
+                                                ('value', 'User-authored event text.')],
+                                     'kind': 'type',
+                                     'signature': '(motion_id: str, event_id: str, value: str)'},
+ 'zipzi.modeling.MotionEventFired.__repr__': {'children': (),
+                                              'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                               'with no RPC/full scan.\n'
+                                                               '\n'
+                                                               'Large arrays and bytes show bounded samples/counts. '
+                                                               'Explicit field access\n'
+                                                               'still exposes the owned full value; no host resource '
+                                                               'is created/released.',
+                                              'example': 'docs/recipes.py',
+                                              'fields': [],
+                                              'kind': 'callable',
+                                              'signature': '() -> str'},
+ 'zipzi.modeling.MotionEventFired.summary': {'children': (),
+                                             'documentation': 'Return a bounded, local summary; full fields remain '
+                                                              'explicitly accessible.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
  'zipzi.modeling.MotionGroup': {'children': ('zipzi.modeling.MotionGroup.__repr__',
                                              'zipzi.modeling.MotionGroup.summary'),
                                 'documentation': 'Immutable owned MotionGroup value. Construction owns declared '
@@ -17530,6 +18128,56 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                       'fields': [],
                                       'kind': 'callable',
                                       'signature': '() -> str'},
+ 'zipzi.modeling.MotionPlaybackPosition': {'children': ('zipzi.modeling.MotionPlaybackPosition.__repr__',
+                                                        'zipzi.modeling.MotionPlaybackPosition.summary'),
+                                           'documentation': 'Immutable owned MotionPlaybackPosition value. '
+                                                            'Construction owns declared collections; reading fields, '
+                                                            'repr and summary performs no IO.\n'
+                                                            '\n'
+                                                            'Fields:\n'
+                                                            'motion_id: Source motion clip UUID for this SDK playback '
+                                                            'position.\n'
+                                                            'local_time: SDK local sample time in seconds, including '
+                                                            'the loop tail.\n'
+                                                            'period: SDK loop period in seconds, including the FPS '
+                                                            'tail.\n'
+                                                            'loop_index: Canonical SDK loop index; exact seams belong '
+                                                            'to the preceding loop.\n'
+                                                            'cycle_origin: Absolute preview-clock time at the start of '
+                                                            'this cycle.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [('motion_id',
+                                                       'Source motion clip UUID for this SDK playback position.'),
+                                                      ('local_time',
+                                                       'SDK local sample time in seconds, including the loop tail.'),
+                                                      ('period', 'SDK loop period in seconds, including the FPS tail.'),
+                                                      ('loop_index',
+                                                       'Canonical SDK loop index; exact seams belong to the preceding '
+                                                       'loop.'),
+                                                      ('cycle_origin',
+                                                       'Absolute preview-clock time at the start of this cycle.')],
+                                           'kind': 'type',
+                                           'signature': '(motion_id: str, local_time: float, period: float, '
+                                                        'loop_index: int, cycle_origin: float)'},
+ 'zipzi.modeling.MotionPlaybackPosition.__repr__': {'children': (),
+                                                    'documentation': 'Return a local summary capped at 1,024 '
+                                                                     'characters, with no RPC/full scan.\n'
+                                                                     '\n'
+                                                                     'Large arrays and bytes show bounded '
+                                                                     'samples/counts. Explicit field access\n'
+                                                                     'still exposes the owned full value; no host '
+                                                                     'resource is created/released.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [],
+                                                    'kind': 'callable',
+                                                    'signature': '() -> str'},
+ 'zipzi.modeling.MotionPlaybackPosition.summary': {'children': (),
+                                                   'documentation': 'Return a bounded, local summary; full fields '
+                                                                    'remain explicitly accessible.',
+                                                   'example': 'docs/recipes.py',
+                                                   'fields': [],
+                                                   'kind': 'callable',
+                                                   'signature': '() -> str'},
  'zipzi.modeling.MotionPoint': {'children': ('zipzi.modeling.MotionPoint.__repr__',
                                              'zipzi.modeling.MotionPoint.summary'),
                                 'documentation': 'Immutable owned MotionPoint value. Construction owns declared '
@@ -17775,6 +18423,95 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'fields': [],
                                                  'kind': 'callable',
                                                  'signature': '() -> str'},
+ 'zipzi.modeling.MotionSnapshot': {'children': ('zipzi.modeling.MotionSnapshot.__repr__',
+                                                'zipzi.modeling.MotionSnapshot.summary'),
+                                   'documentation': 'Immutable owned MotionSnapshot value. Construction owns declared '
+                                                    'collections; reading fields, repr and summary performs no IO.\n'
+                                                    '\n'
+                                                    'Fields:\n'
+                                                    'physics: Optional inspector observations. Collected explicitly by '
+                                                    'a host after\n'
+                                                    'evaluation. Advance/seek results leave this empty; populate it '
+                                                    'with\n'
+                                                    '`snapshot.physics = preview.physics_snapshot();` when displaying '
+                                                    'an inspector.\n'
+                                                    'Internal observations are retained in replay checkpoints for '
+                                                    'consistent seeks.\n'
+                                                    'time: Absolute preview time in seconds.\n'
+                                                    'parameters: Final parameter values keyed by parameter UUID.\n'
+                                                    'part_opacity_channels: PartOpacity curves write virtual controls '
+                                                    'when no real parameter has the Part runtime ID.\n'
+                                                    'part_opacities: Pose-produced opacities keyed by Part UUID.\n'
+                                                    'model_opacity: Model Opacity channel, separate from the drawable '
+                                                    'geometry opacity.\n'
+                                                    'active_motions: Active clip UUIDs in queue order; repeated '
+                                                    'activations may repeat a UUID.\n'
+                                                    'active_expressions: Active expression UUIDs in queue order, '
+                                                    'including fading-out entries.\n'
+                                                    'fired_events: Events crossed by the last update, not accumulated '
+                                                    'across all seek steps.\n'
+                                                    'coverage: Model EyeBlink/LipSync mappings and unsupported Model '
+                                                    'IDs are reported.\n'
+                                                    'motion_positions: SDK sampling coordinates, including the '
+                                                    'duration + 1 / FPS loop tail.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [('physics',
+                                               'Optional inspector observations. Collected explicitly by a host after\n'
+                                               'evaluation. Advance/seek results leave this empty; populate it with\n'
+                                               '`snapshot.physics = preview.physics_snapshot();` when displaying an '
+                                               'inspector.\n'
+                                               'Internal observations are retained in replay checkpoints for '
+                                               'consistent seeks.'),
+                                              ('time', 'Absolute preview time in seconds.'),
+                                              ('parameters', 'Final parameter values keyed by parameter UUID.'),
+                                              ('part_opacity_channels',
+                                               'PartOpacity curves write virtual controls when no real parameter has '
+                                               'the Part runtime ID.'),
+                                              ('part_opacities', 'Pose-produced opacities keyed by Part UUID.'),
+                                              ('model_opacity',
+                                               'Model Opacity channel, separate from the drawable geometry opacity.'),
+                                              ('active_motions',
+                                               'Active clip UUIDs in queue order; repeated activations may repeat a '
+                                               'UUID.'),
+                                              ('active_expressions',
+                                               'Active expression UUIDs in queue order, including fading-out entries.'),
+                                              ('fired_events',
+                                               'Events crossed by the last update, not accumulated across all seek '
+                                               'steps.'),
+                                              ('coverage',
+                                               'Model EyeBlink/LipSync mappings and unsupported Model IDs are '
+                                               'reported.'),
+                                              ('motion_positions',
+                                               'SDK sampling coordinates, including the duration + 1 / FPS loop '
+                                               'tail.')],
+                                   'kind': 'type',
+                                   'signature': '(physics: tuple[PhysicsRigSnapshot, ...] = '
+                                                'field(default_factory=lambda: tuple((read_PhysicsRigSnapshot(v0) for '
+                                                'v0 in sequence([])))), time: float, parameters: _Mapping[str, float], '
+                                                'part_opacity_channels: _Mapping[str, float], part_opacities: '
+                                                '_Mapping[str, float], model_opacity: float, active_motions: '
+                                                'tuple[str, ...], active_expressions: tuple[str, ...], fired_events: '
+                                                'tuple[MotionEventFired, ...], coverage: tuple[str, ...], '
+                                                'motion_positions: tuple[MotionPlaybackPosition, ...])'},
+ 'zipzi.modeling.MotionSnapshot.__repr__': {'children': (),
+                                            'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                             'no RPC/full scan.\n'
+                                                             '\n'
+                                                             'Large arrays and bytes show bounded samples/counts. '
+                                                             'Explicit field access\n'
+                                                             'still exposes the owned full value; no host resource is '
+                                                             'created/released.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
+ 'zipzi.modeling.MotionSnapshot.summary': {'children': (),
+                                           'documentation': 'Return a bounded, local summary; full fields remain '
+                                                            'explicitly accessible.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
  'zipzi.modeling.MotionTrack': {'children': ('zipzi.modeling.MotionTrack.__repr__',
                                              'zipzi.modeling.MotionTrack.summary'),
                                 'documentation': 'Immutable owned MotionTrack value. Construction owns declared '
@@ -20921,6 +21658,49 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'fields': [],
                                           'kind': 'callable',
                                           'signature': '() -> str'},
+ 'zipzi.modeling.PhysicsOutputSnapshot': {'children': ('zipzi.modeling.PhysicsOutputSnapshot.__repr__',
+                                                       'zipzi.modeling.PhysicsOutputSnapshot.summary'),
+                                          'documentation': 'Immutable owned PhysicsOutputSnapshot value. Construction '
+                                                           'owns declared collections; reading fields, repr and '
+                                                           'summary performs no IO.\n'
+                                                           '\n'
+                                                           'Fields:\n'
+                                                           'raw: Raw output value before weight and parameter '
+                                                           'clamping.\n'
+                                                           'before: Parameter value immediately before this output.\n'
+                                                           'after: Parameter value after applying this output and '
+                                                           'clamping.\n'
+                                                           'clamped: Whether the SDK clamped this output to the target '
+                                                           'parameter range.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [('raw', 'Raw output value before weight and parameter clamping.'),
+                                                     ('before', 'Parameter value immediately before this output.'),
+                                                     ('after',
+                                                      'Parameter value after applying this output and clamping.'),
+                                                     ('clamped',
+                                                      'Whether the SDK clamped this output to the target parameter '
+                                                      'range.')],
+                                          'kind': 'type',
+                                          'signature': '(raw: float, before: float, after: float, clamped: bool)'},
+ 'zipzi.modeling.PhysicsOutputSnapshot.__repr__': {'children': (),
+                                                   'documentation': 'Return a local summary capped at 1,024 '
+                                                                    'characters, with no RPC/full scan.\n'
+                                                                    '\n'
+                                                                    'Large arrays and bytes show bounded '
+                                                                    'samples/counts. Explicit field access\n'
+                                                                    'still exposes the owned full value; no host '
+                                                                    'resource is created/released.',
+                                                   'example': 'docs/recipes.py',
+                                                   'fields': [],
+                                                   'kind': 'callable',
+                                                   'signature': '() -> str'},
+ 'zipzi.modeling.PhysicsOutputSnapshot.summary': {'children': (),
+                                                  'documentation': 'Return a bounded, local summary; full fields '
+                                                                   'remain explicitly accessible.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [],
+                                                  'kind': 'callable',
+                                                  'signature': '() -> str'},
  'zipzi.modeling.PhysicsPatch': {'children': ('zipzi.modeling.PhysicsPatch.__repr__',
                                               'zipzi.modeling.PhysicsPatch.summary'),
                                  'documentation': 'Immutable owned PhysicsPatch value. Construction owns declared '
@@ -21745,6 +22525,68 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'fields': [],
                                             'kind': 'callable',
                                             'signature': '() -> str'},
+ 'zipzi.modeling.PhysicsRigSnapshot': {'children': ('zipzi.modeling.PhysicsRigSnapshot.__repr__',
+                                                    'zipzi.modeling.PhysicsRigSnapshot.summary'),
+                                       'documentation': 'Immutable owned PhysicsRigSnapshot value. Construction owns '
+                                                        'declared collections; reading fields, repr and summary '
+                                                        'performs no IO.\n'
+                                                        '\n'
+                                                        'Fields:\n'
+                                                        'id: Native physics group UUID.\n'
+                                                        'input_ids: Input channel UUIDs aligned with inputs.\n'
+                                                        'output_ids: Output channel UUIDs aligned with outputs.\n'
+                                                        'node_ids: Particle node UUIDs aligned with particles.\n'
+                                                        'particles: Latest solved particle XY positions in the SDK '
+                                                        'solver coordinate system.\n'
+                                                        'input_angle: Weighted, normalized angle in degrees used by '
+                                                        'the latest solved step.\n'
+                                                        'Rotate the Y-down solver coordinates by this angle to display '
+                                                        'a fixed\n'
+                                                        'gravity direction with rotating input axes.\n'
+                                                        'inputs: Latest normalized input values in channel order.\n'
+                                                        'outputs: Latest output observations; None marks an '
+                                                        'unavailable channel.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [('id', 'Native physics group UUID.'),
+                                                  ('input_ids', 'Input channel UUIDs aligned with inputs.'),
+                                                  ('output_ids', 'Output channel UUIDs aligned with outputs.'),
+                                                  ('node_ids', 'Particle node UUIDs aligned with particles.'),
+                                                  ('particles',
+                                                   'Latest solved particle XY positions in the SDK solver coordinate '
+                                                   'system.'),
+                                                  ('input_angle',
+                                                   'Weighted, normalized angle in degrees used by the latest solved '
+                                                   'step.\n'
+                                                   'Rotate the Y-down solver coordinates by this angle to display a '
+                                                   'fixed\n'
+                                                   'gravity direction with rotating input axes.'),
+                                                  ('inputs', 'Latest normalized input values in channel order.'),
+                                                  ('outputs',
+                                                   'Latest output observations; None marks an unavailable channel.')],
+                                       'kind': 'type',
+                                       'signature': '(id: str, input_ids: tuple[str, ...], output_ids: tuple[str, '
+                                                    '...], node_ids: tuple[str, ...], particles: tuple[tuple[float, '
+                                                    'float], ...], input_angle: float, inputs: tuple[float, ...], '
+                                                    'outputs: tuple[PhysicsOutputSnapshot | None, ...])'},
+ 'zipzi.modeling.PhysicsRigSnapshot.__repr__': {'children': (),
+                                                'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                 'with no RPC/full scan.\n'
+                                                                 '\n'
+                                                                 'Large arrays and bytes show bounded samples/counts. '
+                                                                 'Explicit field access\n'
+                                                                 'still exposes the owned full value; no host resource '
+                                                                 'is created/released.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'callable',
+                                                'signature': '() -> str'},
+ 'zipzi.modeling.PhysicsRigSnapshot.summary': {'children': (),
+                                               'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                'explicitly accessible.',
+                                               'example': 'docs/recipes.py',
+                                               'fields': [],
+                                               'kind': 'callable',
+                                               'signature': '() -> str'},
  'zipzi.modeling.PhysicsSetting': {'children': ('zipzi.modeling.PhysicsSetting.__repr__',
                                                 'zipzi.modeling.PhysicsSetting.summary'),
                                    'documentation': 'Immutable owned PhysicsSetting value. Construction owns declared '
@@ -22944,6 +23786,401 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'geometry or pose.')],
                                 'kind': 'type',
                                 'signature': '(x: float, y: float)'},
+ 'zipzi.modeling.PreviewBatch': {'children': ('zipzi.modeling.PreviewBatch.__repr__',
+                                              'zipzi.modeling.PreviewBatch.summary'),
+                                 'documentation': 'Immutable owned PreviewBatch value. Construction owns declared '
+                                                  'collections; reading fields, repr and summary performs no IO.\n'
+                                                  '\n'
+                                                  'Fields:\n'
+                                                  'sequence: Accepted sample request ordinal shared by these ordered '
+                                                  'frames.\n'
+                                                  'frames: Owned frames in requested target order, retaining duplicate '
+                                                  'and backward targets.',
+                                 'example': 'docs/recipes.py',
+                                 'fields': [('sequence',
+                                             'Accepted sample request ordinal shared by these ordered frames.'),
+                                            ('frames',
+                                             'Owned frames in requested target order, retaining duplicate and backward '
+                                             'targets.')],
+                                 'kind': 'type',
+                                 'signature': '(sequence: int, frames: tuple[PreviewFrame, ...])'},
+ 'zipzi.modeling.PreviewBatch.__repr__': {'children': (),
+                                          'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                           'RPC/full scan.\n'
+                                                           '\n'
+                                                           'Large arrays and bytes show bounded samples/counts. '
+                                                           'Explicit field access\n'
+                                                           'still exposes the owned full value; no host resource is '
+                                                           'created/released.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'callable',
+                                          'signature': '() -> str'},
+ 'zipzi.modeling.PreviewBatch.summary': {'children': (),
+                                         'documentation': 'Return a bounded, local summary; full fields remain '
+                                                          'explicitly accessible.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [],
+                                         'kind': 'callable',
+                                         'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommand': {'children': (),
+                                   'documentation': 'Typed public API entry.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [],
+                                   'kind': 'value',
+                                   'signature': ''},
+ 'zipzi.modeling.PreviewCommandReset': {'children': ('zipzi.modeling.PreviewCommandReset.__repr__',
+                                                     'zipzi.modeling.PreviewCommandReset.summary'),
+                                        'documentation': 'Immutable owned PreviewCommandReset value. Construction owns '
+                                                         'declared collections; reading fields, repr and summary '
+                                                         'performs no IO.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'type',
+                                        'signature': '()'},
+ 'zipzi.modeling.PreviewCommandReset.__repr__': {'children': (),
+                                                 'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                  'with no RPC/full scan.\n'
+                                                                  '\n'
+                                                                  'Large arrays and bytes show bounded samples/counts. '
+                                                                  'Explicit field access\n'
+                                                                  'still exposes the owned full value; no host '
+                                                                  'resource is created/released.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'callable',
+                                                 'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandReset.summary': {'children': (),
+                                                'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                 'explicitly accessible.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'callable',
+                                                'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandScheduleExpression': {'children': ('zipzi.modeling.PreviewCommandScheduleExpression.__repr__',
+                                                                  'zipzi.modeling.PreviewCommandScheduleExpression.summary'),
+                                                     'documentation': 'Immutable owned '
+                                                                      'PreviewCommandScheduleExpression value. '
+                                                                      'Construction owns declared collections; reading '
+                                                                      'fields, repr and summary performs no IO.\n'
+                                                                      '\n'
+                                                                      'Fields:\n'
+                                                                      'id: Native expression asset UUID.\n'
+                                                                      'time: Absolute activation time in seconds on '
+                                                                      "this Preview's clock.",
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [('id', 'Native expression asset UUID.'),
+                                                                ('time',
+                                                                 'Absolute activation time in seconds on this '
+                                                                 "Preview's clock.")],
+                                                     'kind': 'type',
+                                                     'signature': '(id: str, time: float)'},
+ 'zipzi.modeling.PreviewCommandScheduleExpression.__repr__': {'children': (),
+                                                              'documentation': 'Return a local summary capped at 1,024 '
+                                                                               'characters, with no RPC/full scan.\n'
+                                                                               '\n'
+                                                                               'Large arrays and bytes show bounded '
+                                                                               'samples/counts. Explicit field access\n'
+                                                                               'still exposes the owned full value; no '
+                                                                               'host resource is created/released.',
+                                                              'example': 'docs/recipes.py',
+                                                              'fields': [],
+                                                              'kind': 'callable',
+                                                              'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandScheduleExpression.summary': {'children': (),
+                                                             'documentation': 'Return a bounded, local summary; full '
+                                                                              'fields remain explicitly accessible.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'callable',
+                                                             'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandScheduleMotion': {'children': ('zipzi.modeling.PreviewCommandScheduleMotion.__repr__',
+                                                              'zipzi.modeling.PreviewCommandScheduleMotion.summary'),
+                                                 'documentation': 'Immutable owned PreviewCommandScheduleMotion value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.\n'
+                                                                  '\n'
+                                                                  'Fields:\n'
+                                                                  "id: Clip UUID; uses the clip's own fades.\n"
+                                                                  'time: Absolute activation time in seconds on this '
+                                                                  "Preview's clock.",
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [('id', "Clip UUID; uses the clip's own fades."),
+                                                            ('time',
+                                                             "Absolute activation time in seconds on this Preview's "
+                                                             'clock.')],
+                                                 'kind': 'type',
+                                                 'signature': '(id: str, time: float)'},
+ 'zipzi.modeling.PreviewCommandScheduleMotion.__repr__': {'children': (),
+                                                          'documentation': 'Return a local summary capped at 1,024 '
+                                                                           'characters, with no RPC/full scan.\n'
+                                                                           '\n'
+                                                                           'Large arrays and bytes show bounded '
+                                                                           'samples/counts. Explicit field access\n'
+                                                                           'still exposes the owned full value; no '
+                                                                           'host resource is created/released.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandScheduleMotion.summary': {'children': (),
+                                                         'documentation': 'Return a bounded, local summary; full '
+                                                                          'fields remain explicitly accessible.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [],
+                                                         'kind': 'callable',
+                                                         'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandScheduleParameter': {'children': ('zipzi.modeling.PreviewCommandScheduleParameter.__repr__',
+                                                                 'zipzi.modeling.PreviewCommandScheduleParameter.summary'),
+                                                    'documentation': 'Immutable owned PreviewCommandScheduleParameter '
+                                                                     'value. Construction owns declared collections; '
+                                                                     'reading fields, repr and summary performs no '
+                                                                     'IO.\n'
+                                                                     '\n'
+                                                                     'Fields:\n'
+                                                                     'id: Document parameter UUID for an SDK input '
+                                                                     'activation.\n'
+                                                                     'time: Absolute activation time in seconds on '
+                                                                     "this Preview's clock.\n"
+                                                                     'value: Finite parameter input in the authored '
+                                                                     'parameter domain.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [('id',
+                                                                'Document parameter UUID for an SDK input activation.'),
+                                                               ('time',
+                                                                "Absolute activation time in seconds on this Preview's "
+                                                                'clock.'),
+                                                               ('value',
+                                                                'Finite parameter input in the authored parameter '
+                                                                'domain.')],
+                                                    'kind': 'type',
+                                                    'signature': '(id: str, time: float, value: float)'},
+ 'zipzi.modeling.PreviewCommandScheduleParameter.__repr__': {'children': (),
+                                                             'documentation': 'Return a local summary capped at 1,024 '
+                                                                              'characters, with no RPC/full scan.\n'
+                                                                              '\n'
+                                                                              'Large arrays and bytes show bounded '
+                                                                              'samples/counts. Explicit field access\n'
+                                                                              'still exposes the owned full value; no '
+                                                                              'host resource is created/released.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'callable',
+                                                             'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandScheduleParameter.summary': {'children': (),
+                                                            'documentation': 'Return a bounded, local summary; full '
+                                                                             'fields remain explicitly accessible.',
+                                                            'example': 'docs/recipes.py',
+                                                            'fields': [],
+                                                            'kind': 'callable',
+                                                            'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandScheduleRegistration': {'children': ('zipzi.modeling.PreviewCommandScheduleRegistration.__repr__',
+                                                                    'zipzi.modeling.PreviewCommandScheduleRegistration.summary'),
+                                                       'documentation': 'Immutable owned '
+                                                                        'PreviewCommandScheduleRegistration value. '
+                                                                        'Construction owns declared collections; '
+                                                                        'reading fields, repr and summary performs no '
+                                                                        'IO.\n'
+                                                                        '\n'
+                                                                        'Fields:\n'
+                                                                        'id: Registration UUID; uses the '
+                                                                        "registration's SDK fade overrides.\n"
+                                                                        'time: Absolute activation time in seconds on '
+                                                                        "this Preview's clock.",
+                                                       'example': 'docs/recipes.py',
+                                                       'fields': [('id',
+                                                                   "Registration UUID; uses the registration's SDK "
+                                                                   'fade overrides.'),
+                                                                  ('time',
+                                                                   'Absolute activation time in seconds on this '
+                                                                   "Preview's clock.")],
+                                                       'kind': 'type',
+                                                       'signature': '(id: str, time: float)'},
+ 'zipzi.modeling.PreviewCommandScheduleRegistration.__repr__': {'children': (),
+                                                                'documentation': 'Return a local summary capped at '
+                                                                                 '1,024 characters, with no RPC/full '
+                                                                                 'scan.\n'
+                                                                                 '\n'
+                                                                                 'Large arrays and bytes show bounded '
+                                                                                 'samples/counts. Explicit field '
+                                                                                 'access\n'
+                                                                                 'still exposes the owned full value; '
+                                                                                 'no host resource is '
+                                                                                 'created/released.',
+                                                                'example': 'docs/recipes.py',
+                                                                'fields': [],
+                                                                'kind': 'callable',
+                                                                'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandScheduleRegistration.summary': {'children': (),
+                                                               'documentation': 'Return a bounded, local summary; full '
+                                                                                'fields remain explicitly accessible.',
+                                                               'example': 'docs/recipes.py',
+                                                               'fields': [],
+                                                               'kind': 'callable',
+                                                               'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandSetParameter': {'children': ('zipzi.modeling.PreviewCommandSetParameter.__repr__',
+                                                            'zipzi.modeling.PreviewCommandSetParameter.summary'),
+                                               'documentation': 'Immutable owned PreviewCommandSetParameter value. '
+                                                                'Construction owns declared collections; reading '
+                                                                'fields, repr and summary performs no IO.\n'
+                                                                '\n'
+                                                                'Fields:\n'
+                                                                'id: Document parameter UUID; the SDK validates '
+                                                                'existence and domain.\n'
+                                                                "value: Finite base value in the parameter's authored "
+                                                                'domain.',
+                                               'example': 'docs/recipes.py',
+                                               'fields': [('id',
+                                                           'Document parameter UUID; the SDK validates existence and '
+                                                           'domain.'),
+                                                          ('value',
+                                                           "Finite base value in the parameter's authored domain.")],
+                                               'kind': 'type',
+                                               'signature': '(id: str, value: float)'},
+ 'zipzi.modeling.PreviewCommandSetParameter.__repr__': {'children': (),
+                                                        'documentation': 'Return a local summary capped at 1,024 '
+                                                                         'characters, with no RPC/full scan.\n'
+                                                                         '\n'
+                                                                         'Large arrays and bytes show bounded '
+                                                                         'samples/counts. Explicit field access\n'
+                                                                         'still exposes the owned full value; no host '
+                                                                         'resource is created/released.',
+                                                        'example': 'docs/recipes.py',
+                                                        'fields': [],
+                                                        'kind': 'callable',
+                                                        'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandSetParameter.summary': {'children': (),
+                                                       'documentation': 'Return a bounded, local summary; full fields '
+                                                                        'remain explicitly accessible.',
+                                                       'example': 'docs/recipes.py',
+                                                       'fields': [],
+                                                       'kind': 'callable',
+                                                       'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandSetPhysics': {'children': ('zipzi.modeling.PreviewCommandSetPhysics.__repr__',
+                                                          'zipzi.modeling.PreviewCommandSetPhysics.summary'),
+                                             'documentation': 'Immutable owned PreviewCommandSetPhysics value. '
+                                                              'Construction owns declared collections; reading fields, '
+                                                              'repr and summary performs no IO.\n'
+                                                              '\n'
+                                                              'Fields:\n'
+                                                              'enabled: Enable the SDK Physics stage in this Preview '
+                                                              'only.\n'
+                                                              'stabilized_start: Use the SDK stabilized-start policy '
+                                                              'on canonical replay.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [('enabled',
+                                                         'Enable the SDK Physics stage in this Preview only.'),
+                                                        ('stabilized_start',
+                                                         'Use the SDK stabilized-start policy on canonical replay.')],
+                                             'kind': 'type',
+                                             'signature': '(enabled: bool, stabilized_start: bool)'},
+ 'zipzi.modeling.PreviewCommandSetPhysics.__repr__': {'children': (),
+                                                      'documentation': 'Return a local summary capped at 1,024 '
+                                                                       'characters, with no RPC/full scan.\n'
+                                                                       '\n'
+                                                                       'Large arrays and bytes show bounded '
+                                                                       'samples/counts. Explicit field access\n'
+                                                                       'still exposes the owned full value; no host '
+                                                                       'resource is created/released.',
+                                                      'example': 'docs/recipes.py',
+                                                      'fields': [],
+                                                      'kind': 'callable',
+                                                      'signature': '() -> str'},
+ 'zipzi.modeling.PreviewCommandSetPhysics.summary': {'children': (),
+                                                     'documentation': 'Return a bounded, local summary; full fields '
+                                                                      'remain explicitly accessible.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'callable',
+                                                     'signature': '() -> str'},
+ 'zipzi.modeling.PreviewFrame': {'children': ('zipzi.modeling.PreviewFrame.__repr__',
+                                              'zipzi.modeling.PreviewFrame.summary'),
+                                 'documentation': 'Immutable owned PreviewFrame value. Construction owns declared '
+                                                  'collections; reading fields, repr and summary performs no IO.\n'
+                                                  '\n'
+                                                  'Fields:\n'
+                                                  'preview_id: Runtime-wide Preview serial; pair with the outer '
+                                                  'Source.runtime for view identity.\n'
+                                                  'sequence: Accepted sample request ordinal; pair with the outer '
+                                                  'Source and Preview identity.\n'
+                                                  'index: Zero-based target slot in the ordered sample request.\n'
+                                                  'motion: SDK Motion/Expression/Physics/Pose result and actual sample '
+                                                  'coordinates.\n'
+                                                  'geometry: Evaluated CPU geometry when requested; model_opacity '
+                                                  'remains a separate SDK channel.',
+                                 'example': 'docs/recipes.py',
+                                 'fields': [('preview_id',
+                                             'Runtime-wide Preview serial; pair with the outer Source.runtime for view '
+                                             'identity.'),
+                                            ('sequence',
+                                             'Accepted sample request ordinal; pair with the outer Source and Preview '
+                                             'identity.'),
+                                            ('index', 'Zero-based target slot in the ordered sample request.'),
+                                            ('motion',
+                                             'SDK Motion/Expression/Physics/Pose result and actual sample '
+                                             'coordinates.'),
+                                            ('geometry',
+                                             'Evaluated CPU geometry when requested; model_opacity remains a separate '
+                                             'SDK channel.')],
+                                 'kind': 'type',
+                                 'signature': '(preview_id: int, sequence: int, index: int, motion: MotionSnapshot, '
+                                              'geometry: DrawableFrame | None = None)'},
+ 'zipzi.modeling.PreviewFrame.__repr__': {'children': (),
+                                          'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                           'RPC/full scan.\n'
+                                                           '\n'
+                                                           'Large arrays and bytes show bounded samples/counts. '
+                                                           'Explicit field access\n'
+                                                           'still exposes the owned full value; no host resource is '
+                                                           'created/released.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'callable',
+                                          'signature': '() -> str'},
+ 'zipzi.modeling.PreviewFrame.summary': {'children': (),
+                                         'documentation': 'Return a bounded, local summary; full fields remain '
+                                                          'explicitly accessible.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [],
+                                         'kind': 'callable',
+                                         'signature': '() -> str'},
+ 'zipzi.modeling.PreviewState': {'children': ('zipzi.modeling.PreviewState.__repr__',
+                                              'zipzi.modeling.PreviewState.summary'),
+                                 'documentation': 'Immutable owned PreviewState value. Construction owns declared '
+                                                  'collections; reading fields, repr and summary performs no IO.\n'
+                                                  '\n'
+                                                  'Fields:\n'
+                                                  'sequence: Monotonic accepted operation ordinal, including cancelled '
+                                                  'sample requests.\n'
+                                                  'time: Actual SDK clock after the last completed operation, in '
+                                                  'seconds.',
+                                 'example': 'docs/recipes.py',
+                                 'fields': [('sequence',
+                                             'Monotonic accepted operation ordinal, including cancelled sample '
+                                             'requests.'),
+                                            ('time',
+                                             'Actual SDK clock after the last completed operation, in seconds.')],
+                                 'kind': 'type',
+                                 'signature': '(sequence: int, time: float)'},
+ 'zipzi.modeling.PreviewState.__repr__': {'children': (),
+                                          'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                           'RPC/full scan.\n'
+                                                           '\n'
+                                                           'Large arrays and bytes show bounded samples/counts. '
+                                                           'Explicit field access\n'
+                                                           'still exposes the owned full value; no host resource is '
+                                                           'created/released.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'callable',
+                                          'signature': '() -> str'},
+ 'zipzi.modeling.PreviewState.summary': {'children': (),
+                                         'documentation': 'Return a bounded, local summary; full fields remain '
+                                                          'explicitly accessible.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [],
+                                         'kind': 'callable',
+                                         'signature': '() -> str'},
  'zipzi.modeling.ProjectDiagnostic': {'children': ('zipzi.modeling.ProjectDiagnostic.__repr__',
                                                    'zipzi.modeling.ProjectDiagnostic.summary'),
                                       'documentation': 'Immutable owned ProjectDiagnostic value. Construction owns '
@@ -30688,6 +31925,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'reading fields, repr and summary performs no IO.\n'
                                             '\n'
                                             'Fields:\n'
+                                            'previews: Runtime-wide retained independent Preview leases; active Jobs '
+                                            'can retain workspace after release.\n'
                                             'allocations: Number of distinct retained allocations counted by Runtime '
                                             'resource accounting.\n'
                                             'resource_entries: Number of retained resource-accounting entries, '
@@ -30706,7 +31945,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'finished.\n'
                                             'transfer_bytes: Reserved bytes for in-progress binary transfers.',
                            'example': 'docs/recipes.py',
-                           'fields': [('allocations',
+                           'fields': [('previews',
+                                       'Runtime-wide retained independent Preview leases; active Jobs can retain '
+                                       'workspace after release.'),
+                                      ('allocations',
                                        'Number of distinct retained allocations counted by Runtime resource '
                                        'accounting.'),
                                       ('resource_entries',
@@ -30726,9 +31968,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        'Reserved bytes for resource preparation that has not yet finished.'),
                                       ('transfer_bytes', 'Reserved bytes for in-progress binary transfers.')],
                            'kind': 'type',
-                           'signature': '(allocations: int, resource_entries: int, prepared_images: int, plans: int, '
-                                        'rgba_bytes: int, png_bytes: int, blob_bytes: int, preparing_bytes: int, '
-                                        'transfer_bytes: int)'},
+                           'signature': '(previews: int, allocations: int, resource_entries: int, prepared_images: '
+                                        'int, plans: int, rgba_bytes: int, png_bytes: int, blob_bytes: int, '
+                                        'preparing_bytes: int, transfer_bytes: int)'},
  'zipzi.resources.Usage.__repr__': {'children': (),
                                     'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                      'RPC/full scan.\n'

@@ -16,7 +16,7 @@ mod binary;
 pub use binary::{BinaryReply, BinarySlice, MAX_BINARY_CHUNK, MAX_BINARY_HEADER};
 mod values;
 use values::*;
-pub const CONTRACT: &str = "zipzi-runtime-r5-authoring-1";
+pub const CONTRACT: &str = "zipzi-runtime-r5-preview-1";
 pub const SDK_BUILD: &str = env!("ZIPZI_RUNTIME_SDK_BUILD");
 pub const MAX_FRAME: usize = 16 << 20;
 
@@ -64,6 +64,27 @@ pub struct Request {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 enum Operation {
+    CreatePreview {
+        session: SessionId,
+        edit: Option<EditId>,
+        expected: Option<SourceRef>,
+    },
+    PreviewState {
+        preview: PreviewId,
+    },
+    ApplyPreview {
+        preview: PreviewId,
+        command: crate::preview::PreviewCommand,
+    },
+    SamplePreview {
+        preview: PreviewId,
+        times: Vec<f32>,
+        geometry: bool,
+        incremental: bool,
+    },
+    ReleasePreview {
+        preview: PreviewId,
+    },
     ListSessions,
     RuntimeCapabilities,
     RuntimeLimits,
@@ -1105,6 +1126,34 @@ impl Protocol {
             Operation::RequestModelingSamples { input } => {
                 json!({"job":rt.request_modeling_samples(client,input)?})
             }
+            Operation::CreatePreview {
+                session,
+                edit,
+                expected,
+            } => {
+                let (preview, source) = rt.create_preview(client, session, edit, expected)?;
+                json!({"preview":preview,"serial":preview.serial(),"source":source})
+            }
+            Operation::PreviewState { preview } => {
+                let (source, value) = rt.preview_state(client, preview)?;
+                json!({"source":source,"value":value})
+            }
+            Operation::ApplyPreview { preview, command } => {
+                let (source, value) = rt.apply_preview(client, preview, command)?;
+                json!({"source":source,"value":value})
+            }
+            Operation::SamplePreview {
+                preview,
+                times,
+                geometry,
+                incremental,
+            } => {
+                json!({"job":rt.request_preview_samples(client,preview,times,geometry,incremental)?})
+            }
+            Operation::ReleasePreview { preview } => {
+                rt.release_preview(client, preview)?;
+                Value::Null
+            }
             Operation::RequestModelingPlan {
                 session,
                 edit,
@@ -1382,7 +1431,7 @@ impl Protocol {
             Operation::Job { job } => {
                 let info = rt.job_info(client, job)?;
                 if let Some(Ok(value)) = &info.result {
-                    if !matches!(value, JobValue::Sampled(_)) {
+                    if !matches!(value, JobValue::Sampled(_) | JobValue::Previewed(_)) {
                         self.execution_leases.push(
                             rt.reserve_transfer(value.retained_bytes().saturating_mul(32))
                                 .map_err(|_| RuntimeError::Busy)?,
@@ -1395,6 +1444,12 @@ impl Protocol {
                     metadata.result = None;
                     let mut value = job_info(&metadata);
                     value["result"] = success(rt.sample_response(client, samples)?);
+                    value
+                } else if let Some(Ok(JobValue::Previewed(samples))) = &info.result {
+                    let mut metadata = info.clone();
+                    metadata.result = None;
+                    let mut value = job_info(&metadata);
+                    value["result"] = success(rt.preview_response(client, samples)?);
                     value
                 } else {
                     job_info(&info)

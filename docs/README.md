@@ -10,7 +10,7 @@
 - [Runtime evidence](runtime/README.md) and [Runtime plan](plans/sdk-runtime-implementation-plan.md), [R2 Editor migration](plans/sdk-runtime/r2-editor.md)
 - [zipzi-python2 construction plan](plans/python-sdk-rewrite-plan.md): independent package, typed API, shared Runtime execution and bounded generation
 - [zipzi-python2 P3A refactor](plans/python-sdk-rewrite/p3a-api-agent-contract.md): final API, generation boundaries, agent documentation and acceptance gates
-- [Runtime R5 / Python P5 animation authoring](plans/sdk-runtime/python2-r5-authoring.md): typed edits, selected records, SDK plans and addresses; Preview/Observer remain pending
+- [Runtime R5 / Python P5 animation authoring](plans/sdk-runtime/python2-r5-authoring.md): typed edits, selected records, SDK plans and addresses; CPU Preview is also connected; Observer and Editor playback remain pending
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
 - [Manual Mesh 编辑实施方案](plans/manual-mesh-editing.md): authoring topology, dashed-edge caches, atomic editing and staged mesh generation
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)

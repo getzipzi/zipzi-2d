@@ -20377,6 +20377,646 @@ fn write_editorcontext_in(
         .unbind())
 }
 
+pub fn read_previewcommand(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_runtime::preview::PreviewCommand> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "set_parameter" => Ok(zipzi_runtime::preview::PreviewCommand::SetParameter {
+            id: value.getattr("id")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "schedule_motion" => Ok(zipzi_runtime::preview::PreviewCommand::ScheduleMotion {
+            id: value.getattr("id")?.extract()?,
+            time: value.getattr("time")?.extract()?,
+        }),
+        "schedule_registration" => Ok(
+            zipzi_runtime::preview::PreviewCommand::ScheduleRegistration {
+                id: value.getattr("id")?.extract()?,
+                time: value.getattr("time")?.extract()?,
+            },
+        ),
+        "schedule_expression" => Ok(zipzi_runtime::preview::PreviewCommand::ScheduleExpression {
+            id: value.getattr("id")?.extract()?,
+            time: value.getattr("time")?.extract()?,
+        }),
+        "schedule_parameter" => Ok(zipzi_runtime::preview::PreviewCommand::ScheduleParameter {
+            id: value.getattr("id")?.extract()?,
+            time: value.getattr("time")?.extract()?,
+            value: value.getattr("value")?.extract()?,
+        }),
+        "set_physics" => Ok(zipzi_runtime::preview::PreviewCommand::SetPhysics {
+            enabled: value.getattr("enabled")?.extract()?,
+            stabilized_start: value.getattr("stabilized_start")?.extract()?,
+        }),
+        "reset" => Ok(zipzi_runtime::preview::PreviewCommand::Reset),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_previewcommand(
+    py: Python<'_>,
+    value: &zipzi_runtime::preview::PreviewCommand,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_previewcommand_in(py, value, &classes)
+}
+fn write_previewcommand_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::preview::PreviewCommand,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_runtime::preview::PreviewCommand::SetParameter {
+            id: field0,
+            value: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PreviewCommandSetParameter")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::preview::PreviewCommand::ScheduleMotion {
+            id: field0,
+            time: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "time",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PreviewCommandScheduleMotion")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::preview::PreviewCommand::ScheduleRegistration {
+            id: field0,
+            time: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "time",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PreviewCommandScheduleRegistration")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::preview::PreviewCommand::ScheduleExpression {
+            id: field0,
+            time: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "time",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PreviewCommandScheduleExpression")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::preview::PreviewCommand::ScheduleParameter {
+            id: field0,
+            time: field1,
+            value: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "time",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "value",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PreviewCommandScheduleParameter")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::preview::PreviewCommand::SetPhysics {
+            enabled: field0,
+            stabilized_start: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "enabled",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "stabilized_start",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("PreviewCommandSetPhysics")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::preview::PreviewCommand::Reset => {
+            Ok(classes.getattr("PreviewCommandReset")?.call0()?.unbind())
+        }
+    }
+}
+
+pub fn write_previewstate(
+    py: Python<'_>,
+    value: &zipzi_runtime::preview::PreviewState,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_previewstate_in(py, value, &classes)
+}
+fn write_previewstate_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::preview::PreviewState,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "sequence",
+        (&value.sequence)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "time",
+        (&value.time)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("PreviewState")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_previewbatch(
+    py: Python<'_>,
+    value: &zipzi_runtime::preview::PreviewBatch,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_previewbatch_in(py, value, &classes)
+}
+fn write_previewbatch_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::preview::PreviewBatch,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "sequence",
+        (&value.sequence)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("frames", {
+        let out = PyList::empty(py);
+        for item0 in (&value.frames) {
+            out.append(write_previewframe_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PreviewBatch")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_previewframe(
+    py: Python<'_>,
+    value: &zipzi_runtime::preview::PreviewFrame,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_previewframe_in(py, value, &classes)
+}
+fn write_previewframe_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::preview::PreviewFrame,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "preview_id",
+        (&value.preview_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "sequence",
+        (&value.sequence)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "index",
+        (&value.index)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "motion",
+        write_motionsnapshot_in(py, (&value.motion), classes)?,
+    )?;
+    out.set_item("geometry", {
+        match (&value.geometry).as_ref() {
+            Some(item) => write_drawableframe_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("PreviewFrame")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_motionsnapshot(
+    py: Python<'_>,
+    value: &zipzi_sdk::MotionSnapshot,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionsnapshot_in(py, value, &classes)
+}
+fn write_motionsnapshot_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::MotionSnapshot,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("physics", {
+        let out = PyList::empty(py);
+        for item0 in (&value.physics) {
+            out.append(write_physicsrigsnapshot_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "time",
+        (&value.time)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("parameters", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.parameters) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("part_opacity_channels", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.part_opacity_channels) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("part_opacities", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.part_opacities) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "model_opacity",
+        (&value.model_opacity)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("active_motions", {
+        let out = PyList::empty(py);
+        for item0 in (&value.active_motions) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("active_expressions", {
+        let out = PyList::empty(py);
+        for item0 in (&value.active_expressions) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("fired_events", {
+        let out = PyList::empty(py);
+        for item0 in (&value.fired_events) {
+            out.append(write_motioneventfired_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("coverage", {
+        let out = PyList::empty(py);
+        for item0 in (&value.coverage) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("motion_positions", {
+        let out = PyList::empty(py);
+        for item0 in (&value.motion_positions) {
+            out.append(write_motionplaybackposition_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("MotionSnapshot")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_physicsrigsnapshot(
+    py: Python<'_>,
+    value: &zipzi_sdk::PhysicsRigSnapshot,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsrigsnapshot_in(py, value, &classes)
+}
+fn write_physicsrigsnapshot_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::PhysicsRigSnapshot,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("input_ids", {
+        let out = PyList::empty(py);
+        for item0 in (&value.input_ids) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("output_ids", {
+        let out = PyList::empty(py);
+        for item0 in (&value.output_ids) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("node_ids", {
+        let out = PyList::empty(py);
+        for item0 in (&value.node_ids) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("particles", {
+        let out = PyList::empty(py);
+        for item0 in (&value.particles) {
+            out.append({
+                let out = PyList::empty(py);
+                for item1 in (item0) {
+                    out.append((item1).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "input_angle",
+        (&value.input_angle)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("inputs", {
+        let out = PyList::empty(py);
+        for item0 in (&value.inputs) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("outputs", {
+        let out = PyList::empty(py);
+        for item0 in (&value.outputs) {
+            out.append({
+                match (item0).as_ref() {
+                    Some(item) => write_physicsoutputsnapshot_in(py, (item), classes)?,
+                    None => py.None(),
+                }
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("PhysicsRigSnapshot")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_physicsoutputsnapshot(
+    py: Python<'_>,
+    value: &zipzi_sdk::PhysicsOutputSnapshot,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_physicsoutputsnapshot_in(py, value, &classes)
+}
+fn write_physicsoutputsnapshot_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::PhysicsOutputSnapshot,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "raw",
+        (&value.raw)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "before",
+        (&value.before)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "after",
+        (&value.after)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "clamped",
+        (&value.clamped)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("PhysicsOutputSnapshot")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_motioneventfired(
+    py: Python<'_>,
+    value: &zipzi_sdk::MotionEventFired,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motioneventfired_in(py, value, &classes)
+}
+fn write_motioneventfired_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::MotionEventFired,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "motion_id",
+        (&value.motion_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "event_id",
+        (&value.event_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "value",
+        (&value.value)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("MotionEventFired")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_motionplaybackposition(
+    py: Python<'_>,
+    value: &zipzi_sdk::MotionPlaybackPosition,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_motionplaybackposition_in(py, value, &classes)
+}
+fn write_motionplaybackposition_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::MotionPlaybackPosition,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "motion_id",
+        (&value.motion_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "local_time",
+        (&value.local_time)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "period",
+        (&value.period)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "loop_index",
+        (&value.loop_index)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "cycle_origin",
+        (&value.cycle_origin)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("MotionPlaybackPosition")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
 pub fn read_parameteroperation(
     value: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_sdk::ParameterOperation> {
@@ -27469,6 +28109,57 @@ pub fn measure_textureslot(value: &Bound<'_, PyAny>) -> PyResult<usize> {
 
 pub fn measure_exportformat(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(128usize)
+}
+
+pub fn measure_previewcommand(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "set_parameter" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "schedule_motion" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "schedule_registration" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "schedule_expression" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)),
+        "schedule_parameter" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(16usize)
+            .saturating_add(16usize)),
+        "set_physics" => Ok(256usize.saturating_add(16usize).saturating_add(16usize)),
+        "reset" => Ok(256usize),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
 }
 
 pub fn measure_parameteroperation(value: &Bound<'_, PyAny>) -> PyResult<usize> {

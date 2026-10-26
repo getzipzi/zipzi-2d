@@ -18,6 +18,7 @@ mod addresses;
 mod references;
 pub(crate) mod resources;
 pub use references::{LabelAddressInfo, ObjectRefInfo};
+pub(crate) mod previews;
 mod sampling;
 mod typed;
 use crate::events::EventLog;
@@ -83,6 +84,7 @@ pub struct RegistrySubscription {
 }
 
 pub struct Runtime {
+    previews: HashMap<PreviewId, previews::PreviewEntry>,
     editor_contexts: HashMap<SessionId, crate::editor_context::EditorContext>,
     #[cfg(feature = "test-support")]
     control: Arc<crate::test_support::Control>,
@@ -122,6 +124,7 @@ impl Runtime {
         let image_budget = zipzi_project::ImageMemoryBudget::new(limits.image_bytes);
         image_budget.bind_host_budget(0, limits.accounted_bytes);
         Self {
+            previews: HashMap::new(),
             #[cfg(feature = "test-support")]
             control: Arc::default(),
             image_budget,
@@ -233,6 +236,14 @@ impl Runtime {
     /// Explicit client expiry; transport grace periods belong to R3. Committing
     /// jobs and their results survive, ordinary unsubmitted candidates do not.
     pub fn release_client(&mut self, client: ClientId) {
+        for entry in self.previews.values().filter(|p| p.client == client) {
+            if let Some(job) = entry.busy {
+                if let Some(job) = self.jobs.get(&job) {
+                    job.cancel.store(true, Ordering::Release);
+                }
+            }
+        }
+        self.previews.retain(|_, p| p.client != client);
         self.clients.remove(&client);
         self.object_refs.retain(|_, r| r.client != client);
         self.field_addresses.retain(|_, r| r.client != client);
@@ -276,6 +287,8 @@ impl Runtime {
         }
         self.object_refs
             .retain(|_, r| r.session != session || r.client != client);
+        self.previews
+            .retain(|_, p| p.source.source.session() != session || p.client != client);
         self.field_addresses
             .retain(|_, r| r.session != session || r.client != client);
         self.plans
@@ -809,6 +822,8 @@ impl Runtime {
         self.object_refs.retain(|_, r| r.session != session);
         self.field_addresses.retain(|_, r| r.session != session);
         self.editor_contexts.remove(&session);
+        self.previews
+            .retain(|_, p| p.source.source.session() != session);
         let mut entry = self.sessions.remove(&session).unwrap();
         if let Some(path) = &entry.info.path {
             self.paths.remove(path);
@@ -1266,6 +1281,11 @@ impl Runtime {
                     .filter_map(|j| j.read_source.as_ref())
                     .map(|s| s.snapshot.document().estimated_content_bytes()),
             )
+            .chain(
+                self.previews
+                    .values()
+                    .map(|p| p.source.snapshot.document().estimated_content_bytes()),
+            )
             .fold(0, usize::saturating_add)
     }
     fn history_bytes(&self) -> usize {
@@ -1296,6 +1316,7 @@ impl Runtime {
                     .saturating_add(self.prepared_images.len().saturating_mul(1024))
                     .saturating_add(self.editor_contexts.len().saturating_mul(128 << 10))
                     .saturating_add(self.reference_bytes())
+                    .saturating_add(self.preview_bytes())
                     .saturating_add(self.candidate_bytes())
                     .saturating_add(self.frozen_bytes())
                     .saturating_add(

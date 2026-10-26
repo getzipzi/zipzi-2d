@@ -1,4 +1,4 @@
-"""The runner requires twenty precise diagnostics, without suppressions."""
+"""The runner requires twenty-two precise diagnostics, without suppressions."""
 import zipzi
 from zipzi import meshes, resources
 from zipzi import bindings, parameters
@@ -34,3 +34,9 @@ def bad_scene(session: zipzi.Session, edit: zipzi.Edit) -> None:
     edit.plan({"op": "delete_scene"})  # error: reportArgumentType
     edit.apply(scene.SetOffscreenStaticKeyform("x", "zero"))  # error: reportArgumentType
     edit.apply(scene.InsertMeshVertex("x", .5, (0., 0.), (0., 0.), ()))  # error: reportArgumentType
+
+from zipzi import animation
+
+def bad_preview(preview: animation.Preview) -> None:
+    preview.apply({"kind":"reset"})  # error: reportArgumentType
+    preview.seek("time")  # error: reportArgumentType

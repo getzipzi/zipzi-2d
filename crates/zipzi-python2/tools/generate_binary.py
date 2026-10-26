@@ -147,6 +147,7 @@ def render_binary(contract,header):
     for s in contract['inputs']:visit(s,inputs)
     visit(contract['output'],outputs)
     visit(contract['samples'],outputs)
+    visit(contract['preview'],outputs)
     visit(contract['mesh'],outputs)
     visit(contract['image'],outputs)
     if contract['source_variants']!=['Formal','Edit'] or contract['source_fields']!=[['session','version'],['session','edit','base','sequence']]:raise ValueError('SourceRef binary lifecycle requires review')
@@ -275,6 +276,7 @@ def render_binary(contract,header):
         if len(fields(v))!=len(exprs):raise ValueError('Changed ownership projection')
         for f,e in zip(fields(v),exprs):out+=write(f['shape'],e,12)
     out+=['        else:','            raise TypeError("Expected typed authoring operation")','    return bytes(w.data)','','def decode_records(value: bytes, signature: str) -> m.OwnedModelingRecords:','    if signature!=OUTPUT_SIGNATURE: raise ValueError("Binary record contract differs")','    r=Reader(value)','    result=_read_ownedmodelingrecords(r)','    r.finish()','    return result','']
+    out+=['def decode_preview(value: bytes, signature: str) -> m.PreviewBatch:', '    if signature!='+repr(contract['preview_signature'])+': raise ValueError("Binary preview contract differs")', '    r=Reader(value)', '    result=_read_previewbatch(r)', '    r.finish()', '    return result', '']
     out+=['def decode_samples(value: bytes, signature: str) -> m.ModelingSamples:', '    if signature!=SAMPLE_SIGNATURE: raise ValueError("Binary sample contract differs")', '    r=Reader(value)', '    result=_read_modelingsamples(r)', '    r.finish()', '    return result', '']
     out+=['def decode_meshes(value: bytes,signature:str)->tuple[Snapshot[meshes.Mesh],...]:','    if signature!=MESH_SIGNATURE: raise ValueError("Binary mesh contract differs")','    r=Reader(value)','    result=tuple(_read_meshsnapshot(r) for _ in range(r.count()))','    r.finish()','    return result','']
     out+=['def decode_bindings(value:bytes,signature:str)->tuple[m.MeshBinding,...]:','    if signature!=BINDING_SIGNATURE: raise ValueError("Binary binding contract differs")','    r=Reader(value)','    result=tuple(_read_meshbinding(r) for _ in range(r.count()))','    r.finish()','    return result','']

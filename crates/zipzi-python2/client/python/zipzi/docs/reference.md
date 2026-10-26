@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-authoring-1; client source SHA-256 a00c21b756f438e4cf357c2379fe7d9cb9528e339b053a567812604ff6ffb325.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r5-preview-1; client source SHA-256 fac8b762de929ba4721cf98c16e63b05b833ebca489d45bef94506331da678c9.
 
 
 ## zipzi.ApiDescription
@@ -493,6 +493,13 @@ Plan a registered typed operation against this candidate and exact sequence. A s
 `(operation: ModelingPlanOperation) -> Job[plans.Plan]`
 
 Submit registered modeling planning against this candidate Source. Wait for Plan before applying; a changed candidate makes it stale. Job timeout does not cancel or replay work.
+
+
+## zipzi.Edit.preview
+
+`(*, expected: Source | None=None) -> Preview`
+
+Capture this candidate and its exact sequence as an independent Preview. Subsequent writes/commit/cancel do not rewrite its frozen content. Preview errors do not abort the candidate.
 
 
 ## zipzi.Edit.receipt
@@ -1289,11 +1296,15 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.RuntimeLimits
 
-`(collection_records: int, collection_bytes: int, collection_scan: int, clients: int, sessions: int, edits_per_client_session: int, edits_per_session: int, edits_total: int, candidate_bytes: int, frozen_bytes: int, accounted_bytes: int, image_bytes: int, plans_per_client: int, references_per_client: int, prepared_images_per_client: int, plan_bytes: int, blob_bytes: int, blobs_per_client: int, history_bytes: int, jobs_total: int, jobs_per_client: int, running_jobs: int, session_events: int, session_event_bytes: int, registry_events: int, registry_event_bytes: int)`
+`(previews_per_client: int, preview_bytes: int, preview_schedule_entries: int, preview_seek_cache_bytes: int, collection_records: int, collection_bytes: int, collection_scan: int, clients: int, sessions: int, edits_per_client_session: int, edits_per_session: int, edits_total: int, candidate_bytes: int, frozen_bytes: int, accounted_bytes: int, image_bytes: int, plans_per_client: int, references_per_client: int, prepared_images_per_client: int, plan_bytes: int, blob_bytes: int, blobs_per_client: int, history_bytes: int, jobs_total: int, jobs_per_client: int, running_jobs: int, session_events: int, session_event_bytes: int, registry_events: int, registry_event_bytes: int)`
 
 Immutable owned RuntimeLimits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+previews_per_client: Maximum independent frozen animation Previews owned by one client.
+preview_bytes: Conservative aggregate Preview storage limit, including replay/cache workspace.
+preview_schedule_entries: Maximum retained activations per Preview; Reset retains schedules.
+preview_seek_cache_bytes: SDK checkpoint-cache budget per Preview; transient replay state is charged separately.
 collection_records: Maximum records returned by one collection page or selected batch.
 collection_bytes: Maximum escaped metadata bytes in one collection page.
 collection_scan: Maximum entries examined by one collection page.
@@ -1321,6 +1332,10 @@ session_event_bytes: Conservative byte limit for event payloads per Session stre
 registry_events: Maximum retained events in the registry stream; this is a count, not a byte limit.
 registry_event_bytes: Conservative byte limit for registry event payloads; not RSS or GPU memory.
 
+- `previews_per_client`: Maximum independent frozen animation Previews owned by one client.
+- `preview_bytes`: Conservative aggregate Preview storage limit, including replay/cache workspace.
+- `preview_schedule_entries`: Maximum retained activations per Preview; Reset retains schedules.
+- `preview_seek_cache_bytes`: SDK checkpoint-cache budget per Preview; transient replay state is charged separately.
 - `collection_records`: Maximum records returned by one collection page or selected batch.
 - `collection_bytes`: Maximum escaped metadata bytes in one collection page.
 - `collection_scan`: Maximum entries examined by one collection page.
@@ -1632,6 +1647,13 @@ Plan a registered typed domain operation against the exact formal Source. Read c
 `(operation: ModelingPlanOperation) -> Job[plans.Plan]`
 
 Submit a registered expensive modeling plan at the captured Source. Returns Job[Plan]; wait before applying and close the resulting Plan. Input type determines this explicit Job API.
+
+
+## zipzi.Session.preview
+
+`(*, expected: Source | None=None) -> Preview`
+
+Capture an independent frozen formal animation Preview. Close it explicitly; later edits never refresh it, and playback never changes document history.
 
 
 ## zipzi.Session.project
@@ -1989,6 +2011,422 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.WriteResult.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation
+
+``
+
+Independent frozen animation controls and CPU playback results.
+
+
+## zipzi.animation.Batch
+
+`(sequence: int, frames: tuple[PreviewFrame, ...])`
+
+Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+sequence: Accepted sample request ordinal shared by these ordered frames.
+frames: Owned frames in requested target order, retaining duplicate and backward targets.
+
+- `sequence`: Accepted sample request ordinal shared by these ordered frames.
+- `frames`: Owned frames in requested target order, retaining duplicate and backward targets.
+
+## zipzi.animation.Batch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.Batch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.Command
+
+``
+
+Typed public API entry.
+
+
+## zipzi.animation.Frame
+
+`(preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+
+Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+preview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
+sequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.
+index: Zero-based target slot in the ordered sample request.
+motion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
+geometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
+
+- `preview_id`: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
+- `sequence`: Accepted sample request ordinal; pair with the outer Source and Preview identity.
+- `index`: Zero-based target slot in the ordered sample request.
+- `motion`: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
+- `geometry`: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
+
+## zipzi.animation.Frame.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.Frame.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.Preview
+
+`(factory-owned; use the documented public entry)`
+
+Independent frozen animation runtime. Create through Session.preview or Edit.preview.
+
+Close explicitly or use with. Edits never refresh this source. Playback and
+physics state belong to this Preview; authored content/history are unchanged.
+Each accepted sample request increments its operation ordinal, including a
+cancelled request. A busy Preview refuses controls and concurrent samples.
+
+
+## zipzi.animation.Preview.__enter__
+
+`() -> Preview`
+
+Validate this owned Preview and return it; scope exit closes it and cancels pending playback work.
+
+
+## zipzi.animation.Preview.__exit__
+
+`(kind: object, exception: BaseException | None, traceback: object) -> None`
+
+Close the owned lease on scope exit; never suppress the body exception.
+
+Python supplies the context arguments. Closing can synchronously contact
+the host. On normal exit an unknown release remains recoverable and is
+raised; during an existing exception cleanup failure is added as a note.
+Retain the handle for pending cleanup. No formal document write occurs.
+
+
+## zipzi.animation.Preview.advance_to
+
+`(time: float, *, geometry: bool=True) -> Job[Snapshot[m.PreviewBatch]]`
+
+Submit SDK canonical incremental playback. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek.
+
+
+## zipzi.animation.Preview.apply
+
+`(command: m.PreviewCommand) -> Snapshot[m.PreviewState]`
+
+Apply one typed animation control in this Preview. SDK validation errors preserve its usable state; commands never publish model history.
+
+
+## zipzi.animation.Preview.close
+
+`() -> None`
+
+Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
+
+
+## zipzi.animation.Preview.id
+
+`() -> int`
+
+Read the Runtime-wide serial without IO; combine with source.runtime to compare returned frames across views.
+
+
+## zipzi.animation.Preview.info
+
+`() -> Snapshot[m.PreviewState]`
+
+Read this Preview's accepted ordinal and actual SDK clock. Busy work refuses this read.
+
+
+## zipzi.animation.Preview.pending_request
+
+`() -> PendingRequest | None`
+
+Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
+
+
+## zipzi.animation.Preview.sample
+
+`(times: Sequence[float], *, geometry: bool=True) -> Job[Snapshot[m.PreviewBatch]]`
+
+Submit 1..64 canonical seeks in target order; wait for a frozen-source batch.
+
+Duplicates/backward times are retained. CPU geometry is optional. A cancelled
+batch discards output and retains completed targets; each individual SDK
+seek is transactional when interrupted; cancellation after the whole batch
+completes reports success. Close/wait the Job to release its
+result slot. Cancellation never changes authored content or another view.
+
+
+## zipzi.animation.Preview.seek
+
+`(time: float, *, geometry: bool=True) -> Job[Snapshot[m.PreviewBatch]]`
+
+Submit one canonical seek and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome.
+
+
+## zipzi.animation.Preview.source
+
+`() -> Source`
+
+Read the cached exact frozen Source without IO or refreshing the model.
+
+
+## zipzi.animation.Reset
+
+`()`
+
+Immutable owned PreviewCommandReset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.animation.Reset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.Reset.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.ScheduleExpression
+
+`(id: str, time: float)`
+
+Immutable owned PreviewCommandScheduleExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Native expression asset UUID.
+time: Absolute activation time in seconds on this Preview's clock.
+
+- `id`: Native expression asset UUID.
+- `time`: Absolute activation time in seconds on this Preview's clock.
+
+## zipzi.animation.ScheduleExpression.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.ScheduleExpression.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.ScheduleMotion
+
+`(id: str, time: float)`
+
+Immutable owned PreviewCommandScheduleMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Clip UUID; uses the clip's own fades.
+time: Absolute activation time in seconds on this Preview's clock.
+
+- `id`: Clip UUID; uses the clip's own fades.
+- `time`: Absolute activation time in seconds on this Preview's clock.
+
+## zipzi.animation.ScheduleMotion.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.ScheduleMotion.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.ScheduleParameter
+
+`(id: str, time: float, value: float)`
+
+Immutable owned PreviewCommandScheduleParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Document parameter UUID for an SDK input activation.
+time: Absolute activation time in seconds on this Preview's clock.
+value: Finite parameter input in the authored parameter domain.
+
+- `id`: Document parameter UUID for an SDK input activation.
+- `time`: Absolute activation time in seconds on this Preview's clock.
+- `value`: Finite parameter input in the authored parameter domain.
+
+## zipzi.animation.ScheduleParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.ScheduleParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.ScheduleRegistration
+
+`(id: str, time: float)`
+
+Immutable owned PreviewCommandScheduleRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Registration UUID; uses the registration's SDK fade overrides.
+time: Absolute activation time in seconds on this Preview's clock.
+
+- `id`: Registration UUID; uses the registration's SDK fade overrides.
+- `time`: Absolute activation time in seconds on this Preview's clock.
+
+## zipzi.animation.ScheduleRegistration.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.ScheduleRegistration.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.SetParameter
+
+`(id: str, value: float)`
+
+Immutable owned PreviewCommandSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Document parameter UUID; the SDK validates existence and domain.
+value: Finite base value in the parameter's authored domain.
+
+- `id`: Document parameter UUID; the SDK validates existence and domain.
+- `value`: Finite base value in the parameter's authored domain.
+
+## zipzi.animation.SetParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.SetParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.SetPhysics
+
+`(enabled: bool, stabilized_start: bool)`
+
+Immutable owned PreviewCommandSetPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+enabled: Enable the SDK Physics stage in this Preview only.
+stabilized_start: Use the SDK stabilized-start policy on canonical replay.
+
+- `enabled`: Enable the SDK Physics stage in this Preview only.
+- `stabilized_start`: Use the SDK stabilized-start policy on canonical replay.
+
+## zipzi.animation.SetPhysics.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.SetPhysics.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.animation.State
+
+`(sequence: int, time: float)`
+
+Immutable owned PreviewState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+sequence: Monotonic accepted operation ordinal, including cancelled sample requests.
+time: Actual SDK clock after the last completed operation, in seconds.
+
+- `sequence`: Monotonic accepted operation ordinal, including cancelled sample requests.
+- `time`: Actual SDK clock after the last completed operation, in seconds.
+
+## zipzi.animation.State.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.animation.State.summary
 
 `() -> str`
 
@@ -12553,6 +12991,38 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.MotionEventFired
+
+`(motion_id: str, event_id: str, value: str)`
+
+Immutable owned MotionEventFired value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+motion_id: Source clip UUID.
+event_id: Source event UUID.
+value: User-authored event text.
+
+- `motion_id`: Source clip UUID.
+- `event_id`: Source event UUID.
+- `value`: User-authored event text.
+
+## zipzi.modeling.MotionEventFired.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionEventFired.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.MotionGroup
 
 `(id: str, name: str, entries: tuple[MotionRegistration, ...])`
@@ -12611,6 +13081,42 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.MotionKey.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionPlaybackPosition
+
+`(motion_id: str, local_time: float, period: float, loop_index: int, cycle_origin: float)`
+
+Immutable owned MotionPlaybackPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+motion_id: Source motion clip UUID for this SDK playback position.
+local_time: SDK local sample time in seconds, including the loop tail.
+period: SDK loop period in seconds, including the FPS tail.
+loop_index: Canonical SDK loop index; exact seams belong to the preceding loop.
+cycle_origin: Absolute preview-clock time at the start of this cycle.
+
+- `motion_id`: Source motion clip UUID for this SDK playback position.
+- `local_time`: SDK local sample time in seconds, including the loop tail.
+- `period`: SDK loop period in seconds, including the FPS tail.
+- `loop_index`: Canonical SDK loop index; exact seams belong to the preceding loop.
+- `cycle_origin`: Absolute preview-clock time at the start of this cycle.
+
+## zipzi.modeling.MotionPlaybackPosition.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionPlaybackPosition.summary
 
 `() -> str`
 
@@ -12802,6 +13308,60 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.MotionSegmentStepped.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.MotionSnapshot
+
+`(physics: tuple[PhysicsRigSnapshot, ...] = field(default_factory=lambda: tuple((read_PhysicsRigSnapshot(v0) for v0 in sequence([])))), time: float, parameters: _Mapping[str, float], part_opacity_channels: _Mapping[str, float], part_opacities: _Mapping[str, float], model_opacity: float, active_motions: tuple[str, ...], active_expressions: tuple[str, ...], fired_events: tuple[MotionEventFired, ...], coverage: tuple[str, ...], motion_positions: tuple[MotionPlaybackPosition, ...])`
+
+Immutable owned MotionSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+physics: Optional inspector observations. Collected explicitly by a host after
+evaluation. Advance/seek results leave this empty; populate it with
+`snapshot.physics = preview.physics_snapshot();` when displaying an inspector.
+Internal observations are retained in replay checkpoints for consistent seeks.
+time: Absolute preview time in seconds.
+parameters: Final parameter values keyed by parameter UUID.
+part_opacity_channels: PartOpacity curves write virtual controls when no real parameter has the Part runtime ID.
+part_opacities: Pose-produced opacities keyed by Part UUID.
+model_opacity: Model Opacity channel, separate from the drawable geometry opacity.
+active_motions: Active clip UUIDs in queue order; repeated activations may repeat a UUID.
+active_expressions: Active expression UUIDs in queue order, including fading-out entries.
+fired_events: Events crossed by the last update, not accumulated across all seek steps.
+coverage: Model EyeBlink/LipSync mappings and unsupported Model IDs are reported.
+motion_positions: SDK sampling coordinates, including the duration + 1 / FPS loop tail.
+
+- `physics`: Optional inspector observations. Collected explicitly by a host after
+evaluation. Advance/seek results leave this empty; populate it with
+`snapshot.physics = preview.physics_snapshot();` when displaying an inspector.
+Internal observations are retained in replay checkpoints for consistent seeks.
+- `time`: Absolute preview time in seconds.
+- `parameters`: Final parameter values keyed by parameter UUID.
+- `part_opacity_channels`: PartOpacity curves write virtual controls when no real parameter has the Part runtime ID.
+- `part_opacities`: Pose-produced opacities keyed by Part UUID.
+- `model_opacity`: Model Opacity channel, separate from the drawable geometry opacity.
+- `active_motions`: Active clip UUIDs in queue order; repeated activations may repeat a UUID.
+- `active_expressions`: Active expression UUIDs in queue order, including fading-out entries.
+- `fired_events`: Events crossed by the last update, not accumulated across all seek steps.
+- `coverage`: Model EyeBlink/LipSync mappings and unsupported Model IDs are reported.
+- `motion_positions`: SDK sampling coordinates, including the duration + 1 / FPS loop tail.
+
+## zipzi.modeling.MotionSnapshot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MotionSnapshot.summary
 
 `() -> str`
 
@@ -15096,6 +15656,40 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.PhysicsOutputSnapshot
+
+`(raw: float, before: float, after: float, clamped: bool)`
+
+Immutable owned PhysicsOutputSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+raw: Raw output value before weight and parameter clamping.
+before: Parameter value immediately before this output.
+after: Parameter value after applying this output and clamping.
+clamped: Whether the SDK clamped this output to the target parameter range.
+
+- `raw`: Raw output value before weight and parameter clamping.
+- `before`: Parameter value immediately before this output.
+- `after`: Parameter value after applying this output and clamping.
+- `clamped`: Whether the SDK clamped this output to the target parameter range.
+
+## zipzi.modeling.PhysicsOutputSnapshot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsOutputSnapshot.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.PhysicsPatch
 
 `(asset_id: str, asset_changes: tuple[PhysicsAssetProperty, ...], rig: PhysicsRigPatch | None = None)`
@@ -15725,6 +16319,52 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.PhysicsRigPatch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PhysicsRigSnapshot
+
+`(id: str, input_ids: tuple[str, ...], output_ids: tuple[str, ...], node_ids: tuple[str, ...], particles: tuple[tuple[float, float], ...], input_angle: float, inputs: tuple[float, ...], outputs: tuple[PhysicsOutputSnapshot | None, ...])`
+
+Immutable owned PhysicsRigSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Native physics group UUID.
+input_ids: Input channel UUIDs aligned with inputs.
+output_ids: Output channel UUIDs aligned with outputs.
+node_ids: Particle node UUIDs aligned with particles.
+particles: Latest solved particle XY positions in the SDK solver coordinate system.
+input_angle: Weighted, normalized angle in degrees used by the latest solved step.
+Rotate the Y-down solver coordinates by this angle to display a fixed
+gravity direction with rotating input axes.
+inputs: Latest normalized input values in channel order.
+outputs: Latest output observations; None marks an unavailable channel.
+
+- `id`: Native physics group UUID.
+- `input_ids`: Input channel UUIDs aligned with inputs.
+- `output_ids`: Output channel UUIDs aligned with outputs.
+- `node_ids`: Particle node UUIDs aligned with particles.
+- `particles`: Latest solved particle XY positions in the SDK solver coordinate system.
+- `input_angle`: Weighted, normalized angle in degrees used by the latest solved step.
+Rotate the Y-down solver coordinates by this angle to display a fixed
+gravity direction with rotating input axes.
+- `inputs`: Latest normalized input values in channel order.
+- `outputs`: Latest output observations; None marks an unavailable channel.
+
+## zipzi.modeling.PhysicsRigSnapshot.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PhysicsRigSnapshot.summary
 
 `() -> str`
 
@@ -16661,6 +17301,315 @@ Immutable typed value. See field semantics and the linked workflow.
 - `x`: Horizontal coordinate; its space and units are determined by the containing geometry or
 pose.
 - `y`: Vertical coordinate; its space and units are determined by the containing geometry or pose.
+
+## zipzi.modeling.PreviewBatch
+
+`(sequence: int, frames: tuple[PreviewFrame, ...])`
+
+Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+sequence: Accepted sample request ordinal shared by these ordered frames.
+frames: Owned frames in requested target order, retaining duplicate and backward targets.
+
+- `sequence`: Accepted sample request ordinal shared by these ordered frames.
+- `frames`: Owned frames in requested target order, retaining duplicate and backward targets.
+
+## zipzi.modeling.PreviewBatch.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewBatch.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewCommand
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.PreviewCommandReset
+
+`()`
+
+Immutable owned PreviewCommandReset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.PreviewCommandReset.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewCommandReset.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewCommandScheduleExpression
+
+`(id: str, time: float)`
+
+Immutable owned PreviewCommandScheduleExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Native expression asset UUID.
+time: Absolute activation time in seconds on this Preview's clock.
+
+- `id`: Native expression asset UUID.
+- `time`: Absolute activation time in seconds on this Preview's clock.
+
+## zipzi.modeling.PreviewCommandScheduleExpression.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewCommandScheduleExpression.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewCommandScheduleMotion
+
+`(id: str, time: float)`
+
+Immutable owned PreviewCommandScheduleMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Clip UUID; uses the clip's own fades.
+time: Absolute activation time in seconds on this Preview's clock.
+
+- `id`: Clip UUID; uses the clip's own fades.
+- `time`: Absolute activation time in seconds on this Preview's clock.
+
+## zipzi.modeling.PreviewCommandScheduleMotion.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewCommandScheduleMotion.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewCommandScheduleParameter
+
+`(id: str, time: float, value: float)`
+
+Immutable owned PreviewCommandScheduleParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Document parameter UUID for an SDK input activation.
+time: Absolute activation time in seconds on this Preview's clock.
+value: Finite parameter input in the authored parameter domain.
+
+- `id`: Document parameter UUID for an SDK input activation.
+- `time`: Absolute activation time in seconds on this Preview's clock.
+- `value`: Finite parameter input in the authored parameter domain.
+
+## zipzi.modeling.PreviewCommandScheduleParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewCommandScheduleParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewCommandScheduleRegistration
+
+`(id: str, time: float)`
+
+Immutable owned PreviewCommandScheduleRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Registration UUID; uses the registration's SDK fade overrides.
+time: Absolute activation time in seconds on this Preview's clock.
+
+- `id`: Registration UUID; uses the registration's SDK fade overrides.
+- `time`: Absolute activation time in seconds on this Preview's clock.
+
+## zipzi.modeling.PreviewCommandScheduleRegistration.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewCommandScheduleRegistration.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewCommandSetParameter
+
+`(id: str, value: float)`
+
+Immutable owned PreviewCommandSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Document parameter UUID; the SDK validates existence and domain.
+value: Finite base value in the parameter's authored domain.
+
+- `id`: Document parameter UUID; the SDK validates existence and domain.
+- `value`: Finite base value in the parameter's authored domain.
+
+## zipzi.modeling.PreviewCommandSetParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewCommandSetParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewCommandSetPhysics
+
+`(enabled: bool, stabilized_start: bool)`
+
+Immutable owned PreviewCommandSetPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+enabled: Enable the SDK Physics stage in this Preview only.
+stabilized_start: Use the SDK stabilized-start policy on canonical replay.
+
+- `enabled`: Enable the SDK Physics stage in this Preview only.
+- `stabilized_start`: Use the SDK stabilized-start policy on canonical replay.
+
+## zipzi.modeling.PreviewCommandSetPhysics.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewCommandSetPhysics.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewFrame
+
+`(preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+
+Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+preview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
+sequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.
+index: Zero-based target slot in the ordered sample request.
+motion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
+geometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
+
+- `preview_id`: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
+- `sequence`: Accepted sample request ordinal; pair with the outer Source and Preview identity.
+- `index`: Zero-based target slot in the ordered sample request.
+- `motion`: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
+- `geometry`: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
+
+## zipzi.modeling.PreviewFrame.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewFrame.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.PreviewState
+
+`(sequence: int, time: float)`
+
+Immutable owned PreviewState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+sequence: Monotonic accepted operation ordinal, including cancelled sample requests.
+time: Actual SDK clock after the last completed operation, in seconds.
+
+- `sequence`: Monotonic accepted operation ordinal, including cancelled sample requests.
+- `time`: Actual SDK clock after the last completed operation, in seconds.
+
+## zipzi.modeling.PreviewState.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.PreviewState.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
 
 ## zipzi.modeling.ProjectDiagnostic
 
@@ -22505,11 +23454,12 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.resources.Usage
 
-`(allocations: int, resource_entries: int, prepared_images: int, plans: int, rgba_bytes: int, png_bytes: int, blob_bytes: int, preparing_bytes: int, transfer_bytes: int)`
+`(previews: int, allocations: int, resource_entries: int, prepared_images: int, plans: int, rgba_bytes: int, png_bytes: int, blob_bytes: int, preparing_bytes: int, transfer_bytes: int)`
 
 Immutable owned Usage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 Fields:
+previews: Runtime-wide retained independent Preview leases; active Jobs can retain workspace after release.
 allocations: Number of distinct retained allocations counted by Runtime resource accounting.
 resource_entries: Number of retained resource-accounting entries, including history/lease holders.
 prepared_images: Runtime-wide number of retained client-owned prepared image handles.
@@ -22520,6 +23470,7 @@ blob_bytes: Retained immutable binary blob storage in bytes under Runtime accoun
 preparing_bytes: Reserved bytes for resource preparation that has not yet finished.
 transfer_bytes: Reserved bytes for in-progress binary transfers.
 
+- `previews`: Runtime-wide retained independent Preview leases; active Jobs can retain workspace after release.
 - `allocations`: Number of distinct retained allocations counted by Runtime resource accounting.
 - `resource_entries`: Number of retained resource-accounting entries, including history/lease holders.
 - `prepared_images`: Runtime-wide number of retained client-owned prepared image handles.

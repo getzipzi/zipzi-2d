@@ -4626,6 +4626,27 @@ def _read_geometrydiagnostickind(r: Reader) -> m.GeometryDiagnosticKind:
         return m.GeometryDiagnosticKind('OutsideModelBounds')
     raise ValueError("Unknown binary GeometryDiagnosticKind variant")
 
+def _read_previewbatch(r: Reader) -> m.PreviewBatch:
+    return m.PreviewBatch(sequence=integer(r.scalar('Q')), frames=tuple(_read_previewframe(r) for _ in range(r.count())))
+
+def _read_previewframe(r: Reader) -> m.PreviewFrame:
+    return m.PreviewFrame(preview_id=integer(r.scalar('Q')), sequence=integer(r.scalar('Q')), index=integer(r.scalar('Q')), motion=_read_motionsnapshot(r), geometry=(_read_drawableframe(r) if r.optional() else None))
+
+def _read_motionsnapshot(r: Reader) -> m.MotionSnapshot:
+    return m.MotionSnapshot(physics=tuple(_read_physicsrigsnapshot(r) for _ in range(r.count())), time=number(r.scalar('f')), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, part_opacity_channels={r.text(): number(r.scalar('f')) for _ in range(r.count())}, part_opacities={r.text(): number(r.scalar('f')) for _ in range(r.count())}, model_opacity=number(r.scalar('f')), active_motions=tuple(r.text() for _ in range(r.count())), active_expressions=tuple(r.text() for _ in range(r.count())), fired_events=tuple(_read_motioneventfired(r) for _ in range(r.count())), coverage=tuple(r.text() for _ in range(r.count())), motion_positions=tuple(_read_motionplaybackposition(r) for _ in range(r.count())))
+
+def _read_physicsrigsnapshot(r: Reader) -> m.PhysicsRigSnapshot:
+    return m.PhysicsRigSnapshot(id=r.text(), input_ids=tuple(r.text() for _ in range(r.count())), output_ids=tuple(r.text() for _ in range(r.count())), node_ids=tuple(r.text() for _ in range(r.count())), particles=cast('tuple[tuple[float, float], ...]', r.numeric('ff', r.count())), input_angle=number(r.scalar('f')), inputs=cast('tuple[float, ...]', tuple(v[0] for v in r.numeric('f', r.count()))), outputs=tuple((_read_physicsoutputsnapshot(r) if r.optional() else None) for _ in range(r.count())))
+
+def _read_physicsoutputsnapshot(r: Reader) -> m.PhysicsOutputSnapshot:
+    return m.PhysicsOutputSnapshot(raw=number(r.scalar('f')), before=number(r.scalar('f')), after=number(r.scalar('f')), clamped=r.boolean())
+
+def _read_motioneventfired(r: Reader) -> m.MotionEventFired:
+    return m.MotionEventFired(motion_id=r.text(), event_id=r.text(), value=r.text())
+
+def _read_motionplaybackposition(r: Reader) -> m.MotionPlaybackPosition:
+    return m.MotionPlaybackPosition(motion_id=r.text(), local_time=number(r.scalar('f')), period=number(r.scalar('f')), loop_index=integer(r.scalar('Q')), cycle_origin=number(r.scalar('f')))
+
 def _read_meshsnapshot(r: Reader) -> Snapshot[meshes.Mesh]:
     return Snapshot(_read_sourceref(r), meshes.Mesh(id=r.text(), name=r.text(), geometry=_read_meshgeometry(r)))
 
@@ -4700,6 +4721,13 @@ def decode_records(value: bytes, signature: str) -> m.OwnedModelingRecords:
     if signature!=OUTPUT_SIGNATURE: raise ValueError("Binary record contract differs")
     r=Reader(value)
     result=_read_ownedmodelingrecords(r)
+    r.finish()
+    return result
+
+def decode_preview(value: bytes, signature: str) -> m.PreviewBatch:
+    if signature!='471663b0658d2b2a11201a3eeee7d6f3': raise ValueError("Binary preview contract differs")
+    r=Reader(value)
+    result=_read_previewbatch(r)
     r.finish()
     return result
 

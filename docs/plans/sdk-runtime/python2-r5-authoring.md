@@ -93,3 +93,7 @@ Snapshot/Job/恢复能力。R5 和 P5 在上述范围完成前保持“实施中
 前文源码包/wheel/安装证据对应 rebase 前的树。本次重新构建匹配的 Debug adapter
 和 CPU host 做源码回归，未重新执行发行打包或 Editor 验收；旧配对产物只保留为
 历史证据，不能作为 rebase 后的构建使用。R5/P5 整体仍为实施中。
+
+随后已接通[独立 CPU Preview 切片](python2-r5-preview.md)，覆盖冻结来源、
+多个实例/客户端、采样/seek/advance Job、取消和二进制恢复。该记录更新前文的
+Preview 待办；Observer、空间查询、完整调度与 Editor 播放隔离继续待交付。

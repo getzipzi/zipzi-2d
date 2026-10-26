@@ -7249,6 +7249,224 @@ class EditorContext(CompactValue):
         object.__setattr__(self, 'pending_interaction', self.pending_interaction)
 EditorContext.__module__ = "zipzi.modeling"
 
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewCommandSetParameter(CompactValue):
+    "Immutable owned PreviewCommandSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Document parameter UUID; the SDK validates existence and domain.\nvalue: Finite base value in the parameter's authored domain."
+    _variant: _ClassVar[str] = 'set_parameter'
+    id: str
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'value', self.value)
+PreviewCommandSetParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewCommandScheduleMotion(CompactValue):
+    "Immutable owned PreviewCommandScheduleMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Clip UUID; uses the clip's own fades.\ntime: Absolute activation time in seconds on this Preview's clock."
+    _variant: _ClassVar[str] = 'schedule_motion'
+    id: str
+    time: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'time', self.time)
+PreviewCommandScheduleMotion.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewCommandScheduleRegistration(CompactValue):
+    "Immutable owned PreviewCommandScheduleRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Registration UUID; uses the registration's SDK fade overrides.\ntime: Absolute activation time in seconds on this Preview's clock."
+    _variant: _ClassVar[str] = 'schedule_registration'
+    id: str
+    time: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'time', self.time)
+PreviewCommandScheduleRegistration.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewCommandScheduleExpression(CompactValue):
+    "Immutable owned PreviewCommandScheduleExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Native expression asset UUID.\ntime: Absolute activation time in seconds on this Preview's clock."
+    _variant: _ClassVar[str] = 'schedule_expression'
+    id: str
+    time: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'time', self.time)
+PreviewCommandScheduleExpression.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewCommandScheduleParameter(CompactValue):
+    "Immutable owned PreviewCommandScheduleParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Document parameter UUID for an SDK input activation.\ntime: Absolute activation time in seconds on this Preview's clock.\nvalue: Finite parameter input in the authored parameter domain."
+    _variant: _ClassVar[str] = 'schedule_parameter'
+    id: str
+    time: float
+    value: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'time', self.time)
+        object.__setattr__(self, 'value', self.value)
+PreviewCommandScheduleParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewCommandSetPhysics(CompactValue):
+    'Immutable owned PreviewCommandSetPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nenabled: Enable the SDK Physics stage in this Preview only.\nstabilized_start: Use the SDK stabilized-start policy on canonical replay.'
+    _variant: _ClassVar[str] = 'set_physics'
+    enabled: bool
+    stabilized_start: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'enabled', self.enabled)
+        object.__setattr__(self, 'stabilized_start', self.stabilized_start)
+PreviewCommandSetPhysics.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewCommandReset(CompactValue):
+    'Immutable owned PreviewCommandReset value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'reset'
+PreviewCommandReset.__module__ = "zipzi.modeling"
+
+PreviewCommand: TypeAlias = PreviewCommandSetParameter | PreviewCommandScheduleMotion | PreviewCommandScheduleRegistration | PreviewCommandScheduleExpression | PreviewCommandScheduleParameter | PreviewCommandSetPhysics | PreviewCommandReset
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewState(CompactValue):
+    'Immutable owned PreviewState value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsequence: Monotonic accepted operation ordinal, including cancelled sample requests.\ntime: Actual SDK clock after the last completed operation, in seconds.'
+    sequence: int
+    time: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'sequence', self.sequence)
+        object.__setattr__(self, 'time', self.time)
+PreviewState.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewBatch(CompactValue):
+    'Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsequence: Accepted sample request ordinal shared by these ordered frames.\nframes: Owned frames in requested target order, retaining duplicate and backward targets.'
+    sequence: int
+    frames: tuple[PreviewFrame, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'sequence', self.sequence)
+        object.__setattr__(self, 'frames', tuple(self.frames))
+PreviewBatch.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PreviewFrame(CompactValue):
+    'Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npreview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.\nsequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.\nindex: Zero-based target slot in the ordered sample request.\nmotion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.\ngeometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.'
+    preview_id: int
+    sequence: int
+    index: int
+    motion: MotionSnapshot
+    geometry: (DrawableFrame | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'preview_id', self.preview_id)
+        object.__setattr__(self, 'sequence', self.sequence)
+        object.__setattr__(self, 'index', self.index)
+        object.__setattr__(self, 'motion', self.motion)
+        object.__setattr__(self, 'geometry', None if self.geometry is None else self.geometry)
+PreviewFrame.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionSnapshot(CompactValue):
+    'Immutable owned MotionSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nphysics: Optional inspector observations. Collected explicitly by a host after\nevaluation. Advance/seek results leave this empty; populate it with\n`snapshot.physics = preview.physics_snapshot();` when displaying an inspector.\nInternal observations are retained in replay checkpoints for consistent seeks.\ntime: Absolute preview time in seconds.\nparameters: Final parameter values keyed by parameter UUID.\npart_opacity_channels: PartOpacity curves write virtual controls when no real parameter has the Part runtime ID.\npart_opacities: Pose-produced opacities keyed by Part UUID.\nmodel_opacity: Model Opacity channel, separate from the drawable geometry opacity.\nactive_motions: Active clip UUIDs in queue order; repeated activations may repeat a UUID.\nactive_expressions: Active expression UUIDs in queue order, including fading-out entries.\nfired_events: Events crossed by the last update, not accumulated across all seek steps.\ncoverage: Model EyeBlink/LipSync mappings and unsupported Model IDs are reported.\nmotion_positions: SDK sampling coordinates, including the duration + 1 / FPS loop tail.'
+    physics: tuple[PhysicsRigSnapshot, ...] = field(default_factory=lambda: tuple(read_PhysicsRigSnapshot(v0) for v0 in sequence([])))
+    time: float
+    parameters: _Mapping[str, float]
+    part_opacity_channels: _Mapping[str, float]
+    part_opacities: _Mapping[str, float]
+    model_opacity: float
+    active_motions: tuple[str, ...]
+    active_expressions: tuple[str, ...]
+    fired_events: tuple[MotionEventFired, ...]
+    coverage: tuple[str, ...]
+    motion_positions: tuple[MotionPlaybackPosition, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'physics', tuple(self.physics))
+        object.__setattr__(self, 'time', self.time)
+        object.__setattr__(self, 'parameters', MappingProxyType({key0: v0 for key0, v0 in self.parameters.items()}))
+        object.__setattr__(self, 'part_opacity_channels', MappingProxyType({key0: v0 for key0, v0 in self.part_opacity_channels.items()}))
+        object.__setattr__(self, 'part_opacities', MappingProxyType({key0: v0 for key0, v0 in self.part_opacities.items()}))
+        object.__setattr__(self, 'model_opacity', self.model_opacity)
+        object.__setattr__(self, 'active_motions', tuple(self.active_motions))
+        object.__setattr__(self, 'active_expressions', tuple(self.active_expressions))
+        object.__setattr__(self, 'fired_events', tuple(self.fired_events))
+        object.__setattr__(self, 'coverage', tuple(self.coverage))
+        object.__setattr__(self, 'motion_positions', tuple(self.motion_positions))
+MotionSnapshot.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsRigSnapshot(CompactValue):
+    'Immutable owned PhysicsRigSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Native physics group UUID.\ninput_ids: Input channel UUIDs aligned with inputs.\noutput_ids: Output channel UUIDs aligned with outputs.\nnode_ids: Particle node UUIDs aligned with particles.\nparticles: Latest solved particle XY positions in the SDK solver coordinate system.\ninput_angle: Weighted, normalized angle in degrees used by the latest solved step.\nRotate the Y-down solver coordinates by this angle to display a fixed\ngravity direction with rotating input axes.\ninputs: Latest normalized input values in channel order.\noutputs: Latest output observations; None marks an unavailable channel.'
+    id: str
+    input_ids: tuple[str, ...]
+    output_ids: tuple[str, ...]
+    node_ids: tuple[str, ...]
+    particles: tuple[tuple[float, float], ...]
+    input_angle: float
+    inputs: tuple[float, ...]
+    outputs: tuple[(PhysicsOutputSnapshot | None), ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'input_ids', tuple(self.input_ids))
+        object.__setattr__(self, 'output_ids', tuple(self.output_ids))
+        object.__setattr__(self, 'node_ids', tuple(self.node_ids))
+        object.__setattr__(self, 'particles', tuple(tuple(v0) for v0 in self.particles))
+        object.__setattr__(self, 'input_angle', self.input_angle)
+        object.__setattr__(self, 'inputs', tuple(self.inputs))
+        object.__setattr__(self, 'outputs', tuple(None if v0 is None else v0 for v0 in self.outputs))
+PhysicsRigSnapshot.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsOutputSnapshot(CompactValue):
+    'Immutable owned PhysicsOutputSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nraw: Raw output value before weight and parameter clamping.\nbefore: Parameter value immediately before this output.\nafter: Parameter value after applying this output and clamping.\nclamped: Whether the SDK clamped this output to the target parameter range.'
+    raw: float
+    before: float
+    after: float
+    clamped: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'raw', self.raw)
+        object.__setattr__(self, 'before', self.before)
+        object.__setattr__(self, 'after', self.after)
+        object.__setattr__(self, 'clamped', self.clamped)
+PhysicsOutputSnapshot.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionEventFired(CompactValue):
+    'Immutable owned MotionEventFired value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmotion_id: Source clip UUID.\nevent_id: Source event UUID.\nvalue: User-authored event text.'
+    motion_id: str
+    event_id: str
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'motion_id', self.motion_id)
+        object.__setattr__(self, 'event_id', self.event_id)
+        object.__setattr__(self, 'value', self.value)
+MotionEventFired.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionPlaybackPosition(CompactValue):
+    'Immutable owned MotionPlaybackPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmotion_id: Source motion clip UUID for this SDK playback position.\nlocal_time: SDK local sample time in seconds, including the loop tail.\nperiod: SDK loop period in seconds, including the FPS tail.\nloop_index: Canonical SDK loop index; exact seams belong to the preceding loop.\ncycle_origin: Absolute preview-clock time at the start of this cycle.'
+    motion_id: str
+    local_time: float
+    period: float
+    loop_index: int
+    cycle_origin: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'motion_id', self.motion_id)
+        object.__setattr__(self, 'local_time', self.local_time)
+        object.__setattr__(self, 'period', self.period)
+        object.__setattr__(self, 'loop_index', self.loop_index)
+        object.__setattr__(self, 'cycle_origin', self.cycle_origin)
+MotionPlaybackPosition.__module__ = "zipzi.modeling"
+
 def validate_ModelingCommand(value: ModelingCommand) -> None:
     if isinstance(value, ModelingCommandCreateAsset):
         validate_ImageAsset(value.asset)
@@ -15518,6 +15736,311 @@ def read_EditorContext(value: object) -> EditorContext:
     r = record(value)
     return EditorContext(version=read_Version(r['version']), view_id=string(r['view_id']), selected_ids=tuple(string(v0) for v0 in sequence(r['selected_ids'])), workspace=string(r['workspace']), editing_context=string(r['editing_context']), active_tool=string(r['active_tool']), pending_interaction=_boolean(r['pending_interaction']))
 
+def validate_PreviewCommand(value: PreviewCommand) -> None:
+    if isinstance(value, PreviewCommandSetParameter):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PreviewCommandScheduleMotion):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PreviewCommandScheduleRegistration):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PreviewCommandScheduleExpression):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PreviewCommandScheduleParameter):
+        if not isinstance(value.id, str):
+            raise ValueError("Expected string")
+        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    elif isinstance(value, PreviewCommandSetPhysics):
+        if type(value.enabled) is not bool:
+            raise ValueError("Expected bool")
+        if type(value.stabilized_start) is not bool:
+            raise ValueError("Expected bool")
+    elif isinstance(value, PreviewCommandReset):
+        pass
+    else:
+        raise TypeError("Expected PreviewCommand")
+
+def encode_PreviewCommand(value: PreviewCommand) -> object:
+    if isinstance(value, PreviewCommandSetParameter):
+        return {'kind': 'set_parameter', **cast(Mapping[str, object], {'id': value.id, 'value': value.value})}
+    elif isinstance(value, PreviewCommandScheduleMotion):
+        return {'kind': 'schedule_motion', **cast(Mapping[str, object], {'id': value.id, 'time': value.time})}
+    elif isinstance(value, PreviewCommandScheduleRegistration):
+        return {'kind': 'schedule_registration', **cast(Mapping[str, object], {'id': value.id, 'time': value.time})}
+    elif isinstance(value, PreviewCommandScheduleExpression):
+        return {'kind': 'schedule_expression', **cast(Mapping[str, object], {'id': value.id, 'time': value.time})}
+    elif isinstance(value, PreviewCommandScheduleParameter):
+        return {'kind': 'schedule_parameter', **cast(Mapping[str, object], {'id': value.id, 'time': value.time, 'value': value.value})}
+    elif isinstance(value, PreviewCommandSetPhysics):
+        return {'kind': 'set_physics', **cast(Mapping[str, object], {'enabled': value.enabled, 'stabilized_start': value.stabilized_start})}
+    elif isinstance(value, PreviewCommandReset):
+        return {'kind': 'reset', **cast(Mapping[str, object], {})}
+    raise TypeError("Expected PreviewCommand")
+
+def read_PreviewCommand(value: object) -> PreviewCommand:
+    if isinstance(value, (PreviewCommandSetParameter, PreviewCommandScheduleMotion, PreviewCommandScheduleRegistration, PreviewCommandScheduleExpression, PreviewCommandScheduleParameter, PreviewCommandSetPhysics, PreviewCommandReset,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'set_parameter':
+        f = record(r)
+        return PreviewCommandSetParameter(id=string(f['id']), value=number(f['value']))
+    elif tag == 'schedule_motion':
+        f = record(r)
+        return PreviewCommandScheduleMotion(id=string(f['id']), time=number(f['time']))
+    elif tag == 'schedule_registration':
+        f = record(r)
+        return PreviewCommandScheduleRegistration(id=string(f['id']), time=number(f['time']))
+    elif tag == 'schedule_expression':
+        f = record(r)
+        return PreviewCommandScheduleExpression(id=string(f['id']), time=number(f['time']))
+    elif tag == 'schedule_parameter':
+        f = record(r)
+        return PreviewCommandScheduleParameter(id=string(f['id']), time=number(f['time']), value=number(f['value']))
+    elif tag == 'set_physics':
+        f = record(r)
+        return PreviewCommandSetPhysics(enabled=_boolean(f['enabled']), stabilized_start=_boolean(f['stabilized_start']))
+    elif tag == 'reset':
+        return PreviewCommandReset()
+    raise ValueError("Unknown PreviewCommand variant")
+
+def validate_PreviewState(value: PreviewState) -> None:
+    if not isinstance(value, PreviewState):
+        raise TypeError("Expected PreviewState")
+    if type(value.sequence) is not int or not 0 <= value.sequence < 18446744073709551616:
+        raise ValueError("Expected u64")
+    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+
+def encode_PreviewState(value: PreviewState) -> object:
+    return {'sequence': value.sequence, 'time': value.time}
+
+def read_PreviewState(value: object) -> PreviewState:
+    if isinstance(value, PreviewState): return value
+    r = record(value)
+    return PreviewState(sequence=integer(r['sequence']), time=number(r['time']))
+
+def validate_PreviewBatch(value: PreviewBatch) -> None:
+    if not isinstance(value, PreviewBatch):
+        raise TypeError("Expected PreviewBatch")
+    if type(value.sequence) is not int or not 0 <= value.sequence < 18446744073709551616:
+        raise ValueError("Expected u64")
+    if not isinstance(value.frames, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.frames:
+        validate_PreviewFrame(v0)
+
+def encode_PreviewBatch(value: PreviewBatch) -> object:
+    return {'sequence': value.sequence, 'frames': [encode_PreviewFrame(v0) for v0 in value.frames]}
+
+def read_PreviewBatch(value: object) -> PreviewBatch:
+    if isinstance(value, PreviewBatch): return value
+    r = record(value)
+    return PreviewBatch(sequence=integer(r['sequence']), frames=tuple(read_PreviewFrame(v0) for v0 in sequence(r['frames'])))
+
+def validate_PreviewFrame(value: PreviewFrame) -> None:
+    if not isinstance(value, PreviewFrame):
+        raise TypeError("Expected PreviewFrame")
+    if type(value.preview_id) is not int or not 0 <= value.preview_id < 18446744073709551616:
+        raise ValueError("Expected u64")
+    if type(value.sequence) is not int or not 0 <= value.sequence < 18446744073709551616:
+        raise ValueError("Expected u64")
+    if type(value.index) is not int or not 0 <= value.index < 18446744073709551616:
+        raise ValueError("Expected usize")
+    validate_MotionSnapshot(value.motion)
+    if value.geometry is not None:
+        validate_DrawableFrame(value.geometry)
+
+def encode_PreviewFrame(value: PreviewFrame) -> object:
+    return {'preview_id': value.preview_id, 'sequence': value.sequence, 'index': value.index, 'motion': encode_MotionSnapshot(value.motion), 'geometry': None if value.geometry is None else encode_DrawableFrame(value.geometry)}
+
+def read_PreviewFrame(value: object) -> PreviewFrame:
+    if isinstance(value, PreviewFrame): return value
+    r = record(value)
+    return PreviewFrame(preview_id=integer(r['preview_id']), sequence=integer(r['sequence']), index=integer(r['index']), motion=read_MotionSnapshot(r['motion']), geometry=None if r.get('geometry', None) is None else read_DrawableFrame(r.get('geometry', None)))
+
+def validate_MotionSnapshot(value: MotionSnapshot) -> None:
+    if not isinstance(value, MotionSnapshot):
+        raise TypeError("Expected MotionSnapshot")
+    if not isinstance(value.physics, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.physics:
+        validate_PhysicsRigSnapshot(v0)
+    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    for key0, v0 in value.parameters.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    for key0, v0 in value.part_opacity_channels.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    for key0, v0 in value.part_opacities.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if isinstance(value.model_opacity, bool) or not isinstance(value.model_opacity, (float, int)) or not math.isfinite(value.model_opacity) or abs(value.model_opacity) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if not isinstance(value.active_motions, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.active_motions:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.active_expressions, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.active_expressions:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.fired_events, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.fired_events:
+        validate_MotionEventFired(v0)
+    if not isinstance(value.coverage, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.coverage:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.motion_positions, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.motion_positions:
+        validate_MotionPlaybackPosition(v0)
+
+def encode_MotionSnapshot(value: MotionSnapshot) -> object:
+    return {'physics': [encode_PhysicsRigSnapshot(v0) for v0 in value.physics], 'time': value.time, 'parameters': {str(key0): v0 for key0, v0 in value.parameters.items()}, 'part_opacity_channels': {str(key0): v0 for key0, v0 in value.part_opacity_channels.items()}, 'part_opacities': {str(key0): v0 for key0, v0 in value.part_opacities.items()}, 'model_opacity': value.model_opacity, 'active_motions': [v0 for v0 in value.active_motions], 'active_expressions': [v0 for v0 in value.active_expressions], 'fired_events': [encode_MotionEventFired(v0) for v0 in value.fired_events], 'coverage': [v0 for v0 in value.coverage], 'motion_positions': [encode_MotionPlaybackPosition(v0) for v0 in value.motion_positions]}
+
+def read_MotionSnapshot(value: object) -> MotionSnapshot:
+    if isinstance(value, MotionSnapshot): return value
+    r = record(value)
+    return MotionSnapshot(physics=tuple(read_PhysicsRigSnapshot(v0) for v0 in sequence(r.get('physics', []))), time=number(r['time']), parameters={key0: number(v0) for key0, v0 in record(r['parameters']).items()}, part_opacity_channels={key0: number(v0) for key0, v0 in record(r['part_opacity_channels']).items()}, part_opacities={key0: number(v0) for key0, v0 in record(r['part_opacities']).items()}, model_opacity=number(r['model_opacity']), active_motions=tuple(string(v0) for v0 in sequence(r['active_motions'])), active_expressions=tuple(string(v0) for v0 in sequence(r['active_expressions'])), fired_events=tuple(read_MotionEventFired(v0) for v0 in sequence(r['fired_events'])), coverage=tuple(string(v0) for v0 in sequence(r['coverage'])), motion_positions=tuple(read_MotionPlaybackPosition(v0) for v0 in sequence(r['motion_positions'])))
+
+def validate_PhysicsRigSnapshot(value: PhysicsRigSnapshot) -> None:
+    if not isinstance(value, PhysicsRigSnapshot):
+        raise TypeError("Expected PhysicsRigSnapshot")
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.input_ids, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.input_ids:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.output_ids, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.output_ids:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.node_ids, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.node_ids:
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    if not isinstance(value.particles, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.particles:
+        if not isinstance(v0, tuple):
+            raise TypeError("Expected an immutable tuple")
+        if len(v0) != 2:
+            raise ValueError("Invalid fixed array length")
+        for v1 in v0:
+            if isinstance(v1, bool) or not isinstance(v1, (float, int)) or not math.isfinite(v1) or abs(v1) > 3.4028234663852886e38:
+                raise ValueError("Expected f32")
+    if isinstance(value.input_angle, bool) or not isinstance(value.input_angle, (float, int)) or not math.isfinite(value.input_angle) or abs(value.input_angle) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if not isinstance(value.inputs, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.inputs:
+        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    if not isinstance(value.outputs, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.outputs:
+        if v0 is not None:
+            validate_PhysicsOutputSnapshot(v0)
+
+def encode_PhysicsRigSnapshot(value: PhysicsRigSnapshot) -> object:
+    return {'id': value.id, 'input_ids': [v0 for v0 in value.input_ids], 'output_ids': [v0 for v0 in value.output_ids], 'node_ids': [v0 for v0 in value.node_ids], 'particles': [[v1 for v1 in v0] for v0 in value.particles], 'input_angle': value.input_angle, 'inputs': [v0 for v0 in value.inputs], 'outputs': [None if v0 is None else encode_PhysicsOutputSnapshot(v0) for v0 in value.outputs]}
+
+def read_PhysicsRigSnapshot(value: object) -> PhysicsRigSnapshot:
+    if isinstance(value, PhysicsRigSnapshot): return value
+    r = record(value)
+    return PhysicsRigSnapshot(id=string(r['id']), input_ids=tuple(string(v0) for v0 in sequence(r['input_ids'])), output_ids=tuple(string(v0) for v0 in sequence(r['output_ids'])), node_ids=tuple(string(v0) for v0 in sequence(r['node_ids'])), particles=tuple(cast('tuple[float, float]', tuple(number(v1) for v1 in sequence(v0))) for v0 in sequence(r['particles'])), input_angle=number(r['input_angle']), inputs=tuple(number(v0) for v0 in sequence(r['inputs'])), outputs=tuple(None if v0 is None else read_PhysicsOutputSnapshot(v0) for v0 in sequence(r['outputs'])))
+
+def validate_PhysicsOutputSnapshot(value: PhysicsOutputSnapshot) -> None:
+    if not isinstance(value, PhysicsOutputSnapshot):
+        raise TypeError("Expected PhysicsOutputSnapshot")
+    if isinstance(value.raw, bool) or not isinstance(value.raw, (float, int)) or not math.isfinite(value.raw) or abs(value.raw) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.before, bool) or not isinstance(value.before, (float, int)) or not math.isfinite(value.before) or abs(value.before) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.after, bool) or not isinstance(value.after, (float, int)) or not math.isfinite(value.after) or abs(value.after) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if type(value.clamped) is not bool:
+        raise ValueError("Expected bool")
+
+def encode_PhysicsOutputSnapshot(value: PhysicsOutputSnapshot) -> object:
+    return {'raw': value.raw, 'before': value.before, 'after': value.after, 'clamped': value.clamped}
+
+def read_PhysicsOutputSnapshot(value: object) -> PhysicsOutputSnapshot:
+    if isinstance(value, PhysicsOutputSnapshot): return value
+    r = record(value)
+    return PhysicsOutputSnapshot(raw=number(r['raw']), before=number(r['before']), after=number(r['after']), clamped=_boolean(r['clamped']))
+
+def validate_MotionEventFired(value: MotionEventFired) -> None:
+    if not isinstance(value, MotionEventFired):
+        raise TypeError("Expected MotionEventFired")
+    if not isinstance(value.motion_id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.event_id, str):
+        raise ValueError("Expected string")
+    if not isinstance(value.value, str):
+        raise ValueError("Expected string")
+
+def encode_MotionEventFired(value: MotionEventFired) -> object:
+    return {'motion_id': value.motion_id, 'event_id': value.event_id, 'value': value.value}
+
+def read_MotionEventFired(value: object) -> MotionEventFired:
+    if isinstance(value, MotionEventFired): return value
+    r = record(value)
+    return MotionEventFired(motion_id=string(r['motion_id']), event_id=string(r['event_id']), value=string(r['value']))
+
+def validate_MotionPlaybackPosition(value: MotionPlaybackPosition) -> None:
+    if not isinstance(value, MotionPlaybackPosition):
+        raise TypeError("Expected MotionPlaybackPosition")
+    if not isinstance(value.motion_id, str):
+        raise ValueError("Expected string")
+    if isinstance(value.local_time, bool) or not isinstance(value.local_time, (float, int)) or not math.isfinite(value.local_time) or abs(value.local_time) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if isinstance(value.period, bool) or not isinstance(value.period, (float, int)) or not math.isfinite(value.period) or abs(value.period) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if type(value.loop_index) is not int or not 0 <= value.loop_index < 18446744073709551616:
+        raise ValueError("Expected u64")
+    if isinstance(value.cycle_origin, bool) or not isinstance(value.cycle_origin, (float, int)) or not math.isfinite(value.cycle_origin) or abs(value.cycle_origin) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+
+def encode_MotionPlaybackPosition(value: MotionPlaybackPosition) -> object:
+    return {'motion_id': value.motion_id, 'local_time': value.local_time, 'period': value.period, 'loop_index': value.loop_index, 'cycle_origin': value.cycle_origin}
+
+def read_MotionPlaybackPosition(value: object) -> MotionPlaybackPosition:
+    if isinstance(value, MotionPlaybackPosition): return value
+    r = record(value)
+    return MotionPlaybackPosition(motion_id=string(r['motion_id']), local_time=number(r['local_time']), period=number(r['period']), loop_index=integer(r['loop_index']), cycle_origin=number(r['cycle_origin']))
+
 OPERATION_TYPES = (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandMotion, ModelingCommandExpression, ModelingCommandPhysics, ModelingCommandPose, ModelingCommandCreateMotion, ModelingCommandReplaceMotion, ModelingCommandCreateExpression, ModelingCommandReplaceExpression, ModelingCommandSetPhysics, ModelingCommandSetPose, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology,)
 
-__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandMotion', 'ModelingCommandExpression', 'ModelingCommandPhysics', 'ModelingCommandPose', 'ModelingCommandCreateMotion', 'ModelingCommandReplaceMotion', 'ModelingCommandCreateExpression', 'ModelingCommandReplaceExpression', 'ModelingCommandSetPhysics', 'ModelingCommandSetPose', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentStrategy', 'ReparentPlacement', 'ReparentContext', 'ConversionDomain', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionContainerRoot', 'MotionContainerGroup', 'MotionRegistration', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved', 'MotionEvent', 'ExpressionEditCreate', 'ExpressionEditCreateEntry', 'ExpressionEditPatchEntry', 'ExpressionEditMoveEntries', 'ExpressionEditDuplicateEntries', 'ExpressionEditDeleteEntries', 'ExpressionEditDuplicate', 'ExpressionEditDelete', 'ExpressionEditReorder', 'ExpressionEntryFields', 'ExpressionTargetUnspecified', 'ExpressionTargetResolved', 'ExpressionTargetUnresolved', 'ExpressionBlend', 'PhysicsEditCreateGroup', 'PhysicsEditCreateInput', 'PhysicsEditCreateOutput', 'PhysicsEditInsertNode', 'PhysicsEditMoveNode', 'PhysicsEditDuplicateNode', 'PhysicsEditPatch', 'PhysicsEditMoveInputs', 'PhysicsEditMoveOutputs', 'PhysicsEditReorderGroups', 'PhysicsEditDuplicate', 'PhysicsEditDelete', 'PhysicsNode', 'PhysicsVector', 'PhysicsPatch', 'PhysicsAssetPropertyFps', 'PhysicsRigPatch', 'PhysicsPropertyName', 'PhysicsPropertyInputWeight', 'PhysicsPropertyInputAxis', 'PhysicsPropertyInputReflect', 'PhysicsPropertyInputParameter', 'PhysicsPropertyOutputWeight', 'PhysicsPropertyOutputScale', 'PhysicsPropertyOutputAxis', 'PhysicsPropertyOutputReflect', 'PhysicsPropertyOutputParameter', 'PhysicsPropertyOutputNode', 'PhysicsPropertyVertexPosition', 'PhysicsPropertyVertexRadius', 'PhysicsPropertyVertexMobility', 'PhysicsPropertyVertexDelay', 'PhysicsPropertyVertexAcceleration', 'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsAxis', 'PhysicsTargetUnspecified', 'PhysicsTargetResolved', 'PhysicsTargetUnresolved', 'PhysicsRange', 'PoseEditCreate', 'PoseEditCreateGroup', 'PoseEditCreateEntry', 'PoseEditCreateLink', 'PoseEditPatch', 'PoseEditMove', 'PoseEditDuplicate', 'PoseEditDelete', 'PoseEditDissolveGroup', 'PoseFieldsAsset', 'PoseFieldsGroup', 'PoseFieldsEntry', 'PoseFieldsLink', 'PosePartRefUnspecified', 'PosePartRefResolved', 'PosePartRefUnresolved', 'PoseCollectionGroups', 'PoseCollectionEntries', 'PoseCollectionLinks', 'MotionClip', 'MotionTrack', 'MotionKey', 'MotionSegmentLinear', 'MotionSegmentBezier', 'MotionSegmentStepped', 'MotionSegmentInverseStepped', 'MotionPoint', 'ExpressionAsset', 'ExpressionEntry', 'PhysicsAsset', 'PhysicsDefinition', 'PhysicsMeta', 'PhysicsForces', 'PhysicsDictionaryEntry', 'PhysicsSetting', 'PhysicsInput', 'PhysicsOutput', 'PhysicsNormalization', 'PoseAsset', 'PoseGroup', 'PoseEntry', 'PoseLink', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'MotionGroup', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'AddressSelectorMotionRegistration', 'AddressSelectorExpressionEntry', 'AddressSelectorPhysics', 'AddressSelectorPose', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'AddressPatchMotionRegistration', 'AddressPatchExpressionEntry', 'AddressPatchPhysics', 'AddressPatchPose', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CollectionQueryMotion', 'CollectionQueryMotionGroups', 'CollectionQueryClips', 'CollectionQueryExpressions', 'CollectionQueryExpressionEntries', 'CollectionQueryPhysics', 'CollectionQueryPose', 'PhysicsCollectionGroups', 'PhysicsCollectionInputs', 'PhysicsCollectionOutputs', 'PhysicsCollectionNodes', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'CapabilitiesMotion', 'CapabilitiesExpression', 'CapabilitiesPhysics', 'CapabilitiesPose', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'MotionCapabilities', 'ExpressionCapabilities', 'PhysicsCapabilities', 'PoseCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'MotionEdit', 'MotionContainer', 'MotionTrackTarget', 'ExpressionEdit', 'ExpressionTarget', 'PhysicsEdit', 'PhysicsAssetProperty', 'PhysicsProperty', 'PhysicsTarget', 'PoseEdit', 'PoseFields', 'PosePartRef', 'PoseCollection', 'MotionSegment', 'SceneKeyform', 'GeometrySpace', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'PhysicsCollection', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'ExtensionValue']
+__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandMotion', 'ModelingCommandExpression', 'ModelingCommandPhysics', 'ModelingCommandPose', 'ModelingCommandCreateMotion', 'ModelingCommandReplaceMotion', 'ModelingCommandCreateExpression', 'ModelingCommandReplaceExpression', 'ModelingCommandSetPhysics', 'ModelingCommandSetPose', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentStrategy', 'ReparentPlacement', 'ReparentContext', 'ConversionDomain', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionContainerRoot', 'MotionContainerGroup', 'MotionRegistration', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved', 'MotionEvent', 'ExpressionEditCreate', 'ExpressionEditCreateEntry', 'ExpressionEditPatchEntry', 'ExpressionEditMoveEntries', 'ExpressionEditDuplicateEntries', 'ExpressionEditDeleteEntries', 'ExpressionEditDuplicate', 'ExpressionEditDelete', 'ExpressionEditReorder', 'ExpressionEntryFields', 'ExpressionTargetUnspecified', 'ExpressionTargetResolved', 'ExpressionTargetUnresolved', 'ExpressionBlend', 'PhysicsEditCreateGroup', 'PhysicsEditCreateInput', 'PhysicsEditCreateOutput', 'PhysicsEditInsertNode', 'PhysicsEditMoveNode', 'PhysicsEditDuplicateNode', 'PhysicsEditPatch', 'PhysicsEditMoveInputs', 'PhysicsEditMoveOutputs', 'PhysicsEditReorderGroups', 'PhysicsEditDuplicate', 'PhysicsEditDelete', 'PhysicsNode', 'PhysicsVector', 'PhysicsPatch', 'PhysicsAssetPropertyFps', 'PhysicsRigPatch', 'PhysicsPropertyName', 'PhysicsPropertyInputWeight', 'PhysicsPropertyInputAxis', 'PhysicsPropertyInputReflect', 'PhysicsPropertyInputParameter', 'PhysicsPropertyOutputWeight', 'PhysicsPropertyOutputScale', 'PhysicsPropertyOutputAxis', 'PhysicsPropertyOutputReflect', 'PhysicsPropertyOutputParameter', 'PhysicsPropertyOutputNode', 'PhysicsPropertyVertexPosition', 'PhysicsPropertyVertexRadius', 'PhysicsPropertyVertexMobility', 'PhysicsPropertyVertexDelay', 'PhysicsPropertyVertexAcceleration', 'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsAxis', 'PhysicsTargetUnspecified', 'PhysicsTargetResolved', 'PhysicsTargetUnresolved', 'PhysicsRange', 'PoseEditCreate', 'PoseEditCreateGroup', 'PoseEditCreateEntry', 'PoseEditCreateLink', 'PoseEditPatch', 'PoseEditMove', 'PoseEditDuplicate', 'PoseEditDelete', 'PoseEditDissolveGroup', 'PoseFieldsAsset', 'PoseFieldsGroup', 'PoseFieldsEntry', 'PoseFieldsLink', 'PosePartRefUnspecified', 'PosePartRefResolved', 'PosePartRefUnresolved', 'PoseCollectionGroups', 'PoseCollectionEntries', 'PoseCollectionLinks', 'MotionClip', 'MotionTrack', 'MotionKey', 'MotionSegmentLinear', 'MotionSegmentBezier', 'MotionSegmentStepped', 'MotionSegmentInverseStepped', 'MotionPoint', 'ExpressionAsset', 'ExpressionEntry', 'PhysicsAsset', 'PhysicsDefinition', 'PhysicsMeta', 'PhysicsForces', 'PhysicsDictionaryEntry', 'PhysicsSetting', 'PhysicsInput', 'PhysicsOutput', 'PhysicsNormalization', 'PoseAsset', 'PoseGroup', 'PoseEntry', 'PoseLink', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'MotionGroup', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'AddressSelectorMotionRegistration', 'AddressSelectorExpressionEntry', 'AddressSelectorPhysics', 'AddressSelectorPose', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'AddressPatchMotionRegistration', 'AddressPatchExpressionEntry', 'AddressPatchPhysics', 'AddressPatchPose', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CollectionQueryMotion', 'CollectionQueryMotionGroups', 'CollectionQueryClips', 'CollectionQueryExpressions', 'CollectionQueryExpressionEntries', 'CollectionQueryPhysics', 'CollectionQueryPose', 'PhysicsCollectionGroups', 'PhysicsCollectionInputs', 'PhysicsCollectionOutputs', 'PhysicsCollectionNodes', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'CapabilitiesMotion', 'CapabilitiesExpression', 'CapabilitiesPhysics', 'CapabilitiesPose', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'MotionCapabilities', 'ExpressionCapabilities', 'PhysicsCapabilities', 'PoseCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'PreviewCommandSetParameter', 'PreviewCommandScheduleMotion', 'PreviewCommandScheduleRegistration', 'PreviewCommandScheduleExpression', 'PreviewCommandScheduleParameter', 'PreviewCommandSetPhysics', 'PreviewCommandReset', 'PreviewState', 'PreviewBatch', 'PreviewFrame', 'MotionSnapshot', 'PhysicsRigSnapshot', 'PhysicsOutputSnapshot', 'MotionEventFired', 'MotionPlaybackPosition', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'MotionEdit', 'MotionContainer', 'MotionTrackTarget', 'ExpressionEdit', 'ExpressionTarget', 'PhysicsEdit', 'PhysicsAssetProperty', 'PhysicsProperty', 'PhysicsTarget', 'PoseEdit', 'PoseFields', 'PosePartRef', 'PoseCollection', 'MotionSegment', 'SceneKeyform', 'GeometrySpace', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'PhysicsCollection', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'PreviewCommand', 'ExtensionValue']

@@ -48,6 +48,7 @@ def render_modeling(contract, header, rust_header):
         n=re.sub(r'zipzi_core::document::(?:[a-z_0-9]+::)*', 'zipzi_core::document::', n)
         n=re.sub(r'zipzi_sdk::(?:[a-z_0-9]+::)*', 'zipzi_sdk::', n)
         n=n.replace('zipzi_core::scene_reference::', 'zipzi_core::').replace('zipzi_core::evaluation::types::','zipzi_core::evaluation::')
+        n=re.sub(r'zipzi_animation::(?:motion_preview|physics)::', 'zipzi_sdk::', n)
         return n
     def nm(s):return names[s['name']]
     def pn(f):return f['name'] + ('_' if keyword.iskeyword(f['name']) else '')

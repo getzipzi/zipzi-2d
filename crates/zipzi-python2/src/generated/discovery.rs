@@ -37,6 +37,10 @@ pub(crate) fn write_runtimelimits<'py>(
     v: &zipzi_runtime::RuntimeLimits,
 ) -> PyResult<Bound<'py, PyDict>> {
     let d = PyDict::new(py);
+    d.set_item("previews_per_client", &v.previews_per_client)?;
+    d.set_item("preview_bytes", &v.preview_bytes)?;
+    d.set_item("preview_schedule_entries", &v.preview_schedule_entries)?;
+    d.set_item("preview_seek_cache_bytes", &v.preview_seek_cache_bytes)?;
     d.set_item("collection_records", &v.collection_records)?;
     d.set_item("collection_bytes", &v.collection_bytes)?;
     d.set_item("collection_scan", &v.collection_scan)?;

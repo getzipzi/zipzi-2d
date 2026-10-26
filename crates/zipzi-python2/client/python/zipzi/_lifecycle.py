@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TypeVar, overload
 from . import events, ops, _plans as plans, resources, references, modeling
 from ._errors import Busy, JobTimeout, OutcomeUnknown, SdkFailure
-from ._values import ConnectionInfo, Receipt, SaveReceipt, SessionId, SessionInfo, WriteResult, record, sequence
+from ._values import ConnectionInfo, Receipt, SaveReceipt, SessionId, SessionInfo, Source, WriteResult, record, sequence
 from .backends import Backend
 from ._recovery import RecoveryOwner
 from ._calls import Call, known
@@ -24,6 +24,7 @@ def absolute(path: Path) -> Path:
     return path
 
 from ._jobs import Job, JobState as JobState
+from ._preview import Preview
 
 from ._generated.facades import Meshes, EditableMeshes, Images, EditableImages, Parameters, EditableParameters, Bindings, EditableBindings, Scene, Modeling
 from ._generated.discovery import RuntimeCapabilities, RuntimeLimits
@@ -183,6 +184,10 @@ class Session:
         def finish(raw:object)->SessionInfo:
             info=SessionInfo._read(raw);binding.closed=info;binding.active=False;return info
         return binding._request("close",lambda:self._backend.close_session(binding.token,discard_modified,binding),finish)
+    def preview(self, *, expected: Source | None = None) -> Preview:
+        """Capture an independent frozen formal animation Preview. Close it explicitly; later edits never refresh it, and playback never changes document history."""
+        return Preview._create(self._backend,self._token,None,expected)
+
     def plan(self, operation: ops.PlannableOperation) -> plans.Plan:
         'Plan a registered typed domain operation against the exact formal Source. Read cost/losses, apply through an Edit, then close the Plan. Planning failures do not abort another candidate.'
         return plans.Plan._create(self._backend, self._token, None, operation)
@@ -367,6 +372,11 @@ class Edit(RecoveryOwner):
             if self._state != EditState.aborted:
                 self._state = EditState.cancelled
         self._run("release", lambda: self._backend.release(self._token, self), released)
+
+    def preview(self, *, expected: Source | None = None) -> Preview:
+        """Capture this candidate and its exact sequence as an independent Preview. Subsequent writes/commit/cancel do not rewrite its frozen content. Preview errors do not abort the candidate."""
+        self._ensure_editing()
+        return Preview._create(self._backend,self._session._token,self._token,expected)
 
     def plan(self, operation: ops.PlannableOperation) -> plans.Plan:
         'Plan a registered typed operation against this candidate and exact sequence. A subsequent write invalidates the Plan. Apply as the first and only Plan in a batch, then close it.'

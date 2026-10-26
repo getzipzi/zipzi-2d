@@ -172,6 +172,7 @@ impl Runtime {
                 "scene",
                 "modeling",
                 "animation_authoring",
+                "animation_preview",
                 "sampling",
                 "events",
                 "references",

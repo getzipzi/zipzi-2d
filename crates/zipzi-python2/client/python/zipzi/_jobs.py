@@ -67,7 +67,7 @@ class Job(RecoveryOwner, Generic[T]):
     def _wait_value(self, raw: object) -> T:
         # A recovered sampled transfer can be a poll taken before completion.
         # Its empty result is not a sample; continue polling the accepted job.
-        if raw is None and self._kind == "sampled":
+        if raw is None and self._kind in {"sampled", "preview"}:
             raw = self._backend.wait(self._token, self._kind, self, timeout=self._remaining())
         if "result" in record(raw):
             from ._errors import unwrap

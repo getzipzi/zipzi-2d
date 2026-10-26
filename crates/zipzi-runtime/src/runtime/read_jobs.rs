@@ -5,7 +5,7 @@ use crate::{
     jobs::{ReadTask, Task},
 };
 impl Runtime {
-    fn queue_read(
+    pub(super) fn queue_read(
         &mut self,
         client: ClientId,
         source: SourceSnapshot,
@@ -163,13 +163,18 @@ impl Runtime {
             self.jobs.remove(&job);
             return true;
         }
-        if record.cancel.load(Ordering::Acquire) {
+        self.complete_preview_job(job);
+        let record = self.jobs.get(&job).unwrap();
+        // Preview steps commit in the SDK worker. A cancellation that arrives
+        // after the complete batch succeeded must report that actual outcome.
+        if record.cancel.load(Ordering::Acquire) && !matches!(&result, Ok(JobValue::Previewed(_))) {
             result = Err(RuntimeError::Cancelled);
         }
         let expected = record.read_source.as_ref().map(|s| s.source);
         if let Ok(value) = &result {
             let actual = match value {
                 JobValue::Sampled(value) => Some(value.source),
+                JobValue::Previewed(value) => Some(value.source),
                 JobValue::PreparedPlan(value) => Some(value.source.source),
                 _ => None,
             };

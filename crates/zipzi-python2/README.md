@@ -19,7 +19,7 @@ no JSON transport conversion or direct SDK session owner.
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |
 | `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract, registered domain values/operations, facades, codecs and documentation |
-| `client/python/zipzi/_generated/`, `src/generated/` | 37 managed outputs, including uniform facades, backend bindings, metadata, public reexports and the offline API reference |
+| `client/python/zipzi/_generated/`, `src/generated/` | 38 managed outputs, including uniform facades, backend bindings, metadata, public reexports and the offline API reference |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
 From the repository root, using the workspace's CPython 3.14 tools:
@@ -70,8 +70,9 @@ For focused regressions, run from the repository root:
 ```
 
 [Typed animation authoring](../../docs/plans/sdk-runtime/python2-r5-authoring.md)
-is connected in the first R5/P5 slice. Independent Preview, animation sampling,
-Observer/inspection, scheduling and Editor acceptance remain pending in R5/P5.
+is connected in the first R5/P5 slice. [CPU Preview and animation sampling](../../docs/plans/sdk-runtime/python2-r5-preview.md)
+are connected on independent frozen sources. Observer/inspection, spatial queries,
+fair batch scheduling and Editor playback integration remain pending in R5/P5.
 Full platform/app distribution acceptance is also pending.
 See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence.
 
@@ -391,7 +392,7 @@ release their tables. Every create/read/plan/close retains its own recovery owne
 
 ## Complete Runtime R4 routes
 
-The native pairing contract is `zipzi-python2-15`; IPC is `zipzi-runtime-r5-authoring-1`.
+The native pairing contract is `zipzi-python2-16`; IPC is `zipzi-runtime-r5-preview-1`.
 Rebuild both adapters and hosts after contract changes. Compiled Rust serde
 shapes generate `zipzi.modeling`, native constructors/writers and the binary
 array codec. `edit.apply` accepts the full `ModelingCommand` family, including
@@ -481,7 +482,8 @@ allocator overhead and realloc transient storage. Connected probes retain an
 empty control-window calibration. Noise and regression policies are recorded;
 CPU fixture numbers do not claim Editor latency.
 
-Independent animation Preview and observer/inspection remain later Runtime capabilities. See the
+CPU animation Preview is available through `session.preview()` / `edit.preview()`.
+Observer/inspection and Editor playback integration remain pending. See the
 [construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).
 

@@ -184,3 +184,14 @@ def animation_authoring(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zi
     with session.address(modeling.AddressSelectorPose(id=id)) as address:
         assert_type(address.plan(modeling.AddressPatchPose(fields=modeling.PoseFieldsGroup(name="New"))), zipzi.Plan)
     return snapshot
+
+from zipzi import animation
+
+def animation_preview(session: zipzi.Session, edit: zipzi.Edit) -> zipzi.Snapshot[animation.Batch]:
+    with session.preview() as preview:
+        assert_type(preview.source,zipzi.Source)
+        assert_type(preview.id,int)
+        assert_type(preview.apply(animation.SetParameter(id="parameter",value=.5)),zipzi.Snapshot[animation.State])
+        assert_type(zipzi.recover_call(preview.seek,.5),zipzi.Job[zipzi.Snapshot[animation.Batch]])
+        assert_type(preview.advance_to(.5),zipzi.Job[zipzi.Snapshot[animation.Batch]])
+        return preview.sample((0.,.5),geometry=True).wait()

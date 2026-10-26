@@ -18,7 +18,7 @@ from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
 from ._transfers import Transfer
 
-CONTRACT = "zipzi-runtime-r5-authoring-1"
+CONTRACT = "zipzi-runtime-r5-preview-1"
 MAX_FRAME = 16 << 20
 MAX_BINARY_CHUNK = 1 << 20
 MAX_BINARY_HEADER = 16 << 10
@@ -230,8 +230,10 @@ class ConnectedBackend(ConnectedBindings):
         return self._request(dict(op="seal_blob", blob=blob), owner, "buffer.seal")
     def _transport_buffer_read(self, blob: object, offset: int, length: int, owner: object) -> object:
         return self._drive_transfer(Transfer(self, owner, "read", blob=blob, offset=offset, length=length))
-    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None:
-        if kind == "image":
+    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer", "preview"], token: object, owner: object) -> None:
+        if kind == "preview":
+            operation = dict(op="release_preview", preview=token)
+        elif kind == "image":
             operation = dict(op="release_prepared_image", image=token)
         elif kind == "plan":
             operation = dict(op="release_modeling_plan", plan=token)
@@ -247,9 +249,9 @@ class ConnectedBackend(ConnectedBindings):
     def _transport_wait(self, job: object, kind: JobKind, owner: object, *, timeout: float | None = None) -> object:
         deadline = None if timeout is None else time.monotonic() + timeout
         while True:
-            if kind=="sampled":
+            if kind in {"sampled","preview"}:
                 selector=dict(op="job",job=job)
-                raw=self._drive_transfer(Transfer(self,owner,"samples",selector=selector))
+                raw=self._drive_transfer(Transfer(self,owner,"samples" if kind=="sampled" else "preview",selector=selector))
                 if raw is not None: return raw
                 if deadline is not None and time.monotonic() >= deadline:
                     raise JobTimeout()

@@ -134,7 +134,7 @@ BINDINGS = {'Local': [('buffer_create',
             '    return self._transport_prepare_image(width,height,rgba,owner)\n',
             '_transport_prepare_image'),
            ('release_handle',
-            'def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: '
+            'def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer", "preview"], token: object, owner: '
             'object) -> None:\n'
             '    return self._transport_release_handle(kind,token,owner)\n',
             '_transport_release_handle'),
@@ -403,7 +403,7 @@ BINDINGS = {'Local': [('buffer_create',
                 'image=image)))\n',
                 None),
                ('release_handle',
-                'def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, '
+                'def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer", "preview"], token: object, '
                 'owner: object) -> None:\n'
                 '    return self._transport_release_handle(kind,token,owner)\n',
                 '_transport_release_handle'),
@@ -500,3 +500,13 @@ BINDINGS = {'Local': [('buffer_create',
                 'Source | None, owner: object) -> object:\n'
                 '    return self._transport_read_selection(session,edit,domain,ids,expected,owner)\n',
                 '_transport_read_selection')]}
+
+# Independent frozen animation Preview routes.
+BINDINGS['Local'].append(('create_preview', 'def create_preview(self, session: object, edit: object | None, expected: Source | None, owner: object) -> object:\n    return unwrap(self._native.create_preview(session,edit,expected))\n', None))
+BINDINGS['Local'].append(('preview_state', 'def preview_state(self, preview: object, owner: object) -> object:\n    return unwrap(self._native.preview_state(preview))\n', None))
+BINDINGS['Local'].append(('apply_preview', 'def apply_preview(self, preview: object, command: modeling.PreviewCommand, owner: object) -> object:\n    return unwrap(self._native.apply_preview(preview,command))\n', None))
+BINDINGS['Local'].append(('sample_preview', 'def sample_preview(self, preview: object, times: tuple[float,...], geometry: bool, incremental: bool, owner: object) -> object:\n    return unwrap(self._native.sample_preview(preview,times,geometry,incremental))\n', None))
+BINDINGS['Connected'].append(('create_preview', 'def create_preview(self, session: object, edit: object | None, expected: Source | None, owner: object) -> object:\n    return self._request(dict(op="create_preview",session=session,edit=edit,expected=None if expected is None else expected._wire()),owner,"preview.create_preview")\n', None))
+BINDINGS['Connected'].append(('preview_state', 'def preview_state(self, preview: object, owner: object) -> object:\n    return self._request(dict(op="preview_state",preview=preview),owner,"preview.preview_state")\n', None))
+BINDINGS['Connected'].append(('apply_preview', 'def apply_preview(self, preview: object, command: modeling.PreviewCommand, owner: object) -> object:\n    return self._request(dict(op="apply_preview",preview=preview,command=modeling.encode_PreviewCommand(command)),owner,"preview.apply_preview")\n', None))
+BINDINGS['Connected'].append(('sample_preview', 'def sample_preview(self, preview: object, times: tuple[float,...], geometry: bool, incremental: bool, owner: object) -> object:\n    return record(self._request(dict(op="sample_preview",preview=preview,times=times,geometry=geometry,incremental=incremental),owner,"preview.sample_preview"))["job"]\n', None))

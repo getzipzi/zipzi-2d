@@ -52,7 +52,8 @@ ids!(
     ImageId,
     BlobId,
     ObjectRefId,
-    FieldAddressId
+    FieldAddressId,
+    PreviewId
 );
 impl From<EditId> for OperationId {
     fn from(id: EditId) -> Self {
@@ -118,6 +119,7 @@ impl JobState {
 
 #[derive(Debug, Clone)]
 pub enum JobValue {
+    Previewed(std::sync::Arc<crate::preview::PreviewSampleBatch>),
     PreparedImage(std::sync::Arc<zipzi_sdk::PreparedImageContent>),
     ImagePrepared(crate::authoring::PreparedImageInfo),
     Project {
@@ -274,6 +276,7 @@ impl JobValue {
         use zipzi_core::binary_wire::WireWrite;
         match self {
             Self::Project { report, .. } => report.expansion_bytes(),
+            Self::Previewed(value) => value.samples.expansion_bytes(),
             Self::Sampled(samples) => samples.samples.expansion_bytes(),
             Self::Planned(plan) => plan.report.expansion_bytes(),
             Self::PreparedPlan(plan) => plan.bytes,

@@ -98,8 +98,8 @@ class LocalBindings(ABC):
     def prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
         return self._transport_prepare_image(width,height,rgba,owner)
     @abstractmethod
-    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None: ...
-    def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None:
+    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer", "preview"], token: object, owner: object) -> None: ...
+    def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer", "preview"], token: object, owner: object) -> None:
         return self._transport_release_handle(kind,token,owner)
     def statistics(self, owner: object) -> object:
         return unwrap(self._native.statistics())
@@ -155,6 +155,14 @@ class LocalBindings(ABC):
     def _transport_read_selection(self, session: object, edit: object | None, domain: str, ids: tuple[str,...], expected: Source | None, owner: object) -> object: ...
     def read_selection(self, session: object, edit: object | None, domain: str, ids: tuple[str,...], expected: Source | None, owner: object) -> object:
         return self._transport_read_selection(session,edit,domain,ids,expected,owner)
+    def create_preview(self, session: object, edit: object | None, expected: Source | None, owner: object) -> object:
+        return unwrap(self._native.create_preview(session,edit,expected))
+    def preview_state(self, preview: object, owner: object) -> object:
+        return unwrap(self._native.preview_state(preview))
+    def apply_preview(self, preview: object, command: modeling.PreviewCommand, owner: object) -> object:
+        return unwrap(self._native.apply_preview(preview,command))
+    def sample_preview(self, preview: object, times: tuple[float,...], geometry: bool, incremental: bool, owner: object) -> object:
+        return unwrap(self._native.sample_preview(preview,times,geometry,incremental))
 
 class ConnectedBindings(TransferBackend, ABC):
     @abstractmethod
@@ -251,8 +259,8 @@ class ConnectedBindings(TransferBackend, ABC):
     def prepared_pixels(self, image: object, owner: object) -> object:
         return self._drive_transfer(Transfer(self, owner, "pixels", selector=dict(op="prepared_pixels", image=image)))
     @abstractmethod
-    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None: ...
-    def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer"], token: object, owner: object) -> None:
+    def _transport_release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer", "preview"], token: object, owner: object) -> None: ...
+    def release_handle(self, kind: Literal["image", "plan", "reference", "address", "buffer", "preview"], token: object, owner: object) -> None:
         return self._transport_release_handle(kind,token,owner)
     def statistics(self, owner: object) -> object:
         return self._request(dict(op="statistics"), owner, "resources.usage")
@@ -302,5 +310,13 @@ class ConnectedBindings(TransferBackend, ABC):
     def _transport_read_selection(self, session: object, edit: object | None, domain: str, ids: tuple[str,...], expected: Source | None, owner: object) -> object: ...
     def read_selection(self, session: object, edit: object | None, domain: str, ids: tuple[str,...], expected: Source | None, owner: object) -> object:
         return self._transport_read_selection(session,edit,domain,ids,expected,owner)
+    def create_preview(self, session: object, edit: object | None, expected: Source | None, owner: object) -> object:
+        return self._request(dict(op="create_preview",session=session,edit=edit,expected=None if expected is None else expected._wire()),owner,"preview.create_preview")
+    def preview_state(self, preview: object, owner: object) -> object:
+        return self._request(dict(op="preview_state",preview=preview),owner,"preview.preview_state")
+    def apply_preview(self, preview: object, command: modeling.PreviewCommand, owner: object) -> object:
+        return self._request(dict(op="apply_preview",preview=preview,command=modeling.encode_PreviewCommand(command)),owner,"preview.apply_preview")
+    def sample_preview(self, preview: object, times: tuple[float,...], geometry: bool, incremental: bool, owner: object) -> object:
+        return record(self._request(dict(op="sample_preview",preview=preview,times=times,geometry=geometry,incremental=incremental),owner,"preview.sample_preview"))["job"]
 
 TRANSPORT_HOOKS = {'Local.buffer_create': {'hook': '_transport_buffer_create', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.buffer_append': {'hook': '_transport_buffer_append', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.buffer_seal': {'hook': '_transport_buffer_seal', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.buffer_read': {'hook': '_transport_buffer_read', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.prepare_image_buffer': {'hook': '_transport_prepare_image_buffer', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.apply': {'hook': '_transport_apply', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.prepare_image': {'hook': '_transport_prepare_image', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.release_handle': {'hook': '_transport_release_handle', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.wait': {'hook': '_transport_wait', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.close': {'hook': '_transport_close', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Local.read_selection': {'hook': '_transport_read_selection', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.apply': {'hook': '_transport_apply', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.prepare_image': {'hook': '_transport_prepare_image', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.prepare_image_buffer': {'hook': '_transport_prepare_image_buffer', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.buffer_create': {'hook': '_transport_buffer_create', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.buffer_append': {'hook': '_transport_buffer_append', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.buffer_seal': {'hook': '_transport_buffer_seal', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.buffer_read': {'hook': '_transport_buffer_read', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.release_handle': {'hook': '_transport_release_handle', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.wait': {'hook': '_transport_wait', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.close': {'hook': '_transport_close', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}, 'Connected.read_selection': {'hook': '_transport_read_selection', 'reason': 'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call', 'contracts': ['C01', 'C07', 'C08']}}

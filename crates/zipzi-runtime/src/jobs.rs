@@ -236,6 +236,15 @@ impl Completion {
 }
 
 pub(crate) enum ReadTask {
+    Preview {
+        preview_id: u64,
+        source: crate::SourceRef,
+        sequence: u64,
+        state: Arc<std::sync::Mutex<zipzi_sdk::MotionPreview>>,
+        times: Vec<f32>,
+        geometry: bool,
+        incremental: bool,
+    },
     Image {
         path: Option<PathBuf>,
         bytes: Option<Arc<[u8]>>,
@@ -280,6 +289,24 @@ impl Work {
             }
             before();
             let value = match task {
+                ReadTask::Preview {
+                    preview_id,
+                    source,
+                    sequence,
+                    state,
+                    times,
+                    geometry,
+                    incremental,
+                } => crate::runtime::previews::sample_preview(
+                    preview_id,
+                    source,
+                    sequence,
+                    &state,
+                    times,
+                    geometry,
+                    incremental,
+                    &cancel,
+                )?,
                 ReadTask::Image {
                     path,
                     bytes,
@@ -331,7 +358,7 @@ impl Work {
                     }))
                 }
             };
-            if cancel.load(Ordering::Acquire) {
+            if cancel.load(Ordering::Acquire) && !matches!(value, JobValue::Previewed(_)) {
                 Err(RuntimeError::Cancelled)
             } else {
                 Ok(value)

@@ -12,6 +12,7 @@ mod jobs;
 pub mod local;
 pub mod metrics;
 pub mod modeling;
+pub mod preview;
 pub mod project_io;
 pub mod protocol;
 mod runtime;

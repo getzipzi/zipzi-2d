@@ -36737,6 +36737,1125 @@
       "tuple": false
     },
     "output_signature": "8cd0ae2d11ab948c6e8eb66fa80e5210",
+    "preview": {
+      "fields": [
+        {
+          "doc": "Accepted sample request ordinal shared by these ordered frames.",
+          "name": "sequence",
+          "rust_name": "sequence",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned frames in requested target order, retaining duplicate and backward targets.",
+          "name": "frames",
+          "rust_name": "frames",
+          "shape": {
+            "item": {
+              "fields": [
+                {
+                  "doc": "Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.",
+                  "name": "preview_id",
+                  "rust_name": "preview_id",
+                  "shape": {
+                    "kind": "u64"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Accepted sample request ordinal; pair with the outer Source and Preview identity.",
+                  "name": "sequence",
+                  "rust_name": "sequence",
+                  "shape": {
+                    "kind": "u64"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "Zero-based target slot in the ordered sample request.",
+                  "name": "index",
+                  "rust_name": "index",
+                  "shape": {
+                    "kind": "usize"
+                  },
+                  "skip": false
+                },
+                {
+                  "doc": "SDK Motion/Expression/Physics/Pose result and actual sample coordinates.",
+                  "name": "motion",
+                  "rust_name": "motion",
+                  "shape": {
+                    "fields": [
+                      {
+                        "default": [],
+                        "doc": "Optional inspector observations. Collected explicitly by a host after\nevaluation. Advance/seek results leave this empty; populate it with\n`snapshot.physics = preview.physics_snapshot();` when displaying an inspector.\nInternal observations are retained in replay checkpoints for consistent seeks.",
+                        "name": "physics",
+                        "rust_name": "physics",
+                        "shape": {
+                          "item": {
+                            "fields": [
+                              {
+                                "doc": "Native physics group UUID.",
+                                "name": "id",
+                                "rust_name": "id",
+                                "shape": {
+                                  "kind": "string"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Input channel UUIDs aligned with inputs.",
+                                "name": "input_ids",
+                                "rust_name": "input_ids",
+                                "shape": {
+                                  "item": {
+                                    "kind": "string"
+                                  },
+                                  "kind": "sequence"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Output channel UUIDs aligned with outputs.",
+                                "name": "output_ids",
+                                "rust_name": "output_ids",
+                                "shape": {
+                                  "item": {
+                                    "kind": "string"
+                                  },
+                                  "kind": "sequence"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Particle node UUIDs aligned with particles.",
+                                "name": "node_ids",
+                                "rust_name": "node_ids",
+                                "shape": {
+                                  "item": {
+                                    "kind": "string"
+                                  },
+                                  "kind": "sequence"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Latest solved particle XY positions in the SDK solver coordinate system.",
+                                "name": "particles",
+                                "rust_name": "particles",
+                                "shape": {
+                                  "item": {
+                                    "item": {
+                                      "kind": "f32"
+                                    },
+                                    "kind": "array",
+                                    "length": 2
+                                  },
+                                  "kind": "sequence"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Weighted, normalized angle in degrees used by the latest solved step.\nRotate the Y-down solver coordinates by this angle to display a fixed\ngravity direction with rotating input axes.",
+                                "name": "input_angle",
+                                "rust_name": "input_angle",
+                                "shape": {
+                                  "kind": "f32"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Latest normalized input values in channel order.",
+                                "name": "inputs",
+                                "rust_name": "inputs",
+                                "shape": {
+                                  "item": {
+                                    "kind": "f32"
+                                  },
+                                  "kind": "sequence"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Latest output observations; None marks an unavailable channel.",
+                                "name": "outputs",
+                                "rust_name": "outputs",
+                                "shape": {
+                                  "item": {
+                                    "item": {
+                                      "fields": [
+                                        {
+                                          "doc": "Raw output value before weight and parameter clamping.",
+                                          "name": "raw",
+                                          "rust_name": "raw",
+                                          "shape": {
+                                            "kind": "f32"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Parameter value immediately before this output.",
+                                          "name": "before",
+                                          "rust_name": "before",
+                                          "shape": {
+                                            "kind": "f32"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Parameter value after applying this output and clamping.",
+                                          "name": "after",
+                                          "rust_name": "after",
+                                          "shape": {
+                                            "kind": "f32"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Whether the SDK clamped this output to the target parameter range.",
+                                          "name": "clamped",
+                                          "rust_name": "clamped",
+                                          "shape": {
+                                            "kind": "bool"
+                                          },
+                                          "skip": false
+                                        }
+                                      ],
+                                      "kind": "serde_record",
+                                      "name": "zipzi_animation::physics::PhysicsOutputSnapshot",
+                                      "transparent": false,
+                                      "tuple": false
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "kind": "sequence"
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "kind": "serde_record",
+                            "name": "zipzi_animation::physics::PhysicsRigSnapshot",
+                            "transparent": false,
+                            "tuple": false
+                          },
+                          "kind": "sequence"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "Absolute preview time in seconds.",
+                        "name": "time",
+                        "rust_name": "time",
+                        "shape": {
+                          "kind": "f32"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "Final parameter values keyed by parameter UUID.",
+                        "name": "parameters",
+                        "rust_name": "parameters",
+                        "shape": {
+                          "kind": "string_map",
+                          "value": {
+                            "kind": "f32"
+                          }
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "PartOpacity curves write virtual controls when no real parameter has the Part runtime ID.",
+                        "name": "part_opacity_channels",
+                        "rust_name": "part_opacity_channels",
+                        "shape": {
+                          "kind": "string_map",
+                          "value": {
+                            "kind": "f32"
+                          }
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "Pose-produced opacities keyed by Part UUID.",
+                        "name": "part_opacities",
+                        "rust_name": "part_opacities",
+                        "shape": {
+                          "kind": "string_map",
+                          "value": {
+                            "kind": "f32"
+                          }
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "Model Opacity channel, separate from the drawable geometry opacity.",
+                        "name": "model_opacity",
+                        "rust_name": "model_opacity",
+                        "shape": {
+                          "kind": "f32"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "Active clip UUIDs in queue order; repeated activations may repeat a UUID.",
+                        "name": "active_motions",
+                        "rust_name": "active_motions",
+                        "shape": {
+                          "item": {
+                            "kind": "string"
+                          },
+                          "kind": "sequence"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "Active expression UUIDs in queue order, including fading-out entries.",
+                        "name": "active_expressions",
+                        "rust_name": "active_expressions",
+                        "shape": {
+                          "item": {
+                            "kind": "string"
+                          },
+                          "kind": "sequence"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "Events crossed by the last update, not accumulated across all seek steps.",
+                        "name": "fired_events",
+                        "rust_name": "fired_events",
+                        "shape": {
+                          "item": {
+                            "fields": [
+                              {
+                                "doc": "Source clip UUID.",
+                                "name": "motion_id",
+                                "rust_name": "motion_id",
+                                "shape": {
+                                  "kind": "string"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Source event UUID.",
+                                "name": "event_id",
+                                "rust_name": "event_id",
+                                "shape": {
+                                  "kind": "string"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "User-authored event text.",
+                                "name": "value",
+                                "rust_name": "value",
+                                "shape": {
+                                  "kind": "string"
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "kind": "serde_record",
+                            "name": "zipzi_animation::motion_preview::MotionEventFired",
+                            "transparent": false,
+                            "tuple": false
+                          },
+                          "kind": "sequence"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "Model EyeBlink/LipSync mappings and unsupported Model IDs are reported.",
+                        "name": "coverage",
+                        "rust_name": "coverage",
+                        "shape": {
+                          "item": {
+                            "kind": "string"
+                          },
+                          "kind": "sequence"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "doc": "SDK sampling coordinates, including the duration + 1 / FPS loop tail.",
+                        "name": "motion_positions",
+                        "rust_name": "motion_positions",
+                        "shape": {
+                          "item": {
+                            "fields": [
+                              {
+                                "doc": "Source motion clip UUID for this SDK playback position.",
+                                "name": "motion_id",
+                                "rust_name": "motion_id",
+                                "shape": {
+                                  "kind": "string"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "SDK local sample time in seconds, including the loop tail.",
+                                "name": "local_time",
+                                "rust_name": "local_time",
+                                "shape": {
+                                  "kind": "f32"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "SDK loop period in seconds, including the FPS tail.",
+                                "name": "period",
+                                "rust_name": "period",
+                                "shape": {
+                                  "kind": "f32"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Canonical SDK loop index; exact seams belong to the preceding loop.",
+                                "name": "loop_index",
+                                "rust_name": "loop_index",
+                                "shape": {
+                                  "kind": "u64"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "doc": "Absolute preview-clock time at the start of this cycle.",
+                                "name": "cycle_origin",
+                                "rust_name": "cycle_origin",
+                                "shape": {
+                                  "kind": "f32"
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "kind": "serde_record",
+                            "name": "zipzi_animation::motion_preview::MotionPlaybackPosition",
+                            "transparent": false,
+                            "tuple": false
+                          },
+                          "kind": "sequence"
+                        },
+                        "skip": false
+                      }
+                    ],
+                    "kind": "serde_record",
+                    "name": "zipzi_animation::motion_preview::MotionSnapshot",
+                    "transparent": false,
+                    "tuple": false
+                  },
+                  "skip": false
+                },
+                {
+                  "default": null,
+                  "doc": "Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.",
+                  "name": "geometry",
+                  "rust_name": "geometry",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "doc": "Revision used to evaluate this immutable snapshot; later name edits may reuse it.",
+                          "name": "source_revision",
+                          "rust_name": "source_revision",
+                          "shape": {
+                            "kind": "u64"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Requested/effective/clamped parameter records for this evaluated pose.",
+                          "name": "parameters",
+                          "rust_name": "parameters",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+                                  "name": "id",
+                                  "rust_name": "id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Requested parameter value before range/repeat handling, in the parameter domain.",
+                                  "name": "requested",
+                                  "rust_name": "requested",
+                                  "shape": {
+                                    "kind": "f32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Effective parameter value after native range/repeat handling, in the parameter domain.",
+                                  "name": "value",
+                                  "rust_name": "value",
+                                  "shape": {
+                                    "kind": "f32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Whether the effective parameter value differs due to range clamping.",
+                                  "name": "clamped",
+                                  "rust_name": "clamped",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_core::evaluation::types::EvaluatedParameter",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Evaluated drawable records in this pose, including their immutable geometry and appearance.",
+                          "name": "drawables",
+                          "rust_name": "drawables",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+                                  "name": "id",
+                                  "rust_name": "id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+                                  "name": "runtime_id",
+                                  "rust_name": "runtime_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Organizational Part owner ID; independent of the deformation parent. An empty string\nrepresents the root/unassigned container.",
+                                  "name": "part_id",
+                                  "rust_name": "part_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Original format-specific blend-mode code; None means no preserved raw code.",
+                                  "name": "raw_blend_mode",
+                                  "rust_name": "raw_blend_mode",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "u32"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Resolved image-asset object ID used by this drawable; separate from its evaluated\ntexture slot.",
+                                  "name": "texture_asset_id",
+                                  "rust_name": "texture_asset_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Resolved texture slot index; separate from the persistent texture asset ID.",
+                                  "name": "texture_slot",
+                                  "rust_name": "texture_slot",
+                                  "shape": {
+                                    "kind": "i32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": true,
+                                  "doc": "Geometry remains editable when this resource cannot contribute color.",
+                                  "name": "renderable",
+                                  "rust_name": "renderable",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.",
+                                  "name": "positions",
+                                  "rust_name": "positions",
+                                  "shape": {
+                                    "item": {
+                                      "fields": [
+                                        {
+                                          "default": null,
+                                          "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                          "name": "x",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                          "name": "y",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        }
+                                      ],
+                                      "kind": "record",
+                                      "name": "zipzi_core::types::Vec2"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Texture UV pairs ordered by vertex_ids; keep one UV for each position.",
+                                  "name": "uvs",
+                                  "rust_name": "uvs",
+                                  "shape": {
+                                    "item": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "default": null,
+                                            "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                            "name": "x",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                            "name": "y",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          }
+                                        ],
+                                        "kind": "record",
+                                        "name": "zipzi_core::types::Vec2"
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "kind": "shared"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Flattened triangle indices into evaluated positions/UVs; these are offsets, not\nauthoring vertex IDs.",
+                                  "name": "indices",
+                                  "rust_name": "indices",
+                                  "shape": {
+                                    "item": {
+                                      "item": {
+                                        "kind": "u32"
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "kind": "shared"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Evaluated integer drawing-order coordinate before final render sorting.",
+                                  "name": "draw_order",
+                                  "rust_name": "draw_order",
+                                  "shape": {
+                                    "kind": "i32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Final evaluated drawing sequence rank after hierarchy and group ordering.",
+                                  "name": "render_order",
+                                  "rust_name": "render_order",
+                                  "shape": {
+                                    "kind": "i32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+                                  "name": "opacity",
+                                  "rust_name": "opacity",
+                                  "shape": {
+                                    "kind": "f32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Evaluated RGBA multiply factors, channel order R, G, B, A.",
+                                  "name": "multiply_color",
+                                  "rust_name": "multiply_color",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f32"
+                                    },
+                                    "kind": "array",
+                                    "length": 4
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Evaluated RGBA screen factors, channel order R, G, B, A.",
+                                  "name": "screen_color",
+                                  "rust_name": "screen_color",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f32"
+                                    },
+                                    "kind": "array",
+                                    "length": 4
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Compositing mode used when drawing this object.",
+                                  "name": "blend_mode",
+                                  "rust_name": "blend_mode",
+                                  "shape": {
+                                    "content": null,
+                                    "kind": "serde_enum",
+                                    "name": "zipzi_core::types::BlendMode",
+                                    "tag": null,
+                                    "variants": [
+                                      {
+                                        "fields": [],
+                                        "form": "unit",
+                                        "name": "normal",
+                                        "rust_name": "Normal"
+                                      },
+                                      {
+                                        "fields": [],
+                                        "form": "unit",
+                                        "name": "additive",
+                                        "rust_name": "Additive"
+                                      },
+                                      {
+                                        "fields": [],
+                                        "form": "unit",
+                                        "name": "multiplicative",
+                                        "rust_name": "Multiplicative"
+                                      }
+                                    ]
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+                                  "name": "enabled",
+                                  "rust_name": "enabled",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Whether the evaluated object is visible after hierarchical visibility rules.",
+                                  "name": "visible",
+                                  "rust_name": "visible",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Whether both triangle faces contribute to drawing.",
+                                  "name": "double_sided",
+                                  "rust_name": "double_sided",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Whether to invert the combined clipping mask for this drawable.",
+                                  "name": "inverted_mask",
+                                  "rust_name": "inverted_mask",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.",
+                                  "name": "masks",
+                                  "rust_name": "masks",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "string"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_core::evaluation::types::Drawable",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Evaluated Offscreen compositing records for this pose.",
+                          "name": "offscreens",
+                          "rust_name": "offscreens",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "default": true,
+                                  "doc": "Whether required content is available for rendering; unavailable textures do not make\ngeometry uneditable.",
+                                  "name": "renderable",
+                                  "rust_name": "renderable",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+                                  "name": "id",
+                                  "rust_name": "id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+                                  "name": "runtime_id",
+                                  "rust_name": "runtime_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Stable Part ID whose contents are composited by this Offscreen.",
+                                  "name": "owner_part_id",
+                                  "rust_name": "owner_part_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Enclosing Offscreen ID; None means output is composited directly to the main target.",
+                                  "name": "parent_offscreen_id",
+                                  "rust_name": "parent_offscreen_id",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "string"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Final evaluated drawing sequence rank after hierarchy and group ordering.",
+                                  "name": "render_order",
+                                  "rust_name": "render_order",
+                                  "shape": {
+                                    "kind": "i32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+                                  "name": "opacity",
+                                  "rust_name": "opacity",
+                                  "shape": {
+                                    "kind": "f32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+                                  "name": "enabled",
+                                  "rust_name": "enabled",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Compositing mode used when drawing this object.",
+                                  "name": "blend_mode",
+                                  "rust_name": "blend_mode",
+                                  "shape": {
+                                    "kind": "u32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Preserved format-specific Offscreen compositing flags.",
+                                  "name": "flags",
+                                  "rust_name": "flags",
+                                  "shape": {
+                                    "kind": "u8"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.",
+                                  "name": "masks",
+                                  "rust_name": "masks",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "string"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Evaluated RGBA multiply factors, channel order R, G, B, A.",
+                                  "name": "multiply_color",
+                                  "rust_name": "multiply_color",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f32"
+                                    },
+                                    "kind": "array",
+                                    "length": 4
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Evaluated RGBA screen factors, channel order R, G, B, A.",
+                                  "name": "screen_color",
+                                  "rust_name": "screen_color",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f32"
+                                    },
+                                    "kind": "array",
+                                    "length": 4
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_core::evaluation::types::OffscreenFrame",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Ordered render commands; Offscreen begin/end delimit the compositing scopes.",
+                          "name": "render_plan",
+                          "rust_name": "render_plan",
+                          "shape": {
+                            "item": {
+                              "content": null,
+                              "kind": "serde_enum",
+                              "name": "zipzi_core::evaluation::types::RenderCommand",
+                              "tag": null,
+                              "variants": [
+                                {
+                                  "fields": [
+                                    {
+                                      "doc": "Stable Offscreen object ID; not a texture asset ID.",
+                                      "name": "offscreen_id",
+                                      "rust_name": "offscreen_id",
+                                      "shape": {
+                                        "kind": "string"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "form": "record",
+                                  "name": "BeginOffscreen",
+                                  "rust_name": "BeginOffscreen"
+                                },
+                                {
+                                  "fields": [
+                                    {
+                                      "doc": "Stable ID of the target mesh in this document.",
+                                      "name": "mesh_id",
+                                      "rust_name": "mesh_id",
+                                      "shape": {
+                                        "kind": "string"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "form": "record",
+                                  "name": "DrawMesh",
+                                  "rust_name": "DrawMesh"
+                                },
+                                {
+                                  "fields": [
+                                    {
+                                      "doc": "Stable Offscreen object ID; not a texture asset ID.",
+                                      "name": "offscreen_id",
+                                      "rust_name": "offscreen_id",
+                                      "shape": {
+                                        "kind": "string"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "form": "record",
+                                  "name": "EndOffscreen",
+                                  "rust_name": "EndOffscreen"
+                                }
+                              ]
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Editor controls evaluated in the same pose as the drawables.",
+                          "name": "deformers",
+                          "rust_name": "deformers",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+                                  "name": "id",
+                                  "rust_name": "id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+                                  "name": "enabled",
+                                  "rust_name": "enabled",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.",
+                                  "name": "points",
+                                  "rust_name": "points",
+                                  "shape": {
+                                    "item": {
+                                      "fields": [
+                                        {
+                                          "default": null,
+                                          "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                          "name": "x",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                          "name": "y",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        }
+                                      ],
+                                      "kind": "record",
+                                      "name": "zipzi_core::types::Vec2"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle.",
+                                  "name": "rotation_axis",
+                                  "rust_name": "rotation_axis",
+                                  "shape": {
+                                    "item": {
+                                      "fields": [
+                                        {
+                                          "default": null,
+                                          "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                          "name": "x",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                          "name": "y",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        }
+                                      ],
+                                      "kind": "record",
+                                      "name": "zipzi_core::types::Vec2"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_core::evaluation::types::EvaluatedDeformer",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_core::evaluation::types::DrawableFrame",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "kind": "optional"
+                  },
+                  "skip": false
+                }
+              ],
+              "kind": "serde_record",
+              "name": "zipzi_runtime::preview::PreviewFrame",
+              "transparent": false,
+              "tuple": false
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_runtime::preview::PreviewBatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "preview_signature": "471663b0658d2b2a11201a3eeee7d6f3",
     "sample_signature": "33cfb73ff96616c25d9d5f06db944d7e",
     "samples": {
       "fields": [
@@ -53700,7 +54819,8 @@
       6,
       7,
       9,
-      11
+      11,
+      14
     ],
     "native_only_roots": [
       {
@@ -113158,6 +114278,1323 @@
         "name": "zipzi_runtime::editor_context::EditorContext",
         "transparent": false,
         "tuple": false
+      },
+      {
+        "content": null,
+        "kind": "serde_enum",
+        "name": "zipzi_runtime::preview::PreviewCommand",
+        "tag": "kind",
+        "variants": [
+          {
+            "fields": [
+              {
+                "doc": "Document parameter UUID; the SDK validates existence and domain.",
+                "name": "id",
+                "rust_name": "id",
+                "shape": {
+                  "kind": "string"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Finite base value in the parameter's authored domain.",
+                "name": "value",
+                "rust_name": "value",
+                "shape": {
+                  "kind": "f32"
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "set_parameter",
+            "rust_name": "SetParameter"
+          },
+          {
+            "fields": [
+              {
+                "doc": "Clip UUID; uses the clip's own fades.",
+                "name": "id",
+                "rust_name": "id",
+                "shape": {
+                  "kind": "string"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Absolute activation time in seconds on this Preview's clock.",
+                "name": "time",
+                "rust_name": "time",
+                "shape": {
+                  "kind": "f32"
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "schedule_motion",
+            "rust_name": "ScheduleMotion"
+          },
+          {
+            "fields": [
+              {
+                "doc": "Registration UUID; uses the registration's SDK fade overrides.",
+                "name": "id",
+                "rust_name": "id",
+                "shape": {
+                  "kind": "string"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Absolute activation time in seconds on this Preview's clock.",
+                "name": "time",
+                "rust_name": "time",
+                "shape": {
+                  "kind": "f32"
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "schedule_registration",
+            "rust_name": "ScheduleRegistration"
+          },
+          {
+            "fields": [
+              {
+                "doc": "Native expression asset UUID.",
+                "name": "id",
+                "rust_name": "id",
+                "shape": {
+                  "kind": "string"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Absolute activation time in seconds on this Preview's clock.",
+                "name": "time",
+                "rust_name": "time",
+                "shape": {
+                  "kind": "f32"
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "schedule_expression",
+            "rust_name": "ScheduleExpression"
+          },
+          {
+            "fields": [
+              {
+                "doc": "Document parameter UUID for an SDK input activation.",
+                "name": "id",
+                "rust_name": "id",
+                "shape": {
+                  "kind": "string"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Absolute activation time in seconds on this Preview's clock.",
+                "name": "time",
+                "rust_name": "time",
+                "shape": {
+                  "kind": "f32"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Finite parameter input in the authored parameter domain.",
+                "name": "value",
+                "rust_name": "value",
+                "shape": {
+                  "kind": "f32"
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "schedule_parameter",
+            "rust_name": "ScheduleParameter"
+          },
+          {
+            "fields": [
+              {
+                "doc": "Enable the SDK Physics stage in this Preview only.",
+                "name": "enabled",
+                "rust_name": "enabled",
+                "shape": {
+                  "kind": "bool"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Use the SDK stabilized-start policy on canonical replay.",
+                "name": "stabilized_start",
+                "rust_name": "stabilized_start",
+                "shape": {
+                  "kind": "bool"
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "set_physics",
+            "rust_name": "SetPhysics"
+          },
+          {
+            "fields": [],
+            "form": "unit",
+            "name": "reset",
+            "rust_name": "Reset"
+          }
+        ]
+      },
+      {
+        "fields": [
+          {
+            "doc": "Monotonic accepted operation ordinal, including cancelled sample requests.",
+            "name": "sequence",
+            "rust_name": "sequence",
+            "shape": {
+              "kind": "u64"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Actual SDK clock after the last completed operation, in seconds.",
+            "name": "time",
+            "rust_name": "time",
+            "shape": {
+              "kind": "f32"
+            },
+            "skip": false
+          }
+        ],
+        "kind": "serde_record",
+        "name": "zipzi_runtime::preview::PreviewState",
+        "transparent": false,
+        "tuple": false
+      },
+      {
+        "fields": [
+          {
+            "doc": "Accepted sample request ordinal shared by these ordered frames.",
+            "name": "sequence",
+            "rust_name": "sequence",
+            "shape": {
+              "kind": "u64"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Owned frames in requested target order, retaining duplicate and backward targets.",
+            "name": "frames",
+            "rust_name": "frames",
+            "shape": {
+              "item": {
+                "fields": [
+                  {
+                    "doc": "Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.",
+                    "name": "preview_id",
+                    "rust_name": "preview_id",
+                    "shape": {
+                      "kind": "u64"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Accepted sample request ordinal; pair with the outer Source and Preview identity.",
+                    "name": "sequence",
+                    "rust_name": "sequence",
+                    "shape": {
+                      "kind": "u64"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Zero-based target slot in the ordered sample request.",
+                    "name": "index",
+                    "rust_name": "index",
+                    "shape": {
+                      "kind": "usize"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "SDK Motion/Expression/Physics/Pose result and actual sample coordinates.",
+                    "name": "motion",
+                    "rust_name": "motion",
+                    "shape": {
+                      "fields": [
+                        {
+                          "default": [],
+                          "doc": "Optional inspector observations. Collected explicitly by a host after\nevaluation. Advance/seek results leave this empty; populate it with\n`snapshot.physics = preview.physics_snapshot();` when displaying an inspector.\nInternal observations are retained in replay checkpoints for consistent seeks.",
+                          "name": "physics",
+                          "rust_name": "physics",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Native physics group UUID.",
+                                  "name": "id",
+                                  "rust_name": "id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Input channel UUIDs aligned with inputs.",
+                                  "name": "input_ids",
+                                  "rust_name": "input_ids",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "string"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Output channel UUIDs aligned with outputs.",
+                                  "name": "output_ids",
+                                  "rust_name": "output_ids",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "string"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Particle node UUIDs aligned with particles.",
+                                  "name": "node_ids",
+                                  "rust_name": "node_ids",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "string"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Latest solved particle XY positions in the SDK solver coordinate system.",
+                                  "name": "particles",
+                                  "rust_name": "particles",
+                                  "shape": {
+                                    "item": {
+                                      "item": {
+                                        "kind": "f32"
+                                      },
+                                      "kind": "array",
+                                      "length": 2
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Weighted, normalized angle in degrees used by the latest solved step.\nRotate the Y-down solver coordinates by this angle to display a fixed\ngravity direction with rotating input axes.",
+                                  "name": "input_angle",
+                                  "rust_name": "input_angle",
+                                  "shape": {
+                                    "kind": "f32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Latest normalized input values in channel order.",
+                                  "name": "inputs",
+                                  "rust_name": "inputs",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f32"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Latest output observations; None marks an unavailable channel.",
+                                  "name": "outputs",
+                                  "rust_name": "outputs",
+                                  "shape": {
+                                    "item": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "doc": "Raw output value before weight and parameter clamping.",
+                                            "name": "raw",
+                                            "rust_name": "raw",
+                                            "shape": {
+                                              "kind": "f32"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Parameter value immediately before this output.",
+                                            "name": "before",
+                                            "rust_name": "before",
+                                            "shape": {
+                                              "kind": "f32"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Parameter value after applying this output and clamping.",
+                                            "name": "after",
+                                            "rust_name": "after",
+                                            "shape": {
+                                              "kind": "f32"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Whether the SDK clamped this output to the target parameter range.",
+                                            "name": "clamped",
+                                            "rust_name": "clamped",
+                                            "shape": {
+                                              "kind": "bool"
+                                            },
+                                            "skip": false
+                                          }
+                                        ],
+                                        "kind": "serde_record",
+                                        "name": "zipzi_animation::physics::PhysicsOutputSnapshot",
+                                        "transparent": false,
+                                        "tuple": false
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_animation::physics::PhysicsRigSnapshot",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Absolute preview time in seconds.",
+                          "name": "time",
+                          "rust_name": "time",
+                          "shape": {
+                            "kind": "f32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Final parameter values keyed by parameter UUID.",
+                          "name": "parameters",
+                          "rust_name": "parameters",
+                          "shape": {
+                            "kind": "string_map",
+                            "value": {
+                              "kind": "f32"
+                            }
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "PartOpacity curves write virtual controls when no real parameter has the Part runtime ID.",
+                          "name": "part_opacity_channels",
+                          "rust_name": "part_opacity_channels",
+                          "shape": {
+                            "kind": "string_map",
+                            "value": {
+                              "kind": "f32"
+                            }
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Pose-produced opacities keyed by Part UUID.",
+                          "name": "part_opacities",
+                          "rust_name": "part_opacities",
+                          "shape": {
+                            "kind": "string_map",
+                            "value": {
+                              "kind": "f32"
+                            }
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Model Opacity channel, separate from the drawable geometry opacity.",
+                          "name": "model_opacity",
+                          "rust_name": "model_opacity",
+                          "shape": {
+                            "kind": "f32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Active clip UUIDs in queue order; repeated activations may repeat a UUID.",
+                          "name": "active_motions",
+                          "rust_name": "active_motions",
+                          "shape": {
+                            "item": {
+                              "kind": "string"
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Active expression UUIDs in queue order, including fading-out entries.",
+                          "name": "active_expressions",
+                          "rust_name": "active_expressions",
+                          "shape": {
+                            "item": {
+                              "kind": "string"
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Events crossed by the last update, not accumulated across all seek steps.",
+                          "name": "fired_events",
+                          "rust_name": "fired_events",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Source clip UUID.",
+                                  "name": "motion_id",
+                                  "rust_name": "motion_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Source event UUID.",
+                                  "name": "event_id",
+                                  "rust_name": "event_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "User-authored event text.",
+                                  "name": "value",
+                                  "rust_name": "value",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_animation::motion_preview::MotionEventFired",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Model EyeBlink/LipSync mappings and unsupported Model IDs are reported.",
+                          "name": "coverage",
+                          "rust_name": "coverage",
+                          "shape": {
+                            "item": {
+                              "kind": "string"
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "SDK sampling coordinates, including the duration + 1 / FPS loop tail.",
+                          "name": "motion_positions",
+                          "rust_name": "motion_positions",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Source motion clip UUID for this SDK playback position.",
+                                  "name": "motion_id",
+                                  "rust_name": "motion_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "SDK local sample time in seconds, including the loop tail.",
+                                  "name": "local_time",
+                                  "rust_name": "local_time",
+                                  "shape": {
+                                    "kind": "f32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "SDK loop period in seconds, including the FPS tail.",
+                                  "name": "period",
+                                  "rust_name": "period",
+                                  "shape": {
+                                    "kind": "f32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Canonical SDK loop index; exact seams belong to the preceding loop.",
+                                  "name": "loop_index",
+                                  "rust_name": "loop_index",
+                                  "shape": {
+                                    "kind": "u64"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Absolute preview-clock time at the start of this cycle.",
+                                  "name": "cycle_origin",
+                                  "rust_name": "cycle_origin",
+                                  "shape": {
+                                    "kind": "f32"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_animation::motion_preview::MotionPlaybackPosition",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_animation::motion_preview::MotionSnapshot",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": null,
+                    "doc": "Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.",
+                    "name": "geometry",
+                    "rust_name": "geometry",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "doc": "Revision used to evaluate this immutable snapshot; later name edits may reuse it.",
+                            "name": "source_revision",
+                            "rust_name": "source_revision",
+                            "shape": {
+                              "kind": "u64"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Requested/effective/clamped parameter records for this evaluated pose.",
+                            "name": "parameters",
+                            "rust_name": "parameters",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+                                    "name": "id",
+                                    "rust_name": "id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Requested parameter value before range/repeat handling, in the parameter domain.",
+                                    "name": "requested",
+                                    "rust_name": "requested",
+                                    "shape": {
+                                      "kind": "f32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Effective parameter value after native range/repeat handling, in the parameter domain.",
+                                    "name": "value",
+                                    "rust_name": "value",
+                                    "shape": {
+                                      "kind": "f32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether the effective parameter value differs due to range clamping.",
+                                    "name": "clamped",
+                                    "rust_name": "clamped",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_core::evaluation::types::EvaluatedParameter",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Evaluated drawable records in this pose, including their immutable geometry and appearance.",
+                            "name": "drawables",
+                            "rust_name": "drawables",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+                                    "name": "id",
+                                    "rust_name": "id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+                                    "name": "runtime_id",
+                                    "rust_name": "runtime_id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Organizational Part owner ID; independent of the deformation parent. An empty string\nrepresents the root/unassigned container.",
+                                    "name": "part_id",
+                                    "rust_name": "part_id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Original format-specific blend-mode code; None means no preserved raw code.",
+                                    "name": "raw_blend_mode",
+                                    "rust_name": "raw_blend_mode",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "u32"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Resolved image-asset object ID used by this drawable; separate from its evaluated\ntexture slot.",
+                                    "name": "texture_asset_id",
+                                    "rust_name": "texture_asset_id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Resolved texture slot index; separate from the persistent texture asset ID.",
+                                    "name": "texture_slot",
+                                    "rust_name": "texture_slot",
+                                    "shape": {
+                                      "kind": "i32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": true,
+                                    "doc": "Geometry remains editable when this resource cannot contribute color.",
+                                    "name": "renderable",
+                                    "rust_name": "renderable",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.",
+                                    "name": "positions",
+                                    "rust_name": "positions",
+                                    "shape": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "default": null,
+                                            "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                            "name": "x",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                            "name": "y",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          }
+                                        ],
+                                        "kind": "record",
+                                        "name": "zipzi_core::types::Vec2"
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Texture UV pairs ordered by vertex_ids; keep one UV for each position.",
+                                    "name": "uvs",
+                                    "rust_name": "uvs",
+                                    "shape": {
+                                      "item": {
+                                        "item": {
+                                          "fields": [
+                                            {
+                                              "default": null,
+                                              "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                              "name": "x",
+                                              "shape": {
+                                                "kind": "f32"
+                                              }
+                                            },
+                                            {
+                                              "default": null,
+                                              "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                              "name": "y",
+                                              "shape": {
+                                                "kind": "f32"
+                                              }
+                                            }
+                                          ],
+                                          "kind": "record",
+                                          "name": "zipzi_core::types::Vec2"
+                                        },
+                                        "kind": "sequence"
+                                      },
+                                      "kind": "shared"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Flattened triangle indices into evaluated positions/UVs; these are offsets, not\nauthoring vertex IDs.",
+                                    "name": "indices",
+                                    "rust_name": "indices",
+                                    "shape": {
+                                      "item": {
+                                        "item": {
+                                          "kind": "u32"
+                                        },
+                                        "kind": "sequence"
+                                      },
+                                      "kind": "shared"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Evaluated integer drawing-order coordinate before final render sorting.",
+                                    "name": "draw_order",
+                                    "rust_name": "draw_order",
+                                    "shape": {
+                                      "kind": "i32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Final evaluated drawing sequence rank after hierarchy and group ordering.",
+                                    "name": "render_order",
+                                    "rust_name": "render_order",
+                                    "shape": {
+                                      "kind": "i32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+                                    "name": "opacity",
+                                    "rust_name": "opacity",
+                                    "shape": {
+                                      "kind": "f32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Evaluated RGBA multiply factors, channel order R, G, B, A.",
+                                    "name": "multiply_color",
+                                    "rust_name": "multiply_color",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f32"
+                                      },
+                                      "kind": "array",
+                                      "length": 4
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Evaluated RGBA screen factors, channel order R, G, B, A.",
+                                    "name": "screen_color",
+                                    "rust_name": "screen_color",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f32"
+                                      },
+                                      "kind": "array",
+                                      "length": 4
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Compositing mode used when drawing this object.",
+                                    "name": "blend_mode",
+                                    "rust_name": "blend_mode",
+                                    "shape": {
+                                      "content": null,
+                                      "kind": "serde_enum",
+                                      "name": "zipzi_core::types::BlendMode",
+                                      "tag": null,
+                                      "variants": [
+                                        {
+                                          "fields": [],
+                                          "form": "unit",
+                                          "name": "normal",
+                                          "rust_name": "Normal"
+                                        },
+                                        {
+                                          "fields": [],
+                                          "form": "unit",
+                                          "name": "additive",
+                                          "rust_name": "Additive"
+                                        },
+                                        {
+                                          "fields": [],
+                                          "form": "unit",
+                                          "name": "multiplicative",
+                                          "rust_name": "Multiplicative"
+                                        }
+                                      ]
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+                                    "name": "enabled",
+                                    "rust_name": "enabled",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether the evaluated object is visible after hierarchical visibility rules.",
+                                    "name": "visible",
+                                    "rust_name": "visible",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether both triangle faces contribute to drawing.",
+                                    "name": "double_sided",
+                                    "rust_name": "double_sided",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether to invert the combined clipping mask for this drawable.",
+                                    "name": "inverted_mask",
+                                    "rust_name": "inverted_mask",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.",
+                                    "name": "masks",
+                                    "rust_name": "masks",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "string"
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_core::evaluation::types::Drawable",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Evaluated Offscreen compositing records for this pose.",
+                            "name": "offscreens",
+                            "rust_name": "offscreens",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "default": true,
+                                    "doc": "Whether required content is available for rendering; unavailable textures do not make\ngeometry uneditable.",
+                                    "name": "renderable",
+                                    "rust_name": "renderable",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+                                    "name": "id",
+                                    "rust_name": "id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+                                    "name": "runtime_id",
+                                    "rust_name": "runtime_id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Stable Part ID whose contents are composited by this Offscreen.",
+                                    "name": "owner_part_id",
+                                    "rust_name": "owner_part_id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Enclosing Offscreen ID; None means output is composited directly to the main target.",
+                                    "name": "parent_offscreen_id",
+                                    "rust_name": "parent_offscreen_id",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "string"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Final evaluated drawing sequence rank after hierarchy and group ordering.",
+                                    "name": "render_order",
+                                    "rust_name": "render_order",
+                                    "shape": {
+                                      "kind": "i32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+                                    "name": "opacity",
+                                    "rust_name": "opacity",
+                                    "shape": {
+                                      "kind": "f32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+                                    "name": "enabled",
+                                    "rust_name": "enabled",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Compositing mode used when drawing this object.",
+                                    "name": "blend_mode",
+                                    "rust_name": "blend_mode",
+                                    "shape": {
+                                      "kind": "u32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Preserved format-specific Offscreen compositing flags.",
+                                    "name": "flags",
+                                    "rust_name": "flags",
+                                    "shape": {
+                                      "kind": "u8"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.",
+                                    "name": "masks",
+                                    "rust_name": "masks",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "string"
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Evaluated RGBA multiply factors, channel order R, G, B, A.",
+                                    "name": "multiply_color",
+                                    "rust_name": "multiply_color",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f32"
+                                      },
+                                      "kind": "array",
+                                      "length": 4
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Evaluated RGBA screen factors, channel order R, G, B, A.",
+                                    "name": "screen_color",
+                                    "rust_name": "screen_color",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f32"
+                                      },
+                                      "kind": "array",
+                                      "length": 4
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_core::evaluation::types::OffscreenFrame",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Ordered render commands; Offscreen begin/end delimit the compositing scopes.",
+                            "name": "render_plan",
+                            "rust_name": "render_plan",
+                            "shape": {
+                              "item": {
+                                "content": null,
+                                "kind": "serde_enum",
+                                "name": "zipzi_core::evaluation::types::RenderCommand",
+                                "tag": null,
+                                "variants": [
+                                  {
+                                    "fields": [
+                                      {
+                                        "doc": "Stable Offscreen object ID; not a texture asset ID.",
+                                        "name": "offscreen_id",
+                                        "rust_name": "offscreen_id",
+                                        "shape": {
+                                          "kind": "string"
+                                        },
+                                        "skip": false
+                                      }
+                                    ],
+                                    "form": "record",
+                                    "name": "BeginOffscreen",
+                                    "rust_name": "BeginOffscreen"
+                                  },
+                                  {
+                                    "fields": [
+                                      {
+                                        "doc": "Stable ID of the target mesh in this document.",
+                                        "name": "mesh_id",
+                                        "rust_name": "mesh_id",
+                                        "shape": {
+                                          "kind": "string"
+                                        },
+                                        "skip": false
+                                      }
+                                    ],
+                                    "form": "record",
+                                    "name": "DrawMesh",
+                                    "rust_name": "DrawMesh"
+                                  },
+                                  {
+                                    "fields": [
+                                      {
+                                        "doc": "Stable Offscreen object ID; not a texture asset ID.",
+                                        "name": "offscreen_id",
+                                        "rust_name": "offscreen_id",
+                                        "shape": {
+                                          "kind": "string"
+                                        },
+                                        "skip": false
+                                      }
+                                    ],
+                                    "form": "record",
+                                    "name": "EndOffscreen",
+                                    "rust_name": "EndOffscreen"
+                                  }
+                                ]
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Editor controls evaluated in the same pose as the drawables.",
+                            "name": "deformers",
+                            "rust_name": "deformers",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+                                    "name": "id",
+                                    "rust_name": "id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+                                    "name": "enabled",
+                                    "rust_name": "enabled",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.",
+                                    "name": "points",
+                                    "rust_name": "points",
+                                    "shape": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "default": null,
+                                            "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                            "name": "x",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                            "name": "y",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          }
+                                        ],
+                                        "kind": "record",
+                                        "name": "zipzi_core::types::Vec2"
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle.",
+                                    "name": "rotation_axis",
+                                    "rust_name": "rotation_axis",
+                                    "shape": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "default": null,
+                                            "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                            "name": "x",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                            "name": "y",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          }
+                                        ],
+                                        "kind": "record",
+                                        "name": "zipzi_core::types::Vec2"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_core::evaluation::types::EvaluatedDeformer",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "kind": "serde_record",
+                        "name": "zipzi_core::evaluation::types::DrawableFrame",
+                        "transparent": false,
+                        "tuple": false
+                      },
+                      "kind": "optional"
+                    },
+                    "skip": false
+                  }
+                ],
+                "kind": "serde_record",
+                "name": "zipzi_runtime::preview::PreviewFrame",
+                "transparent": false,
+                "tuple": false
+              },
+              "kind": "sequence"
+            },
+            "skip": false
+          }
+        ],
+        "kind": "serde_record",
+        "name": "zipzi_runtime::preview::PreviewBatch",
+        "transparent": false,
+        "tuple": false
       }
     ],
     "version": 1
@@ -114221,6 +116658,14 @@
         "fields": [
           {
             "default": null,
+            "doc": "Runtime-wide retained independent Preview leases; active Jobs can retain workspace after release.",
+            "name": "previews",
+            "shape": {
+              "kind": "usize"
+            }
+          },
+          {
+            "default": null,
             "doc": "Number of distinct retained allocations counted by Runtime resource accounting.",
             "name": "allocations",
             "shape": {
@@ -115235,6 +117680,42 @@
     },
     "RuntimeLimits": {
       "fields": [
+        {
+          "doc": "Maximum independent frozen animation Previews owned by one client.",
+          "name": "previews_per_client",
+          "rust_name": "previews_per_client",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative aggregate Preview storage limit, including replay/cache workspace.",
+          "name": "preview_bytes",
+          "rust_name": "preview_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained activations per Preview; Reset retains schedules.",
+          "name": "preview_schedule_entries",
+          "rust_name": "preview_schedule_entries",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "SDK checkpoint-cache budget per Preview; transient replay state is charged separately.",
+          "name": "preview_seek_cache_bytes",
+          "rust_name": "preview_seek_cache_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
         {
           "doc": "Maximum records returned by one collection page or selected batch.",
           "name": "collection_records",

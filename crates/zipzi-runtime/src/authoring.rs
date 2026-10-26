@@ -332,6 +332,8 @@ pub const PREPARED_PIXELS_QUERY: Registered<PreparedPixelsQuery, ImagePixels> =
 zipzi_core::api_record! {
     #[derive(Debug, Clone, Serialize)]
     pub struct ResourceUsage {
+        /// Runtime-wide retained independent Preview leases; active Jobs can retain workspace after release.
+        pub previews: usize,
         /// Number of distinct retained allocations counted by Runtime resource accounting.
         pub allocations: usize,
         /// Number of retained resource-accounting entries, including history/lease holders.
@@ -357,6 +359,7 @@ impl crate::Runtime {
     pub fn resource_usage(&self) -> ResourceUsage {
         let memory = self.image_memory_usage();
         ResourceUsage {
+            previews: self.preview_count(),
             allocations: memory.allocations,
             resource_entries: self.memory_image_entries(),
             prepared_images: self.prepared_image_count(),

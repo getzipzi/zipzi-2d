@@ -7,6 +7,7 @@ license.workspace = true
 description = "Deterministic CPU animation state and scheduling for Zipzi 2D"
 
 [dependencies]
+zipzi-api-derive = { version = "=0.1.0-alpha.1", path = "../zipzi-api-derive" }
 zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
 thiserror = { workspace = true }
 serde = { workspace = true }

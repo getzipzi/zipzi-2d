@@ -17,9 +17,10 @@ Python targets CPython 3.14; connection imports work without `_native`.
 R4 completed its [final recheck](../plans/sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验)
 on 2026-10-26. The [R4 coverage](r4-coverage.json) retains that pairing and scope.
 R5/P5 is now in progress: [typed animation authoring](../plans/sdk-runtime/python2-r5-authoring.md)
-is connected, while independent Preview, Observer, scheduling and Editor acceptance
-remain pending. The active IPC protocol is `zipzi-runtime-r5-authoring-1`, paired
-with native `zipzi-python2-15`; earlier records retain their historical contracts.
+and [independent CPU Preview](../plans/sdk-runtime/python2-r5-preview.md) are connected,
+while Observer, spatial queries, fair scheduling and Editor playback acceptance
+remain pending. The active IPC protocol is `zipzi-runtime-r5-preview-1`, paired
+with native `zipzi-python2-16`; earlier records retain their historical contracts.
 
 ## Active Python implementation
 
