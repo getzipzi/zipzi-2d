@@ -58,6 +58,11 @@ separately. New capabilities require explicit handlers and independent evidence;
 there are no generated unsupported-operation placeholders.
 
 Current R4 implementation and acceptance: [complete record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
+R4 predates the Python P3A/P3B split. Its 2026-10-26 closeout passed current
+Local/Connected full recipes, paired source/wheel rebuilds and native Editor/Metal
+acceptance. Box layout and ordinary mesh batch costs were rechecked in Release;
+historical P1 query and binary-image comparison limits are recorded separately.
+Existing modeling/resource/IO routes are not new P3B/P4 implementation work.
 Python [P3A-0](../../docs/plans/python-sdk-rewrite/p3a-0.md) has passed its freeze gate.
 [P3A-1](../../docs/plans/python-sdk-rewrite/p3a-1.md) implements complete-call recovery,
 cached state and JobTimeout with source/type/installed evidence. P3A-1 is accepted;

@@ -91,30 +91,30 @@ pub(super) fn run() -> anyhow::Result<()> {
         endpoint.path(),
         r#"
 import sys,zipzi
-from zipzi import bindings,events,ops,parameters,scene
+from zipzi import bindings,events,meshes,parameters,scene
 from importlib.metadata import version
 from importlib.util import find_spec
-assert version('zipzi-python2')=='0.1.0'
+assert 'Package '+version('zipzi')+';' in zipzi.describe('zipzi').documentation
 assert '/site-packages/zipzi/' in zipzi.__file__
 assert find_spec('zipzi_native') is None
 with zipzi.connect() as c:
  s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
  assert s.id in {info.id for info in c.sessions.list()}
  stream=s.subscribe()
- geometry=s.meshes.get(sys.argv[3]).geometry
+ geometry=s.meshes.get(sys.argv[3]).value.geometry
  parameter='79700000-0000-4000-8000-000000000001'
  binding='79700000-0000-4000-8000-000000000002'
  with s.edit('external Python') as e:
-  e.apply_many((ops.Rename(sys.argv[3],'Python changed this mesh'),
-   ops.CreateParameter(parameters.ParameterSpec('External Angle',-30.,30.,0.,id='79700000-0000-4000-8000-000000000001',runtime_id='ParamExternal',decimal_places=3)),
-   ops.CreateMeshBinding(bindings.MeshBindingSpec(sys.argv[3],(bindings.Axis(parameter,(-30.,30.)),),(
+  e.apply_many((meshes.Rename(sys.argv[3],'Python changed this mesh'),
+   parameters.Create(parameters.ParameterSpec('External Angle',-30.,30.,0.,id='79700000-0000-4000-8000-000000000001',runtime_id='ParamExternal',decimal_places=3)),
+   bindings.Create(bindings.MeshBindingSpec(sys.argv[3],(bindings.Axis(parameter,(-30.,30.)),),(
     bindings.Keyform((-30.,),geometry.positions),
     bindings.Keyform((30.,),tuple((x+10.,y) for x,y in geometry.positions))),id=binding))))
   candidate=e.bindings.get(binding)
   assert candidate.source.sequence==1
   sampled=e.modeling.sample(({parameter:15.},),expected=candidate.source)
-  assert abs(sampled.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-7.5)<1e-5
-  assert e.parameters.get_many((parameter,)).items[0].source.sequence==1
+  assert abs(sampled.value.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-7.5)<1e-5
+  assert e.parameters.get_many((parameter,)).source.sequence==1
   group='79700000-0000-4000-8000-000000000003'
   part='79700000-0000-4000-8000-000000000004'
   e.apply_many((scene.CreatePart(scene.PartSpec('External folder',id=part)),
@@ -124,10 +124,10 @@ with zipzi.connect() as c:
   assert e.scene.get(sys.argv[3]).value.part_id==part
  before=s.info()
  formal=s.modeling.sample(({parameter:-30.},{parameter:0.},{parameter:30.}))
- assert [round(f.drawables[0].positions[0][0]-geometry.positions[0][0],5) for f in formal.frames]==[0.,5.,10.]
+ assert [round(f.drawables[0].positions[0][0]-geometry.positions[0][0],5) for f in formal.value.frames]==[0.,5.,10.]
  assert s.info()==before
- assert s.meshes.get(sys.argv[3]).name=='Python changed this mesh'
- assert s.meshes.get_many((sys.argv[3],))[0].name=='Python changed this mesh'
+ assert s.meshes.get(sys.argv[3]).value.name=='Python changed this mesh'
+ assert s.meshes.get_many((sys.argv[3],)).items[0].name=='Python changed this mesh'
  with s.reference('mesh',sys.argv[3]) as reference:
   assert reference.resolve().version==s.info().version
   assert reference.scene_capabilities().patch.state=='available'
@@ -213,16 +213,16 @@ with zipzi.connect() as c:
  s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
  parameter='79700000-0000-4000-8000-000000000001'
  binding='79700000-0000-4000-8000-000000000002'
- geometry=s.meshes.get(sys.argv[3]).geometry
+ geometry=s.meshes.get(sys.argv[3]).value.geometry
  before=s.info()
  stream=s.subscribe()
  sampled=s.modeling.sample(({parameter:15.},))
- assert abs(sampled.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-7.5)<1e-5
+ assert abs(sampled.value.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-7.5)<1e-5
  edit=s.edit('temporary CPU sample')
  try:
   edit.bindings.set_keyform(binding,bindings.Keyform((30.,),tuple((x+20.,y) for x,y in geometry.positions)))
   candidate=edit.modeling.sample(({parameter:15.},))
-  assert abs(candidate.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-15.)<1e-5
+  assert abs(candidate.value.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-15.)<1e-5
  finally: edit.cancel()
  assert s.info()==before
  assert stream.poll()==()
@@ -270,9 +270,10 @@ import json,sys,zipzi
 from zipzi import events
 with zipzi.connect() as c:
  s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- assert s.meshes.get(sys.argv[3]).name!='Python changed this mesh'
+ assert s.meshes.get(sys.argv[3]).value.name!='Python changed this mesh'
  assert s.info().history[1]==1
- published=[e for e in c.events_since(events.Cursor.read(json.loads(sys.argv[4]))) if isinstance(e,events.Published)]
+ cursor=json.loads(sys.argv[4])
+ published=[e for e in c.events_since(events.Cursor(cursor['runtime'],zipzi.SessionId(**cursor['session']),cursor['sequence'])) if isinstance(e,events.Published)]
  assert len(published)==2
  assert published[0].receipt.after==published[1].receipt.before
  assert published[1].receipt.after==s.info().version
@@ -353,22 +354,22 @@ with zipzi.connect() as c:
         r#"
 import sys,time,zipzi
 from dataclasses import replace
-from zipzi import scene,ops,meshes,parameters,modeling as m
+from zipzi import scene,meshes,parameters,modeling as m
 u=lambda n:f'79800000-0000-4000-8000-{n:012x}'
 with zipzi.connect() as c:
  s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
  mesh=sys.argv[3]
- context=s.editor_context()
- assert context.context is not None and context.context.version==s.info().version
- assert mesh in context.context.selected_ids
- geometry=s.meshes.get(mesh).geometry
+ context=s.editor_context().value
+ assert context is not None and context.version==s.info().version
+ assert mesh in context.selected_ids
+ geometry=s.meshes.get(mesh).value.geometry
  with c.resources.prepare_image(2,2,bytes((45,80,130,255))*4) as image:
   with s.edit('R4 complete projection') as e:
    e.apply_many((scene.CreatePart(scene.PartSpec('R4 Part',id=u(1))),
     scene.CreateParameterGroup(scene.ParameterGroupSpec('R4 Controls',id=u(2))),
-    ops.CreateParameter(parameters.ParameterSpec('R4 Blend',0.,1.,0.,id=u(3),kind=parameters.Kind.BLEND_SHAPE)),
+    parameters.Create(parameters.ParameterSpec('R4 Blend',0.,1.,0.,id=u(3),kind=parameters.Kind.BLEND_SHAPE)),
     scene.MoveParameters((u(3),),group_id=u(2)),
-    ops.Create(meshes.MeshSpec('R4 Second',geometry,id=u(4))),
+    meshes.Create(meshes.MeshSpec('R4 Second',geometry,id=u(4))),
     scene.MoveToPart((mesh,u(4)),part_id=u(1)),
     scene.CreateWarp('R4 Warp',scene.Placement(part_id=u(1)),(-10.,-10.,20.,20.),id=u(5)),
     scene.CreateRotation('R4 Rotation',scene.Placement(part_id=u(1),parent_id=u(5)),id=u(6)),
@@ -380,17 +381,17 @@ with zipzi.connect() as c:
     scene.CreateBlendTable(u(3),(scene.Sample(u(10),0.),scene.Sample(u(11),1.)),u(10),id=u(12)),
     scene.CreateMeshBlend(mesh,u(12),id=u(13))))
    asset=e.resources.create_image('R4 memory texture',image,id=u(14))
-   value=e.modeling.records(m.ModelingQuery(meshes=(mesh,))).values.meshes[0]
+   value=e.modeling.records(m.ModelingQuery(meshes=(mesh,))).value.meshes[0]
    e.apply(m.ModelingCommandReplaceMesh(mesh=replace(value,name='R4 property name',texture_asset_id=m.SceneReferenceResolved(object_id=asset))))
    e.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditCreate(id=u(15),path='extras/projection.bin')))
  deadline=time.monotonic()+5
  while True:
-  context=s.editor_context()
-  if context.context is not None and context.context.version==s.info().version:break
+  context=s.editor_context().value
+  if context is not None and context.version==s.info().version:break
   assert time.monotonic()<deadline
   time.sleep(.01)
- assert mesh in context.context.selected_ids
- assert s.resources.get(u(14)).pixels.rgba==bytes((45,80,130,255))*4
+ assert mesh in context.selected_ids
+ assert s.resources.get(u(14)).value.pixels.rgba==bytes((45,80,130,255))*4
  assert s.info().history==(1,0)
 "#,
         &[
@@ -470,7 +471,7 @@ with zipzi.connect() as c:
             r#"
 import sys,time,zipzi
 from pathlib import Path
-from zipzi import ops,modeling as m
+from zipzi import meshes,modeling as m
 ready,busy,retry,finish=map(Path,sys.argv[4:])
 def wait(path):
  deadline=time.monotonic()+15
@@ -480,7 +481,7 @@ def wait(path):
 with zipzi.connect() as c:
  s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
  e=s.edit('obsolete external candidate')
- e.apply(ops.Rename(sys.argv[3],'must never publish'))
+ e.apply(meshes.Rename(sys.argv[3],'must never publish'))
  ready.write_text('candidate prepared')
  wait(retry)
  try:e.commit()
@@ -491,8 +492,8 @@ with zipzi.connect() as c:
  try:e.commit().wait()
  except zipzi.SdkFailure as error:assert error.code=='STALE_VERSION',error.code
  else:raise AssertionError('obsolete candidate committed')
- assert s.meshes.get(sys.argv[3]).name=='R4 property name'
- value=s.modeling.records(m.ModelingQuery(meshes=(sys.argv[3],))).values.meshes[0]
+ assert s.meshes.get(sys.argv[3]).value.name=='R4 property name'
+ value=s.modeling.records(m.ModelingQuery(meshes=(sys.argv[3],))).value.meshes[0]
  assert abs(value.appearance.opacity-.61)<1e-6
 "#,
         ])
@@ -564,7 +565,7 @@ with zipzi.connect() as c:
         "native render missing"
     );
     println!(
-        "R4 native IPC: installed zipzi-python2 -> mesh/parameter/binding/scene/group -> SDK reference/address -> candidate/formal CPU sweep -> human preview unchanged -> cursor events/UI Undo -> path reservation -> Metal render passed"
+        "R4 native IPC: installed zipzi -> mesh/parameter/binding/scene/group -> SDK reference/address -> candidate/formal CPU sweep -> human preview unchanged -> cursor events/UI Undo -> path reservation -> Metal render passed"
     );
     Ok(())
 }
