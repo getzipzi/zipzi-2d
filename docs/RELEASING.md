@@ -50,7 +50,9 @@ them merely to bump a release version.
 
 4. Follow **Actions → Package macOS App**. The tag must exactly match the
    workspace version. One `macos-15` runner builds the Release app, validates
-   its contents, ad hoc signs it, verifies the signature, and creates a zip.
+   its contents, ad hoc signs it, verifies the signature, and creates a zip and
+   a drag-to-Applications DMG installer. The DMG is mounted read-only to verify
+   its Applications link, executable bytes, release identity and App signature.
    Corresponding complete workspace source and SHA-256 checksums accompany it.
 5. A small Linux job verifies downloaded checksums and creates a GitHub
    **prerelease**, without marking it Latest. Release assets remain available

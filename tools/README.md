@@ -116,6 +116,7 @@ select the branch and start the run, or use
 `gh workflow run macos-app.yml --ref <branch>`. This uses one `macos-15`
 Apple Silicon runner to build a Release app, verify its contents, apply and
 verify an ad hoc signature, and archive the bundle with executable permissions.
+It creates a drag-to-Applications DMG installer and verifies the mounted App.
 It also archives and verifies the corresponding workspace source and records
 SHA-256 checksums. Manual runs upload artifacts only; Alpha tag pushes publish
 the same verified artifacts to a GitHub prerelease.
