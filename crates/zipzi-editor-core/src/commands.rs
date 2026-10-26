@@ -147,6 +147,20 @@ pub enum CommandId {
     GlueTool,
     #[serde(rename = "tool.generate-mesh")]
     GenerateMesh,
+    #[serde(rename = "tool.manual-mesh")]
+    ManualMesh,
+    #[serde(rename = "tool.manual-select")]
+    ManualSelect,
+    #[serde(rename = "tool.manual-create")]
+    ManualCreate,
+    #[serde(rename = "tool.manual-delete")]
+    ManualDelete,
+    #[serde(rename = "tool.manual-reconnect")]
+    ManualReconnect,
+    #[serde(rename = "tool.manual-remove-selection")]
+    ManualRemoveSelection,
+    #[serde(rename = "tool.manual-preview-result")]
+    ManualPreviewResult,
     #[serde(rename = "view.deformers")]
     ToggleDeformers,
     #[serde(rename = "view.ancestor-deformers")]
@@ -507,6 +521,49 @@ specs![
         false,
         ["shift-m"]
     ),
+    (ManualMesh, "editor.tool_manual_mesh", Viewport, false, []),
+    (
+        ManualSelect,
+        "editor.tool_manual_select",
+        Viewport,
+        false,
+        []
+    ),
+    (
+        ManualCreate,
+        "editor.tool_manual_create",
+        Viewport,
+        false,
+        []
+    ),
+    (
+        ManualDelete,
+        "editor.tool_manual_delete",
+        Viewport,
+        false,
+        []
+    ),
+    (
+        ManualReconnect,
+        "editor.tool_manual_reconnect",
+        Viewport,
+        false,
+        []
+    ),
+    (
+        ManualRemoveSelection,
+        "editor.tool_manual_remove_selection",
+        Viewport,
+        false,
+        ["backspace", "delete"]
+    ),
+    (
+        ManualPreviewResult,
+        "editor.tool_manual_preview_result",
+        Viewport,
+        false,
+        []
+    ),
     (GlueTool, "editor.tool_glue", Viewport, false, ["g"]),
     (HandTool, "editor.tool_hand", Viewport, false, ["h"]),
     (
@@ -799,6 +856,13 @@ impl Editor {
             LassoTool => !animation_navigation && self.active_tool() == crate::ToolId::Lasso,
             GlueTool => !animation_navigation && self.active_tool() == crate::ToolId::Glue,
             HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,
+            ManualMesh => self.manual_active(),
+            ManualSelect => self.manual_tool() == Some(crate::ManualTool::Select),
+            ManualCreate => self.manual_tool() == Some(crate::ManualTool::Create),
+            ManualDelete => self.manual_tool() == Some(crate::ManualTool::Delete),
+            ManualPreviewResult => self
+                .active_session()
+                .is_some_and(|s| s.modeling.tools.manual_preview_result()),
             ToggleViewportIsolation => matches!(command.target,
                 CommandTarget::Viewport(binding) if self.viewport_isolated(binding)),
             ToggleDeformers => self.deformer_visibility().all,
@@ -910,10 +974,27 @@ impl Editor {
                     && !self.is_busy()
                     && !self.exiting()
                     && !self.gesture_active()
-                    && self
-                        .document()
-                        .is_some_and(|d| d.mesh_generation_target().is_ok())
+                    && (self.manual_active()
+                        || self
+                            .document()
+                            .is_some_and(|d| d.mesh_generation_target().is_ok()))
             }
+            ManualMesh => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && (self.manual_active()
+                        || self
+                            .document()
+                            .is_some_and(|d| d.manual_mesh_target(true).is_ok()))
+            }
+            ManualSelect
+            | ManualCreate
+            | ManualDelete
+            | ManualReconnect
+            | ManualRemoveSelection
+            | ManualPreviewResult => modeling && target && !self.is_busy() && self.manual_active(),
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {
                 target && !self.is_busy() && !self.exiting()
             }
@@ -943,8 +1024,8 @@ impl Editor {
             EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {
                 modeling && target && !self.is_busy() && !self.exiting() && authoring_available()
             }
-            Undo => target && self.can_undo(),
-            Redo => target && self.can_redo(),
+            Undo => target && (self.can_undo() || (self.manual_active() && self.gesture_active())),
+            Redo => target && (self.can_redo() || (self.manual_active() && self.gesture_active())),
             Deselect => {
                 modeling
                     && target
@@ -1008,6 +1089,9 @@ impl Editor {
             Previous | Next => {
                 self.activate(self.adjacent(command.id == Next).unwrap())?;
             }
+            Undo | Redo if self.manual_active() && self.gesture_active() => {
+                self.cancel_gesture();
+            }
             Undo => self.execute_for(command.document().unwrap(), EditorCommand::Undo)?,
             Redo => self.execute_for(command.document().unwrap(), EditorCommand::Redo)?,
             Deselect => {
@@ -1017,6 +1101,11 @@ impl Editor {
                 )?;
             }
             SelectAll => {
+                if self.manual_active() {
+                    let session = self.active_session_mut().unwrap();
+                    session.modeling.tools.manual_select_all(&session.document);
+                    return Ok(CommandEffect::Done);
+                }
                 let frame = self
                     .displayed_modeling_frame(viewport.unwrap())
                     .unwrap()
@@ -1053,6 +1142,50 @@ impl Editor {
                 };
                 self.execute_for(command.document().unwrap(), EditorCommand::SetTool(tool))?;
             }
+            ManualMesh if self.manual_active() => self.exit_manual_mesh(),
+            ManualMesh => return Ok(CommandEffect::Host(command)),
+            ManualSelect | ManualCreate | ManualDelete => {
+                let tool = match command.id {
+                    ManualCreate => crate::ManualTool::Create,
+                    ManualDelete => crate::ManualTool::Delete,
+                    _ => crate::ManualTool::Select,
+                };
+                let session = self.active_session_mut().unwrap();
+                session
+                    .modeling
+                    .tools
+                    .set_manual_tool(tool, &mut session.document);
+                session.invalidate_scene();
+            }
+            ManualRemoveSelection => {
+                let session = self.active_session_mut().unwrap();
+                if session
+                    .modeling
+                    .tools
+                    .manual_delete_selection(&mut session.document)?
+                {
+                    session.invalidate_scene();
+                }
+            }
+            ManualReconnect => {
+                let session = self.active_session_mut().unwrap();
+                let target = session.modeling.tools.manual_target().unwrap().clone();
+                let changed = session
+                    .document
+                    .apply_manual_mesh_once(&target, zipzi_sdk::ManualMeshOperation::Reconnect)?;
+                session
+                    .modeling
+                    .tools
+                    .refresh_manual_source(&session.document)?;
+                if changed {
+                    session.invalidate_scene();
+                }
+            }
+            ManualPreviewResult => {
+                let session = self.active_session_mut().unwrap();
+                session.modeling.tools.toggle_manual_preview_result();
+                session.invalidate_scene();
+            }
             ToggleDeformers => {
                 self.execute_for(command.document().unwrap(), EditorCommand::ToggleDeformers)?
             }
@@ -1061,6 +1194,7 @@ impl Editor {
                 EditorCommand::ToggleAncestorDeformers,
             )?,
             CancelGesture => {
+                let exit_manual = self.manual_active() && !self.gesture_active();
                 let binding = viewport.unwrap();
                 if let Some(token) = self
                     .viewport_interaction
@@ -1069,6 +1203,9 @@ impl Editor {
                     self.cancel_viewport_interaction(token);
                 }
                 self.cancel_gesture_for(binding);
+                if exit_manual {
+                    self.exit_manual_mesh();
+                }
             }
             _ => return Ok(CommandEffect::Host(command)),
         }

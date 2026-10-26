@@ -71,6 +71,7 @@ impl Editor {
                 EditingLifecycle::ContextChange | EditingLifecycle::Close => {
                     session.cancel_timeline_edit();
                     session.execute(EditorCommand::FinishEdit)?;
+                    session.modeling.tools.exit_manual(&mut session.document);
                 }
             }
         } else {

@@ -930,6 +930,78 @@ pub fn edit_manual_mesh(
     })
 }
 
+/// Add sampled fill sites to an authored mesh in one constrained triangulation.
+/// Existing vertices, the outer boundary and every structural edge are retained.
+pub fn add_manual_interior_sites(
+    source: &MeshGeometry,
+    sites: &[Vec2],
+    allocator: &mut ManualVertexIdAllocator,
+) -> Result<ManualMeshResult, SdkError> {
+    let meshing = extract_manual_meshing(source)?;
+    let map = AffineUvMap::from_geometry(source)?;
+    let old_edges = mesh_edges(&source.triangles);
+    let mut geometry = source.clone();
+    let mut points = uv_map(&geometry);
+    let structural: Vec<_> = boundary_edges(&meshing.boundary)
+        .into_iter()
+        .chain(meshing.constraints.iter().map(|c| c.endpoints))
+        .collect();
+    let mut sorted = sites.to_vec();
+    sorted.sort_by(|a, b| a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
+    let mut added = Vec::new();
+    for uv in sorted {
+        if !uv.x.is_finite()
+            || !uv.y.is_finite()
+            || !(0.0..=1.0).contains(&uv.x)
+            || !(0.0..=1.0).contains(&uv.y)
+        {
+            return Err(bad("interior site lies outside the source image"));
+        }
+        let point = xy(uv);
+        if !polygon_contains(point, &meshing.boundary, &points)
+            || points
+                .values()
+                .any(|other| (point[0] - other[0]).hypot(point[1] - other[1]) < 1e-7)
+            || structural
+                .iter()
+                .any(|edge| between(point, points[&edge[0]], points[&edge[1]]))
+        {
+            continue;
+        }
+        let id = allocator.allocate(&geometry)?;
+        geometry.vertex_ids.push(id);
+        geometry.positions.push(map.position(uv));
+        geometry.uvs.push(uv);
+        points.insert(id, point);
+        added.push(id);
+    }
+    if added.is_empty() {
+        return Ok(ManualMeshResult {
+            geometry: source.clone(),
+            vertex_mapping: source.vertex_ids.iter().map(|&id| (id, Some(id))).collect(),
+            added,
+            removed: Vec::new(),
+            affected_edges: Vec::new(),
+            changed: false,
+        });
+    }
+    geometry.meshing = Some(meshing.clone());
+    geometry.triangles = triangulate(&geometry, &meshing, &BTreeSet::new())?;
+    validate(&geometry, &meshing)?;
+    let new_edges = mesh_edges(&geometry.triangles);
+    Ok(ManualMeshResult {
+        vertex_mapping: source.vertex_ids.iter().map(|&id| (id, Some(id))).collect(),
+        affected_edges: old_edges
+            .symmetric_difference(&new_edges)
+            .copied()
+            .collect(),
+        geometry,
+        added,
+        removed: Vec::new(),
+        changed: true,
+    })
+}
+
 impl crate::EditSession<'_> {
     /// Apply one manual operation to this candidate through the complete topology path.
     /// A caller commits the candidate once for the corresponding document history step.

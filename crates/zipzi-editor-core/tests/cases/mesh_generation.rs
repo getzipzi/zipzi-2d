@@ -8,6 +8,14 @@ fn id(n: u128) -> String {
 fn mesh() -> ObjectRef {
     ObjectRef::new(ObjectKind::Mesh, id(902))
 }
+fn saved_mesh_has_meshing(manifest: &std::path::Path) -> anyhow::Result<bool> {
+    let mut session = zipzi_sdk::AuthoringSession::new(
+        &id(920),
+        zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
+    )?;
+    session.open_project(manifest, None)?;
+    Ok(session.mesh(&mesh().id).unwrap().meshing.is_some())
+}
 fn generate(editor: &mut Editor, columns: usize, rows: usize) -> anyhow::Result<()> {
     let expected_revision = editor.document().unwrap().mesh_generation_revision();
     editor.execute(EditorCommand::GenerateMeshGrid {
@@ -27,6 +35,400 @@ fn present(editor: &mut Editor, vertices: usize, triangles: usize) -> anyhow::Re
     assert_eq!(geometry.vertices.len(), vertices);
     assert_eq!(geometry.triangles.len(), triangles);
     assert!(editor.present_frame(frame));
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_stages_preview_apply_and_reject_stale_options() -> anyhow::Result<()> {
+    let (mut doc, dir) = support::alpha_document()?;
+    let target = doc.manual_mesh_target(true)?;
+    let source = doc.mesh_generation_source_manual(&target)?;
+    let options = AlphaMeshOptions {
+        outside_spacing: 8.,
+        inside_spacing: 8.,
+        outside_margin: 0.,
+        inside_margin: 2.,
+        minimum_margin: 0.,
+        alpha_threshold: 64,
+        preserve_holes: false,
+        clip_to_image: true,
+        ..AlphaMeshOptions::deformation_large()
+    };
+    let stale = source.generate(MeshGenerationOptions::ManualEdge(options))?;
+    assert!(stale.geometry().meshing.is_some());
+    source.invalidate_previews();
+    assert!(doc.apply_mesh_generation(&stale).is_err());
+    assert_eq!(doc.history_lengths(), (0, 0));
+
+    let edge = source.generate(MeshGenerationOptions::ManualEdge(options))?;
+    let edge_vertex_count = edge.geometry().vertex_ids.len();
+    let edge_meshing = edge.geometry().meshing.clone().unwrap();
+    doc.apply_mesh_generation(&edge)?;
+    assert_eq!(doc.history_lengths(), (1, 0));
+    let target = doc.manual_mesh_target(true)?;
+    let triangle = edge.geometry().triangles[0];
+    let uv = triangle.map(|id| {
+        let slot = edge
+            .geometry()
+            .vertex_ids
+            .iter()
+            .position(|&candidate| candidate == id)
+            .unwrap();
+        edge.geometry().uvs[slot]
+    });
+    let uv = Vec2::new(
+        (uv[0].x + uv[1].x + uv[2].x) / 3.,
+        (uv[0].y + uv[1].y + uv[2].y) / 3.,
+    );
+    let inserted_id =
+        zipzi_sdk::ManualVertexIdAllocator::new(edge.geometry()).allocate(edge.geometry())?;
+    assert!(doc.apply_manual_mesh_once(
+        &target,
+        zipzi_sdk::ManualMeshOperation::InsertVertex {
+            id: inserted_id,
+            uv,
+        }
+    )?);
+    assert_eq!(doc.history_lengths(), (2, 0));
+    let target = doc.manual_mesh_target(true)?;
+    let source = doc.mesh_generation_source_manual(&target)?;
+    let fill = source.generate(MeshGenerationOptions::ManualInterior(options))?;
+    assert!(fill.geometry().vertex_ids.len() >= edge_vertex_count);
+    assert_eq!(fill.geometry().meshing.as_ref(), Some(&edge_meshing));
+    for id in &edge.geometry().vertex_ids {
+        assert!(fill.geometry().vertex_ids.contains(id));
+    }
+    assert!(fill.geometry().vertex_ids.contains(&inserted_id));
+    doc.apply_mesh_generation(&fill)?;
+    assert_eq!(doc.history_lengths(), (3, 0));
+    let target = doc.manual_mesh_target(true)?;
+    let source = doc.mesh_generation_source_manual(&target)?;
+    let reconnect = source.generate(MeshGenerationOptions::ManualReconnect)?;
+    let reconnect_changed = reconnect.geometry() != fill.geometry();
+    doc.apply_mesh_generation(&reconnect)?;
+    let expected_history = 3 + usize::from(reconnect_changed);
+    assert_eq!(doc.history_lengths(), (expected_history, 0));
+    let target = doc.manual_mesh_target(true)?;
+    let source = doc.mesh_generation_source_manual(&target)?;
+    let full = source.generate(MeshGenerationOptions::ManualFull(options))?;
+    assert!(full.geometry().meshing.is_some());
+    doc.apply_mesh_generation(&full)?;
+    assert_eq!(doc.history_lengths(), (expected_history + 1, 0));
+    let saved = doc.save(&dir.path().join("manual-stages.zipzi"))?;
+    assert!(saved_mesh_has_meshing(&saved.manifest)?);
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_mode_uses_full_reference_and_one_history_step_per_point() -> anyhow::Result<()> {
+    let (doc, dir) = support::alpha_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    support::attach_viewports(&mut editor);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let id = editor.active_id().unwrap();
+    editor.enter_manual_mesh(id)?;
+    assert!(editor.manual_active());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    let preview = editor.preview()?;
+    assert!(
+        preview
+            .scene
+            .viewport_frame
+            .drawables
+            .iter()
+            .any(|drawable| {
+                drawable.id.starts_with("__manual_mesh_reference_") && drawable.positions.len() == 4
+            })
+    );
+    assert!(
+        preview
+            .scene
+            .runtime_frame
+            .drawables
+            .iter()
+            .all(|drawable| { !drawable.id.starts_with("__manual_mesh_reference_") })
+    );
+    let frame = preview.canvas.unwrap();
+    assert!(editor.present_frame(frame.clone()));
+    let binding = editor.primary_viewport_binding().unwrap();
+    let overlay = editor.overlay_for_viewport(binding);
+    assert!(!overlay.automatic_lines.is_empty());
+    editor.dispatch(editor.command(CommandId::ManualCreate))?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let point = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point })?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    assert!(editor.manual_active());
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
+    assert!(editor.manual_active());
+    editor.execute(EditorCommand::Redo)?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    let task = editor.prepare_save(id, &dir.path().join("manual-editor.zipzi"), false)?;
+    let saved = editor.finish_save(&mut task.run())?;
+    assert!(saved_mesh_has_meshing(&saved.manifest)?);
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_drag_keeps_last_valid_candidate_and_undo_cancels_gesture() -> anyhow::Result<()> {
+    let (doc, _dir) = support::alpha_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    support::attach_viewports(&mut editor);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let geometry = frame
+        .geometry
+        .meshes
+        .iter()
+        .find(|m| m.id == mesh().id)
+        .unwrap();
+    let &(vertex_id, original) = geometry
+        .vertices
+        .iter()
+        .min_by(|a, b| (a.1.x + a.1.y).total_cmp(&(b.1.x + b.1.y)))
+        .unwrap();
+    let start = frame.transform.to_viewport(original);
+    let valid = ViewportPoint {
+        x: start.x + 12.,
+        y: start.y - 12.,
+    };
+    let invalid = ViewportPoint {
+        x: start.x - 1000.,
+        y: start.y + 1000.,
+    };
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: valid,
+            left_down: true,
+        },
+    )?;
+    assert!(editor.document().unwrap().has_pending_edit());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    let accepted = editor
+        .document()
+        .unwrap()
+        .selected_vertex_positions()
+        .into_iter()
+        .find(|(id, _)| *id == vertex_id)
+        .unwrap()
+        .1;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: invalid,
+            left_down: true,
+        },
+    )?;
+    let retained = editor
+        .document()
+        .unwrap()
+        .selected_vertex_positions()
+        .into_iter()
+        .find(|(id, _)| *id == vertex_id)
+        .unwrap()
+        .1;
+    assert_eq!(retained, accepted);
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: invalid })?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    assert!(!editor.document().unwrap().has_pending_edit());
+
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let geometry = frame
+        .geometry
+        .meshes
+        .iter()
+        .find(|m| m.id == mesh().id)
+        .unwrap();
+    let position = geometry
+        .vertices
+        .iter()
+        .find(|(id, _)| *id == vertex_id)
+        .unwrap()
+        .1;
+    let start = frame.transform.to_viewport(position);
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: ViewportPoint {
+                x: start.x + 6.,
+                y: start.y - 6.,
+            },
+            left_down: true,
+        },
+    )?;
+    assert!(editor.document().unwrap().has_pending_edit());
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    assert!(!editor.document().unwrap().has_pending_edit());
+    editor.dispatch(editor.command(CommandId::CancelGesture))?;
+    assert!(!editor.manual_active());
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_edge_selection_pins_and_releases_an_automatic_connection() -> anyhow::Result<()> {
+    let (doc, _dir) = support::alpha_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    support::attach_viewports(&mut editor);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    crate::support::present_canvas(&mut editor)?;
+    let binding = editor.primary_viewport_binding().unwrap();
+    let lines = editor.overlay_for_viewport(binding).automatic_lines;
+    assert_eq!(lines.len(), 1);
+    let (a, b) = lines[0];
+    editor.dispatch(editor.command(CommandId::ManualCreate))?;
+    crate::support::present_canvas(&mut editor)?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: a,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: b })?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    crate::support::present_canvas(&mut editor)?;
+    assert!(
+        editor
+            .overlay_for_viewport(binding)
+            .automatic_lines
+            .is_empty()
+    );
+    editor.dispatch(editor.command(CommandId::ManualSelect))?;
+    crate::support::present_canvas(&mut editor)?;
+    let midpoint = ViewportPoint {
+        x: (a.x + b.x) * 0.5,
+        y: (a.y + b.y) * 0.5,
+    };
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: midpoint,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: midpoint })?;
+    editor.dispatch(editor.command(CommandId::ManualRemoveSelection))?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
+    crate::support::present_canvas(&mut editor)?;
+    assert_eq!(
+        editor.overlay_for_viewport(binding).automatic_lines.len(),
+        1
+    );
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_saving_drag_commits_the_last_valid_candidate() -> anyhow::Result<()> {
+    let (doc, dir) = support::alpha_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    support::attach_viewports(&mut editor);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let document_id = editor.active_id().unwrap();
+    editor.enter_manual_mesh(document_id)?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let geometry = frame
+        .geometry
+        .meshes
+        .iter()
+        .find(|m| m.id == mesh().id)
+        .unwrap();
+    let &(vertex_id, original) = geometry
+        .vertices
+        .iter()
+        .min_by(|a, b| (a.1.x + a.1.y).total_cmp(&(b.1.x + b.1.y)))
+        .unwrap();
+    let start = frame.transform.to_viewport(original);
+    let moved = ViewportPoint {
+        x: start.x + 12.,
+        y: start.y - 12.,
+    };
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: moved,
+            left_down: true,
+        },
+    )?;
+    assert!(editor.document().unwrap().has_pending_edit());
+    let save = editor.prepare_save(
+        document_id,
+        &dir.path().join("manual-during-drag.zipzi"),
+        false,
+    )?;
+    let saved = editor.finish_save(&mut save.run())?;
+    assert!(!editor.document().unwrap().has_pending_edit());
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    let mut session = zipzi_sdk::AuthoringSession::new(
+        &id(920),
+        zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
+    )?;
+    session.open_project(&saved.manifest, None)?;
+    let saved_mesh = session.mesh(&mesh().id).unwrap();
+    let slot = saved_mesh
+        .vertex_ids
+        .iter()
+        .position(|&id| id == vertex_id)
+        .unwrap();
+    assert_ne!(
+        saved_mesh.base_positions[slot],
+        Vec2::new(original.x, original.y)
+    );
     Ok(())
 }
 

@@ -5,15 +5,16 @@ use super::{
     spatial::{self, PolygonIndex},
     AlphaMask, AlphaMeshOptions,
 };
-use crate::{MeshGeometry, SdkError};
+use crate::{extract_manual_meshing, MeshGeometry, SdkError};
 use geo::{
     unary_union, Area, BooleanOps, BoundingRect, Buffer, Contains, Coord, InteriorPoint,
     LineString, MultiLineString, MultiPolygon, Point, Polygon, Simplify,
 };
 use spade::{handles::FixedVertexHandle, Point2, Triangulation};
-use std::collections::HashMap;
-use zipzi_core::Vec2;
+use std::collections::{BTreeSet, HashMap};
+use zipzi_core::{MeshConstraint, MeshConstraintKind, Vec2};
 
+#[derive(Clone)]
 struct Sampler {
     cdt: Cdt,
     occupied: Occupied,
@@ -21,6 +22,53 @@ struct Sampler {
     remaining: usize,
     max_vertices: usize,
     extent: Option<[f64; 2]>,
+}
+
+#[derive(Clone)]
+pub struct EdgeLayout {
+    sampler: Sampler,
+    foreground: MultiPolygon<f64>,
+    outline: MultiPolygon<f64>,
+    inner: MultiPolygon<f64>,
+    options: AlphaMeshOptions,
+    width: u32,
+    height: u32,
+}
+
+#[derive(Clone)]
+pub struct InteriorSites {
+    sampler: Sampler,
+    outline: MultiPolygon<f64>,
+    options: AlphaMeshOptions,
+    width: u32,
+    height: u32,
+    added_uvs: Vec<Vec2>,
+}
+
+impl EdgeLayout {
+    /// Render the edge phase as a valid mesh before interior sites are added.
+    pub fn preview_geometry(&self) -> Result<MeshGeometry, SdkError> {
+        triangulate_constrained(InteriorSites {
+            sampler: self.sampler.clone(),
+            outline: self.outline.clone(),
+            options: self.options,
+            width: self.width,
+            height: self.height,
+            added_uvs: Vec::new(),
+        })
+    }
+}
+
+impl InteriorSites {
+    /// New fill sites, excluding the perimeter and generated support sites.
+    pub fn added_uvs(&self) -> &[Vec2] {
+        &self.added_uvs
+    }
+
+    /// Inspect the complete result without consuming this stage.
+    pub fn preview_geometry(&self) -> Result<MeshGeometry, SdkError> {
+        triangulate_constrained(self.clone())
+    }
 }
 
 // Keep sampling and its work budget identical for bulk boundaries and support rings.
@@ -224,12 +272,12 @@ impl Sampler {
     }
 }
 
-pub(super) fn generate(
+pub(super) fn build_edge_layout(
     mask: AlphaMask<'_>,
     options: &AlphaMeshOptions,
     foreground: &MultiPolygon<f64>,
     outline: &MultiPolygon<f64>,
-) -> Result<MeshGeometry, SdkError> {
+) -> Result<EdgeLayout, SdkError> {
     let clearance = (options.inside_spacing * 0.3).max(0.001);
     let mut sampler = Sampler {
         cdt: Cdt::new(),
@@ -400,8 +448,31 @@ pub(super) fn generate(
             }
         }
     }
+    Ok(EdgeLayout {
+        sampler,
+        foreground: foreground.clone(),
+        outline: outline.clone(),
+        inner,
+        options: *options,
+        width: mask.width,
+        height: mask.height,
+    })
+}
+
+pub(super) fn sample_interior(layout: EdgeLayout) -> Result<InteriorSites, SdkError> {
+    let EdgeLayout {
+        mut sampler,
+        foreground,
+        outline,
+        inner,
+        options,
+        width,
+        height,
+    } = layout;
+    let original_vertices = sampler.cdt.num_vertices();
     // Anchor the staggered lattice in source-image coordinates. Component
     // bounds only restrict enumeration; changing a bound must not shift sites.
+    let clearance = (options.inside_spacing * 0.3).max(0.001);
     let spacing = options.inside_spacing;
     let dy = spacing * (3.0_f64).sqrt() * 0.5;
     let fill = inner.buffer(-clearance);
@@ -467,6 +538,38 @@ pub(super) fn generate(
             }
         }
     }
+    let mut added_uvs: Vec<_> = sampler
+        .cdt
+        .vertices()
+        .filter(|vertex| vertex.index() >= original_vertices)
+        .map(|vertex| {
+            let point = vertex.position();
+            Vec2::new(
+                point.x as f32 / width as f32,
+                point.y as f32 / height as f32,
+            )
+        })
+        .collect();
+    added_uvs.sort_by(|a, b| a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
+    Ok(InteriorSites {
+        sampler,
+        outline,
+        options,
+        width,
+        height,
+        added_uvs,
+    })
+}
+
+pub(super) fn triangulate_constrained(sites: InteriorSites) -> Result<MeshGeometry, SdkError> {
+    let InteriorSites {
+        sampler,
+        outline,
+        options,
+        width,
+        height,
+        added_uvs: _,
+    } = sites;
     // Only outline constraints toggle inside/outside; support rings and chains
     // remain traversable. Rebuild boundary flags after any edge splits.
     // No global angle refinement: it can destroy the regular interior lattice
@@ -501,8 +604,8 @@ pub(super) fn generate(
         let position = Vec2::new(p.x as f32, p.y as f32);
         positions.push(position);
         uvs.push(Vec2::new(
-            position.x / mask.width as f32,
-            position.y / mask.height as f32,
+            position.x / width as f32,
+            position.y / height as f32,
         ));
     }
     let mut output = Vec::new();
@@ -528,13 +631,49 @@ pub(super) fn generate(
             "No interior triangles were generated",
         ));
     }
-    Ok(MeshGeometry {
+    let mut geometry = MeshGeometry {
         vertex_ids: (0..positions.len() as u32).collect(),
         positions,
         uvs,
         triangles: output,
         meshing: None,
-    })
+    };
+    // A single, hole-free component can carry the exact structural constraints
+    // into manual editing. Other Alpha domains keep their established render
+    // geometry without pretending to have one editable perimeter.
+    if options.clip_to_image && outline.0.len() == 1 && outline.0[0].interiors().is_empty() {
+        let mut meshing = extract_manual_meshing(&geometry)?;
+        let boundary: BTreeSet<_> = meshing
+            .boundary
+            .iter()
+            .enumerate()
+            .map(|(i, &a)| {
+                let b = meshing.boundary[(i + 1) % meshing.boundary.len()];
+                [a.min(b), a.max(b)]
+            })
+            .collect();
+        let mut support = BTreeSet::new();
+        for edge in cdt
+            .undirected_edges()
+            .filter(|edge| edge.is_constraint_edge())
+        {
+            let [a, b] = edge.vertices().map(|v| remap[v.index()]);
+            let pair = [a.min(b), a.max(b)];
+            if a != b && !boundary.contains(&pair) {
+                support.insert(pair);
+            }
+        }
+        meshing.constraints = support
+            .into_iter()
+            .map(|endpoints| MeshConstraint {
+                endpoints,
+                kind: MeshConstraintKind::EdgeSupport,
+            })
+            .collect();
+        geometry.meshing = Some(meshing);
+        extract_manual_meshing(&geometry)?;
+    }
+    Ok(geometry)
 }
 
 #[cfg(test)]

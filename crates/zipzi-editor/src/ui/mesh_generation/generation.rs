@@ -100,6 +100,7 @@ impl PreviewGeneration {
     }
     fn request(&mut self, options: Option<MeshGenerationOptions>) {
         if self.requested != options {
+            self.source.invalidate_previews();
             self.request_id += 1;
             self.latest_request
                 .store(self.request_id, Ordering::Relaxed);

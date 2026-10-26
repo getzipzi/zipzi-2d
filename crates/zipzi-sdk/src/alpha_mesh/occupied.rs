@@ -2,6 +2,7 @@
 use spade::Point2;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub(super) struct Occupied {
     cell: f64,
     buckets: HashMap<(i64, i64), Vec<Point2<f64>>>,

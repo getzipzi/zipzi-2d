@@ -447,6 +447,24 @@ pub(crate) struct HostedEdit {
     interactive: bool,
 }
 impl HostedEdit {
+    pub(crate) fn apply_manual_mesh(
+        &mut self,
+        mesh_id: &str,
+        operation: zipzi_sdk::ManualMeshOperation,
+    ) -> zipzi_runtime::Result<zipzi_runtime::SourceRef> {
+        let expected = self.source_ref();
+        self.host.write().apply_modeling(
+            self.client,
+            self.id.expect("active candidate"),
+            vec![zipzi_runtime::modeling::ModelingCommand::ManualMesh {
+                mesh_id: mesh_id.into(),
+                expected,
+                operation,
+            }],
+        )?;
+        Ok(self.source_ref())
+    }
+
     pub(crate) fn source_ref(&self) -> zipzi_runtime::SourceRef {
         let edit = self.id.expect("active candidate");
         let sequence = self

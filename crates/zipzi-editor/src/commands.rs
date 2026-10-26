@@ -115,7 +115,8 @@ impl EditorView {
                 | CommandId::Next
                 | CommandId::Deselect
                 | CommandId::SelectAll
-                | CommandId::GenerateMesh => Some(crate::editing::InputBoundary::CommitText),
+                | CommandId::GenerateMesh
+                | CommandId::ManualMesh => Some(crate::editing::InputBoundary::CommitText),
                 _ => None,
             };
             if let Some(boundary) = boundary {
@@ -148,6 +149,10 @@ impl EditorView {
                         | CommandId::LassoTool
                         | CommandId::GlueTool
                         | CommandId::HandTool
+                        | CommandId::ManualMesh
+                        | CommandId::ManualSelect
+                        | CommandId::ManualCreate
+                        | CommandId::ManualDelete
                         | CommandId::CancelGesture
                 ) {
                     if let zipzi_editor_core::CommandTarget::Viewport(binding) = command.target {
@@ -210,6 +215,35 @@ impl EditorView {
                         }
                     });
                     cx.notify();
+                }
+                CommandId::ManualMesh => {
+                    let confirmation = window.prompt(
+                        PromptLevel::Warning,
+                        &t!("manual_mesh.confirm_source"),
+                        Some(&t!("manual_mesh.confirm_source_detail")),
+                        &[
+                            PromptButton::Cancel(t!("project.cancel").into()),
+                            PromptButton::Other(t!("manual_mesh.confirm").into()),
+                        ],
+                        cx,
+                    );
+                    self.modal = true;
+                    cx.notify();
+                    cx.spawn_in(window, async move |this, cx| {
+                        let choice = confirmation.await.ok();
+                        let _ = this.update_in(cx, |this, _window, cx| {
+                            this.modal = false;
+                            if choice == Some(1) {
+                                if let Err(error) =
+                                    this.editor.enter_manual_mesh(command.document().unwrap())
+                                {
+                                    this.set_edit_error(error.to_string(), cx);
+                                }
+                            }
+                            this.redraw(cx);
+                        });
+                    })
+                    .detach();
                 }
                 CommandId::PaletteMoveUp
                 | CommandId::PaletteMoveDown

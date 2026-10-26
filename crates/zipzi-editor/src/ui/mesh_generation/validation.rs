@@ -17,7 +17,7 @@ impl MeshGenerationForm {
         );
         let doc = state.editor.document().unwrap();
         anyhow::ensure!(
-            doc.mesh_generation_revision() == self.revision && !doc.has_pending_edit(),
+            self.preview.source.is_current(doc) && doc.mesh_generation_revision() == self.revision,
             t!("mesh_generation.stale")
         );
         anyhow::ensure!(
@@ -45,13 +45,20 @@ impl MeshGenerationForm {
                 minimum_margin: number(4)?,
                 minimum_boundary_points: number(5)?.to_string().parse().map_err(|_| invalid())?,
                 alpha_threshold: number(6)?.to_string().parse().map_err(|_| invalid())?,
-                preserve_holes: self.preserve_holes,
-                clip_to_image: false,
+                preserve_holes: if self.preview.source.manual_available() {
+                    false
+                } else {
+                    self.preserve_holes
+                },
+                clip_to_image: self.preview.source.manual_available(),
                 remove_faint_islands: self.remove_faint_islands,
                 ..AlphaMeshOptions::default()
             };
             options.validate().map_err(|_| invalid())?;
-            return Ok(MeshGenerationOptions::Alpha(options));
+            return Ok(self.wrap_alpha(options, cx));
+        }
+        if self.is_reconnect(cx) {
+            return Ok(MeshGenerationOptions::ManualReconnect);
         }
         let parse = |i: usize| {
             truncated_number(&self.inputs[i].read(cx).value())

@@ -399,6 +399,43 @@ impl Editor {
             .and_then(|e| e.session())
             .map_or(crate::ToolId::Select, DocumentSession::active_tool)
     }
+    pub fn manual_active(&self) -> bool {
+        self.active_session()
+            .is_some_and(|s| s.modeling.tools.manual_active())
+    }
+    pub fn manual_tool(&self) -> Option<crate::ManualTool> {
+        self.active_session()
+            .and_then(|s| s.modeling.tools.manual_tool())
+    }
+    pub fn manual_target(&self) -> Option<crate::ManualMeshTarget> {
+        self.active_session()
+            .and_then(|s| s.modeling.tools.manual_target().cloned())
+    }
+    pub fn enter_manual_mesh(&mut self, id: DocumentId) -> Result<()> {
+        self.sync_runtime()?;
+        ensure!(self.active == Some(id), "Manual mesh target changed");
+        ensure!(
+            self.entry(id)?.context == crate::EditingContext::Modeling,
+            "Manual mesh editing requires the Modeling workspace"
+        );
+        let session = self
+            .active_session_mut()
+            .ok_or_else(|| anyhow!("No document"))?;
+        session.document.finish_edit()?;
+        let target = session.document.manual_mesh_target(true)?;
+        session
+            .modeling
+            .tools
+            .enter_manual(&mut session.document, target);
+        session.invalidate_scene();
+        Ok(())
+    }
+    pub fn exit_manual_mesh(&mut self) {
+        if let Some(session) = self.active_session_mut() {
+            session.modeling.tools.exit_manual(&mut session.document);
+            session.invalidate_scene();
+        }
+    }
     pub fn deformer_visibility(&self) -> crate::DeformerVisibility {
         self.active
             .and_then(|id| self.entry(id).ok())

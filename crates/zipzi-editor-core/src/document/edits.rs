@@ -185,6 +185,13 @@ impl Document {
     }
 
     pub(super) fn pending_changed(&self) -> bool {
+        if self
+            .manual_pending
+            .as_ref()
+            .is_some_and(|pending| pending.changed)
+        {
+            return true;
+        }
         self.pending.as_ref().is_some_and(|pending| {
             *pending.changed.get_or_init(|| {
                 !pending
@@ -195,6 +202,9 @@ impl Document {
     }
 
     pub fn finish_edit(&mut self) -> Result<()> {
+        if self.manual_pending.is_some() {
+            self.finish_manual_mesh_gesture()?;
+        }
         if let Some(token) = self.expression_edit_token() {
             self.commit_expression_entry_edit(token)?;
             return Ok(());
@@ -278,6 +288,10 @@ impl Document {
     }
 
     pub fn cancel_edit(&mut self) {
+        if self.manual_pending.is_some() {
+            self.cancel_manual_mesh_gesture();
+            return;
+        }
         if let Some(pending) = self.pending.take() {
             if let PendingOriginal::ExpressionEntry(address) = &pending.original {
                 let references_changed = pending

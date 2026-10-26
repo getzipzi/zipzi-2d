@@ -118,8 +118,18 @@ impl MeshGenerationForm {
         let state = entity.read(cx);
         let context = state.editor.editing_context_token().unwrap();
         let doc = state.editor.document().unwrap();
-        let target = doc.mesh_generation_target()?;
-        let source = Arc::new(doc.mesh_generation_source(&target)?);
+        let manual_target = state.editor.manual_target();
+        let (target, source) = if let Some(manual_target) = &manual_target {
+            (
+                manual_target.object.clone(),
+                doc.mesh_generation_source_manual(manual_target)?,
+            )
+        } else {
+            let target = doc.mesh_generation_target()?;
+            let source = doc.mesh_generation_source(&target)?;
+            (target, source)
+        };
+        let source = Arc::new(source);
         let name = doc.object_index().name(&target).to_owned();
         let revision = doc.mesh_generation_revision();
         let square = doc.mesh_grid_requires_square(&target);
@@ -188,21 +198,57 @@ impl MeshGenerationForm {
                     .truncate_to_integer()
                 })
             });
+            let choices = if source.manual_available() {
+                vec![
+                    AlgorithmChoice {
+                        label: t!("mesh_generation.manual_edge").into(),
+                        id: "manual-edge",
+                        available: true,
+                    },
+                    AlgorithmChoice {
+                        label: t!("mesh_generation.manual_interior").into(),
+                        id: "manual-interior",
+                        available: true,
+                    },
+                    AlgorithmChoice {
+                        label: t!("mesh_generation.manual_reconnect").into(),
+                        id: "manual-reconnect",
+                        available: true,
+                    },
+                    AlgorithmChoice {
+                        label: t!("mesh_generation.manual_full").into(),
+                        id: "manual-full",
+                        available: true,
+                    },
+                ]
+            } else {
+                vec![
+                    AlgorithmChoice {
+                        label: if source.replaces_modeling_topology() {
+                            t!("mesh_generation.alpha_replaces").into()
+                        } else {
+                            t!("mesh_generation.alpha").into()
+                        },
+                        id: "alpha-cdt",
+                        available: source.alpha_error().is_none(),
+                    },
+                    AlgorithmChoice {
+                        label: t!("mesh_generation.grid").into(),
+                        id: "grid",
+                        available: source.grid_available(),
+                    },
+                ]
+            };
             let algorithm = cx.new(|cx| {
                 SelectState::new(
-                    vec![
-                        AlgorithmChoice {
-                            label: t!("mesh_generation.alpha").into(),
-                            id: "alpha-cdt",
-                            available: source.alpha_error().is_none(),
+                    choices,
+                    Some(IndexPath::new(
+                        if source.manual_available() || alpha_available {
+                            0
+                        } else {
+                            1
                         },
-                        AlgorithmChoice {
-                            label: t!("mesh_generation.grid").into(),
-                            id: "grid",
-                            available: source.grid_available(),
-                        },
-                    ],
-                    Some(IndexPath::new(if alpha_available { 0 } else { 1 })),
+                    )),
                     window,
                     cx,
                 )
@@ -296,7 +342,7 @@ impl MeshGenerationForm {
                 document,
                 revision,
                 target,
-                preview: generation::PreviewGeneration::new(source, window.metal_context()),
+                preview: generation::PreviewGeneration::new(source.clone(), window.metal_context()),
                 name,
                 square,
                 algorithm,
@@ -309,7 +355,14 @@ impl MeshGenerationForm {
                 remove_faint_islands: true,
                 dialog: FormDialogState::new(cx),
                 validation: Ok(if alpha_available {
-                    MeshGenerationOptions::Alpha(alpha_presets()[0])
+                    if source.manual_available() {
+                        MeshGenerationOptions::ManualEdge(AlphaMeshOptions {
+                            clip_to_image: true,
+                            ..alpha_presets()[0]
+                        })
+                    } else {
+                        MeshGenerationOptions::Alpha(alpha_presets()[0])
+                    }
                 } else {
                     MeshGenerationOptions::Grid(defaults)
                 }),
@@ -333,7 +386,23 @@ impl MeshGenerationForm {
     }
 
     fn is_alpha(&self, cx: &App) -> bool {
-        self.algorithm.read(cx).selected_value() == Some(&"alpha-cdt")
+        matches!(
+            self.algorithm.read(cx).selected_value().copied(),
+            Some("alpha-cdt" | "manual-edge" | "manual-interior" | "manual-full")
+        )
+    }
+
+    fn is_reconnect(&self, cx: &App) -> bool {
+        self.algorithm.read(cx).selected_value() == Some(&"manual-reconnect")
+    }
+
+    fn wrap_alpha(&self, options: AlphaMeshOptions, cx: &App) -> MeshGenerationOptions {
+        match self.algorithm.read(cx).selected_value().copied() {
+            Some("manual-edge") => MeshGenerationOptions::ManualEdge(options),
+            Some("manual-interior") => MeshGenerationOptions::ManualInterior(options),
+            Some("manual-full") => MeshGenerationOptions::ManualFull(options),
+            _ => MeshGenerationOptions::Alpha(options),
+        }
     }
 
     fn alpha_preset(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {

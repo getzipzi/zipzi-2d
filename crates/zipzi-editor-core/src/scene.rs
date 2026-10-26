@@ -27,6 +27,60 @@ pub struct SceneSnapshot {
 }
 
 impl SceneSnapshot {
+    pub(crate) fn with_manual_reference(
+        mut self,
+        target: &crate::ManualMeshTarget,
+        preview_result: bool,
+    ) -> Self {
+        if preview_result {
+            return self;
+        }
+        let mut frame = self.viewport_frame.as_ref().clone();
+        let Some(source) = frame
+            .drawables
+            .iter()
+            .find(|drawable| drawable.id == target.object.id)
+        else {
+            return self;
+        };
+        let mut reference = source.clone();
+        reference.id = format!("__manual_mesh_reference_{}", source.id);
+        reference.runtime_id = reference.id.clone();
+        reference.visible = true;
+        reference.enabled = true;
+        reference.opacity = 0.65;
+        reference.masks.clear();
+        let corners = [
+            zipzi_core::Vec2::new(0., 0.),
+            zipzi_core::Vec2::new(1., 0.),
+            zipzi_core::Vec2::new(1., 1.),
+            zipzi_core::Vec2::new(0., 1.),
+        ];
+        reference.positions = corners
+            .iter()
+            .map(|&uv| target.mapping.position(uv))
+            .collect();
+        reference.uvs = corners.into();
+        reference.indices = vec![0, 1, 2, 0, 2, 3].into();
+        if let Some(drawable) = frame
+            .drawables
+            .iter_mut()
+            .find(|drawable| drawable.id == target.object.id)
+        {
+            drawable.visible = false;
+        }
+        if let Some(index) = frame.render_plan.iter().position(|command| {
+            matches!(command, zipzi_core::evaluation::RenderCommand::DrawMesh { mesh_id } if mesh_id == &target.object.id)
+        }) {
+            frame.render_plan.insert(index, zipzi_core::evaluation::RenderCommand::DrawMesh {
+                mesh_id: reference.id.clone(),
+            });
+        }
+        frame.drawables.push(reference);
+        self.viewport_frame = Arc::new(frame);
+        self
+    }
+
     pub fn render_frame(&self) -> anyhow::Result<Arc<DrawableFrame>> {
         if self.model_opacity == 1. {
             return Ok(self.viewport_frame.clone());

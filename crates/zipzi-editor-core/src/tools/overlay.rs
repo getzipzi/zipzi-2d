@@ -55,6 +55,7 @@ pub struct OverlaySnapshot {
     pub vertices: Vec<OverlayVertex>,
     /// Mesh topology; controls retain their own semantic line groups below.
     pub lines: Vec<(ViewportPoint, ViewportPoint)>,
+    pub automatic_lines: Vec<(ViewportPoint, ViewportPoint)>,
     /// Selected mesh and group boundaries.
     pub accent_lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub hover_lines: Vec<(ViewportPoint, ViewportPoint)>,
@@ -163,6 +164,9 @@ impl ToolController {
     }
 
     pub fn overlay(&self, document: &Document, frame: &CanvasFrame) -> OverlaySnapshot {
+        if let Some(manual) = &self.manual {
+            return manual.overlay(frame);
+        }
         #[cfg(test)]
         self.overlay_builds
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);

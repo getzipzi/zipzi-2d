@@ -74,6 +74,19 @@ pub(crate) fn paint_lines(
         });
     };
     lines(&overlay.reference_lines, 0.75, p.mesh.opacity(0.5));
+    let automatic: Vec<_> = overlay
+        .automatic_lines
+        .iter()
+        .flat_map(|&(a, b)| {
+            dashed_segments(
+                a,
+                b,
+                [bounds.size.width.as_f32(), bounds.size.height.as_f32()],
+            )
+        })
+        .take(100_000)
+        .collect();
+    lines(&automatic, 0.75, p.mesh.opacity(0.55));
     if let Some(origin) = overlay.origin_crosshair {
         let size = 10.;
         let x_axis = [(

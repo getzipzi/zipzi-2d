@@ -11,6 +11,7 @@ mod support;
 mod triangulate;
 
 use crate::{MeshGeometry, SdkError};
+pub use triangulate::{EdgeLayout, InteriorSites};
 
 /// Tightly packed, top-to-bottom, one-byte alpha samples (not RGBA).
 #[derive(Clone, Copy, Debug)]
@@ -140,6 +141,15 @@ pub fn alpha_mesh_geometry(
     mask: AlphaMask<'_>,
     options: &AlphaMeshOptions,
 ) -> Result<MeshGeometry, SdkError> {
+    triangulate_constrained(sample_interior(build_edge_layout(mask, options)?)?)
+}
+
+/// Build the sampled exterior and generated support constraints without the
+/// dense interior lattice. The result can be triangulated for an edge preview.
+pub fn build_edge_layout(
+    mask: AlphaMask<'_>,
+    options: &AlphaMeshOptions,
+) -> Result<EdgeLayout, SdkError> {
     options.validate()?;
     let count = (mask.width as usize).checked_mul(mask.height as usize);
     if mask.width == 0 || mask.height == 0 || count != Some(mask.alpha.len()) {
@@ -162,5 +172,15 @@ pub fn alpha_mesh_geometry(
         mask
     };
     let (foreground, outline) = domain::build(mask, options)?;
-    triangulate::generate(mask, options, &foreground, &outline)
+    triangulate::build_edge_layout(mask, options, &foreground, &outline)
+}
+
+/// Add interior sites while preserving the edge layout's perimeter and support.
+pub fn sample_interior(layout: EdgeLayout) -> Result<InteriorSites, SdkError> {
+    triangulate::sample_interior(layout)
+}
+
+/// Publish the full constrained triangulation after interior sampling.
+pub fn triangulate_constrained(sites: InteriorSites) -> Result<MeshGeometry, SdkError> {
+    triangulate::triangulate_constrained(sites)
 }

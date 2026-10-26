@@ -22,6 +22,9 @@ impl ToolController {
         frame: &CanvasFrame,
         event: CanvasInput,
     ) -> Result<bool> {
+        if let Some(manual) = &mut self.manual {
+            return manual.input(document, frame, event);
+        }
         match event {
             CanvasInput::Cancel => Ok(self.cancel(document)),
             CanvasInput::Leave => {

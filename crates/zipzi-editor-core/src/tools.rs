@@ -8,10 +8,12 @@ mod hand;
 mod hints;
 mod input;
 mod lasso;
+mod manual_mesh;
 mod overlay;
 mod region;
 mod select;
 pub use hints::{HintAction, InteractionHint};
+pub use manual_mesh::ManualTool;
 
 use crate::{
     CanvasScene, ComponentRef, Document, HitTarget, ObjectKind, ObjectRef, ViewportPoint,
@@ -62,6 +64,7 @@ pub struct ToolController {
     hovered: Option<HitTarget>,
     hovered_binding: Option<crate::ViewportBinding>,
     gesture: Option<Gesture>,
+    manual: Option<manual_mesh::ManualMeshMode>,
     access_cache: std::sync::Mutex<Option<access::AccessCache>>,
     #[cfg(test)]
     access_builds: std::sync::atomic::AtomicUsize,
@@ -73,6 +76,9 @@ impl ToolController {
         self.hovered_binding
     }
     pub(crate) fn interaction_viewport(&self) -> Option<crate::ViewportId> {
+        if let Some(manual) = &self.manual {
+            return manual.viewport();
+        }
         self.gesture
             .as_ref()
             .map(|press| press.press().version.binding.viewport)
@@ -83,22 +89,33 @@ impl ToolController {
             .map_or(controls::HINTS, Gesture::hints)
     }
     pub fn dragging(&self) -> bool {
-        self.gesture.is_some()
+        self.gesture.is_some() || self.manual.as_ref().is_some_and(|mode| mode.dragging())
     }
     /// Completed poses from this control edit can lag subsequent pointer moves.
     /// The press fixes the authoring target; new gestures still require a current frame.
     pub(crate) fn accepts_drag_frame(&self, version: FrameVersion) -> bool {
+        if let Some(manual) = &self.manual {
+            return manual.accepts_frame(version);
+        }
         self.gesture
             .as_ref()
             .is_some_and(|gesture| gesture.accepts_frame(version))
     }
 
     pub fn clear(&mut self) {
+        self.manual = None;
         self.components.clear();
         self.hovered = None;
         self.hovered_binding = None;
     }
     pub fn reconcile(&mut self, document: &Document) {
+        if self
+            .manual
+            .as_ref()
+            .is_some_and(|mode| !mode.target_matches(document))
+        {
+            self.manual = None;
+        }
         let locks = document.object_state_index();
         let model = document.model();
         self.components.retain(|c| {
@@ -117,19 +134,91 @@ impl ToolController {
         self.hovered_binding = None;
     }
     pub fn cancel(&mut self, document: &mut Document) -> bool {
-        let changed = self.gesture.take().is_some_and(|g| g.cancel(document));
+        let changed = self.gesture.take().is_some_and(|g| g.cancel(document))
+            | self
+                .manual
+                .as_mut()
+                .is_some_and(|mode| mode.cancel(document));
         self.hovered = None;
         self.hovered_binding = None;
         changed
     }
     pub fn set_tool(&mut self, tool: ToolId, document: &mut Document) -> bool {
         let changed = self.cancel(document);
+        self.manual = None;
         let preserve_components = self.active.preserves_components(tool);
         self.active = tool;
         if !preserve_components {
             self.clear();
         }
         changed
+    }
+    pub fn manual_active(&self) -> bool {
+        self.manual.is_some()
+    }
+    pub fn manual_tool(&self) -> Option<ManualTool> {
+        self.manual.as_ref().map(|mode| mode.tool)
+    }
+    pub fn manual_target(&self) -> Option<&crate::ManualMeshTarget> {
+        self.manual.as_ref().map(|mode| &mode.target)
+    }
+    pub fn manual_preview_result(&self) -> bool {
+        self.manual.as_ref().is_some_and(|mode| mode.preview_result)
+    }
+    pub fn toggle_manual_preview_result(&mut self) {
+        if let Some(mode) = &mut self.manual {
+            mode.preview_result = !mode.preview_result;
+        }
+    }
+    pub fn refresh_manual_source(&mut self, document: &Document) -> anyhow::Result<()> {
+        if let Some(mode) = &mut self.manual {
+            mode.refresh_source(document)?;
+        }
+        Ok(())
+    }
+    pub fn after_manual_generation(&mut self, document: &Document) -> anyhow::Result<()> {
+        if let Some(previous) = &self.manual {
+            let tool = previous.tool;
+            let preview_result = previous.preview_result;
+            let target = document.manual_mesh_target(true)?;
+            let mut mode = manual_mesh::ManualMeshMode::new(target, document);
+            mode.tool = tool;
+            mode.preview_result = preview_result;
+            self.manual = Some(mode);
+        }
+        Ok(())
+    }
+    pub fn enter_manual(&mut self, document: &mut Document, target: crate::ManualMeshTarget) {
+        self.cancel(document);
+        self.components.clear();
+        self.manual = Some(manual_mesh::ManualMeshMode::new(target, document));
+    }
+    pub fn set_manual_tool(&mut self, tool: ManualTool, document: &mut Document) {
+        self.cancel(document);
+        if let Some(mode) = &mut self.manual {
+            mode.tool = tool;
+        }
+    }
+    pub fn exit_manual(&mut self, document: &mut Document) {
+        self.cancel(document);
+        self.manual = None;
+    }
+    pub fn settle_manual(&mut self, document: &mut Document) -> anyhow::Result<bool> {
+        self.manual
+            .as_mut()
+            .map_or(Ok(false), |mode| mode.settle(document))
+    }
+    pub fn manual_select_all(&mut self, document: &Document) -> bool {
+        if let Some(mode) = &mut self.manual {
+            mode.select_all(document);
+            return true;
+        }
+        false
+    }
+    pub fn manual_delete_selection(&mut self, document: &mut Document) -> anyhow::Result<bool> {
+        self.manual
+            .as_mut()
+            .map_or(Ok(false), |mode| mode.delete_selection(document))
     }
 }
 #[derive(Clone, Copy, Debug)]

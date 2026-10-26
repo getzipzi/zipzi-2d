@@ -78,6 +78,26 @@ impl ToolbarRegistry {
                 icon: IconName::Grid2x2,
                 command: CommandId::GenerateMesh,
             },
+            ToolbarItemConfig {
+                id: "tool_manual_mesh",
+                icon: IconName::Grid2x2,
+                command: CommandId::ManualMesh,
+            },
+            ToolbarItemConfig {
+                id: "tool_manual_select",
+                icon: IconName::MousePointer,
+                command: CommandId::ManualSelect,
+            },
+            ToolbarItemConfig {
+                id: "tool_manual_create",
+                icon: IconName::Grid2x2,
+                command: CommandId::ManualCreate,
+            },
+            ToolbarItemConfig {
+                id: "tool_manual_delete",
+                icon: IconName::Lasso,
+                command: CommandId::ManualDelete,
+            },
         ] {
             registry.register(item).unwrap();
         }

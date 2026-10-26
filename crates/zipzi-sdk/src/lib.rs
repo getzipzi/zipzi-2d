@@ -10,7 +10,10 @@ mod types;
 pub use zipzi_animation::canonical_motion_seek_time;
 pub use zipzi_animation::CompiledSegment;
 
-pub use alpha_mesh::{alpha_mesh_geometry, AlphaMask, AlphaMeshOptions};
+pub use alpha_mesh::{
+    alpha_mesh_geometry, build_edge_layout, sample_interior, triangulate_constrained, AlphaMask,
+    AlphaMeshOptions, EdgeLayout, InteriorSites,
+};
 pub use assets::{
     prepare_png_asset, prepare_png_asset_from_base, prepare_relocated_asset, rectangle_mesh,
 };
@@ -45,8 +48,8 @@ mod geometry;
 pub use geometry::{rectangle_grid_geometry, MeshGeometry};
 mod manual_mesh;
 pub use manual_mesh::{
-    edit_manual_mesh, extract_manual_meshing, AffineUvMap, ManualMeshOperation, ManualMeshResult,
-    ManualVertexIdAllocator, ManualVertexTarget,
+    add_manual_interior_sites, edit_manual_mesh, extract_manual_meshing, AffineUvMap,
+    ManualMeshOperation, ManualMeshResult, ManualVertexIdAllocator, ManualVertexTarget,
 };
 mod mesh_binding_edit;
 mod mesh_edit;

@@ -1,6 +1,36 @@
 use super::common::*;
 use std::collections::{BTreeMap, BTreeSet};
-use zipzi_sdk::AlphaMeshOptions;
+use zipzi_sdk::{
+    build_edge_layout, sample_interior, triangulate_constrained, AlphaMask, AlphaMeshOptions,
+};
+
+#[test]
+fn staged_edge_and_interior_generation_matches_the_composed_output() {
+    let alpha = pixels(160, 160, |x, y| {
+        u8::from((20..140).contains(&x) && (20..140).contains(&y)) * 255
+    });
+    let mask = AlphaMask {
+        width: 160,
+        height: 160,
+        alpha: &alpha,
+    };
+    let options = AlphaMeshOptions {
+        outside_spacing: 20.,
+        inside_spacing: 20.,
+        ..AlphaMeshOptions::standard()
+    };
+    let layout = build_edge_layout(mask, &options).unwrap();
+    let edges = layout.preview_geometry().unwrap();
+    assert!(edges
+        .meshing
+        .as_ref()
+        .is_some_and(|m| !m.constraints.is_empty()));
+    let interior = sample_interior(layout).unwrap();
+    assert!(!interior.added_uvs().is_empty());
+    let staged = triangulate_constrained(interior).unwrap();
+    assert!(edges.vertex_ids.len() < staged.vertex_ids.len());
+    assert_eq!(staged, generate(160, 160, &alpha, &options));
+}
 
 #[test]
 fn continuous_inner_ring_separates_boundary_from_deep_vertices() {
@@ -9,6 +39,15 @@ fn continuous_inner_ring_separates_boundary_from_deep_vertices() {
     });
     let mesh = generate(256, 256, &alpha, &AlphaMeshOptions::deformation_small());
     valid(&mesh, 256, 256);
+    let meshing = mesh
+        .meshing
+        .as_ref()
+        .expect("single region preserves structure");
+    assert!(!meshing.constraints.is_empty());
+    assert!(meshing
+        .constraints
+        .iter()
+        .all(|constraint| { constraint.kind == zipzi_core::MeshConstraintKind::EdgeSupport }));
     let edges = mesh_edges(&mesh);
     let boundary: BTreeSet<_> = edges
         .iter()

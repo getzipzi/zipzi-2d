@@ -164,7 +164,13 @@ impl DocumentSession {
                 _ => self.cancel_timeline_edit(),
             }
         }
-        self.cancel_gesture();
+        if matches!(command, EditorCommand::FinishEdit) && self.modeling.tools.manual_active() {
+            if self.modeling.tools.settle_manual(&mut self.document)? {
+                self.invalidate_scene();
+            }
+        } else {
+            self.cancel_gesture();
+        }
         let presentation_only = match &command {
             EditorCommand::PreviewOpacity(_) | EditorCommand::PreviewName(_) => true,
             EditorCommand::SetObjectProperties { object, patch } => {
@@ -265,9 +271,16 @@ impl DocumentSession {
                 result
             }
             EditorCommand::ApplyMeshGeneration(preview) => {
+                let manual = preview.is_manual();
                 let result = self.document.apply_mesh_generation(&preview);
                 if result.is_ok() {
-                    self.modeling.tools.clear();
+                    if manual {
+                        self.modeling
+                            .tools
+                            .after_manual_generation(&self.document)?;
+                    } else {
+                        self.modeling.tools.clear();
+                    }
                 }
                 result
             }
@@ -372,8 +385,18 @@ impl DocumentSession {
         if selection && self.modeling.tools.original_points {
             self.invalidate_scene();
         }
-        if selection || lock_or_history {
+        if selection {
             self.modeling.tools.clear();
+        } else if lock_or_history {
+            if !self.modeling.tools.manual_active()
+                || self
+                    .modeling
+                    .tools
+                    .after_manual_generation(&self.document)
+                    .is_err()
+            {
+                self.modeling.tools.clear();
+            }
         }
         // Editor lock edits are standalone transactions. Other metadata history
         // (for example names) must refresh labels captured in canvas topology.
@@ -400,7 +423,11 @@ impl DocumentSession {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.scene");
         if self.cache.is_none() {
-            let scene = self.document.snapshot()?;
+            let mut scene = self.document.snapshot()?;
+            if let Some(target) = self.modeling.tools.manual_target() {
+                scene = scene
+                    .with_manual_reference(target, self.modeling.tools.manual_preview_result());
+            }
             if self.geometry.is_none() {
                 let previous = self.previous_geometry.take();
                 self.geometry = Some(if let Some(previous) = self.appearance_geometry.take() {

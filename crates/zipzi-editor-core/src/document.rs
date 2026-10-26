@@ -20,6 +20,10 @@ pub use mesh_generation::{
     MeshGridOptions,
 };
 
+#[path = "document/manual_mesh.rs"]
+mod manual_mesh;
+pub use manual_mesh::ManualMeshTarget;
+
 #[path = "sorting.rs"]
 mod sorting;
 pub use sorting::{OrganizationDestination, ParameterDestination, ReorderPosition};
@@ -135,6 +139,12 @@ struct PendingEdit {
     property_write: Option<crate::property::PropertyWrite>,
 }
 
+struct ManualPending {
+    edit: crate::runtime_host::HostedEdit,
+    preview: PreviewState,
+    changed: bool,
+}
+
 /// CPU presentation prepared on a load worker; contains no writable SDK state.
 pub(crate) struct PreparedDocument {
     version: zipzi_sdk::Version,
@@ -164,6 +174,7 @@ pub struct Document {
     previous_canvas_source: std::sync::Mutex<Option<zipzi_runtime::SourceRef>>,
     changed_canvas_meshes: std::sync::Mutex<Option<std::collections::HashSet<String>>>,
     pending: Option<PendingEdit>,
+    manual_pending: Option<ManualPending>,
     next_property_edit: u64,
     textures: textures::DocumentTextures,
     pristine_blank: Option<zipzi_sdk::Version>,
@@ -396,6 +407,7 @@ impl Document {
             changed_canvas_meshes: std::sync::Mutex::new(None),
             selected: None,
             pending: None,
+            manual_pending: None,
             next_property_edit: 0,
             textures,
             pristine_blank,
@@ -441,13 +453,16 @@ impl Document {
         self.session.history_lengths()
     }
     pub fn has_pending_edit(&self) -> bool {
-        self.pending.is_some()
+        self.pending.is_some() || self.manual_pending.is_some()
     }
     pub fn selected_id(&self) -> Option<&str> {
         self.selected.as_deref()
     }
 
     fn mesh(&self, id: &str) -> Option<Mesh> {
+        if let Some(pending) = &self.manual_pending {
+            return pending.edit.candidate_document().get_mesh(id).cloned();
+        }
         match &self.pending {
             Some(pending) => pending.edit.candidate_document().get_mesh(id).cloned(),
             None => self.session.mesh(id),
@@ -455,6 +470,9 @@ impl Document {
     }
 
     pub(crate) fn model(&self) -> crate::runtime_host::ModelRead<'_> {
+        if let Some(pending) = &self.manual_pending {
+            return pending.edit.candidate_document();
+        }
         self.pending
             .as_ref()
             .map_or_else(|| self.session.document(), |p| p.edit.candidate_document())
@@ -701,7 +719,9 @@ impl Document {
     }
 
     pub(crate) fn canvas_topology(&self) -> Arc<crate::canvas_topology::CanvasTopology> {
-        let source = if let Some(pending) = &self.pending {
+        let source = if let Some(pending) = &self.manual_pending {
+            pending.edit.source_ref()
+        } else if let Some(pending) = &self.pending {
             pending.edit.source_ref()
         } else {
             zipzi_runtime::SourceRef::Formal {
@@ -786,7 +806,20 @@ impl Document {
     }
 
     pub fn snapshot(&mut self) -> Result<SceneSnapshot> {
-        let frame = if let Some(pending) = &mut self.pending {
+        let frame = if let Some(pending) = &mut self.manual_pending {
+            pending
+                .preview
+                .replace(
+                    &pending.edit.candidate_document(),
+                    0,
+                    self.session.preview_values().clone(),
+                )
+                .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
+            pending
+                .preview
+                .frame(&pending.edit.candidate_document(), 0)
+                .map_err(|status| anyhow!("{}: {}", status.code, status.message))?
+        } else if let Some(pending) = &mut self.pending {
             pending
                 .preview
                 .replace(

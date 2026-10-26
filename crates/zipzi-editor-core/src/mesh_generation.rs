@@ -5,9 +5,15 @@ use super::Document;
 use crate::{ObjectKind, ObjectRef};
 use alpha::TextureTransform;
 use anyhow::{Result, ensure};
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
 pub use zipzi_sdk::AlphaMeshOptions;
 use zipzi_sdk::{
-    AlphaMask, MeshGeometry, TopologyReplacement, alpha_mesh_geometry, rectangle_grid_geometry,
+    AlphaMask, ManualMeshOperation, ManualVertexIdAllocator, MeshGeometry, TopologyReplacement,
+    add_manual_interior_sites, alpha_mesh_geometry, build_edge_layout, edit_manual_mesh,
+    rectangle_grid_geometry, sample_interior,
 };
 
 /// Each backend owns its typed configuration. Preview and apply share this dispatch.
@@ -15,6 +21,10 @@ use zipzi_sdk::{
 pub enum MeshGenerationOptions {
     Grid(MeshGridOptions),
     Alpha(AlphaMeshOptions),
+    ManualEdge(AlphaMeshOptions),
+    ManualInterior(AlphaMeshOptions),
+    ManualFull(AlphaMeshOptions),
+    ManualReconnect,
 }
 
 /// Immutable input for background generation; no document or history is mutated.
@@ -28,6 +38,8 @@ pub struct MeshGenerationSource {
     alpha_error: Option<String>,
     grid_available: bool,
     pub texture: Option<crate::SceneTexture>,
+    manual_target: Option<crate::ManualMeshTarget>,
+    generation: Arc<AtomicU64>,
 }
 
 #[derive(Clone, Debug)]
@@ -39,6 +51,10 @@ pub struct MeshGenerationPreview {
     minimum_angle: f64,
     source_bounds: [zipzi_core::Vec2; 2],
     padded_texture: Option<crate::SceneTexture>,
+    manual_target: Option<crate::ManualMeshTarget>,
+    texture_identity: Option<(String, u32, u32)>,
+    generation: Arc<AtomicU64>,
+    generation_id: u64,
 }
 
 impl MeshGenerationSource {
@@ -48,11 +64,49 @@ impl MeshGenerationSource {
     pub fn grid_available(&self) -> bool {
         self.grid_available
     }
+    pub fn manual_available(&self) -> bool {
+        self.manual_target.is_some()
+    }
+    pub fn replaces_modeling_topology(&self) -> bool {
+        self.geometry.meshing.is_some()
+    }
+    pub fn invalidate_previews(&self) {
+        self.generation.fetch_add(1, Ordering::SeqCst);
+    }
+    pub fn is_current(&self, document: &Document) -> bool {
+        document.mesh_generation_revision() == self.revision
+            && !document.has_pending_edit()
+            && self
+                .manual_target
+                .as_ref()
+                .is_none_or(|target| document.validate_manual_target(target).is_ok())
+            && self.texture.as_ref().is_none_or(|original| {
+                document
+                    .mesh(&self.target.id)
+                    .and_then(|mesh| document.textures.get(&mesh.texture_asset_id))
+                    .is_some_and(|current| {
+                        current.cache_key == original.cache_key
+                            && current.width == original.width
+                            && current.height == original.height
+                    })
+            })
+    }
 
     pub fn generate(&self, options: MeshGenerationOptions) -> Result<MeshGenerationPreview> {
+        let generation_id = self.generation.load(Ordering::SeqCst);
+        let phase = options;
         let mut padded_texture = None;
         let geometry = match options {
-            MeshGenerationOptions::Alpha(options) => {
+            MeshGenerationOptions::Alpha(alpha_options)
+            | MeshGenerationOptions::ManualEdge(alpha_options)
+            | MeshGenerationOptions::ManualInterior(alpha_options)
+            | MeshGenerationOptions::ManualFull(alpha_options) => {
+                if self.manual_target.is_some() {
+                    ensure!(
+                        alpha_options.clip_to_image,
+                        "Manual stages require sites inside the complete source image"
+                    );
+                }
                 ensure!(
                     self.alpha_error.is_none(),
                     "{}",
@@ -71,17 +125,54 @@ impl MeshGenerationSource {
                     .iter()
                     .map(|p| p[3])
                     .collect();
-                let mut geometry = alpha_mesh_geometry(
-                    AlphaMask {
-                        width: texture.width,
-                        height: texture.height,
-                        alpha: &alpha,
-                    },
-                    &options,
-                )?;
-                self.alpha_transform.unwrap().map(&mut geometry);
-                padded_texture = alpha::pad_texture(texture, &mut geometry)?;
+                let mask = AlphaMask {
+                    width: texture.width,
+                    height: texture.height,
+                    alpha: &alpha,
+                };
+                // The chosen phase is kept in the outer enum, separate from
+                // alpha tuning values shared by all phases.
+                let mut geometry = match phase {
+                    MeshGenerationOptions::ManualEdge(_) => {
+                        build_edge_layout(mask, &alpha_options)?.preview_geometry()?
+                    }
+                    MeshGenerationOptions::ManualInterior(_) => {
+                        let sites = sample_interior(build_edge_layout(mask, &alpha_options)?)?;
+                        let additions = filter_interior_sites(
+                            &self.geometry,
+                            sites.added_uvs(),
+                            texture.width,
+                            texture.height,
+                            (alpha_options.inside_spacing * 0.3).max(0.001),
+                        );
+                        ensure!(
+                            self.geometry.vertex_ids.len() + additions.len()
+                                <= alpha_options.max_vertices,
+                            "Interior sites exceed the mesh vertex budget"
+                        );
+                        let mut allocator = ManualVertexIdAllocator::new(&self.geometry);
+                        add_manual_interior_sites(&self.geometry, &additions, &mut allocator)?
+                            .geometry
+                    }
+                    MeshGenerationOptions::ManualFull(_) | MeshGenerationOptions::Alpha(_) => {
+                        alpha_mesh_geometry(mask, &alpha_options)?
+                    }
+                    _ => unreachable!(),
+                };
+                if !matches!(phase, MeshGenerationOptions::ManualInterior(_)) {
+                    self.alpha_transform.unwrap().map(&mut geometry);
+                    padded_texture = alpha::pad_texture(texture, &mut geometry)?;
+                }
+                if self.manual_target.is_some() {
+                    ensure!(
+                        geometry.meshing.is_some(),
+                        "Generated mesh has holes or separate regions"
+                    );
+                }
                 geometry
+            }
+            MeshGenerationOptions::ManualReconnect => {
+                edit_manual_mesh(&self.geometry, ManualMeshOperation::Reconnect)?.geometry
             }
             MeshGenerationOptions::Grid(grid) => {
                 grid.validate()?;
@@ -114,7 +205,11 @@ impl MeshGenerationSource {
             }
         }
         let mut source_bounds = match options {
-            MeshGenerationOptions::Alpha(_) => self.alpha_transform.unwrap().bounds(),
+            MeshGenerationOptions::Alpha(_)
+            | MeshGenerationOptions::ManualEdge(_)
+            | MeshGenerationOptions::ManualInterior(_)
+            | MeshGenerationOptions::ManualFull(_)
+            | MeshGenerationOptions::ManualReconnect => self.alpha_transform.unwrap().bounds(),
             MeshGenerationOptions::Grid(_) => {
                 [self.geometry.positions[0], self.geometry.positions[2]]
             }
@@ -133,11 +228,66 @@ impl MeshGenerationSource {
             minimum_angle,
             source_bounds,
             padded_texture,
+            manual_target: self.manual_target.clone(),
+            texture_identity: self
+                .texture
+                .as_ref()
+                .map(|texture| (texture.cache_key.clone(), texture.width, texture.height)),
+            generation: self.generation.clone(),
+            generation_id,
         })
     }
 }
 
+fn filter_interior_sites(
+    geometry: &MeshGeometry,
+    sites: &[zipzi_core::Vec2],
+    width: u32,
+    height: u32,
+    clearance: f64,
+) -> Vec<zipzi_core::Vec2> {
+    use std::collections::HashMap;
+    let mut occupied: HashMap<(i64, i64), Vec<(f64, f64)>> = HashMap::new();
+    let cell = |x: f64, y: f64| {
+        (
+            (x / clearance).floor() as i64,
+            (y / clearance).floor() as i64,
+        )
+    };
+    let mut insert = |uv: zipzi_core::Vec2, test: bool| {
+        let x = uv.x as f64 * width as f64;
+        let y = uv.y as f64 * height as f64;
+        let (cx, cy) = cell(x, y);
+        if test
+            && (-1..=1).any(|dx| {
+                (-1..=1).any(|dy| {
+                    occupied.get(&(cx + dx, cy + dy)).is_some_and(|points| {
+                        points
+                            .iter()
+                            .any(|&(px, py)| (px - x).hypot(py - y) < clearance)
+                    })
+                })
+            })
+        {
+            return false;
+        }
+        occupied.entry((cx, cy)).or_default().push((x, y));
+        true
+    };
+    for &uv in &geometry.uvs {
+        insert(uv, false);
+    }
+    sites
+        .iter()
+        .copied()
+        .filter(|&uv| insert(uv, true))
+        .collect()
+}
+
 impl MeshGenerationPreview {
+    pub fn is_manual(&self) -> bool {
+        self.manual_target.is_some()
+    }
     pub fn render_texture(&self, source: crate::SceneTexture) -> crate::SceneTexture {
         self.padded_texture.clone().unwrap_or(source)
     }
@@ -188,6 +338,36 @@ impl MeshGridOptions {
 }
 
 impl Document {
+    pub fn mesh_generation_source_manual(
+        &self,
+        target: &crate::ManualMeshTarget,
+    ) -> Result<MeshGenerationSource> {
+        self.validate_manual_target(target)?;
+        ensure!(!self.has_pending_edit(), "Finish the current edit first");
+        let mesh = self
+            .mesh(&target.object.id)
+            .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
+        let geometry = MeshGeometry {
+            vertex_ids: mesh.vertex_ids,
+            positions: mesh.base_positions,
+            uvs: mesh.uvs,
+            triangles: mesh.triangles,
+            meshing: mesh.meshing,
+        };
+        Ok(MeshGenerationSource {
+            target: target.object.clone(),
+            revision: self.mesh_generation_revision(),
+            geometry: geometry.clone(),
+            square: false,
+            alpha_transform: Some(TextureTransform::from_geometry(&geometry)?),
+            alpha_error: None,
+            grid_available: false,
+            texture: Some(target.texture.clone()),
+            manual_target: Some(target.clone()),
+            generation: Arc::new(AtomicU64::new(0)),
+        })
+    }
+
     pub fn mesh_generation_source(&self, object: &ObjectRef) -> Result<MeshGenerationSource> {
         self.validate_mesh_generation_target(object)?;
         ensure!(!self.has_pending_edit(), "Document has changed");
@@ -221,17 +401,45 @@ impl Document {
                 triangles: mesh.triangles,
                 meshing: mesh.meshing,
             },
+            manual_target: None,
+            generation: Arc::new(AtomicU64::new(0)),
         })
     }
 
     pub fn apply_mesh_generation(&mut self, preview: &MeshGenerationPreview) -> Result<()> {
+        ensure!(
+            preview.generation.load(Ordering::SeqCst) == preview.generation_id,
+            "Generation options changed"
+        );
+        if let Some(target) = &preview.manual_target {
+            self.validate_manual_target(target)?;
+        }
+        ensure!(
+            self.mesh_generation_revision() == preview.revision && !self.has_pending_edit(),
+            "Document has changed"
+        );
+        if let Some((key, width, height)) = &preview.texture_identity {
+            let mesh = self
+                .mesh(&preview.target.id)
+                .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
+            let texture = self
+                .textures
+                .get(&mesh.texture_asset_id)
+                .ok_or_else(|| anyhow::anyhow!("Source image was removed"))?;
+            ensure!(
+                texture.cache_key == *key && texture.width == *width && texture.height == *height,
+                "Source image changed"
+            );
+        }
         match preview.options {
-            MeshGenerationOptions::Alpha(_) => {
-                ensure!(
-                    self.mesh_generation_revision() == preview.revision && !self.has_pending_edit(),
-                    "Document has changed"
-                );
-                self.validate_mesh_alpha(&preview.target)?;
+            MeshGenerationOptions::Alpha(_)
+            | MeshGenerationOptions::ManualEdge(_)
+            | MeshGenerationOptions::ManualInterior(_)
+            | MeshGenerationOptions::ManualFull(_)
+            | MeshGenerationOptions::ManualReconnect => {
+                if preview.manual_target.is_none() {
+                    self.validate_mesh_alpha(&preview.target)?;
+                }
                 let source = self
                     .session
                     .geometry(&preview.target.id)
@@ -258,7 +466,11 @@ impl Document {
                     binding: None,
                     blend_bindings: vec![],
                     glues: vec![],
-                    vertex_mapping: source.vertex_ids.iter().map(|&id| (id, None)).collect(),
+                    vertex_mapping: source
+                        .vertex_ids
+                        .iter()
+                        .map(|&id| (id, g.vertex_ids.contains(&id).then_some(id)))
+                        .collect(),
                 };
                 let (_, receipt) =
                     self.session
@@ -333,10 +545,6 @@ impl Document {
         let mesh = self
             .mesh(&object.id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
-        ensure!(
-            mesh.meshing.is_none(),
-            "Regenerating modeling topology requires an explicit full replacement of its boundary and constraints"
-        );
         ensure!(
             self.textures.contains(&mesh.texture_asset_id),
             "Missing source texture"

@@ -2,9 +2,9 @@ use zipzi_core::{
     document::*, Mesh, MeshConstraint, MeshConstraintKind, MeshMeshing, ModelSetup, Vec2,
 };
 use zipzi_sdk::{
-    edit_manual_mesh, extract_manual_meshing, AffineUvMap, AuthoringSession, ManualMeshOperation,
-    ManualVertexIdAllocator, ManualVertexTarget, MeshGeometry, SceneContentEdit,
-    TopologyReplacement,
+    add_manual_interior_sites, edit_manual_mesh, extract_manual_meshing, AffineUvMap,
+    AuthoringSession, ManualMeshOperation, ManualVertexIdAllocator, ManualVertexTarget,
+    MeshGeometry, SceneContentEdit, TopologyReplacement,
 };
 
 fn target(id: u32, uv: Vec2) -> ManualVertexTarget {
@@ -29,6 +29,36 @@ fn square_geometry() -> MeshGeometry {
         triangles: vec![[10, 20, 30], [10, 30, 40]],
         meshing: None,
     }
+}
+
+#[test]
+fn interior_sampling_keeps_existing_vertices_and_structural_edges() {
+    let mut original = square_geometry();
+    original.meshing = Some(extract_manual_meshing(&original).unwrap());
+    original
+        .meshing
+        .as_mut()
+        .unwrap()
+        .constraints
+        .push(zipzi_core::MeshConstraint {
+            endpoints: [10, 30],
+            kind: zipzi_core::MeshConstraintKind::User,
+        });
+    let mut ids = ManualVertexIdAllocator::new(&original);
+    let result = add_manual_interior_sites(
+        &original,
+        &[
+            Vec2::new(0.2, 0.3),
+            Vec2::new(0.8, 0.3),
+            Vec2::new(0.5, 0.5),
+        ],
+        &mut ids,
+    )
+    .unwrap();
+    assert_eq!(result.added.len(), 2);
+    assert!(result.geometry.vertex_ids.starts_with(&original.vertex_ids));
+    assert_eq!(result.geometry.meshing, original.meshing);
+    assert!(result.changed);
 }
 
 #[test]

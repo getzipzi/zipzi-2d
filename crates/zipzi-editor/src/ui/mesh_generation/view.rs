@@ -50,8 +50,11 @@ impl Render for MeshGenerationForm {
             .into_iter()
             .enumerate()
             {
-                let selected = self.validation.as_ref().ok()
-                    == Some(&MeshGenerationOptions::Alpha(alpha_presets()[i]));
+                let preset = AlphaMeshOptions {
+                    clip_to_image: self.preview.source.manual_available(),
+                    ..alpha_presets()[i]
+                };
+                let selected = self.validation.as_ref().ok() == Some(&self.wrap_alpha(preset, cx));
                 presets =
                     presets.child(
                         crate::ui::compact::button(Button::new(id))
@@ -134,19 +137,21 @@ impl Render for MeshGenerationForm {
                         cx.notify();
                     })),
             );
-            settings = settings.child(
-                Checkbox::new("mesh-generation-preserve-holes")
-                    .small()
-                    .label(t!("mesh_generation.preserve_holes").to_string())
-                    .checked(self.preserve_holes)
-                    .on_click(cx.listener(|this, value: &bool, _, cx| {
-                        this.preserve_holes = *value;
-                        this.dialog.edited();
-                        this.refresh(cx);
-                        cx.notify();
-                    })),
-            );
-        } else {
+            if !self.preview.source.manual_available() {
+                settings = settings.child(
+                    Checkbox::new("mesh-generation-preserve-holes")
+                        .small()
+                        .label(t!("mesh_generation.preserve_holes").to_string())
+                        .checked(self.preserve_holes)
+                        .on_click(cx.listener(|this, value: &bool, _, cx| {
+                            this.preserve_holes = *value;
+                            this.dialog.edited();
+                            this.refresh(cx);
+                            cx.notify();
+                        })),
+                );
+            }
+        } else if !self.is_reconnect(cx) {
             let mut presets = div().flex().gap_1();
             for (id, label, count) in [
                 ("mesh-generation-sparse", t!("mesh_generation.sparse"), 4),
