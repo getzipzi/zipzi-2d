@@ -8,6 +8,120 @@ use zipzi_core::{
 use zipzi_editor_core::*;
 
 #[test]
+fn select_all_selects_editable_components_without_history_or_evaluation() -> anyhow::Result<()> {
+    for tool in [ToolId::Select, ToolId::Lasso] {
+        let (document, _dir) = support::sample_document_with_binding(true)?;
+        let parameter = document.parameters()[0].id.clone();
+        let mut editor = crate::support::editor_from_document(document);
+        editor.set_canvas_metrics(ViewportMetrics {
+            width: 512.,
+            height: 512.,
+            scale_factor: 1.,
+        });
+        editor.execute(EditorCommand::SetTool(tool))?;
+        shown(&mut editor)?;
+        let objects = editor.document().unwrap().context().selections.clone();
+        let evaluations = editor.evaluation_count();
+        for _ in 0..2 {
+            editor.dispatch(editor.command(CommandId::SelectAll))?;
+            let vertices = editor.overlay().vertices;
+            assert_eq!(vertices.len(), 4);
+            assert!(vertices.iter().all(|v| v.selected && v.editable));
+        }
+        assert_eq!(editor.document().unwrap().context().selections, objects);
+        assert_eq!(editor.evaluation_count(), evaluations);
+        editor.execute(EditorCommand::SetPreviewParameter {
+            parameter_id: parameter,
+            value: 0.5,
+        })?;
+        shown(&mut editor)?;
+        editor.dispatch(editor.command(CommandId::SelectAll))?;
+        assert!(
+            editor
+                .overlay()
+                .vertices
+                .iter()
+                .all(|v| !v.selected && !v.editable)
+        );
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        assert!(!editor.gesture_active());
+        assert!(!editor.document().unwrap().has_pending_edit());
+    }
+    Ok(())
+}
+
+#[test]
+fn select_all_objects_respects_visibility_locks_and_viewport_isolation() -> anyhow::Result<()> {
+    for mode in 0..4 {
+        let (mut editor, _dir) = setup()?;
+        let objects: Vec<_> = editor
+            .layers()
+            .iter()
+            .map(|l| ObjectRef::new(ObjectKind::Mesh, &l.id))
+            .collect();
+        match mode {
+            1 => editor.execute(EditorCommand::SetObjectVisible {
+                object: objects[1].clone(),
+                visible: false,
+            })?,
+            2 => editor.execute(EditorCommand::SetObjectsLocked {
+                objects: vec![objects[1].clone()],
+                locked: true,
+            })?,
+            3 => {
+                editor.execute(EditorCommand::SelectObject(objects[0].clone()))?;
+                editor.dispatch(editor.command(CommandId::ToggleViewportIsolation))?;
+            }
+            _ => {}
+        }
+        editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+        shown(&mut editor)?;
+        let history = editor.document().unwrap().history_lengths();
+        let evaluations = editor.evaluation_count();
+        editor.dispatch(editor.command(CommandId::SelectAll))?;
+        let selected = &editor.document().unwrap().context().selections;
+        assert_eq!(selected.len(), if mode == 0 { 2 } else { 1 });
+        assert!(selected.contains(&objects[0]));
+        editor.dispatch(editor.command(CommandId::SelectAll))?;
+        assert!(
+            editor
+                .overlay()
+                .vertices
+                .iter()
+                .all(|v| v.selected && v.editable)
+        );
+        assert_eq!(editor.document().unwrap().history_lengths(), history);
+        assert_eq!(editor.evaluation_count(), evaluations);
+    }
+    Ok(())
+}
+
+#[test]
+fn select_all_warp_points_respects_fine_mode_and_rejects_stale_targets() -> anyhow::Result<()> {
+    for fine in [false, true] {
+        let (mut editor, _dir, _object, _) = bound_deformer_editor(false, false)?;
+        if fine {
+            editor.execute(EditorCommand::ToggleWarpFine)?;
+        }
+        shown(&mut editor)?;
+        editor.dispatch(editor.command(CommandId::SelectAll))?;
+        let vertices = editor.overlay().vertices;
+        assert!(!vertices.is_empty());
+        assert!(vertices.iter().all(|v| v.selected && v.editable));
+        let command = editor.command(CommandId::SelectAll);
+        editor.pan_by(ViewportPoint { x: 5., y: 0. });
+        assert!(!editor.command_available(command));
+        assert!(editor.dispatch(command).is_err());
+        shown(&mut editor)?;
+        assert!(editor.command_available(command));
+        editor.new_document()?;
+        assert!(!editor.command_available(command));
+        assert!(editor.dispatch(command).is_err());
+    }
+    Ok(())
+}
+
+#[test]
 fn selection_tools_share_region_modifiers_and_option_click_subtraction() -> anyhow::Result<()> {
     for tool in [ToolId::Select, ToolId::Lasso] {
         let (mut editor, _dir) = setup()?;

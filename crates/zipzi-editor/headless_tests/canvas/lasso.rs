@@ -20,6 +20,65 @@ fn selected(harness: &Harness, cx: &App) -> Vec<u32> {
         .collect()
 }
 
+#[gpui_kit::test]
+fn select_all_shortcut_selects_canvas_vertices_and_leaves_text_selection_to_inputs(
+    cx: &mut TestAppContext,
+) {
+    use gpui_kit::component::{WindowExt, input::AnyInputState};
+    for tool in [ToolId::Select, ToolId::Lasso] {
+        let (document, assets) =
+            super::super::document_fixture::sample_document_with_binding(true).unwrap();
+        let parameter = document.parameters()[0].id.clone();
+        let harness = super::super::setup_with_document(cx, document, assets);
+        present_canvas(&harness, cx);
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click(
+                if tool == ToolId::Lasso {
+                    "tool_lasso"
+                } else {
+                    "tool_select"
+                },
+                cx,
+            );
+            let vertex = harness.view.read(cx).editor.overlay().vertices[0].position;
+            window.click_at("canvas-body", point(px(vertex.x), px(vertex.y)), cx);
+            window.press("cmd-a", cx);
+            window.render_frame(cx);
+            let vertices = harness.view.read(cx).editor.overlay().vertices;
+            assert_eq!(vertices.len(), 4);
+            assert!(vertices.iter().all(|v| v.selected && v.editable));
+            // Leave a partial canvas selection so text Select All cannot silently change it.
+            let other = vertices[1].position;
+            window.click_with_options(
+                "canvas-body",
+                gpui_kit::test::ClickOptions::new()
+                    .with_offset(point(px(other.x), px(other.y)))
+                    .with_modifiers(Modifiers {
+                        shift: true,
+                        ..Default::default()
+                    }),
+                cx,
+            );
+            let before = selected(&harness, cx);
+            assert_eq!(before.len(), 3);
+            window.click(format!("parameter-value-{parameter}"), cx);
+            window.press("cmd-a", cx);
+            let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
+                panic!("input not focused")
+            };
+            assert_eq!(
+                input.read(cx).selected_range(),
+                0..input.read(cx).value().len()
+            );
+            assert_eq!(selected(&harness, cx), before);
+            let view = harness.view.read(cx);
+            assert_eq!(view.editor.active_tool(), tool);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        })
+        .unwrap();
+    }
+}
+
 fn draw(
     harness: &Harness,
     center: ViewportPoint,

@@ -19,10 +19,10 @@ path = "tests/alpha_mesh.rs"
 bench-instrumentation = ["zipzi-core/bench-instrumentation"]
 
 [dependencies]
-zipzi-api-derive = { version = "=0.1.0-alpha.1", path = "../zipzi-api-derive" }
-zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
-zipzi-animation = { version = "=0.1.0-alpha.1", path = "../zipzi-animation" }
-zipzi-project = { version = "=0.1.0-alpha.1", path = "../zipzi-project" }
+zipzi-api-derive = { path = "../zipzi-api-derive" }
+zipzi-core = { path = "../zipzi-core" }
+zipzi-animation = { path = "../zipzi-animation" }
+zipzi-project = { path = "../zipzi-project" }
 serde = { workspace = true }
 uuid.workspace = true
 geo = { version = "0.33.1", default-features = false }

@@ -71,6 +71,8 @@ pub enum CommandId {
     Redo,
     #[serde(rename = "edit.deselect")]
     Deselect,
+    #[serde(rename = "edit.select-all")]
+    SelectAll,
     #[serde(rename = "palette.move-to")]
     PaletteMoveTo,
     #[serde(rename = "palette.move-up")]
@@ -331,6 +333,13 @@ specs![
     (Undo, "menu.undo", Document, false, ["secondary-z"]),
     (Redo, "menu.redo", Document, false, ["secondary-shift-z"]),
     (Deselect, "menu.deselect", Document, false, ["secondary-d"]),
+    (
+        SelectAll,
+        "menu.select_all",
+        Viewport,
+        false,
+        ["secondary-a"]
+    ),
     (
         PaletteMoveUp,
         "authoring.move_up",
@@ -945,6 +954,14 @@ impl Editor {
                         .document()
                         .is_some_and(|d| !d.context().selections.is_empty())
             }
+            SelectAll => {
+                modeling
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && !self.gesture_active()
+                    && matches!(command.target, CommandTarget::Viewport(binding)
+                        if self.validate_modeling_press(binding).is_ok())
+            }
             CommitProperty | CancelProperty => {
                 target
                     && !self.is_busy()
@@ -998,6 +1015,17 @@ impl Editor {
                     command.document().unwrap(),
                     EditorCommand::SelectObjects(Vec::new()),
                 )?;
+            }
+            SelectAll => {
+                let frame = self
+                    .displayed_modeling_frame(viewport.unwrap())
+                    .unwrap()
+                    .clone();
+                let session = self.active_session_mut().unwrap();
+                session
+                    .modeling
+                    .tools
+                    .select_all(&mut session.document, &frame)?;
             }
             CommitProperty => {
                 self.execute_for(command.document().unwrap(), EditorCommand::FinishEdit)?

@@ -1,8 +1,8 @@
 //! Region selection shared by the rectangle and freehand tools.
-use super::gesture::Press;
+use super::{ToolController, access::EditAccess, gesture::Press};
 use crate::{
-    CanvasScene, ComponentRef, ControlKind, Document, HitTarget, ObjectKind, ObjectRef,
-    ObjectStateIndex, ViewportPoint,
+    CanvasFrame, CanvasScene, ComponentRef, ControlKind, Document, HitTarget, ObjectKind,
+    ObjectRef, ObjectStateIndex, ViewportPoint, ViewportTransform,
 };
 use anyhow::Result;
 use std::{collections::HashSet, hash::Hash};
@@ -160,85 +160,143 @@ pub(super) fn select_region(
     press: &Press,
     region: &SelectionRegion<'_>,
 ) -> Result<()> {
-    let operation = press.operation;
-    let locks = document.object_state_index();
-    if has_region_components(&press.scene, &press.selection, &locks) {
-        let mut hits = Vec::new();
-        for c in &press.scene.controls {
-            if c.kind != ControlKind::Warp
-                || locks.is_locked(&c.object)
-                || !c.enabled
-                || !c.visible
-                || !press.selection.contains(&c.object)
-            {
-                continue;
-            }
-            let mut add = |id, point| {
-                let component = ComponentRef {
-                    object: c.object.clone(),
-                    id,
-                };
-                if (operation == SelectionOperation::Remove
-                    || matches!(press.access.probe(&component), Some(Ok(()))))
-                    && region.contains(press.transform.to_viewport(point))
-                {
-                    hits.push(component);
-                }
-            };
-            if let Some(bezier) = (!press.warp_fine)
-                .then(|| press.scene.bezier(&c.object.id))
-                .flatten()
-            {
-                for (i, &p) in bezier.anchors.iter().enumerate() {
-                    add(crate::warp_bezier::component_id(i, 0), p);
-                }
-            } else {
-                for (i, &p) in c.points.iter().enumerate() {
-                    add(i as u32, p);
-                }
-            }
+    RegionSelection {
+        scene: &press.scene,
+        selection: &press.selection,
+        transform: press.transform,
+        warp_fine: press.warp_fine,
+        access: &press.access,
+    }
+    .apply(components, document, Some(region), press.operation)
+}
+
+impl ToolController {
+    pub(crate) fn select_all(
+        &mut self,
+        document: &mut Document,
+        frame: &CanvasFrame,
+    ) -> Result<()> {
+        let selection: Vec<_> = document
+            .context()
+            .selections
+            .iter()
+            .filter(|object| frame.geometry.in_isolation_scope(object))
+            .cloned()
+            .collect();
+        let access = self.edit_access(document, &frame.geometry, &selection);
+        RegionSelection {
+            scene: &frame.geometry,
+            selection: &selection,
+            transform: frame.transform,
+            warp_fine: self.warp_fine,
+            access: &access,
         }
-        for r in &press.selection {
-            if let Some(mesh) = press.scene.mesh(&r.id).filter(|_| {
-                r.kind == ObjectKind::Mesh && !locks.is_locked(r) && press.scene.mesh_visible(&r.id)
-            }) {
-                for &(id, point) in &mesh.vertices {
+        .apply(
+            &mut self.components,
+            document,
+            None,
+            SelectionOperation::Replace,
+        )
+    }
+}
+
+struct RegionSelection<'a> {
+    scene: &'a CanvasScene,
+    selection: &'a [ObjectRef],
+    transform: ViewportTransform,
+    warp_fine: bool,
+    access: &'a EditAccess,
+}
+impl RegionSelection<'_> {
+    fn apply(
+        &self,
+        components: &mut Vec<ComponentRef>,
+        document: &mut Document,
+        region: Option<&SelectionRegion<'_>>,
+        operation: SelectionOperation,
+    ) -> Result<()> {
+        let contains = |point| region.is_none_or(|region| region.contains(point));
+        let locks = document.object_state_index();
+        if has_region_components(self.scene, self.selection, &locks) {
+            let mut hits = Vec::new();
+            for c in &self.scene.controls {
+                if c.kind != ControlKind::Warp
+                    || locks.is_locked(&c.object)
+                    || !c.enabled
+                    || !c.visible
+                    || !self.selection.contains(&c.object)
+                {
+                    continue;
+                }
+                let mut add = |id, point| {
                     let component = ComponentRef {
-                        object: r.clone(),
+                        object: c.object.clone(),
                         id,
                     };
                     if (operation == SelectionOperation::Remove
-                        || matches!(press.access.probe(&component), Some(Ok(()))))
-                        && region.contains(press.transform.to_viewport(point))
+                        || matches!(self.access.probe(&component), Some(Ok(()))))
+                        && contains(self.transform.to_viewport(point))
                     {
                         hits.push(component);
                     }
+                };
+                if let Some(bezier) = (!self.warp_fine)
+                    .then(|| self.scene.bezier(&c.object.id))
+                    .flatten()
+                {
+                    for (i, &p) in bezier.anchors.iter().enumerate() {
+                        add(crate::warp_bezier::component_id(i, 0), p);
+                    }
+                } else {
+                    for (i, &p) in c.points.iter().enumerate() {
+                        add(i as u32, p);
+                    }
                 }
             }
+            for r in self.selection {
+                if let Some(mesh) = self.scene.mesh(&r.id).filter(|_| {
+                    r.kind == ObjectKind::Mesh
+                        && !locks.is_locked(r)
+                        && self.scene.mesh_visible(&r.id)
+                }) {
+                    for &(id, point) in &mesh.vertices {
+                        let component = ComponentRef {
+                            object: r.clone(),
+                            id,
+                        };
+                        if (operation == SelectionOperation::Remove
+                            || matches!(self.access.probe(&component), Some(Ok(()))))
+                            && contains(self.transform.to_viewport(point))
+                        {
+                            hits.push(component);
+                        }
+                    }
+                }
+            }
+            operation.apply(components, hits);
+        } else {
+            let hits = self
+                .scene
+                .meshes
+                .iter()
+                .filter(|mesh| {
+                    !locks.is_locked(&ObjectRef::new(ObjectKind::Mesh, &mesh.id))
+                        && self.scene.mesh_visible(&mesh.id)
+                        && !mesh.vertices.is_empty()
+                        && mesh
+                            .vertices
+                            .iter()
+                            .all(|(_, p)| contains(self.transform.to_viewport(*p)))
+                })
+                .map(|mesh| ObjectRef::new(ObjectKind::Mesh, &mesh.id))
+                .collect();
+            let mut selection = document.context().selections.clone();
+            operation.apply(&mut selection, hits);
+            document.select_objects(selection)?;
+            components.clear();
         }
-        operation.apply(components, hits);
-    } else {
-        let hits = press
-            .scene
-            .meshes
-            .iter()
-            .filter(|mesh| {
-                !locks.is_locked(&ObjectRef::new(ObjectKind::Mesh, &mesh.id))
-                    && press.scene.mesh_visible(&mesh.id)
-                    && !mesh.vertices.is_empty()
-                    && mesh
-                        .vertices
-                        .iter()
-                        .all(|(_, p)| region.contains(press.transform.to_viewport(*p)))
-            })
-            .map(|mesh| ObjectRef::new(ObjectKind::Mesh, &mesh.id))
-            .collect();
-        let mut selection = document.context().selections.clone();
-        operation.apply(&mut selection, hits);
-        document.select_objects(selection)?;
-        components.clear();
+        Ok(())
     }
-    Ok(())
 }
 
 #[cfg(test)]

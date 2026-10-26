@@ -114,6 +114,7 @@ impl EditorView {
                 | CommandId::Previous
                 | CommandId::Next
                 | CommandId::Deselect
+                | CommandId::SelectAll
                 | CommandId::GenerateMesh => Some(crate::editing::InputBoundary::CommitText),
                 _ => None,
             };

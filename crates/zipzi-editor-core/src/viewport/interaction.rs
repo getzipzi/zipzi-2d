@@ -162,7 +162,7 @@ impl Editor {
         );
         Ok(())
     }
-    fn validate_modeling_press(&self, binding: ViewportBinding) -> Result<()> {
+    pub(crate) fn validate_modeling_press(&self, binding: ViewportBinding) -> Result<()> {
         let frame = self
             .displayed_modeling_frame(binding)
             .ok_or_else(|| anyhow::anyhow!("Wait for the current model frame"))?;

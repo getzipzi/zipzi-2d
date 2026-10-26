@@ -20,7 +20,7 @@ pub fn name(depth: usize) -> Div {
     div()
         .flex_1()
         .flex_grow(2.)
-        .max_w(crate::ui::compact::rem(200.))
+        .max_w(crate::ui::compact::rem(120.))
         .min_w(crate::ui::compact::rem(64.))
         .text_xs()
         .pl(compact::rem(

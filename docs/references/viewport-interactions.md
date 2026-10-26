@@ -41,6 +41,11 @@ vertices use the same edit-access checks as their overlay styling and are exclud
 from click and region selection. They remain hoverable to explain the restriction,
 and Option can remove a previously selected point that has since become disabled.
 
+The viewport's Select All command (`Cmd+A` on macOS) shares these region selection
+rules: it selects editable vertices of selected meshes/warps, or visible unlocked
+meshes when there are no component targets. It respects viewport isolation and
+requires a current displayed frame. Text inputs retain their own Select All action.
+
 ## Lifecycle
 
 [`viewport/interaction.rs`](../../crates/zipzi-editor-core/src/viewport/interaction.rs)
