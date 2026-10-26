@@ -32,7 +32,7 @@ enum EdgeHitKind {
 enum GestureKind {
     Drag(Vec<ManualVertexTarget>),
     Marquee { shift: bool, alt: bool },
-    Create(Option<VertexId>),
+    Create(Hit),
     Delete(Hit),
 }
 
@@ -77,6 +77,15 @@ impl ManualMeshMode {
 
     pub(super) fn refresh_source(&mut self, document: &Document) -> Result<()> {
         self.target.source = document.manual_mesh_target(true)?.source;
+        let model = document.model();
+        if let Some(mesh) = model.get_mesh(&self.target.object.id) {
+            self.selected.retain(|id| mesh.vertex_ids.contains(id));
+            self.selected_edge = self.selected_edge.filter(|edge| {
+                mesh.triangles
+                    .iter()
+                    .any(|triangle| edge.iter().all(|id| triangle.contains(id)))
+            });
+        }
         Ok(())
     }
     pub fn new(target: ManualMeshTarget, document: &Document) -> Self {
@@ -268,10 +277,7 @@ impl ManualMeshMode {
                         }
                         _ => GestureKind::Marquee { shift, alt },
                     },
-                    ManualTool::Create => GestureKind::Create(match self.hover {
-                        Hit::Vertex(id) => Some(id),
-                        _ => None,
-                    }),
+                    ManualTool::Create => GestureKind::Create(self.hover),
                     ManualTool::Delete => GestureKind::Delete(self.hover),
                 };
                 self.gesture = Some(Gesture {
@@ -353,8 +359,10 @@ impl ManualMeshMode {
                             self.selected_edge = None;
                         }
                     }
-                    GestureKind::Create(from) => {
-                        if let Some(a) = from {
+                    GestureKind::Create(hit) => {
+                        if let Hit::Vertex(a) = hit {
+                            self.selected = vec![a];
+                            self.selected_edge = None;
                             if let Hit::Vertex(b) = self.hit(frame, point) {
                                 if a != b {
                                     changed = self.apply_once(
@@ -363,14 +371,41 @@ impl ManualMeshMode {
                                     )?;
                                 }
                             }
-                        } else {
-                            let position = gesture.transform.to_model(gesture.start);
-                            let uv = self.target.mapping.uv(Vec2::new(position.x, position.y))?;
+                        } else if !gesture.moved
+                            && crate::picking::distance2(gesture.start, point) < 9.
+                        {
                             let mesh = document
                                 .model()
                                 .get_mesh(&self.target.object.id)
                                 .unwrap()
                                 .clone();
+                            let uv = if let Hit::Edge([a, b], _) = hit {
+                                let a = mesh.vertex_ids.iter().position(|id| *id == a).unwrap();
+                                let b = mesh.vertex_ids.iter().position(|id| *id == b).unwrap();
+                                let project = |slot: usize| {
+                                    let p = mesh.base_positions[slot];
+                                    gesture
+                                        .transform
+                                        .to_viewport(crate::ModelPoint { x: p.x, y: p.y })
+                                };
+                                let pa = project(a);
+                                let pb = project(b);
+                                let dx = (pb.x - pa.x) as f64;
+                                let dy = (pb.y - pa.y) as f64;
+                                let t = (((gesture.start.x - pa.x) as f64 * dx
+                                    + (gesture.start.y - pa.y) as f64 * dy)
+                                    / (dx * dx + dy * dy))
+                                    .clamp(0., 1.);
+                                let a = mesh.uvs[a];
+                                let b = mesh.uvs[b];
+                                Vec2::new(
+                                    (a.x as f64 + t * (b.x as f64 - a.x as f64)) as f32,
+                                    (a.y as f64 + t * (b.y as f64 - a.y as f64)) as f32,
+                                )
+                            } else {
+                                let position = gesture.transform.to_model(gesture.start);
+                                self.target.mapping.uv(Vec2::new(position.x, position.y))?
+                            };
                             let geometry = MeshGeometry {
                                 vertex_ids: mesh.vertex_ids,
                                 positions: mesh.base_positions,
@@ -600,7 +635,7 @@ impl ManualMeshMode {
                 GestureKind::Marquee { .. } if gesture.moved => {
                     out.marquee = Some((gesture.start, gesture.current));
                 }
-                GestureKind::Create(Some(id)) if gesture.moved => {
+                GestureKind::Create(Hit::Vertex(id)) if gesture.moved => {
                     if let Some((_, position)) =
                         mesh.vertices.iter().find(|(vertex, _)| *vertex == id)
                     {
@@ -617,6 +652,10 @@ impl ManualMeshMode {
         } else {
             format!("Manual mesh · {:?}", self.tool)
         });
+        if let Some(reason) = &self.diagnostic {
+            out.interaction_label = Some(reason.clone());
+            out.point_unavailable = Some(reason.clone());
+        }
         out.unavailable = self.diagnostic.clone();
         out
     }

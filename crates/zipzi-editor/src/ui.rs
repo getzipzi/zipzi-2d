@@ -3,6 +3,7 @@ pub(crate) mod color_picker;
 pub(crate) mod compact;
 pub(crate) mod export;
 pub(crate) mod form_dialog;
+pub(crate) mod manual_mesh;
 pub(crate) mod mesh_generation;
 pub(crate) mod mesh_generation_preview;
 mod mesh_preview;

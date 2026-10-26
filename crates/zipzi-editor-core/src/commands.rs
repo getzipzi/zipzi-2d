@@ -987,7 +987,7 @@ impl Editor {
                     && (self.manual_active()
                         || self
                             .document()
-                            .is_some_and(|d| d.manual_mesh_target(true).is_ok()))
+                            .is_some_and(|d| matches!(d.context().selections.as_slice(), [object] if object.kind == crate::ObjectKind::Mesh)))
             }
             ManualSelect
             | ManualCreate
@@ -1132,6 +1132,14 @@ impl Editor {
                     .is_some_and(|binding| binding.kind == crate::ViewportKind::Animation) =>
             {
                 // Animation exposes navigation without changing the document's Modeling tool.
+            }
+            SelectTool if self.manual_active() => {
+                let session = self.active_session_mut().unwrap();
+                session
+                    .modeling
+                    .tools
+                    .set_manual_tool(crate::ManualTool::Select, &mut session.document);
+                session.invalidate_scene();
             }
             SelectTool | LassoTool | GlueTool | HandTool => {
                 let tool = match command.id {

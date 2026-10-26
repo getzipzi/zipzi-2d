@@ -62,6 +62,25 @@ fn between(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> bool {
     cross(a, b, p).abs() <= len * 1e-12_f64.max(len * f64::EPSILON * 16.)
         && (0..2).all(|i| p[i] >= a[i].min(b[i]) && p[i] <= a[i].max(b[i]))
 }
+// A screen-projected split is rounded to the persisted f32 UVs. On a
+// slanted segment the rounded site need not be exactly collinear. Identify
+// that edge before triangulation so rounding cannot create a sliver face or
+// turn a visible edge hit into an outside-boundary error.
+fn rounded_split_on_edge(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> bool {
+    let dx = b[0] - a[0];
+    let dy = b[1] - a[1];
+    let length2 = dx * dx + dy * dy;
+    let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length2;
+    let scale = a
+        .into_iter()
+        .chain(b)
+        .chain(p)
+        .map(f64::abs)
+        .fold(0.0, f64::max);
+    let tolerance = (scale * f32::EPSILON as f64 * 2.).max(f32::MIN_POSITIVE as f64);
+    t > 0. && t < 1. && cross(a, b, p).abs() <= length2.sqrt() * tolerance
+}
+
 fn proper_cross(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> bool {
     let (u, v, w, z) = (
         cross(a, b, c),
@@ -680,7 +699,7 @@ pub fn edit_manual_mesh(
             let hit: Vec<_> = old_edges
                 .iter()
                 .copied()
-                .filter(|e| between(p, points[&e[0]], points[&e[1]]))
+                .filter(|e| rounded_split_on_edge(p, points[&e[0]], points[&e[1]]))
                 .collect();
             if hit.len() > 1 {
                 return Err(bad("new UV touches multiple edges"));

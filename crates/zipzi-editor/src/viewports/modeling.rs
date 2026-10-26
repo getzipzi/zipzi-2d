@@ -77,7 +77,10 @@ impl ModelingViewport {
                         } else {
                             Some(CursorStyle::Arrow)
                         }
-                    } else if owner.editor.active_tool() == ToolId::Lasso {
+                    } else if owner.editor.manual_tool()
+                        == Some(zipzi_editor_core::ManualTool::Create)
+                        || owner.editor.active_tool() == ToolId::Lasso
+                    {
                         Some(CursorStyle::Crosshair)
                     } else {
                         None
@@ -178,6 +181,7 @@ impl ViewportSurface {
             };
             match result {
                 Ok(update) => {
+                    owner.sync_viewport_notice(cx);
                     let previous = self.interaction;
                     self.interaction = update.capture;
                     if previous != self.interaction {

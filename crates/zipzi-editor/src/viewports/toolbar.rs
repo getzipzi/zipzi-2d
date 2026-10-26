@@ -80,7 +80,7 @@ impl ToolbarRegistry {
             },
             ToolbarItemConfig {
                 id: "tool_manual_mesh",
-                icon: IconName::Grid2x2,
+                icon: IconName::GitBranch,
                 command: CommandId::ManualMesh,
             },
             ToolbarItemConfig {
@@ -90,13 +90,18 @@ impl ToolbarRegistry {
             },
             ToolbarItemConfig {
                 id: "tool_manual_create",
-                icon: IconName::Grid2x2,
+                icon: IconName::Plus,
                 command: CommandId::ManualCreate,
             },
             ToolbarItemConfig {
                 id: "tool_manual_delete",
-                icon: IconName::Lasso,
+                icon: IconName::Trash,
                 command: CommandId::ManualDelete,
+            },
+            ToolbarItemConfig {
+                id: "tool_manual_preview",
+                icon: IconName::Eye,
+                command: CommandId::ManualPreviewResult,
             },
         ] {
             registry.register(item).unwrap();
@@ -152,6 +157,25 @@ impl RenderOnce for CanvasToolbar {
             .gap(compact::rem(1.));
         for item in items {
             let command = item.command;
+            let manual = view.editor.manual_active();
+            if matches!(
+                command,
+                CommandId::ManualSelect
+                    | CommandId::ManualCreate
+                    | CommandId::ManualDelete
+                    | CommandId::ManualPreviewResult
+            ) && !manual
+            {
+                continue;
+            }
+            if manual
+                && matches!(
+                    command,
+                    CommandId::SelectTool | CommandId::LassoTool | CommandId::GlueTool
+                )
+            {
+                continue;
+            }
             let invocation = canvas.read(cx).command(
                 &view.editor,
                 command,

@@ -855,3 +855,132 @@ fn alpha_outside_margin_pads_texture_atomically_and_regenerates_after_save() -> 
     );
     Ok(())
 }
+
+fn manual_interaction_fixture() -> anyhow::Result<(Editor, tempfile::TempDir)> {
+    let (doc, dir) = support::alpha_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    support::attach_viewports(&mut editor);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    editor.dispatch(editor.command(CommandId::ManualCreate))?;
+    crate::support::present_canvas(&mut editor)?;
+    Ok((editor, dir))
+}
+
+fn manual_click(editor: &mut Editor, point: ViewportPoint) -> anyhow::Result<()> {
+    crate::support::pointer_input(
+        editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(editor, CanvasInput::Up { point })?;
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_create_click_selects_an_existing_point() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let geometry = frame
+        .geometry
+        .meshes
+        .iter()
+        .find(|m| m.id == mesh().id)
+        .unwrap();
+    let (id, position) = geometry.vertices[0];
+    manual_click(&mut editor, frame.transform.to_viewport(position))?;
+    let overlay = editor.overlay_for_viewport(editor.primary_viewport_binding().unwrap());
+    assert!(
+        overlay.vertices.iter().any(|v| v.id == id && v.selected),
+        "Clicking an existing point must select it in Create mode"
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_create_near_boundary_snaps_to_the_highlighted_edge() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let geometry = frame
+        .geometry
+        .meshes
+        .iter()
+        .find(|m| m.id == mesh().id)
+        .unwrap();
+    let mut corners: Vec<_> = geometry
+        .vertices
+        .iter()
+        .map(|(_, p)| frame.transform.to_viewport(*p))
+        .collect();
+    corners.sort_by(|a, b| a.y.total_cmp(&b.y).then(a.x.total_cmp(&b.x)));
+    let point = ViewportPoint {
+        x: (corners[0].x + corners[1].x) * 0.5,
+        y: corners[0].y - 3.,
+    };
+    manual_click(&mut editor, point)?;
+    assert_eq!(
+        editor.layers()[0].vertices,
+        5,
+        "The 5-pixel edge hit must split the edge, including clicks just outside it"
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_create_drag_from_empty_space_does_not_insert_a_point() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let start = frame.transform.to_viewport(ModelPoint { x: 100., y: 100. });
+    let end = ViewportPoint {
+        x: start.x + 25.,
+        y: start.y + 30.,
+    };
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: end,
+            left_down: true,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+    assert_eq!(
+        editor.document().unwrap().history_lengths(),
+        (0, 0),
+        "Only a click adds a point; an empty-space drag has no connection endpoints"
+    );
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_sparse_interior_is_a_valid_noop_on_an_untouched_mesh() -> anyhow::Result<()> {
+    let (mut doc, _dir) = support::alpha_document()?;
+    let target = doc.manual_mesh_target(true)?;
+    let source = doc.mesh_generation_source_manual(&target)?;
+    let options = AlphaMeshOptions {
+        clip_to_image: true,
+        inside_spacing: 10000.,
+        ..AlphaMeshOptions::deformation_large()
+    };
+    let preview = source.generate(MeshGenerationOptions::ManualInterior(options))?;
+    assert_eq!(preview.geometry().vertex_ids.len(), 4);
+    doc.apply_mesh_generation(&preview)?;
+    assert_eq!(doc.history_lengths(), (0, 0));
+    Ok(())
+}

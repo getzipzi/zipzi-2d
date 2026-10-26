@@ -165,7 +165,7 @@ impl MeshGenerationSource {
                 }
                 if self.manual_target.is_some() {
                     ensure!(
-                        geometry.meshing.is_some(),
+                        zipzi_sdk::extract_manual_meshing(&geometry).is_ok(),
                         "Generated mesh has holes or separate regions"
                     );
                 }

@@ -622,3 +622,32 @@ fn candidate_snapshots_keep_structure_and_failed_creation_has_no_history() {
         .is_err());
     assert_eq!(s.version(), version);
 }
+
+#[test]
+fn projected_insert_splits_a_slanted_edge_after_f32_rounding() {
+    let mut source = square_geometry();
+    source.uvs = vec![
+        Vec2::new(0.1, 0.2),
+        Vec2::new(0.8, 0.15),
+        Vec2::new(0.85, 0.8),
+        Vec2::new(0.15, 0.85),
+    ];
+    source.positions = source.uvs.clone();
+    let a = source.uvs[0];
+    let b = source.uvs[1];
+    let t = 0.37_f64;
+    let uv = Vec2::new(
+        (a.x as f64 + t * (b.x as f64 - a.x as f64)) as f32,
+        (a.y as f64 + t * (b.y as f64 - a.y as f64)) as f32,
+    );
+    let result =
+        edit_manual_mesh(&source, ManualMeshOperation::InsertVertex { id: 50, uv }).unwrap();
+    assert!(result
+        .geometry
+        .meshing
+        .as_ref()
+        .unwrap()
+        .boundary
+        .contains(&50));
+    assert_eq!(result.geometry.triangles.len(), 3);
+}

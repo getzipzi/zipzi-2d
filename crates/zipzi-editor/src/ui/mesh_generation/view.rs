@@ -37,6 +37,19 @@ impl Render for MeshGenerationForm {
                         ),
                     ),
             );
+        let selected = self.algorithm.read(cx).selected_value().copied();
+        let replaces = matches!(selected, Some("manual-edge" | "manual-full"))
+            || (selected == Some("alpha-cdt") && self.preview.source.replaces_modeling_topology());
+        if replaces {
+            settings = settings.child(
+                div()
+                    .id("mesh-generation-replacement-notice")
+                    .test_support()
+                    .text_xs()
+                    .text_color(cx.theme().muted_foreground)
+                    .child(t!("mesh_generation.replacement_notice")),
+            );
+        }
         if self.is_alpha(cx) {
             let mut presets = div().flex().gap_1();
             for (i, (id, label)) in [

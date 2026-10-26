@@ -137,8 +137,26 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
                 })
                 .flatten()
         });
+    let manual_message = (!view.modal
+        && view.editor.editing_context() == Some(zipzi_editor_core::EditingContext::Modeling))
+    .then(|| view.editor.manual_tool())
+    .flatten()
+    .map(|tool| {
+        view.editor
+            .canvas_notice()
+            .map(|reason| crate::ui::manual_mesh::diagnostic(&reason))
+            .unwrap_or_else(|| {
+                match tool {
+                    zipzi_editor_core::ManualTool::Select => t!("manual_mesh.select_hint"),
+                    zipzi_editor_core::ManualTool::Create => t!("manual_mesh.create_hint"),
+                    zipzi_editor_core::ManualTool::Delete => t!("manual_mesh.delete_hint"),
+                }
+                .into_owned()
+            })
+    });
     let message = error
         .clone()
+        .or(manual_message)
         .or(interaction_message)
         .or_else(|| {
             (!view.modal)

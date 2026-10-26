@@ -217,6 +217,15 @@ impl EditorView {
                     cx.notify();
                 }
                 CommandId::ManualMesh => {
+                    // Check capabilities once on invocation, and explain a refusal.
+                    // Rendering a toolbar must not scan and validate the entire mesh.
+                    if let Err(error) = self.editor.document().unwrap().manual_mesh_target(true) {
+                        self.set_edit_error(
+                            crate::ui::manual_mesh::diagnostic(&error.to_string()),
+                            cx,
+                        );
+                        return;
+                    }
                     let confirmation = window.prompt(
                         PromptLevel::Warning,
                         &t!("manual_mesh.confirm_source"),

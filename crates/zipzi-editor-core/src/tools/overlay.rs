@@ -115,6 +115,9 @@ impl ToolController {
 
     /// Status queries share the edit capabilities, without producing screen geometry.
     pub(crate) fn notice(&self, document: &Document, frame: &CanvasFrame) -> Option<String> {
+        if let Some(manual) = &self.manual {
+            return manual.diagnostic.clone();
+        }
         let scene = &frame.geometry;
         let selection = self.overlay_selection(document, scene);
         if let Err(error) = document.ensure_editable(&selection) {
