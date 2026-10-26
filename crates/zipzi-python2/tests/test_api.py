@@ -27,6 +27,16 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_p3b_conversions_scene_bindings_and_independent_collections(self):
+        import runpy
+        recipe = runpy.run_path(str(Path(__file__).with_name("p3b_recipe.py")))["run"]
+        results = []
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                results.append(recipe(self.runtime(mode), self.folder / (mode + "-p3b")))
+        if len(results) == 2:
+            self.assertEqual(results[0], results[1])
+
     def test_domain_operations_and_unified_plans_preserve_content_and_history(self):
         for mode in ("local", "connected"):
             with self.subTest(mode=mode), self.runtime(mode) as runtime:

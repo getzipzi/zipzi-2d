@@ -74,6 +74,16 @@ Runtime capabilities. Full platform/app distribution acceptance is also pending.
 See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence;
 implementation does not by itself mean that every R4/P4 exit gate has passed.
 
+[P3B scope reconciliation](../../docs/plans/python-sdk-rewrite/p3b.md) is complete:
+the earlier R4 implementation supplies the modeling routes, and public source and
+installed recipes now cover affine reparenting, grid/range conversions, all three
+scene binding tracks, independent scene collections and nested identity expiry.
+The focused check also runs positive/negative static types:
+
+```sh
+./tools/test-sdk.sh python2 PythonSdk.test_p3b_conversions_scene_bindings_and_independent_collections
+```
+
 ## Selected code generation
 
 Generation derives registered mesh, image, Plan, parameter, binding, scene,

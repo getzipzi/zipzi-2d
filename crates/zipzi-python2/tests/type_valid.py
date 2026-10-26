@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import assert_type
 import zipzi
-from zipzi import bindings, sampling, events, meshes, ops, parameters, resources, scene, references
+from zipzi import bindings, sampling, events, meshes, modeling, ops, parameters, resources, scene, references
 
 def recipe(runtime: zipzi.Runtime) -> zipzi.SaveReceipt:
     session = runtime.sessions.create("79000000-0000-4000-8000-000000000001")
@@ -119,6 +119,28 @@ def uniform_results(session: zipzi.Session, id: str) -> zipzi.Batch[meshes.Mesh]
     assert_type(session.modeling.sample(({},)), zipzi.Snapshot[sampling.Result])
     assert_type(zipzi.recover_call(session.meshes.get_many, (id,)), zipzi.Batch[meshes.Mesh])
     return session.meshes.get_many((id,))
+
+
+def canonical_conversion(session: zipzi.Session, owner: str, parameter: str) -> zipzi.PlanReport:
+    operation = modeling.ModelingCommandBinding(intent=modeling.BindingAuthoringEditMeshGrid(
+        value=modeling.MeshGridEditMoveSample(binding_id=owner, parameter_id=parameter, from_=.5, to=.4)))
+    assert_type(session.modeling.records(modeling.ModelingQuery(bindings=(owner,))),
+                zipzi.Snapshot[modeling.OwnedModelingRecords])
+    assert_type(zipzi.recover_call(session.plan_async, operation), zipzi.Job[zipzi.Plan])
+    with session.plan_async(operation) as job, job.wait() as plan:
+        assert_type(plan, zipzi.Plan)
+        with session.edit("Typed conversion") as edit:
+            assert_type(edit.apply(plan), zipzi.WriteResult)
+        return plan.report
+
+
+def canonical_address(session: zipzi.Session, sample: str) -> zipzi.PlanReport:
+    with session.address(modeling.AddressSelectorBinding(id=sample)) as address:
+        assert_type(address, references.FieldAddress)
+        with address.plan(modeling.AddressPatchBinding(
+                patch=modeling.BindingFieldPatchSampleValue(value=.25))) as plan:
+            assert_type(plan, zipzi.Plan)
+            return plan.report
 
 
 def unified_planning(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi.PlanReport:

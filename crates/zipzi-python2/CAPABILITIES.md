@@ -33,10 +33,10 @@ fixed geometry/history and the independent Rust SDK tests.
 | Formal/candidate Plan | Domain operations, cached report, `session.plan` / `edit.plan` / `edit.apply(plan)` | Source-bound Runtime plans through `apply_authoring` | Exact source, stale/foreign/closed refusal, batch rollback, report after close, same-ID recovery | Selected P1 implemented; P3 expands |
 | Binary buffers/large images | `prepare_buffer`, `prepare_image`, Buffer reads | Binary chunks, SHA256, immutable blobs and leases | Every transfer-phase loss, seal peak, owner/hash negatives, installed large grid and images | Implemented R4 |
 | Mesh binding/keyforms | `bindings.MeshBindingSpec/Keyform`, `session/edit.bindings`, typed ops | SDK spec/core canonical identities; unified Runtime candidate batch | Numerical interpolation/clamp, identity retention, failures/no-op/redo, installed recovery/save/reopen and real Editor | Selected Runtime R4 slice implemented |
-| Selected scene/organization | `scene` typed ops, `session/edit.scene.get/get_many/plan` | SDK `SceneOperation` → existing scene/organization/content/binding intentions → unified Runtime batch | Local/Connected scene/group/Glue/Offscreen recipe, plans, save/reopen; installed wheels and Editor Part/group projections | P3 started; selected slice implemented |
+| Scene/organization | `scene` typed ops, `modeling.ModelingCommandScene`, scene reads and plans | SDK scene/organization/content/binding intentions → unified Runtime batch | Scene/group/Glue/Offscreen, all scene binding tracks, organization/deformation/drawing collections; source/installed recipes and existing Editor projection | R4 implemented; P3B scope accepted |
 | Mesh BlendShape/bound topology | `scene.CreateBlendTable/CreateMeshBlend/SetMeshBlendVertices/InsertMeshVertex/ReplaceTriangles`, `ReparentLocal` | Existing SDK/Core planning, interpolation, remapping and limits | Independent ordinary+Blend sweep `.5,6.5,12.5`, vertex interpolation, formal/candidate invariance, invalid topology; installed recipe | Selected P3/R4 slice implemented |
 | SDK object references/label addresses | `session.reference`, `resolve/scene_capabilities/label`, `LabelAddress.plan`, explicit close | SDK incarnation and context/field epochs; bounded Runtime tables | Move, field change, delete/Undo, stale rejection, ownership/budgets/100 release rounds and lost responses | Implemented R4; all SDK selector domains |
-| Full Modeling/collections/conversions | Generated `modeling.ModelingCommand`, typed records/intents/capabilities | Exhaustive SDK dispatch and compiled input/output shapes | Same-backend numerical recipes, all address domains, SDK domain regression | Implemented R4 |
+| Full Modeling/collections/conversions | Generated `modeling.ModelingCommand`, typed records/intents/capabilities | Exhaustive SDK dispatch and compiled input/output shapes | Affine reparent, grid/range/bake conversion and scene binding numerical recipes; independent collections, all address domains and nested Undo identity expiry | R4 implemented; P3B source/types/installed scope accepted |
 | Project formats and resource IO | Project/Sessions Jobs; PNG Jobs and ImageLease | SDK import/open/generation/export and bounded decoders | Installed PSD/Model3/MOC3/Cubism and all sidecar formats; disk overwrite and memory leases | Implemented R4 |
 | Modeling CPU sampling | `session/edit.modeling.sample`, immutable `sampling` values | Same typed Runtime sampling entry and frozen SDK evaluation | Mesh binding/keyform numeric recipe, source/limits/recovery and real Editor human Preview/history isolation | Implemented R4; frozen sync/async CPU batches |
 | Animation/Preview | Typed query and independent sources | Shared SDK/Runtime | Numerical and isolation recipes required | Runtime R5 / Python P5 pending |
@@ -63,6 +63,11 @@ Local/Connected full recipes, paired source/wheel rebuilds and native Editor/Met
 acceptance. Box layout and ordinary mesh batch costs were rechecked in Release;
 historical P1 query and binary-image comparison limits are recorded separately.
 Existing modeling/resource/IO routes are not new P3B/P4 implementation work.
+The [P3B record](../../docs/plans/python-sdk-rewrite/p3b.md) closes the original
+modeling scope using these routes and additional public conversion/scene/identity
+scenarios. Six focused tests run both backends; strict types and the normal-wheel
+Local/Connected installed recipes pass. Product code and public signatures are
+unchanged; R4 performance and Editor evidence retain their original scope.
 Python [P3A-0](../../docs/plans/python-sdk-rewrite/p3a-0.md) has passed its freeze gate.
 [P3A-1](../../docs/plans/python-sdk-rewrite/p3a-1.md) implements complete-call recovery,
 cached state and JobTimeout with source/type/installed evidence. P3A-1 is accepted;
