@@ -9,6 +9,8 @@ use zipzi_editor_core::RuntimeHost;
 #[derive(Clone)]
 pub(super) struct DesktopHost {
     pub(super) runtime: RuntimeHost,
+    pub(super) protocol: Rc<RefCell<zipzi_runtime::protocol::Protocol>>,
+    resident: bool,
     parked: Rc<RefCell<Option<Editor>>>,
     pub(super) pending_quit: Rc<Cell<bool>>,
     outcomes: Rc<RefCell<std::collections::VecDeque<zipzi_editor_core::RuntimeJobInfo>>>,
@@ -16,16 +18,30 @@ pub(super) struct DesktopHost {
 }
 impl Global for DesktopHost {}
 impl DesktopHost {
-    pub(super) fn new() -> Self {
+    pub(super) fn new(resident: bool) -> Self {
         let runtime = RuntimeHost::new();
         let editor = Editor::with_runtime(runtime.clone());
         Self {
             runtime,
+            protocol: Rc::new(RefCell::new(
+                zipzi_runtime::protocol::Protocol::default().with_window_support(),
+            )),
+            resident,
             parked: Rc::new(RefCell::new(Some(editor))),
             pending_quit: Default::default(),
             outcomes: Default::default(),
             notices: Default::default(),
         }
+    }
+    pub(super) fn keep_running_without_windows(&self) -> bool {
+        self.resident
+            || self.protocol.borrow().has_connected_clients()
+            || !self.runtime.read().pending_jobs().is_empty()
+    }
+    pub(super) fn release_disconnected_clients(&self) {
+        self.protocol
+            .borrow_mut()
+            .release_disconnected_clients(&mut self.runtime.write());
     }
     pub(super) fn take_editor(&self) -> (Editor, Vec<String>) {
         let mut editor = self

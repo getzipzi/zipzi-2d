@@ -1,14 +1,10 @@
 //! Socket IO decodes off-thread; all Runtime admission/publication runs on App.
 use super::*;
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 use zipzi_runtime::{
     Executor, Work,
     local::{Endpoint, Inbound, Owner, read_frame, write_frame},
-    protocol::{CONTRACT, Protocol},
+    protocol::CONTRACT,
 };
 
 pub(super) fn reopen(endpoint: &Endpoint) -> std::io::Result<u32> {
@@ -84,7 +80,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
             })
             .detach();
     }
-    let protocol = Rc::new(RefCell::new(Protocol::default().with_window_support()));
+    let protocol = cx.global::<host::DesktopHost>().protocol.clone();
     let expiry = protocol.clone();
     cx.spawn(async move |cx| {
         loop {

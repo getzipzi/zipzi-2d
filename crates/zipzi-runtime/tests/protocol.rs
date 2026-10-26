@@ -35,6 +35,73 @@ fn request(
     )
 }
 #[test]
+fn connected_clients_exclude_reconnect_grace_and_ignore_old_socket_disconnects() {
+    let mut rt = Runtime::default();
+    let mut p = Protocol::default();
+    let now = Instant::now();
+    assert!(!p.has_connected_clients());
+    let hello = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
+    let client = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
+    let connection = hello["ok"]["connection"].as_u64().unwrap();
+    assert!(p.has_connected_clients());
+    let second = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
+    p.disconnect(client, connection, now);
+    assert!(p.has_connected_clients());
+    p.disconnect(
+        serde_json::from_value(second["ok"]["client"].clone()).unwrap(),
+        second["ok"]["connection"].as_u64().unwrap(),
+        now,
+    );
+    assert!(!p.has_connected_clients());
+    let instance = rt.instance_id();
+    let resumed = p.hello(
+        &mut rt,
+        json!({"protocol": CONTRACT, "runtime": instance,
+            "client": client, "secret": hello["ok"]["secret"]}),
+        now,
+    );
+    assert!(resumed.get("ok").is_some(), "{resumed}");
+    p.disconnect(client, connection, now);
+    assert!(
+        p.has_connected_clients(),
+        "old socket displaced a resumed connection"
+    );
+    p.disconnect(client, resumed["ok"]["connection"].as_u64().unwrap(), now);
+    assert!(!p.has_connected_clients());
+}
+
+#[test]
+fn shutdown_releases_disconnected_clients_but_preserves_unsaved_sessions_and_live_peers() {
+    let (mut rt, mut p, client, connection, now) = setup(Default::default());
+    let session = rt
+        .create_session(
+            client,
+            &uuid::Uuid::new_v4().to_string(),
+            ModelSetup::default(),
+        )
+        .unwrap();
+    let edit = rt.begin_edit(client, session, "unsaved", None).unwrap();
+    rt.apply_edit(client, edit, |e| {
+        e.replace_model_setup(zipzi_core::Canvas::new(200., 100., Default::default(), 1.))
+    })
+    .unwrap();
+    rt.commit_edit(client, edit).unwrap();
+    let version = rt.session_info(session).unwrap().version;
+    let hello = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
+    let live = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
+    p.disconnect(client, connection, now);
+    p.release_disconnected_clients(&mut rt);
+    assert!(p.has_connected_clients());
+    assert_eq!(rt.live_counts().0, 1);
+    assert!(rt.list_jobs(live).is_ok());
+    assert!(rt.list_jobs(client).is_err());
+    let info = rt.session_info(session).unwrap();
+    assert_eq!(info.version, version);
+    assert!(info.modified);
+    rt.close_session(live, session, true).unwrap();
+}
+
+#[test]
 fn image_prepare_failure_aborts_on_host_even_if_client_never_sends_cleanup() {
     for from_blob in [false, true] {
         let (mut rt, mut p, client, connection, now) = setup(Default::default());

@@ -114,9 +114,16 @@ with its assets, workspace patches and [required notices](../../LICENSING.md).
 ## Resident application host
 
 Run `cargo run --locked -p zipzi-editor -- --no-window` to start the application
-without a window. Closing a window or document tab detaches its view and retains
-the Runtime session, unsaved content and history in this process. Reopening the
-application window attaches resident sessions. Use Quit to save/discard and exit.
+without a window and keep it resident. Closing the last window in a normal desktop
+launch exits when there are no connected SDK clients or pending background jobs.
+Unsaved documents, including detached tabs, first prompt to save, discard or cancel;
+cancelling or a failed save keeps the window open. Disconnected clients retained
+only for reconnect grace do not prevent this exit.
+
+With a connected SDK client, pending job or explicit `--no-window` launch, closing
+a window detaches its view and retains Runtime sessions, unsaved content and history.
+Closing a document tab also only detaches its view. Reopening the application window
+attaches resident sessions. Use Quit to save/discard and explicitly exit.
 Load/import/save completion returns to the application host even without windows;
 errors remain available when a window is reopened.
 

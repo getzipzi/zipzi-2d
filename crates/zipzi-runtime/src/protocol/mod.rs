@@ -569,6 +569,24 @@ impl Protocol {
             c.disconnected = Some(now);
         }
     }
+    /// Authenticated sockets still connected, excluding clients retained only
+    /// for reconnect grace. In-process Runtime clients are not socket clients.
+    pub fn has_connected_clients(&self) -> bool {
+        self.clients.values().any(|c| c.disconnected.is_none())
+    }
+    /// A desktop host about to exit may end reconnect grace early. Formal
+    /// sessions survive so the host can still ask to save their unsaved content.
+    pub fn release_disconnected_clients(&mut self, runtime: &mut Runtime) {
+        self.clients.retain(|id, c| {
+            if c.disconnected.is_some() {
+                runtime.release_client(*id);
+                false
+            } else {
+                true
+            }
+        });
+        self.refresh_memory(runtime);
+    }
     pub fn expire(&mut self, runtime: &mut Runtime, now: Instant) {
         self.clients.retain(|id, c| {
             if c.disconnected

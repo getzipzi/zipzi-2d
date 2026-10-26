@@ -125,6 +125,10 @@ impl EditorView {
             let result = picker.await;
             let _ = this.update_in(cx, |this, window, cx| {
                 this.modal = false;
+                if this.window_exit_interrupted() {
+                    cx.notify();
+                    return;
+                }
                 match result {
                     Ok(Ok(Some(path))) => this.save_to(id, path, close_after, window, cx),
                     other => {
@@ -418,8 +422,27 @@ impl EditorView {
         })
         .detach();
     }
-    pub(super) fn detach_window(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
-        if self.modal {
+    pub(super) fn request_window_close(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if self.modal || window.has_active_dialog(cx) {
+            return false;
+        }
+        if cx.windows().len() == 1
+            && !self
+                .host
+                .as_ref()
+                .is_some_and(host::DesktopHost::keep_running_without_windows)
+            && self.editor.pending_io_count() == 0
+        {
+            // Keep the window alive while the ordinary Quit path resolves all
+            // resident documents, including tabs that were detached earlier.
+            if let Some(host) = &self.host {
+                host.release_disconnected_clients();
+            }
+            self.begin_exit(true, window, cx);
             return false;
         }
         if let Some(id) = self.editor.active_id() {
@@ -434,7 +457,7 @@ impl EditorView {
         true
     }
     pub(super) fn close_window(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.detach_window(window, cx) {
+        if self.request_window_close(window, cx) {
             window.remove_window();
         }
     }
@@ -454,6 +477,9 @@ impl EditorView {
         }
     }
     pub(super) fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.begin_exit(false, window, cx);
+    }
+    fn begin_exit(&mut self, on_window_close: bool, window: &mut Window, cx: &mut Context<Self>) {
         if self.modal {
             return;
         }
@@ -462,15 +488,34 @@ impl EditorView {
                 return;
             }
         }
+        self.exit_on_window_close = on_window_close;
         match self.editor.request_exit() {
             Ok(()) => self.continue_exit(window, cx),
             Err(error) => {
+                self.exit_on_window_close = false;
                 self.set_edit_error(error.to_string(), cx);
             }
         }
     }
+    fn window_exit_interrupted(&mut self) -> bool {
+        if !self.editor.exiting() {
+            self.exit_on_window_close = false;
+        }
+        if !self.exit_on_window_close {
+            return false;
+        }
+        if let Some(host) = &self.host {
+            if host.keep_running_without_windows() {
+                self.editor.cancel_exit();
+                self.exit_on_window_close = false;
+                return true;
+            }
+            host.release_disconnected_clients();
+        }
+        false
+    }
     fn continue_exit(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if !self.editor.exiting() || self.modal {
+        if !self.editor.exiting() || self.modal || self.window_exit_interrupted() {
             return;
         }
         if let Some(id) = self.editor.next_close() {
@@ -540,6 +585,10 @@ impl EditorView {
                     let choice = confirmation.await.ok();
                     let _ = this.update_in(cx, |this, window, cx| {
                         this.modal = false;
+                        if this.window_exit_interrupted() {
+                            cx.notify();
+                            return;
+                        }
                         match choice {
                             Some(1) => {
                                 this.property_forms

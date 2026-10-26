@@ -4,8 +4,12 @@ use crate::host::DesktopHost;
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 
 fn hosted(cx: &mut TestAppContext) -> (Harness, DesktopHost) {
+    hosted_with_residency(cx, false)
+}
+
+fn hosted_with_residency(cx: &mut TestAppContext, resident: bool) -> (Harness, DesktopHost) {
     let harness = setup(cx);
-    let host = DesktopHost::new();
+    let host = DesktopHost::new(resident);
     drop(host.take_editor());
     harness.view.update(cx, |view, cx| {
         view.editor.rehost(host.runtime.clone()).unwrap();
@@ -14,6 +18,303 @@ fn hosted(cx: &mut TestAppContext) -> (Harness, DesktopHost) {
     });
     cx.update(|cx| cx.set_global(host.clone()));
     (harness, host)
+}
+
+fn connect_peer(host: &DesktopHost) -> (zipzi_runtime::ClientId, u64) {
+    let hello = host.protocol.borrow_mut().hello(
+        &mut host.runtime.write(),
+        serde_json::json!({"protocol": zipzi_runtime::protocol::CONTRACT}),
+        std::time::Instant::now(),
+    );
+    (
+        serde_json::from_value(hello["ok"]["client"].clone()).unwrap(),
+        hello["ok"]["connection"].as_u64().unwrap(),
+    )
+}
+
+fn modify(harness: &Harness, cx: &mut TestAppContext) {
+    harness.view.update(cx, |view, cx| {
+        view.editor
+            .execute(zipzi_editor_core::EditorCommand::CreateParameter(
+                zipzi_editor_core::NewParameter {
+                    name: "Unsaved".into(),
+                    ..Default::default()
+                },
+            ))
+            .unwrap();
+        view.redraw(cx);
+        assert!(view.editor.document().unwrap().modified());
+    });
+}
+
+#[gpui_kit::test]
+fn last_idle_window_enters_quit_instead_of_parking_sessions(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    // Exercise the native red-button callback. Quit owns the window lifetime;
+    // the test platform's quit itself is a no-op.
+    let mut visual = gpui_kit::VisualTestContext::from_window(harness.window, cx);
+    assert!(!visual.simulate_close());
+    harness.view.read_with(cx, |view, _| {
+        assert!(view.editor.exiting());
+        assert_eq!(view.editor.document_count(), 0);
+        assert!(!view.modal);
+    });
+    assert!(host.runtime.read().list_sessions().is_empty());
+}
+
+#[gpui_kit::test]
+fn closing_dirty_last_window_supports_cancel_and_discard(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    modify(&harness, cx);
+    for discard in [false, true] {
+        cx.update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.close_window(window, cx);
+                assert!(view.modal);
+                assert!(view.editor.exiting());
+            });
+        })
+        .unwrap();
+        cx.simulate_prompt_answer(if discard {
+            "Discard and Close"
+        } else {
+            "Cancel"
+        });
+        cx.run_until_parked();
+        harness.view.read_with(cx, |view, _| {
+            assert!(!view.modal);
+            assert_eq!(view.editor.exiting(), discard);
+            assert_eq!(view.editor.document_count(), usize::from(!discard));
+            if !discard {
+                assert!(view.editor.document().unwrap().modified());
+            }
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        });
+    }
+    assert!(host.runtime.read().list_sessions().is_empty());
+}
+
+#[gpui_kit::test]
+fn closing_last_window_saves_before_quitting(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    harness
+        .view
+        .update(cx, |view, _| view.editor.new_document().unwrap());
+    modify(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.close_window(window, cx));
+    })
+    .unwrap();
+    cx.simulate_prompt_answer("Save");
+    cx.run_until_parked();
+    assert!(cx.did_prompt_for_new_path());
+    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    let target = harness._config_dir.path().join("saved-on-close.zipzi");
+    cx.simulate_new_path_selection(|_| Some(target.clone()));
+    cx.run_until_parked();
+    assert!(target.join("project.zipzi.json").is_file());
+    harness.view.read_with(cx, |view, _| {
+        assert!(view.editor.exiting());
+        assert_eq!(view.editor.document_count(), 0);
+        assert!(!view.modal);
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+    });
+    assert!(host.runtime.read().list_sessions().is_empty());
+}
+
+#[gpui_kit::test]
+fn cancelling_close_save_picker_or_failing_save_preserves_unsaved_document(
+    cx: &mut TestAppContext,
+) {
+    let (harness, _) = hosted(cx);
+    harness
+        .view
+        .update(cx, |view, _| view.editor.new_document().unwrap());
+    modify(&harness, cx);
+    for fail in [false, true] {
+        cx.update_window(harness.window, |_, window, cx| {
+            harness
+                .view
+                .update(cx, |view, cx| view.close_window(window, cx));
+        })
+        .unwrap();
+        cx.simulate_prompt_answer("Save");
+        cx.run_until_parked();
+        let target = harness._config_dir.path().join("invalid-save.zipzi");
+        if fail {
+            std::fs::create_dir_all(target.join("project.zipzi.json")).unwrap();
+        }
+        cx.simulate_new_path_selection(|_| fail.then_some(target));
+        cx.run_until_parked();
+        harness.view.read_with(cx, |view, _| {
+            assert!(!view.editor.exiting());
+            assert!(!view.modal);
+            assert!(view.editor.document().unwrap().modified());
+            assert_eq!(view.edit_error.is_some(), fail);
+        });
+    }
+}
+
+#[gpui_kit::test]
+fn connected_sdk_keeps_host_and_unsaved_content_alive_without_attaching_a_session(
+    cx: &mut TestAppContext,
+) {
+    let (harness, host) = hosted(cx);
+    modify(&harness, cx);
+    let _peer = connect_peer(&host);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.close_window(window, cx));
+    })
+    .unwrap();
+    assert!(cx.update(|cx| cx.windows().is_empty()));
+    harness.view.read_with(cx, |view, _| {
+        assert!(!view.editor.exiting());
+        assert!(!view.modal);
+        assert!(view.editor.document().unwrap().modified());
+    });
+    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+}
+
+#[gpui_kit::test]
+fn disconnected_sdk_does_not_delay_close_for_reconnect_grace(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    let session = harness.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().runtime_session_id()
+    });
+    let (peer, connection) = connect_peer(&host);
+    host.runtime.write().attach_session(peer, session).unwrap();
+    host.protocol
+        .borrow_mut()
+        .disconnect(peer, connection, std::time::Instant::now());
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.close_window(window, cx));
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert!(view.editor.exiting());
+        assert_eq!(view.editor.document_count(), 0);
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+    });
+    assert!(host.runtime.read().list_sessions().is_empty());
+}
+
+#[gpui_kit::test]
+fn explicit_no_window_host_stays_resident_after_its_window_is_closed(cx: &mut TestAppContext) {
+    let (harness, host) = hosted_with_residency(cx, true);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.close_window(window, cx));
+    })
+    .unwrap();
+    assert!(cx.update(|cx| cx.windows().is_empty()));
+    harness
+        .view
+        .read_with(cx, |view, _| assert!(!view.editor.exiting()));
+    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+}
+
+#[gpui_kit::test]
+fn non_last_window_closes_without_starting_quit(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    let _other = cx.add_window(|_, _| gpui_kit::EmptyView);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.close_window(window, cx));
+    })
+    .unwrap();
+    assert_eq!(cx.update(|cx| cx.windows().len()), 1);
+    harness
+        .view
+        .read_with(cx, |view, _| assert!(!view.editor.exiting()));
+    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+}
+
+#[gpui_kit::test]
+fn foreign_background_job_keeps_host_alive_without_sdk_connection(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    // Host jobs include work on sessions not attached to the visible workspace.
+    let client = host.runtime.write().register_client().unwrap();
+    let session = host
+        .runtime
+        .write()
+        .create_session(
+            client,
+            &uuid::Uuid::new_v4().to_string(),
+            zipzi_core::ModelSetup::default(),
+        )
+        .unwrap();
+    let target = harness._config_dir.path().join("background.zipzi");
+    let job = host
+        .runtime
+        .write()
+        .request_save(client, session, &target)
+        .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            assert_eq!(view.editor.pending_io_count(), 0);
+            view.close_window(window, cx);
+        });
+    })
+    .unwrap();
+    assert!(cx.update(|cx| cx.windows().is_empty()));
+    harness
+        .view
+        .read_with(cx, |view, _| assert!(!view.editor.exiting()));
+    let work = host.runtime.write().take_work(job).unwrap();
+    host.runtime.write().complete(work.run());
+    assert!(target.join("project.zipzi.json").is_file());
+}
+
+#[gpui_kit::test]
+fn sdk_connecting_during_save_confirmation_cancels_automatic_exit(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    modify(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.close_window(window, cx));
+    })
+    .unwrap();
+    let _peer = connect_peer(&host);
+    cx.simulate_prompt_answer("Discard and Close");
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        assert!(!view.editor.exiting());
+        assert!(!view.modal);
+        assert!(view.editor.document().unwrap().modified());
+    });
+    assert_eq!(cx.update(|cx| cx.windows().len()), 1);
+}
+
+#[gpui_kit::test]
+fn closing_last_window_also_prompts_for_a_detached_dirty_tab(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    modify(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.close_active(window, cx);
+            assert_eq!(view.editor.document_count(), 0);
+            view.close_window(window, cx);
+            assert!(view.modal);
+            assert_eq!(view.editor.document_count(), 1);
+        });
+    })
+    .unwrap();
+    cx.simulate_prompt_answer("Cancel");
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        assert!(!view.editor.exiting());
+        assert!(view.editor.document().unwrap().modified());
+    });
+    assert_eq!(host.runtime.read().list_sessions().len(), 1);
 }
 
 fn save_and_close(cx: &mut TestAppContext, fail: bool, reopen_before_completion: bool) {
@@ -144,7 +445,7 @@ fn host_accepts_typed_creation_without_any_window_then_attaches_editor(cx: &mut 
     cx.update_window(harness.window, |_, window, _| window.remove_window())
         .unwrap();
     drop(harness);
-    let host = DesktopHost::new();
+    let host = DesktopHost::new(false);
     let session = host
         .runtime
         .write()
@@ -203,6 +504,7 @@ fn r2_reopen_catches_up_external_edits(cx: &mut TestAppContext) {
         let _cached = document.object_index();
         (document.runtime_session_id(), mesh)
     });
+    let (client, _) = connect_peer(&host);
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         harness
@@ -219,7 +521,6 @@ fn r2_reopen_catches_up_external_edits(cx: &mut TestAppContext) {
     drop(view);
     cx.run_until_parked();
     assert!(cx.update(|cx| cx.windows().is_empty()));
-    let client = host.runtime.write().register_client().unwrap();
     let edit = host
         .runtime
         .write()

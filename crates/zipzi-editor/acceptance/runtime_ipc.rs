@@ -59,7 +59,7 @@ pub(super) fn run() -> anyhow::Result<()> {
     use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(endpoint.path(), std::fs::Permissions::from_mode(0o700))?;
     let mut h = Harness::new()?;
-    let host = crate::host::DesktopHost::new();
+    let host = crate::host::DesktopHost::new(false);
     let (document, _assets) = super::fixture::sample_document()?;
     let runtime = host.runtime.clone();
     h.cx.update(|cx| {

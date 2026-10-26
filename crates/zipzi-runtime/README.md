@@ -5,7 +5,9 @@ formal session and history, client/edit/job tables, project path reservations,
 bounded event streams and executor handoffs. There is no GPUI, PyO3 or GPU dependency. SDK does not depend on Runtime.
 
 The desktop Editor uses the same application-owned Runtime. Windows and tabs
-attach views; closing them retains resident sessions and history. Typed UI writes
+attach views. Closing a tab retains resident sessions and history; closing the last
+desktop window exits after save confirmation when no SDK client or background job
+needs the host. Explicit `--no-window` hosts remain resident. Typed UI writes
 and external clients share publication, event and project-path boundaries.
 The `protocol` and Unix `local` modules provide the R3 control-message slice,
 remote request deduplication, reconnect grace periods and endpoint ownership.

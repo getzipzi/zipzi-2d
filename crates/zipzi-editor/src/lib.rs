@@ -51,6 +51,7 @@ struct EditorView {
     input_router: input_routing::InputRouter,
     focus: FocusHandle,
     modal: bool,
+    exit_on_window_close: bool,
     focused_viewport: Option<zipzi_editor_core::ViewportId>,
     frozen_frames: std::collections::HashMap<
         zipzi_editor_core::DocumentId,
@@ -106,6 +107,7 @@ impl EditorView {
             input_router: Default::default(),
             focus,
             modal: false,
+            exit_on_window_close: false,
             focused_viewport: None,
             frozen_frames: Default::default(),
             editor,
@@ -143,7 +145,7 @@ impl EditorView {
         let entity = cx.weak_entity();
         window.on_window_should_close(cx, move |window, cx| {
             entity
-                .update(cx, |this, cx| this.detach_window(window, cx))
+                .update(cx, |this, cx| this.request_window_close(window, cx))
                 .unwrap_or(true)
         });
         editor.connect_panel_lifecycle(window, cx);
@@ -440,7 +442,7 @@ pub fn run() {
         cx.set_global(settings);
         actions::init(cx);
         theme::init(cx);
-        cx.set_global(host::DesktopHost::new());
+        cx.set_global(host::DesktopHost::new(no_window));
         ipc::start(owner, cx).expect("start local Runtime listener");
         if !no_window {
             host::open_window(cx, !background_launch);
