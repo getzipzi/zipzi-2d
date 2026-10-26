@@ -192,6 +192,11 @@ pub fn read_modelingcommand(
             source: read_geometrysnapshot(&value.getattr("source")?)?,
             replacement: read_topologyreplacement(&value.getattr("replacement")?)?,
         }),
+        "manual_mesh" => Ok(zipzi_runtime::modeling::ModelingCommand::ManualMesh {
+            mesh_id: value.getattr("mesh_id")?.extract()?,
+            expected: read_sourceref(&value.getattr("expected")?)?,
+            operation: read_manualmeshoperation(&value.getattr("operation")?)?,
+        }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -646,6 +651,26 @@ fn write_modelingcommand_in(
             )?;
             Ok(classes
                 .getattr("ModelingCommandReplaceTopology")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::ManualMesh {
+            mesh_id: field0,
+            expected: field1,
+            operation: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "mesh_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("expected", write_sourceref(py, (field1))?)?;
+            content.set_item(
+                "operation",
+                write_manualmeshoperation_in(py, (field2), classes)?,
+            )?;
+            Ok(classes
+                .getattr("ModelingCommandManualMesh")?
                 .call((), Some(&content))?
                 .unbind())
         }
@@ -10660,6 +10685,270 @@ fn write_topologyreplacement_in(
         .unbind())
 }
 
+pub fn read_sourceref(value: &Bound<'_, PyAny>) -> PyResult<SourceRef> {
+    crate::modeling_bridge::read_source(value)
+}
+pub fn write_sourceref(py: Python<'_>, value: &SourceRef) -> PyResult<Py<PyAny>> {
+    Ok(PyModule::import(py, "zipzi._values")?
+        .getattr("Source")?
+        .call_method1("_read", (source(py, *value)?,))?
+        .unbind())
+}
+pub fn read_manualmeshoperation(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::ManualMeshOperation> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "insert_vertex" => Ok(zipzi_sdk::ManualMeshOperation::InsertVertex {
+            id: value.getattr("id")?.extract()?,
+            uv: read_vec2(&value.getattr("uv")?)?,
+        }),
+        "insert_connected_vertex" => Ok(zipzi_sdk::ManualMeshOperation::InsertConnectedVertex {
+            from: value.getattr("from_")?.extract()?,
+            id: value.getattr("id")?.extract()?,
+            uv: read_vec2(&value.getattr("uv")?)?,
+        }),
+        "delete_edge" => Ok(zipzi_sdk::ManualMeshOperation::DeleteEdge {
+            a: value.getattr("a")?.extract()?,
+            b: value.getattr("b")?.extract()?,
+        }),
+        "move_vertices" => Ok(zipzi_sdk::ManualMeshOperation::MoveVertices {
+            targets: value
+                .getattr("targets")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(read_manualvertextarget(&item0)?)
+                })
+                .collect::<PyResult<Vec<_>>>()?,
+            motion_from: if value.getattr("motion_from")?.is_none() {
+                None
+            } else {
+                Some(
+                    value
+                        .getattr("motion_from")?
+                        .try_iter()?
+                        .map(|item| -> PyResult<_> {
+                            let item0 = item?;
+                            Ok(read_manualvertextarget(&item0)?)
+                        })
+                        .collect::<PyResult<Vec<_>>>()?,
+                )
+            },
+        }),
+        "delete_vertices" => Ok(zipzi_sdk::ManualMeshOperation::DeleteVertices {
+            ids: value
+                .getattr("ids")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(item0.extract()?)
+                })
+                .collect::<PyResult<Vec<_>>>()?,
+        }),
+        "constrain_edge" => Ok(zipzi_sdk::ManualMeshOperation::ConstrainEdge {
+            a: value.getattr("a")?.extract()?,
+            b: value.getattr("b")?.extract()?,
+        }),
+        "release_constraint" => Ok(zipzi_sdk::ManualMeshOperation::ReleaseConstraint {
+            a: value.getattr("a")?.extract()?,
+            b: value.getattr("b")?.extract()?,
+        }),
+        "reconnect" => Ok(zipzi_sdk::ManualMeshOperation::Reconnect),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_manualmeshoperation(
+    py: Python<'_>,
+    value: &zipzi_sdk::ManualMeshOperation,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_manualmeshoperation_in(py, value, &classes)
+}
+fn write_manualmeshoperation_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::ManualMeshOperation,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_sdk::ManualMeshOperation::InsertVertex {
+            id: field0,
+            uv: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("uv", write_vec2_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("ManualMeshOperationInsertVertex")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::ManualMeshOperation::InsertConnectedVertex {
+            from: field0,
+            id: field1,
+            uv: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "from_",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("uv", write_vec2_in(py, (field2), classes)?)?;
+            Ok(classes
+                .getattr("ManualMeshOperationInsertConnectedVertex")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::ManualMeshOperation::DeleteEdge {
+            a: field0,
+            b: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "a",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "b",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ManualMeshOperationDeleteEdge")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::ManualMeshOperation::MoveVertices {
+            targets: field0,
+            motion_from: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("targets", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append(write_manualvertextarget_in(py, (item0), classes)?)?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item("motion_from", {
+                match (field1).as_ref() {
+                    Some(item) => {
+                        let out = PyList::empty(py);
+                        for item1 in (item) {
+                            out.append(write_manualvertextarget_in(py, (item1), classes)?)?;
+                        }
+                        out.into_any().unbind()
+                    }
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("ManualMeshOperationMoveVertices")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::ManualMeshOperation::DeleteVertices { ids: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("ids", {
+                let out = PyList::empty(py);
+                for item0 in (field0) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("ManualMeshOperationDeleteVertices")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::ManualMeshOperation::ConstrainEdge {
+            a: field0,
+            b: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "a",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "b",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ManualMeshOperationConstrainEdge")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::ManualMeshOperation::ReleaseConstraint {
+            a: field0,
+            b: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "a",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "b",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ManualMeshOperationReleaseConstraint")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::ManualMeshOperation::Reconnect => Ok(classes
+            .getattr("ManualMeshOperationReconnect")?
+            .call0()?
+            .unbind()),
+    }
+}
+
+pub fn read_manualvertextarget(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::ManualVertexTarget> {
+    Ok(zipzi_sdk::ManualVertexTarget {
+        id: value.getattr("id")?.extract()?,
+        uv: read_vec2(&value.getattr("uv")?)?,
+    })
+}
+
+pub fn write_manualvertextarget(
+    py: Python<'_>,
+    value: &zipzi_sdk::ManualVertexTarget,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_manualvertextarget_in(py, value, &classes)
+}
+fn write_manualvertextarget_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::ManualVertexTarget,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("uv", write_vec2_in(py, (&value.uv), classes)?)?;
+    Ok(classes
+        .getattr("ManualVertexTarget")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
 pub fn read_modelingintent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::ModelingIntent> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
         "scene" => Ok(zipzi_sdk::ModelingIntent::Scene(read_sceneedit(
@@ -14760,6 +15049,15 @@ pub fn measure_modelingcommand(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             .saturating_add(measure_topologyreplacement(
                 &(value.getattr("replacement")?),
             )?)),
+        "manual_mesh" => Ok(256usize
+            .saturating_add(
+                (value.getattr("mesh_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(128usize)
+            .saturating_add(measure_manualmeshoperation(&(value.getattr("operation")?))?)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -18468,6 +18766,64 @@ pub fn measure_topologyreplacement(value: &Bound<'_, PyAny>) -> PyResult<usize> 
             }
             bytes
         }))
+}
+
+pub fn measure_sourceref(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
+}
+
+pub fn measure_manualmeshoperation(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "insert_vertex" => Ok(256usize
+            .saturating_add(16usize)
+            .saturating_add(measure_vec2(&(value.getattr("uv")?))?)),
+        "insert_connected_vertex" => Ok(256usize
+            .saturating_add(16usize)
+            .saturating_add(16usize)
+            .saturating_add(measure_vec2(&(value.getattr("uv")?))?)),
+        "delete_edge" => Ok(256usize.saturating_add(16usize).saturating_add(16usize)),
+        "move_vertices" => Ok(256usize
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("targets")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(measure_manualvertextarget(&(v0))?);
+                }
+                bytes
+            })
+            .saturating_add(if (value.getattr("motion_from")?).is_none() {
+                0usize
+            } else {
+                {
+                    let mut bytes = 64usize;
+                    for value in (value.getattr("motion_from")?).try_iter()? {
+                        let v0 = value?;
+                        bytes = bytes.saturating_add(measure_manualvertextarget(&(v0))?);
+                    }
+                    bytes
+                }
+            })),
+        "delete_vertices" => Ok(256usize.saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("ids")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(16usize);
+            }
+            bytes
+        })),
+        "constrain_edge" => Ok(256usize.saturating_add(16usize).saturating_add(16usize)),
+        "release_constraint" => Ok(256usize.saturating_add(16usize).saturating_add(16usize)),
+        "reconnect" => Ok(256usize),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_manualvertextarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(measure_vec2(&(value.getattr("uv")?))?))
 }
 
 pub fn measure_modelingintent(value: &Bound<'_, PyAny>) -> PyResult<usize> {

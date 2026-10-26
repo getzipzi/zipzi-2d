@@ -63,6 +63,7 @@ def render_modeling(contract, header, rust_header):
     def member(v):return re.sub(r'(?<!^)(?=[A-Z])','_',v['rust_name']).upper()
     def typ(s):
         k=s['kind']
+        if k=='opaque' and nm(s)=='SourceRef':return '_Source'
         if k in {'u8','u16','u32','u64','usize','i32','i64'}:return 'int'
         if k in {'f32','f64'}:return 'float'
         if k in {'string','bool','bytes','json'}:return dict(string='str',bool='bool',bytes='bytes',json='ExtensionValue')[k]
@@ -164,7 +165,7 @@ def render_modeling(contract, header, rust_header):
     for s in shapes.values():
         if nm(s)=='ModelingIntent' or s['name'] not in public_shapes: continue
         if s['kind']=='opaque':
-            if nm(s)!='Version':raise ValueError('Unselected opaque modeling type')
+            if nm(s) not in {'Version','SourceRef'}:raise ValueError('Unselected opaque modeling type')
             continue
         if unit(s):
             py.extend(['class '+nm(s)+'(str, Enum):','    __module__ = "zipzi.modeling"'])
@@ -177,6 +178,9 @@ def render_modeling(contract, header, rust_header):
     for s in shapes.values():
         if nm(s)=='ModelingIntent' or s['name'] not in public_shapes: continue
         n=nm(s);fs=fields(s)
+        if s['kind']=='opaque' and n=='SourceRef':
+            py+=['def validate_SourceRef(value: _Source) -> None:', '    if not isinstance(value, _Source): raise TypeError("Expected Source")', '', 'def encode_SourceRef(value: _Source) -> object:', '    return value._wire()', '', 'def read_SourceRef(value: object) -> _Source:', '    return value if isinstance(value, _Source) else _Source._read(value)', '']
+            continue
         if s['kind']=='opaque':
             py+=['def validate_Version(value: Version) -> None:', '    if not isinstance(value, Version): raise TypeError(\"Expected Version\")', '', 'def encode_Version(value: Version) -> object:', '    return dict(session_id=value.session_id, generation=value.generation, revision=value.revision)', '', 'def read_Version(value: object) -> Version:', '    return Version.read(value)', '']
             continue
@@ -265,6 +269,9 @@ def render_modeling(contract, header, rust_header):
     rust=[rust_header.rstrip(),'#![allow(dead_code, unused_variables, unused_parens)]','use pyo3::BoundObject;','use crate::*;','use crate::extension_bridge::{read_extension,write_extension};','']
     for s in shapes.values():
         n=path(s);fs=fields(s);read_start=len(rust)
+        if s['kind']=='opaque' and nm(s)=='SourceRef':
+            rust += ["pub fn read_sourceref(value: &Bound<'_, PyAny>) -> PyResult<SourceRef> { crate::modeling_bridge::read_source(value) }", "pub fn write_sourceref(py: Python<'_>, value: &SourceRef) -> PyResult<Py<PyAny>> { Ok(PyModule::import(py, \"zipzi._values\")?.getattr(\"Source\")?.call_method1(\"_read\", (source(py, *value)?,))?.unbind()) }"]
+            continue
         if s['kind']=='opaque':
             rust += ['pub fn read_version(value: &Bound<\'_ , PyAny>) -> PyResult<zipzi_sdk::Version> { Ok(zipzi_sdk::Version {session_id:value.getattr(\"session_id\")?.extract()?,generation:value.getattr(\"generation\")?.extract()?,revision:value.getattr(\"revision\")?.extract()?}) }', 'pub fn write_version(py:Python<\'_>, value:&zipzi_sdk::Version)->PyResult<Py<PyAny>> {Ok(PyModule::import(py,"zipzi._values")?.getattr("Version")?.call1((value.session_id,value.generation,value.revision))?.unbind())}']
             continue
@@ -370,6 +377,7 @@ def render_modeling(contract, header, rust_header):
     py.insert(3, 'from collections.abc import Mapping as _Mapping')
     py.insert(4, 'from .._values import Version as _Version')
     py.insert(5, 'from builtins import bytes as _Bytes')
+    py.insert(6, 'from .._values import Source as _Source')
     for index,line in enumerate(py):
         if line.startswith('from typing import ClassVar,'):py[index]=line.replace('ClassVar, ','')
         if re.match(r'    [A-Za-z_]\w*:',line):

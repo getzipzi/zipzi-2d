@@ -9,11 +9,11 @@ from ._generated.modeling import __all__ as __all__
 
 from typing import ClassVar as _ClassVar
 from collections.abc import Mapping as _Mapping
-from ._values import Version as _Version
+from ._values import Version as _Version, Source as _Source
 from ._extensions import ExtensionValue as ExtensionValue
 
 # Resolve postponed annotations through the same private aliases as their declaring module.
-_ANNOTATION_TYPES = (_ClassVar, _Mapping, _Version)
+_ANNOTATION_TYPES = (_ClassVar, _Mapping, _Version, _Source)
 
 from builtins import bytes as _Bytes
 _ANNOTATION_BYTES = _Bytes

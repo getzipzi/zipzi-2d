@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-p3a-345-1; client source SHA-256 b7d7e3d76a2c6828fcf5c2f1584785ca8e1435eff28912e9f6e4de2f8085854d.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-manual-mesh-1; client source SHA-256 277463dfbd692466a149d43d3dcce59e091f717cec2f88ba661d9f023afe321a.
 
 
 ## zipzi.ApiDescription
@@ -8070,6 +8070,277 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Immutable typed value. See field semantics and the linked workflow.
 
 
+## zipzi.modeling.ManualMeshOperation
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.ManualMeshOperationConstrainEdge
+
+`(a: int, b: int)`
+
+Immutable owned ManualMeshOperationConstrainEdge value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+a: First endpoint identity of the fixed edge.
+b: Second endpoint identity of the fixed edge.
+
+- `a`: First endpoint identity of the fixed edge.
+- `b`: Second endpoint identity of the fixed edge.
+
+## zipzi.modeling.ManualMeshOperationConstrainEdge.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshOperationConstrainEdge.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualMeshOperationDeleteEdge
+
+`(a: int, b: int)`
+
+Immutable owned ManualMeshOperationDeleteEdge value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+a: First endpoint identity of the edge to remove.
+b: Second endpoint identity of the edge to remove.
+
+- `a`: First endpoint identity of the edge to remove.
+- `b`: Second endpoint identity of the edge to remove.
+
+## zipzi.modeling.ManualMeshOperationDeleteEdge.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshOperationDeleteEdge.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualMeshOperationDeleteVertices
+
+`(ids: tuple[int, ...])`
+
+Immutable owned ManualMeshOperationDeleteVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+ids: Persistent vertex identities to remove atomically.
+
+- `ids`: Persistent vertex identities to remove atomically.
+
+## zipzi.modeling.ManualMeshOperationDeleteVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshOperationDeleteVertices.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualMeshOperationInsertConnectedVertex
+
+`(from_: int, id: int, uv: Vec2)`
+
+Immutable owned ManualMeshOperationInsertConnectedVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+from_: Existing vertex identity to connect to the inserted vertex.
+id: Fresh vertex identity that has not been used by a cancelled candidate.
+uv: Absolute UV position of the new vertex.
+
+- `from_`: Existing vertex identity to connect to the inserted vertex.
+- `id`: Fresh vertex identity that has not been used by a cancelled candidate.
+- `uv`: Absolute UV position of the new vertex.
+
+## zipzi.modeling.ManualMeshOperationInsertConnectedVertex.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshOperationInsertConnectedVertex.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualMeshOperationInsertVertex
+
+`(id: int, uv: Vec2)`
+
+Immutable owned ManualMeshOperationInsertVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Fresh vertex identity that has not been used by a cancelled candidate.
+uv: Absolute UV position of the new vertex.
+
+- `id`: Fresh vertex identity that has not been used by a cancelled candidate.
+- `uv`: Absolute UV position of the new vertex.
+
+## zipzi.modeling.ManualMeshOperationInsertVertex.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshOperationInsertVertex.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualMeshOperationMoveVertices
+
+`(targets: tuple[ManualVertexTarget, ...], motion_from: tuple[ManualVertexTarget, ...] | None = None)`
+
+Immutable owned ManualMeshOperationMoveVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+targets: Absolute UV targets keyed by persistent mesh vertex identities.
+motion_from: Last accepted preview positions for swept crossing checks; None uses source positions.
+
+- `targets`: Absolute UV targets keyed by persistent mesh vertex identities.
+- `motion_from`: Last accepted preview positions for swept crossing checks; None uses source positions.
+
+## zipzi.modeling.ManualMeshOperationMoveVertices.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshOperationMoveVertices.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualMeshOperationReconnect
+
+`()`
+
+Immutable owned ManualMeshOperationReconnect value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.ManualMeshOperationReconnect.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshOperationReconnect.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualMeshOperationReleaseConstraint
+
+`(a: int, b: int)`
+
+Immutable owned ManualMeshOperationReleaseConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+a: First endpoint identity of the constraint to release.
+b: Second endpoint identity of the constraint to release.
+
+- `a`: First endpoint identity of the constraint to release.
+- `b`: Second endpoint identity of the constraint to release.
+
+## zipzi.modeling.ManualMeshOperationReleaseConstraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshOperationReleaseConstraint.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualVertexTarget
+
+`(id: int, uv: Vec2)`
+
+Immutable owned ManualVertexTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+id: Stable vertex identity in the edited mesh, not its array index.
+uv: Absolute target UV coordinate in the mesh texture domain.
+
+- `id`: Stable vertex identity in the edited mesh, not its array index.
+- `uv`: Absolute target UV coordinate in the mesh texture domain.
+
+## zipzi.modeling.ManualVertexTarget.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualVertexTarget.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.Mesh
 
 `(id: str, name: str, texture_asset_id: SceneReference, vertex_ids: tuple[int, ...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, runtime_id: str, part_id: str, deformer_id: str, appearance: Appearance, draw_order: float | None = None, blend_mode: BlendMode, enabled: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...], raw_blend_mode: int | None = None)`
@@ -9298,6 +9569,40 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ModelingCommandEraseObject.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ModelingCommandManualMesh
+
+`(mesh_id: str, expected: _Source, operation: ManualMeshOperation)`
+
+Immutable owned ModelingCommandManualMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+mesh_id: Stable mesh UUID whose editable UV triangulation is changed.
+expected: Exact candidate source before this operation; submit it alone in a batch.
+operation: Atomic UV topology intent; the SDK preserves dependent geometry and identities.
+kind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+- `mesh_id`: Stable mesh UUID whose editable UV triangulation is changed.
+- `expected`: Exact candidate source before this operation; submit it alone in a batch.
+- `operation`: Atomic UV topology intent; the SDK preserves dependent geometry and identities.
+- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+
+## zipzi.modeling.ModelingCommandManualMesh.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ModelingCommandManualMesh.summary
 
 `() -> str`
 

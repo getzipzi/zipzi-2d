@@ -18,7 +18,7 @@ from .._values import ConnectionInfo, SessionId, Source, record, sequence
 from . import JobKind
 from ._transfers import Transfer
 
-CONTRACT = "zipzi-runtime-p3a-345-1"
+CONTRACT = "zipzi-runtime-manual-mesh-1"
 MAX_FRAME = 16 << 20
 MAX_BINARY_CHUNK = 1 << 20
 MAX_BINARY_HEADER = 16 << 10

@@ -237,8 +237,11 @@ pub enum ModelingCommand {
         replacement: zipzi_sdk::TopologyReplacement,
     },
     ManualMesh {
+        /// Stable mesh UUID whose editable UV triangulation is changed.
         mesh_id: String,
+        /// Exact candidate source before this operation; submit it alone in a batch.
         expected: crate::SourceRef,
+        /// Atomic UV topology intent; the SDK preserves dependent geometry and identities.
         operation: zipzi_sdk::ManualMeshOperation,
     },
 }

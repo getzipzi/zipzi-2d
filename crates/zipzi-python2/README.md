@@ -378,7 +378,7 @@ release their tables. Every create/read/plan/close retains its own recovery owne
 
 ## Complete Runtime R4 routes
 
-The native pairing contract is `zipzi-python2-14`; IPC is `zipzi-runtime-p3a-345-1`.
+The native pairing contract is `zipzi-python2-manual-mesh-1`; IPC is `zipzi-runtime-manual-mesh-1`.
 Rebuild both adapters and hosts after contract changes. Compiled Rust serde
 shapes generate `zipzi.modeling`, native constructors/writers and the binary
 array codec. `edit.apply` accepts the full `ModelingCommand` family, including

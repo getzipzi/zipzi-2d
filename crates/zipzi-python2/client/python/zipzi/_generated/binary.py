@@ -117,7 +117,7 @@ class Reader:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
 
-INPUT_SIGNATURE = 'b91f5e3957fbc18897bd0ac033fe8f18'
+INPUT_SIGNATURE = 'f6f82a33891ec7e69d6bd66acda4d31b'
 MESH_SIGNATURE = '6f011cf86dfd4d3f0ee05751e6a6cc13'
 BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
 SAMPLE_SIGNATURE = '33cfb73ff96616c25d9d5f06db944d7e'
@@ -280,6 +280,11 @@ def _write_modelingcommand(value: object, w: Writer) -> None:
         w.u32(42)
         _write_geometrysnapshot(_field(value, 'source'), w)
         _write_topologyreplacement(_field(value, 'replacement'), w)
+    elif tag=='manual_mesh':
+        w.u32(43)
+        w.text(_field(value, 'mesh_id'))
+        _write_sourceref(_field(value, 'expected'), w)
+        _write_manualmeshoperation(_field(value, 'operation'), w)
     else:
         raise TypeError("Unexpected ModelingCommand variant")
 
@@ -2643,6 +2648,79 @@ def _write_topologyreplacement(value: object, w: Writer) -> None:
             w.raw(b"\1")
             w.scalar('I', value0)
 
+def _write_sourceref(value: object, w: Writer) -> None:
+    if not isinstance(value, Source): raise TypeError("Expected Source")
+    w.u32(0 if value.edit is None else 1)
+    runtime=UUID(value.runtime).bytes
+    w.raw(runtime); w.scalar("Q", value.session)
+    if value.edit is not None:
+        w.raw(runtime); w.scalar("Q", value.edit)
+    _write_version(value.version, w)
+    if value.edit is not None: w.scalar("Q", value.sequence)
+
+def _read_sourceref(r: Reader) -> Source:
+    tag=r.u32()
+    runtime=str(UUID(bytes=bytes(r.take(16)))); session=integer(r.scalar("Q"))
+    edit=None
+    if tag==1:
+        if str(UUID(bytes=bytes(r.take(16))))!=runtime: raise ValueError("Mixed source runtimes")
+        edit=integer(r.scalar("Q"))
+    elif tag!=0: raise ValueError("Unknown source variant")
+    version=Version(integer(r.scalar("Q")),integer(r.scalar("Q")),integer(r.scalar("Q")))
+    sequence=integer(r.scalar("Q")) if tag==1 else 0
+    return Source(runtime,session,version,edit,sequence)
+
+def _write_manualmeshoperation(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='insert_vertex':
+        w.u32(0)
+        w.scalar('I', _field(value, 'id'))
+        _write_vec2(_field(value, 'uv'), w)
+    elif tag=='insert_connected_vertex':
+        w.u32(1)
+        w.scalar('I', _field(value, 'from_'))
+        w.scalar('I', _field(value, 'id'))
+        _write_vec2(_field(value, 'uv'), w)
+    elif tag=='delete_edge':
+        w.u32(2)
+        w.scalar('I', _field(value, 'a'))
+        w.scalar('I', _field(value, 'b'))
+    elif tag=='move_vertices':
+        w.u32(3)
+        items0=sequence(_field(value, 'targets'))
+        w.u32(len(items0))
+        for item0 in items0:
+            _write_manualvertextarget(item0, w)
+        if _field(value, 'motion_from') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            items0=sequence(_field(value, 'motion_from'))
+            w.u32(len(items0))
+            for item0 in items0:
+                _write_manualvertextarget(item0, w)
+    elif tag=='delete_vertices':
+        w.u32(4)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        w.numeric('I', tuple(items0))
+    elif tag=='constrain_edge':
+        w.u32(5)
+        w.scalar('I', _field(value, 'a'))
+        w.scalar('I', _field(value, 'b'))
+    elif tag=='release_constraint':
+        w.u32(6)
+        w.scalar('I', _field(value, 'a'))
+        w.scalar('I', _field(value, 'b'))
+    elif tag=='reconnect':
+        w.u32(7)
+    else:
+        raise TypeError("Unexpected ManualMeshOperation variant")
+
+def _write_manualvertextarget(value: object, w: Writer) -> None:
+    w.scalar('I', _field(value, 'id'))
+    _write_vec2(_field(value, 'uv'), w)
+
 def _write_sceneoperation(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     tag=tag.removeprefix("scene_")
@@ -3349,18 +3427,6 @@ def _read_geometrydiagnostickind(r: Reader) -> m.GeometryDiagnosticKind:
 
 def _read_meshsnapshot(r: Reader) -> Snapshot[meshes.Mesh]:
     return Snapshot(_read_sourceref(r), meshes.Mesh(id=r.text(), name=r.text(), geometry=_read_meshgeometry(r)))
-
-def _read_sourceref(r: Reader) -> Source:
-    tag=r.u32()
-    runtime=str(UUID(bytes=bytes(r.take(16)))); session=integer(r.scalar("Q"))
-    edit=None
-    if tag==1:
-        if str(UUID(bytes=bytes(r.take(16))))!=runtime: raise ValueError("Mixed source runtimes")
-        edit=integer(r.scalar("Q"))
-    elif tag!=0: raise ValueError("Unknown source variant")
-    version=Version(integer(r.scalar("Q")),integer(r.scalar("Q")),integer(r.scalar("Q")))
-    sequence=integer(r.scalar("Q")) if tag==1 else 0
-    return Source(runtime,session,version,edit,sequence)
 
 def _read_imagesnapshot(r: Reader) -> Snapshot[resources.Image]:
     return Snapshot(_read_sourceref(r), resources.Image(id=r.text(), name=r.text(), pixels=_read_imagepixels(r)))

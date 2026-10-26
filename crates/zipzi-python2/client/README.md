@@ -15,7 +15,7 @@ again. `job.wait(timeout=None)` waits until terminal; a finite timeout raises
 `JobTimeout` while the accepted Job remains usable. Close an unresolved Runtime
 only after recovery or with explicit `abandon_pending=True`.
 
-The native/host pairing is `zipzi-python2-14` / `zipzi-runtime-p3a-345-1`; rebuild
+The native/host pairing is `zipzi-python2-manual-mesh-1` / `zipzi-runtime-manual-mesh-1`; rebuild
 adapters and hosts together after a contract change.
 
 See the [package source](https://github.com/getzipzi/zipzi-2d/tree/main/crates/zipzi-python2)

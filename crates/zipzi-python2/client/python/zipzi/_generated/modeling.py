@@ -5,6 +5,7 @@ from typing import ClassVar as _ClassVar
 from collections.abc import Mapping as _Mapping
 from .._values import Version as _Version
 from builtins import bytes as _Bytes
+from .._values import Source as _Source
 from dataclasses import dataclass, field
 from enum import Enum
 from collections.abc import Mapping
@@ -510,7 +511,22 @@ class ModelingCommandReplaceTopology(CompactValue):
         object.__setattr__(self, 'replacement', self.replacement)
 ModelingCommandReplaceTopology.__module__ = "zipzi.modeling"
 
-ModelingCommand: TypeAlias = ModelingCommandCreateAsset | ModelingCommandReplaceAsset | ModelingCommandCreateMesh | ModelingCommandReplaceMesh | ModelingCommandCreateParameter | ModelingCommandReplaceParameter | ModelingCommandCreatePart | ModelingCommandReplacePart | ModelingCommandCreateTransform | ModelingCommandReplaceTransform | ModelingCommandCreateBinding | ModelingCommandReplaceBinding | ModelingCommandCreateSceneBinding | ModelingCommandReplaceSceneBinding | ModelingCommandCreateBlendKeyTable | ModelingCommandReplaceBlendKeyTable | ModelingCommandCreateBlendConstraint | ModelingCommandReplaceBlendConstraint | ModelingCommandCreateBlendBinding | ModelingCommandReplaceBlendBinding | ModelingCommandCreateGlue | ModelingCommandReplaceGlue | ModelingCommandCreateOffscreen | ModelingCommandReplaceOffscreen | ModelingCommandScene | ModelingCommandOrganization | ModelingCommandBinding | ModelingCommandContent | ModelingCommandReferences | ModelingCommandResource | ModelingCommandDocument | ModelingCommandAttachment | ModelingCommandReplaceModelSetup | ModelingCommandReplaceHierarchyOrder | ModelingCommandReplaceEditorState | ModelingCommandReplaceDrawOrderGroups | ModelingCommandEraseObject | ModelingCommandRenameMesh | ModelingCommandUpdatePositions | ModelingCommandSetMeshKeyform | ModelingCommandSetSceneKeyform | ModelingCommandRemeshRectangleGrid | ModelingCommandReplaceTopology
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ModelingCommandManualMesh(CompactValue):
+    'Immutable owned ModelingCommandManualMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable mesh UUID whose editable UV triangulation is changed.\nexpected: Exact candidate source before this operation; submit it alone in a batch.\noperation: Atomic UV topology intent; the SDK preserves dependent geometry and identities.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    _variant: _ClassVar[str] = 'manual_mesh'
+    kind: _ClassVar[str] = "modeling"
+    mesh_id: str
+    expected: _Source
+    operation: ManualMeshOperation
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'mesh_id', self.mesh_id)
+        object.__setattr__(self, 'expected', self.expected)
+        object.__setattr__(self, 'operation', self.operation)
+ModelingCommandManualMesh.__module__ = "zipzi.modeling"
+
+ModelingCommand: TypeAlias = ModelingCommandCreateAsset | ModelingCommandReplaceAsset | ModelingCommandCreateMesh | ModelingCommandReplaceMesh | ModelingCommandCreateParameter | ModelingCommandReplaceParameter | ModelingCommandCreatePart | ModelingCommandReplacePart | ModelingCommandCreateTransform | ModelingCommandReplaceTransform | ModelingCommandCreateBinding | ModelingCommandReplaceBinding | ModelingCommandCreateSceneBinding | ModelingCommandReplaceSceneBinding | ModelingCommandCreateBlendKeyTable | ModelingCommandReplaceBlendKeyTable | ModelingCommandCreateBlendConstraint | ModelingCommandReplaceBlendConstraint | ModelingCommandCreateBlendBinding | ModelingCommandReplaceBlendBinding | ModelingCommandCreateGlue | ModelingCommandReplaceGlue | ModelingCommandCreateOffscreen | ModelingCommandReplaceOffscreen | ModelingCommandScene | ModelingCommandOrganization | ModelingCommandBinding | ModelingCommandContent | ModelingCommandReferences | ModelingCommandResource | ModelingCommandDocument | ModelingCommandAttachment | ModelingCommandReplaceModelSetup | ModelingCommandReplaceHierarchyOrder | ModelingCommandReplaceEditorState | ModelingCommandReplaceDrawOrderGroups | ModelingCommandEraseObject | ModelingCommandRenameMesh | ModelingCommandUpdatePositions | ModelingCommandSetMeshKeyform | ModelingCommandSetSceneKeyform | ModelingCommandRemeshRectangleGrid | ModelingCommandReplaceTopology | ModelingCommandManualMesh
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ImageAsset(CompactValue):
@@ -3701,6 +3717,109 @@ class TopologyReplacement(CompactValue):
 TopologyReplacement.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class ManualMeshOperationInsertVertex(CompactValue):
+    'Immutable owned ManualMeshOperationInsertVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Fresh vertex identity that has not been used by a cancelled candidate.\nuv: Absolute UV position of the new vertex.'
+    _variant: _ClassVar[str] = 'insert_vertex'
+    id: int
+    uv: Vec2
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'uv', self.uv)
+ManualMeshOperationInsertVertex.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ManualMeshOperationInsertConnectedVertex(CompactValue):
+    'Immutable owned ManualMeshOperationInsertConnectedVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfrom_: Existing vertex identity to connect to the inserted vertex.\nid: Fresh vertex identity that has not been used by a cancelled candidate.\nuv: Absolute UV position of the new vertex.'
+    _variant: _ClassVar[str] = 'insert_connected_vertex'
+    from_: int
+    id: int
+    uv: Vec2
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'from_', self.from_)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'uv', self.uv)
+ManualMeshOperationInsertConnectedVertex.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ManualMeshOperationDeleteEdge(CompactValue):
+    'Immutable owned ManualMeshOperationDeleteEdge value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\na: First endpoint identity of the edge to remove.\nb: Second endpoint identity of the edge to remove.'
+    _variant: _ClassVar[str] = 'delete_edge'
+    a: int
+    b: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'a', self.a)
+        object.__setattr__(self, 'b', self.b)
+ManualMeshOperationDeleteEdge.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ManualMeshOperationMoveVertices(CompactValue):
+    'Immutable owned ManualMeshOperationMoveVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntargets: Absolute UV targets keyed by persistent mesh vertex identities.\nmotion_from: Last accepted preview positions for swept crossing checks; None uses source positions.'
+    _variant: _ClassVar[str] = 'move_vertices'
+    targets: tuple[ManualVertexTarget, ...]
+    motion_from: (tuple[ManualVertexTarget, ...] | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'targets', tuple(self.targets))
+        object.__setattr__(self, 'motion_from', None if self.motion_from is None else tuple(self.motion_from))
+ManualMeshOperationMoveVertices.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ManualMeshOperationDeleteVertices(CompactValue):
+    'Immutable owned ManualMeshOperationDeleteVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Persistent vertex identities to remove atomically.'
+    _variant: _ClassVar[str] = 'delete_vertices'
+    ids: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'ids', tuple(self.ids))
+ManualMeshOperationDeleteVertices.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ManualMeshOperationConstrainEdge(CompactValue):
+    'Immutable owned ManualMeshOperationConstrainEdge value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\na: First endpoint identity of the fixed edge.\nb: Second endpoint identity of the fixed edge.'
+    _variant: _ClassVar[str] = 'constrain_edge'
+    a: int
+    b: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'a', self.a)
+        object.__setattr__(self, 'b', self.b)
+ManualMeshOperationConstrainEdge.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ManualMeshOperationReleaseConstraint(CompactValue):
+    'Immutable owned ManualMeshOperationReleaseConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\na: First endpoint identity of the constraint to release.\nb: Second endpoint identity of the constraint to release.'
+    _variant: _ClassVar[str] = 'release_constraint'
+    a: int
+    b: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'a', self.a)
+        object.__setattr__(self, 'b', self.b)
+ManualMeshOperationReleaseConstraint.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ManualMeshOperationReconnect(CompactValue):
+    'Immutable owned ManualMeshOperationReconnect value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'reconnect'
+ManualMeshOperationReconnect.__module__ = "zipzi.modeling"
+
+ManualMeshOperation: TypeAlias = ManualMeshOperationInsertVertex | ManualMeshOperationInsertConnectedVertex | ManualMeshOperationDeleteEdge | ManualMeshOperationMoveVertices | ManualMeshOperationDeleteVertices | ManualMeshOperationConstrainEdge | ManualMeshOperationReleaseConstraint | ManualMeshOperationReconnect
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ManualVertexTarget(CompactValue):
+    'Immutable owned ManualVertexTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable vertex identity in the edited mesh, not its array index.\nuv: Absolute target UV coordinate in the mesh texture domain.'
+    id: int
+    uv: Vec2
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'uv', self.uv)
+ManualVertexTarget.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingQuery(CompactValue):
     'Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nassets: Explicit IDs of image assets to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nmeshes: Explicit IDs of meshes to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparameters: Explicit IDs of parameters to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparts: Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,\nwhile collection IDs remain discoverable.\ntransforms: Explicit IDs of deformation transforms to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nbindings: Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nscene_bindings: Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nblend_key_tables: Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_constraints: Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_bindings: Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nglues: Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\noffscreens: Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests\nno payloads, while collection IDs remain discoverable.\nparameter_groups: Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nattachments: Explicit IDs of package attachments to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.'
     assets: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
@@ -5227,6 +5346,11 @@ def validate_ModelingCommand(value: ModelingCommand) -> None:
     elif isinstance(value, ModelingCommandReplaceTopology):
         validate_GeometrySnapshot(value.source)
         validate_TopologyReplacement(value.replacement)
+    elif isinstance(value, ModelingCommandManualMesh):
+        if not isinstance(value.mesh_id, str):
+            raise ValueError("Expected string")
+        validate_SourceRef(value.expected)
+        validate_ManualMeshOperation(value.operation)
     else:
         raise TypeError("Expected ModelingCommand")
 
@@ -5317,10 +5441,12 @@ def encode_ModelingCommand(value: ModelingCommand) -> object:
         return {'op': 'remesh_rectangle_grid', **cast(Mapping[str, object], {'id': value.id, 'columns': value.columns, 'rows': value.rows})}
     elif isinstance(value, ModelingCommandReplaceTopology):
         return {'op': 'replace_topology', **cast(Mapping[str, object], {'source': encode_GeometrySnapshot(value.source), 'replacement': encode_TopologyReplacement(value.replacement)})}
+    elif isinstance(value, ModelingCommandManualMesh):
+        return {'op': 'manual_mesh', **cast(Mapping[str, object], {'mesh_id': value.mesh_id, 'expected': encode_SourceRef(value.expected), 'operation': encode_ManualMeshOperation(value.operation)})}
     raise TypeError("Expected ModelingCommand")
 
 def read_ModelingCommand(value: object) -> ModelingCommand:
-    if isinstance(value, (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology,)): return value
+    if isinstance(value, (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology, ModelingCommandManualMesh,)): return value
     r = record(value)
     tag = string(r['op'])
     if tag == 'create_asset':
@@ -5452,6 +5578,9 @@ def read_ModelingCommand(value: object) -> ModelingCommand:
     elif tag == 'replace_topology':
         f = record(r)
         return ModelingCommandReplaceTopology(source=read_GeometrySnapshot(f['source']), replacement=read_TopologyReplacement(f['replacement']))
+    elif tag == 'manual_mesh':
+        f = record(r)
+        return ModelingCommandManualMesh(mesh_id=string(f['mesh_id']), expected=read_SourceRef(f['expected']), operation=read_ManualMeshOperation(f['operation']))
     raise ValueError("Unknown ModelingCommand variant")
 
 def validate_ImageAsset(value: ImageAsset) -> None:
@@ -9371,6 +9500,125 @@ def read_TopologyReplacement(value: object) -> TopologyReplacement:
     r = record(value)
     return TopologyReplacement(mesh=read_Mesh(r['mesh']), binding=None if r.get('binding', None) is None else read_MeshBinding(r.get('binding', None)), blend_bindings=tuple(read_BlendShapeBinding(v0) for v0 in sequence(r['blend_bindings'])), glues=tuple(read_Glue(v0) for v0 in sequence(r['glues'])), vertex_mapping={int(key0): None if v0 is None else integer(v0) for key0, v0 in record(r['vertex_mapping']).items()})
 
+def validate_SourceRef(value: _Source) -> None:
+    if not isinstance(value, _Source): raise TypeError("Expected Source")
+
+def encode_SourceRef(value: _Source) -> object:
+    return value._wire()
+
+def read_SourceRef(value: object) -> _Source:
+    return value if isinstance(value, _Source) else _Source._read(value)
+
+def validate_ManualMeshOperation(value: ManualMeshOperation) -> None:
+    if isinstance(value, ManualMeshOperationInsertVertex):
+        if type(value.id) is not int or not 0 <= value.id < 4294967296:
+            raise ValueError("Expected u32")
+        validate_Vec2(value.uv)
+    elif isinstance(value, ManualMeshOperationInsertConnectedVertex):
+        if type(value.from_) is not int or not 0 <= value.from_ < 4294967296:
+            raise ValueError("Expected u32")
+        if type(value.id) is not int or not 0 <= value.id < 4294967296:
+            raise ValueError("Expected u32")
+        validate_Vec2(value.uv)
+    elif isinstance(value, ManualMeshOperationDeleteEdge):
+        if type(value.a) is not int or not 0 <= value.a < 4294967296:
+            raise ValueError("Expected u32")
+        if type(value.b) is not int or not 0 <= value.b < 4294967296:
+            raise ValueError("Expected u32")
+    elif isinstance(value, ManualMeshOperationMoveVertices):
+        if not isinstance(value.targets, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.targets:
+            validate_ManualVertexTarget(v0)
+        if value.motion_from is not None:
+            if not isinstance(value.motion_from, tuple):
+                raise TypeError("Expected an immutable tuple")
+            for v0 in value.motion_from:
+                validate_ManualVertexTarget(v0)
+    elif isinstance(value, ManualMeshOperationDeleteVertices):
+        if not isinstance(value.ids, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.ids:
+            if type(v0) is not int or not 0 <= v0 < 4294967296:
+                raise ValueError("Expected u32")
+    elif isinstance(value, ManualMeshOperationConstrainEdge):
+        if type(value.a) is not int or not 0 <= value.a < 4294967296:
+            raise ValueError("Expected u32")
+        if type(value.b) is not int or not 0 <= value.b < 4294967296:
+            raise ValueError("Expected u32")
+    elif isinstance(value, ManualMeshOperationReleaseConstraint):
+        if type(value.a) is not int or not 0 <= value.a < 4294967296:
+            raise ValueError("Expected u32")
+        if type(value.b) is not int or not 0 <= value.b < 4294967296:
+            raise ValueError("Expected u32")
+    elif isinstance(value, ManualMeshOperationReconnect):
+        pass
+    else:
+        raise TypeError("Expected ManualMeshOperation")
+
+def encode_ManualMeshOperation(value: ManualMeshOperation) -> object:
+    if isinstance(value, ManualMeshOperationInsertVertex):
+        return {'op': 'insert_vertex', **cast(Mapping[str, object], {'id': value.id, 'uv': encode_Vec2(value.uv)})}
+    elif isinstance(value, ManualMeshOperationInsertConnectedVertex):
+        return {'op': 'insert_connected_vertex', **cast(Mapping[str, object], {'from': value.from_, 'id': value.id, 'uv': encode_Vec2(value.uv)})}
+    elif isinstance(value, ManualMeshOperationDeleteEdge):
+        return {'op': 'delete_edge', **cast(Mapping[str, object], {'a': value.a, 'b': value.b})}
+    elif isinstance(value, ManualMeshOperationMoveVertices):
+        return {'op': 'move_vertices', **cast(Mapping[str, object], {'targets': [encode_ManualVertexTarget(v0) for v0 in value.targets], 'motion_from': None if value.motion_from is None else [encode_ManualVertexTarget(v0) for v0 in value.motion_from]})}
+    elif isinstance(value, ManualMeshOperationDeleteVertices):
+        return {'op': 'delete_vertices', **cast(Mapping[str, object], {'ids': [v0 for v0 in value.ids]})}
+    elif isinstance(value, ManualMeshOperationConstrainEdge):
+        return {'op': 'constrain_edge', **cast(Mapping[str, object], {'a': value.a, 'b': value.b})}
+    elif isinstance(value, ManualMeshOperationReleaseConstraint):
+        return {'op': 'release_constraint', **cast(Mapping[str, object], {'a': value.a, 'b': value.b})}
+    elif isinstance(value, ManualMeshOperationReconnect):
+        return {'op': 'reconnect', **cast(Mapping[str, object], {})}
+    raise TypeError("Expected ManualMeshOperation")
+
+def read_ManualMeshOperation(value: object) -> ManualMeshOperation:
+    if isinstance(value, (ManualMeshOperationInsertVertex, ManualMeshOperationInsertConnectedVertex, ManualMeshOperationDeleteEdge, ManualMeshOperationMoveVertices, ManualMeshOperationDeleteVertices, ManualMeshOperationConstrainEdge, ManualMeshOperationReleaseConstraint, ManualMeshOperationReconnect,)): return value
+    r = record(value)
+    tag = string(r['op'])
+    if tag == 'insert_vertex':
+        f = record(r)
+        return ManualMeshOperationInsertVertex(id=integer(f['id']), uv=read_Vec2(f['uv']))
+    elif tag == 'insert_connected_vertex':
+        f = record(r)
+        return ManualMeshOperationInsertConnectedVertex(from_=integer(f['from']), id=integer(f['id']), uv=read_Vec2(f['uv']))
+    elif tag == 'delete_edge':
+        f = record(r)
+        return ManualMeshOperationDeleteEdge(a=integer(f['a']), b=integer(f['b']))
+    elif tag == 'move_vertices':
+        f = record(r)
+        return ManualMeshOperationMoveVertices(targets=tuple(read_ManualVertexTarget(v0) for v0 in sequence(f['targets'])), motion_from=None if f.get('motion_from', None) is None else tuple(read_ManualVertexTarget(v0) for v0 in sequence(f.get('motion_from', None))))
+    elif tag == 'delete_vertices':
+        f = record(r)
+        return ManualMeshOperationDeleteVertices(ids=tuple(integer(v0) for v0 in sequence(f['ids'])))
+    elif tag == 'constrain_edge':
+        f = record(r)
+        return ManualMeshOperationConstrainEdge(a=integer(f['a']), b=integer(f['b']))
+    elif tag == 'release_constraint':
+        f = record(r)
+        return ManualMeshOperationReleaseConstraint(a=integer(f['a']), b=integer(f['b']))
+    elif tag == 'reconnect':
+        return ManualMeshOperationReconnect()
+    raise ValueError("Unknown ManualMeshOperation variant")
+
+def validate_ManualVertexTarget(value: ManualVertexTarget) -> None:
+    if not isinstance(value, ManualVertexTarget):
+        raise TypeError("Expected ManualVertexTarget")
+    if type(value.id) is not int or not 0 <= value.id < 4294967296:
+        raise ValueError("Expected u32")
+    validate_Vec2(value.uv)
+
+def encode_ManualVertexTarget(value: ManualVertexTarget) -> object:
+    return {'id': value.id, 'uv': encode_Vec2(value.uv)}
+
+def read_ManualVertexTarget(value: object) -> ManualVertexTarget:
+    if isinstance(value, ManualVertexTarget): return value
+    r = record(value)
+    return ManualVertexTarget(id=integer(r['id']), uv=read_Vec2(r['uv']))
+
 def validate_ModelingQuery(value: ModelingQuery) -> None:
     if not isinstance(value, ModelingQuery):
         raise TypeError("Expected ModelingQuery")
@@ -11043,6 +11291,6 @@ def read_EditorContext(value: object) -> EditorContext:
     r = record(value)
     return EditorContext(version=read_Version(r['version']), view_id=string(r['view_id']), selected_ids=tuple(string(v0) for v0 in sequence(r['selected_ids'])), workspace=string(r['workspace']), editing_context=string(r['editing_context']), active_tool=string(r['active_tool']), pending_interaction=_boolean(r['pending_interaction']))
 
-OPERATION_TYPES = (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology,)
+OPERATION_TYPES = (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology, ModelingCommandManualMesh,)
 
-__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentStrategy', 'ReparentPlacement', 'ReparentContext', 'ConversionDomain', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'SceneKeyform', 'GeometrySpace', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'ExtensionValue']
+__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ModelingCommandManualMesh', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentStrategy', 'ReparentPlacement', 'ReparentContext', 'ConversionDomain', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ManualMeshOperationInsertVertex', 'ManualMeshOperationInsertConnectedVertex', 'ManualMeshOperationDeleteEdge', 'ManualMeshOperationMoveVertices', 'ManualMeshOperationDeleteVertices', 'ManualMeshOperationConstrainEdge', 'ManualMeshOperationReleaseConstraint', 'ManualMeshOperationReconnect', 'ManualVertexTarget', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'SceneKeyform', 'GeometrySpace', 'ManualMeshOperation', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'ExtensionValue']

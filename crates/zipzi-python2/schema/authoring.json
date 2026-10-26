@@ -77,7 +77,7 @@
       "name": "zipzi_runtime::authoring::ImageSnapshot"
     },
     "image_signature": "fbafcb840850220e3314b16301323be6",
-    "input_signature": "b91f5e3957fbc18897bd0ac033fe8f18",
+    "input_signature": "f6f82a33891ec7e69d6bd66acda4d31b",
     "inputs": [
       {
         "content": null,
@@ -19663,6 +19663,362 @@
             "form": "record",
             "name": "replace_topology",
             "rust_name": "ReplaceTopology"
+          },
+          {
+            "fields": [
+              {
+                "doc": "Stable mesh UUID whose editable UV triangulation is changed.",
+                "name": "mesh_id",
+                "rust_name": "mesh_id",
+                "shape": {
+                  "kind": "string"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Exact candidate source before this operation; submit it alone in a batch.",
+                "name": "expected",
+                "rust_name": "expected",
+                "shape": {
+                  "kind": "opaque",
+                  "name": "zipzi_runtime::types::SourceRef"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Atomic UV topology intent; the SDK preserves dependent geometry and identities.",
+                "name": "operation",
+                "rust_name": "operation",
+                "shape": {
+                  "content": null,
+                  "kind": "serde_enum",
+                  "name": "zipzi_sdk::manual_mesh::ManualMeshOperation",
+                  "tag": "op",
+                  "variants": [
+                    {
+                      "fields": [
+                        {
+                          "doc": "Fresh vertex identity that has not been used by a cancelled candidate.",
+                          "name": "id",
+                          "rust_name": "id",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Absolute UV position of the new vertex.",
+                          "name": "uv",
+                          "rust_name": "uv",
+                          "shape": {
+                            "fields": [
+                              {
+                                "default": null,
+                                "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                "name": "x",
+                                "shape": {
+                                  "kind": "f32"
+                                }
+                              },
+                              {
+                                "default": null,
+                                "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                "name": "y",
+                                "shape": {
+                                  "kind": "f32"
+                                }
+                              }
+                            ],
+                            "kind": "record",
+                            "name": "zipzi_core::types::Vec2"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "insert_vertex",
+                      "rust_name": "InsertVertex"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "Existing vertex identity to connect to the inserted vertex.",
+                          "name": "from",
+                          "rust_name": "from",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Fresh vertex identity that has not been used by a cancelled candidate.",
+                          "name": "id",
+                          "rust_name": "id",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Absolute UV position of the new vertex.",
+                          "name": "uv",
+                          "rust_name": "uv",
+                          "shape": {
+                            "fields": [
+                              {
+                                "default": null,
+                                "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                "name": "x",
+                                "shape": {
+                                  "kind": "f32"
+                                }
+                              },
+                              {
+                                "default": null,
+                                "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                "name": "y",
+                                "shape": {
+                                  "kind": "f32"
+                                }
+                              }
+                            ],
+                            "kind": "record",
+                            "name": "zipzi_core::types::Vec2"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "insert_connected_vertex",
+                      "rust_name": "InsertConnectedVertex"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "First endpoint identity of the edge to remove.",
+                          "name": "a",
+                          "rust_name": "a",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Second endpoint identity of the edge to remove.",
+                          "name": "b",
+                          "rust_name": "b",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "delete_edge",
+                      "rust_name": "DeleteEdge"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "Absolute UV targets keyed by persistent mesh vertex identities.",
+                          "name": "targets",
+                          "rust_name": "targets",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Stable vertex identity in the edited mesh, not its array index.",
+                                  "name": "id",
+                                  "rust_name": "id",
+                                  "shape": {
+                                    "kind": "u32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Absolute target UV coordinate in the mesh texture domain.",
+                                  "name": "uv",
+                                  "rust_name": "uv",
+                                  "shape": {
+                                    "fields": [
+                                      {
+                                        "default": null,
+                                        "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                        "name": "x",
+                                        "shape": {
+                                          "kind": "f32"
+                                        }
+                                      },
+                                      {
+                                        "default": null,
+                                        "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                        "name": "y",
+                                        "shape": {
+                                          "kind": "f32"
+                                        }
+                                      }
+                                    ],
+                                    "kind": "record",
+                                    "name": "zipzi_core::types::Vec2"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_sdk::manual_mesh::ManualVertexTarget",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": null,
+                          "doc": "Last accepted preview positions for swept crossing checks; None uses source positions.",
+                          "name": "motion_from",
+                          "rust_name": "motion_from",
+                          "shape": {
+                            "item": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Stable vertex identity in the edited mesh, not its array index.",
+                                    "name": "id",
+                                    "rust_name": "id",
+                                    "shape": {
+                                      "kind": "u32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Absolute target UV coordinate in the mesh texture domain.",
+                                    "name": "uv",
+                                    "rust_name": "uv",
+                                    "shape": {
+                                      "fields": [
+                                        {
+                                          "default": null,
+                                          "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                          "name": "x",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                          "name": "y",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        }
+                                      ],
+                                      "kind": "record",
+                                      "name": "zipzi_core::types::Vec2"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::manual_mesh::ManualVertexTarget",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "move_vertices",
+                      "rust_name": "MoveVertices"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "Persistent vertex identities to remove atomically.",
+                          "name": "ids",
+                          "rust_name": "ids",
+                          "shape": {
+                            "item": {
+                              "kind": "u32"
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "delete_vertices",
+                      "rust_name": "DeleteVertices"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "First endpoint identity of the fixed edge.",
+                          "name": "a",
+                          "rust_name": "a",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Second endpoint identity of the fixed edge.",
+                          "name": "b",
+                          "rust_name": "b",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "constrain_edge",
+                      "rust_name": "ConstrainEdge"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "First endpoint identity of the constraint to release.",
+                          "name": "a",
+                          "rust_name": "a",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Second endpoint identity of the constraint to release.",
+                          "name": "b",
+                          "rust_name": "b",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "release_constraint",
+                      "rust_name": "ReleaseConstraint"
+                    },
+                    {
+                      "fields": [],
+                      "form": "unit",
+                      "name": "reconnect",
+                      "rust_name": "Reconnect"
+                    }
+                  ]
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "manual_mesh",
+            "rust_name": "ManualMesh"
           }
         ]
       },
@@ -60716,6 +61072,362 @@
             "form": "record",
             "name": "replace_topology",
             "rust_name": "ReplaceTopology"
+          },
+          {
+            "fields": [
+              {
+                "doc": "Stable mesh UUID whose editable UV triangulation is changed.",
+                "name": "mesh_id",
+                "rust_name": "mesh_id",
+                "shape": {
+                  "kind": "string"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Exact candidate source before this operation; submit it alone in a batch.",
+                "name": "expected",
+                "rust_name": "expected",
+                "shape": {
+                  "kind": "opaque",
+                  "name": "zipzi_runtime::types::SourceRef"
+                },
+                "skip": false
+              },
+              {
+                "doc": "Atomic UV topology intent; the SDK preserves dependent geometry and identities.",
+                "name": "operation",
+                "rust_name": "operation",
+                "shape": {
+                  "content": null,
+                  "kind": "serde_enum",
+                  "name": "zipzi_sdk::manual_mesh::ManualMeshOperation",
+                  "tag": "op",
+                  "variants": [
+                    {
+                      "fields": [
+                        {
+                          "doc": "Fresh vertex identity that has not been used by a cancelled candidate.",
+                          "name": "id",
+                          "rust_name": "id",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Absolute UV position of the new vertex.",
+                          "name": "uv",
+                          "rust_name": "uv",
+                          "shape": {
+                            "fields": [
+                              {
+                                "default": null,
+                                "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                "name": "x",
+                                "shape": {
+                                  "kind": "f32"
+                                }
+                              },
+                              {
+                                "default": null,
+                                "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                "name": "y",
+                                "shape": {
+                                  "kind": "f32"
+                                }
+                              }
+                            ],
+                            "kind": "record",
+                            "name": "zipzi_core::types::Vec2"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "insert_vertex",
+                      "rust_name": "InsertVertex"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "Existing vertex identity to connect to the inserted vertex.",
+                          "name": "from",
+                          "rust_name": "from",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Fresh vertex identity that has not been used by a cancelled candidate.",
+                          "name": "id",
+                          "rust_name": "id",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Absolute UV position of the new vertex.",
+                          "name": "uv",
+                          "rust_name": "uv",
+                          "shape": {
+                            "fields": [
+                              {
+                                "default": null,
+                                "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                "name": "x",
+                                "shape": {
+                                  "kind": "f32"
+                                }
+                              },
+                              {
+                                "default": null,
+                                "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                "name": "y",
+                                "shape": {
+                                  "kind": "f32"
+                                }
+                              }
+                            ],
+                            "kind": "record",
+                            "name": "zipzi_core::types::Vec2"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "insert_connected_vertex",
+                      "rust_name": "InsertConnectedVertex"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "First endpoint identity of the edge to remove.",
+                          "name": "a",
+                          "rust_name": "a",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Second endpoint identity of the edge to remove.",
+                          "name": "b",
+                          "rust_name": "b",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "delete_edge",
+                      "rust_name": "DeleteEdge"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "Absolute UV targets keyed by persistent mesh vertex identities.",
+                          "name": "targets",
+                          "rust_name": "targets",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Stable vertex identity in the edited mesh, not its array index.",
+                                  "name": "id",
+                                  "rust_name": "id",
+                                  "shape": {
+                                    "kind": "u32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Absolute target UV coordinate in the mesh texture domain.",
+                                  "name": "uv",
+                                  "rust_name": "uv",
+                                  "shape": {
+                                    "fields": [
+                                      {
+                                        "default": null,
+                                        "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                        "name": "x",
+                                        "shape": {
+                                          "kind": "f32"
+                                        }
+                                      },
+                                      {
+                                        "default": null,
+                                        "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                        "name": "y",
+                                        "shape": {
+                                          "kind": "f32"
+                                        }
+                                      }
+                                    ],
+                                    "kind": "record",
+                                    "name": "zipzi_core::types::Vec2"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_sdk::manual_mesh::ManualVertexTarget",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": null,
+                          "doc": "Last accepted preview positions for swept crossing checks; None uses source positions.",
+                          "name": "motion_from",
+                          "rust_name": "motion_from",
+                          "shape": {
+                            "item": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Stable vertex identity in the edited mesh, not its array index.",
+                                    "name": "id",
+                                    "rust_name": "id",
+                                    "shape": {
+                                      "kind": "u32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Absolute target UV coordinate in the mesh texture domain.",
+                                    "name": "uv",
+                                    "rust_name": "uv",
+                                    "shape": {
+                                      "fields": [
+                                        {
+                                          "default": null,
+                                          "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                          "name": "x",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                          "name": "y",
+                                          "shape": {
+                                            "kind": "f32"
+                                          }
+                                        }
+                                      ],
+                                      "kind": "record",
+                                      "name": "zipzi_core::types::Vec2"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::manual_mesh::ManualVertexTarget",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "move_vertices",
+                      "rust_name": "MoveVertices"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "Persistent vertex identities to remove atomically.",
+                          "name": "ids",
+                          "rust_name": "ids",
+                          "shape": {
+                            "item": {
+                              "kind": "u32"
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "delete_vertices",
+                      "rust_name": "DeleteVertices"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "First endpoint identity of the fixed edge.",
+                          "name": "a",
+                          "rust_name": "a",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Second endpoint identity of the fixed edge.",
+                          "name": "b",
+                          "rust_name": "b",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "constrain_edge",
+                      "rust_name": "ConstrainEdge"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "doc": "First endpoint identity of the constraint to release.",
+                          "name": "a",
+                          "rust_name": "a",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Second endpoint identity of the constraint to release.",
+                          "name": "b",
+                          "rust_name": "b",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "form": "record",
+                      "name": "release_constraint",
+                      "rust_name": "ReleaseConstraint"
+                    },
+                    {
+                      "fields": [],
+                      "form": "unit",
+                      "name": "reconnect",
+                      "rust_name": "Reconnect"
+                    }
+                  ]
+                },
+                "skip": false
+              }
+            ],
+            "form": "record",
+            "name": "manual_mesh",
+            "rust_name": "ManualMesh"
           }
         ]
       },

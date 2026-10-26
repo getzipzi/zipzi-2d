@@ -186,7 +186,7 @@ continue via `Executor` and completion delivery. Terminal Job queries atomically
 transfer their results into the deduplicated request window and release Job slots.
 Request status queries do not advance the monotonic admission watermark.
 
-The current contract is `zipzi-runtime-p3a-345-1`: big-endian u32 length, UTF-8 JSON control
+The current contract is `zipzi-runtime-manual-mesh-1`: big-endian u32 length, UTF-8 JSON control
 frames (16 MiB maximum), strict handshake and runtime-scoped IDs. The high length
 bit selects binary framing: a bounded JSON header (16 KiB) plus at most 1 MiB raw
 payload. Each immutable blob is at most 256 MiB and SHA256 checked before use.

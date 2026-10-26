@@ -27,6 +27,34 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_manual_mesh_source_contract_and_existing_large_writes(self):
+        from zipzi._generated import binary, modeling as wire
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime=self.runtime(mode)
+                session=runtime.sessions.create(uid(1))
+                with session.edit("mesh") as edit:
+                    mesh=edit.meshes.create(meshes.MeshSpec("Mesh",GEOMETRY,id=uid(2)))
+                    captured=edit.meshes.get(mesh).source
+                    operation=m.ModelingCommandManualMesh(mesh_id=mesh,expected=captured,
+                        operation=m.ManualMeshOperationInsertVertex(id=100,uv=m.Vec2(.25,.25)))
+                    self.assertEqual(wire.read_ModelingCommand(wire.encode_ModelingCommand(operation)),operation)
+                    # Independently check the opaque source writer against the
+                    # established source reader, including candidate sequence.
+                    for source in (captured,session.meshes.list().source):
+                        writer=binary.Writer();binary._write_sourceref(source,writer)
+                        reader=binary.Reader(bytes(writer.data))
+                        self.assertEqual(binary._read_sourceref(reader),source);reader.finish()
+                    edit.apply(operation)
+                    self.assertEqual(edit.meshes.get(mesh).value.geometry.vertex_ids, (42,7,99,100))
+                with self.assertRaises(zipzi.SdkFailure):
+                    with session.edit("stale source") as edit:edit.apply(operation)
+                # A pre-existing operation large enough to use binary upload
+                # must still decode under the extended command signature.
+                with session.edit("large existing operation") as edit:
+                    edit.meshes.rename(mesh,"M"*(70<<10))
+                self.assertEqual(session.meshes.get(mesh).value.name,"M"*(70<<10))
+
     def test_manual_mesh_structure_roundtrips_local_connected_binary_history_and_project(self):
         boundary = [10, 20, 30, 40]
         support = meshes.Constraint((10, 30), meshes.ConstraintKind.EDGE_SUPPORT)

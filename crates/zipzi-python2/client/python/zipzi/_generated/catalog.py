@@ -9,10 +9,10 @@ class _Entry(TypedDict):
     fields: NotRequired[Sequence[tuple[str,str]]]
     children: tuple[str,...]
     example: NotRequired[str]
-CONTRACT = "zipzi-runtime-p3a-345-1"
+CONTRACT = "zipzi-runtime-manual-mesh-1"
 PACKAGE_VERSION = '0.1.0a1'
-CLIENT_SOURCE_SHA256 = 'b7d7e3d76a2c6828fcf5c2f1584785ca8e1435eff28912e9f6e4de2f8085854d'
-CONTRACT_SHA256 = 'f0df8f64ec52e02c67a6aed0380af0f2e7954361cb2db9f873bb1907612d26c5'
+CLIENT_SOURCE_SHA256 = '277463dfbd692466a149d43d3dcce59e091f717cec2f88ba661d9f023afe321a'
+CONTRACT_SHA256 = '958cb25c4dbb664aa058184ed6cd24b85aa15c2e6db413a421cc0023047a3d4c'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -53,8 +53,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.recover_call'),
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
-                            'then save and release. Package 0.1.0a1; protocol zipzi-runtime-p3a-345-1; client source '
-                            'SHA-256 b7d7e3d76a2c6828fcf5c2f1584785ca8e1435eff28912e9f6e4de2f8085854d.',
+                            'then save and release. Package 0.1.0a1; protocol zipzi-runtime-manual-mesh-1; client '
+                            'source SHA-256 277463dfbd692466a149d43d3dcce59e091f717cec2f88ba661d9f023afe321a.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -4525,6 +4525,16 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.ImageAsset',
                                  'zipzi.modeling.ImageContent',
                                  'zipzi.modeling.ImportFormat',
+                                 'zipzi.modeling.ManualMeshOperation',
+                                 'zipzi.modeling.ManualMeshOperationConstrainEdge',
+                                 'zipzi.modeling.ManualMeshOperationDeleteEdge',
+                                 'zipzi.modeling.ManualMeshOperationDeleteVertices',
+                                 'zipzi.modeling.ManualMeshOperationInsertConnectedVertex',
+                                 'zipzi.modeling.ManualMeshOperationInsertVertex',
+                                 'zipzi.modeling.ManualMeshOperationMoveVertices',
+                                 'zipzi.modeling.ManualMeshOperationReconnect',
+                                 'zipzi.modeling.ManualMeshOperationReleaseConstraint',
+                                 'zipzi.modeling.ManualVertexTarget',
                                  'zipzi.modeling.Mesh',
                                  'zipzi.modeling.MeshBinding',
                                  'zipzi.modeling.MeshConstraint',
@@ -4565,6 +4575,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.ModelingCommandCreateTransform',
                                  'zipzi.modeling.ModelingCommandDocument',
                                  'zipzi.modeling.ModelingCommandEraseObject',
+                                 'zipzi.modeling.ModelingCommandManualMesh',
                                  'zipzi.modeling.ModelingCommandOrganization',
                                  'zipzi.modeling.ModelingCommandReferences',
                                  'zipzi.modeling.ModelingCommandRemeshRectangleGrid',
@@ -11121,6 +11132,354 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'fields': [],
                                  'kind': 'type',
                                  'signature': '()'},
+ 'zipzi.modeling.ManualMeshOperation': {'children': (),
+                                        'documentation': 'Typed public API entry.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'value',
+                                        'signature': ''},
+ 'zipzi.modeling.ManualMeshOperationConstrainEdge': {'children': ('zipzi.modeling.ManualMeshOperationConstrainEdge.__repr__',
+                                                                  'zipzi.modeling.ManualMeshOperationConstrainEdge.summary'),
+                                                     'documentation': 'Immutable owned '
+                                                                      'ManualMeshOperationConstrainEdge value. '
+                                                                      'Construction owns declared collections; reading '
+                                                                      'fields, repr and summary performs no IO.\n'
+                                                                      '\n'
+                                                                      'Fields:\n'
+                                                                      'a: First endpoint identity of the fixed edge.\n'
+                                                                      'b: Second endpoint identity of the fixed edge.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [('a', 'First endpoint identity of the fixed edge.'),
+                                                                ('b', 'Second endpoint identity of the fixed edge.')],
+                                                     'kind': 'type',
+                                                     'signature': '(a: int, b: int)'},
+ 'zipzi.modeling.ManualMeshOperationConstrainEdge.__repr__': {'children': (),
+                                                              'documentation': 'Return a local summary capped at 1,024 '
+                                                                               'characters, with no RPC/full scan.\n'
+                                                                               '\n'
+                                                                               'Large arrays and bytes show bounded '
+                                                                               'samples/counts. Explicit field access\n'
+                                                                               'still exposes the owned full value; no '
+                                                                               'host resource is created/released.',
+                                                              'example': 'docs/recipes.py',
+                                                              'fields': [],
+                                                              'kind': 'callable',
+                                                              'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationConstrainEdge.summary': {'children': (),
+                                                             'documentation': 'Return a bounded, local summary; full '
+                                                                              'fields remain explicitly accessible.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'callable',
+                                                             'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationDeleteEdge': {'children': ('zipzi.modeling.ManualMeshOperationDeleteEdge.__repr__',
+                                                               'zipzi.modeling.ManualMeshOperationDeleteEdge.summary'),
+                                                  'documentation': 'Immutable owned ManualMeshOperationDeleteEdge '
+                                                                   'value. Construction owns declared collections; '
+                                                                   'reading fields, repr and summary performs no IO.\n'
+                                                                   '\n'
+                                                                   'Fields:\n'
+                                                                   'a: First endpoint identity of the edge to remove.\n'
+                                                                   'b: Second endpoint identity of the edge to remove.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [('a', 'First endpoint identity of the edge to remove.'),
+                                                             ('b', 'Second endpoint identity of the edge to remove.')],
+                                                  'kind': 'type',
+                                                  'signature': '(a: int, b: int)'},
+ 'zipzi.modeling.ManualMeshOperationDeleteEdge.__repr__': {'children': (),
+                                                           'documentation': 'Return a local summary capped at 1,024 '
+                                                                            'characters, with no RPC/full scan.\n'
+                                                                            '\n'
+                                                                            'Large arrays and bytes show bounded '
+                                                                            'samples/counts. Explicit field access\n'
+                                                                            'still exposes the owned full value; no '
+                                                                            'host resource is created/released.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [],
+                                                           'kind': 'callable',
+                                                           'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationDeleteEdge.summary': {'children': (),
+                                                          'documentation': 'Return a bounded, local summary; full '
+                                                                           'fields remain explicitly accessible.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationDeleteVertices': {'children': ('zipzi.modeling.ManualMeshOperationDeleteVertices.__repr__',
+                                                                   'zipzi.modeling.ManualMeshOperationDeleteVertices.summary'),
+                                                      'documentation': 'Immutable owned '
+                                                                       'ManualMeshOperationDeleteVertices value. '
+                                                                       'Construction owns declared collections; '
+                                                                       'reading fields, repr and summary performs no '
+                                                                       'IO.\n'
+                                                                       '\n'
+                                                                       'Fields:\n'
+                                                                       'ids: Persistent vertex identities to remove '
+                                                                       'atomically.',
+                                                      'example': 'docs/recipes.py',
+                                                      'fields': [('ids',
+                                                                  'Persistent vertex identities to remove '
+                                                                  'atomically.')],
+                                                      'kind': 'type',
+                                                      'signature': '(ids: tuple[int, ...])'},
+ 'zipzi.modeling.ManualMeshOperationDeleteVertices.__repr__': {'children': (),
+                                                               'documentation': 'Return a local summary capped at '
+                                                                                '1,024 characters, with no RPC/full '
+                                                                                'scan.\n'
+                                                                                '\n'
+                                                                                'Large arrays and bytes show bounded '
+                                                                                'samples/counts. Explicit field '
+                                                                                'access\n'
+                                                                                'still exposes the owned full value; '
+                                                                                'no host resource is created/released.',
+                                                               'example': 'docs/recipes.py',
+                                                               'fields': [],
+                                                               'kind': 'callable',
+                                                               'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationDeleteVertices.summary': {'children': (),
+                                                              'documentation': 'Return a bounded, local summary; full '
+                                                                               'fields remain explicitly accessible.',
+                                                              'example': 'docs/recipes.py',
+                                                              'fields': [],
+                                                              'kind': 'callable',
+                                                              'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationInsertConnectedVertex': {'children': ('zipzi.modeling.ManualMeshOperationInsertConnectedVertex.__repr__',
+                                                                          'zipzi.modeling.ManualMeshOperationInsertConnectedVertex.summary'),
+                                                             'documentation': 'Immutable owned '
+                                                                              'ManualMeshOperationInsertConnectedVertex '
+                                                                              'value. Construction owns declared '
+                                                                              'collections; reading fields, repr and '
+                                                                              'summary performs no IO.\n'
+                                                                              '\n'
+                                                                              'Fields:\n'
+                                                                              'from_: Existing vertex identity to '
+                                                                              'connect to the inserted vertex.\n'
+                                                                              'id: Fresh vertex identity that has not '
+                                                                              'been used by a cancelled candidate.\n'
+                                                                              'uv: Absolute UV position of the new '
+                                                                              'vertex.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [('from_',
+                                                                         'Existing vertex identity to connect to the '
+                                                                         'inserted vertex.'),
+                                                                        ('id',
+                                                                         'Fresh vertex identity that has not been used '
+                                                                         'by a cancelled candidate.'),
+                                                                        ('uv',
+                                                                         'Absolute UV position of the new vertex.')],
+                                                             'kind': 'type',
+                                                             'signature': '(from_: int, id: int, uv: Vec2)'},
+ 'zipzi.modeling.ManualMeshOperationInsertConnectedVertex.__repr__': {'children': (),
+                                                                      'documentation': 'Return a local summary capped '
+                                                                                       'at 1,024 characters, with no '
+                                                                                       'RPC/full scan.\n'
+                                                                                       '\n'
+                                                                                       'Large arrays and bytes show '
+                                                                                       'bounded samples/counts. '
+                                                                                       'Explicit field access\n'
+                                                                                       'still exposes the owned full '
+                                                                                       'value; no host resource is '
+                                                                                       'created/released.',
+                                                                      'example': 'docs/recipes.py',
+                                                                      'fields': [],
+                                                                      'kind': 'callable',
+                                                                      'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationInsertConnectedVertex.summary': {'children': (),
+                                                                     'documentation': 'Return a bounded, local '
+                                                                                      'summary; full fields remain '
+                                                                                      'explicitly accessible.',
+                                                                     'example': 'docs/recipes.py',
+                                                                     'fields': [],
+                                                                     'kind': 'callable',
+                                                                     'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationInsertVertex': {'children': ('zipzi.modeling.ManualMeshOperationInsertVertex.__repr__',
+                                                                 'zipzi.modeling.ManualMeshOperationInsertVertex.summary'),
+                                                    'documentation': 'Immutable owned ManualMeshOperationInsertVertex '
+                                                                     'value. Construction owns declared collections; '
+                                                                     'reading fields, repr and summary performs no '
+                                                                     'IO.\n'
+                                                                     '\n'
+                                                                     'Fields:\n'
+                                                                     'id: Fresh vertex identity that has not been used '
+                                                                     'by a cancelled candidate.\n'
+                                                                     'uv: Absolute UV position of the new vertex.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [('id',
+                                                                'Fresh vertex identity that has not been used by a '
+                                                                'cancelled candidate.'),
+                                                               ('uv', 'Absolute UV position of the new vertex.')],
+                                                    'kind': 'type',
+                                                    'signature': '(id: int, uv: Vec2)'},
+ 'zipzi.modeling.ManualMeshOperationInsertVertex.__repr__': {'children': (),
+                                                             'documentation': 'Return a local summary capped at 1,024 '
+                                                                              'characters, with no RPC/full scan.\n'
+                                                                              '\n'
+                                                                              'Large arrays and bytes show bounded '
+                                                                              'samples/counts. Explicit field access\n'
+                                                                              'still exposes the owned full value; no '
+                                                                              'host resource is created/released.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'callable',
+                                                             'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationInsertVertex.summary': {'children': (),
+                                                            'documentation': 'Return a bounded, local summary; full '
+                                                                             'fields remain explicitly accessible.',
+                                                            'example': 'docs/recipes.py',
+                                                            'fields': [],
+                                                            'kind': 'callable',
+                                                            'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationMoveVertices': {'children': ('zipzi.modeling.ManualMeshOperationMoveVertices.__repr__',
+                                                                 'zipzi.modeling.ManualMeshOperationMoveVertices.summary'),
+                                                    'documentation': 'Immutable owned ManualMeshOperationMoveVertices '
+                                                                     'value. Construction owns declared collections; '
+                                                                     'reading fields, repr and summary performs no '
+                                                                     'IO.\n'
+                                                                     '\n'
+                                                                     'Fields:\n'
+                                                                     'targets: Absolute UV targets keyed by persistent '
+                                                                     'mesh vertex identities.\n'
+                                                                     'motion_from: Last accepted preview positions for '
+                                                                     'swept crossing checks; None uses source '
+                                                                     'positions.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [('targets',
+                                                                'Absolute UV targets keyed by persistent mesh vertex '
+                                                                'identities.'),
+                                                               ('motion_from',
+                                                                'Last accepted preview positions for swept crossing '
+                                                                'checks; None uses source positions.')],
+                                                    'kind': 'type',
+                                                    'signature': '(targets: tuple[ManualVertexTarget, ...], '
+                                                                 'motion_from: tuple[ManualVertexTarget, ...] | None = '
+                                                                 'None)'},
+ 'zipzi.modeling.ManualMeshOperationMoveVertices.__repr__': {'children': (),
+                                                             'documentation': 'Return a local summary capped at 1,024 '
+                                                                              'characters, with no RPC/full scan.\n'
+                                                                              '\n'
+                                                                              'Large arrays and bytes show bounded '
+                                                                              'samples/counts. Explicit field access\n'
+                                                                              'still exposes the owned full value; no '
+                                                                              'host resource is created/released.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'callable',
+                                                             'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationMoveVertices.summary': {'children': (),
+                                                            'documentation': 'Return a bounded, local summary; full '
+                                                                             'fields remain explicitly accessible.',
+                                                            'example': 'docs/recipes.py',
+                                                            'fields': [],
+                                                            'kind': 'callable',
+                                                            'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationReconnect': {'children': ('zipzi.modeling.ManualMeshOperationReconnect.__repr__',
+                                                              'zipzi.modeling.ManualMeshOperationReconnect.summary'),
+                                                 'documentation': 'Immutable owned ManualMeshOperationReconnect value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'type',
+                                                 'signature': '()'},
+ 'zipzi.modeling.ManualMeshOperationReconnect.__repr__': {'children': (),
+                                                          'documentation': 'Return a local summary capped at 1,024 '
+                                                                           'characters, with no RPC/full scan.\n'
+                                                                           '\n'
+                                                                           'Large arrays and bytes show bounded '
+                                                                           'samples/counts. Explicit field access\n'
+                                                                           'still exposes the owned full value; no '
+                                                                           'host resource is created/released.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationReconnect.summary': {'children': (),
+                                                         'documentation': 'Return a bounded, local summary; full '
+                                                                          'fields remain explicitly accessible.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [],
+                                                         'kind': 'callable',
+                                                         'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationReleaseConstraint': {'children': ('zipzi.modeling.ManualMeshOperationReleaseConstraint.__repr__',
+                                                                      'zipzi.modeling.ManualMeshOperationReleaseConstraint.summary'),
+                                                         'documentation': 'Immutable owned '
+                                                                          'ManualMeshOperationReleaseConstraint value. '
+                                                                          'Construction owns declared collections; '
+                                                                          'reading fields, repr and summary performs '
+                                                                          'no IO.\n'
+                                                                          '\n'
+                                                                          'Fields:\n'
+                                                                          'a: First endpoint identity of the '
+                                                                          'constraint to release.\n'
+                                                                          'b: Second endpoint identity of the '
+                                                                          'constraint to release.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [('a',
+                                                                     'First endpoint identity of the constraint to '
+                                                                     'release.'),
+                                                                    ('b',
+                                                                     'Second endpoint identity of the constraint to '
+                                                                     'release.')],
+                                                         'kind': 'type',
+                                                         'signature': '(a: int, b: int)'},
+ 'zipzi.modeling.ManualMeshOperationReleaseConstraint.__repr__': {'children': (),
+                                                                  'documentation': 'Return a local summary capped at '
+                                                                                   '1,024 characters, with no RPC/full '
+                                                                                   'scan.\n'
+                                                                                   '\n'
+                                                                                   'Large arrays and bytes show '
+                                                                                   'bounded samples/counts. Explicit '
+                                                                                   'field access\n'
+                                                                                   'still exposes the owned full '
+                                                                                   'value; no host resource is '
+                                                                                   'created/released.',
+                                                                  'example': 'docs/recipes.py',
+                                                                  'fields': [],
+                                                                  'kind': 'callable',
+                                                                  'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshOperationReleaseConstraint.summary': {'children': (),
+                                                                 'documentation': 'Return a bounded, local summary; '
+                                                                                  'full fields remain explicitly '
+                                                                                  'accessible.',
+                                                                 'example': 'docs/recipes.py',
+                                                                 'fields': [],
+                                                                 'kind': 'callable',
+                                                                 'signature': '() -> str'},
+ 'zipzi.modeling.ManualVertexTarget': {'children': ('zipzi.modeling.ManualVertexTarget.__repr__',
+                                                    'zipzi.modeling.ManualVertexTarget.summary'),
+                                       'documentation': 'Immutable owned ManualVertexTarget value. Construction owns '
+                                                        'declared collections; reading fields, repr and summary '
+                                                        'performs no IO.\n'
+                                                        '\n'
+                                                        'Fields:\n'
+                                                        'id: Stable vertex identity in the edited mesh, not its array '
+                                                        'index.\n'
+                                                        'uv: Absolute target UV coordinate in the mesh texture domain.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [('id',
+                                                   'Stable vertex identity in the edited mesh, not its array index.'),
+                                                  ('uv', 'Absolute target UV coordinate in the mesh texture domain.')],
+                                       'kind': 'type',
+                                       'signature': '(id: int, uv: Vec2)'},
+ 'zipzi.modeling.ManualVertexTarget.__repr__': {'children': (),
+                                                'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                 'with no RPC/full scan.\n'
+                                                                 '\n'
+                                                                 'Large arrays and bytes show bounded samples/counts. '
+                                                                 'Explicit field access\n'
+                                                                 'still exposes the owned full value; no host resource '
+                                                                 'is created/released.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'callable',
+                                                'signature': '() -> str'},
+ 'zipzi.modeling.ManualVertexTarget.summary': {'children': (),
+                                               'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                'explicitly accessible.',
+                                               'example': 'docs/recipes.py',
+                                               'fields': [],
+                                               'kind': 'callable',
+                                               'signature': '() -> str'},
  'zipzi.modeling.Mesh': {'children': ('zipzi.modeling.Mesh.__repr__', 'zipzi.modeling.Mesh.summary'),
                          'documentation': 'Immutable owned Mesh value. Construction owns declared collections; reading '
                                           'fields, repr and summary performs no IO.\n'
@@ -12793,6 +13152,57 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                        'fields': [],
                                                        'kind': 'callable',
                                                        'signature': '() -> str'},
+ 'zipzi.modeling.ModelingCommandManualMesh': {'children': ('zipzi.modeling.ModelingCommandManualMesh.__repr__',
+                                                           'zipzi.modeling.ModelingCommandManualMesh.summary'),
+                                              'documentation': 'Immutable owned ModelingCommandManualMesh value. '
+                                                               'Construction owns declared collections; reading '
+                                                               'fields, repr and summary performs no IO.\n'
+                                                               '\n'
+                                                               'Fields:\n'
+                                                               'mesh_id: Stable mesh UUID whose editable UV '
+                                                               'triangulation is changed.\n'
+                                                               'expected: Exact candidate source before this '
+                                                               'operation; submit it alone in a batch.\n'
+                                                               'operation: Atomic UV topology intent; the SDK '
+                                                               'preserves dependent geometry and identities.\n'
+                                                               'kind: Fixed operation discriminator supplied by this '
+                                                               'value type; not a constructor argument or a mutable '
+                                                               'object field.',
+                                              'example': 'docs/recipes.py',
+                                              'fields': [('mesh_id',
+                                                          'Stable mesh UUID whose editable UV triangulation is '
+                                                          'changed.'),
+                                                         ('expected',
+                                                          'Exact candidate source before this operation; submit it '
+                                                          'alone in a batch.'),
+                                                         ('operation',
+                                                          'Atomic UV topology intent; the SDK preserves dependent '
+                                                          'geometry and identities.'),
+                                                         ('kind',
+                                                          'Fixed operation discriminator supplied by this value type; '
+                                                          'not a constructor argument or a mutable object field.')],
+                                              'kind': 'type',
+                                              'signature': '(mesh_id: str, expected: _Source, operation: '
+                                                           'ManualMeshOperation)'},
+ 'zipzi.modeling.ModelingCommandManualMesh.__repr__': {'children': (),
+                                                       'documentation': 'Return a local summary capped at 1,024 '
+                                                                        'characters, with no RPC/full scan.\n'
+                                                                        '\n'
+                                                                        'Large arrays and bytes show bounded '
+                                                                        'samples/counts. Explicit field access\n'
+                                                                        'still exposes the owned full value; no host '
+                                                                        'resource is created/released.',
+                                                       'example': 'docs/recipes.py',
+                                                       'fields': [],
+                                                       'kind': 'callable',
+                                                       'signature': '() -> str'},
+ 'zipzi.modeling.ModelingCommandManualMesh.summary': {'children': (),
+                                                      'documentation': 'Return a bounded, local summary; full fields '
+                                                                       'remain explicitly accessible.',
+                                                      'example': 'docs/recipes.py',
+                                                      'fields': [],
+                                                      'kind': 'callable',
+                                                      'signature': '() -> str'},
  'zipzi.modeling.ModelingCommandOrganization': {'children': ('zipzi.modeling.ModelingCommandOrganization.__repr__',
                                                              'zipzi.modeling.ModelingCommandOrganization.summary'),
                                                 'documentation': 'Immutable owned ModelingCommandOrganization value. '

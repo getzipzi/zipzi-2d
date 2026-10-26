@@ -228,6 +228,8 @@ def render_binary(contract,header):
             if s['kind']=='opaque':
                 if name(s)=='Version':
                     for f in ('session_id','generation','revision'):out+=['    w.scalar("Q", _field(value,'+repr(f)+'))']
+                elif name(s)=='SourceRef':
+                    out+=['    if not isinstance(value, Source): raise TypeError("Expected Source")', '    w.u32(0 if value.edit is None else 1)', '    runtime=UUID(value.runtime).bytes', '    w.raw(runtime); w.scalar("Q", value.session)', '    if value.edit is not None:', '        w.raw(runtime); w.scalar("Q", value.edit)', '    _write_version(value.version, w)', '    if value.edit is not None: w.scalar("Q", value.sequence)']
                 elif name(s) in {'ImageId','PlanId'}:out+=['    raw=record(value)','    w.raw(UUID(string(raw["runtime"])).bytes)','    w.scalar("Q",raw["serial"])']
                 else:raise ValueError('Unreviewed opaque binary input')
             elif enum(s):
