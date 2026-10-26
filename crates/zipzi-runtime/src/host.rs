@@ -5,9 +5,8 @@ use crate::{
     Work,
 };
 use std::sync::{
-    Arc, Mutex,
     atomic::{AtomicBool, AtomicUsize, Ordering},
-    mpsc,
+    mpsc, Arc, Mutex,
 };
 use std::thread::{self, JoinHandle};
 

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use zipzi_core::{Canvas, Vec2};
 use zipzi_sdk::{
-    AuthoringSession, MeshProperties, TopologyReplacement, prepare_png_asset, rectangle_mesh,
+    prepare_png_asset, rectangle_mesh, AuthoringSession, MeshProperties, TopologyReplacement,
 };
 
 const DOCUMENT_ID: &str = "00000000-0000-4000-8000-000000000101";
@@ -352,7 +352,7 @@ fn rectangle_grid_preserves_bound_surface_and_history() {
 
 #[test]
 fn rectangle_grid_rejects_invalid_geometry_and_overflow() {
-    use zipzi_sdk::{MeshGeometry, rectangle_grid_geometry};
+    use zipzi_sdk::{rectangle_grid_geometry, MeshGeometry};
     let mesh = fixture().mesh(MESH_ID).unwrap();
     let mut source = MeshGeometry {
         vertex_ids: mesh.vertex_ids,

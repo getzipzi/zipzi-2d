@@ -440,42 +440,42 @@ pub enum ModelingIntent {
     Scene(
         /// Typed intent for scene lifecycle, hierarchy and drawing; apply/plan it against a
         /// Session/Edit source rather than mutating this value.
-         crate::SceneEdit,
+        crate::SceneEdit,
     ),
     Organization(
         /// Typed intent for organization and parameter groups; apply/plan it against a
         /// Session/Edit source rather than mutating this value.
-         crate::OrganizationEdit,
+        crate::OrganizationEdit,
     ),
     Binding(
         /// Typed intent for parameter bindings and grid conversions; apply/plan it against a
         /// Session/Edit source rather than mutating this value.
-         crate::BindingAuthoringEdit,
+        crate::BindingAuthoringEdit,
     ),
     Content(
         /// Typed intent for geometry and topology content; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
-         crate::SceneContentEdit,
+        crate::SceneContentEdit,
     ),
     References(
         /// Typed intent for metadata references and selections; apply/plan it against a
         /// Session/Edit source rather than mutating this value.
-         crate::ReferenceEdit,
+        crate::ReferenceEdit,
     ),
     Resource(
         /// Typed intent for image asset metadata and references; apply/plan it against a
         /// Session/Edit source rather than mutating this value.
-         crate::ResourceEdit,
+        crate::ResourceEdit,
     ),
     Document(
         /// Typed intent for document configuration and metadata repair; apply/plan it against a
         /// Session/Edit source rather than mutating this value.
-         crate::DocumentAuthoringEdit,
+        crate::DocumentAuthoringEdit,
     ),
     Attachment(
         /// Typed intent for package attachments and their references; apply/plan it against a
         /// Session/Edit source rather than mutating this value.
-         zipzi_core::document::AttachmentEdit,
+        zipzi_core::document::AttachmentEdit,
     ),
 }
 #[derive(Debug, Clone)]

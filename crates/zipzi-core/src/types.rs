@@ -423,7 +423,7 @@ impl Default for Transform {
 pub enum TransformData {
     Warp(
         /// Warp deformation definition with its baked lattice and optional authoring controller.
-         WarpTransform,
+        WarpTransform,
     ),
     Rotation(
         /// Rotation deformation definition with its reference angle and base pose.
@@ -631,16 +631,16 @@ pub struct PartKeyform {
 pub enum SceneKeyform {
     Warp(
         /// Complete Warp ordinary-binding keyform; samples identify the active axis combination.
-         WarpKeyform,
+        WarpKeyform,
     ),
     Rotation(
         /// Complete Rotation ordinary-binding keyform; samples identify the active axis
         /// combination.
-         RotationKeyform,
+        RotationKeyform,
     ),
     Part(
         /// Complete Part ordinary-binding keyform; samples identify the active axis combination.
-         PartKeyform,
+        PartKeyform,
     ),
 }
 /// Borrowed projection for interpolation and external formats. Neutral values
@@ -1042,32 +1042,32 @@ pub enum DeltaKeyforms {
     Mesh(
         /// Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
-         Vec<DeltaMeshKeyform>,
+        Vec<DeltaMeshKeyform>,
     ),
     Warp(
         /// Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
-         Vec<DeltaWarpKeyform>,
+        Vec<DeltaWarpKeyform>,
     ),
     Rotation(
         /// Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
-         Vec<DeltaRotationKeyform>,
+        Vec<DeltaRotationKeyform>,
     ),
     Part(
         /// Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
-         Vec<DeltaPartKeyform>,
+        Vec<DeltaPartKeyform>,
     ),
     Glue(
         /// Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
-         Vec<DeltaGlueKeyform>,
+        Vec<DeltaGlueKeyform>,
     ),
     Offscreen(
         /// Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
-         Vec<DeltaOffscreenKeyform>,
+        Vec<DeltaOffscreenKeyform>,
     ),
 }
 
@@ -1504,7 +1504,11 @@ macro_rules! scene_id {
             }
             pub fn optional(id: impl Into<String>) -> Option<Self> {
                 let id = id.into();
-                if id.is_empty() { None } else { Some(Self(id)) }
+                if id.is_empty() {
+                    None
+                } else {
+                    Some(Self(id))
+                }
             }
         }
         impl From<String> for $name {

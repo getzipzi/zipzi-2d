@@ -1,4 +1,4 @@
-use super::lattice::{self, GridOperation, active};
+use super::lattice::{self, active, GridOperation};
 use super::*;
 use crate::{
     GlueBinding, GlueKeyform, MeshKeyform, OffscreenKeyform, PartKeyform, RotationKeyform,
@@ -18,7 +18,7 @@ pub enum BindingGridTarget {
     Mesh(#[doc = "Stable ID of the target mesh whose ordinary grid is being created."] String),
     Scene(
         /// Stable ID of the target scene transform or Part whose ordinary grid is being created.
-         String,
+        String,
     ),
     Glue(#[doc = "Stable ID of the target Glue whose ordinary grid is being created."] String),
 }

@@ -1,8 +1,8 @@
 //! Integer-key maps also deserialize through serde's buffered tagged-enum
 //! representation, whose keys arrive as strings rather than JSON key adapters.
 use serde::{
-    Deserialize, Deserializer,
     de::{Error, MapAccess, Visitor},
+    Deserialize, Deserializer,
 };
 use std::{
     collections::{BTreeMap, HashMap},

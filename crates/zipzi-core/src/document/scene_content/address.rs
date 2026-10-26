@@ -79,7 +79,10 @@ impl SceneContentTarget {
 )]
 #[derive(zipzi_api_derive::ApiShape)]
 pub enum SceneContentValue {
-    Point(#[doc = "Replacement XY value in the selected shape/UV space; BlendShape targets use deltas."] Vec2),
+    Point(
+        #[doc = "Replacement XY value in the selected shape/UV space; BlendShape targets use deltas."]
+         Vec2,
+    ),
     Triangle(
         /// Replacement triangle as three stable vertex IDs, not position-array indices.
         [VertexId; 3],

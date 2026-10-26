@@ -2,8 +2,8 @@
 //! no environment switch or wire operation exists in production builds.
 use crate::{Completion, Result, RuntimeError, Work};
 use std::sync::{
-    Condvar, Mutex,
     atomic::{AtomicBool, AtomicUsize, Ordering},
+    Condvar, Mutex,
 };
 
 #[derive(Default)]

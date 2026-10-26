@@ -3,14 +3,14 @@ use super::assets::MemoryAsset;
 use super::import::read_psd_bytes;
 use super::manifest::{publication_result, resolved_manifest};
 use super::{
-    DocumentStore, ProjectResult, ResourceDiagnostic, read_project_asset,
-    read_project_asset_if_changed,
+    read_project_asset, read_project_asset_if_changed, DocumentStore, ProjectResult,
+    ResourceDiagnostic,
 };
 use crate::filesystem::{self as io, FileSystem, NativeFileSystem};
 use crate::package::{
-    PackageOptions, PackageValidation, RuntimeValidation, publish_with_filesystem,
+    publish_with_filesystem, PackageOptions, PackageValidation, RuntimeValidation,
 };
-use crate::resources::{AssetData, TextureData, decode_png};
+use crate::resources::{decode_png, AssetData, TextureData};
 use std::{
     collections::HashMap,
     fs,
@@ -654,13 +654,11 @@ mod memory_psd_tests {
             "RESOURCE_DIMENSIONS"
         );
         assert!(memory.png.lock().unwrap().is_none());
-        assert!(
-            session
-                .document
-                .replace_asset(descriptor.clone())
-                .status
-                .is_ok()
-        );
+        assert!(session
+            .document
+            .replace_asset(descriptor.clone())
+            .status
+            .is_ok());
 
         let eager = import_psd(fixture).unwrap();
         let data = session.read_asset(&id).unwrap();
@@ -678,12 +676,10 @@ mod memory_psd_tests {
         );
         assert_eq!(data.rgba.as_slice(), first.rgba.as_ref());
         assert!(memory.png.lock().unwrap().is_some());
-        assert!(
-            session
-                .read_asset_if_changed(&id, Some((&data.sha256, data.width, data.height)),)
-                .unwrap()
-                .is_none()
-        );
+        assert!(session
+            .read_asset_if_changed(&id, Some((&data.sha256, data.width, data.height)),)
+            .unwrap()
+            .is_none());
 
         let mut invalid = descriptor;
         invalid.content.as_mut().unwrap().sha256 = "bad hash".into();

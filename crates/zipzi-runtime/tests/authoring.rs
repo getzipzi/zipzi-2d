@@ -68,16 +68,15 @@ fn manual_mesh_candidate_and_formal_reads_preserve_constraints_in_borrowed_outpu
             endpoints: [7, 99],
             kind: MeshConstraintKind::User,
         });
-    assert!(
-        rt.apply_authoring(
+    assert!(rt
+        .apply_authoring(
             client,
             edit,
             vec![EditOperation::Modeling {
                 operation: Box::new(modeling::ModelingCommand::ReplaceMesh { mesh })
             }]
         )
-        .is_err()
-    );
+        .is_err());
     assert_eq!(
         rt.mesh_snapshot(client, session, None, &id(2))
             .unwrap()
@@ -696,10 +695,9 @@ fn selected_mesh_query_checks_exact_session_and_admits_before_copy_without_poiso
         rt.mesh_snapshot(client, other, Some(edit), &id(3)),
         Err(RuntimeError::InvalidReference)
     ));
-    assert!(
-        rt.mesh_snapshot(client, session, Some(edit), &id(3))
-            .is_ok()
-    );
+    assert!(rt
+        .mesh_snapshot(client, session, Some(edit), &id(3))
+        .is_ok());
     rt.refresh_memory_budget();
     let competing = rt
         .reserve_transfer(

@@ -1,16 +1,16 @@
 use super::{
-    Result, archive,
+    archive,
     graph::{Graph, Node},
-    invalid,
+    invalid, Result,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use zipzi_core::{
-    Document,
     document::{
         ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget, MotionClip,
         MotionEvent, MotionGroup, MotionKey, MotionPoint, MotionRegistration, MotionSegment,
         MotionTrack, MotionTrackTarget,
     },
+    Document,
 };
 fn id() -> String {
     uuid::Uuid::new_v4().to_string()
@@ -504,12 +504,11 @@ mod tests {
         let original_scene = id();
         let copied_scene = id();
         let mut base = Document::new();
-        assert!(
-            base.initialize(&id(), zipzi_core::ModelSetup::default())
-                .is_ok()
-        );
-        assert!(
-            base.create_parameter(zipzi_core::Parameter {
+        assert!(base
+            .initialize(&id(), zipzi_core::ModelSetup::default())
+            .is_ok());
+        assert!(base
+            .create_parameter(zipzi_core::Parameter {
                 id: parameter.clone(),
                 runtime_id: "P".into(),
                 name: "P".into(),
@@ -517,8 +516,7 @@ mod tests {
                 ..Default::default()
             })
             .status
-            .is_ok()
-        );
+            .is_ok());
         let entries = vec![ExpressionEntry {
             id: uuid::Uuid::new_v4().to_string(),
             target: ExpressionTarget::Resolved {
@@ -529,22 +527,20 @@ mod tests {
             extensions: Default::default(),
         }];
         let mut source = base.clone();
-        assert!(
-            source
-                .create_expression(ExpressionAsset {
-                    id: original_scene.clone(),
-                    name: "Expression".into(),
-                    file_type: None,
-                    fade_in: None,
-                    fade_out: None,
-                    entries: entries.clone(),
-                    extensions: Default::default(),
-                    opaque_source_ids: None,
-                    opaque_source_content_hash: None,
-                })
-                .status
-                .is_ok()
-        );
+        assert!(source
+            .create_expression(ExpressionAsset {
+                id: original_scene.clone(),
+                name: "Expression".into(),
+                file_type: None,
+                fade_in: None,
+                fade_out: None,
+                entries: entries.clone(),
+                extensions: Default::default(),
+                opaque_source_ids: None,
+                opaque_source_content_hash: None,
+            })
+            .status
+            .is_ok());
         let artifact = crate::encode_can3(&source, &Default::default()).unwrap();
         let archive = super::super::archive::read(&artifact.bytes).unwrap();
         let xml = std::str::from_utf8(&archive["main.xml"]).unwrap();
@@ -600,26 +596,22 @@ mod tests {
         );
         let bytes = crate::caff::encode(Vec::new(), xml.as_bytes(), 0).unwrap();
         let mut document = Document::new();
-        assert!(
-            document
-                .initialize(
-                    &id(),
-                    zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(0., 0.), 1.)
-                )
-                .is_ok()
-        );
-        assert!(
-            document
-                .create_parameter(zipzi_core::Parameter {
-                    id: parameter.into(),
-                    runtime_id: "ParamX".into(),
-                    name: "X".into(),
-                    default_value: 0.5,
-                    ..Default::default()
-                })
-                .status
-                .is_ok()
-        );
+        assert!(document
+            .initialize(
+                &id(),
+                zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(0., 0.), 1.)
+            )
+            .is_ok());
+        assert!(document
+            .create_parameter(zipzi_core::Parameter {
+                id: parameter.into(),
+                runtime_id: "ParamX".into(),
+                name: "X".into(),
+                default_value: 0.5,
+                ..Default::default()
+            })
+            .status
+            .is_ok());
         read(&bytes, &mut document).unwrap();
         assert!(document.motion_order().is_empty());
         let expression = document.get_expression(scene).unwrap().clone();
@@ -671,10 +663,9 @@ mod tests {
         let mut bytes = animation_with_sources(source, &scene);
         for _ in 0..2 {
             let mut doc = Document::new();
-            assert!(
-                doc.initialize(&id(), zipzi_core::ModelSetup::default())
-                    .is_ok()
-            );
+            assert!(doc
+                .initialize(&id(), zipzi_core::ModelSetup::default())
+                .is_ok());
             read(&bytes, &mut doc).unwrap();
             let tracks = &doc.get_motion(&scene).unwrap().tracks;
             assert_eq!(tracks.len(), 1);
@@ -695,33 +686,30 @@ mod tests {
         let part = id();
         let scene = id();
         let mut base = Document::new();
-        assert!(
-            base.initialize(
+        assert!(base
+            .initialize(
                 &id(),
                 zipzi_core::Canvas::new(100., 100., Default::default(), 1.)
             )
-            .is_ok()
-        );
-        assert!(
-            base.create_parameter(zipzi_core::Parameter {
+            .is_ok());
+        assert!(base
+            .create_parameter(zipzi_core::Parameter {
                 id: parameter.clone(),
                 runtime_id: "P".into(),
                 name: "P".into(),
                 ..Default::default()
             })
             .status
-            .is_ok()
-        );
-        assert!(
-            base.create_part(zipzi_core::Part {
+            .is_ok());
+        assert!(base
+            .create_part(zipzi_core::Part {
                 id: part.clone(),
                 runtime_id: "Part".into(),
                 name: "Part".into(),
                 ..Default::default()
             })
             .status
-            .is_ok()
-        );
+            .is_ok());
         let sources = format!(
             "<CMvTrack_Live2DModel_Source>{}{}</CMvTrack_Live2DModel_Source>",
             unkeyed_effect("keyParamEffect", &parameter, 0.5),
@@ -758,20 +746,18 @@ mod tests {
         let bytes = animation_with_sources(&source.repeat(2), &id());
         assert_eq!(paths(&bytes).unwrap(), ["model.cmo3"]);
         let mut doc = Document::new();
-        assert!(
-            doc.initialize(&id(), zipzi_core::ModelSetup::default())
-                .is_ok()
-        );
-        assert!(
-            doc.create_parameter(zipzi_core::Parameter {
+        assert!(doc
+            .initialize(&id(), zipzi_core::ModelSetup::default())
+            .is_ok());
+        assert!(doc
+            .create_parameter(zipzi_core::Parameter {
                 id: parameter,
                 runtime_id: "P".into(),
                 name: "P".into(),
                 ..Default::default()
             })
             .status
-            .is_ok()
-        );
+            .is_ok());
         let revision = doc.revision();
         let error = read(&bytes, &mut doc).unwrap_err();
         assert!(error.to_string().contains("Multiple model"), "{error}");

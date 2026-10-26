@@ -534,7 +534,11 @@ impl Document {
     }
 }
 fn check(status: Status) -> Result<(), Status> {
-    if status.is_ok() { Ok(()) } else { Err(status) }
+    if status.is_ok() {
+        Ok(())
+    } else {
+        Err(status)
+    }
 }
 fn permutation(order: &[usize], len: usize) -> Result<(), Status> {
     if order.len() != len

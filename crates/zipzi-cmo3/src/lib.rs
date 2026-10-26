@@ -7,15 +7,15 @@ mod import;
 #[cfg(feature = "test-support")]
 pub use import::test_support;
 pub use import::{
-    ImportedModel, animation_model_paths, animation_model_paths_with_budget, import_animation,
-    import_animation_with_budget, import_model, import_model_with_budget,
+    animation_model_paths, animation_model_paths_with_budget, import_animation,
+    import_animation_with_budget, import_model, import_model_with_budget, ImportedModel,
 };
 mod can3;
 mod canvas;
 mod expression_semantics;
 pub use can3::{
-    Can3Artifact, Can3Options, CubismArtifact, CubismOptions, encode_can3, encode_cubism,
-    inspect_can3, inspect_cubism,
+    encode_can3, encode_cubism, inspect_can3, inspect_cubism, Can3Artifact, Can3Options,
+    CubismArtifact, CubismOptions,
 };
 mod export;
 mod schema;

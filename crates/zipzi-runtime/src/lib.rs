@@ -21,9 +21,9 @@ pub use config::RuntimeLimits;
 pub use events::{EventCursor, EventKind, RuntimeEvent};
 pub use jobs::{Completion, Executor, PreparedModelingPlan, Work};
 pub use runtime::{
-    AUTHORING_MAGIC, CandidateWork, LabelAddressInfo, ModelingRecordBatch, ModelingRecordBlob,
+    CandidateWork, LabelAddressInfo, ModelingRecordBatch, ModelingRecordBlob,
     ModelingRecordResponse, ObjectRefInfo, RegistrySubscription, Runtime, SessionEventSubscription,
-    SessionSubscription,
+    SessionSubscription, AUTHORING_MAGIC,
 };
 pub use types::*;
 pub use zipzi_project::TransferReservation;

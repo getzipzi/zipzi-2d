@@ -8,7 +8,7 @@ pub use zipzi_core::document::{
     ReferenceEffects, ReferenceFields, ReferenceIdentity, ReferenceKind, ReferenceProjection,
     ReferenceSelectionField,
 };
-use zipzi_core::{Document, document::ReferencePlan};
+use zipzi_core::{document::ReferencePlan, Document};
 #[derive(Debug, Clone)]
 pub struct ReferenceEditPlan {
     version: Version,

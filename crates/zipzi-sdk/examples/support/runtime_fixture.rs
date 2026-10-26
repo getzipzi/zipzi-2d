@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use zipzi_core::{BindingAxis, Canvas, MeshBinding, MeshKeyform, Parameter, Vec2};
 use zipzi_sdk::{
-    AuthoringSession, MeshGeometry, SdkError, rectangle_grid_geometry, rectangle_mesh,
+    rectangle_grid_geometry, rectangle_mesh, AuthoringSession, MeshGeometry, SdkError,
 };
 
 pub fn id(n: usize) -> String {

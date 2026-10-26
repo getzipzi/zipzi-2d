@@ -4,15 +4,14 @@ use zipzi_core::{
 use zipzi_project::{decode_project, encode_project};
 fn document() -> Document {
     let mut d = Document::new();
-    assert!(
-        d.initialize(
+    assert!(d
+        .initialize(
             "b0000000-0000-4000-8000-000000000001",
             ModelSetup::default()
         )
-        .is_ok()
-    );
-    assert!(
-        d.create_mesh(Mesh {
+        .is_ok());
+    assert!(d
+        .create_mesh(Mesh {
             id: "b0000000-0000-4000-8000-000000000002".into(),
             vertex_ids: vec![8, 2, 5, 12],
             base_positions: vec![
@@ -38,8 +37,7 @@ fn document() -> Document {
             ..Default::default()
         })
         .status
-        .is_ok()
-    );
+        .is_ok());
     d
 }
 

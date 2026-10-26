@@ -1,5 +1,5 @@
-use zipzi_core::Document;
 use zipzi_core::types::{BlendMode, DeltaKeyforms, Status, TransformKind};
+use zipzi_core::Document;
 
 use super::types::*;
 

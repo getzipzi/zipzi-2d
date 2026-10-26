@@ -1,8 +1,8 @@
 use super::EditSession;
 use crate::types::SdkError;
-use zipzi_core::ChangeKind;
 use zipzi_core::document::ExpressionAsset;
-use zipzi_project::{ExpressionDiagnostic, ExpressionProjectError, import_expression3};
+use zipzi_core::ChangeKind;
+use zipzi_project::{import_expression3, ExpressionDiagnostic, ExpressionProjectError};
 
 fn project_error(error: ExpressionProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);

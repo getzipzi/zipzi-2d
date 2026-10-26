@@ -2,7 +2,7 @@
 //! domain validation and behavior remain in core/SDK.
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Fields, parse_macro_input};
+use syn::{parse_macro_input, DeriveInput, Fields};
 #[derive(Default)]
 struct Serde {
     rename: Option<String>,

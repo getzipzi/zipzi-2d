@@ -4,11 +4,11 @@ use crate::{
     SdkError, Version,
 };
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 pub use zipzi_core::document::ResourceEdit;
-use zipzi_core::{ImageContent, document::ResourcePlan};
+use zipzi_core::{document::ResourcePlan, ImageContent};
 #[derive(Debug, Clone)]
 pub struct ResourceEditPlan {
     version: Version,

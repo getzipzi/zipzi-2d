@@ -5,13 +5,13 @@
 //! PNG encoding and publication to the project store.
 
 use ag_psd::psd::{BlendMode as PsdBlendMode, ColorMode, Layer, ReadOptions};
-use ag_psd::{PixelData, read_psd};
+use ag_psd::{read_psd, PixelData};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::fmt;
 use std::io::Cursor;
-use zipzi_core::Document;
 use zipzi_core::types::{Appearance, BlendMode, Canvas, ImageAsset, Mesh, Offscreen, Part, Vec2};
+use zipzi_core::Document;
 
 const MAX_FILE_BYTES: usize = 512 * 1024 * 1024;
 // Layer pixels accumulate across the document, independently of canvas size.

@@ -5,7 +5,7 @@ use zipzi_core::{
     Canvas, PreciseVec2, RotationPose, RotationTransform, Transform, TransformData, Vec2,
     WarpTransform,
 };
-use zipzi_sdk::{AuthoringSession, MeshGeometry, rectangle_grid_geometry, rectangle_mesh};
+use zipzi_sdk::{rectangle_grid_geometry, rectangle_mesh, AuthoringSession, MeshGeometry};
 
 fn id(n: usize) -> String {
     format!("71000000-0000-4000-8000-{n:012x}")

@@ -1,6 +1,6 @@
 //! P1 local-host foundations: real SDK state, worker completion and lifetime.
 use std::{
-    sync::{Arc, mpsc},
+    sync::{mpsc, Arc},
     time::Duration,
 };
 use zipzi_core::{ModelSetup, Vec2};
@@ -258,16 +258,14 @@ fn shutdown_drops_unsaved_resources_and_consumes_accepted_jobs() {
 #[test]
 fn host_rejects_zero_capacity_and_worker_count_and_fails_closed_on_panic() {
     assert!(LocalHost::new(Default::default(), 0).is_err());
-    assert!(
-        LocalHost::new(
-            RuntimeLimits {
-                running_jobs: 0,
-                ..Default::default()
-            },
-            1
-        )
-        .is_err()
-    );
+    assert!(LocalHost::new(
+        RuntimeLimits {
+            running_jobs: 0,
+            ..Default::default()
+        },
+        1
+    )
+    .is_err());
     let host = host();
     assert_eq!(
         host.call::<()>(|_| panic!("injected adapter panic")),

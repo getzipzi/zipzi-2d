@@ -1,7 +1,6 @@
 //! Read-only grid/range/parent plans and one SDK transaction on execution.
 use crate::{AuthoringSession, EditReceipt, EditSession, SdkError, Version};
 use serde::{Deserialize, Serialize};
-use zipzi_core::Status;
 pub use zipzi_core::document::{
     AuthoringLimits, AxisReduction, BindingGridEdit, BindingGridPlan, BindingGridTarget,
     BindingIdentityKind, BlendAuthoringEdit, BlendAuthoringPlan, BlendTableOperation,
@@ -10,6 +9,7 @@ pub use zipzi_core::document::{
     ReparentContext, ReparentEdit, ReparentGuarantee, ReparentPlacement, ReparentPlan,
     ReparentStrategy, ReparentSupport,
 };
+use zipzi_core::Status;
 
 #[derive(
     Debug,
@@ -24,27 +24,27 @@ pub enum BindingAuthoringEdit {
     Grid(
         /// Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
-         BindingGridEdit,
+        BindingGridEdit,
     ),
     Blend(
         /// Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source
         /// rather than mutating this value.
-         BlendAuthoringEdit,
+        BlendAuthoringEdit,
     ),
     MeshGrid(
         /// Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
-         MeshGridEdit,
+        MeshGridEdit,
     ),
     ParameterRange(
         /// Typed intent for parameter range conversion; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
-         ParameterRangeEdit,
+        ParameterRangeEdit,
     ),
     Reparent(
         /// Typed intent for deformation reparenting; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
-         ReparentEdit,
+        ReparentEdit,
     ),
 }
 #[derive(Debug, Clone)]

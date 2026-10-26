@@ -21,8 +21,8 @@ pub mod types;
 
 pub use document::Document;
 pub use evaluation::{
-    Drawable, DrawableFrame, EvaluatedParameter, FrameEvaluator, PreviewValues, evaluate_frame,
-    parent_positions,
+    evaluate_frame, parent_positions, Drawable, DrawableFrame, EvaluatedParameter, FrameEvaluator,
+    PreviewValues,
 };
 pub use geometry::{is_renderable_mesh, validate_positions, validate_render_mesh};
 pub use types::*;

@@ -30,7 +30,7 @@ pub enum DocumentValue {
     ExportSettings(#[doc = "Replacement export-frame scale and padding settings."] ExportSettings),
     SourceCanvas(
         /// Replacement source-canvas metadata; None explicitly removes the canvas provenance.
-         Option<Canvas>,
+        Option<Canvas>,
     ),
 }
 impl DocumentValue {

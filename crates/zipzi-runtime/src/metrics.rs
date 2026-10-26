@@ -2,7 +2,7 @@
 //! threads in this image), excluding Python/C allocators and allocator overhead.
 //! Copy counters cover explicit selected payload copies, not implicit Clone or
 //! realloc internals. Timing builds do not enable the counting allocator.
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 #[cfg(feature = "bench-instrumentation")]
 use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 

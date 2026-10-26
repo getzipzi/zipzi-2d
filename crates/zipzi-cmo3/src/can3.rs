@@ -13,12 +13,12 @@ use crate::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use zipzi_core::{
-    Document,
     document::{
         ExpressionAsset, ExpressionBlend, ExpressionTarget, MotionClip, MotionKey, MotionSegment,
         MotionTrack, MotionTrackTarget,
     },
     types::Canvas,
+    Document,
 };
 
 // A reserved playlist identity namespace distinguishes model3 registrations

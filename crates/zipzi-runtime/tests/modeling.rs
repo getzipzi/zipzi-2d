@@ -44,12 +44,11 @@ fn image_preparation_failure_poisoning_is_shared_by_typed_and_blob_writes() {
         };
         assert!(matches!(result, Err(RuntimeError::Sdk(e)) if e.code.as_ref() == "INVALID_IMAGE"));
         assert_eq!(rt.commit_edit(client, edit), Err(RuntimeError::Aborted));
-        assert!(
-            rt.document(session)
-                .unwrap()
-                .get_parameter(&parameter_id)
-                .is_none()
-        );
+        assert!(rt
+            .document(session)
+            .unwrap()
+            .get_parameter(&parameter_id)
+            .is_none());
         assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
         rt.release_edit(client, edit).unwrap();
         assert_eq!(rt.image_memory_usage().total_bytes(), 0);
@@ -89,12 +88,11 @@ fn batch_admission_retains_source_but_mid_batch_sdk_failure_aborts_everything() 
         Err(RuntimeError::Sdk(_))
     ));
     assert_eq!(rt.commit_edit(client, edit), Err(RuntimeError::Aborted));
-    assert!(
-        rt.document(session)
-            .unwrap()
-            .get_parameter(&parameter_id)
-            .is_none()
-    );
+    assert!(rt
+        .document(session)
+        .unwrap()
+        .get_parameter(&parameter_id)
+        .is_none());
     assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
 }
 #[test]

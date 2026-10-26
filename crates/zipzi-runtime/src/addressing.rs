@@ -161,46 +161,46 @@ pub enum Capabilities {
     Scene(
         /// Current scene lifecycle, hierarchy and drawing capability states and reasons; do not
         /// infer support from method presence.
-         SceneCapabilities,
+        SceneCapabilities,
     ),
     Organization(
         /// Current organization and parameter groups capability states and reasons; do not
         /// infer support from method presence.
-         OrganizationCapabilities,
+        OrganizationCapabilities,
     ),
     Binding(
         /// Current parameter bindings and grid conversions capability states and reasons; do
         /// not infer support from method presence.
-         BindingCapabilities,
+        BindingCapabilities,
     ),
     Content(
         /// Current geometry and topology content capability states and reasons; do not infer
         /// support from method presence.
-         SceneContentCapabilities,
+        SceneContentCapabilities,
     ),
     References(
         /// Current metadata references and selections capability states and reasons; do not
         /// infer support from method presence.
-         ReferenceCapabilities,
+        ReferenceCapabilities,
     ),
     Resource(
         /// Current image asset metadata and references capability states and reasons; do not
         /// infer support from method presence.
-         ResourceCapabilities,
+        ResourceCapabilities,
     ),
     Attachment(
         /// Current package attachments and their references capability states and reasons; do
         /// not infer support from method presence.
-         AttachmentCapabilities,
+        AttachmentCapabilities,
     ),
     Collection(
         /// Current collection capability states and reasons; do not infer support from method
         /// presence.
-         CollectionCapabilities,
+        CollectionCapabilities,
     ),
     Document(
         /// Current document configuration and metadata repair capability states and reasons; do
         /// not infer support from method presence.
-         CapabilityState,
+        CapabilityState,
     ),
 }

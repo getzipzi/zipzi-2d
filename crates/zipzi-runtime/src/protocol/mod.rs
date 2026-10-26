@@ -1038,10 +1038,9 @@ impl Protocol {
                 let end = offset
                     .checked_add(length)
                     .ok_or(RuntimeError::InvalidReference)?;
-                json!(
-                    data.get(offset..end)
-                        .ok_or(RuntimeError::InvalidReference)?
-                )
+                json!(data
+                    .get(offset..end)
+                    .ok_or(RuntimeError::InvalidReference)?)
             }
             Operation::SealBlob { blob } => json!(rt.seal_blob(client, blob)?),
             Operation::ReleaseBlob { blob } => {
@@ -1418,12 +1417,11 @@ impl Protocol {
                     json!({"sessions": sub.sessions.iter().map(info).collect::<Vec<_>>(), "cursor": sub.cursor})
                 }
             }
-            Operation::Events { cursor, limit } => json!(
-                rt.events_page(cursor, limit.unwrap_or(128))?
-                    .iter()
-                    .map(|e| event(e))
-                    .collect::<Vec<_>>()
-            ),
+            Operation::Events { cursor, limit } => json!(rt
+                .events_page(cursor, limit.unwrap_or(128))?
+                .iter()
+                .map(|e| event(e))
+                .collect::<Vec<_>>()),
             Operation::ShowWindow { session } => {
                 if !self.windows {
                     return Ok(failure(
