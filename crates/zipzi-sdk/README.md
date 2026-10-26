@@ -87,6 +87,16 @@ Constraint-only edits publish topology notifications, dirty state and history wi
 refreshing evaluation inputs. Undo/redo and native JSON/CBOR preserve the exact triangles.
 External model exports use the actual triangles and do not preserve modeling constraints.
 
+`extract_manual_meshing` validates an existing single-boundary triangulation without
+changing its faces. `edit_manual_mesh` is the pure manual edit layer: insert, move,
+delete, constrain, release and reconnect return complete `MeshGeometry`, stable ID
+mapping and affected edges. Local edits retain unaffected triangle edges; reconnect
+globally rebuilds free edges. Pass a fresh ID from a persistent
+`ManualVertexIdAllocator` for insertion, keeping the allocator across canceled
+candidates so old references cannot name a later point. `AffineUvMap::from_geometry`
+recovers the fixed image transform, including reflections. The focused gate is
+`cargo test --locked -p zipzi-sdk --test integration manual_mesh::`.
+
 `alpha_mesh_geometry(AlphaMask { width, height, alpha }, &AlphaMeshOptions)`
 is a deterministic, CPU-only geometry operation. `alpha` contains one byte per
 pixel, in top-down rows; retained pixels above `alpha_threshold` are included.

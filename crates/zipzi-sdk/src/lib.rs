@@ -43,6 +43,11 @@ pub use zipzi_project::{
 
 mod geometry;
 pub use geometry::{rectangle_grid_geometry, MeshGeometry};
+mod manual_mesh;
+pub use manual_mesh::{
+    edit_manual_mesh, extract_manual_meshing, AffineUvMap, ManualMeshOperation,
+    ManualMeshResult, ManualVertexIdAllocator,
+};
 mod mesh_binding_edit;
 mod mesh_edit;
 mod scene_edit;
