@@ -21,7 +21,10 @@ pub(crate) enum Task {
     },
     Open(PathBuf),
     Import(crate::ImportSource),
-    Save(PathBuf),
+    Save {
+        path: PathBuf,
+        target_sha256: Option<String>,
+    },
     Commit(Box<EditSession<'static>>),
     Undo,
     Redo,
@@ -166,7 +169,14 @@ impl Work {
                 Task::Open(path) => session
                     .open_project(&path, Some(base))
                     .map(|_| JobValue::Opened(session_id)),
-                Task::Save(path) => session.save_project(&path, Some(base)).map(JobValue::Saved),
+                Task::Save {
+                    path,
+                    target_sha256,
+                } => match target_sha256 {
+                    Some(hash) => session.save_project_replacing(&path, Some(base), &hash),
+                    None => session.save_project(&path, Some(base)),
+                }
+                .map(JobValue::Saved),
                 Task::Commit(edit) => (*edit)
                     .commit_to(&mut session)
                     .map(|receipt| JobValue::Published(Arc::new(receipt))),

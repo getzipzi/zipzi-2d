@@ -396,3 +396,60 @@ fn play_pause_has_one_non_repeating_space_binding_in_both_modes() -> anyhow::Res
     }
     Ok(())
 }
+
+#[test]
+fn confirmed_replacement_recovers_failed_save_and_preserves_conflict_checks() -> anyhow::Result<()>
+{
+    let output = tempfile::tempdir()?;
+    let target = output.path().join("replace.zipzi");
+    let mut original = crate::support::new_editor()?;
+    let original_id = original.active_id().unwrap();
+    let task = original.prepare_save(original_id, &target, false)?;
+    original.finish_save(&mut task.run())?;
+    let manifest = target.join("project.zipzi.json");
+    let old_bytes = std::fs::read(&manifest)?;
+
+    let (document, _assets) = support::sample_document()?;
+    let mut editor = support::editor_from_document(document);
+    editor.execute(EditorCommand::PreviewName("Replacement".into()))?;
+    editor.execute(EditorCommand::FinishEdit)?;
+    let document = editor.active_id().unwrap();
+    let source_canvas = editor.document().unwrap().source_canvas();
+    let task = editor.prepare_save(document, &target, false)?;
+    let error = editor.finish_save(&mut task.run()).err().unwrap();
+    assert!(error.to_string().contains("DESTINATION_EXISTS"), "{error}");
+    assert!(!editor.is_busy());
+    assert!(editor.document().unwrap().modified());
+    assert_eq!(std::fs::read(&manifest)?, old_bytes);
+
+    let hash = Editor::save_replacement_baseline(&target)?.unwrap();
+    // An external change after approval must still reject publication and
+    // restore the editable session, even for an explicitly confirmed Replace.
+    let changed_bytes = [old_bytes.as_slice(), b"\n"].concat();
+    let task = editor.prepare_save_replacing(document, &target, false, &hash)?;
+    std::fs::write(&manifest, &changed_bytes)?;
+    let error = editor.finish_save(&mut task.run()).err().unwrap();
+    assert!(error.to_string().contains("PROJECT_CONFLICT"), "{error}");
+    assert!(!editor.is_busy());
+    assert!(editor.document().unwrap().modified());
+    assert_eq!(std::fs::read(&manifest)?, changed_bytes);
+
+    let hash = Editor::save_replacement_baseline(&target)?.unwrap();
+    let task = editor.prepare_save_replacing(document, &target, false, &hash)?;
+    editor.finish_save(&mut task.run())?;
+    assert!(!editor.document().unwrap().modified());
+    assert_ne!(std::fs::read(&manifest)?, old_bytes);
+    let reopened = Document::open(&target)?;
+    assert_eq!(reopened.source_canvas(), source_canvas);
+    assert!(
+        reopened
+            .layers()
+            .iter()
+            .any(|layer| layer.name == "Replacement")
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    // Subsequent ordinary saves use the newly installed baseline.
+    let task = editor.prepare_save(document, &target, false)?;
+    editor.finish_save(&mut task.run())?;
+    Ok(())
+}

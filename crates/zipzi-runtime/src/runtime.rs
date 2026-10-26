@@ -852,6 +852,28 @@ impl Runtime {
         session: SessionId,
         path: &Path,
     ) -> Result<JobId> {
+        self.request_save_inner(client, session, path, None)
+    }
+
+    /// Queue an explicit replacement while retaining path ownership/reservations
+    /// and checking the approved destination manifest again on the worker.
+    pub fn request_save_replacing(
+        &mut self,
+        client: ClientId,
+        session: SessionId,
+        path: &Path,
+        target_sha256: &str,
+    ) -> Result<JobId> {
+        self.request_save_inner(client, session, path, Some(target_sha256.to_owned()))
+    }
+
+    fn request_save_inner(
+        &mut self,
+        client: ClientId,
+        session: SessionId,
+        path: &Path,
+        target_sha256: Option<String>,
+    ) -> Result<JobId> {
         self.client(client)?;
         self.exclusive(session)?;
         let path = identity(path)?;
@@ -860,7 +882,16 @@ impl Runtime {
         {
             return Err(RuntimeError::Busy);
         }
-        self.queue_task(client, session, Task::Save(path.clone()), Some(path), 0)
+        self.queue_task(
+            client,
+            session,
+            Task::Save {
+                path: path.clone(),
+                target_sha256,
+            },
+            Some(path),
+            0,
+        )
     }
     pub fn request_commit(&mut self, client: ClientId, edit: EditId) -> Result<JobId> {
         let entry = self.edit(client, edit)?;
@@ -930,7 +961,7 @@ impl Runtime {
                 self.refresh_memory_budget();
                 Some(Arc::new(self.reserve_transfer(256 << 20)?))
             }
-            Task::Save(_) => {
+            Task::Save { .. } => {
                 self.refresh_memory_budget();
                 Some(Arc::new(
                     self.reserve_transfer(

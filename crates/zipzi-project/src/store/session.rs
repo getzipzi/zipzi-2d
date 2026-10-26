@@ -163,6 +163,16 @@ impl DocumentSession {
     }
 
     pub fn save(&mut self, path: &Path) -> ProjectResult {
+        self.save_inner(path, None)
+    }
+
+    /// Replace a destination explicitly selected by the caller. Publication still
+    /// checks that its manifest matches the bytes the caller approved.
+    pub fn save_replacing(&mut self, path: &Path, target_sha256: &str) -> ProjectResult {
+        self.save_inner(path, Some(target_sha256))
+    }
+
+    fn save_inner(&mut self, path: &Path, target_sha256: Option<&str>) -> ProjectResult {
         if self.document.transaction_active() {
             return ProjectResult::failed("TRANSACTION_ACTIVE", "Commit or cancel first");
         }
@@ -170,7 +180,9 @@ impl DocumentSession {
             Ok(path) => path,
             Err(s) => return ProjectResult::from_status(s),
         };
-        let expected = if self.manifest == target {
+        let expected = if let Some(hash) = target_sha256 {
+            Some(hash)
+        } else if self.manifest == target {
             Some(self.manifest_sha256.as_str())
         } else {
             None

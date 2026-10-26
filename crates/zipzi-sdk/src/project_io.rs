@@ -214,6 +214,26 @@ impl AuthoringSession {
         path: &Path,
         expected: Option<Version>,
     ) -> Result<SaveReceipt, SdkError> {
+        self.save_project_inner(path, expected, None)
+    }
+
+    /// Explicitly replace the destination whose manifest has the approved hash.
+    /// Retains history and rejects changes to the destination before publication.
+    pub fn save_project_replacing(
+        &mut self,
+        path: &Path,
+        expected: Option<Version>,
+        target_sha256: &str,
+    ) -> Result<SaveReceipt, SdkError> {
+        self.save_project_inner(path, expected, Some(target_sha256))
+    }
+
+    fn save_project_inner(
+        &mut self,
+        path: &Path,
+        expected: Option<Version>,
+        target_sha256: Option<&str>,
+    ) -> Result<SaveReceipt, SdkError> {
         if !path.is_absolute() {
             return Err(SdkError::new(
                 "INVALID_PATH",
@@ -258,7 +278,10 @@ impl AuthoringSession {
         }
         // Recompute after any storage relocation or saved-baseline update.
         *self.content_bytes_cache.lock().unwrap() = None;
-        let result = self.project.save(path);
+        let result = match target_sha256 {
+            Some(hash) => self.project.save_replacing(path, hash),
+            None => self.project.save(path),
+        };
         if !result.status.is_ok() {
             return Err(SdkError::from_status(
                 result.status,

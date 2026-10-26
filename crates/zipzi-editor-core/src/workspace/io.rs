@@ -188,11 +188,43 @@ impl Editor {
         self.insert_with_id(id, document)?;
         Ok(notices)
     }
+    /// Capture the existing destination after a save dialog confirmed replacement.
+    /// Run on a worker: the manifest read may block on filesystem IO.
+    pub fn save_replacement_baseline(path: &Path) -> Result<Option<String>> {
+        let manifest = zipzi_project::project_manifest(path);
+        match std::fs::read(manifest) {
+            Ok(bytes) => Ok(Some(zipzi_project::content_sha256(&bytes))),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(error.into()),
+        }
+    }
+
     pub fn prepare_save(
         &mut self,
         id: DocumentId,
         path: &Path,
         close_after: bool,
+    ) -> Result<SaveTask> {
+        self.prepare_save_inner(id, path, close_after, None)
+    }
+
+    /// Save after the user explicitly selected an existing destination to replace.
+    pub fn prepare_save_replacing(
+        &mut self,
+        id: DocumentId,
+        path: &Path,
+        close_after: bool,
+        target_sha256: &str,
+    ) -> Result<SaveTask> {
+        self.prepare_save_inner(id, path, close_after, Some(target_sha256))
+    }
+
+    fn prepare_save_inner(
+        &mut self,
+        id: DocumentId,
+        path: &Path,
+        close_after: bool,
+        target_sha256: Option<&str>,
     ) -> Result<SaveTask> {
         self.end_editing(id, EditingLifecycle::Save)?;
         let operation = OperationId(Uuid::new_v4());
@@ -206,7 +238,13 @@ impl Editor {
             .begin_save(operation, close_after.then_some(close_reason))?;
         let host = self.runtime.clone();
         let prepared = (|| -> Result<(JobId, Work)> {
-            let job = host.write().request_save(host.client_id(), session, path)?;
+            let job = match target_sha256 {
+                Some(hash) => {
+                    host.write()
+                        .request_save_replacing(host.client_id(), session, path, hash)?
+                }
+                None => host.write().request_save(host.client_id(), session, path)?,
+            };
             Ok((job, host.dispatch_job(job)?))
         })();
         let (job, work) = match prepared {

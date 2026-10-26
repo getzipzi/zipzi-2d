@@ -122,7 +122,21 @@ impl EditorView {
         self.modal = true;
         self.redraw(cx);
         cx.spawn_in(window, async move |this, cx| {
-            let result = picker.await;
+            let result = match picker.await {
+                Ok(Ok(Some(path))) => {
+                    cx.background_executor()
+                        .spawn(async move {
+                            // The native save panel has already confirmed Replace.
+                            // Capture its target baseline without blocking the UI;
+                            // the worker checks it again before publishing.
+                            let hash = Editor::save_replacement_baseline(&path)?;
+                            Ok::<_, anyhow::Error>(Some((path, hash)))
+                        })
+                        .await
+                }
+                Ok(Ok(None)) => Ok(None),
+                other => Err(anyhow::anyhow!("{other:?}")),
+            };
             let _ = this.update_in(cx, |this, window, cx| {
                 this.modal = false;
                 if this.window_exit_interrupted() {
@@ -130,14 +144,21 @@ impl EditorView {
                     return;
                 }
                 match result {
-                    Ok(Ok(Some(path))) => this.save_to(id, path, close_after, window, cx),
-                    other => {
+                    Ok(Some((path, hash))) => this.save_to_with_baseline(
+                        id,
+                        path,
+                        close_after,
+                        hash.as_deref(),
+                        window,
+                        cx,
+                    ),
+                    Ok(None) => {
                         this.editor.cancel_exit();
-                        if !matches!(other, Ok(Ok(None))) {
-                            this.set_edit_error(format!("{other:?}"), cx);
-                        } else {
-                            cx.notify();
-                        }
+                        cx.notify();
+                    }
+                    Err(error) => {
+                        this.editor.cancel_exit();
+                        this.set_edit_error(error.to_string(), cx);
                     }
                 }
             });
@@ -152,7 +173,25 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let task = match self.editor.prepare_save(id, &path, close_after) {
+        self.save_to_with_baseline(id, path, close_after, None, window, cx);
+    }
+
+    fn save_to_with_baseline(
+        &mut self,
+        id: DocumentId,
+        path: PathBuf,
+        close_after: bool,
+        target_sha256: Option<&str>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let prepared = match target_sha256 {
+            Some(hash) => self
+                .editor
+                .prepare_save_replacing(id, &path, close_after, hash),
+            None => self.editor.prepare_save(id, &path, close_after),
+        };
+        let task = match prepared {
             Ok(task) => task,
             Err(error) => {
                 self.editor.cancel_exit();

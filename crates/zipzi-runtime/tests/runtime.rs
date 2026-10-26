@@ -1065,3 +1065,39 @@ fn typed_resource_writes_obey_budgets_without_consuming_loads() {
         }
     }
 }
+
+#[test]
+fn confirmed_replacement_respects_open_session_ownership_and_retains_history() {
+    let (mut host, a, b, s) = setup();
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("replace.zipzi");
+    let manifest = target.join("project.zipzi.json");
+    let owner = host.create_session(b, &id(2), canvas(200.)).unwrap();
+    host.request_save(b, owner, &target).unwrap();
+    finish(&mut host);
+    let bytes = std::fs::read(&manifest).unwrap();
+    let hash = zipzi_project::content_sha256(&bytes);
+    assert_eq!(
+        host.request_save_replacing(a, s, &target, &hash),
+        Err(RuntimeError::Busy)
+    );
+    assert_eq!(std::fs::read(&manifest).unwrap(), bytes);
+    host.close_session(b, owner, true).unwrap();
+
+    resize(&mut host, a, s, 120.);
+    let version = host.session(s).unwrap().version();
+    let job = host.request_save_replacing(a, s, &target, &hash).unwrap();
+    assert_eq!(host.request_open(b, &target), Err(RuntimeError::Busy));
+    finish(&mut host);
+    assert_eq!(host.job_info(a, job).unwrap().state, JobState::Succeeded);
+    assert_eq!(host.session(s).unwrap().version(), version);
+    assert_eq!(host.session(s).unwrap().history_lengths(), (1, 0));
+    assert!(!host.session(s).unwrap().modified());
+    assert_eq!(
+        host.request_open(b, &target).unwrap(),
+        OpenRequest::Existing(s)
+    );
+    host.undo(a, s).unwrap();
+    assert_eq!(host.session(s).unwrap().source_canvas(), Some(canvas(100.)));
+    assert!(host.session(s).unwrap().modified());
+}

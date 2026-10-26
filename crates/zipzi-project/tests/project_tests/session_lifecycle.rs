@@ -632,3 +632,46 @@ fn test_project_failure_preserves_document() {
     // Document state remains completely unaltered
     assert!(doc.same_content(&snap));
 }
+
+#[test]
+fn confirmed_replacement_preserves_destination_on_io_failure_and_can_retry() {
+    let tmp = TestDirectory::new();
+    let original = tmp.saved_session();
+    let destination = original.manifest().to_path_buf();
+    let old_bytes = fs::read(&destination).unwrap();
+    let approved_hash = content_sha256(&old_bytes);
+    let unrelated = original.root().join("notes.txt");
+    fs::write(&unrelated, b"keep me").unwrap();
+
+    let mut replacement =
+        DocumentSession::with_filesystem(FailingFileSystem::new(Failure::Rename(vec![1])));
+    let setup = original.document().source_canvas().unwrap();
+    assert!(replacement
+        .document_mut()
+        .initialize(id(999), setup)
+        .is_ok());
+    let before = replacement.document().clone();
+    let result = replacement.save_replacing(&destination, &approved_hash);
+    assert_eq!(result.status.code, "PROJECT_IO");
+    assert!(!result.published);
+    assert!(replacement.manifest().as_os_str().is_empty());
+    assert!(replacement.document().same_content(&before));
+    assert!(replacement.document().modified());
+    assert_eq!(fs::read(&destination).unwrap(), old_bytes);
+    assert!(DocumentStore::new()
+        .open(&destination)
+        .0
+        .resources_complete());
+
+    let result = replacement.save_replacing(&destination, &approved_hash);
+    assert!(result.status.is_ok(), "{result:?}");
+    assert!(!replacement.document().modified());
+    assert_eq!(fs::read(&unrelated).unwrap(), b"keep me");
+    assert_eq!(
+        decode_project(&fs::read_to_string(&destination).unwrap())
+            .unwrap()
+            .id(),
+        id(999)
+    );
+    assert!(replacement.save(&destination).status.is_ok());
+}
