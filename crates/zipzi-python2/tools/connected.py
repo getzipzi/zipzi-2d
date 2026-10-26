@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tomllib
 from _support import exclusive_run
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -19,8 +20,9 @@ def install(output: Path) -> Path:
     if not environment.exists():
         subprocess.run(["uv", "venv", "--python", "3.14", str(environment)], cwd=ROOT, check=True, stdout=sys.stderr)
     python = environment / "bin/python"
+    version = tomllib.loads((PACKAGE / "client/pyproject.toml").read_text())["project"]["version"]
     subprocess.run(["uv", "pip", "install", "--python", str(python), "--reinstall",
-        str(wheels / "zipzi_python2-0.1.0-py3-none-any.whl")], cwd=ROOT, check=True, stdout=sys.stderr)
+        str(wheels / f"zipzi-{version}-py3-none-any.whl")], cwd=ROOT, check=True, stdout=sys.stderr)
     return python
 
 

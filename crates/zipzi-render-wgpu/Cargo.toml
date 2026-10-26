@@ -7,8 +7,8 @@ license.workspace = true
 
 [dependencies]
 bytemuck = { workspace = true }
-zipzi-core = { path = "../zipzi-core" }
-zipzi-render = { path = "../zipzi-render" }
+zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
+zipzi-render = { version = "=0.1.0-alpha.1", path = "../zipzi-render" }
 wgpu = { workspace = true }
 
 [dev-dependencies]

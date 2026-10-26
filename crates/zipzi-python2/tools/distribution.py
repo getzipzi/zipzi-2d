@@ -12,6 +12,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tarfile
+import tomllib
 import zipfile
 from _support import exclusive_run
 
@@ -49,10 +50,11 @@ def main():
             result.check_returncode()
         print(name+': passed',flush=True)
     with exclusive_run(output/'runner.lock'):
+        version = tomllib.loads((PACKAGE/'client/pyproject.toml').read_text())['project']['version']
         run('client-sdist',['uv','build','--sdist','--out-dir',output/'sdists',PACKAGE/'client'])
         run('native-sdist',['uv','build','--sdist','--out-dir',output/'sdists',PACKAGE])
-        client=extract(output/'sdists/zipzi_python2-0.1.0.tar.gz',output/'sources')
-        native=extract(output/'sdists/zipzi_python2_native-0.1.0.tar.gz',output/'sources')
+        client=extract(output/f'sdists/zipzi-{version}.tar.gz',output/'sources')
+        native=extract(output/f'sdists/zipzi_native-{version}.tar.gz',output/'sources')
         archived=native/'crates/zipzi-python2'
         # No Git directory, no reference back to the live workspace.
         assert not (native/'.git').exists()
@@ -64,8 +66,8 @@ def main():
             assert (archived/'client'/relative).read_bytes()==source.read_bytes(),relative
         run('client-wheel',['uv','build','--wheel','--out-dir',output/'wheels',client])
         run('native-wheel',['uv','build','--wheel','--out-dir',output/'wheels',native])
-        pure=next((output/'wheels').glob('zipzi_python2-*.whl'))
-        extension=next((output/'wheels').glob('zipzi_python2_native-*.whl'))
+        pure=next((output/'wheels').glob(f'zipzi-{version}-*.whl'))
+        extension=next((output/'wheels').glob(f'zipzi_native-{version}-*.whl'))
         with zipfile.ZipFile(pure) as wheel:
             for source in (PACKAGE/'client/python/zipzi/_generated').glob('*.py'):
                 assert wheel.read('zipzi/_generated/'+source.name)==source.read_bytes()

@@ -1,4 +1,4 @@
-# zipzi-python2
+# zipzi Python SDK
 
 Independent typed Python SDK built on the shared Rust Runtime. The Python import
 is `zipzi`. All public values, errors and lifecycle wrappers live in this package;
@@ -11,10 +11,10 @@ no JSON transport conversion or direct SDK session owner.
 | Path | Responsibility |
 | --- | --- |
 | `client/python/zipzi/` | Pure Python client, values, operation objects and backends |
-| `client/pyproject.toml` | Pure `zipzi-python2` distribution; no native dependency |
+| `client/pyproject.toml` | Pure `zipzi` distribution; no native dependency |
 | `src/lib.rs` | Thin PyO3 adapter; Cargo package `zipzi-python2` |
 | `native/zipzi_native/` | Native import namespace |
-| `pyproject.toml` | Optional `zipzi-python2-native` distribution |
+| `pyproject.toml` | Optional `zipzi-native` distribution |
 | `tests/` | Shared Local/Connected recipe and positive/negative type examples |
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |

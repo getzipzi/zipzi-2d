@@ -8,7 +8,7 @@ authors.workspace = true
 description = "Typed, IO-free Live2D asset wire formats for Zipzi 2D"
 
 [dependencies]
-zipzi-core = { path = "../zipzi-core" }
+zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

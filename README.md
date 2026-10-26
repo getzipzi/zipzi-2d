@@ -3,8 +3,8 @@
 Zipzi 2D brings the Zipzi Rust authoring SDK, Python bindings and native macOS
 Editor into one workspace. It supports editable 2D model documents, animation,
 Live2D/Cubism format interoperability, and WGPU/Metal rendering. The project is
-under development and has not been officially released; APIs and file formats
-may change.
+under development with no stable release; APIs and file formats may change.
+See [release preparation and Alpha downloads](docs/RELEASING.md).
 
 ## Start here
 

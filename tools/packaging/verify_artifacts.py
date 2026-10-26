@@ -36,11 +36,16 @@ def check_wheel(path):
 
 
 def check_app(path):
+    from release import metadata
     resources = path/'Contents/Resources'
     plist = plistlib.loads((path/'Contents/Info.plist').read_bytes())
     assert plist['CFBundleIdentifier'] == 'dev.zipzi.editor'
     assert plist['CFBundleName'] == 'Zipzi Editor'
     assert plist['CFBundleExecutable'] == 'zipzi-editor'
+    version = metadata()
+    assert plist['CFBundleShortVersionString'] == version['app_version']
+    assert plist['ZipziReleaseVersion'] == version['version']
+    assert plist['CFBundleVersion'] and plist['ZipziSourceRevision']
     binary = path/'Contents/MacOS'/plist['CFBundleExecutable']
     assert binary.is_file() and binary.stat().st_mode & 0o111
     data = binary.read_bytes()

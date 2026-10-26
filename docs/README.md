@@ -5,6 +5,7 @@
 - [Editor development](../crates/zipzi-editor/README.md) and [dependencies](../vendor/README.md#dependencies)
 - [Test domains and CI](../tools/README.md#test-coverage)
 - [Source, wheel and app artifacts](../tools/README.md#local-distribution-artifacts)
+- [Versioning, Alpha releases and package publication preparation](RELEASING.md)
 - [Tool guide](../tools/README.md) and [model inventory](../models/README.md)
 - [Runtime evidence](runtime/README.md) and [Runtime plan](plans/sdk-runtime-implementation-plan.md), [R2 Editor migration](plans/sdk-runtime/r2-editor.md)
 - [zipzi-python2 construction plan](plans/python-sdk-rewrite-plan.md): independent package, typed API, shared Runtime execution and bounded generation

@@ -28,7 +28,7 @@ default-members = ["crates/zipzi-core", "crates/zipzi-project", "crates/zipzi-sd
 exclude = ["vendor/gpui-fast", "vendor/gpui-fast-macos", "vendor/gpui-fast-apple", "vendor/gpui-kit"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2021"
 rust-version = "1.95"
 license = "MIT"
@@ -46,17 +46,17 @@ wgpu = "29"
 anyhow = "1"
 metal = "0.33"
 objc2 = "0.6"
-zipzi-render-metal = { path = "crates/zipzi-render-metal" }
+zipzi-render-metal = { version = "=0.1.0-alpha.1", path = "crates/zipzi-render-metal" }
 gpui-kit = { git = "https://github.com/longbridge/gpui-kit", rev = "507e82b8115ac73af92b7d3856501f9d7b73b2c9", features = ["gpui-fast"] }
 gpui-fps = { git = "https://github.com/longbridge/gpui-kit", rev = "507e82b8115ac73af92b7d3856501f9d7b73b2c9", features = ["gpui-fast"] }
 async-channel = "2"
-zipzi-core = { path = "crates/zipzi-core" }
-zipzi-sdk = { path = "crates/zipzi-sdk" }
-zipzi-runtime = { path = "crates/zipzi-runtime" }
-zipzi-project = { path = "crates/zipzi-project" }
-zipzi-render = { path = "crates/zipzi-render" }
-zipzi-editor-core = { path = "crates/zipzi-editor-core" }
-zipzi-editor-render = { path = "crates/zipzi-editor-render" }
+zipzi-core = { version = "=0.1.0-alpha.1", path = "crates/zipzi-core" }
+zipzi-sdk = { version = "=0.1.0-alpha.1", path = "crates/zipzi-sdk" }
+zipzi-runtime = { version = "=0.1.0-alpha.1", path = "crates/zipzi-runtime" }
+zipzi-project = { version = "=0.1.0-alpha.1", path = "crates/zipzi-project" }
+zipzi-render = { version = "=0.1.0-alpha.1", path = "crates/zipzi-render" }
+zipzi-editor-core = { version = "=0.1.0-alpha.1", path = "crates/zipzi-editor-core" }
+zipzi-editor-render = { version = "=0.1.0-alpha.1", path = "crates/zipzi-editor-render" }
 rust-i18n = "4.2"
 sys-locale = "0.3"
 tempfile = "3"

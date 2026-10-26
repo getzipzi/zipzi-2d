@@ -9,7 +9,7 @@ description = "Backend-neutral frame validation and render planning for Zipzi 2D
 
 [dependencies]
 bytemuck = { workspace = true }
-zipzi-core = { path = "../zipzi-core" }
+zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
 
 [[bench]]
 name = "render_benchmark"

@@ -6,7 +6,6 @@ case "${1:-editor}" in
   editor)
     package="zipzi-editor"
     name="Zipzi Editor"
-    bundle_id="dev.zipzi.editor"
     icon_asset="$repo_root/crates/zipzi-editor/assets/app-icons/zipzi-editor-icon-vector.icns"
     ;;
   *)
@@ -42,17 +41,5 @@ find "$repo_root/vendor" -type f \( -iname 'license*' -o -iname 'notice*' -o -in
 done
 cp "$repo_root/vendor/README.md" "$app/Contents/Resources/vendor-notices/README.md"
 cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
-cat > "$app/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>CFBundleIdentifier</key><string>$bundle_id</string>
-<key>CFBundleName</key><string>$name</string>
-<key>CFBundleExecutable</key><string>$package</string>
-<key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>0.1.0</string>
-<key>CFBundleIconFile</key><string>AppIcon</string>
-<key>NSHighResolutionCapable</key><true/>
-</dict></plist>
-PLIST
+python3 "$repo_root/tools/packaging/release.py" app-plist "$app/Contents/Info.plist"
 printf '%s\n' "$app"

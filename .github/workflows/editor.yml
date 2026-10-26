@@ -1,13 +1,15 @@
 name: Editor CI
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
-# Both domains run on all changes, including SDK, root Cargo, tools and assets.
-# Narrow path filters only after dependency-aware coverage has been established.
+# Run the expensive native Editor gate on demand during pre-release development.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   editor:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
         with:

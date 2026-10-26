@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 from typing import get_type_hints
 
 import zipzi
@@ -15,7 +16,8 @@ from zipzi import bindings, sampling, events, meshes, ops, parameters, resources
 
 def main():
     mode = sys.argv[1]
-    assert version("zipzi-python2") == "0.1.0"
+    expected_version = tomllib.loads((Path(__file__).resolve().parents[1] / "client/pyproject.toml").read_text())["project"]["version"]
+    assert version("zipzi") == expected_version
     assert "/site-packages/zipzi/" in zipzi.__file__, zipzi.__file__
     assert get_type_hints(resources.CreateImage)["image"] is resources.PreparedImage
     assert get_type_hints(zipzi.OutcomeUnknown.recover)["return"] is object
@@ -27,7 +29,7 @@ def main():
         child = None
         try:
             if mode == "local":
-                assert version("zipzi-python2-native") == "0.1.0"
+                assert version("zipzi-native") == expected_version
                 runtime = zipzi.local()
                 assert not hasattr(runtime._backend._native, "_test_control")
                 assert not hasattr(runtime._backend._native, "_measure")

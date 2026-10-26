@@ -11,11 +11,11 @@ default = ["framework-texture-filtering"]
 framework-texture-filtering = []
 
 [dependencies]
-zipzi-animation = { path = "../zipzi-animation" }
-zipzi-core = { path = "../zipzi-core" }
-zipzi-sdk = { path = "../zipzi-sdk" }
-zipzi-project = { path = "../zipzi-project" }
-zipzi-render = { path = "../zipzi-render" }
+zipzi-animation = { version = "=0.1.0-alpha.1", path = "../zipzi-animation" }
+zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
+zipzi-sdk = { version = "=0.1.0-alpha.1", path = "../zipzi-sdk" }
+zipzi-project = { version = "=0.1.0-alpha.1", path = "../zipzi-project" }
+zipzi-render = { version = "=0.1.0-alpha.1", path = "../zipzi-render" }
 png = { workspace = true }
 sha2 = { workspace = true }
 serde = { workspace = true }
@@ -25,8 +25,8 @@ uuid = { version = "1", features = ["v4"] }
 [dev-dependencies]
 
 [target.'cfg(target_os = "macos")'.dependencies]
-zipzi-render-metal = { path = "../zipzi-render-metal" }
+zipzi-render-metal = { version = "=0.1.0-alpha.1", path = "../zipzi-render-metal" }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
-zipzi-render-wgpu = { path = "../zipzi-render-wgpu" }
+zipzi-render-wgpu = { version = "=0.1.0-alpha.1", path = "../zipzi-render-wgpu" }
 wgpu = { workspace = true }

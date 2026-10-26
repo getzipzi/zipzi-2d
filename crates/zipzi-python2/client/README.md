@@ -1,7 +1,7 @@
-# zipzi-python2
+# zipzi
 
 Pure Python authoring client. Import as `zipzi`. The optional
-`zipzi-python2-native` distribution supplies `zipzi_native._native` for
+`zipzi-native` distribution supplies `zipzi_native._native` for
 `zipzi.local()`; connected clients can import and run without it.
 
 Recovery resumes one complete public call with its original request identity:

@@ -42,7 +42,7 @@ class LocalBackend(LocalQueries, LocalResources):
             module = cast("NativeModule", import_module("zipzi_native._native"))
             self._native = module._Runtime()
         except ImportError as e:
-            raise SdkFailure("LOCAL_BACKEND_MISSING", "Install the zipzi-python2-native") from e
+            raise SdkFailure("LOCAL_BACKEND_MISSING", "Install zipzi-native matching your zipzi version") from e
         except RuntimeError as e:
             raise SdkFailure("EXECUTOR_FAILURE", str(e)) from e
         except AttributeError as e:

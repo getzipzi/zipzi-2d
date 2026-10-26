@@ -43,11 +43,14 @@ class Python2ToolsTests(unittest.TestCase):
         cargo = tomllib.loads((PACKAGE / "Cargo.toml").read_text())
         workspace = tomllib.loads((ROOT / "Cargo.toml").read_text())
         self.assertEqual(cargo["package"]["name"], "zipzi-python2")
-        self.assertEqual(client["project"]["name"], "zipzi-python2")
-        self.assertEqual(native["project"]["name"], "zipzi-python2-native")
+        self.assertEqual(client["project"]["name"], "zipzi")
+        self.assertEqual(native["project"]["name"], "zipzi-native")
         version = workspace["workspace"]["package"]["version"]
-        self.assertEqual(client["project"]["version"], version)
-        self.assertIn(f"zipzi-python2=={version}", native["project"]["dependencies"])
+        sys.path.insert(0, str(ROOT / "tools/packaging"))
+        from release import versions
+        python_version = versions(version)["python_version"]
+        self.assertEqual(client["project"]["version"], python_version)
+        self.assertIn(f"zipzi=={python_version}", native["project"]["dependencies"])
         self.assertNotIn("dependencies", client["project"])
         self.assertEqual(native["tool"]["maturin"]["module-name"], "zipzi_native._native")
         self.assertNotIn("zipzi-python", cargo["dependencies"])

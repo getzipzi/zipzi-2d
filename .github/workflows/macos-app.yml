@@ -1,0 +1,98 @@
+name: Package macOS App
+on:
+  push:
+    tags:
+      - 'v[0-9]*-alpha.*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: 2
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Validate release versions and tag
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          args=()
+          if [[ -n "$RELEASE_TAG" ]]; then args+=(--tag "$RELEASE_TAG"); fi
+          python3 tools/packaging/release.py check "${args[@]}" --github-output "$GITHUB_OUTPUT"
+          if [[ -n "$RELEASE_TAG" ]]; then test -f "docs/releases/${RELEASE_TAG}.md"; fi
+      - name: Build Release app
+        env:
+          ZIPZI_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+        run: sh tools/build-editor-app.sh editor release
+      - name: Verify app contents
+        run: python3 tools/packaging/verify_artifacts.py --app 'target/Zipzi Editor.app'
+      - name: Ad hoc sign and verify app
+        run: |
+          codesign --force --deep --sign - 'target/Zipzi Editor.app'
+          codesign --verify --deep --strict 'target/Zipzi Editor.app'
+      - name: Archive app with executable permissions
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          mkdir -p target/releases
+          ditto -c -k --sequesterRsrc --keepParent 'target/Zipzi Editor.app' "target/releases/Zipzi-Editor-${RELEASE_TAG}-macos-arm64.zip"
+      - name: Archive corresponding workspace source
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          python3 tools/packaging/package_source.py "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
+          python3 tools/packaging/verify_artifacts.py --source "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
+      - name: Record checksums
+        working-directory: target/releases
+        run: shasum -a 256 ./*.zip ./*.tar.gz > SHA256SUMS
+      - name: Upload app
+        uses: actions/upload-artifact@v7
+        with:
+          name: Zipzi-Editor-${{ steps.release.outputs.tag }}-macos-arm64
+          path: target/releases/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+  release:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: Zipzi-Editor-${{ needs.package.outputs.tag }}-macos-arm64
+          path: release
+      - name: Verify downloaded assets
+        working-directory: release
+        run: sha256sum --check SHA256SUMS
+      - name: Publish Mac Alpha prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.package.outputs.tag }}
+        run: |
+          gh release create "$RELEASE_TAG" release/* --verify-tag \
+            --title "Zipzi Editor $RELEASE_TAG" \
+            --notes-file "docs/releases/${RELEASE_TAG}.md" \
+            --prerelease --latest=false

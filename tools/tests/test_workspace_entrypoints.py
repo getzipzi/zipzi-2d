@@ -1,6 +1,7 @@
 """Exercise packaging from real directory layouts with a fake Cargo artifact stream."""
 import json
 import os
+import plistlib
 from pathlib import Path
 import shutil
 import subprocess
@@ -23,7 +24,7 @@ class PackagingPaths(unittest.TestCase):
         (self.root / 'tools').mkdir(parents=True)
         self.app.mkdir(parents=True)
         (self.app / 'assets/app-icons').mkdir(parents=True)
-        for name in ['workspace/workspace.sh', 'workspace/workspace_tools.py', 'build-editor-app.sh']:
+        for name in ['workspace/workspace.sh', 'workspace/workspace_tools.py', 'build-editor-app.sh', 'packaging/release.py']:
             (self.root / "tools" / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(SCRIPTS / name, self.root / 'tools' / name)
         (self.root / 'LICENSE-GPL-3.0').write_text('Editor GPL fixture')
@@ -33,7 +34,7 @@ class PackagingPaths(unittest.TestCase):
         (self.root/'vendor/library').mkdir(parents=True)
         (self.root/'vendor/README.md').write_text('vendor provenance')
         (self.root/'vendor/library/LICENSE').write_text('third-party license')
-        (self.root / 'Cargo.toml').write_text('[workspace]')
+        (self.root / 'Cargo.toml').write_text('[workspace.package]\nversion = "0.1.0-alpha.1"\n')
         (self.root / 'Cargo.lock').write_text('version = 4')
         (self.app / 'assets/app-icons/zipzi-editor-icon-vector.icns').write_bytes(b'icon')
         self.outside = Path(self.temp.name).resolve() / 'elsewhere'
@@ -76,6 +77,10 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi-editor','
                     self.assertEqual((bundle/'Contents/Resources/LICENSE-MIT').read_text(), 'SDK MIT fixture')
                     self.assertEqual((bundle/'Contents/Resources/THIRD_PARTY_NOTICES.md').read_text(), 'THIRD_PARTY_NOTICES.md')
                     self.assertEqual((bundle/'Contents/Resources/vendor-notices/library/LICENSE').read_text(), 'third-party license')
+                    info = plistlib.loads((bundle/'Contents/Info.plist').read_bytes())
+                    self.assertEqual(info['CFBundleShortVersionString'], '0.1.0')
+                    self.assertEqual(info['ZipziReleaseVersion'], '0.1.0-alpha.1')
+                    self.assertEqual(info['CFBundleVersion'], '1')
                     call = json.loads((self.root/'invocation.json').read_text())
                     self.assertEqual(Path(call['target']), cwd/'custom target/aarch64-apple-darwin')
                     before = (bundle/'Contents/MacOS/zipzi-editor').read_bytes()

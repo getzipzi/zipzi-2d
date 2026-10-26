@@ -1,5 +1,10 @@
 # Zipzi Python SDK
 
+This is the legacy adapter retained for repository tests and experiments. The
+formal `zipzi` / `zipzi-native` release sources are in
+[`../zipzi-python2`](../zipzi-python2/README.md). Do not upload this legacy wheel
+to the public `zipzi` project; see the [release guide](../../docs/RELEASING.md).
+
 `zipzi` is the distributable Python interface for Zipzi 2D authoring. It
 creates and edits 2D model projects, evaluates parameterized geometry, imports
 model3/MOC3 input, and exports MOC3 packages. The optional `observe` build adds

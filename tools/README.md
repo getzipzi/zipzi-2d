@@ -106,9 +106,37 @@ during iteration and reserve full runs for broad regression acceptance.
 
 ### CI coverage
 
-Both workflows run on every push and pull request. There are no path filters:
-SDK changes trigger Editor consumer validation; root manifests, shared tools,
-assets and vendor changes cannot be missed by path heuristics.
+SDK CI, Editor CI and Prepare Python Packages are manual-only. Ordinary branch
+pushes and pull request updates do not start CI jobs. Only an explicitly pushed
+`vX.Y.Z-alpha.N` tag starts Package macOS App and its GitHub prerelease upload.
+See [the release guide](../docs/RELEASING.md) for versioning and tag commands.
+
+For a downloadable app, open **Actions → Package macOS App → Run workflow**,
+select the branch and start the run, or use
+`gh workflow run macos-app.yml --ref <branch>`. This uses one `macos-15`
+Apple Silicon runner to build a Release app, verify its contents, apply and
+verify an ad hoc signature, and archive the bundle with executable permissions.
+It also archives and verifies the corresponding workspace source and records
+SHA-256 checksums. Manual runs upload artifacts only; Alpha tag pushes publish
+the same verified artifacts to a GitHub prerelease.
+It does not run the SDK/Editor test suites or build Python wheels. Download
+`Zipzi-Editor-vX.Y.Z-alpha.N-macos-arm64` from the completed run's **Artifacts**
+section and extract the enclosed app zip to obtain `Zipzi Editor.app`.
+Artifacts are retained for three days; the job has a 90-minute timeout.
+This is a development build without Developer ID signing or notarization.
+Packaging success does not establish native runtime or UI acceptance.
+
+Use **Actions → SDK CI / Editor CI → Run workflow** for the full checks, or
+`gh workflow run rust.yml --ref <branch>` /
+`gh workflow run editor.yml --ref <branch>`. Manual triggers become available
+once the workflows are on the repository's default branch; no version tag is
+required. Repeated runs of the same workflow for the same branch cancel the
+previous pending or running workflow.
+
+Prepare Python Packages builds the formal `zipzi` client and optional
+`zipzi-native` backend, rebuilds wheels from their source archives and exercises
+isolated Local/Connected installation. It uploads the packages and acceptance
+report as three-day artifacts. No workflow uploads to PyPI or crates.io.
 
 SDK CI retains Linux/macOS/Windows, all-target clippy, decoder safety without
 native Core, complete SDK tests, wheel building, isolated integration, Python

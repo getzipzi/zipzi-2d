@@ -11,9 +11,9 @@ description = "Native Cubism editable project import and export for Zipzi docume
 test-support = []
 
 [dependencies]
-zipzi-core = { path = "../zipzi-core" }
-zipzi-animation = { path = "../zipzi-animation" }
-zipzi-live2d = { path = "../zipzi-live2d" }
+zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
+zipzi-animation = { version = "=0.1.0-alpha.1", path = "../zipzi-animation" }
+zipzi-live2d = { version = "=0.1.0-alpha.1", path = "../zipzi-live2d" }
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
