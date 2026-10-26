@@ -14,6 +14,14 @@ else:
 from ._generated.resource_values import ImagePixels as ImagePixels, Image as Image, Usage as Usage
 
 class PreparedImage(Owned):
+    """Owned prepared-image lease from Runtime.resources preparation/loading.
+
+    Preparation owns immutable pixels independently of any Edit. Accept/replace
+    through edit.resources, then close this lease or use with; formal/candidate/
+    history owners retain their own references. width/height are cached, while
+    pixels() synchronously downloads owned bytes. A pending request must recover
+    on this original owner. Handles cannot cross Runtime/client boundaries.
+    """
     def __init__(self, backend: Backend):
         super().__init__(backend, "image")
         self._width = self._height = 0
@@ -58,6 +66,7 @@ class PreparedImage(Owned):
         return self._request("pixels", lambda: self._backend.prepared_pixels(self._token, self), ImagePixels._read)
 
     def __enter__(self) -> PreparedImage:
+        'Check the owning client/lease locally and return this PreparedImage without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.'
         super().__enter__()
         return self
 
@@ -77,6 +86,7 @@ class ImageLease(PreparedImage):
             value=record(raw);image._token=value["image"];image._width=integer(value["width"]);image._height=integer(value["height"]);image.source=Source._read(value["source"]);return image
         return image._request("capture",lambda:backend.capture_image(session,edit,id,image),decode)
     def __enter__(self)->ImageLease:
+        'Check the owning client/lease locally and return this ImageLease without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.'
         super().__enter__();return self
 
 class Resources:

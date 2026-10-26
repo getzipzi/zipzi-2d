@@ -18,6 +18,14 @@ T=TypeVar('T')
 JobState = Literal["queued", "running", "cancelling", "succeeded", "failed", "cancelled"]
 
 class Job(RecoveryOwner, Generic[T]):
+    """Owned accepted work returned by submit/commit/IO calls; use those factories.
+
+    wait returns the declared T and releases the bounded result slot; state does
+    not consume it. cancel requests cancellation and close waits for the real
+    outcome. A known JobTimeout keeps this Job pending. After OutcomeUnknown,
+    retain and recover its original Call before issuing another Job action.
+    Use with for close-on-exit; it waits rather than cancelling entered IO.
+    """
     def __init__(self, backend: Backend, token: object, kind: JobKind, decode: Callable[[object], T], on_terminal: Callable[[bool | None], None] | None = None):
         super().__init__(backend)
         self._token, self._kind, self._decode = token, kind, decode
@@ -123,9 +131,17 @@ class Job(RecoveryOwner, Generic[T]):
         project(self.wait, lambda _: None, operation="job.close")
 
     def __enter__(self) -> "Job[T]":
+        """Return this accepted Job without polling or IO; exit waits through close()."""
         return self
 
     def __exit__(self, kind: object, exception: BaseException | None, traceback: object) -> None:
+        """Wait/close on scope exit without suppressing the body's exception.
+
+        Context arguments are supplied by Python. Normal exit propagates a Job
+        failure or OutcomeUnknown; during an existing exception cleanup failure
+        is attached as a note and the owning Job retains pending recovery.
+        Returns None and may block for entered work; it never implies cancel.
+        """
         try:
             self.close()
         except BaseException as cleanup:

@@ -5,6 +5,9 @@ import argparse
 import importlib.util
 import inspect
 import typing
+import re
+import hashlib
+from importlib import metadata,resources
 import zipzi
 from zipzi._generated.catalog import CATALOG
 from zipzi._generated import facades
@@ -13,7 +16,7 @@ from zipzi.resources import Resources
 
 
 def audit()->dict[str,object]:
-    failures:dict[str,list[str]]={key:[] for key in ('D01','D02','D04','D07')}
+    failures:dict[str,list[str]]={key:[] for key in ('D01','D02','D04','D07','D08')}
     counts={'symbols':0,'callables':0,'fields':0}
     if '/site-packages/zipzi/' not in zipzi.__file__:raise RuntimeError('Audit requires an installed wheel')
     if importlib.util.find_spec('zipzi_native') is not None:raise RuntimeError('Offline audit must use the pure wheel only')
@@ -35,8 +38,11 @@ def audit()->dict[str,object]:
                 text=inspect.getdoc(value) or ''
                 if 'Declared by ' in text:failures['D02'].append(path+': Rust fields still have declaration-only descriptions')
             for name in dir(value):
-                if name.startswith('_'):continue
+                if name.startswith('_') and name not in {'__enter__','__exit__','__repr__'}:continue
                 member=inspect.getattr_static(value,name)
+                if name.startswith('_'):
+                    source=inspect.getsourcefile(member) if inspect.isfunction(member) else None
+                    if source is None or not Path(source).is_relative_to(Path(zipzi.__file__).parent):continue
                 if isinstance(member,property):
                     if member.fget is not None:check_callable(path+'.'+name,member.fget)
                 elif inspect.isfunction(member):check_callable(path+'.'+name,member)
@@ -72,6 +78,29 @@ def audit()->dict[str,object]:
         if len(repr(value))>1024:failures['D07'].append(type(value).__name__+': repr exceeds 1024 chars')
         if value.summary()!=repr(value):failures['D07'].append(type(value).__name__+': summary differs')
     if len(geometry.positions)!=1000:failures['D07'].append('Explicit geometry fields changed')
+    from zipzi._generated.catalog import PACKAGE_VERSION,CONTRACT,CONTRACT_SHA256,CLIENT_SOURCE_SHA256
+    if PACKAGE_VERSION!=metadata.version('zipzi-python2'):failures['D08'].append('Installed package/catalog version mismatch')
+    if CONTRACT!='zipzi-runtime-p3a-345-1' or not re.fullmatch('[0-9a-f]{64}',CONTRACT_SHA256):failures['D08'].append('Missing exact protocol/contract identity')
+    package=resources.files('zipzi')
+    fingerprint=hashlib.sha256()
+    package_path=Path(zipzi.__file__).parent
+    for path in sorted(package_path.rglob('*.py')):
+        if path.relative_to(package_path).as_posix()=='_generated/catalog.py':continue
+        relative='client/python/zipzi/'+path.relative_to(package_path).as_posix()
+        fingerprint.update(relative.encode());fingerprint.update(b'\0');fingerprint.update(path.read_text().encode())
+    fingerprint.update(b'client/python/zipzi/docs/guide.md\0')
+    fingerprint.update(package.joinpath('docs/guide.md').read_text().encode())
+    if fingerprint.hexdigest()!=CLIENT_SOURCE_SHA256:failures['D08'].append('Installed source/document build fingerprint mismatch')
+    if CLIENT_SOURCE_SHA256 not in zipzi.describe('zipzi').documentation:failures['D08'].append('Build fingerprint missing from public root help')
+    for reference in {'docs/guide.md','docs/reference.md','docs/recipes.py',*[entry.get('example','') for entry in CATALOG.values()]}-{''}:
+        if not package.joinpath(reference).is_file():failures['D08'].append('Missing installed reference: '+reference)
+    guide=package.joinpath('docs/guide.md').read_text()
+    if len(guide.split())>1500:failures['D08'].append('Short workflow exceeds 1500 words')
+    for name in ('guide.md','reference.md'):
+        document=package.joinpath('docs',name)
+        for link in re.findall(r'(?<!!)\[[^\]]+\]\(([^)]+)\)',document.read_text()):
+            if '://' in link or link.startswith('#'):continue
+            if not package.joinpath('docs',link.split('#',1)[0]).is_file():failures['D08'].append(name+': invalid installed link '+link)
     return {'counts':counts,'failures':{k:sorted(set(v)) for k,v in failures.items()}}
 
 

@@ -45,6 +45,7 @@ arguments and output paths.
 | `python/test_python.py` | Refresh Debug Python extension or build/validate an isolated Release wheel |
 | `python/python2_contract.py` | P3A inventory, source/artifact freeze, complete target map/signatures, agent configuration and P3A-0 exit gate |
 | `python/python2_pairs.py` | Counterbalanced comparisons of frozen Python2 clients/Release binaries with the unchanged P0 workload and thresholds |
+| `python/python2_p0_migration.py` | Freeze an explicit shared P3A API adapter for both generations; guard original inputs, operations, assertions, measurement core and policy |
 | `../crates/zipzi-python2/tools/connected.py` | Build/install the independent pure client; real subprocess startup/session acceptance; `--install-only` supplies Editor's interpreter |
 | `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
 | `dev-editor.sh` | Editor development watcher and process lifecycle |
@@ -295,6 +296,15 @@ latency before separate probes, records every run and rejects noise. Preserve
 historical failures when diagnosing environment drift; paired evidence does not
 overwrite them.
 
+For an explicit public API migration, `python/python2_p0_migration.py --help`
+prepares two copied clients running one identical worker and an immutable
+`migration.json` under the requested temporary directory. Pass it to
+`python2_pairs.py --migration`; the default path still requires the original
+worker hash. Inputs, operations, assertions, samples, probe loops and original
+thresholds remain guarded. `crates/zipzi-python2/tools/test.py --release --build-only
+--output <directory>` builds/copies paired timing artifacts without repeating
+behavior/type tests; add `--instrumented` with a different output for probes.
+
 `runtime/check_editor_boundary.py` checks the R2 Editor ownership boundary;
 `runtime/editor_benchmark_pairs.py` runs five alternating prebuilt Release pairs,
 and `runtime/editor_benchmark_report.py` applies the frozen per-operation gates.
@@ -363,8 +373,33 @@ pure-wheel environment's Python `-I`, or `tests/installed_examples.py local|conn
 with the corresponding normal wheel environment (paths relative to
 `crates/zipzi-python2/`; Connected examples require `ZIPZI_PYTHON2_HOST`). The offline
 audit exits nonzero for missing semantic docs and does not constitute a complete
-manual D02 review. `uv run --locked python tools/python/python2_agent_tasks.py --help`
-describes fixed installed-only agent packets and bounded run recording; preparation
-does not run a model or mark G01–G08 passed. Fixture data lives in
+manual D02 review. `--drop apply_authoring|commit|job` on the Connected example
+harness runs public recovery examples with an external test-support host.
+`uv run --locked python tools/python/python2_agent_tasks.py --help` describes fixed
+installed-only packets, bounded recording, and a separate `--preflight <directory>`
+service/identity probe. Preparation runs no model; preflight executes no SDK task
+and cannot mark G01–G08 passed. Fixture data lives in
 `fixtures/python_sdk_agent/`; private controller manifests and raw run events belong
 under `target/`, while plan directories keep Markdown conclusions only.
+
+`tools/python/python2_agent_runner.py --help` runs installed-only diagnostic tasks
+with a macOS Seatbelt MCP shell and a Connected IPC fault relay. It retains every
+failed attempt. Per user instruction on 2026-10-26, token usage has no limit and is
+reported after testing as input/output/total; unavailable counts are not zero-filled
+or failed. Time, tool call/byte, log and actual service identity gates still apply.
+Local page/Plan interference and pre-close independent state/history capture are
+connected through the controlled `sdk-python` workflow launcher. Shell responses
+are paginated within 16 KiB; raw output stays in external logs and subsequent
+pages consume tool calls. `python2_agent_matrix.py --help` freezes one 42-run
+cohort and keeps functional and service identity gates separate. See the
+[agent fixture notes](../fixtures/python_sdk_agent/README.md) and
+[P3A-6 results](../docs/plans/python-sdk-rewrite/p3a-6.md) for coverage and all
+observed failures. Missing actual service identity prevents full acceptance.
+
+The preflight, task runner and matrix accept `--identity-launcher` for a pinned
+host transport adapter. It writes actual model/service metadata to a private,
+run-bound sidecar; CLI/launcher hashes are checked before and after execution and
+cohort drift stops dispatch. Configured model names and model self-reports never
+count as evidence. The [identity protocol](../fixtures/python_sdk_agent/README.md#modelservice-identity-gate)
+defines the adapter contract. This implementation is committed without new
+validation by user request; prior identity results remain unverified.

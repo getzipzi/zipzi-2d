@@ -34,6 +34,11 @@ def _short(value: object, depth: int = 0) -> str:
 class CompactValue:
     """Owned-value display capped at 1,024 characters, without IO or full scans."""
     def __repr__(self)->str:
+        """Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+        Large arrays and bytes show bounded samples/counts. Explicit field access
+        still exposes the owned full value; no host resource is created/released.
+        """
         text=_short(self)
         return text if len(text)<=1024 else text[:1023]+'…'
     def summary(self)->str:

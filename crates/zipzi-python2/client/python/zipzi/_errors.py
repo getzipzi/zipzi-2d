@@ -27,6 +27,20 @@ def _recovery_action(code: str, edit_state: str | None, limit_name: str | None) 
     return "stop"
 
 class SdkFailure(Exception):
+    """Confirmed SDK/host refusal with structured recovery and ownership facts.
+
+    code is the stable discriminator; message is human-readable. operation and
+    object_ids identify the attempted domain action. expected_version,
+    actual_version, field_path and referrers explain stale/invalid references.
+    edit_state distinguishes aborted candidates from confirmed admission refusal.
+    requested/allowed are counts or bytes named by limit_name; None means absent.
+    project_report retains a failed IO report when available. recovery_action
+    recommends a finite next action; it is not permission to replay unknown work.
+    OutcomeUnknown has a separate retained request owner and recover method.
+    This value alone performs no IO and owns no resource lease. Catch outside a
+    failed Edit, inspect code/recovery_action, and start a fresh candidate when
+    required. See docs/guide.md for the error/recovery workflow.
+    """
     def __init__(self, code: str, message: str, *, operation: str = "", object_ids: tuple[str, ...] = (),
         expected_version: Version | None = None, actual_version: Version | None = None,
         field_path: str | None = None, referrers: tuple[str, ...] = (), edit_state: str | None = None, project_report: ProjectReport | None = None,
@@ -52,6 +66,15 @@ class PendingRequest:
     operation: str
 
 class OutcomeUnknown(SdkFailure):
+    """The original public call has an unconfirmed outcome; retain this exception.
+
+    pending identifies its immutable request, while the owning SDK wrapper keeps
+    the complete result projection. recover returns that original runtime type;
+    use recover_call for exact static typing. Further uncertainty raises another
+    recoverable OutcomeUnknown. Never repeat a write under a new request ID.
+    Recovery is synchronous, bounded by host retention/timeouts; expiration is a
+    structured failure rather than proof the write did not happen.
+    """
     def __init__(self, pending: PendingRequest, message: str):
         super().__init__("OUTCOME_UNKNOWN", message, operation=pending.operation)
         self.pending = pending
