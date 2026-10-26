@@ -1,7 +1,7 @@
 //! Scene lifecycle and collections. Organization, deformation, drawing and
 //! connection management have independent, explicit commands.
-use super::organization::Delta;
 use super::organization::lifecycle::{copy_axes, mapped, new_id, unique};
+use super::organization::Delta;
 use super::*;
 use crate::{
     Appearance, BlendMode, RotationTransform, SceneReference, TransformData, Vec2, WarpTransform,
@@ -115,7 +115,7 @@ pub enum SceneFieldValue {
     Appearance(#[doc = "Replacement opacity and RGB color factors."] Appearance),
     Texture(
         /// Resolved image-asset reference or explicitly unresolved texture runtime identifier.
-         SceneReference,
+        SceneReference,
     ),
     Masks(#[doc = "Complete ordered clipping-mask mesh selection."] Vec<String>),
     MeshDrawing {
@@ -829,7 +829,11 @@ impl Document {
     }
 }
 fn check(status: Status) -> Result<(), Status> {
-    if status.is_ok() { Ok(()) } else { Err(status) }
+    if status.is_ok() {
+        Ok(())
+    } else {
+        Err(status)
+    }
 }
 fn ordered_selection(members: &[String], ids: &[String]) -> Result<Vec<String>, Status> {
     let selected: HashSet<_> = ids.iter().collect();

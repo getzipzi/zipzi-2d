@@ -1,10 +1,9 @@
 use super::{
-    ImportedModel, Result,
-    graph::{Graph, Node, attr},
-    invalid,
+    graph::{attr, Graph, Node},
+    invalid, ImportedModel, Result,
 };
 use std::collections::HashMap;
-use zipzi_core::{Document, types::*};
+use zipzi_core::{types::*, Document};
 pub(super) fn edit(result: EditResult) -> Result<()> {
     status(result.status)
 }

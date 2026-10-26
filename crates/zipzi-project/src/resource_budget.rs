@@ -348,11 +348,9 @@ mod tests {
         let budget = ImageMemoryBudget::new(8);
         let a: Arc<[u8]> = vec![0; 4].into();
         let b: Arc<[u8]> = vec![0; 5].into();
-        assert!(
-            budget
-                .track_buffers(&[(&a, ImageBufferKind::Rgba), (&b, ImageBufferKind::Png)])
-                .is_err()
-        );
+        assert!(budget
+            .track_buffers(&[(&a, ImageBufferKind::Rgba), (&b, ImageBufferKind::Png)])
+            .is_err());
         assert_eq!(budget.usage().allocations, 0);
         budget
             .track_buffers(&[(&a, ImageBufferKind::Blob), (&a, ImageBufferKind::Blob)])

@@ -1,4 +1,4 @@
-use super::{Result, invalid};
+use super::{invalid, Result};
 use crate::Cmo3Error;
 use std::{collections::HashMap, io::Read};
 

@@ -1,4 +1,4 @@
-use zipzi_core::binary_wire::{WireWrite, encode};
+use zipzi_core::binary_wire::{encode, WireWrite};
 use zipzi_runtime::{
     authoring::{EditOperation, WriteResult},
     *,

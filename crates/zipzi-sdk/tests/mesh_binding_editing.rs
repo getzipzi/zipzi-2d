@@ -108,14 +108,12 @@ fn caught_invalid_grid_or_keyform_failure_cannot_publish_partial_creation() {
         } else {
             let mut bad = keyform(1., 10.);
             bad.positions.pop();
-            assert!(
-                MeshBindingOperation::SetKeyform {
-                    id: created.unwrap(),
-                    keyform: bad
-                }
-                .apply(&mut e)
-                .is_err()
-            );
+            assert!(MeshBindingOperation::SetKeyform {
+                id: created.unwrap(),
+                keyform: bad
+            }
+            .apply(&mut e)
+            .is_err());
         }
         assert!(e.commit_to(&mut sdk).is_err());
         assert!(sdk.document().mesh_order().is_empty());

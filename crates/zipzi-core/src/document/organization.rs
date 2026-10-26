@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 mod index;
 pub(in crate::document) mod lifecycle;
-pub(in crate::document) use index::{OrganizationIndex, same_metadata_shape};
+pub(in crate::document) use index::{same_metadata_shape, OrganizationIndex};
 mod scene;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

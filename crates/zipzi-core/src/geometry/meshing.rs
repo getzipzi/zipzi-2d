@@ -1,7 +1,7 @@
 //! Validation of the persisted UV triangulation, never of an evaluated pose.
 use crate::{MeshMeshing, Status, Vec2, VertexId};
-use robust::{Coord, orient2d};
-use rstar::{AABB, RTree, RTreeObject};
+use robust::{orient2d, Coord};
+use rstar::{RTree, RTreeObject, AABB};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 type Point = [f64; 2];

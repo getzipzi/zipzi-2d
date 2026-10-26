@@ -1,5 +1,5 @@
 use zipzi_core::{
-    Mesh, MeshConstraint, MeshConstraintKind, MeshMeshing, ModelSetup, Vec2, document::*,
+    document::*, Mesh, MeshConstraint, MeshConstraintKind, MeshMeshing, ModelSetup, Vec2,
 };
 use zipzi_sdk::{AuthoringSession, SceneContentEdit, TopologyReplacement};
 
@@ -57,21 +57,17 @@ fn constraint_only_commit_notifies_and_restores_exact_geometry_without_evaluatio
     assert!(receipt.changed);
     assert_eq!(s.history_lengths(), (2, 0));
     assert_eq!(s.evaluation_revision(), eval);
-    assert!(
-        !receipt
-            .changes
-            .categories
-            .contains(&zipzi_sdk::ChangeCategory::EvaluationInputs)
-    );
-    assert!(
-        receipt
-            .changes
-            .content_changes
-            .iter()
-            .any(|c| c.entity.id == id(2)
-                && c.domain == SceneContentDomain::MeshTopology
-                && c.topology)
-    );
+    assert!(!receipt
+        .changes
+        .categories
+        .contains(&zipzi_sdk::ChangeCategory::EvaluationInputs));
+    assert!(receipt
+        .changes
+        .content_changes
+        .iter()
+        .any(|c| c.entity.id == id(2)
+            && c.domain == SceneContentDomain::MeshTopology
+            && c.topology));
     assert_eq!(s.geometry(&id(2)).unwrap().meshing, mesh.meshing);
     s.undo().unwrap();
     assert_eq!(s.mesh(&id(2)).unwrap(), before);
@@ -116,10 +112,9 @@ fn old_writes_preserve_or_reject_structure_atomically() {
     let history = s.history_state();
     let mut clear = before.clone();
     clear.meshing = None;
-    assert!(
-        s.edit("accidental clear", None, |e| e.replace_mesh(clear))
-            .is_err()
-    );
+    assert!(s
+        .edit("accidental clear", None, |e| e.replace_mesh(clear))
+        .is_err());
     for operation in [
         SceneContentEdit::MeshVertices {
             mesh_id: id(2),
@@ -140,11 +135,10 @@ fn old_writes_preserve_or_reject_structure_atomically() {
             policy: VertexDeletePolicy::RemoveDependentContent,
         },
     ] {
-        assert!(
-            s.edit("invalid raw edit", None, |e| e
+        assert!(s
+            .edit("invalid raw edit", None, |e| e
                 .edit_scene_content(operation))
-                .is_err()
-        );
+            .is_err());
         assert_eq!(s.mesh(&id(2)).unwrap(), before);
         assert_eq!(s.version(), version);
         assert_eq!(s.history_state(), history);
@@ -202,20 +196,18 @@ fn candidate_snapshots_keep_structure_and_failed_creation_has_no_history() {
     let snapshot = s.candidate_snapshot(&edit).unwrap();
     assert_eq!(snapshot.document().get_mesh(&id(2)).unwrap(), &mesh);
     drop(edit);
-    assert!(
-        s.mesh(&id(2))
-            .unwrap()
-            .meshing
-            .unwrap()
-            .constraints
-            .is_empty()
-    );
+    assert!(s
+        .mesh(&id(2))
+        .unwrap()
+        .meshing
+        .unwrap()
+        .constraints
+        .is_empty());
     let version = s.version();
     mesh.id = id(3);
     mesh.triangles.clear();
-    assert!(
-        s.edit("invalid create", None, |e| e.create_mesh(mesh))
-            .is_err()
-    );
+    assert!(s
+        .edit("invalid create", None, |e| e.create_mesh(mesh))
+        .is_err());
     assert_eq!(s.version(), version);
 }

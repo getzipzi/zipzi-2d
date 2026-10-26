@@ -2,9 +2,9 @@
 //! before publication, so a failed edit cannot leave partial memberships.
 use super::EditSession;
 use crate::types::SdkError;
-use zipzi_core::ChangeKind;
 use zipzi_core::document::{CdiCombinedSet, CdiParameterGroup, DisplayInfo};
-use zipzi_project::{CdiProjectDiagnostic, CdiProjectError, import_cdi3};
+use zipzi_core::ChangeKind;
+use zipzi_project::{import_cdi3, CdiProjectDiagnostic, CdiProjectError};
 
 fn project_error(error: CdiProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);

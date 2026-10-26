@@ -92,15 +92,13 @@ fn rejects_bow_ties_t_junctions_and_f32_collapse() {
         .iter()
         .map(|p| Vec2::new(p.x + 100_000_000., p.y))
         .collect::<Vec<_>>();
-    assert!(
-        !validate_mesh_meshing(
-            &ids,
-            &collapsed,
-            &[[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]],
-            &m
-        )
-        .is_ok()
-    );
+    assert!(!validate_mesh_meshing(
+        &ids,
+        &collapsed,
+        &[[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]],
+        &m
+    )
+    .is_ok());
 }
 
 #[test]

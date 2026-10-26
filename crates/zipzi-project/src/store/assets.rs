@@ -1,7 +1,7 @@
 //! Disk resource validation and lazily encoded in-memory draft textures.
 use super::{DocumentStore, ResourceDiagnostic};
 use crate::filesystem as io;
-use crate::resources::{AssetData, TextureData, content_sha256, decode_png};
+use crate::resources::{content_sha256, decode_png, AssetData, TextureData};
 use std::{
     fs,
     path::{Path, PathBuf},

@@ -1,5 +1,5 @@
 #![cfg(unix)]
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::time::Instant;
 use zipzi_runtime::{local::Auth, protocol::*, *};
@@ -214,26 +214,23 @@ fn failed_output_admission_does_not_report_an_executed_write_as_a_known_refusal(
         1,
         json!({"op":"create_session","document_id":uuid::Uuid::new_v4().to_string(),"setup":zipzi_core::ModelSetup::default()}),
     );
-    assert!(
-        p.receive(&mut rt, Some(auth), request.clone(), Instant::now())
-            .get("ok")
-            .is_some()
-    );
+    assert!(p
+        .receive(&mut rt, Some(auth), request.clone(), Instant::now())
+        .get("ok")
+        .is_some());
     rt.refresh_memory_budget();
     let competing = rt
         .reserve_transfer(RuntimeLimits::default().accounted_bytes - rt.accounted_bytes())
         .unwrap();
-    assert!(
-        p.receive_encoded(&mut rt, Some(auth), request.clone(), Instant::now())
-            .is_none()
-    );
+    assert!(p
+        .receive_encoded(&mut rt, Some(auth), request.clone(), Instant::now())
+        .is_none());
     drop(competing);
     assert_eq!(rt.list_sessions().len(), 1);
-    assert!(
-        p.receive(&mut rt, Some(auth), request, Instant::now())
-            .get("ok")
-            .is_some()
-    );
+    assert!(p
+        .receive(&mut rt, Some(auth), request, Instant::now())
+        .get("ok")
+        .is_some());
     assert_eq!(rt.list_sessions().len(), 1);
     assert_eq!(rt.image_memory_usage().total_bytes(), 0);
 }

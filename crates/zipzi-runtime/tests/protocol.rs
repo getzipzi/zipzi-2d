@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::time::{Duration, Instant};
 use zipzi_core::ModelSetup;
 use zipzi_runtime::{protocol::*, *};
@@ -163,12 +163,11 @@ fn image_prepare_failure_aborts_on_host_even_if_client_never_sends_cleanup() {
             "EDIT_ABORTED"
         );
         assert_eq!(rt.session_info(session).unwrap().version, version);
-        assert!(
-            rt.document(session)
-                .unwrap()
-                .get_parameter(&parameter)
-                .is_none()
-        );
+        assert!(rt
+            .document(session)
+            .unwrap()
+            .get_parameter(&parameter)
+            .is_none());
         assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
     }
 }
@@ -615,19 +614,17 @@ fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
         )["ok"],
         "queued"
     );
-    assert!(
-        request(
-            &mut rt,
-            &mut protocol,
-            client,
-            connection,
-            2,
-            json!({"op":"cancel_job","job":job}),
-            now
-        )
-        .get("ok")
-        .is_some()
-    );
+    assert!(request(
+        &mut rt,
+        &mut protocol,
+        client,
+        connection,
+        2,
+        json!({"op":"cancel_job","job":job}),
+        now
+    )
+    .get("ok")
+    .is_some());
     struct Manual(Vec<Work>);
     impl Executor for Manual {
         fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {

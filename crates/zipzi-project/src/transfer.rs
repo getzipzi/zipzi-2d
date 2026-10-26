@@ -418,13 +418,12 @@ mod tests {
             std::env::temp_dir().join(format!("zipzi-cubism-budget-{}", uuid::Uuid::new_v4()));
         fs::create_dir(&root).unwrap();
         let mut doc = zipzi_core::Document::new();
-        assert!(
-            doc.initialize(
+        assert!(doc
+            .initialize(
                 &uuid::Uuid::new_v4().to_string(),
                 zipzi_core::ModelSetup::default()
             )
-            .is_ok()
-        );
+            .is_ok());
         let source = DocumentSession::from_authoring_document(doc);
         let artifact = source.encode_cmo3(&Default::default()).unwrap();
         let path = root.join("model.cmo3");
@@ -528,12 +527,10 @@ mod tests {
         fs::write(&animation, animation_reference(sibling.to_str().unwrap())).unwrap();
         assert!(linked_project(&sibling).unwrap().1.is_some());
         fs::write(root.join("second.can3"), animation_reference("model.cmo3")).unwrap();
-        assert!(
-            linked_project(&sibling)
-                .unwrap_err()
-                .message
-                .contains("Multiple matching")
-        );
+        assert!(linked_project(&sibling)
+            .unwrap_err()
+            .message
+            .contains("Multiple matching"));
         fs::remove_dir_all(root).unwrap();
     }
 }

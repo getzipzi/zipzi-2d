@@ -1,7 +1,7 @@
 //! Unix-only transport and endpoint ownership. Framing/threads have no UI access.
 use crate::{
+    protocol::{failure, BinaryReply, MAX_BINARY_CHUNK, MAX_BINARY_HEADER, MAX_FRAME},
     ClientId,
-    protocol::{BinaryReply, MAX_BINARY_CHUNK, MAX_BINARY_HEADER, MAX_FRAME, failure},
 };
 use serde_json::Value;
 use std::{
@@ -16,9 +16,8 @@ use std::{
     },
     path::{Path, PathBuf},
     sync::{
-        Arc,
         atomic::{AtomicBool, AtomicUsize, Ordering},
-        mpsc,
+        mpsc, Arc,
     },
     thread,
     time::Duration,

@@ -3,8 +3,8 @@
 use crate::{ClientId, JobId, JobValue, Result, RuntimeError, SessionId};
 use std::path::PathBuf;
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 use zipzi_sdk::{AuthoringSession, EditSession, Version};
 

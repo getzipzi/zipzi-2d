@@ -1,8 +1,8 @@
 use super::EditSession;
 use crate::types::SdkError;
-use zipzi_core::ChangeKind;
 use zipzi_core::document::PoseAsset;
-use zipzi_project::{PoseDiagnostic, PoseProjectError, import_pose3};
+use zipzi_core::ChangeKind;
+use zipzi_project::{import_pose3, PoseDiagnostic, PoseProjectError};
 
 fn project_error(error: PoseProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);

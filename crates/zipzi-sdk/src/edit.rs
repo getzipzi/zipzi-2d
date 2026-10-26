@@ -1,7 +1,7 @@
 //! Candidate-document edits and atomic publication.
 use std::collections::HashSet;
 
-use crate::session::{AuthoringSession, keys_in, object_exists_in};
+use crate::session::{keys_in, object_exists_in, AuthoringSession};
 use crate::types::*;
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::{

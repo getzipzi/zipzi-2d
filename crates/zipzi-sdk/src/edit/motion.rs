@@ -6,11 +6,11 @@ use crate::types::SdkError;
 use crate::{
     MotionBezierHandle, MotionClipCandidate, MotionInterpolation, MotionKeyMove, MotionKeyRef,
 };
-use zipzi_core::ChangeKind;
 use zipzi_core::document::{
     MotionClip, MotionEvent, MotionGroup, MotionPoint, MotionSegment, MotionTrack,
 };
-use zipzi_project::{MotionDiagnostic, MotionProjectError, import_motion3};
+use zipzi_core::ChangeKind;
+use zipzi_project::{import_motion3, MotionDiagnostic, MotionProjectError};
 
 fn project_error(error: MotionProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);

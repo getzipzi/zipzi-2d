@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::sync::{Arc, mpsc};
+use std::sync::{mpsc, Arc};
 use zipzi_core::{Canvas, Parameter, Vec2};
 use zipzi_runtime::*;
 use zipzi_sdk::{AuthoringSession, ObjectKind};
@@ -55,10 +55,9 @@ fn a03_two_clients_share_one_history_and_noop_cancel_failure_preserve_redo() {
     host.release_edit(b, cancel).unwrap();
     host.release_edit(b, cancel).unwrap();
     let bad = host.begin_edit(b, s, "fail", None).unwrap();
-    assert!(
-        host.apply_edit(b, bad, |e| e.erase_object(&id(999)))
-            .is_err()
-    );
+    assert!(host
+        .apply_edit(b, bad, |e| e.erase_object(&id(999)))
+        .is_err());
     host.release_edit(b, bad).unwrap();
     assert_eq!(host.session(s).unwrap().history_lengths(), (1, 1));
     host.redo(b, s).unwrap();
@@ -78,12 +77,11 @@ fn a04_candidate_read_after_write_isolated_and_caught_error_aborts_whole_edit() 
         })
     })
     .unwrap();
-    assert!(
-        host.edit_document(a, edit)
-            .unwrap()
-            .get_parameter(&id(10))
-            .is_some()
-    );
+    assert!(host
+        .edit_document(a, edit)
+        .unwrap()
+        .get_parameter(&id(10))
+        .is_some());
     assert!(host.document(s).unwrap().get_parameter(&id(10)).is_none());
     let snap = host.edit_snapshot(a, edit).unwrap();
     assert!(matches!(snap.source, SourceRef::Edit { sequence: 1, .. }));
@@ -278,11 +276,10 @@ fn a10_oversized_event_requires_resync_instead_of_silent_loss() {
         host.events_since(before),
         Err(RuntimeError::ResyncRequired)
     ));
-    assert!(
-        host.events_since(host.subscribe(s).unwrap().cursor)
-            .unwrap()
-            .is_empty()
-    );
+    assert!(host
+        .events_since(host.subscribe(s).unwrap().cursor)
+        .unwrap()
+        .is_empty());
 }
 
 #[test]

@@ -56,12 +56,10 @@ fn boundless_draft_exports_all_editable_cubism_formats_without_mutation() {
     assert_eq!(pair.can3.bytes, animation.bytes);
     assert_eq!(session.version(), before.version());
     assert_eq!(session.modified(), modified);
-    assert!(
-        session
-            .read_snapshot()
-            .document()
-            .same_content(before.document())
-    );
+    assert!(session
+        .read_snapshot()
+        .document()
+        .same_content(before.document()));
 }
 
 #[test]

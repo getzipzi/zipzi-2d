@@ -148,7 +148,11 @@ impl AuthoringLimits {
 }
 
 pub(super) fn require_ok(status: Status) -> Result<(), Status> {
-    if status.is_ok() { Ok(()) } else { Err(status) }
+    if status.is_ok() {
+        Ok(())
+    } else {
+        Err(status)
+    }
 }
 pub(super) fn check_keys(parameter: &Parameter, keys: &[f32]) -> Result<(), Status> {
     if keys.is_empty()
