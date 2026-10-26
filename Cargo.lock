@@ -9313,21 +9313,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zipzi-python"
-version = "0.1.0-alpha.1"
-dependencies = [
- "pyo3",
- "serde",
- "serde_json",
- "uuid",
- "zipzi-core",
- "zipzi-moc3",
- "zipzi-runtime",
- "zipzi-sdk",
- "zipzi-sdk-observe",
-]
-
-[[package]]
 name = "zipzi-python2"
 version = "0.1.0-alpha.1"
 dependencies = [

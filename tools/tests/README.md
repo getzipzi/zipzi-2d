@@ -17,8 +17,7 @@ location, so it also works when invoked by absolute path outside this checkout.
 The complete tooling suite needs a POSIX environment, Git, Cargo (metadata only),
 and a C compiler for development-process fixtures. It does not compile the SDK
 or Editor. Individual platform-independent modules can run on Windows; CI selects
-those explicitly. Experiment wheel tests skip unless `SDK_EXPERIMENT_WHEEL` is set.
-
+those explicitly.
 ## Test ownership
 
 | Location | Responsibility |
@@ -26,7 +25,7 @@ those explicitly. Experiment wheel tests skip unless `SDK_EXPERIMENT_WHEEL` is s
 | `tools/tests/` | Regression tests for repository tools |
 | `crates/<crate>/src/` | Rust unit tests near their implementation |
 | `crates/<crate>/tests/` | Crate-owned integration and native acceptance tests |
-| `crates/zipzi-python/tests/` | Tests of the built Python extension |
+| `crates/zipzi-python2/tests/` | Maintained Python client tests |
 | `fixtures/` | [Shared test data](../../fixtures/README.md), independent of tooling |
 | `models/local/` | Ignored, separately obtained licensed model assets |
 

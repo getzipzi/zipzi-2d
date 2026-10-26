@@ -1,7 +1,7 @@
 # Documentation
 
 - [Repository layout](../MONOREPO.md) and [licensing](../LICENSING.md)
-- [SDK boundaries](../MONOREPO.md#sdk-and-language-boundaries), [Python SDK](../crates/zipzi-python/README.md) and [API](../crates/zipzi-python/API.md)
+- [SDK boundaries](../MONOREPO.md#sdk-and-language-boundaries), [Python SDK](../crates/zipzi-python2/README.md)
 - [Editor development](../crates/zipzi-editor/README.md) and [dependencies](../vendor/README.md#dependencies)
 - [Test domains and CI](../tools/README.md#test-coverage)
 - [Source, wheel and app artifacts](../tools/README.md#local-distribution-artifacts)

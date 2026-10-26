@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/validation')
 import compare_sdk_image as images
 import compare_wgpu_blends as blends
 import validate_official_core as core
-import validate_sdk as sdk
 
 
 class ConformanceGateTests(unittest.TestCase):
@@ -79,27 +78,7 @@ class ConformanceGateTests(unittest.TestCase):
         self.check_gate(lambda d: d['positions'][0].__setitem__(1, 0.1))
 
 
-class ImageReferenceTests(unittest.TestCase):
-    def test_pinned_reference_matches_its_model_and_is_not_empty(self):
-        reference = sdk.load_image_reference()
-        width, height, pixels = images.read_png(sdk.IMAGE_REFERENCE)
-        self.assertEqual((width, height), (reference['view']['width'], reference['view']['height']))
-        self.assertGreater(sum(alpha > 0 for alpha in pixels[3::4]), 0)
-
-    def test_image_comparison_rejects_local_change(self):
-        width, height, original = images.read_png(sdk.IMAGE_REFERENCE)
-        with tempfile.TemporaryDirectory() as folder:
-            output = Path(folder)
-            changed = bytearray(original)
-            for y in range(170, 190):
-                for x in range(45, 65):
-                    changed[(y * width + x) * 4:(y * width + x) * 4 + 4] = b'\xff\x00\x00\xff'
-            actual = output / 'changed.png'
-            images.write_png(actual, width, height, changed)
-            report = images.compare(sdk.IMAGE_REFERENCE, actual, output / 'comparison',
-                                    (30, 151, 98, 220))
-            self.assertEqual(json.loads(report.read_text())['status'], 'failed')
-
+class BlendReferenceTests(unittest.TestCase):
     def test_blend_matrix_rejects_one_wrong_tile(self):
         width, height, original = images.read_png(blends.REFERENCE)
         with tempfile.TemporaryDirectory() as folder:
@@ -111,30 +90,6 @@ class ImageReferenceTests(unittest.TestCase):
             report = blends.compare(actual, output)
             self.assertEqual(report['status'], 'failed')
             self.assertFalse(report['cases'][0]['passed'])
-
-
-class ImportedCoreCoordinateTests(unittest.TestCase):
-    def test_import_comparison_converts_source_pixels_using_saved_canvas_scale(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            recipe = {'original_ids': {'mesh': 'mesh-id', 'mesh_runtime_id': 'Mesh'},
-                      'fixture': {'moc3_sha256': 'fixture'}}
-            for stage in ('before', 'after'):
-                manifest = root / f'{stage}.json'
-                manifest.write_text(json.dumps({'document': {'source_canvas': {'pixels_per_unit': 100}}}))
-                recipe[f'{stage}_manifest'] = str(manifest)
-                recipe[f'{stage}_export'] = str(root / f'{stage}.moc3')
-                recipe[f'{stage}_export_sha256'] = stage
-                recipe[f'{stage}_samples'] = [[[150, -140]], [[50, 60]]]
-            report = root / 'recipe.json'
-            report.write_text(json.dumps(recipe))
-            sample = [{'runtime_id': 'Mesh', 'positions': [[1.5, -1.4]]}]
-            second = [{'runtime_id': 'Mesh', 'positions': [[0.5, 0.6]]}]
-            output = json.dumps({'core_version': 1, 'samples': [sample, second]})
-            with patch.object(sdk, 'command', return_value=output):
-                result = sdk.validate_official_import_edit(root/'probe', report, root, root, {}, root, 'purism')
-            self.assertEqual(result['status'], 'passed')
-            self.assertEqual(result['maximum_pixel_error'], 0)
 
 
 if __name__ == '__main__':

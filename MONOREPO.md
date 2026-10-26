@@ -23,7 +23,6 @@ after adding or removing a member. All owned crates live directly under `crates/
 | `zipzi-sdk` | Transactional Rust authoring API |
 | [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
 | `zipzi-sdk-observe` | Immutable inspection and GPU capture |
-| [`zipzi-python`](crates/zipzi-python/README.md) | Deprecated, unmaintained adapter retained for historical tests and experiments; use `zipzi-python2` |
 | [`zipzi-python2`](crates/zipzi-python2/README.md) | Independent typed Python client and optional Runtime-native adapter |
 | `cubism-matrix-zipzi` | SDK comparison benchmark runner |
 | [`zipzi-editor-core`](crates/zipzi-editor-core/README.md) | UI-independent Editor state and SDK coordination |
@@ -61,11 +60,10 @@ platforms. See [format conversion boundaries](crates/zipzi-cmo3/README.md) and
 | `tools/` | Five daily entrypoints plus [functional tool groups](tools/README.md#directory-ownership) |
 | `tools/tests/` | Tooling regression tests; see [test layout](tools/tests/README.md) |
 | `fixtures/` | Shared test inputs and render references; see [fixture guide](fixtures/README.md) |
-| `crates/<crate>/tests/` | Crate-owned integration/acceptance tests; Python extension tests stay with its crate |
+| `crates/<crate>/tests/` | Crate-owned integration/acceptance tests; Python package tests stay with their crate |
 | `crates/zipzi-editor/assets/` | App icons, UI icons and locale resources |
 | `docs/references/` | Topic references |
 | `docs/plans/`, `docs/archive/` | Plans and historical design/measurement records; not current setup instructions |
-| `examples/sdk/` | Public SDK usage examples |
 | `models/` | Model inventory; private model files belong in ignored `local/` |
 | `benchmarks/cubism-matrix/` | Independent official Cubism/Purism comparison project |
 | `vendor/` | Pinned GPUI patches with their own licenses and excluded workspaces |

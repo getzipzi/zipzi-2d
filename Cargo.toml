@@ -16,7 +16,6 @@ members = [
     "crates/zipzi-sdk",
     "crates/zipzi-runtime",
     "crates/zipzi-sdk-observe",
-    "crates/zipzi-python",
     "crates/zipzi-python2",
     "crates/cubism-matrix-zipzi",
     "crates/zipzi-editor",
@@ -64,9 +63,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 
 # Some macOS 27 toolchains produce an unloadable cdylib when release stripping
 # uses an external llvm-objcopy without the Mach-O LINKEDIT alignment fix.
-[profile.release.package.zipzi-python]
-strip = "none"
-
 [profile.release.package.zipzi-python2]
 strip = "none"
 

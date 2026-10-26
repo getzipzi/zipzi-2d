@@ -1,4 +1,4 @@
-"""Keep daily exclusions local while the full gate retains every stress case."""
+"""Keep daily exclusions local while the full Rust gate retains every stress case."""
 
 import json
 import os
@@ -22,14 +22,13 @@ class TestEntrypointTests(unittest.TestCase):
             shutil.copy(Path(__file__).resolve().parents[2] / 'tools' / name, self.root / 'tools' / name)
         binary = self.root / 'bin'
         binary.mkdir()
-        for name in ['cargo', 'uv']:
+        for name in ['cargo']:
             path = binary / name
             path.write_text(f'#!{sys.executable}\n' + '''import json,os,pathlib,sys
 with open('calls.jsonl','a') as output:
     output.write(json.dumps([pathlib.Path(sys.argv[0]).name,*sys.argv[1:]])+'\\n')
 if sys.argv[1:2]==['fmt']:sys.exit(int(os.environ.get('FORMAT_EXIT','0')))
 if sys.argv[1:2]==['test']:sys.exit(int(os.environ.get('CARGO_TEST_EXIT','0')))
-if pathlib.Path(sys.argv[0]).name=='uv':sys.exit(int(os.environ.get('WHEEL_EXIT','0')))
 ''')
             path.chmod(0o755)
         self.env = {**os.environ, 'PATH': f'{binary}:{os.environ["PATH"]}'}
@@ -83,17 +82,14 @@ if pathlib.Path(sys.argv[0]).name=='uv':sys.exit(int(os.environ.get('WHEEL_EXIT'
                     self.assert_sdk_packages(rust[0])
                     self.assert_sdk_packages(calls[0])
                 if gate != 'stress':
-                    self.assertEqual(calls[-1], ['uv', 'run', '--locked', 'python', 'tools/python/test_python.py', '--wheel'])
+                    self.assertEqual(len(calls), 2)
 
-    def test_format_and_wheel_failures_propagate(self):
+    def test_format_failure_propagates(self):
         result, calls = self.run_gate('full', FORMAT_EXIT='7')
         self.assertEqual(result.returncode, 7)
         self.assertEqual(len(calls), 1)
-        result, calls = self.run_gate('full', WHEEL_EXIT='23')
-        self.assertEqual(result.returncode, 23)
-        self.assertEqual(calls[-1][0], 'uv')
 
-    def test_full_propagates_rust_failure_before_starting_wheel_acceptance(self):
+    def test_full_propagates_rust_failure(self):
         result, calls = self.run_gate('full', CARGO_TEST_EXIT='19')
         self.assertEqual(result.returncode, 19)
         self.assertEqual([call[0] for call in calls], ['cargo', 'cargo'])

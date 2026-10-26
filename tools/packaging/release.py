@@ -102,7 +102,7 @@ def cargo_order(root=ROOT):
     packages = {name: tomllib.loads(path.read_text()) for name, path in members(root).items()}
     public = {name for name, data in packages.items()
               if data['package'].get('publish', True) is not False
-              and name not in {'zipzi-python', 'zipzi-python2'}}
+              and name != 'zipzi-python2'}
     pending = {name: set(packages[name].get('dependencies', {})) & public for name in public}
     order = []
     while pending:

@@ -56,9 +56,8 @@ methods and records, shared domain intent definitions, native imports and native
 stub types. Signatures retain input and result types, with source locations for
 review. Public input/result declarations are recorded separately as local value
 types or backend references; their Rust definitions are not wire layouts.
-Private implementation types such as `Occupied` are excluded. The old
-`crates/zipzi-python/python-coverage.json` has 123 entries and its checker reads
-only selected source files. Its evidence is retained separately; it cannot
+Private implementation types such as `Occupied` are excluded. The retired Python adapter and its partial coverage checker were removed.
+Historical Python rows in this catalog remain reference evidence and do not
 establish complete connected coverage.
 
 Each callable has a required classification:
