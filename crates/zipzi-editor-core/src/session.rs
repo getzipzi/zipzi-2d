@@ -117,6 +117,12 @@ impl DocumentSession {
         // Keep the checked candidate through owner cancellation and publication.
         let mut prepared_properties = None;
         match &command {
+            EditorCommand::SetTool(tool) => {
+                ensure!(
+                    self.modeling.tools.tool_available(*tool),
+                    "Exit Mesh Edit before using this tool"
+                );
+            }
             EditorCommand::ReplacePhysics {
                 asset,
                 expected_revision,

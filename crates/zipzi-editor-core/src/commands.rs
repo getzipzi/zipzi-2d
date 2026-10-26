@@ -1072,6 +1072,7 @@ impl Editor {
                 CommandTarget::Viewport(binding) if self.can_toggle_viewport_isolation(binding))
             }
             CancelGesture => target && !self.is_busy(),
+            LassoTool | GlueTool => modeling && target && !self.is_busy() && !self.manual_active(),
             HandTool => target && !self.is_busy() && (modeling || animation_navigation),
             _ => modeling && target && !self.is_busy(),
         }

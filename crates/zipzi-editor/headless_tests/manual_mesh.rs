@@ -135,3 +135,70 @@ fn manual_mesh_entry_reports_unsupported_bindings(cx: &mut TestAppContext) {
     .unwrap();
     assert!(!cx.has_pending_prompt());
 }
+
+#[gpui_kit::test]
+fn manual_mesh_primary_toolbar_and_shortcuts_preserve_edit_mode(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{ManualTool, ToolId};
+    let h = enter(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tool_manual_create", cx)
+    })
+    .unwrap();
+    present(&h, cx);
+    for (button, shortcut) in [("tool_lasso", "l"), ("tool_glue", "g")] {
+        cx.update_window(h.window, |_, window, cx| {
+            window.click(button, cx);
+            assert!(
+                h.view.read(cx).editor.manual_active(),
+                "{button} exited Mesh Edit"
+            );
+            window.press(shortcut, cx);
+            assert!(
+                h.view.read(cx).editor.manual_active(),
+                "{shortcut} exited Mesh Edit"
+            );
+            assert_eq!(
+                h.view.read(cx).editor.manual_tool(),
+                Some(ManualTool::Create)
+            );
+            assert!(h.view.read(cx).edit_error.is_none());
+        })
+        .unwrap();
+        present(&h, cx);
+    }
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tool_select", cx);
+        assert!(h.view.read(cx).editor.manual_active());
+        assert_eq!(
+            h.view.read(cx).editor.manual_tool(),
+            Some(ManualTool::Select)
+        );
+        window.press("h", cx);
+        assert!(h.view.read(cx).editor.manual_active());
+        assert_eq!(h.view.read(cx).editor.active_tool(), ToolId::Hand);
+    })
+    .unwrap();
+    present(&h, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tool_manual_create", cx);
+        assert!(h.view.read(cx).editor.manual_active());
+        assert_eq!(h.view.read(cx).editor.active_tool(), ToolId::Select);
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            (0, 0)
+        );
+    })
+    .unwrap();
+    present(&h, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tool_manual_mesh", cx)
+    })
+    .unwrap();
+    present(&h, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        assert!(!h.view.read(cx).editor.manual_active());
+        window.click("tool_lasso", cx);
+        assert_eq!(h.view.read(cx).editor.active_tool(), ToolId::Lasso);
+    })
+    .unwrap();
+}

@@ -143,9 +143,23 @@ impl ToolController {
         self.hovered_binding = None;
         changed
     }
+    pub(crate) fn tool_available(&self, tool: ToolId) -> bool {
+        !self.manual_active() || matches!(tool, ToolId::Select | ToolId::Hand)
+    }
     pub fn set_tool(&mut self, tool: ToolId, document: &mut Document) -> bool {
+        if !self.tool_available(tool) {
+            return false;
+        }
         let changed = self.cancel(document);
-        self.manual = None;
+        // Mesh Edit is a document mode, not a disposable ordinary tool state.
+        // Navigation and selection changes must keep its target and source image.
+        if let Some(mode) = &mut self.manual {
+            self.active = tool;
+            if tool == ToolId::Select {
+                mode.tool = ManualTool::Select;
+            }
+            return changed;
+        }
         let preserve_components = self.active.preserves_components(tool);
         self.active = tool;
         if !preserve_components {
@@ -191,11 +205,13 @@ impl ToolController {
     pub fn enter_manual(&mut self, document: &mut Document, target: crate::ManualMeshTarget) {
         self.cancel(document);
         self.components.clear();
+        self.active = ToolId::Select;
         self.manual = Some(manual_mesh::ManualMeshMode::new(target, document));
     }
     pub fn set_manual_tool(&mut self, tool: ManualTool, document: &mut Document) {
         self.cancel(document);
         if let Some(mode) = &mut self.manual {
+            self.active = ToolId::Select;
             mode.tool = tool;
         }
     }

@@ -1098,3 +1098,46 @@ fn manual_mesh_delete_outer_edge_then_create_outside_the_new_outline() -> anyhow
     assert_eq!(edited_mesh(&editor), original);
     Ok(())
 }
+
+#[test]
+fn manual_mesh_primary_tool_commands_do_not_exit_the_mode() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let original = edited_mesh(&editor);
+    for (command, tool) in [
+        (CommandId::LassoTool, ToolId::Lasso),
+        (CommandId::GlueTool, ToolId::Glue),
+    ] {
+        assert!(
+            !editor.command_available(editor.command(command)),
+            "Unsupported tools must be disabled in Mesh Edit"
+        );
+        assert!(editor.dispatch(editor.command(command)).is_err());
+        assert!(editor.execute(EditorCommand::SetTool(tool)).is_err());
+        assert!(editor.manual_active());
+        assert_eq!(editor.manual_tool(), Some(ManualTool::Create));
+    }
+    editor.dispatch(editor.command(CommandId::HandTool))?;
+    assert!(editor.manual_active());
+    assert_eq!(editor.active_tool(), ToolId::Hand);
+    editor.dispatch(editor.command(CommandId::ManualCreate))?;
+    assert!(editor.manual_active());
+    assert_eq!(
+        editor.active_tool(),
+        ToolId::Select,
+        "Mesh tools must leave navigation mode"
+    );
+    editor.dispatch(editor.command(CommandId::SelectTool))?;
+    assert!(editor.manual_active());
+    assert_eq!(editor.manual_tool(), Some(ManualTool::Select));
+    editor.execute(EditorCommand::SetTool(ToolId::Select))?;
+    assert!(editor.manual_active());
+    assert_eq!(edited_mesh(&editor), original);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    editor.dispatch(editor.command(CommandId::ManualMesh))?;
+    assert!(!editor.manual_active());
+    for command in [CommandId::LassoTool, CommandId::GlueTool] {
+        assert!(editor.command_available(editor.command(command)));
+        editor.dispatch(editor.command(command))?;
+    }
+    Ok(())
+}
