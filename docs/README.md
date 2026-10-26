@@ -11,6 +11,7 @@
 - [zipzi-python2 construction plan](plans/python-sdk-rewrite-plan.md): independent package, typed API, shared Runtime execution and bounded generation
 - [zipzi-python2 P3A refactor](plans/python-sdk-rewrite/p3a-api-agent-contract.md): final API, generation boundaries, agent documentation and acceptance gates
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
+- [Manual Mesh 编辑实施方案](plans/manual-mesh-editing.md): authoring topology, dashed-edge caches, atomic editing and staged mesh generation
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)
 
