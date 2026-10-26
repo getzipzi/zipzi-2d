@@ -83,7 +83,15 @@ impl Document {
                 .iter()
                 .any(|edge| scene_kind(edge.entity.kind));
         if structure_changed {
-            self.canvas_topology.get_mut().unwrap().take();
+            let changed = changes
+                .modified
+                .iter()
+                .chain(&changes.created)
+                .chain(&changes.deleted)
+                .filter(|entity| entity.kind == SdkKind::Mesh)
+                .map(|entity| entity.id.clone())
+                .collect();
+            self.invalidate_canvas_topology(Some(changed));
         } else if changes.categories.contains(&ChangeCategory::Labels)
             && self.canvas_topology.get_mut().unwrap().is_some()
         {
@@ -179,7 +187,9 @@ impl Document {
                     }
                 });
             } else {
-                self.after_history(changes.categories.contains(&ChangeCategory::Topology));
+                self.after_history(
+                    changes.categories.contains(&ChangeCategory::Topology) && !structure_changed,
+                );
             }
             if !changes
                 .categories
@@ -257,7 +267,7 @@ impl Document {
                             && f.entity.kind != SdkKind::DrawOrderGroup
                     })
                     || changes.categories.contains(&ChangeCategory::Topology);
-                self.after_history(structural);
+                self.after_history(structural && !structure_changed);
             }
             if !changes
                 .categories
@@ -365,7 +375,7 @@ impl Document {
                         SdkKind::Part | SdkKind::Mesh | SdkKind::Transform | SdkKind::Offscreen
                     )
                 });
-                self.after_history(scene_changed);
+                self.after_history(scene_changed && !structure_changed);
             }
             if !changes
                 .categories
@@ -568,7 +578,7 @@ impl Document {
         } else {
             // Other slices retain their existing invalidation policy. Expression
             // structural edits rebuild relations, but never canvas topology.
-            self.after_history(!expression_only && fallback_topology);
+            self.after_history(!expression_only && fallback_topology && !structure_changed);
         }
         // Library order and labels change presentation, while entry order/content
         // carries EvaluationInputs and must still invalidate the running preview.
@@ -593,6 +603,7 @@ mod tests {
     -> anyhow::Result<()> {
         let mut document = Document::new_blank()?;
         let id = Uuid::new_v4().to_string();
+        let other = Uuid::new_v4().to_string();
         document.session.edit("Mesh", None, |edit| {
             edit.create_mesh(zipzi_core::Mesh {
                 id: id.clone(),
@@ -615,10 +626,19 @@ mod tests {
                     constraints: vec![],
                 }),
                 ..Default::default()
+            })?;
+            edit.create_mesh(zipzi_core::Mesh {
+                id: other.clone(),
+                vertex_ids: vec![10, 11, 12],
+                base_positions: vec![Vec2::new(2., 0.), Vec2::new(3., 0.), Vec2::new(2., 1.)],
+                uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+                triangles: vec![[10, 11, 12]],
+                ..Default::default()
             })
         })?;
         document.after_history(true);
         let before = document.canvas_topology();
+        assert_eq!(before.meshes[&id].automatic_edges.len(), 1);
         let evaluation = document.session.evaluation_revision();
         assert!(
             document
@@ -642,6 +662,13 @@ mod tests {
         document.consume_authoring_receipt(&receipt, false);
         let constrained = document.canvas_topology();
         assert!(!Arc::ptr_eq(&before, &constrained));
+        assert!(!Arc::ptr_eq(&before.meshes[&id], &constrained.meshes[&id]));
+        assert!(Arc::ptr_eq(
+            &before.meshes[&other],
+            &constrained.meshes[&other]
+        ));
+        assert_eq!(constrained.meshes[&id].user_edges.len(), 1);
+        assert!(constrained.meshes[&id].automatic_edges.is_empty());
         assert_eq!(document.session.evaluation_revision(), evaluation);
         document.undo()?;
         assert!(!Arc::ptr_eq(&constrained, &document.canvas_topology()));
@@ -670,6 +697,21 @@ mod tests {
             1
         );
         assert_eq!(document.session.evaluation_revision(), evaluation);
+        let before_position = document.canvas_topology();
+        let before_source = *document.canvas_topology_source.lock().unwrap();
+        let (_, receipt) = document.session.edit("Position", None, |edit| {
+            edit.update_positions(&id, &[0], &[Vec2::new(0.05, 0.05)])
+        })?;
+        document.consume_authoring_receipt(&receipt, false);
+        let after_position = document.canvas_topology();
+        assert_ne!(
+            before_source,
+            *document.canvas_topology_source.lock().unwrap()
+        );
+        assert!(Arc::ptr_eq(
+            &before_position.meshes[&id],
+            &after_position.meshes[&id]
+        ));
         Ok(())
     }
 

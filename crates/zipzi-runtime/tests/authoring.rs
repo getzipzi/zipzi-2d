@@ -6,6 +6,114 @@ use zipzi_sdk::{MeshCreateSpec, MeshGeometry, MeshOperation};
 use zipzi_sdk::{ParameterCreateSpec, ParameterOperation, ParameterPatch};
 
 #[test]
+fn manual_mesh_command_requires_exact_candidate_identity_and_sequence() {
+    use zipzi_core::Mesh;
+    use zipzi_runtime::modeling::ModelingCommand;
+    use zipzi_sdk::ManualMeshOperation;
+    let mut rt = Runtime::default();
+    let client = rt.register_client().unwrap();
+    let session = rt
+        .create_session(client, &id(1), ModelSetup::default())
+        .unwrap();
+    let create = rt.begin_edit(client, session, "create mesh", None).unwrap();
+    rt.apply_edit(client, create, |edit| {
+        edit.create_mesh(Mesh {
+            id: id(2),
+            vertex_ids: vec![0, 1, 2, 3],
+            base_positions: vec![
+                Vec2::new(0., 0.),
+                Vec2::new(1., 0.),
+                Vec2::new(1., 1.),
+                Vec2::new(0., 1.),
+            ],
+            uvs: vec![
+                Vec2::new(0., 0.),
+                Vec2::new(1., 0.),
+                Vec2::new(1., 1.),
+                Vec2::new(0., 1.),
+            ],
+            triangles: vec![[0, 1, 2], [0, 2, 3]],
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    rt.commit_edit(client, create).unwrap();
+    let a = rt.begin_edit(client, session, "manual", None).unwrap();
+    let other = rt.register_client().unwrap();
+    let b = rt.begin_edit(other, session, "other", None).unwrap();
+    let source_a = rt.edit_snapshot(client, a).unwrap().source;
+    let source_b = rt.edit_snapshot(other, b).unwrap().source;
+    let command = |expected, operation| ModelingCommand::ManualMesh {
+        mesh_id: id(2),
+        expected,
+        operation,
+    };
+    assert_eq!(
+        rt.apply_modeling(
+            client,
+            a,
+            vec![command(
+                source_b,
+                ManualMeshOperation::ConstrainEdge { a: 0, b: 2 }
+            )]
+        ),
+        Err(RuntimeError::InvalidReference)
+    );
+    assert_eq!(rt.edit_sequence(client, a).unwrap(), 0);
+    rt.apply_modeling(
+        client,
+        a,
+        vec![command(
+            source_a,
+            ManualMeshOperation::ConstrainEdge { a: 0, b: 2 },
+        )],
+    )
+    .unwrap();
+    assert_eq!(rt.edit_sequence(client, a).unwrap(), 1);
+    let candidate = rt.mesh_snapshot(client, session, Some(a), &id(2)).unwrap();
+    assert_eq!(
+        candidate.geometry.meshing.as_ref().unwrap().constraints[0].endpoints,
+        [0, 2]
+    );
+    assert!(rt
+        .mesh_snapshot(client, session, None, &id(2))
+        .unwrap()
+        .geometry
+        .meshing
+        .is_none());
+    assert_eq!(
+        rt.apply_modeling(
+            client,
+            a,
+            vec![command(
+                source_a,
+                ManualMeshOperation::ReleaseConstraint { a: 0, b: 2 }
+            )]
+        ),
+        Err(RuntimeError::InvalidReference)
+    );
+    assert_eq!(rt.edit_sequence(client, a).unwrap(), 1);
+    let source_next = rt.edit_snapshot(client, a).unwrap().source;
+    rt.apply_modeling(
+        client,
+        a,
+        vec![command(
+            source_next,
+            ManualMeshOperation::ReleaseConstraint { a: 0, b: 2 },
+        )],
+    )
+    .unwrap();
+    assert_eq!(rt.edit_sequence(client, a).unwrap(), 2);
+    rt.commit_edit(client, a).unwrap();
+    assert!(rt
+        .mesh_snapshot(client, session, None, &id(2))
+        .unwrap()
+        .geometry
+        .meshing
+        .is_some());
+}
+
+#[test]
 fn manual_mesh_candidate_and_formal_reads_preserve_constraints_in_borrowed_output() {
     use zipzi_core::{MeshConstraint, MeshConstraintKind, MeshMeshing};
     let mut rt = Runtime::default();

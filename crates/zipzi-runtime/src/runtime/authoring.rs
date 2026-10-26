@@ -101,6 +101,27 @@ impl Runtime {
         if operations.len() > 1024 {
             return Err(RuntimeError::Budget("authoring operations"));
         }
+        for operation in &operations {
+            if let EditOperation::Modeling { operation } = operation {
+                if let crate::modeling::ModelingCommand::ManualMesh { expected, .. } =
+                    operation.as_ref()
+                {
+                    if operations.len() != 1 {
+                        return Err(RuntimeError::InvalidReference);
+                    }
+                    let entry = self.edit(client, edit)?;
+                    let current = SourceRef::Edit {
+                        session: entry.session,
+                        edit,
+                        base: entry.base,
+                        sequence: entry.sequence,
+                    };
+                    if *expected != current || self.ready(entry.session)?.version() != entry.base {
+                        return Err(RuntimeError::InvalidReference);
+                    }
+                }
+            }
+        }
         use zipzi_core::binary_wire::WireWrite;
         // Input resolution, COW detachment, planner workspace and publication
         // growth are admitted before the first SDK mutation in this batch.

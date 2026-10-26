@@ -236,6 +236,11 @@ pub enum ModelingCommand {
         /// remeshing plan.
         replacement: zipzi_sdk::TopologyReplacement,
     },
+    ManualMesh {
+        mesh_id: String,
+        expected: crate::SourceRef,
+        operation: zipzi_sdk::ManualMeshOperation,
+    },
 }
 impl ModelingCommand {
     pub fn apply(self, edit: &mut zipzi_sdk::EditSession<'_>) -> Result<(), zipzi_sdk::SdkError> {
@@ -294,6 +299,9 @@ impl ModelingCommand {
                 source,
                 replacement,
             } => edit.replace_topology(&source, replacement),
+            Self::ManualMesh {
+                mesh_id, operation, ..
+            } => edit.edit_manual_mesh(&mesh_id, operation).map(|_| ()),
         }
     }
 }

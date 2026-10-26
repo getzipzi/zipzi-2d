@@ -1,5 +1,5 @@
 //! Pure, atomic edits of a single UV triangulation. No document or UI state lives here.
-use crate::{MeshGeometry, SdkError};
+use crate::{GeometrySnapshot, GeometrySpace, MeshGeometry, SdkError, TopologyReplacement};
 use rstar::{RTree, RTreeObject, AABB};
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -507,7 +507,17 @@ fn validate(g: &MeshGeometry, m: &MeshMeshing) -> Result<(), SdkError> {
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+pub struct ManualVertexTarget {
+    pub id: VertexId,
+    pub uv: Vec2,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ManualMeshOperation {
     /// The caller supplies a fresh ID; its allocator must not reuse canceled candidate IDs.
     InsertVertex {
@@ -516,8 +526,8 @@ pub enum ManualMeshOperation {
     },
     /// Absolute UV targets; motion_from is the last accepted preview when supplied.
     MoveVertices {
-        targets: Vec<(VertexId, Vec2)>,
-        motion_from: Option<Vec<(VertexId, Vec2)>>,
+        targets: Vec<ManualVertexTarget>,
+        motion_from: Option<Vec<ManualVertexTarget>>,
     },
     DeleteVertices {
         ids: Vec<VertexId>,
@@ -694,7 +704,7 @@ pub fn edit_manual_mesh(
             motion_from,
         } => {
             let map = AffineUvMap::from_geometry(&g)?;
-            let ids: BTreeSet<_> = targets.iter().map(|(id, _)| *id).collect();
+            let ids: BTreeSet<_> = targets.iter().map(|v| v.id).collect();
             if ids.len() != targets.len() {
                 return Err(bad("duplicate moved vertex ID"));
             }
@@ -706,18 +716,22 @@ pub fn edit_manual_mesh(
             }
             let moved: BTreeSet<_> = targets
                 .iter()
-                .filter(|(id, to)| old[id] != xy(*to))
-                .map(|(id, _)| *id)
+                .filter(|v| old[&v.id] != xy(v.uv))
+                .map(|v| v.id)
                 .collect();
             touched.extend(&moved);
             let from: HashMap<_, _> = motion_from
                 .unwrap_or_else(|| {
                     targets
                         .iter()
-                        .map(|(id, _)| (*id, Vec2::new(old[id][0] as f32, old[id][1] as f32)))
+                        .map(|v| ManualVertexTarget {
+                            id: v.id,
+                            uv: Vec2::new(old[&v.id][0] as f32, old[&v.id][1] as f32),
+                        })
                         .collect()
                 })
                 .into_iter()
+                .map(|v| (v.id, v.uv))
                 .collect();
             if from.len() != ids.len() || from.keys().any(|id| !ids.contains(id)) {
                 return Err(bad("motion start IDs do not match targets"));
@@ -725,7 +739,8 @@ pub fn edit_manual_mesh(
             if from.values().any(|p| !p.x.is_finite() || !p.y.is_finite()) {
                 return Err(bad("motion start UVs must be finite"));
             }
-            for (id, to) in &targets {
+            for v in &targets {
+                let (id, to) = (v.id, v.uv);
                 if !to.x.is_finite()
                     || !to.y.is_finite()
                     || !(0.0..=1.0).contains(&to.x)
@@ -735,14 +750,14 @@ pub fn edit_manual_mesh(
                 }
             }
             preserved.retain(|e| !moved.contains(&e[0]) && !moved.contains(&e[1]));
-            let endpoints: HashMap<_, _> = targets.iter().copied().collect();
+            let endpoints: HashMap<_, _> = targets.iter().map(|v| (v.id, v.uv)).collect();
             if let Some((a, b)) = motion_crossing(&old_edges, &old, &from, &endpoints) {
                 return Err(bad(format!("motion crosses edges {a:?} and {b:?}")));
             }
             if let Some(face) = motion_face_collapse(&g.triangles, &old, &from, &endpoints) {
                 return Err(bad(format!("motion collapses triangle {face:?}")));
             }
-            for (id, to) in targets {
+            for ManualVertexTarget { id, uv: to } in targets {
                 let i = g
                     .vertex_ids
                     .iter()
@@ -913,4 +928,80 @@ pub fn edit_manual_mesh(
         affected_edges: affected.into_iter().collect(),
         changed,
     })
+}
+
+impl crate::EditSession<'_> {
+    /// Apply one manual operation to this candidate through the complete topology path.
+    /// A caller commits the candidate once for the corresponding document history step.
+    pub fn edit_manual_mesh(
+        &mut self,
+        mesh_id: &str,
+        operation: ManualMeshOperation,
+    ) -> Result<ManualMeshResult, SdkError> {
+        self.ensure_active("edit_manual_mesh")?;
+        let doc = self.candidate_document();
+        let mesh = doc
+            .get_mesh(mesh_id)
+            .cloned()
+            .ok_or_else(|| bad(format!("mesh {mesh_id}: unknown ID")))?;
+        if !mesh.deformer_id.is_empty()
+            || doc
+                .binding_order()
+                .iter()
+                .filter_map(|id| doc.get_binding(id))
+                .any(|b| b.mesh_id == mesh_id)
+            || doc
+                .blend_binding_order()
+                .iter()
+                .filter_map(|id| doc.get_blend_binding(id))
+                .any(|b| b.target_id == mesh_id)
+            || doc
+                .glue_order()
+                .iter()
+                .filter_map(|id| doc.get_glue(id))
+                .any(|g| g.mesh_a_id == mesh_id || g.mesh_b_id == mesh_id)
+        {
+            return Err(bad(format!("mesh {mesh_id}: manual editing requires no deformation, binding, BlendShape or Glue")));
+        }
+        let source = GeometrySnapshot {
+            version: self.base_version(),
+            mesh_id: mesh_id.into(),
+            vertex_ids: mesh.vertex_ids.clone(),
+            positions: mesh.base_positions.clone(),
+            uvs: mesh.uvs.clone(),
+            triangles: mesh.triangles.clone(),
+            meshing: mesh.meshing.clone(),
+            space: GeometrySpace::Model,
+        };
+        let result = edit_manual_mesh(
+            &MeshGeometry {
+                vertex_ids: source.vertex_ids.clone(),
+                positions: source.positions.clone(),
+                uvs: source.uvs.clone(),
+                triangles: source.triangles.clone(),
+                meshing: source.meshing.clone(),
+            },
+            operation,
+        )?;
+        if !result.changed {
+            return Ok(result);
+        }
+        let mut replacement = mesh;
+        replacement.vertex_ids = result.geometry.vertex_ids.clone();
+        replacement.base_positions = result.geometry.positions.clone();
+        replacement.uvs = result.geometry.uvs.clone();
+        replacement.triangles = result.geometry.triangles.clone();
+        replacement.meshing = result.geometry.meshing.clone();
+        self.replace_topology(
+            &source,
+            TopologyReplacement {
+                mesh: replacement,
+                binding: None,
+                blend_bindings: vec![],
+                glues: vec![],
+                vertex_mapping: result.vertex_mapping.iter().copied().collect(),
+            },
+        )?;
+        Ok(result)
+    }
 }

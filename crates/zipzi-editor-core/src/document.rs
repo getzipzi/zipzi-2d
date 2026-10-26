@@ -159,6 +159,10 @@ pub struct Document {
     object_index_builds: std::sync::atomic::AtomicUsize,
     pub(crate) animation_catalog: std::sync::Mutex<Option<(u64, Arc<crate::AnimationCatalog>)>>,
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
+    canvas_topology_source: std::sync::Mutex<Option<zipzi_runtime::SourceRef>>,
+    previous_canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
+    previous_canvas_source: std::sync::Mutex<Option<zipzi_runtime::SourceRef>>,
+    changed_canvas_meshes: std::sync::Mutex<Option<std::collections::HashSet<String>>>,
     pending: Option<PendingEdit>,
     next_property_edit: u64,
     textures: textures::DocumentTextures,
@@ -232,7 +236,30 @@ impl Document {
         self.projection_revision += 1;
         self.animation_input_revision = self.session.version().revision;
         if topology_changed {
-            self.canvas_topology.get_mut().unwrap().take();
+            self.invalidate_canvas_topology(None);
+        }
+    }
+
+    pub(crate) fn invalidate_canvas_topology(
+        &mut self,
+        changed: Option<std::collections::HashSet<String>>,
+    ) {
+        let old = self.canvas_topology.get_mut().unwrap().take();
+        let old_source = self.canvas_topology_source.get_mut().unwrap().take();
+        let previous = self.previous_canvas_topology.get_mut().unwrap();
+        let known_changes = self.changed_canvas_meshes.get_mut().unwrap();
+        if let Some(old) = old {
+            *previous = Some(old);
+            *self.previous_canvas_source.get_mut().unwrap() = old_source;
+            *known_changes = changed;
+        } else if previous.is_some() {
+            *known_changes = match (known_changes.take(), changed) {
+                (Some(mut a), Some(b)) => {
+                    a.extend(b);
+                    Some(a)
+                }
+                _ => None,
+            };
         }
     }
 
@@ -363,6 +390,10 @@ impl Document {
             object_index_builds: std::sync::atomic::AtomicUsize::new(1),
             animation_catalog: std::sync::Mutex::new(None),
             canvas_topology: std::sync::Mutex::new(None),
+            canvas_topology_source: std::sync::Mutex::new(None),
+            previous_canvas_topology: std::sync::Mutex::new(None),
+            previous_canvas_source: std::sync::Mutex::new(None),
+            changed_canvas_meshes: std::sync::Mutex::new(None),
             selected: None,
             pending: None,
             next_property_edit: 0,
@@ -670,13 +701,83 @@ impl Document {
     }
 
     pub(crate) fn canvas_topology(&self) -> Arc<crate::canvas_topology::CanvasTopology> {
-        self.canvas_topology
-            .lock()
-            .unwrap()
-            .get_or_insert_with(|| {
-                Arc::new(crate::canvas_topology::CanvasTopology::new(&self.model()))
-            })
-            .clone()
+        let source = if let Some(pending) = &self.pending {
+            pending.edit.source_ref()
+        } else {
+            zipzi_runtime::SourceRef::Formal {
+                session: self.session.id,
+                version: self.session.version(),
+            }
+        };
+        let mut current = self.canvas_topology.lock().unwrap();
+        let mut cached_source = self.canvas_topology_source.lock().unwrap();
+        if let Some(value) = current.as_mut() {
+            // A second candidate may share the formal version while containing
+            // different mesh edits. Recheck its topology before sharing any Arc.
+            let different_candidate = match (*cached_source, source) {
+                (
+                    Some(zipzi_runtime::SourceRef::Edit {
+                        session: old_session,
+                        edit: old_edit,
+                        base: old_base,
+                        ..
+                    }),
+                    zipzi_runtime::SourceRef::Edit {
+                        session,
+                        edit,
+                        base,
+                        ..
+                    },
+                ) => (old_session, old_edit, old_base) != (session, edit, base),
+                _ => false,
+            };
+            if different_candidate {
+                *value = Arc::new(crate::canvas_topology::CanvasTopology::with_previous(
+                    &self.model(),
+                    Some(value),
+                    None,
+                ));
+            }
+            *cached_source = Some(source);
+            return value.clone();
+        }
+        let previous = self.previous_canvas_topology.lock().unwrap().take();
+        let changed = self.changed_canvas_meshes.lock().unwrap().take();
+        let previous_source = self.previous_canvas_source.lock().unwrap().take();
+        let different_candidate = match (previous_source, source) {
+            (
+                Some(zipzi_runtime::SourceRef::Edit {
+                    session: old_session,
+                    edit: old_edit,
+                    base: old_base,
+                    ..
+                }),
+                zipzi_runtime::SourceRef::Edit {
+                    session,
+                    edit,
+                    base,
+                    ..
+                },
+            ) => (old_session, old_edit, old_base) != (session, edit, base),
+            _ => false,
+        };
+        let built = if previous.is_some() {
+            crate::canvas_topology::CanvasTopology::with_previous(
+                &self.model(),
+                previous.as_deref(),
+                if different_candidate {
+                    None
+                } else {
+                    changed.as_ref()
+                },
+            )
+        } else {
+            crate::canvas_topology::CanvasTopology::new(&self.model())
+        };
+        let built = Arc::new(built);
+        *current = Some(built.clone());
+        *cached_source = Some(source);
+        built
     }
 
     pub fn deformer_controls_visible(&self, id: &str) -> bool {

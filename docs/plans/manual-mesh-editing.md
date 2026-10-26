@@ -1,6 +1,6 @@
 # Manual Mesh 编辑实施方案
 
-状态：实施中，P0–P1 已完成并通过定向验收；P2–P5 待实施。更新日期：2026-10-26。
+状态：实施中，P0–P2 已完成并通过定向验收；P3–P5 待实施。更新日期：2026-10-26。
 
 在 Modeling 主画布中提供单 Mesh 手动网格编辑。用户调整布点和结构约束，系统维持有效三角化；每次操作通过 Runtime 提交一条文档历史。模型保存外轮廓、需要保留的结构边和实际三角形，为后续将自动生成拆成边缘布局、内部布点和自动连线提供共同基础。
 
@@ -335,6 +335,12 @@ P1 可先抽出公共约束三角化设施，P4 再迁移现有 Alpha 实现，�
 - 插点、批量移动、批量删除、固定及解除约束、自动连接统一返回完整几何、ID 映射、新增／删除 ID 与受影响边。保留未受影响的旧边作为临时三角化约束；仅显式自动连接放开全部自动边。约束连线经过已有顶点时拆成子边；移动支撑边端点升级为 User。
 - 移动检查整段运动中边的相交与面塌缩，包括批量拖动的中间状态；相交候选由空间索引筛选。三角化与输出按稳定 ID 排序，最后统一通过 Core 的渲染网格与 meshing 校验。错误不修改输入，取消的 ID 可由持续存活的 SDK allocator 隔离。
 - SDK `manual_mesh::` 定向集成 12 项通过，覆盖凹外围、边／面插点、支撑边分割、中心及外围删除、批量顺序、穿点连线、约束冲突、仿射反射、整段运动、确定性和精度失败。P2 再将这些纯操作接入 Runtime candidate 与编辑器缓存。
+
+2026-10-26，P2 Runtime 与缓存：
+
+- SDK 的 candidate 操作经 `TopologyReplacement` 原子写入完整 Mesh 几何与 meshing；Runtime `ManualMesh` 命令要求精确的 `SourceRef::Edit`，包括 session、edit ID、base version 与 sequence，写入前拒绝过期来源及已前进的正式版本。
+- Editor 的 `CanvasTopology` 为每个 Mesh 缓存去重边、外围边、User、EdgeSupport 与自动边分类。receipt 标明的 Mesh 才重建分类，其余 Mesh 复用 Arc；位置或 UV 变化保持分类，约束 kind 变化触发重建。来源身份与内容缓存分开记录，跨 candidate 时重新核验拓扑，避免相同正式版本下混用预览。
+- 定向验收：SDK `manual_mesh::` 12 项、Runtime authoring 10 项、Editor Core 单元测试 52 项通过；覆盖不同 candidate、过期 sequence、纯约束通知及按 Mesh 复用。
 
 ## 验收与测试
 

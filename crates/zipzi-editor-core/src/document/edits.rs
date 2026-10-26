@@ -125,7 +125,13 @@ impl Document {
                 .map(|w| (w.rows, w.columns));
             if before != after {
                 pending.topology_changed = true;
-                self.canvas_topology.get_mut().unwrap().take();
+                let old = self.canvas_topology.get_mut().unwrap().take();
+                let old_source = self.canvas_topology_source.get_mut().unwrap().take();
+                if let Some(old) = old {
+                    *self.previous_canvas_topology.get_mut().unwrap() = Some(old);
+                    *self.previous_canvas_source.get_mut().unwrap() = old_source;
+                }
+                *self.changed_canvas_meshes.get_mut().unwrap() = None;
             }
         }
         if let Some((revision, index)) = self.object_index.get_mut().unwrap() {

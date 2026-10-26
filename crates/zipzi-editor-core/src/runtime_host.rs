@@ -447,6 +447,20 @@ pub(crate) struct HostedEdit {
     interactive: bool,
 }
 impl HostedEdit {
+    pub(crate) fn source_ref(&self) -> zipzi_runtime::SourceRef {
+        let edit = self.id.expect("active candidate");
+        let sequence = self
+            .host
+            .read()
+            .edit_sequence(self.client, edit)
+            .expect("active candidate sequence");
+        zipzi_runtime::SourceRef::Edit {
+            session: self.session,
+            edit,
+            base: self.base_version(),
+            sequence,
+        }
+    }
     pub(crate) fn read(&self) -> EditRead<'_> {
         EditRead {
             guard: self.host.read(),
@@ -546,7 +560,6 @@ mod forwarding;
 
 #[cfg(test)]
 mod receipt_tests {
-    use super::*;
     #[test]
     fn local_ack_cannot_hide_foreign_publications_or_a_stream_gap() -> anyhow::Result<()> {
         let mut document = crate::Document::new_blank()?;

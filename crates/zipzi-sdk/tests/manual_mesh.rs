@@ -3,8 +3,13 @@ use zipzi_core::{
 };
 use zipzi_sdk::{
     edit_manual_mesh, extract_manual_meshing, AffineUvMap, AuthoringSession, ManualMeshOperation,
-    ManualVertexIdAllocator, MeshGeometry, SceneContentEdit, TopologyReplacement,
+    ManualVertexIdAllocator, ManualVertexTarget, MeshGeometry, SceneContentEdit,
+    TopologyReplacement,
 };
+
+fn target(id: u32, uv: Vec2) -> ManualVertexTarget {
+    ManualVertexTarget { id, uv }
+}
 
 fn square_geometry() -> MeshGeometry {
     MeshGeometry {
@@ -189,7 +194,7 @@ fn move_reflected_mapping_promotes_support_and_rejects_invalid_target() {
     let moved = edit_manual_mesh(
         &g,
         ManualMeshOperation::MoveVertices {
-            targets: vec![(10, Vec2::new(0.1, 0.1))],
+            targets: vec![target(10, Vec2::new(0.1, 0.1))],
             motion_from: None,
         },
     )
@@ -203,7 +208,7 @@ fn move_reflected_mapping_promotes_support_and_rejects_invalid_target() {
     assert!(edit_manual_mesh(
         &g,
         ManualMeshOperation::MoveVertices {
-            targets: vec![(10, Vec2::new(1., 1.))],
+            targets: vec![target(10, Vec2::new(1., 1.))],
             motion_from: None
         }
     )
@@ -299,7 +304,7 @@ fn no_op_and_precision_failure_leave_implicit_structure_unwritten() {
     let unchanged = edit_manual_mesh(
         &g,
         ManualMeshOperation::MoveVertices {
-            targets: vec![(10, Vec2::new(0., 0.))],
+            targets: vec![target(10, Vec2::new(0., 0.))],
             motion_from: None,
         },
     )
@@ -316,10 +321,10 @@ fn sparse_batch_motion_cannot_pass_through_collapsed_geometry() {
     let g = square_geometry();
     let rotated = ManualMeshOperation::MoveVertices {
         targets: vec![
-            (10, Vec2::new(1., 1.)),
-            (20, Vec2::new(0., 1.)),
-            (30, Vec2::new(0., 0.)),
-            (40, Vec2::new(1., 0.)),
+            target(10, Vec2::new(1., 1.)),
+            target(20, Vec2::new(0., 1.)),
+            target(30, Vec2::new(0., 0.)),
+            target(40, Vec2::new(1., 0.)),
         ],
         motion_from: None,
     };
@@ -341,7 +346,7 @@ fn sparse_batch_motion_cannot_pass_through_collapsed_geometry() {
                 .vertex_ids
                 .iter()
                 .zip(&inset.uvs)
-                .map(|(&id, uv)| (id, Vec2::new(uv.x + 0.1, uv.y + 0.1)))
+                .map(|(&id, uv)| target(id, Vec2::new(uv.x + 0.1, uv.y + 0.1)))
                 .collect(),
             motion_from: None,
         },
@@ -369,9 +374,9 @@ fn sparse_batch_motion_cannot_pass_through_collapsed_geometry() {
         &triangle,
         ManualMeshOperation::MoveVertices {
             targets: vec![
-                (10, Vec2::new(0.8, 0.8)),
-                (20, Vec2::new(0.2, 0.8)),
-                (30, Vec2::new(0.5, 0.2))
+                target(10, Vec2::new(0.8, 0.8)),
+                target(20, Vec2::new(0.2, 0.8)),
+                target(30, Vec2::new(0.5, 0.2))
             ],
             motion_from: None,
         }

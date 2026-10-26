@@ -69,7 +69,75 @@ pub(crate) struct MeshTopology {
     pub triangles: Arc<[[u32; 3]]>,
     pub edges: Arc<[(usize, usize)]>,
     pub boundary: Vec<(usize, usize)>,
+    pub user_edges: Arc<[(usize, usize)]>,
+    pub support_edges: Arc<[(usize, usize)]>,
+    pub automatic_edges: Arc<[(usize, usize)]>,
+    meshing: Option<zipzi_core::MeshMeshing>,
     slots: HashMap<u32, usize>,
+}
+impl MeshTopology {
+    fn matches(&self, mesh: &zipzi_core::Mesh) -> bool {
+        self.vertex_ids.as_ref() == mesh.vertex_ids
+            && self.triangles.as_ref() == mesh.triangles
+            && self.meshing == mesh.meshing
+    }
+    fn new(m: &zipzi_core::Mesh) -> Self {
+        let slots: HashMap<_, _> = m
+            .vertex_ids
+            .iter()
+            .enumerate()
+            .map(|(i, &id)| (id, i))
+            .collect();
+        let mut counts = BTreeMap::<(u32, u32), usize>::new();
+        for t in &m.triangles {
+            for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+                *counts.entry((a.min(b), a.max(b))).or_default() += 1;
+            }
+        }
+        let mut edges = Vec::new();
+        let mut boundary = Vec::new();
+        let mut user = Vec::new();
+        let mut support = Vec::new();
+        let mut automatic = Vec::new();
+        let constraints: HashMap<_, _> = m
+            .meshing
+            .as_ref()
+            .map(|v| {
+                v.constraints
+                    .iter()
+                    .map(|c| (c.endpoints, c.kind))
+                    .collect()
+            })
+            .unwrap_or_default();
+        for ((a, b), count) in counts {
+            let (Some(&sa), Some(&sb)) = (slots.get(&a), slots.get(&b)) else {
+                continue;
+            };
+            let pair = (sa, sb);
+            edges.push(pair);
+            if count == 1 {
+                boundary.push(pair);
+            } else if let Some(kind) = constraints.get(&[a, b]) {
+                match kind {
+                    zipzi_core::MeshConstraintKind::User => user.push(pair),
+                    zipzi_core::MeshConstraintKind::EdgeSupport => support.push(pair),
+                }
+            } else {
+                automatic.push(pair);
+            }
+        }
+        Self {
+            vertex_ids: m.vertex_ids.clone().into(),
+            triangles: m.triangles.clone().into(),
+            edges: edges.into(),
+            boundary,
+            user_edges: user.into(),
+            support_edges: support.into(),
+            automatic_edges: automatic.into(),
+            meshing: m.meshing.clone(),
+            slots,
+        }
+    }
 }
 #[derive(Debug)]
 pub(crate) struct ControlTopology {
@@ -87,7 +155,7 @@ pub(crate) struct GlueTopology {
 #[derive(Clone, Debug)]
 pub(crate) struct CanvasTopology {
     pub index: Arc<CanvasObjectIndex>,
-    pub meshes: Arc<HashMap<String, MeshTopology>>,
+    pub meshes: Arc<HashMap<String, Arc<MeshTopology>>>,
     pub controls: Arc<HashMap<String, ControlTopology>>,
     pub glues: Arc<[GlueTopology]>,
 }
@@ -105,6 +173,15 @@ impl CanvasTopology {
         }
     }
     pub fn new(model: &zipzi_core::Document) -> Self {
+        Self::with_previous(model, None, None)
+    }
+    /// `changed` is a proven set of mesh topology writes. Other mesh Arcs can be
+    /// reused without rescanning their triangles.
+    pub fn with_previous(
+        model: &zipzi_core::Document,
+        previous: Option<&Self>,
+        changed: Option<&HashSet<String>>,
+    ) -> Self {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.canvas_topology_build");
         let mut index = CanvasObjectIndex::default();
@@ -121,37 +198,14 @@ impl CanvasTopology {
                 continue;
             };
             index.add(K::Mesh, id, &m.name, &m.part_id, &m.deformer_id);
-            let slots: HashMap<_, _> = m
-                .vertex_ids
-                .iter()
-                .enumerate()
-                .map(|(i, &id)| (id, i))
-                .collect();
-            let mut counts = BTreeMap::<(u32, u32), usize>::new();
-            for t in &m.triangles {
-                for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
-                    *counts.entry((a.min(b), a.max(b))).or_default() += 1;
-                }
-            }
-            let mut edges = Vec::new();
-            let mut boundary = Vec::new();
-            for ((a, b), count) in counts {
-                if let (Some(&a), Some(&b)) = (slots.get(&a), slots.get(&b)) {
-                    edges.push((a, b));
-                    if count == 1 {
-                        boundary.push((a, b));
-                    }
-                }
-            }
+            let old = previous.and_then(|p| p.meshes.get(id));
+            let reuse =
+                old.filter(|old| changed.is_some_and(|set| !set.contains(id)) || old.matches(m));
             meshes.insert(
                 id.clone(),
-                MeshTopology {
-                    vertex_ids: m.vertex_ids.clone().into(),
-                    triangles: m.triangles.clone().into(),
-                    edges: edges.into(),
-                    boundary,
-                    slots,
-                },
+                reuse
+                    .cloned()
+                    .unwrap_or_else(|| Arc::new(MeshTopology::new(m))),
             );
         }
         for id in model.transform_order() {
@@ -222,5 +276,49 @@ impl CanvasTopology {
             controls: Arc::new(controls),
             glues: glues.into(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zipzi_core::{Mesh, MeshConstraint, MeshConstraintKind, MeshMeshing, Vec2};
+
+    #[test]
+    fn support_edge_classification_changes_with_constraints_but_not_positions() {
+        let mut mesh = Mesh {
+            vertex_ids: vec![0, 1, 2, 3],
+            base_positions: vec![
+                Vec2::new(0., 0.),
+                Vec2::new(1., 0.),
+                Vec2::new(1., 1.),
+                Vec2::new(0., 1.),
+            ],
+            uvs: vec![
+                Vec2::new(0., 0.),
+                Vec2::new(1., 0.),
+                Vec2::new(1., 1.),
+                Vec2::new(0., 1.),
+            ],
+            triangles: vec![[0, 1, 2], [0, 2, 3]],
+            meshing: Some(MeshMeshing {
+                boundary: vec![0, 1, 2, 3],
+                constraints: vec![MeshConstraint {
+                    endpoints: [0, 2],
+                    kind: MeshConstraintKind::EdgeSupport,
+                }],
+            }),
+            ..Default::default()
+        };
+        let topology = MeshTopology::new(&mesh);
+        assert_eq!(topology.boundary.len(), 4);
+        assert_eq!(topology.support_edges.as_ref(), &[(0, 2)]);
+        assert!(topology.user_edges.is_empty());
+        assert!(topology.automatic_edges.is_empty());
+        mesh.base_positions[0] = Vec2::new(0.1, 0.1);
+        mesh.uvs[0] = Vec2::new(0.1, 0.1);
+        assert!(topology.matches(&mesh));
+        mesh.meshing.as_mut().unwrap().constraints[0].kind = MeshConstraintKind::User;
+        assert!(!topology.matches(&mesh));
     }
 }
