@@ -63,8 +63,9 @@ Python [P3A-0](../../docs/plans/python-sdk-rewrite/p3a-0.md) has passed its free
 cached state and JobTimeout with source/type/installed evidence. P3A-1 is accepted;
 the user waived this round's final performance noise blocker. Raw failed measurements
 and the original P0 policy remain unchanged.
-P3A-3–6 and the overall API/agent contract remain unaccepted; current selected
-passes and unmet gates are recorded in [P3A-6](../../docs/plans/python-sdk-rewrite/p3a-6.md).
+P3A-3–6 and the overall API/agent contract are accepted for the implemented scope;
+evidence and the user's removal of the model/service identity gate are recorded in
+[P3A-6](../../docs/plans/python-sdk-rewrite/p3a-6.md).
 
 [P3A-2](../../docs/plans/python-sdk-rewrite/p3a-2.md) is accepted. Existing reads
 use root `Snapshot[T]`/`Batch[T]` with pure payloads and exact empty-batch sources.
@@ -74,7 +75,7 @@ Collection pagination uses `Page[Summary]`/`PageCursor` and has focused P3A-6
 evidence for more than 256 objects, exact source, bounded scans and stale cursors.
 
 
-P3A-3/4/5 was committed as `8500d9fe`; **overall acceptance remains open**. It adds generated uniform
+P3A-3/4/5 was committed as `8500d9fe`; **P3A acceptance is complete**. It adds generated uniform
 facades/backend registration and unique transport hooks, exact-source metadata
 pages and selected reads, Runtime capabilities/limits, Session close/detach and
 alias invalidation, bounded owned-value output, private codecs/factories, and the
@@ -84,6 +85,14 @@ pre-close history/content and independent file verification are connected. The
 fixed 42-run agent functional gate passed at 38/42 and at least 2/3 per environment;
 a supplemental review corrects three grader false negatives to 41/42 without
 rerunning tasks or replacing the original records. Token usage is report-only:
-16,093,048 for the fixed matrix. Actual model/service revision identity remains
-unverified, so overall acceptance stays open. Prior behavior/type/distribution/
+16,093,048 for the fixed matrix. The user confirmed the configured model/effort
+as `gpt-6.1-sol/high` and removed the model/service identity gate. Optional metadata
+is report-only. Prior behavior/type/distribution/
 Editor and P0 evidence is reused within its original scope.
+
+The 2026-10-26 [P3A closeout](../../docs/plans/python-sdk-rewrite/p3a-6.md#2026-10-26-p3a-收尾复核)
+synchronizes the current `zipzi` / `zipzi-native` `0.1.0a1` distribution metadata,
+generated source fingerprint and usage documentation. The catalog version is
+derived from the client manifest. The earlier real probe supplied no model/service
+revision; that historical observation remains recorded, and no longer blocks
+acceptance. Task and matrix verdicts use the functional thresholds and hard stops.

@@ -18,7 +18,7 @@ no JSON transport conversion or direct SDK session owner.
 | `tests/` | Shared Local/Connected recipe and positive/negative type examples |
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |
-| `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract and selected mesh/resource/Plan generation |
+| `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract, registered domain values/operations, facades, codecs and documentation |
 | `client/python/zipzi/_generated/`, `src/generated/` | 37 managed outputs, including uniform facades, backend bindings, metadata, public reexports and the offline API reference |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
@@ -43,35 +43,42 @@ from the importing interpreter. Tests never load Cargo's mutable output in place
 The package currently targets CPython `>=3.14,<3.15`; source acceptance is on
 macOS/Unix. Other platform/version claims require separate CI evidence.
 
-## P3A target-contract baseline
+## Current API and validation
 
-P3A-0 has a frozen symbol map, signatures, experiment configuration and Release
-baseline. P3A-1 is accepted with complete-call recovery, cached Edit state/receipt
-and known Job timeouts; this round's final performance noise blocker was waived by
-the user. See the [acceptance record](../../docs/plans/python-sdk-rewrite/p3a-1.md). Target regressions in `tests/test_p3a_contract.py`
-are now passing in [P3A-6](../../docs/plans/python-sdk-rewrite/p3a-6.md).
-After refreshing fixtures with `./tools/test-sdk.sh python2`, run from the repository root:
+The distributions are `zipzi` and optional `zipzi-native`, both currently
+`0.1.0a1`. `zipzi.describe("zipzi")` reads the installed offline directory;
+the [short guide](client/python/zipzi/docs/guide.md),
+[API reference](client/python/zipzi/docs/reference.md) and
+[recipes](client/python/zipzi/docs/recipes.py) describe the current public API.
+The directory's version comes from the pure distribution metadata and its source
+fingerprint can be recomputed from the installed files.
+
+P3A provides complete-call recovery, uniform read containers and domain operations,
+generated facades, collection pages, Session detach/close and offline discovery.
+The [P3A-6 record](../../docs/plans/python-sdk-rewrite/p3a-6.md) closes P3A using
+the deterministic/source/installed evidence and fixed agent functional gate.
+The user confirmed the configured `gpt-6.1-sol/high` model and removed the
+model/service identity gate on 2026-10-26; optional service metadata is report-only.
+The P0 stability waiver applies only to that recorded round; it does not establish
+a performance pass or waive Runtime R4 checks.
+
+For focused regressions, run from the repository root:
 
 ```sh
-uv run --locked python tools/python/python2_contract.py baseline --output target/python2/p3a-baseline.json
 ./tools/test-sdk.sh python2 --recovery
+./tools/test-sdk.sh python2 --discovery
 ```
 
-This command preserves every failure and returns a nonzero status until the
-selected contracts pass. Use a new output path for every run. Inventory/freeze
-commands and their limits are documented in [tools](../../tools/README.md).
-P3A-2 has completed result unification, domain-owned operations, generated DTOs
-and common plan/apply. Generated facades, pagination and session lifecycle have
-focused P3A-6 evidence. Semantic field documentation and installed offline checks
-now pass, including handwritten context methods, build fingerprints and installed
-examples. The comparable P0 experiment completed; the user waived its stability gate for this round on 2026-10-26, retaining the original failed data and thresholds;
-the fixed agent functional gate has passed; actual service identity remains unverified. The examples below
-describe the current API.
+Animation authoring, independent Preview and GPU observer/inspection remain later
+Runtime capabilities. Full platform/app distribution acceptance is also pending.
+See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence;
+implementation does not by itself mean that every R4/P4 exit gate has passed.
 
 ## Selected code generation
 
-P2 derives mesh, image and Plan values/operations, codecs, query signatures and
-simple convenience methods from selected Rust declarations. Public imports stay
+Generation derives registered mesh, image, Plan, parameter, binding, scene,
+sampling, event, reference and canonical modeling values and mechanical bindings
+from Rust declarations and the finite API directory. Public imports stay
 domain modules such as `zipzi.meshes`/`zipzi.parameters`, root `PlanCost`/`PlanReport` and the static `zipzi.ops` unions; lifecycle, resource ownership and recovery stay
 handwritten. Local conversion remains direct PyO3, with no JSON roundtrip.
 
@@ -104,10 +111,10 @@ After installing both local wheels:
 ```python
 from pathlib import Path
 import zipzi
-from zipzi import meshes, ops
+from zipzi import meshes
 
 with zipzi.local() as runtime:
-    session = runtime.sessions.create("79000000-0000-4000-8000-000000000001")
+    session = runtime.sessions.create()
     geometry = meshes.Geometry(
         (42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
         ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),),
@@ -190,8 +197,8 @@ Image preparation, reads, Plan creation and handle close also retain their
 original recovery owner after a lost response. Call `OutcomeUnknown.recover()`;
 another action cannot consume that result. Close/context releases handles only
 after a confirmed outcome. Runtime shutdown or client expiry releases remaining
-leases. This first control-transport slice limits RGBA payloads to **1 MiB**;
-binary buffers and larger images belong to P4.
+leases. Direct bytes and reusable Buffers are supported; larger payloads use the
+bounded binary transfer described under Complete Runtime R4 routes below.
 
 The current native/IPC pairing is listed under Complete Runtime R4 routes below.
 Connected hosts must advertise
@@ -237,8 +244,8 @@ also searches the user/system `Applications/Zipzi Editor.app` locations.
 `SessionId(runtime, serial)` is a pure immutable identity; `session.id` sends no
 request. `sessions.list()` and `sessions.attach(id)` work on both backends.
 `SessionInfo` includes state/path/version/history. `show_window()` requires a
-desktop host. The new client's minimal R3 connection is implemented; full R4 and
-packaged application location acceptance remain pending.
+desktop host. Modeling, resource and project routes also work through this
+connection. Packaged application location acceptance remains pending.
 
 ```sh
 ./tools/test-sdk.sh python2-connected
@@ -248,8 +255,9 @@ packaged application location acceptance remain pending.
 
 The pure wheel runs from `/tmp` under `-I`, without a native package. Editor's
 focused `runtime_ipc_acceptance` also uses this installed client. See the
-[reconnection record](../../docs/plans/sdk-runtime/python2-r0-r4.md) for the
-coverage and remaining R4 modeling work.
+[reconnection record](../../docs/plans/sdk-runtime/python2-r0-r4.md) and
+[R4 record](../../docs/plans/sdk-runtime/python2-r4-complete.md) for coverage and
+remaining acceptance work.
 
 ## Typed parameters and events
 
@@ -270,9 +278,10 @@ for event in stream.poll():
 Create/patch operations compose in the same explicit batch and candidate. Rust
 owns defaults, identity and range/dependency validation; omitted patch fields
 preserve the current candidate's values. Reads own immutable source-bound values.
-`parameters.list()` uses SDK storage order. Both parameter and mesh batches admit
-the complete selection before cloning (at most 256 records and 1 MiB of
-conservative response estimates); large/paged collections remain R4 work.
+Collection `list()` methods return source-bound metadata pages in SDK storage
+order. Selected `get_many()` batches admit the complete selection before cloning;
+record, response-byte and aggregate limits can require smaller batches. Use
+`runtime.limits()` for host facts and follow `next_cursor` for larger collections.
 
 `runtime.sessions.subscribe()` reads registry metadata; `session.subscribe()`
 reads session metadata. Each captures its initial information and cursor together
@@ -302,8 +311,9 @@ formal = session.modeling.sample(({angle: 0.}, {angle: .5}, {angle: 1.}))
 Axis/sample identity allocation, complete-grid validation, interpolation and
 clamping remain in Rust core/SDK. Keyform appearance defaults come from SDK;
 `set_keyform` replaces one numeric grid point while preserving axis identities.
-Binding snapshots expose canonical sample IDs and immutable positions/appearance;
-`get/get_many/list` admit at most 256 records and a conservative 1 MiB result.
+Binding snapshots expose canonical sample IDs and immutable positions/appearance.
+`get/get_many` return full values under record/byte budgets; `list` returns small
+metadata pages and does not include keyforms.
 Sampling returns exact Source/Version, requested/evaluated parameters, CPU
 frames (drawables/deformers/offscreens/render commands) and advisory geometry
 diagnostics. It creates no publication, history entry or Preview change.
@@ -313,7 +323,8 @@ require smaller batches. `sample_async` and `plan_async` capture an immutable
 source and run on cancellable read workers; formal publication retains a worker
 slot. Scene bindings and BlendShape use the same SDK evaluator. The P3 recipe additionally verifies mesh BlendShape
 interpolation and propagation through bound topology changes. Both backends use the same Runtime entry; Local
-conversion uses direct owned PyO3 values. Generation covers the selected mesh/resource/Plan and P3 scene types; these later binding and sampling types remain handwritten.
+conversion uses direct owned PyO3 values. Binding and sampling DTOs are generated
+from their compiled declarations; lifecycle and transfer ownership remain handwritten.
 
 ## P3 scene modeling and SDK identities
 
@@ -398,8 +409,9 @@ conservative admission bounds and actual payload counters, not process RSS.
 
 R4 verification and commands are tracked in the
 [complete acceptance record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
-The later Python [P3A public-contract refactor](../../docs/plans/python-sdk-rewrite/p3a-api-agent-contract.md)
-remains a separate stage.
+The Python [P3A public-contract refactor](../../docs/plans/python-sdk-rewrite/p3a-api-agent-contract.md)
+applies to these routes; its overall acceptance and Runtime R4 exit gates are
+tracked separately.
 
 ## P0 measurements
 
@@ -432,9 +444,9 @@ Animation, independent Preview and observer/inspection remain later Runtime capa
 P3A-3/4/5 was committed as `8500d9fe` without acceptance, by user request.
 Subsequent P3A-6 fixes and selected behavior, recovery, discovery, type, normal
 paired sdist/wheel and current production Editor checks are recorded in
-[P3A-6 results](../../docs/plans/python-sdk-rewrite/p3a-6.md). Overall P3A is still
-unaccepted: P0 stability is waived for this round only; the fixed agent functional
-gate passed, while actual model/service identity remains unverified. Fixes were committed as `32e42da7`; documentation, context methods,
+[P3A-6 results](../../docs/plans/python-sdk-rewrite/p3a-6.md). P3A is accepted:
+P0 stability is waived for the recorded round, the fixed agent functional gate
+passed, and the user removed the model/service identity gate. Fixes were committed as `32e42da7`; documentation, context methods,
 installed examples and deterministic contract evidence have been consolidated.
 
 All five object collections now provide `get(id, expected=...)`,
@@ -470,5 +482,6 @@ are passing. Local inter-page/Plan controls and pre-close independent evidence
 are complete. The fixed 42-run agent functional gate passed at 38/42 with at least
 2/3 per environment; a separate review of the same evidence corrects three grader
 false negatives to 41/42. Original results are retained. The matrix used 16,093,048
-reported tokens with no token caps. Actual model/service revision identity is
-still unavailable, so overall P3A acceptance remains open.
+reported tokens with no token caps. The configured model/effort is recorded as
+`gpt-6.1-sol/high`; actual service revision metadata is optional and does not
+affect task or P3A acceptance.

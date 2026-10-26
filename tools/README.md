@@ -377,7 +377,7 @@ manual D02 review. `--drop apply_authoring|commit|job` on the Connected example
 harness runs public recovery examples with an external test-support host.
 `uv run --locked python tools/python/python2_agent_tasks.py --help` describes fixed
 installed-only packets, bounded recording, and a separate `--preflight <directory>`
-service/identity probe. Preparation runs no model; preflight executes no SDK task
+service availability probe. Preparation runs no model; preflight executes no SDK task
 and cannot mark G01–G08 passed. Fixture data lives in
 `fixtures/python_sdk_agent/`; private controller manifests and raw run events belong
 under `target/`, while plan directories keep Markdown conclusions only.
@@ -386,20 +386,20 @@ under `target/`, while plan directories keep Markdown conclusions only.
 with a macOS Seatbelt MCP shell and a Connected IPC fault relay. It retains every
 failed attempt. Per user instruction on 2026-10-26, token usage has no limit and is
 reported after testing as input/output/total; unavailable counts are not zero-filled
-or failed. Time, tool call/byte, log and actual service identity gates still apply.
+or failed. Time, tool call/byte and log budgets still apply.
 Local page/Plan interference and pre-close independent state/history capture are
 connected through the controlled `sdk-python` workflow launcher. Shell responses
 are paginated within 16 KiB; raw output stays in external logs and subsequent
 pages consume tool calls. `python2_agent_matrix.py --help` freezes one 42-run
-cohort and keeps functional and service identity gates separate. See the
+cohort and decides acceptance from functional results. See the
 [agent fixture notes](../fixtures/python_sdk_agent/README.md) and
 [P3A-6 results](../docs/plans/python-sdk-rewrite/p3a-6.md) for coverage and all
-observed failures. Missing actual service identity prevents full acceptance.
+observed failures. The configured model/effort is `gpt-6.1-sol/high`; optional
+service metadata has no effect on acceptance.
 
-The preflight, task runner and matrix accept `--identity-launcher` for a pinned
-host transport adapter. It writes actual model/service metadata to a private,
-run-bound sidecar; CLI/launcher hashes are checked before and after execution and
-cohort drift stops dispatch. Configured model names and model self-reports never
-count as evidence. The [identity protocol](../fixtures/python_sdk_agent/README.md#modelservice-identity-gate)
-defines the adapter contract. This implementation is committed without new
-validation by user request; prior identity results remain unverified.
+On 2026-10-26 the user removed the model/service identity gate. The runner,
+preflight and matrix no longer require actual service revisions, identity
+launchers or private metadata sidecars. Availability preflight requires a
+completed CLI turn. Missing or changing service metadata is report-only; task
+success, independent verification and functional hard stops determine results.
+See the [metadata notes](../fixtures/python_sdk_agent/README.md#modelservice-metadata).

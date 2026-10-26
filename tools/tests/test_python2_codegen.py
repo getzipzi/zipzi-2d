@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = ROOT / 'crates/zipzi-python2'
@@ -15,6 +16,20 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_catalog_version_follows_distribution_metadata(self):
+        output=gen.render(self.contract())
+        namespace={}
+        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
+        import tomllib
+        version=tomllib.loads((PACKAGE/'client/pyproject.toml').read_text())['project']['version']
+        self.assertEqual(namespace['PACKAGE_VERSION'],version)
+        self.assertIn('Package '+version+';',namespace['CATALOG']['zipzi']['documentation'])
+        with patch.object(gen._catalog_codegen.tomllib,'loads',return_value={'project':{'version':'9.8.7a6'}}):
+            changed=gen.render(self.contract())
+        exec(changed['client/python/zipzi/_generated/catalog.py'],namespace)
+        self.assertEqual(namespace['PACKAGE_VERSION'],'9.8.7a6')
+        self.assertIn('Package 9.8.7a6;',changed['client/python/zipzi/docs/reference.md'])
+
     def test_handwritten_context_and_representation_methods_have_public_entries(self):
         output=gen.render(self.contract());namespace={}
         exec(output['client/python/zipzi/_generated/catalog.py'],namespace)

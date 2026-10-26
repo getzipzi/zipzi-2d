@@ -1,4 +1,4 @@
-"""Keep functional thresholds, actual service identity and hard stops separate."""
+"""Functional thresholds and hard stops decide acceptance; service metadata does not."""
 from pathlib import Path
 import sys
 import unittest
@@ -16,12 +16,20 @@ class AgentMatrix(unittest.TestCase):
                  'input_tokens':1,'output_tokens':2,'total_tokens':3,'verification':{'hard_stop':[]}}
                 for i in range(1,9) for environment in (('local','connected') if i<=6 else ('connected',)) for repeat in range(3)]
 
-    def test_38_successes_require_two_per_environment_and_actual_identity(self):
+    def test_38_successes_with_two_per_environment_pass_without_service_identity(self):
         rows=self.rows()
         for index in (0,3,6,9):rows[index]['functional_passed']=False
         result=summarize(rows)
-        self.assertTrue(result['functional_gate_passed']);self.assertFalse(result['overall_passed'])
-        for row in rows:row['identity_verified']=row['identity']['identity_verified']=True
+        self.assertTrue(result['functional_gate_passed']);self.assertTrue(result['overall_passed'])
+        self.assertEqual(result['model'],{'id':'gpt-6.1-sol','reasoning_effort':'high'})
+        for row in rows:
+            row.pop('identity');row.pop('runner_fingerprint');row.pop('identity_verified')
+        self.assertTrue(summarize(rows)['overall_passed'])
+
+    def test_old_identity_failures_and_service_drift_do_not_change_functional_verdict(self):
+        rows=self.rows()
+        rows[0]['identity'].update(status='failed',service_revision='another-revision')
+        rows[0]['runner_fingerprint']['verified']=False
         self.assertTrue(summarize(rows)['overall_passed'])
 
     def test_total_score_does_not_hide_an_environment_with_only_one_success(self):
@@ -30,11 +38,13 @@ class AgentMatrix(unittest.TestCase):
         result=summarize(rows)
         self.assertEqual(result['functional_successes'],38)
         self.assertFalse(result['functional_gate_passed'])
+        self.assertFalse(result['overall_passed'])
 
     def test_hard_stop_cannot_be_outvoted_by_successful_runs(self):
         rows=self.rows();rows[0]['verification']['hard_stop']=['unknown_reported_as_success']
         result=summarize(rows)
         self.assertFalse(result['functional_gate_passed'])
+        self.assertFalse(result['overall_passed'])
         self.assertEqual(result['hard_stop'],['unknown_reported_as_success'])
 
 

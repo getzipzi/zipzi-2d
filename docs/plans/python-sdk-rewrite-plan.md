@@ -1,8 +1,8 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25。状态：**P1/P2 选定范围已有验收，P0 有试点比较门禁，P3 已交付选定建模/身份切片；P3A-0/P3A-1 已通过，P3A-1 本轮性能噪声由用户豁免，P3A-2 统一值、领域操作、DTO 单一声明和 plan/apply 已验收，整体 P3A 尚未验收。P3 剩余工作归 P3B；P4–P7 按本文调整后的依赖推进。** 既有证据见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+日期：2026-10-25，2026-10-26 收尾。状态：**P3A-0–6 已完成验收；本轮 P0 稳定性沿用用户明确豁免，模型/服务修订身份门禁按用户决定移除。P3 剩余工作归 P3B；P4–P7 按本文依赖推进。** 结果见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
 
-**本轮推进：**[P3A-3/4/5 实现已落地](python-sdk-rewrite/p3a-345.md)，按用户要求期间不验收，统一留待 P3A-6；不得据此标为阶段通过。
+**2026-10-26 收尾完成：**正式分发、生成摘要、当前文档及受影响验证已收敛。用户确认验收运行配置为 `gpt-6.1-sol/high`，明确删除模型/服务身份门禁；配置与可选服务元数据只记录，不参与通过或停止派发判定。固定功能门禁原评分 38/42、补充复核 41/42 和已有确定性/安装/Editor 证据保留。具体结果见 [P3A-6 完成决定](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。
 
 本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）、`f2ef33c`（生命周期与 P0 门禁）、`1e0043f`（P2 网格生成）、`acc54907`（宿主/会话接回）、`c0e186b`（R3 事件/参数/批量）和 2026-10-25 工作区为依据。当前主线按 [Runtime R0–R4](sdk-runtime/python2-r0-r4.md) 推进；已提交的[事件、参数及批量读取](sdk-runtime/python2-r3-events.md)贯通新包 R3 最小链路；工作区中的[网格绑定和显式 CPU 采样](sdk-runtime/python2-r4-bindings.md)接回首批 R4 数值链路，生成器随能力推进。本文区分已提交基础、已有验证记录、工作区实现和后续目标，不改写此前验收结果。
 
@@ -10,7 +10,7 @@
 
 本计划独立于 [SDK Runtime 设计](sdk-runtime-design.md)和[实施计划](sdk-runtime-implementation-plan.md)，不重写其 R0–R7 阶段。可复用的是共享 Rust SDK/core/project/animation、Runtime 和它们独立的领域测试。为新 Python 能力补强这些共享层，也必须计入本项目的实现与复杂度。
 
-**当前阶段为 [P3A「统一 API 与 agent 契约重构」](python-sdk-rewrite/p3a-api-agent-contract.md)，[P3A-0](python-sdk-rewrite/p3a-0.md) 已通过，[P3A-1](python-sdk-rewrite/p3a-1.md) 已通过完整调用恢复验收（本轮性能噪声由用户豁免）。** 包的主要调用者是 agent。P3A 的最终 API、生成/手写边界、执行规则、任务和文档/agent 验收集中维护在独立方案；本文保留整体架构、阶段摘要、历史证据和后续依赖。P3 剩余建模工作归 P3B，后续阶段按第 9 节重新排序。完整目标接口尚未全部交付，不可整体当作当前版本使用说明。
+**P3A「统一 API 与 agent 契约重构」已完成，下一步核对 P3B/P4 与 Runtime R4 的实际剩余项。** 包的主要调用者是 agent；公开契约、生成/手写边界和已有独立行为预期继续适用于后续领域。P3B/P4 未因本次 P3A 完成而自动通过，后续依赖见第 9 节。
 
 当前 `zipzi-python2` 也没有兼容包袱：允许删除、重命名及改变返回类型，不保留旧别名、双入口、弃用期或迁移层；共享领域语义、资源正确性和独立行为预期继续保留。历史验收只证明当时的接口，不自动证明新契约通过。
 
@@ -18,7 +18,7 @@
 
 **建立 agent 能发现、正确调用、恢复失败并验证结果的类型化 Python 客户端。公开方法的正常与恢复路径遵守同一契约，Local/Connected 进入相同 Rust 执行路径。**
 
-1. 包目录和 Cargo 包名为 `zipzi-python2`。纯 Python 分发名为 `zipzi-python2`，导入名为 `zipzi`；可选原生分发名为 `zipzi-python2-native`，导入名为 `zipzi_native._native`。
+1. 包目录和 Cargo 包名为 `zipzi-python2`。纯 Python 分发名为 `zipzi`；可选原生分发名为 `zipzi-native`，导入名分别为 `zipzi` 和 `zipzi_native._native`。当前两份分发版本为 `0.1.0a1`；历史 `zipzi-python2` / `zipzi-python2-native` 产物及成绩保留原身份，不混作当前发布产物。
 2. LocalBackend 与 ConnectedBackend 共用 Rust Runtime 类型化处理器。本地经 PyO3 进入显式拥有的进程内 Runtime，连接模式绑定已有宿主对象，不创建工程镜像或自动退回本地。
 3. SDK/core 定义领域默认值、身份、不变量、算法、编辑、历史与求值；Runtime 管理会话、候选、来源、任务和预算；Python 只组织类型、生命周期、恢复和错误呈现。
 4. 公共便利方法构造同一组类型化操作；显式批次按序执行，提交独立发生。不暴露任意字典/JSON 作为主要创作路径。
@@ -31,7 +31,7 @@
 
 ### 2.1 已有实现与证据
 
-以下“已验证”指[实施记录](python-sdk-rewrite/README.md)已记载的源码/安装验收，不代表本次文档更新重新运行了全部测试。
+下表保留各早期切片的范围与当时待办，不作为当前 API 使用说明。后续完整 R4 接线见 [R4 记录](sdk-runtime/python2-r4-complete.md)，P3A 当前实现/验收见 [P3A-6](python-sdk-rewrite/p3a-6.md)，当前用法见[包 README](../../crates/zipzi-python2/README.md)。历史“已验证”不代表本次重跑了全部测试；R4 接线完整也不代表其最后性能/发行退出门槛通过。
 
 | 切片 | 当前事实与代码位置 | 仍未交付 |
 | --- | --- | --- |
@@ -131,9 +131,9 @@ Edit 失败与恢复、Plan/快照来源、图片/Buffer 所有权、有界传�
 zipzi-python2/
   Cargo.toml                # Rust 包 zipzi-python2
   src/lib.rs                # 薄 PyO3 Runtime 适配
-  pyproject.toml            # 原生分发 zipzi-python2-native，Maturin
+  pyproject.toml            # 原生分发 zipzi-native，Maturin
   native/zipzi_native/       # 只包含原生 namespace
-  client/pyproject.toml     # 纯 Python 分发 zipzi-python2
+  client/pyproject.toml     # 纯 Python 分发 zipzi
   client/python/zipzi/      # 公共类型、生命周期、领域模块和 backends
   tests/                    # 同 recipe 两后端、类型用例、安装验收
   tools/test.py             # 独立构建和 P1 验证
@@ -143,8 +143,8 @@ zipzi-python2/
 
 | 分发 | 内容 | 行为 |
 | --- | --- | --- |
-| `zipzi-python2` | 纯 Python 类型、异常、包装和 ConnectedBackend | 不依赖原生扩展；导入不创建 Runtime、不探测 GPU、不启动宿主 |
-| `zipzi-python2-native` | `zipzi_native._native`，仅 LocalBackend | 依赖匹配的公共包；不安装或覆盖 `zipzi/`；检查契约/构建配对 |
+| `zipzi` | 纯 Python 类型、异常、包装和 ConnectedBackend | 不依赖原生扩展；导入不创建 Runtime、不探测 GPU、不启动宿主 |
+| `zipzi-native` | `zipzi_native._native`，仅 LocalBackend | 依赖匹配的公共包；不安装或覆盖 `zipzi/`；检查契约/构建配对 |
 
 两个分发分别构建，不靠同名 wheel 覆盖来选择后端。是否提供安装 extra，以实际元数据和安装验证决定。首版只声明经验证的 CPython 3.14；扩大平台/版本矩阵需要额外 CI 证据。源码可运行、wheel 可构建、安装后可用和完整发布验收分别记录。
 
@@ -160,8 +160,8 @@ zipzi-python2/
 | **P1 手写完整链路** | 选定生命周期矩阵已验收 | 历史记录保留；P3A 按新接口复用独立预期并补遗漏故障 |
 | **P2 提取生成器** | 网格、资源/Plan 及配对源码发行已验收 | 历史记录保留；P3A 扩展到统一领域 facade、返回投影和文档 |
 | **P3 已有 Modeling 切片** | 场景/组织、选定 BlendShape/拓扑与 SDK Ref/标签地址已有证据 | 纳入 P3A，保持数值、身份和资源行为；完整领域不标完成 |
-| **P3A API 与 agent 契约重构** | **P3A-0–2 已通过；P3A-3/4/5 已提交，P3A-6 综合验收中** | [P3A-6](python-sdk-rewrite/p3a-6.md) 的选定行为/类型/安装及当前 Editor 检查已通过；修复已提交 `32e42da7`；文档/类型/安装及 C 确定性证据已汇总，2026-10-26 用户豁免本轮 P0 稳定性（保留原数据/阈值），执行器与独立证据已补齐，固定 agent 功能门禁原评分 38/42、每环境至少 2/3，补充复核 41/42；token 仅统计，实际模型/服务修订身份仍未验证；整体未通过 |
-| **P3B Modeling 剩余能力** | 待 P3A | 完整场景绑定/网格转换/剩余字段与内容地址，按新 API 补齐两后端 recipe |
+| **P3A API 与 agent 契约重构** | **P3A-0–6 已通过** | [P3A-6 完成决定](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)：D/C、安装、Editor 和固定功能门禁已有证据；本轮 P0 稳定性沿用用户豁免；模型/服务身份改为记录信息，无此验收门禁 |
+| **P3B Modeling 剩余能力** | P3A 前置已满足，阶段待完成 | 以现有完整 Modeling/地址接线和 R4 记录核对剩余领域与独立 recipe，避免重复建设 |
 | **P4 资源与工程** | 工作区已有 Buffer/二进制资源代码与测试，完整阶段未验收 | 已有公开能力纳入 P3A；后续完整格式/IO、昂贵工作取消、公平调度、总预算/峰值及安装证据独立交付 |
 | **P5 动画与观察** | 未开始 | Motion/Expression/Physics/Pose、独立 Preview、空间/观察和 inspection；已有 CPU 建模采样归 P3A/P3B，不重复延期 |
 | **P6 分发与使用** | 双 wheel、配对 sdist 和真实宿主选定链路已有证据 | 每阶段同步安装、文档/agent 验收；最后补齐平台、发行 app 位置与全能力组合 |
@@ -221,7 +221,7 @@ P3A 的范围与排除项见[独立方案第 1 节](python-sdk-rewrite/p3a-api-a
 
 P3A 的详细设计、7 个子任务及退出条件已拆到[独立方案](python-sdk-rewrite/p3a-api-agent-contract.md)。实施顺序为冻结契约/失败基线 → 完整调用恢复 → 统一值/操作/规划 → 生成包装与发现/生命周期 → agent 文档 → 综合验收；依赖和交付物见[任务表](python-sdk-rewrite/p3a-api-agent-contract.md#5-实施任务与交付物)。
 
-当前 [P3A-0](python-sdk-rewrite/p3a-0.md) 已补齐逐符号目标映射、完整签名、agent 配置和 P0 冻结并通过门禁，随后完成 [P3A-1](python-sdk-rewrite/p3a-1.md) 的完整调用恢复与生命周期状态验收。P3A-2 已通过，P3A-3/4/5 已提交为 `8500d9fe`；[P3A-6](python-sdk-rewrite/p3a-6.md) 已启动综合验收并修复实际故障，整体仍未通过。P3A 必须验证全部已有公开能力、正常安装包、当前 Editor 和独立 agent 任务，完成后才进入 P3B/P4；P3A-1 原轮次性能噪声豁免单独保留；2026-10-26 用户另行豁免 P3A-6 本轮 P0 稳定性门槛，直接推进 agent 验收，其他范围和门槛保持不变。
+[P3A-0](python-sdk-rewrite/p3a-0.md) 至 [P3A-6](python-sdk-rewrite/p3a-6.md) 已完成当前范围验收。2026-10-26 用户明确取消模型/服务身份门禁，只记录 `gpt-6.1-sol/high` 运行配置及可选元数据；本轮 P0 稳定性保留原豁免和失败数据。P3B/P4 继续沿用公共契约，完整 R4/P4 性能、资源和发行退出条件独立核对。
 
 ### 9.7 P3A 之后的任务调整
 
@@ -293,6 +293,6 @@ C01–C08 确定性回归、G01–G08 安装包 agent 任务、42 次运行的�
 
 `zipzi-python2` 完成需要：本项目明确承诺的能力均接线且独立验证；两后端共用 Rust 领域路径；公开签名、返回、恢复、来源、事务、资源和 Job 规则一致；生成与手写职责可从唯一目录追踪；随包文档、自省和 agent 任务达标；所有阶段有实际源码/安装/宿主/性能证据。
 
-**当前下一步是 P3A，不是直接继续增加一批新 Python 方法。** P3A 退出要求[独立方案的全部任务与验收门槛](python-sdk-rewrite/p3a-api-agent-contract.md#8-阶段退出与后续交接)；再按 P3B/P4/P5 扩领域。Runtime R0–R7 编号与已交付事实保持，P3A 为其 Python 公共契约补充验收，不宣称完成 Runtime R4。P0/P6 持续跟随，P7 汇总完整发布范围。
+**P3A 已完成，下一步是 P3B/P4 与 Runtime R4 剩余工作的核对和交付。** 沿用已通过的公共契约；以现有实现和独立证据核销旧待办，再补实际缺口。Runtime R0–R7 编号及状态独立维护，P3A 完成不等于 Runtime R4 完成。P0/P6 持续跟随，P7 汇总完整发布范围。
 
 每完成一个切片，更新能力清单和实施记录，只保留简明验收结果：改动范围、必要检查及结果、未满足项和用户明确豁免项。临时日志、JSON 清单、哈希和测量报告不写入计划目录；不为重建已删除的历史产物反复验收。不因删除旧 API 而删除独立行为预期。阶段结论留在[实施记录](python-sdk-rewrite/README.md)，计划据此调整状态与下一步，不把目标改写为完成结果。

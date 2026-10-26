@@ -29,8 +29,10 @@ desktop host. Typed parameter create/patch/batch reads, mesh batch reads and
 independent cursor subscriptions are implemented. Mesh binding creation/keyforms,
 canonical binding queries and explicit formal/candidate CPU pose batches are
 available through `bindings` and `modeling.sample`. Sampling retains its exact
-source and leaves human Preview/history unchanged. Full R4 Modeling,
-handles/addresses, larger cancellable workloads and resource/IO coverage remain in progress.
+source and leaves human Preview/history unchanged. Canonical Modeling commands,
+source-bound references/addresses, binary Buffers, cancellable reads and project
+import/export routes are also implemented. Runtime R4's remaining performance and
+distribution exit gates are tracked separately from implemented capabilities.
 
 Read results use `zipzi.Snapshot[T]` (`source`, `value`) and `zipzi.Batch[T]`
 (`source`, `items`). Domain payloads have no Source field. Use
@@ -47,5 +49,9 @@ Plan values with `edit.apply(plan)`; mixed batches allow one Plan in the first s
 The installed package includes `zipzi/docs/guide.md`, `reference.md` and
 `recipes.py`. `zipzi.describe("zipzi")` is an offline entry point with no native
 extension or host requirement. Collection paging, Session detach/close and the
-new offline catalog are implemented for P3A-3/4/5; acceptance is deferred to
-P3A-6 by user request.
+new offline catalog have deterministic and installed P3A-6 evidence. The fixed
+agent functional gate passed. P3A is accepted after the user removed the
+model/service identity gate; `gpt-6.1-sol/high` is recorded as the configured
+model/effort. The P0 stability waiver applies only to its recorded 2026-10-26 round.
+Animation authoring, independent
+Preview and GPU observer/inspection remain future Runtime capabilities.

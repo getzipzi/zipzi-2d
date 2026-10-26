@@ -3,6 +3,8 @@
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
 日期：2026 年 10 月 24 日。状态：**R0–R3 已交付，R4 实施中，R5–R7 尚未开始**。
 
+2026-10-26 Python 公共契约收尾：[P3A 已完成验收](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。用户确认运行配置 `gpt-6.1-sol/high` 并移除模型/服务身份门禁；既有确定性/安装/Editor/固定功能门禁证据和本轮 P0 稳定性豁免保留。下一步核对 P3B/P4 与 R4 最后布局修复后的实际剩余验证，Runtime R4 状态不因 P3A 完成而自动改变。
+
 2026-10-25 本轮收尾：[R4 完整连接实现与验收记录](sdk-runtime/python2-r4-complete.md)已接通完整 Modeling/地址/资源/IO、可取消读取及 Editor 投影，并取得两后端、安装和十对 UI 性能证据。P0 最后发现的普通批次/Plan 临时堆问题已做 Box 布局修复并通过 Runtime 回归；按用户“直接收尾”要求，未继续最后的 Release 与发行复验，**R4 仍为实施中**。具体未通过项与冻结产物见该记录，不将 Python P3A 标为完成。
 
 

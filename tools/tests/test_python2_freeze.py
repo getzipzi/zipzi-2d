@@ -114,6 +114,10 @@ class Python2Freeze(unittest.TestCase):
         self.assertFalse(any('token' in key for key in self.config['budget_per_run']))
         self.assertEqual(self.config['token_usage_policy']['mode'],'report_only')
         self.assertIsNone(self.config['token_usage_policy']['limits'])
+        self.assertEqual(self.config['model']['reasoning_effort'],'high')
+        self.assertEqual(self.config['identity_policy']['mode'],'report_only')
+        self.assertFalse(self.config['identity_policy']['required'])
+        self.assertFalse(self.config['identity_policy']['affects_acceptance'])
 
     def test_prompts_seeds_thresholds_and_budget_cannot_be_weakened_even_if_rehashed(self):
         for mutate in (
@@ -127,6 +131,7 @@ class Python2Freeze(unittest.TestCase):
             lambda c: c["token_usage_policy"].update(mode="enforced"),
             lambda c: c["token_usage_policy"].update(limits={"total_tokens":184000}),
             lambda c: c["model"].update(fallback=True),
+            lambda c: c["identity_policy"].update(affects_acceptance=True),
         ):
             changed = deepcopy(self.config)
             mutate(changed)

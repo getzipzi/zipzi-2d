@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
-from python2_agent_identity import IDENTITY_POLICY,launcher_spec
+from python2_agent_identity import IDENTITY_POLICY
 
 PROMPTS = {
     "G01": "从提供的多个驻留会话中，找到任务数据指定的文档和所属 Part。对象名称有重复，请按所属关系选择，读取并仅修改指定对象。先检查执行宿主能力；条件不足时准确报告。最后用正式读取验证目标和其他同名对象，按任务数据要求保存。",
@@ -60,7 +60,7 @@ def digest(value: object) -> str:
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def configuration(identity_launcher: Path | None = None) -> dict:
+def configuration() -> dict:
     executable = shutil.which("codex")
     if executable is None:
         raise ValueError("A concrete agent runner version must be identified before freezing")
@@ -78,12 +78,9 @@ def configuration(identity_launcher: Path | None = None) -> dict:
             "verifier": {"version": "p3a-independent-verifier-4-public-runtime", "input": "host model/pixels/version/history/files",
                 "agent_claims_are_evidence": False}})
     result = {"schema": 2, "status": "configuration_frozen_tasks_not_run",
-        "model": {"id": "gpt-6.1-sol", "version": "gpt-6.1-sol", "reasoning_effort": "high",
-            "fallback": False, "record_resolved_model_and_service_revision": True,
-            "reject_model_or_runner_revision_drift_across_42_runs": True,
-            "unavailable_identity_or_service": "unverified; cannot replace with handwritten recipes"},
+        "model": {"id": "gpt-6.1-sol", "reasoning_effort": "high", "fallback": False},
         "runner": {"kind": "codex exec", "version": version, "executable": str(runner),
-            "executable_sha256": hashlib.sha256(runner.read_bytes()).hexdigest(),"identity_launcher":launcher_spec(identity_launcher),
+            "executable_sha256": hashlib.sha256(runner.read_bytes()).hexdigest(),
             "arguments": ["exec", "--json", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--skip-git-repo-check", "--model", "gpt-6.1-sol", "-c", 'model_reasoning_effort="high"'],
             "environment": "isolated packet; no repository, inherited conversation, user skills or answers"},
         "common_prompt": COMMON_PROMPT, "tasks": tasks,
@@ -100,7 +97,7 @@ def configuration(identity_launcher: Path | None = None) -> dict:
             "minimum_successes_per_environment": 2,
             "hard_stop": ["duplicate_write", "wrong_object_modified", "silent_partial_publication", "unknown_reported_as_success"],
             "deterministic_gates": "D01-D08 and C01-C08 must all pass independently"},
-        "required_run_record": ["task", "environment", "seed", "model", "runner_version", "runner_fingerprint", "identity", "package_hashes", "document_hashes", "prompt_hash", "success", "failure_reason", "tool_calls", "exploration_calls_before_first_correct_call", "invented_api_calls", "recovery_actions", "input_tokens", "output_tokens", "total_tokens", "elapsed_seconds", "log_bytes", "independent_verifier_result"],
+        "required_run_record": ["task", "environment", "seed", "model", "runner_version", "package_hashes", "document_hashes", "prompt_hash", "success", "failure_reason", "tool_calls", "exploration_calls_before_first_correct_call", "invented_api_calls", "recovery_actions", "input_tokens", "output_tokens", "total_tokens", "elapsed_seconds", "log_bytes", "independent_verifier_result"],
     }
     result["configuration_sha256"] = digest(result)
     return result
@@ -116,7 +113,7 @@ def validate(config: dict) -> None:
     if config.get("schema") != 2 or config.get("token_usage_policy") != TOKEN_USAGE_POLICY:
         raise ValueError("Token usage must be report-only without token limits")
     if config.get('final_response_schema')!=FINAL_RESPONSE_SCHEMA:raise ValueError('Final confirmation schema changed')
-    if config.get('identity_policy')!=IDENTITY_POLICY:raise ValueError('Actual service identity policy changed')
+    if config.get('identity_policy')!=IDENTITY_POLICY:raise ValueError('Service metadata must remain report-only')
     if not Path(config['runner'].get('executable','')).is_absolute():raise ValueError('Runner executable must be frozen by absolute path')
     expected = {(task, environment) for task in PROMPTS for environment in
                 (["local", "connected"] if task <= "G06" else ["connected"])}
@@ -140,5 +137,3 @@ def validate(config: dict) -> None:
         raise ValueError("Every measured budget must be a finite positive integer")
     if config["model"]["id"] != "gpt-6.1-sol" or config["model"]["fallback"] or not config["runner"]["version"]:
         raise ValueError("Model/runner must be explicitly pinned without fallback")
-    if config['model'].get('record_resolved_model_and_service_revision') is not True or config['model'].get('reject_model_or_runner_revision_drift_across_42_runs') is not True:
-        raise ValueError('Actual identity evidence and revision consistency are mandatory')
