@@ -79,7 +79,7 @@ def audit()->dict[str,object]:
         if value.summary()!=repr(value):failures['D07'].append(type(value).__name__+': summary differs')
     if len(geometry.positions)!=1000:failures['D07'].append('Explicit geometry fields changed')
     from zipzi._generated.catalog import PACKAGE_VERSION,CONTRACT,CONTRACT_SHA256,CLIENT_SOURCE_SHA256
-    if PACKAGE_VERSION!=metadata.version('zipzi-python2'):failures['D08'].append('Installed package/catalog version mismatch')
+    if PACKAGE_VERSION!=metadata.version('zipzi'):failures['D08'].append('Installed package/catalog version mismatch')
     if CONTRACT!='zipzi-runtime-p3a-345-1' or not re.fullmatch('[0-9a-f]{64}',CONTRACT_SHA256):failures['D08'].append('Missing exact protocol/contract identity')
     package=resources.files('zipzi')
     fingerprint=hashlib.sha256()

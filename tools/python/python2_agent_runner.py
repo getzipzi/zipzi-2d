@@ -1,7 +1,6 @@
-"""Execute frozen installed-only SDK tasks; keep functional and identity verdicts separate.
+"""Execute frozen installed-only SDK tasks with functional acceptance.
 
-No identity failure is waived here. A service without actual model/revision
-metadata can produce diagnostic functional evidence but cannot pass G acceptance.
+Configured model/effort and optional service metadata are recorded for context.
 All evidence is retained under an explicitly selected temporary output root.
 """
 from __future__ import annotations
@@ -18,7 +17,6 @@ from python2_agent_tasks import ROOT,prepare,sha,preflight_identity
 from python2_acceptance import BUDGET,TOKEN_USAGE_POLICY,FINAL_RESPONSE_SCHEMA,COMMON_PROMPT,PROMPTS,configuration,digest,validate,token_usage
 from python2_agent_controller import Controller
 from python2_agent_observer import controller_events
-from python2_agent_identity import prepare_identity,runner_fingerprint,identity_command,IdentityFailure
 
 
 def run_one(root:Path,config:dict,task:str,environment:str,repeat:int,wheels:list[Path],host:Path,verifier_python:Path)->dict:
@@ -44,9 +42,6 @@ def run_one(root:Path,config:dict,task:str,environment:str,repeat:int,wheels:lis
     try:
         prepare(packet,config,task,environment,repeat,wheels,host_folder.resolve(),endpoint)
         private=root/(label+'.controller');host_folder.mkdir(exist_ok=True)
-        binding,identity_env=prepare_identity(private,config)
-        runner_before=runner_fingerprint(config)
-        if not runner_before['verified']:raise IdentityFailure('Frozen runner/identity launcher changed before task start')
         harness_paths=['tools/python/python2_agent_runner.py','tools/python/python2_agent_shell.py',
             'tools/python/python2_agent_tasks.py','tools/python/python2_agent_controller.py',
             'tools/python/python2_acceptance.py','fixtures/python_sdk_agent/tasks.py',
@@ -85,11 +80,10 @@ def run_one(root:Path,config:dict,task:str,environment:str,repeat:int,wheels:lis
             '-c','model_instructions_file='+json.dumps(str(private/'instructions.md')),
             '-c','developer_instructions='+json.dumps('Execute only the SDK task in TASK.md. The external sdk_shell shell is the sole allowed tool. Do not use built-in tools, other apps, network, repository files, user instructions or skills. Keep each tool output below the stated budget.'),
             (packet/'TASK.md').read_text()+'\nRead task.json. Frozen budgets: '+json.dumps(BUDGET)+'\nToken usage is reported after the run; no input, output, total or per-call token limits are enforced. Return the final JSON status/artifacts/unconfirmed. unconfirmed lists only unresolved required task outcomes, and is empty when the task is confirmed complete. Long shell output is paginated; use its read_output_command to continue when needed.']
-        arguments=identity_command(arguments,config)
         (private/'command.json').write_text(json.dumps(arguments,indent=2)+'\n')
         started=time.monotonic();failure=[]
         with (private/'agent.ndjson').open('wb') as out,(private/'agent.stderr').open('wb') as err:
-            process=subprocess.Popen(arguments,cwd=packet,env={**os.environ,**identity_env},stdin=subprocess.DEVNULL,stdout=out,stderr=err,start_new_session=True)
+            process=subprocess.Popen(arguments,cwd=packet,stdin=subprocess.DEVNULL,stdout=out,stderr=err,start_new_session=True)
             while process.poll() is None:
                 elapsed=time.monotonic()-started
                 size=(private/'agent.ndjson').stat().st_size
@@ -104,11 +98,7 @@ def run_one(root:Path,config:dict,task:str,environment:str,repeat:int,wheels:lis
         for line in (private/'agent.ndjson').read_text().splitlines():
             try:events.append(json.loads(line))
             except json.JSONDecodeError:pass
-        runner_after=runner_fingerprint(config)
-        identity=preflight_identity(events,process.returncode,expected_model=config['model']['id'],
-            evidence_path=private/'service-identity.json',binding=binding,
-            allow_sidecar=config['runner']['identity_launcher'] is not None,
-            runner_verified=runner_before['verified'] and runner_after['verified'])
+        metadata=preflight_identity(events,process.returncode)
         active_shell=private/'active-shell-pgid'
         if active_shell.exists():
             try:os.killpg(int(active_shell.read_text()),signal.SIGKILL)
@@ -151,15 +141,13 @@ def run_one(root:Path,config:dict,task:str,environment:str,repeat:int,wheels:lis
         if harness_hashes!={path:sha(ROOT/path) for path in harness_paths}:failure.append('diagnostic_harness_changed_during_run')
         functional=bool(verification.get('verified') and verification.get('coverage_complete')) and not failure
         result={'task':task,'environment':environment,'seed':data['seed'],'functional_passed':functional,
-                'identity_verified':identity['identity_verified'],'status':'passed' if functional and identity['identity_verified'] else 'unverified' if functional else 'failed',
-                'identity':identity,'runner_version':config['runner']['version'],'configuration':config['configuration_sha256'],
+                'status':'passed' if functional else 'failed','model':config['model'],
+                'service_metadata':metadata,'runner_version':config['runner']['version'],'configuration':config['configuration_sha256'],
                 'package_hashes':manifest['packages'],'prompt_hash':digest(COMMON_PROMPT+PROMPTS[task]),
                 'tool_calls':tool_calls,'input_tokens':inputs,'output_tokens':outputs,'elapsed_seconds':time.monotonic()-started,
                 'log_bytes':log_size,
                 'failures':failure,'verification':{key:value for key,value in verification.items() if key!='evidence'}}
         result['controller_events']=sorted(actual_events)
-        result['runner_fingerprint']=runner_after
-        if identity['status']=='failed':result['status']='failed'
         result['agent_final']=final_message
         result.update(total_tokens=tokens['total_tokens'],token_usage_policy=TOKEN_USAGE_POLICY)
         result['failures']=sorted(set(failure))
@@ -167,16 +155,15 @@ def run_one(root:Path,config:dict,task:str,environment:str,repeat:int,wheels:lis
         observed=[json.loads(line) for line in observed_path.read_text().splitlines()] if observed_path.exists() else []
         first=min((event['shell_call_index'] for event in observed if event['kind']=='public_return'),default=None)
         recovery=[event['path'] for event in observed if event['kind']=='public_return' and ('recover' in event.get('path','') or event.get('path')=='recover_call')]
-        result.update(mode='functional_matrix_with_separate_identity_gate',document_hashes=documents,
+        result.update(mode='functional_matrix',document_hashes=documents,
             harness_hashes=harness_hashes,actual_prompt_hash=digest(arguments[-1]),
             task_input_hash=sha(task_path),instructions_hash=sha(private/'instructions.md'),
-            exploration_calls_before_first_correct_call=None if first is None else first-1,invented_api_calls=None,recovery_actions=recovery,
-            unverified_fields=[] if identity['identity_verified'] else ['resolved_model_and_service_revision'])
+            exploration_calls_before_first_correct_call=None if first is None else first-1,invented_api_calls=None,recovery_actions=recovery)
         result['call_classification']='First correct workflow call uses observed public return; invented-API classification is unavailable for unobserved offline shell commands.'
         result['artifact_verified']=bool(verification.get('verified'))
         (private/'result.json').write_text(json.dumps(result,indent=2)+'\n')
         counts={key:'unavailable' if value is None else str(value) for key,value in tokens.items()}
-        (private/'result.md').write_text(f'# {label}\n\nFunctional: {functional}; identity: {identity["identity_verified"]}; overall: {result["status"]}.\n\nTools: {tool_calls}; tokens (report only, no limit): {counts["input_tokens"]} input / {counts["output_tokens"]} output / {counts["total_tokens"]} total; seconds: {result["elapsed_seconds"]:.1f}.\n\nVerifier: {json.dumps(result["verification"])}\n\nFailures: {failure}.\n')
+        (private/'result.md').write_text(f'# {label}\n\nFunctional: {functional}; overall: {result["status"]}.\nModel: {config["model"]["id"]}/{config["model"]["reasoning_effort"]}; optional service metadata: {json.dumps(metadata)}.\n\nTools: {tool_calls}; tokens (report only, no limit): {counts["input_tokens"]} input / {counts["output_tokens"]} output / {counts["total_tokens"]} total; seconds: {result["elapsed_seconds"]:.1f}.\n\nVerifier: {json.dumps(result["verification"])}\n\nFailures: {failure}.\n')
         return result
     finally:
         if controller is not None:controller.close()
@@ -196,9 +183,8 @@ def main():
     parser.add_argument('--wheel',type=Path,action='append',required=True)
     parser.add_argument('--host',type=Path,required=True)
     parser.add_argument('--verifier-python',type=Path,required=True)
-    parser.add_argument('--identity-launcher',type=Path,help='Pinned host launcher that writes private run-bound transport identity metadata')
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
-    config=configuration(args.identity_launcher);validate(config)
+    config=configuration();validate(config)
     frozen=args.output/'configuration.json'
     if frozen.exists():
         prior=json.loads(frozen.read_text())

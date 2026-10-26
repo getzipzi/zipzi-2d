@@ -50,9 +50,9 @@ complete, its `read_output_command` retrieves the next page through the same
 shell tool. Each page consumes a tool call; time/call/log limits still apply.
 
 `python2_agent_matrix.py` freezes a cohort's CLI, harness, prompts, packages and
-host, retains each fixed task/seed once and records functional results separately
-from actual service identity. Missing service identity remains unverified and is
-never replaced by the configured model name or a model claim. Offline invented-API
+host and retains each fixed task/seed once. The user confirmed the configured
+model/effort as `gpt-6.1-sol/high` and removed the model/service identity gate.
+Optional lifecycle metadata is report-only and cannot block acceptance or dispatch. Offline invented-API
 classification remains unavailable for unobserved help commands; workflow
 exploration and recovery actions come from external observation.
 
@@ -63,49 +63,19 @@ and `recover_call` preserves the logical create/close operation. Unified
 The completed fixed cohort retains its original grader/source snapshot and score
 38/42 (at least 2/3 everywhere); a source-preserving supplemental review gives
 41/42. The original functional threshold already passed without that correction.
-Actual service identity remains unverified.
+P3A acceptance is complete under the user's updated rules.
 
-## Model/service identity gate
+## Model/service metadata
 
-The gate now checks all trusted lifecycle metadata in a run, instead of letting a
-last event overwrite conflicting identities. It also checks actual model/service
-revision, configuration, CLI version/hash and launcher hash across the whole
-cohort. An explicit mismatch stops further dispatch; missing metadata remains
-unverified. Model-written JSON, configured names and standalone verified booleans
-cannot establish identity.
+On 2026-10-26 the user removed this acceptance gate entirely. Configured model
+and reasoning effort remain recorded. Optional model/service fields already
+present in CLI lifecycle events are collected for context; missing, conflicting
+or changed metadata does not fail a task, stop dispatch or change a matrix score.
+The private identity sidecar, pinned metadata launcher and `--identity-launcher`
+option were removed. No identity probe or another 42-run cohort is required to
+close P3A. Earlier raw identity results remain historical records.
 
-For a CLI that omits service metadata, `--identity-launcher /absolute/executable`
-on the packet preflight, task runner or matrix selects a trusted host-side
-transport adapter. Its path and SHA-256 are frozen. The adapter receives the full
-Codex executable/arguments as its command arguments and must preserve its event
-stream and exit status. It must obtain actual authenticated transport metadata,
-not copy the requested model into an alleged observation.
-
-The adapter receives `ZIPZI_AGENT_IDENTITY_REQUEST` and
-`ZIPZI_AGENT_IDENTITY_RESULT` paths in its environment. These paths belong to the
-private controller directory and are not inherited by the sandboxed task shell.
-The request contains a fresh run ID, configuration hash, CLI executable hash,
-requested model and result path. The adapter writes this bounded result:
-
-```json
-{
-  "schema": 1,
-  "source": "transport_metadata",
-  "run_id": "copy the current private request run_id",
-  "configuration_sha256": "copy the current request configuration hash",
-  "runner_executable_sha256": "copy the current request executable hash",
-  "requested_model": "gpt-6.1-sol",
-  "resolved_model": "actual resolved model from transport metadata",
-  "service_revision": "actual service revision from transport metadata"
-}
-```
-
-The observed model must match the frozen requested model. Evidence is rejected
-if it belongs to another run/configuration, is malformed, conflicts with lifecycle
-metadata or reuses another run ID. Sidecar evidence requires the configured,
-hash-pinned launcher; it is not a user/model assertion or a remote-signature
-protocol. The host launcher is part of the trusted runner boundary.
-
-Implementation and regression cases were added on 2026-10-26. Per user request,
-this identity change was committed without running tests, preflights or another
-agent matrix. The earlier 42-run identity verdict remains unverified.
+Service availability preflight still requires a completed CLI turn; actual task
+execution, independent verification, functional thresholds and hard stops decide
+acceptance. Package/document fingerprints, isolation, recovery, finite budgets
+and token usage reporting continue under their documented rules.

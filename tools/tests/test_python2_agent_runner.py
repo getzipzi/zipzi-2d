@@ -16,6 +16,17 @@ from python2_acceptance import token_usage
 
 
 class AgentController(unittest.TestCase):
+    def test_missing_service_revision_does_not_fail_a_functional_run_record(self):
+        identity={'task':'G02','environment':'local','seed':314360,'model':'gpt-6.1-sol',
+            'runner_version':'test-runner','package_hashes':{'wheel':'a'},
+            'document_hashes':{'guide':'b'},'prompt_hash':'c'}
+        with tempfile.TemporaryDirectory() as directory:
+            recorder=RunRecorder(Path(directory)/'run',identity)
+            report=recorder.finish({'verified':True,'evidence_digest':'independent',
+                'coverage_complete':True},set(),set()).read_text()
+            self.assertIn('Status: passed',report)
+            self.assertIn('Failures: none',report)
+
     def test_large_token_usage_is_reported_without_failing_the_run(self):
         identity={'task':'G02','environment':'local','seed':314360,'model':'gpt-6.1-sol',
             'service_revision':'test-revision','runner_version':'test-runner','package_hashes':{'wheel':'a'},
