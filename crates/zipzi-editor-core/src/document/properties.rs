@@ -339,6 +339,24 @@ impl Document {
         if object.kind == ObjectKind::Mesh
             && patch
                 .changes
+                .contains_key(&crate::property::mesh::DEFORMER.key)
+        {
+            ensure!(
+                patch.changes.len() == 1,
+                "Deformer changes must be independent"
+            );
+            // Use the same native reparent operation as tree dragging so locks,
+            // deformation order and undo are validated together.
+            return Ok(edit.edit_scene(zipzi_sdk::SceneEdit::Reparent {
+                edit: zipzi_sdk::ReparentEdit::keep_local(
+                    vec![object.id.clone()],
+                    payload["deformer_id"].as_str().unwrap().into(),
+                ),
+            })?);
+        }
+        if object.kind == ObjectKind::Mesh
+            && patch
+                .changes
                 .contains_key(&crate::property::mesh::TEXTURE.key)
         {
             ensure!(

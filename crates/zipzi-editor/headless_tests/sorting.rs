@@ -48,6 +48,117 @@ fn begin_drag(
 }
 
 #[gpui_kit::test]
+fn tree_icons_and_labels_start_dragging_without_including_row_controls(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
+    let mesh = document.layers()[0].id.clone();
+    let deformer = id(501);
+    let harness = setup_with_document(cx, document, assets);
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, cx| {
+        assert!(view.mesh_thumbnails.read(cx).cached_image(&mesh).is_some());
+    });
+    for (prefix, panel) in [
+        ("parts", zipzi_editor_core::PanelKind::PartsTree),
+        ("deformer", zipzi_editor_core::PanelKind::Deformers),
+    ] {
+        cx.update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.dock.as_ref().unwrap().show(panel, None, window, cx);
+            });
+            window.render_frame(cx);
+            let to = window
+                .find(format!("{prefix}-tree-root-drop"))
+                .bounds()
+                .center();
+            for (source, area) in [(&mesh, "icon"), (&deformer, "icon"), (&mesh, "label")] {
+                let from = window
+                    .find(format!("{prefix}-{area}-{source}"))
+                    .bounds()
+                    .center();
+                begin_drag(window, cx, from, to);
+                assert!(
+                    cx.has_active_drag(),
+                    "{prefix} {area} {source}: drag did not start"
+                );
+                window.press("escape", cx);
+                window.dispatch_event(
+                    MouseUpEvent {
+                        button: MouseButton::Left,
+                        position: to,
+                        modifiers: Default::default(),
+                        click_count: 1,
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+                window.render_frame(cx);
+                assert!(!cx.has_active_drag());
+            }
+            for control in [
+                format!("{prefix}-vis-{mesh}"),
+                format!("{prefix}-lock-{mesh}"),
+                format!("tree-expand-RotationDeformer:{deformer}"),
+            ] {
+                let from = window
+                    .within(format!("{prefix}-tree-panel"))
+                    .find(control.clone())
+                    .bounds()
+                    .center();
+                begin_drag(window, cx, from, to);
+                assert!(!cx.has_active_drag(), "{prefix}: {control} started a drag");
+                window.dispatch_event(
+                    MouseUpEvent {
+                        button: MouseButton::Left,
+                        position: to,
+                        modifiers: Default::default(),
+                        click_count: 1,
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+                window.render_frame(cx);
+            }
+            let history = harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths();
+            let from = window
+                .find(format!("{prefix}-icon-{mesh}"))
+                .bounds()
+                .center();
+            window.drag(from, to, cx);
+            window.render_frame(cx);
+            harness.view.read_with(cx, |view, _| {
+                let document = view.editor.document().unwrap();
+                let index = document.object_index();
+                let properties = &index
+                    .get(&zipzi_editor_core::ObjectRef::new(
+                        zipzi_editor_core::ObjectKind::Mesh,
+                        &mesh,
+                    ))
+                    .unwrap()
+                    .properties;
+                assert_eq!(
+                    properties[if prefix == "parts" {
+                        "part_id"
+                    } else {
+                        "deformer_id"
+                    }],
+                    ""
+                );
+                assert_eq!(document.history_lengths(), (history.0 + 1, 0));
+                assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+            });
+        })
+        .unwrap();
+        cx.run_until_parked();
+    }
+}
+
+#[gpui_kit::test]
 fn motions_can_be_dragged_to_root_without_a_virtual_group(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::animation_document().unwrap();
     let moved = document.motion_resources()[0].selection.clone();

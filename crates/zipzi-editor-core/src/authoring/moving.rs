@@ -3,7 +3,8 @@
 use super::*;
 use anyhow::{Result, anyhow, ensure};
 use zipzi_sdk::{
-    OrganizationCollection as Collection, OrganizationEdit, SceneCollection, SceneEdit,
+    OrganizationCollection as Collection, OrganizationEdit, ReparentEdit, ReparentPlacement,
+    SceneCollection, SceneEdit,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -43,19 +44,14 @@ pub struct PaletteMovePlan(pub(super) MovePlan);
 pub(super) enum MovePlan {
     Organization(zipzi_sdk::OrganizationEditPlan),
     Scene(zipzi_sdk::SceneEditPlan),
-    ReparentRequired { noop: bool },
     Steps(super::stepping::PaletteStepsPlan),
 }
 impl PaletteMovePlan {
-    pub fn requires_preservation(&self) -> bool {
-        matches!(self.0, MovePlan::ReparentRequired { .. })
-    }
     pub fn is_noop(&self) -> bool {
         match &self.0 {
             MovePlan::Organization(plan) => plan.is_noop(),
             MovePlan::Scene(plan) => plan.is_noop(),
             MovePlan::Steps(plan) => plan.is_noop(),
-            MovePlan::ReparentRequired { noop } => *noop,
         }
     }
 }
@@ -136,6 +132,13 @@ impl Document {
             .map(|object| object.id.clone())
             .collect();
         if request.projection == PaletteProjection::Deformation {
+            ensure!(
+                request
+                    .sources
+                    .iter()
+                    .all(|object| matches!(object.kind, ObjectKind::Mesh | ObjectKind::Deformer)),
+                "Select meshes or deformers"
+            );
             let (collection, before) =
                 super::reparenting::deformation_destination(&self.model(), &request)?;
             let SceneCollection::Deformation { ref parent_id } = collection else {
@@ -145,8 +148,13 @@ impl Document {
                 self.model().scene_deformer_parent(&object.id)
                     != Some(parent_id.as_deref().unwrap_or(""))
             }) {
-                let noop = self.palette_reparent_preflight(&request)?;
-                return Ok(PaletteMovePlan(MovePlan::ReparentRequired { noop }));
+                // Ordinary tree moves retain local geometry and bindings. Shape
+                // preservation is a separate, explicitly requested conversion.
+                let mut edit = ReparentEdit::keep_local(ids, parent_id.clone().unwrap_or_default());
+                edit.placement = Some(ReparentPlacement { before });
+                return Ok(PaletteMovePlan(MovePlan::Scene(
+                    self.plan_scene_authoring(SceneEdit::Reparent { edit })?,
+                )));
             }
             return Ok(PaletteMovePlan(MovePlan::Scene(
                 self.plan_scene_authoring(SceneEdit::Move {
@@ -250,9 +258,6 @@ impl Document {
             MovePlan::Organization(plan) => self.execute_organization_authoring(plan),
             MovePlan::Scene(plan) => self.execute_scene_authoring(plan),
             MovePlan::Steps(plan) => self.execute_palette_steps(plan),
-            MovePlan::ReparentRequired { .. } => {
-                anyhow::bail!("Review the preservation plan before moving")
-            }
         }
     }
 

@@ -81,7 +81,7 @@ fn mesh_properties_colors_masks_culling_and_blends_validate_roundtrip_and_undo()
         ("masks", json!(["missing"])),
         ("color_blend", json!("invalid")),
         ("color_blend", json!("add_compatible")),
-        ("deformer_id", json!("")),
+        ("deformer_id", json!("missing")),
     ] {
         assert!(
             doc.set_object_property(&object, path, value).is_err(),
@@ -103,6 +103,98 @@ fn mesh_properties_colors_masks_culling_and_blends_validate_roundtrip_and_undo()
         doc.redo()?;
     }
     assert_eq!(doc.property_values(&object)?, values);
+    Ok(())
+}
+
+#[test]
+fn mesh_deformer_property_reparents_bound_meshes_with_warp_root_and_undo() -> anyhow::Result<()> {
+    let (mut doc, assets) = support::rectangle_document(true)?;
+    let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
+    let create = doc.plan_scene_object_creation(SceneObjectType::Warp, "Warp".into(), &[])?;
+    let warp = doc
+        .execute_scene_object_creation(&create)?
+        .suggested_selection[0]
+        .clone();
+    // Structural properties remain editable between stored keyforms.
+    let parameter = doc.parameters()[0].id.clone();
+    doc.set_preview_parameter(&parameter, 0.5)?;
+    assert_eq!(doc.property_scope(&object), PropertyScope::InterpolatedMesh);
+    let before = doc.property_values(&object)?;
+    let tree = doc.deformer_tree();
+    let organization = doc.part_tree();
+    let bindings = |doc: &Document| {
+        doc.object_index()
+            .bindings
+            .iter()
+            .map(|binding| {
+                (
+                    binding.reference.clone(),
+                    binding.target.clone(),
+                    binding.axes.clone(),
+                    binding.points.clone(),
+                    binding.blend,
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    let original_bindings = bindings(&doc);
+    let history = doc.history_lengths();
+    let stale = patch(
+        &doc,
+        &object,
+        fields::DEFORMER,
+        PropertyValue::Text(String::new()),
+    );
+    doc.set_object_property(&object, "deformer_id", json!(warp.id))?;
+    assert_eq!(
+        doc.property_values(&object)?[&fields::DEFORMER.key],
+        PropertyValue::Text(warp.id.clone())
+    );
+    assert_eq!(doc.history_lengths(), (history.0 + 1, 0));
+    assert_eq!(doc.part_tree(), organization);
+    assert_eq!(bindings(&doc), original_bindings);
+    assert!(
+        doc.deformer_tree()
+            .iter()
+            .find(|node| node.id == warp.id)
+            .unwrap()
+            .children
+            .iter()
+            .any(|node| node.id == object.id)
+    );
+    let history = doc.history_lengths();
+    assert!(doc.set_object_properties(&object, &stale).is_err());
+    assert_eq!(doc.history_lengths(), history);
+    doc.undo()?;
+    assert_eq!(doc.property_values(&object)?, before);
+    assert_eq!(doc.deformer_tree(), tree);
+    let history = doc.history_lengths();
+    doc.set_object_property(&object, "deformer_id", json!(""))?;
+    assert_eq!(doc.history_lengths(), history); // A no-op keeps redo.
+    doc.redo()?;
+    let saved = doc.save(&assets.path().join("reparented.zipzi"))?;
+    assert_eq!(
+        Document::open(&saved.manifest)?.property_values(&object)?[&fields::DEFORMER.key],
+        PropertyValue::Text(warp.id.clone())
+    );
+    doc.set_object_property(&object, "deformer_id", json!(""))?;
+    assert_eq!(
+        doc.property_values(&object)?[&fields::DEFORMER.key],
+        PropertyValue::Text(String::new())
+    );
+    doc.undo()?;
+    assert_eq!(
+        doc.property_values(&object)?[&fields::DEFORMER.key],
+        PropertyValue::Text(warp.id.clone())
+    );
+    doc.redo()?;
+    doc.set_objects_locked(std::slice::from_ref(&warp), true)?;
+    let history = doc.history_lengths();
+    assert!(
+        doc.set_object_property(&object, "deformer_id", json!(warp.id))
+            .is_err()
+    );
+    assert_eq!(doc.history_lengths(), history);
     Ok(())
 }
 

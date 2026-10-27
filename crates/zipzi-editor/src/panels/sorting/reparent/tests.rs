@@ -396,7 +396,7 @@ fn cancelling_pending_conversion_preserves_redo_and_discards_result(cx: &mut Tes
     );
 }
 #[gpui_kit::test]
-fn deformation_root_drag_opens_review_then_moves_on_confirmation(cx: &mut TestAppContext) {
+fn deformation_root_drag_moves_immediately_and_supports_undo(cx: &mut TestAppContext) {
     let (h, objects) = setup(cx, false);
     let history = h
         .view
@@ -412,39 +412,118 @@ fn deformation_root_drag_opens_review_then_moves_on_confirmation(cx: &mut TestAp
     .unwrap();
     settle(cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.click("reparent-absolute", cx);
-        window.press("cmd-a", cx);
-        window.input("0.001", cx);
-    })
-    .unwrap();
-    settle(cx);
-    cx.update_window(h.window, |_, window, cx| {
-        assert!(window.has_active_dialog(cx));
-        assert!(window.find("reparent-report").visible());
-        assert_eq!(
-            h.view.read(cx).editor.document().unwrap().history_lengths(),
-            history
-        );
-        window.click("reparent-submit", cx);
+        assert!(!window.has_active_dialog(cx));
     })
     .unwrap();
     settle(cx);
     h.view.read_with(cx, |v, _| {
         let d = v.editor.document().unwrap();
         assert_eq!(d.history_lengths(), (history.0 + 1, 0));
-        assert!(
-            d.deformer_tree()
-                .iter()
-                .flat_map(|n| n.children.iter())
-                .all(|n| n.id != objects[0].id)
-                || d.deformer_tree().iter().any(|n| n
-                    .children
-                    .iter()
-                    .any(|n| n.id == objects[0].id)
-                    && n.kind == zipzi_editor_core::TreeNodeKind::Group)
+        assert_eq!(
+            d.object_index().get(&objects[0]).unwrap().properties["deformer_id"],
+            ""
+        );
+    });
+    h.view.update(cx, |v, cx| {
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Undo)
+            .unwrap();
+        v.redraw(cx);
+    });
+    h.view.read_with(cx, |v, _| {
+        let d = v.editor.document().unwrap();
+        assert_eq!(d.history_lengths(), (history.0, 1));
+        assert_eq!(
+            d.object_index().get(&objects[0]).unwrap().properties["deformer_id"],
+            object(501).id
+        );
+    });
+    h.view.update(cx, |v, cx| {
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Redo)
+            .unwrap();
+        v.redraw(cx);
+    });
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(
+            v.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&objects[0])
+                .unwrap()
+                .properties["deformer_id"],
+            ""
         );
     });
 }
+#[gpui_kit::test]
+fn deformer_subtree_drag_into_warp_keeps_children_and_undo(cx: &mut TestAppContext) {
+    let (h, objects) = setup(cx, true);
+    let warp = h.view.update(cx, |v, cx| {
+        let document = v.editor.active_id().unwrap();
+        let plan = v
+            .editor
+            .document()
+            .unwrap()
+            .plan_scene_object_creation(
+                zipzi_editor_core::SceneObjectType::Warp,
+                "Warp destination".into(),
+                &[],
+            )
+            .unwrap();
+        let warp = v
+            .editor
+            .execute_scene_object_creation(document, &plan)
+            .unwrap()
+            .suggested_selection[0]
+            .clone();
+        v.redraw(cx);
+        warp
+    });
+    settle(cx);
+    let (tree, history) = h.view.read_with(cx, |v, _| {
+        let d = v.editor.document().unwrap();
+        (d.deformer_tree(), d.history_lengths())
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        let from = window
+            .find(format!("deformer-item-RotationDeformer:{}", object(501).id))
+            .bounds()
+            .center();
+        let to = window
+            .find(format!("deformer-item-WarpDeformer:{}", warp.id))
+            .bounds()
+            .center();
+        window.drag(from, to, cx);
+    })
+    .unwrap();
+    settle(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        assert!(!window.has_active_dialog(cx));
+        let v = h.view.read(cx);
+        let d = v.editor.document().unwrap();
+        assert_eq!(d.history_lengths(), (history.0 + 1, 0));
+        let tree = d.deformer_tree();
+        let parent = tree.iter().find(|n| n.id == warp.id).unwrap();
+        assert_eq!(parent.children[0].id, object(501).id);
+        assert_eq!(parent.children[0].children[0].id, objects[0].id);
+        assert!(v.edit_error.is_none());
+    })
+    .unwrap();
+    h.view.update(cx, |v, cx| {
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Undo)
+            .unwrap();
+        v.redraw(cx);
+    });
+    h.view.read_with(cx, |v, _| {
+        let d = v.editor.document().unwrap();
+        assert_eq!(d.deformer_tree(), tree);
+        assert_eq!(d.history_lengths(), (history.0, 1));
+    });
+}
+
 #[gpui_kit::test]
 fn deformation_move_to_menu_opens_searchable_preservation_review(cx: &mut TestAppContext) {
     let (h, objects) = setup(cx, false);
@@ -479,7 +558,9 @@ fn deformation_move_to_menu_opens_searchable_preservation_review(cx: &mut TestAp
 }
 
 #[gpui_kit::test]
-fn cross_parent_after_drag_reviews_and_keeps_the_requested_anchor(cx: &mut TestAppContext) {
+fn cross_parent_after_drag_moves_immediately_and_keeps_the_requested_anchor(
+    cx: &mut TestAppContext,
+) {
     let (h, objects) = setup(cx, false);
     let history = h
         .view
@@ -501,19 +582,7 @@ fn cross_parent_after_drag_reviews_and_keeps_the_requested_anchor(cx: &mut TestA
     .unwrap();
     settle(cx);
     cx.update_window(h.window, |_, window, cx| {
-        assert!(window.has_active_dialog(cx));
-        window.click("reparent-absolute", cx);
-        window.press("cmd-a", cx);
-        window.input("0.001", cx);
-    })
-    .unwrap();
-    settle(cx);
-    cx.update_window(h.window, |_, window, cx| {
-        assert_eq!(
-            h.view.read(cx).editor.document().unwrap().history_lengths(),
-            history
-        );
-        window.click("reparent-submit", cx);
+        assert!(!window.has_active_dialog(cx));
     })
     .unwrap();
     settle(cx);

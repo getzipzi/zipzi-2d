@@ -56,8 +56,7 @@ pub const DEFORMER: PropertySpec = PropertySpec::new(
     "deformer_id",
     PropertyType::Text,
 )
-.allow_empty()
-.readonly();
+.allow_empty();
 pub const MASKS: PropertySpec =
     PropertySpec::new(ObjectKind::Mesh, "masks", "masks", PropertyType::References);
 pub const INVERTED_MASK: PropertySpec = PropertySpec::new(

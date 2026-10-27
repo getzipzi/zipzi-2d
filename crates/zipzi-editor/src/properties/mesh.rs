@@ -50,7 +50,9 @@ fn tree_choices(
                     .get(&reference)
                     .and_then(|info| info.properties["runtime_id"].as_str())
                     .unwrap_or_default();
-                let title = if runtime.is_empty() || runtime == node.id || runtime == node.name {
+                let title = if kind != ObjectKind::Mesh {
+                    node.name.clone()
+                } else if runtime.is_empty() || runtime == node.id || runtime == node.name {
                     label.clone()
                 } else {
                     format!("{label} · {runtime}")

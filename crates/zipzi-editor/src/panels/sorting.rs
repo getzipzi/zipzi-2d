@@ -129,9 +129,6 @@ impl SortPlan {
             Self::Business(p) => p.noop,
         }
     }
-    fn requires_preservation(&self) -> bool {
-        matches!(self, Self::Palette(p) if p.requires_preservation())
-    }
 }
 struct DragPreview {
     label: SharedString,
@@ -430,28 +427,7 @@ impl SortState {
             target: target.reference(),
             position,
         };
-        let preservation = self.cached.as_ref().is_some_and(|(_, _, result)| {
-            result
-                .as_ref()
-                .is_ok_and(|plan| plan.requires_preservation())
-        });
         self.clear(cx);
-        if preservation {
-            let owner = self.owner.clone();
-            let document = drag.document;
-            window.defer(cx, move |window, cx| {
-                reparent::open(
-                    owner,
-                    document,
-                    context,
-                    request.sources.clone(),
-                    Some(request),
-                    window,
-                    cx,
-                );
-            });
-            return;
-        }
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |owner, cx| {
                 let reveal = request.sources.last().cloned();

@@ -818,23 +818,6 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                         )
                                         .child(
                                             div()
-                                                .mr_1p5()
-                                                .size(crate::ui::compact::rem(20.))
-                                                .flex_shrink_0()
-                                                .flex()
-                                                .items_center()
-                                                .justify_center()
-                                                .text_color(crate::theme::object_icon(
-                                                    node.kind, &theme,
-                                                ))
-                                                .child(if let Some(image) = thumbnail {
-                                                    img(image).size_full().into_any_element()
-                                                } else {
-                                                    Icon::new(icon).small().into_any_element()
-                                                }),
-                                        )
-                                        .child(
-                                            div()
                                                 .id(SharedString::from(format!(
                                                     "{}-drag-{id}",
                                                     Self::prefix()
@@ -857,34 +840,69 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                 })
                                                 .flex_1()
                                                 .min_w_0()
-                                                .text_xs()
-                                                .text_ellipsis()
-                                                .overflow_hidden()
-                                                .text_color(if row.context_only {
-                                                    theme.muted_foreground
-                                                } else {
-                                                    theme.foreground
-                                                })
                                                 .child(
-                                                    StyledText::new(label.clone()).with_highlights(
-                                                        highlight_ranges(&label, &query)
-                                                            .into_iter()
-                                                            .map(|range| {
-                                                                (
-                                                                    range,
-                                                                    HighlightStyle {
-                                                                        font_weight: Some(
-                                                                            FontWeight::SEMIBOLD,
-                                                                        ),
-                                                                        ..Default::default()
-                                                                    },
-                                                                )
-                                                            }),
-                                                    ),
+                                                    div()
+                                                        .id(SharedString::from(format!(
+                                                            "{}-icon-{id}",
+                                                            Self::prefix()
+                                                        )))
+                                                        .test_support()
+                                                        .mr_1p5()
+                                                        .size(crate::ui::compact::rem(20.))
+                                                        .flex_shrink_0()
+                                                        .flex()
+                                                        .items_center()
+                                                        .justify_center()
+                                                        .text_color(crate::theme::object_icon(
+                                                            node.kind, &theme,
+                                                        ))
+                                                        .child(if let Some(image) = thumbnail {
+                                                            img(image).size_full().into_any_element()
+                                                        } else {
+                                                            Icon::new(icon).small().into_any_element()
+                                                        }),
                                                 )
-                                                .when_some(node.diagnostic, |this, d| {
-                                                    this.child(format!(" ⚠ {d}"))
-                                                }),
+                                                .child(
+                                                    div()
+                                                        .id(SharedString::from(format!(
+                                                            "{}-label-{id}",
+                                                            Self::prefix()
+                                                        )))
+                                                        .test_support()
+                                                        .h_full()
+                                                        .flex()
+                                                        .items_center()
+                                                        .flex_1()
+                                                        .min_w_0()
+                                                        .text_xs()
+                                                        .text_ellipsis()
+                                                        .overflow_hidden()
+                                                        .text_color(if row.context_only {
+                                                            theme.muted_foreground
+                                                        } else {
+                                                            theme.foreground
+                                                        })
+                                                        .child(
+                                                            StyledText::new(label.clone()).with_highlights(
+                                                                highlight_ranges(&label, &query)
+                                                                    .into_iter()
+                                                                    .map(|range| {
+                                                                        (
+                                                                            range,
+                                                                            HighlightStyle {
+                                                                                font_weight: Some(
+                                                                                    FontWeight::SEMIBOLD,
+                                                                                ),
+                                                                                ..Default::default()
+                                                                            },
+                                                                        )
+                                                                    }),
+                                                            ),
+                                                        )
+                                                        .when_some(node.diagnostic, |this, d| {
+                                                            this.child(format!(" ⚠ {d}"))
+                                                        }),
+                                                ),
                                         )
                                         .when(created_revealed, |element| {
                                             element.child(

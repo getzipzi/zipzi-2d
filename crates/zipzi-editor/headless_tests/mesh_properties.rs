@@ -3,6 +3,7 @@ use super::{
     properties::{fill, show},
     setup_with_document,
 };
+use gpui_kit::component::WindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 use zipzi_editor_core::{EditorCommand, ObjectKind, ObjectRef, PropertyValue, property::mesh};
 
@@ -39,7 +40,7 @@ fn choose(h: &Harness, field: &str, query: &str, cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn mesh_properties_part_masks_blends_and_disabled_deformer(cx: &mut TestAppContext) {
+fn mesh_properties_part_masks_and_blends(cx: &mut TestAppContext) {
     let (mut doc, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
     let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
     let mask_source = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[1].id);
@@ -51,21 +52,11 @@ fn mesh_properties_part_masks_blends_and_disabled_deformer(cx: &mut TestAppConte
     .unwrap();
     doc.navigate(object.clone()).unwrap();
     let h = setup_with_document(cx, doc, assets);
-    show(&h, "property-select-deformer_id", cx);
-    cx.update_window(h.window, |_, window, cx| {
-        assert_eq!(
-            window.find("property-select-deformer_id").expanded(),
-            Some(false)
-        );
-        window.click("property-select-deformer_id", cx);
-        window.render_frame(cx);
-        assert_eq!(
-            window.find("property-select-deformer_id").expanded(),
-            Some(false)
-        );
+    choose(&h, "property-select-part_id", "Eyes", cx);
+    cx.update_window(h.window, |_, window, _| {
+        assert_eq!(window.find("property-select-part_id").value(), Some("Eyes"));
     })
     .unwrap();
-    choose(&h, "property-select-part_id", "Body", cx);
     choose(&h, "property-select-masks", "MaskSearchId", cx);
     h.view.read_with(cx, |view, _| {
         let values = view
@@ -76,7 +67,7 @@ fn mesh_properties_part_masks_blends_and_disabled_deformer(cx: &mut TestAppConte
             .unwrap();
         assert_eq!(
             values[&mesh::PART.key],
-            PropertyValue::Text(uuid::Uuid::from_u128(102).to_string())
+            PropertyValue::Text(uuid::Uuid::from_u128(103).to_string())
         );
         assert!(
             matches!(&values[&mesh::MASKS.key], PropertyValue::References(ids) if ids.len() == 1)
@@ -124,6 +115,95 @@ fn mesh_properties_part_masks_blends_and_disabled_deformer(cx: &mut TestAppConte
         assert_eq!(values[&mesh::INVERTED_MASK.key], PropertyValue::Bool(true));
         assert_eq!(values[&mesh::CULLING.key], PropertyValue::Bool(true));
         assert!(view.edit_error.is_none());
+    });
+}
+
+#[gpui_kit::test]
+fn mesh_properties_deformer_select_reparents_to_warp_and_root_with_undo(cx: &mut TestAppContext) {
+    let (mut doc, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
+    let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
+    doc.navigate(object.clone()).unwrap();
+    let history = doc.history_lengths();
+    let original = doc.property_values(&object).unwrap()[&mesh::DEFORMER.key].clone();
+    let warp = document_fixture::object(ObjectKind::Deformer, 502);
+    let h = setup_with_document(cx, doc, assets);
+    choose(&h, "property-select-deformer_id", "Warp", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        assert!(!window.has_active_dialog(cx));
+        assert_eq!(
+            window.find("property-select-deformer_id").value(),
+            Some("Warp")
+        );
+        let view = h.view.read(cx);
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&mesh::DEFORMER.key],
+            PropertyValue::Text(warp.id.clone())
+        );
+        assert_eq!(doc.context().inspected.as_ref(), Some(&object));
+        assert_eq!(doc.history_lengths(), (history.0 + 1, 0));
+        assert!(view.edit_error.is_none());
+    })
+    .unwrap();
+    command(&h, EditorCommand::Undo, cx);
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.editor
+                .document()
+                .unwrap()
+                .property_values(&object)
+                .unwrap()[&mesh::DEFORMER.key],
+            original
+        );
+    });
+    command(&h, EditorCommand::Redo, cx);
+    choose(&h, "property-select-deformer_id", "No deformer", cx);
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&mesh::DEFORMER.key],
+            PropertyValue::Text(String::new())
+        );
+        assert_eq!(doc.history_lengths(), (history.0 + 2, 0));
+    });
+    command(&h, EditorCommand::Undo, cx);
+    choose(&h, "property-select-deformer_id", "Warp", cx);
+    // Re-selecting the current parent keeps redo available.
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.editor.document().unwrap().history_lengths(),
+            (history.0 + 1, 1)
+        );
+    });
+    command(&h, EditorCommand::Redo, cx);
+    command(
+        &h,
+        EditorCommand::SetObjectsLocked {
+            objects: vec![warp],
+            locked: true,
+        },
+        cx,
+    );
+    let history = h.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().history_lengths()
+    });
+    choose(&h, "property-select-deformer_id", "Warp", cx);
+    h.view.read_with(cx, |view, cx| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&mesh::DEFORMER.key],
+            PropertyValue::Text(String::new())
+        );
+        assert_eq!(doc.history_lengths(), history);
+        assert!(view.edit_error.is_some());
+        let panel = view.dock.as_ref().unwrap().properties.read(cx);
+        assert_eq!(
+            panel
+                .field_select(mesh::DEFORMER.key)
+                .read(cx)
+                .selected_value(),
+            Some(&String::new())
+        );
     });
 }
 

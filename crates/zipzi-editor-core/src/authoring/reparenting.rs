@@ -185,17 +185,6 @@ impl Document {
             edit_time_seconds: 0.,
         }
     }
-    pub(super) fn palette_reparent_preflight(&self, request: &PaletteMove) -> Result<bool> {
-        // Match the review's default edit-state guarantee. Full-domain proof
-        // remains an explicit choice in the review, never a hover conversion.
-        let edit = reparent_edit(
-            &self.model(),
-            request,
-            self.preservation_context(),
-            PalettePreservation::EditState,
-        )?;
-        Ok(self.reparent_support(&edit)? == zipzi_sdk::ReparentSupport::NoChange)
-    }
     pub fn capture_palette_reparent(&self) -> Result<PaletteReparentCapture> {
         self.ensure_authoring_idle()?;
         Ok(PaletteReparentCapture {
