@@ -1,6 +1,6 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25，2026-10-27 更新。状态：**P3A-0–6、Runtime R4、P3B、P4 与 R5/P5 当前范围已完成；简化 R6 和 Runtime R7 已验收。** 动画创作、独立 Preview、空间/GPU 观察、公平调度、Editor 隔离与当前 macOS/CPython 3.14 分发已验证；[最终记录](sdk-runtime/python2-r7-closeout.md)包含 151 项性能指标。Python P7 的独立汇总仍单列；P3A 的用户豁免和移除模型/服务身份门禁的决定保持。
+日期：2026-10-25，2026-10-27 更新。状态：**Python P7 全量收尾完成，当前 macOS arm64 / CPython 3.14 范围已核销。** [P7 总验收](python-sdk-rewrite/p7.md)逐项对应公共契约、全部承诺能力、生成/手写责任、性能/资源、agent 和发行证据；[Runtime R7](sdk-runtime/python2-r7-closeout.md)包含完整桌面流程与 151 项性能结果。P0 历史口径、P3A 用户豁免和移除模型/服务身份门禁的决定保持；不扩大平台或后置能力声明。
 
 2026-10-27 人机交接范围调整：用户确认前期直接将一批修改提交到 Editor 当前 Session，再由人检查/精修，agent 读取最新版本接续。[Runtime R6](sdk-runtime-implementation-plan.md#r6editor-直写与人工接续) 收缩为该闭环的补齐和验收。Connected 使用现有 `Edit.commit().wait()` 或 Edit 上下文管理器完成 flush；不新增 flush API。Proposal/seal、专用对比和接受/拒绝流程后置，不作为 Python 当前交付或 Runtime R7 的依赖。
 
@@ -24,7 +24,7 @@
 
 **P4 资源与工程范围已核销。** 独立 worktree 中补齐大附件/图片的保存、另存、重开和包往返，确认 Save As 的磁盘历史路径规则；九项定向回归、类型和两后端隔离安装通过。复用 R4 产品实现，独立附件便利子集合仍按需另列；见 [P4 记录](python-sdk-rewrite/p4.md)。
 
-**P5 与 Runtime R5 同步推进中。** P4 提交 `e1401632` 后，首批接通四个动画创作领域及选取式 records、SDK Plan、地址和能力查询；使用已有两后端、Snapshot/Job 和完整调用恢复。具体实现、验证和剩余范围见 [R5/P5 动画创作记录](sdk-runtime/python2-r5-authoring.md)，后续已补[批次调度与 Editor 隔离](sdk-runtime/python2-r5-scheduling.md)，整体阶段尚未完成。
+**P5 与 Runtime R5 当前范围已完成。** P4 提交 `e1401632` 后接通四个动画创作领域及选取式 records、SDK Plan、地址和能力查询，随后交付独立 Preview、空间/GPU 观察、inspection、[批次调度与 Editor 隔离](sdk-runtime/python2-r5-scheduling.md)。沿用已有两后端、Snapshot/Job 和完整调用恢复；当前平台的组合、性能及发行验收见 [R7 最终记录](sdk-runtime/python2-r7-closeout.md)，Python 契约与成本归并见 [P7](python-sdk-rewrite/p7.md)。各切片中的当时待办保留历史含义。
 
 当前 `zipzi-python2` 也没有兼容包袱：允许删除、重命名及改变返回类型，不保留旧别名、双入口、弃用期或迁移层；共享领域语义、资源正确性和独立行为预期继续保留。历史验收只证明当时的接口，不自动证明新契约通过。
 
@@ -82,7 +82,7 @@ P1 选定矩阵见[验收表](python-sdk-rewrite/p1-lifecycle-matrix.md)。P0 �
 | 能力 | 实现责任 | 交付阶段 |
 | --- | --- | --- |
 | Runtime/Session/Edit/Job、结构化错误、恢复 | 共用少数手写生命周期原语；Rust Runtime 是实际状态来源 | P1 |
-| 统一 API、完整调用恢复、分页/关闭、文档与 agent 契约 | 生成领域包装 + 手写公共执行原语；新增共享能力仍由 Runtime 承担 | **P3A，下一阶段** |
+| 统一 API、完整调用恢复、分页/关闭、文档与 agent 契约 | 生成领域包装 + 手写公共执行原语；新增共享能力仍由 Runtime 承担 | P3A，已验收 |
 | 网格创建、位置、候选查询、批次 | 选定 SDK 类型和 Runtime 处理器，Python 提供明确签名 | P1 |
 | PreparedImage、正式/候选 Plan、保存/重开 | 共享资源及 Plan 来源规则，Python 显式拥有 token/lease | P1，P3/P4 扩展 |
 | 场景组织、参数/绑定/BlendShape、拓扑、Glue/Offscreen、Ref/Address | 已有切片纳入 P3A；剩余领域按新契约扩展 | P3B |
@@ -170,7 +170,7 @@ zipzi-python2/
 
 | 阶段 | 当前状态 | 下一步与退出门槛 |
 | --- | --- | --- |
-| **P0 范围与基线** | 选定六项两后端负载的比较门禁已建立 | P3A 冻结重构前基线；相同领域工作量比较，新包装/文档/分页单列成本 |
+| **P0 范围与基线** | 历史基线及当前成本核对已归并 | [P7 成本记录](python-sdk-rewrite/p7.md#成本资源与-agent-证据)分别报告包装、分页、二进制、后台任务与 agent；旧口径失败及原轮次稳定性豁免保留，不宣称全部旧阈值通过 |
 | **P1 手写完整链路** | 选定生命周期矩阵已验收 | 历史记录保留；P3A 按新接口复用独立预期并补遗漏故障 |
 | **P2 提取生成器** | 网格、资源/Plan 及配对源码发行已验收 | 历史记录保留；P3A 扩展到统一领域 facade、返回投影和文档 |
 | **P3 已有 Modeling 切片** | 历史切片的数值、身份和资源行为已纳入 P3A/P3B | 原定建模范围由 R4 实现与 P3B 补验覆盖 |
@@ -179,7 +179,7 @@ zipzi-python2/
 | **P4 资源与工程** | **资源/工程范围核销和补验完成** | [P4 记录](python-sdk-rewrite/p4.md)：复用 R4；补大附件/图片保存/另存/包往返、generation 与失败验证；独立附件便利子集合按需另列，平台/app 总验收归 P6/Runtime R7 |
 | **P5 动画与观察** | **当前范围已完成** | 四动画领域、records/Plan/地址、独立 Preview、空间与 GPU 观察、inspection、公平调度及 Editor 隔离均交付；[Runtime R7](sdk-runtime/python2-r7-closeout.md)完成当前平台组合、发行及性能验收 |
 | **P6 分发与使用** | 当前 macOS arm64 / CPython 3.14 配对发行范围已验收 | 正常双 wheel/配对 sdist、实际 app 安装发现、完整领域 recipe、文档和生命周期通过；其他平台不得据此宣称支持 |
-| **P7 全量收尾** | 未开始 | 汇总新契约全部承诺、性能/资源、生成/手写边界、agent 任务及发行证据 |
+| **P7 全量收尾** | **当前承诺范围已完成** | [P7 总验收](python-sdk-rewrite/p7.md)：能力/契约逐项核销、责任规模和成本单列、当前产物配对与离线检查通过；沿用原范围的独立行为、agent 和 R7 证据 |
 
 实际执行顺序为：**R4 主体实现 → P3A-0 至 P3A-6 → R4 最后复验 → 核销 P3B/P4 重复待办并补真实新增差异 → P5 → P7**。P0/P6 贯穿各阶段。P3B/P4 的公共 Python 扩展以 P3A 为前置；已有二进制工作和独立 Rust 领域研究继续保留，不回退、不冒充已验收。若 P3A 需要某项尚未完成的 Runtime 分页/关闭/预算能力，明确纳入 P3A 子任务，不能靠 Python 镜像、无限重试或跳过测试绕过。
 
@@ -307,6 +307,6 @@ C01–C08 确定性回归、G01–G08 安装包 agent 任务、42 次运行的�
 
 `zipzi-python2` 完成需要：本项目明确承诺的能力均接线且独立验证；两后端共用 Rust 领域路径；公开签名、返回、恢复、来源、事务、资源和 Job 规则一致；生成与手写职责可从唯一目录追踪；随包文档、自省和 agent 任务达标；所有阶段有实际源码/安装/宿主/性能证据。
 
-**P3A、R4 收尾、P3B、P4 与 R5/P5 当前范围已完成。** 简化 R6 和 Runtime R7 的 macOS/CPython 3.14 组合、发行和性能验收已通过；证据见 [R7 记录](sdk-runtime/python2-r7-closeout.md)。P0 的历史口径和用户豁免保持，Python P7 的独立全量汇总不由 Runtime 阶段编号代替。
+**Python 当前承诺范围已完成。** [P7 总验收](python-sdk-rewrite/p7.md)已独立核对全部能力、统一契约、生成/手写边界、成本及阶段证据；简化 R6 和 Runtime R7 的 macOS arm64 / CPython 3.14 组合、发行和性能结果按原范围沿用。P0 的历史口径、明确失败和用户原轮次豁免保持；其他平台、公开发布、可重渲染 scene bundle、独立附件便利集合及后置 Proposal/Review 不计为当前交付。
 
 每完成一个切片，更新能力清单和实施记录，只保留简明验收结果：改动范围、必要检查及结果、未满足项和用户明确豁免项。临时日志、JSON 清单、哈希和测量报告不写入计划目录；不为重建已删除的历史产物反复验收。不因删除旧 API 而删除独立行为预期。阶段结论留在[实施记录](python-sdk-rewrite/README.md)，计划据此调整状态与下一步，不把目标改写为完成结果。

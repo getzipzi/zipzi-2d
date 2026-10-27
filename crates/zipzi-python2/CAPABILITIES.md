@@ -4,6 +4,12 @@ This list is a delivery checklist for a new package. It does not generate API
 signatures or define another wire schema. Domain behavior is checked against
 fixed geometry/history and the independent Rust SDK tests.
 
+[Python P7 closeout](../../docs/plans/python-sdk-rewrite/p7.md) reconciles the
+complete current scope for macOS arm64 / CPython 3.14, including the shared
+contract, generated/manual responsibilities, measured costs, agent evidence and
+final distributions. Slice labels below retain the stage in which each route
+was introduced; later aggregate acceptance does not expand historical results.
+
 | Capability | Public entry | Shared typed Rust route | Evidence | State |
 | --- | --- | --- | --- | --- |
 | Mesh generation | Same public values/ops and query methods | Selected Rust declarations + compiled query registration | Deterministic generation/check-only/protection, real Rust negative compilation, unchanged behavior/static tests | P2 mesh slice implemented |

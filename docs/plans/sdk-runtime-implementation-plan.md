@@ -1,7 +1,7 @@
 # SDK Runtime 分阶段实施计划
 
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
-日期：2026 年 10 月 24 日，2026-10-27 更新。状态：**R0–R5、简化 R6 与当前 macOS arm64 / CPython 3.14 范围的 R7 已交付；Python P5 同步完成。** [R7 最终验收](sdk-runtime/python2-r7-closeout.md)汇总完整创作、安装发行、生命周期、资源与 151 项性能结果。Proposal/Review 保持后置。
+日期：2026 年 10 月 24 日，2026-10-27 更新。状态：**R0–R5、简化 R6 与当前 macOS arm64 / CPython 3.14 范围的 R7 已交付；Python P5 及 P7 总核销已完成。** [R7 最终验收](sdk-runtime/python2-r7-closeout.md)汇总完整创作、安装发行、生命周期、资源与 151 项性能结果；[Python P7](python-sdk-rewrite/p7.md)单独核对公共契约、全部能力、责任与成本。Proposal/Review 保持后置。
 
 2026-10-26 Python 公共契约收尾：[P3A 已完成验收](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。用户确认运行配置 `gpt-6.1-sol/high` 并移除模型/服务身份门禁；既有确定性/安装/Editor/固定功能门禁证据和本轮 P0 稳定性豁免保留。随后完成独立的 R4 最后复验，见下节；P3A 完成与 R4 完成分别有记录。
 

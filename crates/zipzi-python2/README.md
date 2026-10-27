@@ -76,6 +76,11 @@ cover formal/candidate poses and animated frames. [GPU observation and PNG/JSON 
 [Fair batch scheduling and Editor playback isolation](../../docs/plans/sdk-runtime/python2-r5-scheduling.md)
 are delivered with the R5/P5 regressions and final Release comparisons.
 Runtime R7 acceptance is complete for macOS arm64 and CPython 3.14.
+The [Python P7 closeout](../../docs/plans/python-sdk-rewrite/p7.md) completes the
+current Python scope: capability/contract evidence, generated/manual ownership,
+wrapper/page/binary/background costs, agent results and final artifact identity.
+Historical P0 comparison limits and the recorded stability waiver retain their
+original scope; other platforms and deferred capabilities are separate.
 The [R5/R7 closeout record](../../docs/plans/sdk-runtime/python2-r7-closeout.md)
 tracks paired normal sdists/wheels, the macOS app/installer, installed-app
 discovery, handoff/save/reopen/export and the 151 native/window performance checks.

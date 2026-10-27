@@ -17,6 +17,8 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
   [R5/P5 animation authoring](docs/plans/sdk-runtime/python2-r5-authoring.md).
   [R5/R7 final acceptance](docs/plans/sdk-runtime/python2-r7-closeout.md) records
   the current macOS/CPython 3.14 distribution, complete workflows and performance.
+  [Python P7 closeout](docs/plans/python-sdk-rewrite/p7.md) reconciles the complete
+  Python contract, capability evidence, ownership boundaries and measured costs.
 - **Contributing:** [repository structure](MONOREPO.md),
   [test gates](tools/README.md#test-coverage), [tools](tools/README.md) and
   [documentation index](docs/README.md).

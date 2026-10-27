@@ -1,6 +1,6 @@
 # R5/R7：发行复验与完整流程收尾
 
-日期：2026-10-27。**R5/P5、简化 R6 与当前 macOS arm64 / CPython 3.14 范围的 Runtime R7 已完成。** 接续 R6 `b7faee0e`，修复与首轮验收提交为 `8a35de62`；本轮补齐实际窗口性能和干净修订上的配对发行复验。Proposal/Review 保持后置，Python P7 独立汇总不由 Runtime 编号替代。
+日期：2026-10-27。**R5/P5、简化 R6 与当前 macOS arm64 / CPython 3.14 范围的 Runtime R7 已完成。** 接续 R6 `b7faee0e`，修复与首轮验收提交为 `8a35de62`；本轮补齐实际窗口性能和干净修订上的配对发行复验。Proposal/Review 保持后置；随后完成的 [Python P7](../python-sdk-rewrite/p7.md)独立核对 Python 契约、能力、责任及成本，沿用本文适用证据。
 
 ## 本轮修复
 
