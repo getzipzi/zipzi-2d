@@ -108,8 +108,20 @@ pub(super) fn summarize_physics(before: &Document, after: &Document, out: &mut C
                     out.collections.push(collection(Some(id.clone()), $role));
                     out.categories.insert(ChangeCategory::Order);
                 }
+                let old_by_id = left
+                    .iter()
+                    .map(|v| &v.id)
+                    .ne(right.iter().map(|v| &v.id))
+                    .then(|| {
+                        left.iter()
+                            .map(|v| (v.id.as_str(), v))
+                            .collect::<std::collections::HashMap<_, _>>()
+                    });
                 for (index, v) in right.iter().enumerate() {
-                    if left.get(index) != Some(v) {
+                    let old = old_by_id
+                        .as_ref()
+                        .map_or_else(|| left.get(index), |rows| rows.get(v.id.as_str()).copied());
+                    if old != Some(v) {
                         out.modified.push(entity(ObjectKind::$kind, &v.id));
                     }
                 }

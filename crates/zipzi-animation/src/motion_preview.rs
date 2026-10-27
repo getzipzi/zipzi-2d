@@ -18,7 +18,15 @@ use crate::seek_cache::{Checkpoint, SeekCache};
 use crate::{AnimationError, CompiledCurve, SeekCacheStats};
 
 /// A motion event crossed during the last update, returned without side effects.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct MotionEventFired {
     /// Source clip UUID.
     pub motion_id: String,
@@ -29,7 +37,15 @@ pub struct MotionEventFired {
 }
 
 /// Combined values after Motion, Expression, Physics and Pose evaluation.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct MotionSnapshot {
     /// Optional inspector observations. Collected explicitly by a host after
     /// evaluation. Advance/seek results leave this empty; populate it with
@@ -59,12 +75,25 @@ pub struct MotionSnapshot {
     pub motion_positions: Vec<MotionPlaybackPosition>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct MotionPlaybackPosition {
+    /// Source motion clip UUID for this SDK playback position.
     pub motion_id: String,
+    /// SDK local sample time in seconds, including the loop tail.
     pub local_time: f32,
+    /// SDK loop period in seconds, including the FPS tail.
     pub period: f32,
+    /// Canonical SDK loop index; exact seams belong to the preceding loop.
     pub loop_index: u64,
+    /// Absolute preview-clock time at the start of this cycle.
     pub cycle_origin: f32,
 }
 
@@ -237,6 +266,12 @@ impl MotionPreview {
         self.document.revision()
     }
 
+    /// Check immutable document identity, including branches whose local
+    /// revision counters coincide. This never evaluates or copies payloads.
+    pub fn matches_document(&self, document: &Document) -> bool {
+        self.document.is_same_snapshot(document)
+    }
+
     /// Rebuild this detached preview when comparing with physics bypassed.
     /// Schedules are retained; the authoring document is untouched.
     pub fn set_physics_enabled(&mut self, enabled: bool) {
@@ -285,6 +320,23 @@ impl MotionPreview {
     /// Borrow the current snapshot without advancing playback.
     pub fn snapshot(&self) -> &MotionSnapshot {
         &self.snapshot
+    }
+
+    /// Conservative scheduled Motion output/adapter expansion for one canonical seek or
+    /// advance-to frame, including events, coverage strings, repeated activations and short looping clips.
+    /// Hosts must also reserve live/transactional state and each returned frame;
+    /// this excludes other snapshot fields, geometry and the bounded seek cache.
+    pub fn canonical_motion_output_bytes(&self) -> usize {
+        use zipzi_core::binary_wire::WireWrite;
+        self.motion
+            .canonical_motion_output_bytes(&self.document)
+            .max(
+                self.snapshot
+                    .fired_events
+                    .expansion_bytes()
+                    .saturating_add(self.snapshot.coverage.expansion_bytes())
+                    .saturating_add(self.snapshot.motion_positions.expansion_bytes()),
+            )
     }
 
     pub fn operation(&self) -> &MotionOperation {

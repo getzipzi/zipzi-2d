@@ -45,6 +45,50 @@ pub(crate) struct MotionRuntime {
     playing: Vec<Playing>,
 }
 impl MotionRuntime {
+    pub(crate) fn canonical_motion_output_bytes(&self, document: &Document) -> usize {
+        use zipzi_core::binary_wire::WireWrite;
+        // Count duplicate activations first: admission must not scan every key
+        // or event once per activation on the Runtime owner thread.
+        let mut counts = BTreeMap::new();
+        for activation in &self.activations {
+            *counts
+                .entry(activation.motion_id.as_str())
+                .or_insert(0usize) += 1;
+        }
+        counts.into_iter().fold(0usize, |total, (id, count)| {
+            let clip = document.get_motion(id).expect("scheduled motion");
+            // Canonical replay uses 60 Hz steps. Twice that interval also covers
+            // f32 grid rounding at the one-million-step seek limit and a loop seam.
+            let crossings = if clip.looping {
+                ((1.0 / 30.0 / f64::from(clip.duration + 1.0 / clip.fps)).ceil() as usize)
+                    .saturating_add(1)
+            } else {
+                1
+            };
+            let events = clip.events.iter().fold(0usize, |n, event| {
+                n.saturating_add(256)
+                    .saturating_add(clip.id.expansion_bytes())
+                    .saturating_add(event.id.expansion_bytes())
+                    .saturating_add(event.value.expansion_bytes())
+            });
+            // Unresolved/virtual track diagnostics repeat once per playing clip
+            // too; their imported runtime labels may be much larger than UUIDs.
+            let coverage = clip.tracks.iter().fold(0usize, |n, track| {
+                n.saturating_add(512)
+                    .saturating_add(clip.id.expansion_bytes())
+                    .saturating_add(track.id.expansion_bytes())
+                    .saturating_add(track.target.expansion_bytes())
+            });
+            total.saturating_add(
+                events
+                    .saturating_mul(crossings)
+                    .saturating_add(coverage)
+                    .saturating_add(1024)
+                    .saturating_mul(count),
+            )
+        })
+    }
+
     pub(crate) fn heap_bytes(&self) -> usize {
         use crate::seek_cache::{map_bytes, vec_bytes};
         map_bytes(&self.motion_parameters)

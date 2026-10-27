@@ -14,9 +14,15 @@ see [R3 evidence](../plans/sdk-runtime/r3-ipc.md) and the explicit
 remains a classification catalog; `not-connected` there is not a claim that all
 entries are unimplemented. R3's coverage manifest records the verified routes.
 Python targets CPython 3.14; connection imports work without `_native`.
-R4 remains in progress after the user-requested wrap-up: see [current implementation/evidence and remaining Release gates](../plans/sdk-runtime/python2-r4-complete.md)
-and [current verified/pending coverage](r4-coverage.json). The active protocol is
-`zipzi-runtime-r4-3`; R3 records retain their historical contract.
+R4 completed its [final recheck](../plans/sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验)
+on 2026-10-26. The [R4 coverage](r4-coverage.json) retains that pairing and scope.
+R5/P5 is now in progress: [typed animation authoring](../plans/sdk-runtime/python2-r5-authoring.md)
+and [independent CPU Preview](../plans/sdk-runtime/python2-r5-preview.md),
+[CPU spatial queries](../plans/sdk-runtime/python2-r5-spatial.md), and
+[GPU observation / inspection export](../plans/sdk-runtime/python2-r5-observation.md) are connected,
+while fair scheduling and Editor playback acceptance
+remain pending. The active IPC protocol is `zipzi-runtime-r5-observation-1`, paired
+with native `zipzi-python2-18`; earlier records retain their historical contracts.
 
 ## Active Python implementation
 
@@ -33,7 +39,9 @@ samples, including real Editor human Preview isolation. Cross-domain Modeling
 dispatch now belongs to Runtime. The [P3 scene/identity slice](../plans/sdk-runtime/python2-p3-scene-identity.md)
 adds generated scene/group operations, mesh BlendShape/bound topology recipes,
 SDK references and scene label addresses, with installed and native Editor checks.
-Full R4 coverage remains pending.
+Full R4 was subsequently accepted in the final recheck linked above. The new
+animation authoring slice adds selected canonical records, SDK plans and field
+addresses through the same handlers; it does not complete R5/P5 Preview/Observer.
 The inventories and older client evidence below retain their historical scope;
 they do not establish acceptance for the new package.
 
@@ -44,7 +52,7 @@ Regenerate and validate from the repository root:
 ```sh
 uv run --locked python tools/runtime/runtime_inventory.py --shared-only
 uv run --locked python tools/runtime/runtime_inventory.py --shared-only --check
-uv run --locked python tools/test_tools.py -p test_runtime_inventory.py
+uv run --locked python tools/test_tools.py -p test_runtime_shared_inventory.py
 ```
 
 `--shared-only` refreshes Rust rows and keeps the historical Python catalog
@@ -106,7 +114,10 @@ Rust input/result signatures and the full shared intent definitions are indexed,
 including the nested binding/grid/blend operations. The eventual wire format must
 use explicit DTOs and blobs rather than Rust layouts or private PyO3 objects.
 
-## Python backend and transaction audit
+## Historical Python backend and transaction audit
+
+The following audit describes the retired client at R0, without rereading it in
+the current Python2 workflow. Current implementation evidence is linked above.
 
 `__init__.py` directly imports `ObjectHandle`, `SdkFailure`, capabilities and
 `NativeSpatialSnapshot`. `_session.py` imports NativeSession, Plan, Address,

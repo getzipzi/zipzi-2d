@@ -13,45 +13,72 @@ pub use projection::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum PosePartRef {
     Unspecified,
-    Resolved { part_id: String },
-    Unresolved { runtime_id: String },
+    Resolved {
+        /// Stable document Part UUID for this opacity or visibility reference.
+        part_id: String,
+    },
+    Unresolved {
+        /// Imported/exported runtime label, distinct from the document object UUID.
+        runtime_id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct PoseEntry {
+    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
+    /// Typed resolved/unresolved Part reference retained by the Pose entry or link.
     pub part: PosePartRef,
+    /// Optional ordered Pose links; None retains absence rather than an explicit empty list.
     pub links: Option<crate::SharedVec<PoseLink>>,
+    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
     pub extensions: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct PoseLink {
+    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
+    /// Typed target reference; unresolved imported runtime labels remain explicit.
     pub target: PosePartRef,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct PoseGroup {
+    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
+    /// Human-readable display or registration name; distinct from persistent object identity.
     pub name: String,
+    /// Ordered owned registrations or expression/Pose entries, with stable identities.
     pub entries: crate::SharedVec<PoseEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct PoseAsset {
+    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
+    /// Optional format type label retained from the imported expression or Pose asset.
     pub file_type: Option<String>,
+    /// Optional fade-in duration in seconds; None retains the format/runtime default.
     pub fade_in: Option<f32>,
+    /// Ordered owned Pose groups; each owns its entries and link rows.
     pub groups: crate::SharedVec<PoseGroup>,
+    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
     pub extensions: BTreeMap<String, Value>,
+    /// Original runtime-ID namespace used to validate preservation of opaque imported fields.
     pub opaque_source_ids: Option<BTreeMap<String, String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Original imported-content hash used to detect unsupported changes to opaque fields.
     pub opaque_source_content_hash: Option<String>,
 }
 

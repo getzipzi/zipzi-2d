@@ -68,7 +68,7 @@ impl AnimationSession {
         self.source = None;
         self.error = None;
     }
-    pub(super) fn barrier(&mut self) {
+    pub(crate) fn barrier(&mut self) {
         if self.scrubbing {
             // A completed drag sample can be ahead of the final pointer target.
             self.presented = None;

@@ -33,3 +33,8 @@ mod runtime_ipc;
 pub fn runtime_ipc() -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| runtime_ipc::run())
 }
+
+mod runtime_handoff;
+pub fn runtime_handoff() -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| runtime_handoff::run())
+}

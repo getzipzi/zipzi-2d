@@ -54,6 +54,252 @@ class PythonSdk(unittest.TestCase):
                 with session.edit("large existing operation") as edit:
                     edit.meshes.rename(mesh,"M"*(70<<10))
                 self.assertEqual(session.meshes.get(mesh).value.name,"M"*(70<<10))
+    def test_r5_spatial_frozen_sources_hidden_geometry_and_animated_numerics(self):
+        import runpy
+        recipe=runpy.run_path(str(Path(__file__).with_name("r5_spatial_recipe.py")))["run"]
+        results=[recipe(self.runtime(mode),self.folder/(mode+"-spatial")) for mode in ("local","connected")]
+        self.assertEqual(results[0],results[1])
+
+    def test_r5_spatial_complete_call_recovery(self):
+        from zipzi import spatial as s
+        for phase in ("request_spatial_samples","job","read_blob_binary"):
+            with self.subTest(phase=phase):
+                runtime=self.runtime("connected",drop=phase)
+                session=runtime.sessions.create(uid(1))
+                job=zipzi.recover_call(session.modeling.spatial,({},{}),(s.Hits(point=(0.,0.)),))
+                result=zipzi.recover_call(job.wait)
+                self.assertEqual(len(result.value.frames),2)
+                self.assertEqual(tuple(f.results[0].value.total for f in result.value.frames),(0,0))
+                self.assertEqual(session.info().history,(0,0))
+
+    def test_r5_spatial_worker_cancellation_and_local_direct_values(self):
+        from zipzi import spatial as s
+        for mode in ("local","connected"):
+            with self.subTest(mode=mode):
+                runtime=self.runtime(mode)
+                session=runtime.sessions.create(uid(1))
+                before=session.info()
+                backend=runtime._backend
+                backend._test_control("hold_io")
+                job=session.modeling.spatial(({},),(s.Hits(point=(0.,0.)),))
+                deadline=time.monotonic()+3
+                while not backend._test_control("entered"):
+                    self.assertLess(time.monotonic(),deadline);time.sleep(.005)
+                job.cancel();backend._test_control("release_io")
+                with self.assertRaises(zipzi.SdkFailure) as cancelled:job.wait()
+                self.assertEqual(cancelled.exception.code,"CANCELLED")
+                self.assertEqual(session.info(),before)
+        runtime=self.runtime("local");session=runtime.sessions.create(uid(1))
+        with patch("json.dumps",side_effect=AssertionError("Spatial Python JSON encode")), \
+             patch("json.loads",side_effect=AssertionError("Spatial Python JSON decode")):
+            result=session.modeling.spatial(({},),(s.Hits(point=(.25,.25)),)).wait()
+            self.assertEqual(result.value.frames[0].results[0].value.total,0)
+            with session.preview() as preview:
+                result=preview.seek(.25,geometry=False,queries=(s.Hits(point=(.25,.25)),)).wait()
+                self.assertEqual(result.value.frames[0].spatial[0].value.total,0)
+
+    def test_r5_large_spatial_details_binary_recovery(self):
+        from zipzi import spatial as s
+        for mode in ("local","connected"):
+            runtime=self.runtime(mode,drop="read_blob_binary" if mode=="connected" else None,drop_after=1)
+            session=runtime.sessions.create(uid(1))
+            # Every triangle contributes independently; the result exceeds one Blob chunk.
+            geometry=replace(GEOMETRY,triangles=GEOMETRY.triangles*2048)
+            with session.edit("Overlapping triangles") as edit:
+                edit.meshes.create(meshes.MeshSpec("Overlap",geometry,id=uid(2)))
+            before=session.info()
+            job=session.modeling.spatial(tuple({} for _ in range(8)),(s.Hits(point=(.25,.25),details=True),))
+            result=zipzi.recover_call(job.wait)
+            self.assertEqual(len(result.value.frames),8)
+            for frame in result.value.frames:
+                triangles=frame.results[0].value.hits[0].triangles
+                self.assertEqual(len(triangles),2048)
+                self.assertEqual(triangles[-1].triangle_index,2047)
+                self.assertEqual(triangles[-1].vertex_ids,(42,7,99))
+                self.assertEqual(triangles[-1].barycentric,(.5,.25,.25))
+            self.assertEqual(session.info(),before)
+
+    def test_r5_independent_previews_numeric_geometry_and_candidate_sources(self):
+        import runpy
+        recipe=runpy.run_path(str(Path(__file__).with_name("r5_preview_recipe.py")))["run"]
+        results=[recipe(self.runtime(mode),self.folder/(mode+"-preview")) for mode in ("local","connected")]
+        self.assertEqual(results[0],results[1])
+
+    def test_r5_preview_complete_call_recovery_and_close(self):
+        from zipzi import animation as a
+        for phase in ("create_preview","apply_preview","sample_preview","job","read_blob_binary","release_preview"):
+            with self.subTest(phase=phase):
+                runtime=self.runtime("connected",drop=phase)
+                session=runtime.sessions.create(uid(1))
+                preview=zipzi.recover_call(session.preview)
+                self.assertIsInstance(preview,a.Preview)
+                state=zipzi.recover_call(preview.apply,a.Reset())
+                self.assertEqual(state.value.sequence,1)
+                job=zipzi.recover_call(preview.seek,.5)
+                value=zipzi.recover_call(job.wait)
+                self.assertEqual(value.value.frames[0].motion.time,.5)
+                self.assertEqual(value.value.sequence,2)
+                self.assertEqual(preview.info().value.sequence,2)
+                zipzi.recover_call(preview.close)
+                preview.close()
+                self.assertEqual(runtime.resources.usage().previews,0)
+
+    def test_r5_preview_workers_cancel_without_blocking_formal_or_other_clients(self):
+        from zipzi import animation as a
+        for mode in ("local","connected"):
+            with self.subTest(mode=mode):
+                runtime=self.runtime(mode)
+                session=runtime.sessions.create(uid(1))
+                preview=session.preview()
+                backend=runtime._backend
+                backend._test_control("hold_io")
+                job=preview.seek(100.)
+                deadline=time.monotonic()+3
+                while not backend._test_control("entered"):
+                    self.assertLess(time.monotonic(),deadline)
+                    time.sleep(.005)
+                with self.assertRaises(zipzi.Busy):preview.apply(a.Reset())
+                self.assertEqual(session.info().history,(0,0))
+                job.cancel()
+                backend._test_control("release_io")
+                with self.assertRaises(zipzi.SdkFailure) as cancelled:job.wait()
+                self.assertEqual(cancelled.exception.code,"CANCELLED")
+                self.assertEqual(preview.info().value.time,0.)
+                self.assertEqual(preview.seek(.5,geometry=False).wait().value.frames[0].motion.time,.5)
+                preview.close()
+                self.assertEqual(runtime.resources.usage().previews,0)
+        runtime=self.runtime("connected")
+        session=runtime.sessions.create(uid(1))
+        first=session.preview()
+        first.seek(.5,geometry=False).wait()
+        with zipzi.connect(endpoint=runtime._backend._endpoint) as peer:
+            bound=peer.sessions.attach(session.id)
+            second=bound.preview()
+            second.seek(1.,geometry=False).wait()
+            self.assertEqual(first.info().value.time,.5)
+            self.assertEqual(runtime.resources.usage().previews,2)
+        self.assertEqual(runtime.resources.usage().previews,1)
+        self.assertEqual(first.info().value.time,.5)
+        first.close()
+
+    def test_r5_local_preview_has_no_python_json_roundtrip(self):
+        from zipzi import animation as a
+        runtime=self.runtime("local")
+        session=runtime.sessions.create(uid(1))
+        with patch("json.dumps",side_effect=AssertionError("Preview encoded Python JSON")), \
+             patch("json.loads",side_effect=AssertionError("Preview decoded Python JSON")):
+            with session.preview() as preview:
+                preview.apply(a.Reset())
+                value=preview.sample((0.,.5,0.)).wait()
+                self.assertEqual(tuple(f.motion.time for f in value.value.frames),(0.,.5,0.))
+                self.assertEqual(preview.info().value.sequence,2)
+
+    def test_r5_large_preview_batch_binary_recovery_preserves_every_frame(self):
+        for mode in ("local","connected"):
+            runtime=self.runtime(mode,drop="read_blob_binary" if mode=="connected" else None,drop_after=1)
+            session=runtime.sessions.create(uid(1))
+            size=32
+            points=tuple((float(x),float(y)) for y in range(size) for x in range(size))
+            triangles=tuple(t for y in range(size-1) for x in range(size-1)
+                for t in ((y*size+x,y*size+x+1,(y+1)*size+x),
+                          (y*size+x+1,(y+1)*size+x+1,(y+1)*size+x)))
+            geometry=meshes.Geometry(tuple(range(size*size)),points,points,triangles)
+            with session.edit("Grid") as edit:edit.meshes.create(meshes.MeshSpec("Grid",geometry,id=uid(2)))
+            before=session.info()
+            with session.preview() as preview:
+                job=preview.sample(tuple(0. for _ in range(32)))
+                value=zipzi.recover_call(job.wait)
+                self.assertEqual(len(value.value.frames),32)
+                self.assertEqual(preview.info().value.sequence,1)
+                self.assertEqual(tuple(f.index for f in value.value.frames),tuple(range(32)))
+                self.assertTrue(all(len(f.geometry.drawables[0].positions)==1024 for f in value.value.frames))
+            self.assertEqual(session.info(),before)
+
+    def test_r5_physics_extension_shadowing_aborts_the_candidate_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(1))
+                before = session.info()
+                with self.assertRaisesRegex(ValueError, "overlap declared fields"):
+                    with session.edit("Invalid flattened metadata") as edit:
+                        edit.apply(m.ModelingCommandPhysics(intent=m.PhysicsEditCreateGroup(
+                            asset_id=uid(2), id=uid(3), name="Rig")))
+                        physics = edit.modeling.records(m.ModelingQuery(physics=True)).value.physics
+                        group = physics.data.settings[0]
+                        normalized = replace(group.normalization, extensions={"Position": 42})
+                        invalid = replace(physics, data=replace(physics.data,
+                            settings=(replace(group, normalization=normalized),)))
+                        edit.apply(m.ModelingCommandSetPhysics(physics=invalid))
+                self.assertEqual(session.info(), before)
+                self.assertIsNone(session.modeling.records(m.ModelingQuery(physics=True)).value.physics)
+
+    def test_r5_large_motion_binary_records_and_complete_call_recovery(self):
+        for mode, phase, after in (("local", None, 0), ("connected", None, 0),
+                ("connected", "apply_authoring_blob", 0), ("connected", "modeling_query", 1),
+                ("connected", "read_blob_binary", 0)):
+            with self.subTest(mode=mode, phase=phase):
+                runtime = self.runtime(mode, drop=phase, drop_after=after)
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Large motion graph") as edit:
+                    parameter = edit.parameters.create(parameters.ParameterSpec("P", -1., 1., 0., id=uid(2)))
+                    edit.apply(m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(3), name="Large",
+                        registration_id=uid(4), destination=m.MotionContainerRoot())))
+                    clip = edit.modeling.records(m.ModelingQuery(motions=(uid(3),))).value.motions[0]
+                    segments = tuple(m.MotionSegmentLinear(end=m.MotionKey(id=uid(10_000+i),
+                        time=float(i), value=float(i % 2))) for i in range(1, 4097))
+                    track = m.MotionTrack(id=uid(5), target=m.MotionTrackTargetParameter(parameter_id=parameter),
+                        initial=m.MotionKey(id=uid(6), time=0., value=0.), segments=segments, extensions={})
+                    operation = m.ModelingCommandReplaceMotion(clip=replace(clip, duration=4096., tracks=(track,)))
+                    if phase == "apply_authoring_blob":
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            edit.apply(operation)
+                        result = lost.exception.recover()
+                        self.assertIsInstance(result, zipzi.WriteResult)
+                        self.assertEqual(result.source.sequence, 3)
+                    else:
+                        edit.apply(operation)
+                    query = m.ModelingQuery(motions=(uid(3),))
+                    if phase in {"modeling_query", "read_blob_binary"}:
+                        with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                            edit.modeling.records(query)
+                        snapshot = lost.exception.recover()
+                    else:
+                        snapshot = edit.modeling.records(query)
+                    self.assertEqual(snapshot.source.sequence, 3)
+                    self.assertEqual(snapshot.value.motions[0].tracks[0], track)
+                    self.assertEqual(session.info().history, (0, 0))
+                self.assertEqual(session.info().history, (1, 0))
+                self.assertEqual(snapshot.value.motions[0].tracks[0].segments[-1].end.time, 4096.)
+
+    def test_r5_local_animation_bridge_does_not_encode_or_decode_python_json(self):
+        runtime = self.runtime("local")
+        with patch("json.dumps", side_effect=AssertionError("Local animation encoded JSON")), \
+             patch("json.loads", side_effect=AssertionError("Local animation decoded JSON")):
+            session = runtime.sessions.create(uid(1))
+            with session.edit("Direct animation") as edit:
+                edit.apply_many((
+                    m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(2), name="Motion",
+                        registration_id=uid(3), destination=m.MotionContainerRoot())),
+                    m.ModelingCommandExpression(intent=m.ExpressionEditCreate(id=uid(4), name="Expression")),
+                    m.ModelingCommandPhysics(intent=m.PhysicsEditCreateGroup(asset_id=uid(5), id=uid(6), name="Physics")),
+                    m.ModelingCommandPose(intent=m.PoseEditCreateGroup(pose_id=uid(7), id=uid(8), name="Pose")),
+                ))
+                selected = edit.modeling.records(m.ModelingQuery(motions=(uid(2),), expressions=(uid(4),), physics=True, pose=True))
+                self.assertEqual(selected.value.motions[0].name, "Motion")
+                self.assertEqual(selected.value.physics.data.meta.PhysicsSettingCount, 1)
+                self.assertEqual(selected.source.sequence, 1)
+            self.assertEqual(session.info().history, (1, 0))
+
+    def test_r5_animation_authoring_plans_addresses_and_sidecars(self):
+        import runpy
+        recipe = runpy.run_path(str(Path(__file__).with_name("r5_authoring_recipe.py")))["run"]
+        results = []
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                results.append(recipe(self.runtime(mode), self.folder / (mode + "-r5")))
+        if len(results) == 2:
+            self.assertEqual(results[0], results[1])
 
     def test_manual_mesh_structure_roundtrips_local_connected_binary_history_and_project(self):
         boundary = [10, 20, 30, 40]
@@ -91,6 +337,16 @@ class PythonSdk(unittest.TestCase):
                 saved = session.project.save(self.folder / (mode + "-manual-mesh")).wait()
                 reopened = self.runtime(mode).sessions.open(saved.manifest).wait()
                 self.assertEqual(reopened.meshes.get(mesh).value.geometry, expected)
+
+    def test_p4_large_attachments_resource_relocation_and_package_roundtrip(self):
+        import runpy
+        recipe = runpy.run_path(str(Path(__file__).with_name("p4_recipe.py")))["run"]
+        results = []
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                results.append(recipe(self.runtime(mode), self.folder / (mode + "-p4")))
+        if len(results) == 2:
+            self.assertEqual(results[0], results[1])
 
     def test_p3b_conversions_scene_bindings_and_independent_collections(self):
         import runpy
@@ -425,7 +681,8 @@ class PythonSdk(unittest.TestCase):
 
     def test_large_binary_authoring_records_sampling_and_attachment(self):
         # SDK rectangle-grid helper's exact 65536-vertex boundary, with a
-        # concrete keyform dependency and an attachment larger than JSON frames.
+        # concrete keyform dependency. Attachment transfer/persistence has its
+        # own recovery tests and p4_recipe.py scenario.
         n=256
         positions=tuple((float(x),float(y)) for y in range(n) for x in range(n))
         ids=tuple(range(n*n))

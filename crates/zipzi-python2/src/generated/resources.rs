@@ -11,6 +11,7 @@ pub(crate) fn write_resourceusage(
     value: zipzi_runtime::authoring::ResourceUsage,
 ) -> PyResult<Bound<'_, PyDict>> {
     let d = PyDict::new(py);
+    d.set_item("previews", value.previews)?;
     d.set_item("allocations", value.allocations)?;
     d.set_item("resource_entries", value.resource_entries)?;
     d.set_item("prepared_images", value.prepared_images)?;

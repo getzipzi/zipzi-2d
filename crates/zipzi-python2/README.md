@@ -19,7 +19,7 @@ no JSON transport conversion or direct SDK session owner.
 | `tools/test.py`, `tools/baseline.py` | Source validation and P0 measurements |
 | `tools/connected.py` | Pure wheel installation, host startup/session acceptance and Editor's isolated interpreter |
 | `tools/generate.py`, `examples/authoring_schema.rs` | Compiled Rust contract, registered domain values/operations, facades, codecs and documentation |
-| `client/python/zipzi/_generated/`, `src/generated/` | 37 managed outputs, including uniform facades, backend bindings, metadata, public reexports and the offline API reference |
+| `client/python/zipzi/_generated/`, `src/generated/` | 40 managed outputs, including uniform facades, backend bindings, metadata, public reexports and the offline API reference |
 | [CAPABILITIES.md](CAPABILITIES.md) | Explicit scope and delivery evidence |
 
 From the repository root, using the workspace's CPython 3.14 tools:
@@ -69,10 +69,26 @@ For focused regressions, run from the repository root:
 ./tools/test-sdk.sh python2 --discovery
 ```
 
-Animation authoring, independent Preview and GPU observer/inspection remain later
-Runtime capabilities. Full platform/app distribution acceptance is also pending.
-See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence;
-implementation does not by itself mean that every R4/P4 exit gate has passed.
+[Typed animation authoring](../../docs/plans/sdk-runtime/python2-r5-authoring.md)
+is connected in the first R5/P5 slice. [CPU Preview and animation sampling](../../docs/plans/sdk-runtime/python2-r5-preview.md)
+are connected on independent frozen sources. [CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md)
+cover formal/candidate poses and animated frames. [GPU observation and PNG/JSON inspection](../../docs/plans/sdk-runtime/python2-r5-observation.md) are connected;
+[Fair batch scheduling and Editor playback isolation](../../docs/plans/sdk-runtime/python2-r5-scheduling.md)
+are delivered with the R5/P5 regressions and final Release comparisons.
+Runtime R7 acceptance is complete for macOS arm64 and CPython 3.14.
+The [Python P7 closeout](../../docs/plans/python-sdk-rewrite/p7.md) completes the
+current Python scope: capability/contract evidence, generated/manual ownership,
+wrapper/page/binary/background costs, agent results and final artifact identity.
+Historical P0 comparison limits and the recorded stability waiver retain their
+original scope; other platforms and deferred capabilities are separate.
+The [R5/R7 closeout record](../../docs/plans/sdk-runtime/python2-r7-closeout.md)
+tracks paired normal sdists/wheels, the macOS app/installer, installed-app
+discovery, handoff/save/reopen/export and the 151 native/window performance checks.
+The opt-in `tests/installed_model_workflow.py` also checks real-model authoring,
+Preview, save/reopen, motion/package export and reconnection against a normal
+desktop executable. Run it with an installed pure interpreter, `-I`, and explicit
+`--host`, `--model`, `--output` paths; model assets are not bundled.
+See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence.
 
 [P3B scope reconciliation](../../docs/plans/python-sdk-rewrite/p3b.md) is complete:
 the earlier R4 implementation supplies the modeling routes, and public source and
@@ -82,6 +98,18 @@ The focused check also runs positive/negative static types:
 
 ```sh
 ./tools/test-sdk.sh python2 PythonSdk.test_p3b_conversions_scene_bindings_and_independent_collections
+```
+
+[P4 resource/project acceptance](../../docs/plans/python-sdk-rewrite/p4.md) covers
+large attachments and RGBA images through save, Save As, reopen and package
+export/import, including empty/unavailable attachments, disk captures, generation
+expiry and failures. Save As copies current resources; old disk-backed Undo
+content retains its original absolute path. Explicit image leases pin their bytes.
+Attachments use the typed canonical modeling route; an independent attachment
+collection remains an optional convenience. Focused regression:
+
+```sh
+./tools/test-sdk.sh python2 PythonSdk.test_p4_large_attachments_resource_relocation_and_package_roundtrip
 ```
 
 ## Selected code generation
@@ -255,7 +283,30 @@ also searches the user/system `Applications/Zipzi Editor.app` locations.
 request. `sessions.list()` and `sessions.attach(id)` work on both backends.
 `SessionInfo` includes state/path/version/history. `show_window()` requires a
 desktop host. Modeling, resource and project routes also work through this
-connection. Packaged application location acceptance remains pending.
+connection. Packaged application discovery/startup is verified at the supported
+macOS installation location in the R7 acceptance record.
+
+### Direct Editor handoff (R6)
+
+Attach the intended resident Session, make a meaningful batch in one Edit, and
+wait for `edit.commit().wait()` (normal Edit context exit also commits and waits).
+The Editor refreshes from the same formal document and Undo/Redo history. A human
+can inspect, undo or refine it; the next agent Edit reads that latest state.
+Committing updates the in-memory document; saving remains a separate operation.
+Busy, stale-version and original-call recovery rules continue to apply.
+
+The installed package includes a runnable example. With the Editor running:
+
+```sh
+python -I -m zipzi.docs.editor_handoff list
+python -I -m zipzi.docs.editor_handoff rename \
+  --runtime RUNTIME_UUID --session SESSION_SERIAL --mesh MESH_UUID --name "Refined face"
+```
+
+Use the identities from discovery and explicitly select the target document and
+mesh. `--endpoint /absolute/path/to/profile.sock` before the subcommand selects a
+specific host. Script exit retains committed content and resources. See the
+[R6 handoff record](../../docs/plans/sdk-runtime/python2-r6-handoff.md) for tested scope.
 
 ```sh
 ./tools/test-sdk.sh python2-connected
@@ -378,7 +429,7 @@ release their tables. Every create/read/plan/close retains its own recovery owne
 
 ## Complete Runtime R4 routes
 
-The native pairing contract is `zipzi-python2-manual-mesh-1`; IPC is `zipzi-runtime-manual-mesh-1`.
+The native pairing contract is `zipzi-python2-r7-manual-mesh-1`; IPC is `zipzi-runtime-r7-manual-mesh-1`.
 Rebuild both adapters and hosts after contract changes. Compiled Rust serde
 shapes generate `zipzi.modeling`, native constructors/writers and the binary
 array codec. `edit.apply` accepts the full `ModelingCommand` family, including
@@ -423,6 +474,30 @@ The Python [P3A public-contract refactor](../../docs/plans/python-sdk-rewrite/p3
 applies to these routes; its overall acceptance and Runtime R4 exit gates are
 tracked separately.
 
+## R5/P5 animation authoring
+
+`ModelingCommandMotion/Expression/Physics/Pose` apply the existing SDK edits in
+the same atomic candidate as modeling operations. Whole-asset create/replace
+commands and `ModelingIntentMotion/Expression/Physics/Pose` use the SDK planners.
+`ModelingQuery` selects motion clips, groups, registrations and expressions by ID;
+`physics=True` and `pose=True` request the singleton payloads. Empty selections
+still expose collection identities without copying those payloads.
+
+Motion registration, expression entry, Physics channel and Pose field addresses
+keep SDK owner/incarnation/field epochs. Field changes and Undo retire old field
+addresses; unrelated edits and sibling reorders preserve them. Plans carry the
+exact formal/candidate source. Large curves and selected records reuse binary
+transfer and complete-call recovery. Local conversion uses concrete generated
+types without a Python JSON round trip.
+
+The [shared source/installed recipe](tests/r5_authoring_recipe.py) checks four
+domains, plans, addresses, exports and save/reopen. Current scope and remaining
+Preview/Observer work are recorded in the [R5/P5 record](../../docs/plans/sdk-runtime/python2-r5-authoring.md).
+
+```sh
+./tools/test-sdk.sh python2 PythonSdk.test_r5_animation_authoring_plans_addresses_and_sidecars
+```
+
 ## P0 measurements
 
 ```sh
@@ -444,7 +519,12 @@ allocator overhead and realloc transient storage. Connected probes retain an
 empty control-window calibration. Noise and regression policies are recorded;
 CPU fixture numbers do not claim Editor latency.
 
-Animation, independent Preview and observer/inspection remain later Runtime capabilities. See the
+CPU animation Preview is available through `session.preview()` / `edit.preview()`.
+Use `session/edit.modeling.spatial(poses, queries)` for geometric bounds and hits,
+or pass `queries` to Preview sampling; both return explicit Jobs with exact Sources.
+GPU renders use `modeling.observe(poses, observation.View(...))` or Preview
+`view=...`. Use `inspection.save` for local PNG/JSON evidence. Agent previews stay
+independent of human Editor playback. See the
 [construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).
 
@@ -495,3 +575,10 @@ false negatives to 41/42. Original results are retained. The matrix used 16,093,
 reported tokens with no token caps. The configured model/effort is recorded as
 `gpt-6.1-sol/high`; actual service revision metadata is optional and does not
 affect task or P3A acceptance.
+
+GPU tests are explicit: `./tools/test-sdk.sh python2 --observation` requires a
+usable device and runs pixels, frozen resources, recovery and inspection. Default
+CPU tests do not initialize a device. Runtime GPU checks use
+`cargo test --locked -p zipzi-runtime --test observation -- --include-ignored`.
+Normal distribution acceptance adds `--observation` to `tools/distribution.py`
+when exercising installed GPU recipes.

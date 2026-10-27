@@ -9146,6 +9146,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.20",
  "uuid",
+ "zipzi-api-derive",
  "zipzi-core",
  "zipzi-project",
 ]
@@ -9370,6 +9371,7 @@ dependencies = [
  "zipzi-core",
  "zipzi-project",
  "zipzi-sdk",
+ "zipzi-sdk-observe",
 ]
 
 [[package]]

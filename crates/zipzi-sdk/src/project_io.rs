@@ -112,6 +112,7 @@ impl AuthoringSession {
         self.preview.reset();
         self.incarnations.clear();
         self.expression_entry_contexts.clear();
+        self.animation_field_epochs.clear();
         self.events.clear();
         self.emit_replacement(current);
         Ok(self.version())
@@ -607,6 +608,7 @@ impl AuthoringSession {
         self.preview.reset();
         self.incarnations.clear();
         self.expression_entry_contexts.clear();
+        self.animation_field_epochs.clear();
         self.events.clear();
         self.refresh_incarnations(&HashSet::new(), &HashSet::new());
         self.emit_replacement(before);

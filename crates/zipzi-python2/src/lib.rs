@@ -12,10 +12,13 @@ mod input_budget;
 use input_budget::input_lease;
 mod discovery_bridge;
 mod modeling_bridge;
+mod observation_bridge;
 mod parameter_bridge;
+mod preview_bridge;
 mod project_bridge;
 mod reference_bridge;
 mod scene_bridge;
+mod spatial_bridge;
 mod streams;
 use generated::mesh::read_mesh_operation;
 use zipzi_runtime::authoring::{EditOperation, MAX_IMAGE_BYTES};
@@ -47,6 +50,11 @@ struct EditToken {
 #[pyclass(frozen, name = "_JobToken")]
 struct JobToken {
     id: JobId,
+}
+
+#[pyclass(frozen, name = "_PreviewToken")]
+struct PreviewToken {
+    id: PreviewId,
 }
 
 #[pyclass(frozen, name = "_ImageToken")]
@@ -305,7 +313,7 @@ impl NativeRuntime {
     }
     #[getter]
     fn contract(&self) -> &'static str {
-        "zipzi-python2-manual-mesh-1"
+        "zipzi-python2-r7-manual-mesh-1"
     }
     #[cfg(feature = "bench-instrumentation")]
     fn _measure(&self, py: Python<'_>, reset: bool) -> PyResult<Py<PyDict>> {
@@ -515,6 +523,10 @@ impl NativeRuntime {
     ) -> PyResult<Py<PyDict>> {
         let client = self.client;
         let value = match kind {
+            "preview" => {
+                let id = token.extract::<PyRef<'_, PreviewToken>>()?.id;
+                py.detach(|| self.host.call(move |rt| rt.release_preview(client, id)))
+            }
             "image" => {
                 let image = token.extract::<PyRef<'_, ImageToken>>()?.id;
                 py.detach(|| {
@@ -735,6 +747,9 @@ impl NativeRuntime {
                     )?;
                     d
                 }
+                JobValue::Previewed(value) => preview_bridge::samples(py, &value)?,
+                JobValue::Spatial(value) => spatial_bridge::samples(py, &value)?,
+                JobValue::Observed(value) => observation_bridge::samples(py, &value)?,
                 JobValue::Sampled(value) => modeling_bridge::sample_batch(py, &value)?,
                 JobValue::Planned(value) => {
                     generated::resources::write_plansnapshot(py, value.as_ref().clone())?

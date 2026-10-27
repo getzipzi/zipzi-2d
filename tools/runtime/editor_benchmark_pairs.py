@@ -41,6 +41,7 @@ def main():
     parser.add_argument('--pairs', type=int, default=5, help='at least five process pairs; all pairs are retained')
     parser.add_argument('--warp', help='explicit editable Warp UUID from the model fixture audit')
     parser.add_argument('--resume', action='store_true', help='reuse completed runs only when the executable hash matches')
+    parser.add_argument('--read-batches', action='store_true', help='Include continuous CPU/Preview/GPU batches in the native interaction case')
     parser.add_argument('modes', nargs='+', choices=['cpu', 'properties', 'color', 'deformations', 'animation', 'timeline', 'interaction'])
     args = parser.parse_args()
     if args.pairs < 5:
@@ -75,6 +76,8 @@ def main():
                 elif mode in ['timeline', 'interaction']:
                     env.update(ZIPZI_TIMELINE_MODEL=str(model), ZIPZI_TIMELINE_REQUIRE_ASSET='1', ZIPZI_TIMELINE_SAMPLES='60', ZIPZI_TIMELINE_OUTPUT=str(directory), ZIPZI_RUNTIME_INTERACTION_OUTPUT=str(directory), ZIPZI_RUNTIME_INTERACTION_SAMPLES='60')
                     cmd = [str(BIN / f'{side}-{mode}')]
+                    if mode == 'interaction' and args.read_batches:
+                        env['ZIPZI_RUNTIME_INTERACTION_READS'] = '1'
                 else:
                     env.update(ZIPZI_CONFIG_DIR=str(directory / 'config'), ZIPZI_FRAME_TRACE=str(directory / 'trace.jsonl'), ZIPZI_WINDOW_BENCH='1', ZIPZI_BENCH_MODEL=str(model), ZIPZI_BENCH_HZ='120', ZIPZI_BENCH_SAMPLES='120', ZIPZI_BENCH_WARMUP='10')
                     if mode == 'properties':
@@ -92,7 +95,7 @@ def main():
                 fingerprint = hashlib.sha256(binary.read_bytes()).hexdigest()
                 identity = {'binary_sha256': fingerprint, 'model': str(model), 'model_sha256': hashlib.sha256(model.read_bytes()).hexdigest()}
                 identity['pair_order'] = list(pair_order(pair))
-                identity['workload'] = {name: env.get(name) for name in ['ZIPZI_BENCH_PROPERTY_CASE', 'ZIPZI_BENCH_WARP', 'ZIPZI_BENCH_SAMPLES', 'ZIPZI_BENCH_WARMUP']}
+                identity['workload'] = {name: env.get(name) for name in ['ZIPZI_BENCH_PROPERTY_CASE', 'ZIPZI_BENCH_WARP', 'ZIPZI_BENCH_SAMPLES', 'ZIPZI_BENCH_WARMUP', 'ZIPZI_RUNTIME_INTERACTION_READS', 'ZIPZI_RUNTIME_INTERACTION_SAMPLES']}
                 if (directory / 'summary.json').exists():
                     if not args.resume or json.loads((directory / 'identity.json').read_text()) != identity:
                         raise ValueError(f'refusing to reuse incompatible run: {directory}')

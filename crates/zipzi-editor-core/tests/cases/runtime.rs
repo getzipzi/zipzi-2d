@@ -613,3 +613,136 @@ fn r2_quit_waits_for_foreign_provisional_loads() -> anyhow::Result<()> {
     assert!(editor.next_close().is_some());
     Ok(())
 }
+
+#[test]
+fn r6_direct_batches_share_human_refinement_history_and_reject_old_candidates() -> anyhow::Result<()>
+{
+    use zipzi_editor_core::{
+        AnimationPreviewMode, MotionSelection, TimelineChannelId, TimelineCommand, TimelineKeyRef,
+        WorkspaceKind,
+    };
+    let (document, _assets) = crate::support::animation_document()?;
+    let mut editor = crate::support::editor_from_document(document);
+    let host = editor.runtime_host();
+    let session = editor.document().unwrap().runtime_session_id();
+    let agent = host.write().register_client()?;
+    let mesh = editor.document().unwrap().layers()[0].id.clone();
+    let motion = editor.document().unwrap().motion_resources()[0]
+        .selection
+        .clone();
+    let original = editor
+        .document()
+        .unwrap()
+        .motion_definition(&motion.clip_id)
+        .unwrap();
+    let track = original.tracks[0].clone();
+    let parameter = editor.document().unwrap().parameters()[0].id.clone();
+    let endpoint_key = track.segments[0].end().id.clone();
+
+    let edit = host
+        .write()
+        .begin_edit(agent, session, "Agent batch", None)?;
+    host.write().apply_edit(agent, edit, |e| {
+        e.rename_mesh(&mesh, "Agent draft")?;
+        let mut clip = e
+            .candidate_document()
+            .get_motion(&motion.clip_id)
+            .unwrap()
+            .clone();
+        Arc::make_mut(&mut clip.tracks[0].segments)[0]
+            .end_mut()
+            .value = 0.8;
+        e.replace_motion(clip)
+    })?;
+    let job = host.write().request_commit(agent, edit)?;
+    let completion = host.write().take_work(job)?.run();
+    assert!(host.write().complete(completion));
+    host.write().release_job(agent, job)?;
+    assert!(editor.sync_runtime()?);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    assert_eq!(editor.document().unwrap().layers()[0].name, "Agent draft");
+
+    let obsolete = host
+        .write()
+        .begin_edit(agent, session, "Old candidate", None)?;
+    host.write().apply_edit(agent, obsolete, |e| {
+        e.rename_mesh(&mesh, "Must not overwrite")
+    })?;
+    editor.execute(EditorCommand::Select(mesh.clone()))?;
+    editor.execute(EditorCommand::PreviewName("Human polish".into()))?;
+    editor.execute(EditorCommand::FinishEdit)?;
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    let document = editor.active_id().unwrap();
+    editor.set_animation_preview_mode(document, AnimationPreviewMode::Editing)?;
+    editor.select_motion(
+        document,
+        MotionSelection {
+            clip_id: motion.clip_id.clone(),
+            entry: motion.entry,
+        },
+    )?;
+    editor.seek_timeline(document, 2.)?;
+    editor.execute_timeline(
+        document,
+        TimelineCommand::WriteValue {
+            channel: TimelineChannelId::Parameter(parameter),
+            track_id: Some(track.id.clone()),
+            selected_key: Some(TimelineKeyRef {
+                clip_id: motion.clip_id.clone(),
+                track_id: track.id.clone(),
+                key_id: endpoint_key.clone(),
+            }),
+            value: 0.45,
+        },
+    )?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (3, 0));
+    let error = host.write().commit_edit(agent, obsolete).unwrap_err();
+    assert!(
+        matches!(error, RuntimeError::Sdk(ref error) if error.code.as_ref() == "STALE_VERSION")
+    );
+    host.write().release_edit(agent, obsolete)?;
+    assert_eq!(editor.document().unwrap().layers()[0].name, "Human polish");
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (2, 1));
+    editor.execute(EditorCommand::Redo)?;
+    let refined = host.read().session_info(session)?.version;
+
+    let next = host
+        .write()
+        .begin_edit(agent, session, "Continue human work", Some(refined))?;
+    host.write().apply_edit(agent, next, |e| {
+        assert_eq!(
+            e.candidate_document().get_mesh(&mesh).unwrap().name,
+            "Human polish"
+        );
+        let mut clip = e
+            .candidate_document()
+            .get_motion(&motion.clip_id)
+            .unwrap()
+            .clone();
+        assert_eq!(clip.tracks[0].segments[0].end().id, endpoint_key);
+        assert_eq!(clip.tracks[0].segments[0].end().value, 0.45);
+        e.rename_mesh(&mesh, "Agent continued")?;
+        clip.tracks[0].initial.value = 0.2;
+        e.replace_motion(clip)
+    })?;
+    host.write().commit_edit(agent, next)?;
+    host.write().release_client(agent);
+    assert!(editor.sync_runtime()?);
+    assert_eq!(editor.document().unwrap().history_lengths(), (4, 0));
+    assert_eq!(
+        editor.document().unwrap().layers()[0].name,
+        "Agent continued"
+    );
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(editor.document().unwrap().layers()[0].name, "Human polish");
+    let restored = editor
+        .document()
+        .unwrap()
+        .motion_definition(&motion.clip_id)
+        .unwrap();
+    assert_eq!(restored.tracks[0].initial.value, 0.);
+    assert_eq!(restored.tracks[0].segments[0].end().value, 0.45);
+    assert_eq!(restored.tracks[0].segments[0].end().id, endpoint_key);
+    Ok(())
+}

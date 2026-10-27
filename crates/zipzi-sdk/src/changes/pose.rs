@@ -106,6 +106,9 @@ pub(super) fn summarize_pose(before: &Document, after: &Document, out: &mut Chan
                 .extend([ChangeCategory::Order, ChangeCategory::EvaluationInputs]);
         }
         let fields_changed = old.map(|r| &r.field) != new.map(|r| &r.field);
+        if fields_changed {
+            out.pose_field_changes.push((*id).into());
+        }
         let moved = old.map(|r| r.owner) != new.map(|r| r.owner);
         let content = old.map(|r| (r.entry.map(|e| &e.extensions), r.links_present))
             != new.map(|r| (r.entry.map(|e| &e.extensions), r.links_present));

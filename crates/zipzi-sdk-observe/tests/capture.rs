@@ -11,6 +11,73 @@ const MESH: &str = "00000000-0000-4000-8000-000000000003";
 const PARAMETER: &str = "00000000-0000-4000-8000-000000000004";
 
 #[test]
+fn candidate_animation_uses_snapshot_identity_not_formal_or_branch_revision_counters() {
+    let session =
+        AuthoringSession::new(DOCUMENT, Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
+    let mut left = session.begin_owned_edit("left", None).unwrap();
+    left.create_part(zipzi_core::Part {
+        id: ASSET.into(),
+        name: "Left".into(),
+        ..Default::default()
+    })
+    .unwrap();
+    let a = session.candidate_snapshot(&left).unwrap();
+    assert_ne!(a.version().revision, a.document().revision());
+    let mut preview = zipzi_sdk::MotionPreview::new(a.document());
+    preview.bind_session_identity(a.version().session_id, a.version().generation);
+    ObservationInput::capture_motion_from_snapshot(&a, &preview, true).unwrap();
+    let mut right = session.begin_owned_edit("right", None).unwrap();
+    right
+        .create_part(zipzi_core::Part {
+            id: ASSET.into(),
+            name: "Right".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    let b = session.candidate_snapshot(&right).unwrap();
+    assert_eq!(a.version(), b.version());
+    assert_eq!(a.document().revision(), b.document().revision());
+    assert_eq!(
+        ObservationInput::capture_motion_from_snapshot(&b, &preview, true)
+            .unwrap_err()
+            .code,
+        "STALE_ANIMATION_PREVIEW"
+    );
+    left.create_part(zipzi_core::Part {
+        id: MESH.into(),
+        name: "Later".into(),
+        ..Default::default()
+    })
+    .unwrap();
+    let later = session.candidate_snapshot(&left).unwrap();
+    assert_eq!(
+        ObservationInput::capture_motion_from_snapshot(&later, &preview, true)
+            .unwrap_err()
+            .code,
+        "STALE_ANIMATION_PREVIEW"
+    );
+    drop(left);
+    drop(right);
+    ObservationInput::capture_motion_from_snapshot(&a, &preview, true).unwrap();
+}
+
+#[test]
+fn cancelled_capture_releases_inputs_without_resolving_resources_or_gpu() {
+    let session =
+        AuthoringSession::new(DOCUMENT, Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
+    let input = ObservationInput::capture(&session, &PreviewValues::new()).unwrap();
+    let control = zipzi_sdk::ConversionControl::default();
+    control.cancel();
+    let failure =
+        ResolvedObservation::capture_many_with_control(vec![input], &control).unwrap_err();
+    assert_eq!(failure.code, "CANCELLED");
+    assert!(ResolvedObservation::capture(
+        ObservationInput::capture(&session, &PreviewValues::new()).unwrap()
+    )
+    .is_ok());
+}
+
+#[test]
 fn saved_binding_capture_restores_numeric_caches_from_stable_samples() {
     use zipzi_core::{BindingAxis, MeshBinding, MeshKeyform};
     let mut session =

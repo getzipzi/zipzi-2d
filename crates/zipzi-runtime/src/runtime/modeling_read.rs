@@ -56,6 +56,12 @@ impl Runtime {
             query.offscreens.len(),
             query.parameter_groups.len(),
             query.attachments.len(),
+            query.motions.len(),
+            query.motion_groups.len(),
+            query.motion_registrations.len(),
+            query.expressions.len(),
+            usize::from(query.physics),
+            usize::from(query.pose),
         ]
         .into_iter()
         .sum::<usize>();
@@ -78,6 +84,10 @@ impl Runtime {
             doc.package_attachments().len(),
             doc.motion_order().len(),
             doc.expression_order().len(),
+            doc.motion_groups().len(),
+            doc.motion_registrations().count(),
+            usize::from(doc.physics().is_some()),
+            usize::from(doc.pose().is_some()),
             doc.display_info()
                 .parameter_groups
                 .as_ref()

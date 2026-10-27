@@ -5,88 +5,160 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 /// Atomic asset edits plus optional rig edits; asset-only patches support empty assets.
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct PhysicsPatch {
+    /// Stable Physics singleton ID owning these changes.
     pub asset_id: String,
+    /// Ordered changes to Physics asset metadata; rig-local changes are separate.
     pub asset_changes: Vec<PhysicsAssetProperty>,
+    /// Optional atomic changes to one owned Physics rig/group.
     pub rig: Option<PhysicsRigPatch>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum PhysicsAssetProperty {
     /// None or zero follows the evaluation delta; positive values select a fixed step.
-    Fps(Option<f32>),
+    Fps(
+        /// Optional Physics fixed-step frequency; None follows the evaluation delta.
+        Option<f32>,
+    ),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct PhysicsRigPatch {
+    /// Stable ID of the group owning the affected rows or node chain.
     pub group_id: String,
+    /// Ordered typed property changes validated as one native operation.
     pub changes: Vec<PhysicsProperty>,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum PhysicsProperty {
-    Name(String),
+    Name(
+        /// Replacement display name of the Physics group.
+        String,
+    ),
     InputWeight {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: f32,
     },
     InputAxis {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: PhysicsAxis,
     },
     InputReflect {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: bool,
     },
     InputParameter {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Typed target reference; unresolved imported runtime labels remain explicit.
         target: PhysicsTarget,
     },
     OutputWeight {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: f32,
     },
     OutputScale {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: f32,
     },
     OutputAxis {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: PhysicsAxis,
     },
     OutputReflect {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: bool,
     },
     OutputParameter {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Typed target reference; unresolved imported runtime labels remain explicit.
         target: PhysicsTarget,
     },
     OutputNode {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Stable node identity, independent of the node index used by exported Physics JSON.
         node_id: String,
     },
     VertexPosition {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: crate::physics::PhysicsVector,
     },
     VertexRadius {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: f32,
     },
     VertexMobility {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: f32,
     },
     VertexDelay {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: f32,
     },
     VertexAcceleration {
+        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
+        /// Channel value or replacement payload in the domain declared by this field type.
         value: f32,
     },
-    PositionNormalization(PhysicsRange),
-    AngleNormalization(PhysicsRange),
+    PositionNormalization(
+        /// Replacement minimum/default/maximum range for position normalization.
+        PhysicsRange,
+    ),
+    AngleNormalization(
+        /// Replacement minimum/default/maximum range for angle normalization.
+        PhysicsRange,
+    ),
 }
 struct Prepared {
     index: usize,

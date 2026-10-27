@@ -83,7 +83,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
                 destination='plan_values' if binding['name'] in {'PlanCost','PlanReport'} else file
                 bind(destination,binding['name'],shape)
     for rust,shape in shapes.items():
-        if rust in {s['name'] for s in contract['modeling']['roots']} or rust.startswith(('zipzi_core::','zipzi_sdk::','zipzi_runtime::')):
+        if rust in {s['name'] for s in contract['modeling']['roots']} or rust.startswith(('zipzi_core::','zipzi_sdk::','zipzi_runtime::','zipzi_animation::')):
             short=modeling_name(rust)
             if shape['kind'] in {'union','serde_enum'}:variants(shape,'modeling',short)
             else:bind('modeling',short,shape)
@@ -151,7 +151,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
             return '('+ast.unparse(arguments)+')'+(' -> '+ast.unparse(node.returns) if node.returns else '')
         init=next((n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='__init__'),None)
         if init:
-            if any(a.arg in {'backend','token','session','edit'} for a in init.args.args[1:]) and node.name in {'Runtime','Session','Edit','Job','Plan','PreparedImage','ImageLease','Buffer','ObjectRef','LabelAddress','FieldAddress'}:return '(factory-owned; use the documented public entry)'
+            if any(a.arg in {'backend','token','session','edit'} for a in init.args.args[1:]) and node.name in {'Runtime','Session','Edit','Job','Plan','PreparedImage','ImageLease','Buffer','Preview','ObjectRef','LabelAddress','FieldAddress'}:return '(factory-owned; use the documented public entry)'
             return signature(init)
         fields=[n for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_') and not (isinstance(n.annotation,ast.Subscript) and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})]
         return '('+', '.join(n.target.id+': '+ast.unparse(n.annotation)+(' = '+ast.unparse(n.value) if n.value else '') for n in fields)+')'
@@ -173,6 +173,10 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
         if (module,name) in seen:return None
         seen.add((module,name));node=symbols.get(module,{}).get(name)
         if isinstance(node,tuple):return resolve(*node,seen)
+        if isinstance(node,ast.AnnAssign) and 'TypeAlias' in ast.unparse(node.annotation) and isinstance(node.value,ast.Name):
+            # A single-variant union is the actual dataclass at runtime. Its
+            # alias needs the same field docs and inherited public methods.
+            return resolve(module,node.value.id,seen)
         return node
     node_modules={id(node):module for module,tree in trees.items() for node in tree.body if isinstance(node,ast.ClassDef)}
     def public_methods(node,seen=None):
@@ -208,7 +212,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
             for child in public_methods(node).values():
                 add(path+'.'+child.name,child);catalog[path]['children'].append(path+'.'+child.name)
     # Public paths are explicit reexports in domain modules, plus canonical modeling DTO types/unions.
-    domains=('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops')
+    domains=('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops','animation','spatial','observation','inspection')
     for module in ('',*domains):
         public='zipzi'+('.'+module if module else '')
         if module:catalog[public]=dict(kind='module',signature='',documentation=ast.get_docstring(trees[module]) or '',children=[])
@@ -259,14 +263,14 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
     fingerprint.update((package/guide_path).read_text().encode())
     source_sha=fingerprint.hexdigest()
     package_version=tomllib.loads((package/'client/pyproject.toml').read_text())['project']['version']
-    catalog['zipzi']['documentation']+=' Package '+package_version+'; protocol zipzi-runtime-manual-mesh-1; client source SHA-256 '+source_sha+'.'
+    catalog['zipzi']['documentation']+=' Package '+package_version+'; protocol '+contract['protocol']+'; client source SHA-256 '+source_sha+'.'
     for row in catalog.values():row['children']=tuple(sorted(set(row.get('children',()))))
     reference=[header.rstrip(),'# Installed Python API reference','','Generated from the compiled authoring contract, the finite binding directory and lifecycle source docs.','']
     for path,row in sorted(catalog.items()):
         reference+=['## '+path,'', '`'+row.get('signature','')+'`','',row.get('documentation',''),'']
         for field,text in row.get('fields',()):reference+=['- `'+field+'`: '+text]
         reference+=['']
-    result={'client/python/zipzi/_generated/catalog.py':header+'"""Offline API directory; no imports or host probes."""\nfrom typing import TypedDict, NotRequired\nfrom collections.abc import Sequence\nclass _Entry(TypedDict):\n    kind: str\n    signature: str\n    documentation: str\n    fields: NotRequired[Sequence[tuple[str,str]]]\n    children: tuple[str,...]\n    example: NotRequired[str]\nCONTRACT = "zipzi-runtime-manual-mesh-1"\nPACKAGE_VERSION = '+repr(package_version)+'\nCONTRACT_SHA256 = '+repr(hashlib.sha256(__import__('json').dumps(contract,sort_keys=True).encode()).hexdigest())+'\nCATALOG: dict[str,_Entry] = '+pprint.pformat(catalog,width=120,sort_dicts=True)+'\n', 'client/python/zipzi/docs/reference.md':'\n'.join(reference)+'\n'}
+    result={'client/python/zipzi/_generated/catalog.py':header+'"""Offline API directory; no imports or host probes."""\nfrom typing import TypedDict, NotRequired\nfrom collections.abc import Sequence\nclass _Entry(TypedDict):\n    kind: str\n    signature: str\n    documentation: str\n    fields: NotRequired[Sequence[tuple[str,str]]]\n    children: tuple[str,...]\n    example: NotRequired[str]\nCONTRACT = '+repr(contract['protocol'])+'\nPACKAGE_VERSION = '+repr(package_version)+'\nCONTRACT_SHA256 = '+repr(hashlib.sha256(__import__('json').dumps(contract,sort_keys=True).encode()).hexdigest())+'\nCATALOG: dict[str,_Entry] = '+pprint.pformat(catalog,width=120,sort_dicts=True)+'\n', 'client/python/zipzi/docs/reference.md':'\n'.join(reference)+'\n'}
     result['client/python/zipzi/_generated/catalog.py']=result['client/python/zipzi/_generated/catalog.py'].replace(
         'CONTRACT_SHA256 = ', 'CLIENT_SOURCE_SHA256 = '+repr(source_sha)+'\nCONTRACT_SHA256 = ',1)
     return result

@@ -55,6 +55,9 @@ impl Entry {
         for state in session.views.values_mut() {
             state.revision += 1;
         }
+        // Busy unbound the viewports and retired their GPU images. A paused
+        // animation needs a new request even when IO did not change its pose.
+        session.animation.playback.barrier();
         self.state = EntryState::Ready(session);
         close
     }

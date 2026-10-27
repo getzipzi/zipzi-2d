@@ -52,14 +52,12 @@ impl RuntimeHost {
         &self,
         job: zipzi_runtime::JobId,
     ) -> zipzi_runtime::Result<zipzi_runtime::Work> {
-        let dispatched = self.write().take_work(job);
-        match dispatched {
+        let mut runtime = self.write();
+        match runtime.take_work(job) {
             Ok(work) => Ok(work),
             Err(error) => {
-                self.write().cancel_job(self.client_id(), job)?;
-                let work = self.write().take_work(job)?;
-                self.write().complete(work.run());
-                self.write().release_job(self.client_id(), job)?;
+                runtime.cancel_queued_job(self.client_id(), job)?;
+                runtime.release_job(self.client_id(), job)?;
                 Err(error)
             }
         }

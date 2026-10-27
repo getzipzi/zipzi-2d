@@ -2,6 +2,14 @@
 /// shared document content per holder; these are not RSS or GPU limits.
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct RuntimeLimits {
+    /// Maximum independent frozen animation Previews owned by one client.
+    pub previews_per_client: usize,
+    /// Conservative aggregate Preview storage limit, including replay/cache workspace.
+    pub preview_bytes: usize,
+    /// Maximum retained activations per Preview; Reset retains schedules.
+    pub preview_schedule_entries: usize,
+    /// SDK checkpoint-cache budget per Preview; transient replay state is charged separately.
+    pub preview_seek_cache_bytes: usize,
     /// Maximum records returned by one collection page or selected batch.
     pub collection_records: usize,
     /// Maximum escaped metadata bytes in one collection page.
@@ -58,6 +66,10 @@ pub struct RuntimeLimits {
 impl Default for RuntimeLimits {
     fn default() -> Self {
         Self {
+            previews_per_client: 8,
+            preview_bytes: 128 << 20,
+            preview_schedule_entries: 4096,
+            preview_seek_cache_bytes: 2 << 20,
             collection_records: 256,
             collection_bytes: 256 << 10,
             collection_scan: 16384,

@@ -2,7 +2,7 @@
 from .._calls import register_request
 
 def register() -> None:
-    from .. import _lifecycle as lifecycle, resources, references, events
+    from .. import _lifecycle as lifecycle, resources, references, events, animation
     from ..buffers import Buffer
     from .._owned import Owned
     register_request(lifecycle.Runtime.close)
@@ -15,6 +15,7 @@ def register() -> None:
     register_request(lifecycle.Sessions.open)
     register_request(lifecycle.Sessions.import_)
     register_request(lifecycle.Sessions.subscribe)
+    register_request(lifecycle.Session.preview)
     register_request(lifecycle.Session.edit)
     register_request(lifecycle.Session.plan)
     register_request(lifecycle.Session.plan_async)
@@ -35,6 +36,7 @@ def register() -> None:
     register_request(lifecycle.Project.export)
     register_request(lifecycle.Project.replace)
     register_request(lifecycle.Project.open)
+    register_request(lifecycle.Edit.preview)
     register_request(lifecycle.Edit.apply)
     register_request(lifecycle.Edit.apply_many)
     register_request(lifecycle.Edit.plan)
@@ -48,6 +50,8 @@ def register() -> None:
     register_request(lifecycle.Modeling.records)
     register_request(lifecycle.Modeling.sample)
     register_request(lifecycle.Modeling.sample_async)
+    register_request(lifecycle.Modeling.spatial)
+    register_request(lifecycle.Modeling.observe)
     register_request(resources.Resources.prepare_image)
     register_request(resources.Resources.prepare_buffer)
     register_request(resources.Resources.load_png)
@@ -56,6 +60,11 @@ def register() -> None:
     register_request(resources.PreparedImage.pixels)
     register_request(Buffer.read)
     register_request(Owned.close)
+    register_request(animation.Preview.info)
+    register_request(animation.Preview.apply)
+    register_request(animation.Preview.sample)
+    register_request(animation.Preview.seek)
+    register_request(animation.Preview.advance_to)
     register_request(references.ObjectRef.resolve)
     register_request(references.ObjectRef.label)
     register_request(references.ObjectRef.capabilities)

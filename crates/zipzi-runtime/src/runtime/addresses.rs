@@ -32,6 +32,12 @@ impl Runtime {
             }
             S::ResourceName { id } => A::ResourceName(sdk.resource_name_address(&id)?),
             S::AttachmentPath { id } => A::AttachmentPath(sdk.attachment_path_address(&id)?),
+            S::MotionRegistration { id } => {
+                A::MotionRegistration(sdk.motion_registration_address(&id)?)
+            }
+            S::ExpressionEntry { id } => A::ExpressionEntry(sdk.expression_entry_address(&id)?),
+            S::Physics { id } => A::Physics(sdk.physics_field_address(&id)?),
+            S::Pose { id } => A::Pose(sdk.pose_field_address(&id)?),
             S::Document { field } => A::Document(sdk.document_field_address(field)?),
         };
         let token = FieldAddressId::from_parts(self.instance, self.serial());
@@ -124,6 +130,18 @@ impl Runtime {
             (A::Document(a), P::Document { value }) => {
                 zipzi_sdk::ModelingPlan::Document(sdk.plan_document_field_patch(a, value)?)
             }
+            (A::MotionRegistration(a), P::MotionRegistration { entry }) => {
+                zipzi_sdk::ModelingPlan::Motion(sdk.plan_motion_registration_patch(a, entry)?)
+            }
+            (A::ExpressionEntry(a), P::ExpressionEntry { fields }) => {
+                zipzi_sdk::ModelingPlan::Expression(sdk.plan_expression_entry_patch(a, fields)?)
+            }
+            (A::Physics(a), P::Physics { changes }) => {
+                zipzi_sdk::ModelingPlan::Physics(sdk.plan_physics_field_patch(a, changes)?)
+            }
+            (A::Pose(a), P::Pose { fields }) => {
+                zipzi_sdk::ModelingPlan::Pose(sdk.plan_pose_field_patch(a, fields)?)
+            }
             _ => return Err(RuntimeError::InvalidReference),
         };
         let report = plan.report();
@@ -176,6 +194,10 @@ impl Runtime {
             D::Content => C::Content(sdk.scene_content_capabilities(h)?),
             D::References => C::References(sdk.reference_capabilities(h)?),
             D::Resource => C::Resource(sdk.resource_capabilities(h)?),
+            D::Motion => C::Motion(sdk.motion_capabilities(h)?),
+            D::Expression => C::Expression(sdk.expression_capabilities(h)?),
+            D::Physics => C::Physics(sdk.physics_capabilities(h)?),
+            D::Pose => C::Pose(sdk.pose_capabilities(h)?),
             D::Attachment => C::Attachment(sdk.attachment_capabilities(h)?),
         })
     }
@@ -194,6 +216,15 @@ impl Runtime {
                 zipzi_sdk::AuthoringCollection::Organization(collection)
             }
             Q::References { collection } => zipzi_sdk::AuthoringCollection::References(collection),
+            Q::Motion { collection } => zipzi_sdk::AuthoringCollection::Motion(collection),
+            Q::MotionGroups => zipzi_sdk::AuthoringCollection::MotionGroups,
+            Q::Clips => zipzi_sdk::AuthoringCollection::Clips,
+            Q::Expressions => zipzi_sdk::AuthoringCollection::Expressions,
+            Q::ExpressionEntries { expression_id } => {
+                zipzi_sdk::AuthoringCollection::ExpressionEntries { expression_id }
+            }
+            Q::Physics { collection } => zipzi_sdk::AuthoringCollection::Physics(collection),
+            Q::Pose { collection } => zipzi_sdk::AuthoringCollection::Pose(collection),
             Q::Resources => zipzi_sdk::AuthoringCollection::Resources,
             Q::Attachments => zipzi_sdk::AuthoringCollection::Attachments,
             Q::Document { field } => return Ok(C::Document(sdk.document_field_capability(field))),

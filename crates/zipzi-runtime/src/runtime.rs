@@ -18,16 +18,19 @@ mod addresses;
 mod references;
 pub(crate) mod resources;
 pub use references::{LabelAddressInfo, ObjectRefInfo};
+mod observation;
+pub(crate) mod previews;
 mod sampling;
+mod spatial;
 mod typed;
 use crate::events::EventLog;
-use crate::jobs::Task;
+use crate::jobs::{Task, WorkOutcome};
 use crate::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use zipzi_core::{Canvas, Document, ModelSetup, Vec2};
 use zipzi_sdk::{AuthoringSession, AuthoringSnapshot, EditReceipt, EditSession, Version};
@@ -66,6 +69,9 @@ struct JobEntry {
     read_bytes: usize,
     read_only: bool,
     plan_result: bool,
+    gpu: bool,
+    // Admission lives across yields until worker-side destruction completes.
+    gpu_resident: bool,
 }
 
 pub struct SessionSubscription {
@@ -83,6 +89,9 @@ pub struct RegistrySubscription {
 }
 
 pub struct Runtime {
+    gpu_available: Option<bool>,
+    gpu_error: Option<String>,
+    previews: HashMap<PreviewId, previews::PreviewEntry>,
     editor_contexts: HashMap<SessionId, crate::editor_context::EditorContext>,
     #[cfg(feature = "test-support")]
     control: Arc<crate::test_support::Control>,
@@ -96,6 +105,7 @@ pub struct Runtime {
     edits: HashMap<EditId, EditEntry>,
     jobs: HashMap<JobId, JobEntry>,
     queue: VecDeque<Work>,
+    read_turns: VecDeque<ClientId>,
     registry: EventLog,
     image_budget: zipzi_project::ImageMemoryBudget,
     plans: HashMap<PlanId, modeling::PlanEntry>,
@@ -122,6 +132,9 @@ impl Runtime {
         let image_budget = zipzi_project::ImageMemoryBudget::new(limits.image_bytes);
         image_budget.bind_host_budget(0, limits.accounted_bytes);
         Self {
+            gpu_available: None,
+            gpu_error: None,
+            previews: HashMap::new(),
             #[cfg(feature = "test-support")]
             control: Arc::default(),
             image_budget,
@@ -142,6 +155,7 @@ impl Runtime {
             edits: HashMap::new(),
             jobs: HashMap::new(),
             queue: VecDeque::new(),
+            read_turns: VecDeque::new(),
             registry,
         }
     }
@@ -233,6 +247,14 @@ impl Runtime {
     /// Explicit client expiry; transport grace periods belong to R3. Committing
     /// jobs and their results survive, ordinary unsubmitted candidates do not.
     pub fn release_client(&mut self, client: ClientId) {
+        for entry in self.previews.values().filter(|p| p.client == client) {
+            if let Some(job) = entry.busy {
+                if let Some(job) = self.jobs.get(&job) {
+                    job.cancel.store(true, Ordering::Release);
+                }
+            }
+        }
+        self.previews.retain(|_, p| p.client != client);
         self.clients.remove(&client);
         self.object_refs.retain(|_, r| r.client != client);
         self.field_addresses.retain(|_, r| r.client != client);
@@ -274,8 +296,38 @@ impl Runtime {
         {
             return Err(RuntimeError::Busy);
         }
+        self.detach_editor_view(client, session)
+    }
+    /// Detach a host-owned view while its background Job continues. Unlike the
+    /// public client Session detach operation, this transfers no job ownership
+    /// and leaves Job results discoverable by the application host.
+    pub fn detach_editor_view(&mut self, client: ClientId, session: SessionId) -> Result<()> {
+        self.client(client)?;
+        if !self.entry(session)?.users.contains(&client) {
+            return Err(RuntimeError::WrongOwner);
+        }
+        if self
+            .edits
+            .values()
+            .any(|e| e.session == session && e.client == client)
+        {
+            return Err(RuntimeError::Busy);
+        }
+        // A view's independent simulations are no longer presented. Jobs keep
+        // their frozen roots until cancellation/completion, as on client expiry.
+        for preview in self
+            .previews
+            .values()
+            .filter(|p| p.client == client && p.source.source.session() == session)
+        {
+            if let Some(job) = preview.busy.and_then(|id| self.jobs.get(&id)) {
+                job.cancel.store(true, Ordering::Release);
+            }
+        }
         self.object_refs
             .retain(|_, r| r.session != session || r.client != client);
+        self.previews
+            .retain(|_, p| p.source.source.session() != session || p.client != client);
         self.field_addresses
             .retain(|_, r| r.session != session || r.client != client);
         self.plans
@@ -809,6 +861,8 @@ impl Runtime {
         self.object_refs.retain(|_, r| r.session != session);
         self.field_addresses.retain(|_, r| r.session != session);
         self.editor_contexts.remove(&session);
+        self.previews
+            .retain(|_, p| p.source.source.session() != session);
         let mut entry = self.sessions.remove(&session).unwrap();
         if let Some(path) = &entry.info.path {
             self.paths.remove(path);
@@ -1015,6 +1069,8 @@ impl Runtime {
                 read_bytes: 0,
                 read_only: false,
                 plan_result: false,
+                gpu: false,
+                gpu_resident: false,
             },
         );
         if let Some(target) = target {
@@ -1043,8 +1099,9 @@ impl Runtime {
         self.trim_events();
         Ok(job)
     }
-    /// FIFO dispatch. Executors and completion delivery are host-owned, with no
-    /// dependency on windows. Rejected submissions retain ownership in the queue.
+    /// Publications have a reserved slot; reads rotate between clients, then
+    /// FIFO between that client's jobs/continuations. Hosts execute run_quantum
+    /// and publish each completion. Rejection preserves the dispatch turn.
     pub fn dispatch(&mut self, executor: &mut impl Executor) {
         let mut running = self
             .jobs
@@ -1055,8 +1112,7 @@ impl Runtime {
             })
             .count();
         while running < self.limits.running_jobs {
-            // Keep an executor slot available for interactive publication. Read
-            // batches are FIFO, and cannot occupy every worker of a multi-worker host.
+            // Keep an executor slot available for interactive publication.
             let running_reads = self
                 .jobs
                 .values()
@@ -1071,26 +1127,61 @@ impl Runtime {
                 .iter()
                 .position(|w| !self.jobs[&w.job].read_only)
                 .or_else(|| {
-                    (running_reads < self.limits.running_jobs.saturating_sub(1).max(1)).then_some(0)
+                    (running_reads < self.limits.running_jobs.saturating_sub(1).max(1))
+                        .then(|| self.next_read_index())
+                        .flatten()
                 });
-            let Some(work) = index.and_then(|i| self.queue.remove(i)) else {
+            let Some(index) = index else {
                 break;
             };
+            let work = self.queue.remove(index).unwrap();
             let job = work.job;
+            let client = work.client;
             match executor.submit(work) {
                 Ok(()) => {
                     let entry = self.jobs.get_mut(&job).unwrap();
                     if entry.info.state != JobState::Cancelling {
                         entry.info.state = JobState::Running;
                     }
+                    if entry.read_only {
+                        entry.gpu_resident = entry.gpu;
+                        self.read_turns.pop_front();
+                        self.read_turns.push_back(client);
+                    }
                     running += 1;
                 }
                 Err(work) => {
-                    self.queue.push_front(*work);
+                    self.queue.insert(index, *work);
                     break;
                 }
             }
         }
+    }
+    fn read_dispatchable(&self, work: &Work) -> bool {
+        let entry = &self.jobs[&work.job];
+        entry.read_only
+            && (!entry.gpu
+                || entry.gpu_resident
+                || self.jobs.values().filter(|j| j.gpu_resident).count()
+                    < self.limits.running_jobs.saturating_sub(1).max(1))
+    }
+    fn next_read_index(&mut self) -> Option<usize> {
+        let eligible: Vec<_> = self
+            .queue
+            .iter()
+            .filter(|w| self.read_dispatchable(w))
+            .map(|w| w.client)
+            .collect();
+        self.read_turns.retain(|client| eligible.contains(client));
+        for client in eligible {
+            if !self.read_turns.contains(&client) {
+                self.read_turns.push_back(client);
+            }
+        }
+        let client = self.read_turns.front()?;
+        self.queue
+            .iter()
+            .position(|w| w.client == *client && self.read_dispatchable(w))
     }
     pub fn job_info(&self, client: ClientId, job: JobId) -> Result<JobInfo> {
         self.client(client)?;
@@ -1109,7 +1200,11 @@ impl Runtime {
         }
         let queued = self.jobs[&job]
             .read_only
-            .then(|| self.queue.iter().position(|w| w.job == job))
+            .then(|| {
+                self.queue.iter().position(|w| {
+                    w.job == job && !matches!(w.task, Task::Read(crate::jobs::ReadTask::Batch(_)))
+                })
+            })
             .flatten();
         if let Some(index) = queued {
             let work = self.queue.remove(index).unwrap();
@@ -1120,7 +1215,7 @@ impl Runtime {
                 base: work.base,
                 session: None,
                 transfer: work.transfer,
-                result: Err(RuntimeError::Cancelled),
+                outcome: WorkOutcome::Complete(Err(RuntimeError::Cancelled)),
             });
         }
         Ok(())
@@ -1154,10 +1249,34 @@ impl Runtime {
             base,
             session: returned,
             transfer: _transfer,
-            mut result,
+            outcome,
         } = completion;
         let Some(record) = self.jobs.get(&job) else {
             return false;
+        };
+        let mut result = match outcome {
+            WorkOutcome::Complete(result) => result,
+            WorkOutcome::Yielded(work) => {
+                if !record.read_only
+                    || job.runtime_instance() != self.instance
+                    || record.info.client != client
+                    || record.info.session != session
+                    || record.base != base
+                    || record.info.state.is_terminal()
+                    || self.queue.iter().any(|w| w.job == job)
+                {
+                    return false;
+                }
+                if record.cancel.load(Ordering::Acquire) || !self.clients.contains(&client) {
+                    // The continuation may own GPU objects and a large partial
+                    // result. Its next worker step observes cancellation and
+                    // destroys them before publishing the terminal completion.
+                    record.cancel.store(true, Ordering::Release);
+                    self.jobs.get_mut(&job).unwrap().info.state = JobState::Cancelling;
+                }
+                self.queue.push_back(*work);
+                return true;
+            }
         };
         if record.read_only {
             return self.complete_read(job, client, session, base, result);
@@ -1297,6 +1416,11 @@ impl Runtime {
                     .filter_map(|j| j.read_source.as_ref())
                     .map(|s| s.snapshot.document().estimated_content_bytes()),
             )
+            .chain(
+                self.previews
+                    .values()
+                    .map(|p| p.source.snapshot.document().estimated_content_bytes()),
+            )
             .fold(0, usize::saturating_add)
     }
     fn history_bytes(&self) -> usize {
@@ -1327,6 +1451,7 @@ impl Runtime {
                     .saturating_add(self.prepared_images.len().saturating_mul(1024))
                     .saturating_add(self.editor_contexts.len().saturating_mul(128 << 10))
                     .saturating_add(self.reference_bytes())
+                    .saturating_add(self.preview_bytes())
                     .saturating_add(self.candidate_bytes())
                     .saturating_add(self.frozen_bytes())
                     .saturating_add(
@@ -1419,7 +1544,7 @@ mod tests {
             base,
             session: returned,
             transfer: None,
-            result: Err(RuntimeError::WorkerPanic("injected".into())),
+            outcome: WorkOutcome::Complete(Err(RuntimeError::WorkerPanic("injected".into()))),
         };
         let wrong = SessionId {
             runtime: runtime.instance_id(),

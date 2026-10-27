@@ -32,6 +32,7 @@ DOMAINS = {
     "document_authoring": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "authoring_collections": ("identity-collections", "R4", ["A04", "A05", "A15"]),
     "geometry": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
+    "manual_mesh": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
     "alpha_mesh": ("geometry-binding", "R4", ["A04", "A15", "A17"]),
     "binding_authoring": ("geometry-binding", "R4", ["A04", "A05", "A15", "A17"]),
     "scene_authoring": ("scene-document", "R4", ["A04", "A05", "A15"]),
@@ -215,10 +216,15 @@ def rust_contract(row: dict, path: Path) -> dict:
         source = "borrowed formal/candidate document or typed scene input"
         effect = "metadata projection/admission or SDK intent construction; no publication"
         lifecycle = "Rust adapter helper; public Python uses typed values and Runtime handlers"
+    if owner in {"ModelingSampler", "SpatialSampler"}:
+        classification, source = "local-helper", "immutable borrowed/owned authoring snapshot"
+        effect = "SDK resumable sampling; no formal publication"
+        lifecycle = "worker-owned continuation; discard after result/error; not a client token"
     if name.startswith("plan_") or owner.endswith("Plan"):
         lifecycle = "Plan owned by client/session/source; base Version checked at execute; explicit release"
     expensive = (name.startswith(("import_", "export_", "plan_", "execute_", "prepare_"))
-                 or name in {"save_project", "open_project", "commit", "commit_to", "read_snapshot", "candidate_snapshot", "remesh_rectangle_grid"})
+                 or name in {"save_project", "open_project", "commit", "commit_to", "read_snapshot", "candidate_snapshot", "remesh_rectangle_grid"}
+                 or owner in {"ModelingSampler", "SpatialSampler"})
     if owner == "AuthoringSession" and name == "check_version":
         classification = "host-only"
         effect = "version admission check; no mutation"
@@ -258,7 +264,10 @@ def collect(root: Path = ROOT, *, shared_only: bool = False) -> dict:
                 continue
             rows.append(dict(id=f"sdk::{method['owner']}.{method['name']}",
                 location=str(path.relative_to(ROOT)), **method, domain="observe-preview",
-                classification="local-helper" if method["owner"] in {"free", "CompiledCurve", "CompiledSegment"} else "connected",
+                # Runtime consumes this estimate for admission; it is not a
+                # separate client operation or an omitted Preview capability.
+                classification="host-only" if method["owner"] == "MotionPreview" and method["name"] == "canonical_motion_output_bytes" else
+                    "local-helper" if method["owner"] in {"free", "CompiledCurve", "CompiledSegment"} or method["name"] == "matches_document" else "connected",
                 stage="R5", source_ref="explicit curve arguments" if method["owner"] in {"free", "CompiledCurve", "CompiledSegment"} else "independent frozen Preview",
                 effect="no formal history", lifecycle="client-owned Preview or local curve value; explicit release",
                 bulk="ordered schedule and sample arrays", scheduling="captured source; bounded replay worker",
@@ -307,7 +316,9 @@ def value_types() -> list[dict]:
                     line=source.count("\n", 0, match.start()) + 1,
                     classification="backend-reference" if reference else "local-value",
                     contract="route opaque lifetime/version state; do not serialize Rust/private fields" if reference else "explicit public value DTO; not native memory layout")
-                if not reference:
+                if name in {"ModelingSampler", "SpatialSampler"}:
+                    row.update(classification="local-helper", contract="SDK worker-owned sampling state; not a serializable DTO or client token")
+                elif not reference:
                     row["definition"] = source[match.start():end + 1]
                 result.append(row)
     return sorted(result, key=lambda row: (row["name"], row["location"]))

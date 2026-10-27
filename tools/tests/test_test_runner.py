@@ -85,7 +85,7 @@ sys.exit(int(os.environ.get('TEST_EXIT','0')))
         result, calls = self.run_entrypoint("acceptance", TEST_EXIT="9")
         self.assertEqual(result.returncode, 9)
         self.assertEqual(len(calls), 1)
-        for target in ["acceptance", "native_render", "headless_screenshot", "animation_acceptance", "timeline_acceptance", "runtime_ipc_acceptance"]:
+        for target in ["acceptance", "native_render", "headless_screenshot", "animation_acceptance", "timeline_acceptance", "runtime_ipc_acceptance", "runtime_handoff_acceptance"]:
             self.assertIn(target, calls[0]["args"])
 
     def test_acceptance_prepares_client_when_no_interpreter_was_supplied(self):

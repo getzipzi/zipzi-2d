@@ -84,3 +84,9 @@ name = "runtime_ipc_acceptance"
 path = "tests/runtime_ipc_acceptance.rs"
 harness = false
 required-features = ["test-support"]
+
+[[test]]
+name = "runtime_handoff_acceptance"
+path = "tests/runtime_handoff_acceptance.rs"
+harness = false
+required-features = ["test-support"]

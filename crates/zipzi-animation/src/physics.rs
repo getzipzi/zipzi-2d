@@ -64,26 +64,53 @@ struct RigState {
 
 /// Read-only observation of one rig. Positions are the latest solved physics
 /// step, not model-space attachment points or interpolated render geometry.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct PhysicsRigSnapshot {
+    /// Native physics group UUID.
     pub id: String,
+    /// Input channel UUIDs aligned with inputs.
     pub input_ids: Vec<String>,
+    /// Output channel UUIDs aligned with outputs.
     pub output_ids: Vec<String>,
+    /// Particle node UUIDs aligned with particles.
     pub node_ids: Vec<String>,
+    /// Latest solved particle XY positions in the SDK solver coordinate system.
     pub particles: Vec<[f32; 2]>,
     /// Weighted, normalized angle in degrees used by the latest solved step.
     /// Rotate the Y-down solver coordinates by this angle to display a fixed
     /// gravity direction with rotating input axes.
     pub input_angle: f32,
+    /// Latest normalized input values in channel order.
     pub inputs: Vec<f32>,
+    /// Latest output observations; None marks an unavailable channel.
     pub outputs: Vec<Option<PhysicsOutputSnapshot>>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct PhysicsOutputSnapshot {
+    /// Raw output value before weight and parameter clamping.
     pub raw: f32,
+    /// Parameter value immediately before this output.
     pub before: f32,
+    /// Parameter value after applying this output and clamping.
     pub after: f32,
+    /// Whether the SDK clamped this output to the target parameter range.
     pub clamped: bool,
 }
 

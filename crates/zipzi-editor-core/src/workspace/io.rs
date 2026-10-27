@@ -410,7 +410,7 @@ impl Editor {
         let session = self.entry(id)?.hosted_session_id();
         self.runtime
             .write()
-            .detach_session(self.runtime.client_id(), session)?;
+            .detach_editor_view(self.runtime.client_id(), session)?;
         let index = self.documents.iter().position(|e| e.id == id).unwrap();
         self.documents.remove(index);
         if self.active == Some(id) {

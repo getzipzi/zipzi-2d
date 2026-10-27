@@ -409,6 +409,12 @@ pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Docum
 /// and an ungrouped looping clip.
 #[allow(dead_code)]
 pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
+    animation_document_with_sound_bytes(None)
+}
+
+pub fn animation_document_with_sound_bytes(
+    sound: Option<&[u8]>,
+) -> anyhow::Result<(Document, TempDir)> {
     use zipzi_core::document::{
         ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget, MotionClip,
         MotionGroup, MotionKey, MotionRegistration, MotionSegment, MotionTrack, MotionTrackTarget,
@@ -465,6 +471,17 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
         opaque_source_content_hash: None,
     };
     session.edit("Animation fixture", None, |edit| {
+        let sound = if let Some(bytes) = sound {
+            let id = Uuid::new_v4().to_string();
+            edit.set_package_attachments(vec![zipzi_core::document::PackageAttachment {
+                id: id.clone(),
+                path: "test.wav".into(),
+                bytes: Some(std::sync::Arc::new(bytes.to_vec())),
+            }])?;
+            zipzi_core::document::AttachmentRef::Resolved { attachment_id: id }
+        } else {
+            "test.wav".into()
+        };
         for (name, blend, value) in [
             ("Add", ExpressionBlend::Add, 0.3),
             ("Multiply", ExpressionBlend::Multiply, 0.5),
@@ -503,7 +520,7 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
                         clip_id: clip.clone(),
                         fade_in: Some(fade),
                         fade_out: Some(0.),
-                        sound: Some("test.wav".into()),
+                        sound: Some(sound.clone()),
                         extensions: Default::default(),
                     })
                     .collect(),

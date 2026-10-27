@@ -117,11 +117,11 @@ class Reader:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
 
-INPUT_SIGNATURE = 'f6f82a33891ec7e69d6bd66acda4d31b'
+INPUT_SIGNATURE = 'b252887103a2a321a726745f003bae57'
 MESH_SIGNATURE = '6f011cf86dfd4d3f0ee05751e6a6cc13'
 BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
 SAMPLE_SIGNATURE = '33cfb73ff96616c25d9d5f06db944d7e'
-OUTPUT_SIGNATURE = 'aea652bacfef347a026e69670cce2126'
+OUTPUT_SIGNATURE = '8cd0ae2d11ab948c6e8eb66fa80e5210'
 
 def _point(value: object) -> tuple[object, object]:
     if isinstance(value, tuple):
@@ -232,30 +232,60 @@ def _write_modelingcommand(value: object, w: Writer) -> None:
     elif tag=='attachment':
         w.u32(31)
         _write_attachmentedit(_field(value, 'intent'), w)
-    elif tag=='replace_model_setup':
+    elif tag=='motion':
         w.u32(32)
+        _write_motionedit(_field(value, 'intent'), w)
+    elif tag=='expression':
+        w.u32(33)
+        _write_expressionedit(_field(value, 'intent'), w)
+    elif tag=='physics':
+        w.u32(34)
+        _write_physicsedit(_field(value, 'intent'), w)
+    elif tag=='pose':
+        w.u32(35)
+        _write_poseedit(_field(value, 'intent'), w)
+    elif tag=='create_motion':
+        w.u32(36)
+        _write_motionclip(_field(value, 'clip'), w)
+    elif tag=='replace_motion':
+        w.u32(37)
+        _write_motionclip(_field(value, 'clip'), w)
+    elif tag=='create_expression':
+        w.u32(38)
+        _write_expressionasset(_field(value, 'expression'), w)
+    elif tag=='replace_expression':
+        w.u32(39)
+        _write_expressionasset(_field(value, 'expression'), w)
+    elif tag=='set_physics':
+        w.u32(40)
+        _write_physicsasset(_field(value, 'physics'), w)
+    elif tag=='set_pose':
+        w.u32(41)
+        _write_poseasset(_field(value, 'pose'), w)
+    elif tag=='replace_model_setup':
+        w.u32(42)
         _write_modelsetup(_field(value, 'setup'), w)
     elif tag=='replace_hierarchy_order':
-        w.u32(33)
+        w.u32(43)
         _write_hierarchyorder(_field(value, 'order'), w)
     elif tag=='replace_editor_state':
-        w.u32(34)
+        w.u32(44)
         _write_editorstate(_field(value, 'state'), w)
     elif tag=='replace_draw_order_groups':
-        w.u32(35)
+        w.u32(45)
         items0=sequence(_field(value, 'groups'))
         w.u32(len(items0))
         for item0 in items0:
             _write_drawordergroup(item0, w)
     elif tag=='erase_object':
-        w.u32(36)
+        w.u32(46)
         w.text(_field(value, 'id'))
     elif tag=='rename_mesh':
-        w.u32(37)
+        w.u32(47)
         w.text(_field(value, 'id'))
         w.text(_field(value, 'name'))
     elif tag=='update_positions':
-        w.u32(38)
+        w.u32(48)
         w.text(_field(value, 'id'))
         items0=sequence(_field(value, 'vertex_ids'))
         w.u32(len(items0))
@@ -264,24 +294,24 @@ def _write_modelingcommand(value: object, w: Writer) -> None:
         w.u32(len(items0))
         w.numeric('f', tuple(v for item in items0 for v in _point(item)))
     elif tag=='set_mesh_keyform':
-        w.u32(39)
+        w.u32(49)
         w.text(_field(value, 'id'))
         _write_meshkeyform(_field(value, 'keyform'), w)
     elif tag=='set_scene_keyform':
-        w.u32(40)
+        w.u32(50)
         w.text(_field(value, 'id'))
         _write_scenekeyform(_field(value, 'keyform'), w)
     elif tag=='remesh_rectangle_grid':
-        w.u32(41)
+        w.u32(51)
         w.text(_field(value, 'id'))
         w.scalar('Q', _field(value, 'columns'))
         w.scalar('Q', _field(value, 'rows'))
     elif tag=='replace_topology':
-        w.u32(42)
+        w.u32(52)
         _write_geometrysnapshot(_field(value, 'source'), w)
         _write_topologyreplacement(_field(value, 'replacement'), w)
     elif tag=='manual_mesh':
-        w.u32(43)
+        w.u32(53)
         w.text(_field(value, 'mesh_id'))
         _write_sourceref(_field(value, 'expected'), w)
         _write_manualmeshoperation(_field(value, 'operation'), w)
@@ -2509,6 +2539,1252 @@ def _read_attachmentref(r: Reader) -> m.AttachmentRef:
         return m.AttachmentRefUnresolved(path=r.text())
     raise ValueError("Unknown binary AttachmentRef variant")
 
+def _write_motionedit(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='create':
+        w.u32(0)
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+        w.text(_field(value, 'registration_id'))
+        _write_motioncontainer(_field(value, 'destination'), w)
+    elif tag=='create_group':
+        w.u32(1)
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+    elif tag=='rename_group':
+        w.u32(2)
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+    elif tag=='reorder_groups':
+        w.u32(3)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    elif tag=='register':
+        w.u32(4)
+        _write_motionregistration(_field(value, 'entry'), w)
+        _write_motioncontainer(_field(value, 'destination'), w)
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='patch_registration':
+        w.u32(5)
+        w.text(_field(value, 'id'))
+        _write_motionregistration(_field(value, 'expected'), w)
+        _write_motionregistration(_field(value, 'entry'), w)
+    elif tag=='move_registrations':
+        w.u32(6)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        _write_motioncontainer(_field(value, 'destination'), w)
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='duplicate_registrations':
+        w.u32(7)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        _write_motioncontainer(_field(value, 'destination'), w)
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='delete_registrations':
+        w.u32(8)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    elif tag=='dissolve_group':
+        w.u32(9)
+        w.text(_field(value, 'id'))
+    elif tag=='delete_group':
+        w.u32(10)
+        w.text(_field(value, 'id'))
+    elif tag=='duplicate_group':
+        w.u32(11)
+        w.text(_field(value, 'source'))
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+    elif tag=='duplicate_clip':
+        w.u32(12)
+        w.text(_field(value, 'source'))
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+        w.text(_field(value, 'registration_id'))
+        _write_motioncontainer(_field(value, 'destination'), w)
+    elif tag=='delete_clip':
+        w.u32(13)
+        w.text(_field(value, 'id'))
+    elif tag=='reorder_tracks':
+        w.u32(14)
+        w.text(_field(value, 'clip'))
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    elif tag=='create_track':
+        w.u32(15)
+        w.text(_field(value, 'clip'))
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'key_id'))
+        w.scalar('f', _field(value, 'time'))
+    elif tag=='set_track_target':
+        w.u32(16)
+        w.text(_field(value, 'id'))
+        _write_motiontracktarget(_field(value, 'target'), w)
+    elif tag=='move_tracks':
+        w.u32(17)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        w.text(_field(value, 'destination'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+        w.boolean(_field(value, 'copy'))
+    elif tag=='delete_tracks':
+        w.u32(18)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    elif tag=='transfer_keys':
+        w.u32(19)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        w.text(_field(value, 'destination_track'))
+        w.scalar('f', _field(value, 'time_offset'))
+        w.boolean(_field(value, 'copy'))
+    elif tag=='set_event':
+        w.u32(20)
+        w.text(_field(value, 'clip'))
+        _write_motionevent(_field(value, 'event'), w)
+    elif tag=='delete_events':
+        w.u32(21)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    elif tag=='move_events':
+        w.u32(22)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        w.text(_field(value, 'destination'))
+        w.scalar('f', _field(value, 'time_offset'))
+        w.boolean(_field(value, 'copy'))
+    else:
+        raise TypeError("Unexpected MotionEdit variant")
+
+def _write_motioncontainer(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='root':
+        w.u32(0)
+    elif tag=='group':
+        w.u32(1)
+        w.text(_field(value, 'value'))
+    else:
+        raise TypeError("Unexpected MotionContainer variant")
+
+def _write_motionregistration(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    w.text(_field(value, 'clip_id'))
+    if _field(value, 'fade_in') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_in'))
+    if _field(value, 'fade_out') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_out'))
+    if _field(value, 'sound') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_attachmentref(_field(value, 'sound'), w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_motionregistration(r: Reader) -> m.MotionRegistration:
+    return m.MotionRegistration(id=r.text(), clip_id=r.text(), fade_in=(number(r.scalar('f')) if r.optional() else None), fade_out=(number(r.scalar('f')) if r.optional() else None), sound=(_read_attachmentref(r) if r.optional() else None), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_motiontracktarget(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='unspecified':
+        w.u32(0)
+    elif tag=='model':
+        w.u32(1)
+        w.text(_field(value, 'runtime_id'))
+    elif tag=='parameter':
+        w.u32(2)
+        w.text(_field(value, 'parameter_id'))
+    elif tag=='part_opacity':
+        w.u32(3)
+        w.text(_field(value, 'part_id'))
+    elif tag=='unresolved':
+        w.u32(4)
+        w.text(_field(value, 'category'))
+        w.text(_field(value, 'runtime_id'))
+    else:
+        raise TypeError("Unexpected MotionTrackTarget variant")
+
+def _read_motiontracktarget(r: Reader) -> m.MotionTrackTarget:
+    tag=r.u32()
+    if tag==0:
+        return m.MotionTrackTargetUnspecified()
+    elif tag==1:
+        return m.MotionTrackTargetModel(runtime_id=r.text())
+    elif tag==2:
+        return m.MotionTrackTargetParameter(parameter_id=r.text())
+    elif tag==3:
+        return m.MotionTrackTargetPartOpacity(part_id=r.text())
+    elif tag==4:
+        return m.MotionTrackTargetUnresolved(category=r.text(), runtime_id=r.text())
+    raise ValueError("Unknown binary MotionTrackTarget variant")
+
+def _write_motionevent(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    w.scalar('f', _field(value, 'time'))
+    w.text(_field(value, 'value'))
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_motionevent(r: Reader) -> m.MotionEvent:
+    return m.MotionEvent(id=r.text(), time=number(r.scalar('f')), value=r.text(), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_expressionedit(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='create':
+        w.u32(0)
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+    elif tag=='create_entry':
+        w.u32(1)
+        w.text(_field(value, 'owner'))
+        w.text(_field(value, 'id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='patch_entry':
+        w.u32(2)
+        w.text(_field(value, 'id'))
+        _write_expressionentryfields(_field(value, 'expected'), w)
+        _write_expressionentryfields(_field(value, 'fields'), w)
+    elif tag=='move_entries':
+        w.u32(3)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        w.text(_field(value, 'destination'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='duplicate_entries':
+        w.u32(4)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        items0=sequence(_field(value, 'new_ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        w.text(_field(value, 'destination'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='delete_entries':
+        w.u32(5)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    elif tag=='duplicate':
+        w.u32(6)
+        w.text(_field(value, 'source'))
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+        items0=sequence(_field(value, 'entry_ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    elif tag=='delete':
+        w.u32(7)
+        w.text(_field(value, 'id'))
+    elif tag=='reorder':
+        w.u32(8)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    else:
+        raise TypeError("Unexpected ExpressionEdit variant")
+
+def _write_expressionentryfields(value: object, w: Writer) -> None:
+    _write_expressiontarget(_field(value, 'target'), w)
+    w.scalar('f', _field(value, 'value'))
+    if _field(value, 'blend') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_expressionblend(_field(value, 'blend'), w)
+
+def _write_expressiontarget(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='unspecified':
+        w.u32(0)
+    elif tag=='resolved':
+        w.u32(1)
+        w.text(_field(value, 'parameter_id'))
+    elif tag=='unresolved':
+        w.u32(2)
+        w.text(_field(value, 'runtime_id'))
+    else:
+        raise TypeError("Unexpected ExpressionTarget variant")
+
+def _read_expressiontarget(r: Reader) -> m.ExpressionTarget:
+    tag=r.u32()
+    if tag==0:
+        return m.ExpressionTargetUnspecified()
+    elif tag==1:
+        return m.ExpressionTargetResolved(parameter_id=r.text())
+    elif tag==2:
+        return m.ExpressionTargetUnresolved(runtime_id=r.text())
+    raise ValueError("Unknown binary ExpressionTarget variant")
+
+def _write_expressionblend(value: object, w: Writer) -> None:
+    tag=string(_field(value,"value"))
+    if tag=='add':
+        w.u32(0)
+    elif tag=='multiply':
+        w.u32(1)
+    elif tag=='overwrite':
+        w.u32(2)
+    else:
+        raise TypeError("Unexpected ExpressionBlend variant")
+
+def _read_expressionblend(r: Reader) -> m.ExpressionBlend:
+    tag=r.u32()
+    if tag==0:
+        return m.ExpressionBlend('add')
+    elif tag==1:
+        return m.ExpressionBlend('multiply')
+    elif tag==2:
+        return m.ExpressionBlend('overwrite')
+    raise ValueError("Unknown binary ExpressionBlend variant")
+
+def _write_physicsedit(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='create_group':
+        w.u32(0)
+        w.text(_field(value, 'asset_id'))
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='create_input':
+        w.u32(1)
+        w.text(_field(value, 'group_id'))
+        w.text(_field(value, 'id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='create_output':
+        w.u32(2)
+        w.text(_field(value, 'group_id'))
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'node_id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='insert_node':
+        w.u32(3)
+        w.text(_field(value, 'group_id'))
+        _write_physicsnode(_field(value, 'node'), w)
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='move_node':
+        w.u32(4)
+        w.text(_field(value, 'id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='duplicate_node':
+        w.u32(5)
+        w.text(_field(value, 'id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='patch':
+        w.u32(6)
+        _write_physicspatch(_field(value, 'patch'), w)
+    elif tag=='move_inputs':
+        w.u32(7)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        w.text(_field(value, 'group_id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='move_outputs':
+        w.u32(8)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        w.text(_field(value, 'group_id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+        items0=_mapping(_field(value, 'node_replacements'))
+        w.u32(len(items0))
+        for key0, value0 in items0.items():
+            w.text(key0)
+            w.text(value0)
+    elif tag=='reorder_groups':
+        w.u32(9)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='duplicate':
+        w.u32(10)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        if _field(value, 'group_id') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'group_id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='delete':
+        w.u32(11)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        items0=_mapping(_field(value, 'node_replacements'))
+        w.u32(len(items0))
+        for key0, value0 in items0.items():
+            w.text(key0)
+            w.text(value0)
+    else:
+        raise TypeError("Unexpected PhysicsEdit variant")
+
+def _write_physicsnode(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    _write_physicsvector(_field(value, 'position'), w)
+    w.scalar('f', _field(value, 'mobility'))
+    w.scalar('f', _field(value, 'delay'))
+    w.scalar('f', _field(value, 'acceleration'))
+    w.scalar('f', _field(value, 'radius'))
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicsnode(r: Reader) -> m.PhysicsNode:
+    return m.PhysicsNode(id=r.text(), position=_read_physicsvector(r), mobility=number(r.scalar('f')), delay=number(r.scalar('f')), acceleration=number(r.scalar('f')), radius=number(r.scalar('f')), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicsvector(value: object, w: Writer) -> None:
+    w.scalar('f', _field(value, 'X'))
+    w.scalar('f', _field(value, 'Y'))
+
+def _read_physicsvector(r: Reader) -> m.PhysicsVector:
+    return m.PhysicsVector(X=number(r.scalar('f')), Y=number(r.scalar('f')))
+
+def _write_physicspatch(value: object, w: Writer) -> None:
+    w.text(_field(value, 'asset_id'))
+    items0=sequence(_field(value, 'asset_changes'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_physicsassetproperty(item0, w)
+    if _field(value, 'rig') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_physicsrigpatch(_field(value, 'rig'), w)
+
+def _write_physicsassetproperty(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='Fps':
+        w.u32(0)
+        if _field(value, 'value') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.scalar('f', _field(value, 'value'))
+    else:
+        raise TypeError("Unexpected PhysicsAssetProperty variant")
+
+def _write_physicsrigpatch(value: object, w: Writer) -> None:
+    w.text(_field(value, 'group_id'))
+    items0=sequence(_field(value, 'changes'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_physicsproperty(item0, w)
+
+def _write_physicsproperty(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='Name':
+        w.u32(0)
+        w.text(_field(value, 'value'))
+    elif tag=='InputWeight':
+        w.u32(1)
+        w.text(_field(value, 'id'))
+        w.scalar('f', _field(value, 'value'))
+    elif tag=='InputAxis':
+        w.u32(2)
+        w.text(_field(value, 'id'))
+        _write_physicsaxis(_field(value, 'value'), w)
+    elif tag=='InputReflect':
+        w.u32(3)
+        w.text(_field(value, 'id'))
+        w.boolean(_field(value, 'value'))
+    elif tag=='InputParameter':
+        w.u32(4)
+        w.text(_field(value, 'id'))
+        _write_physicstarget(_field(value, 'target'), w)
+    elif tag=='OutputWeight':
+        w.u32(5)
+        w.text(_field(value, 'id'))
+        w.scalar('f', _field(value, 'value'))
+    elif tag=='OutputScale':
+        w.u32(6)
+        w.text(_field(value, 'id'))
+        w.scalar('f', _field(value, 'value'))
+    elif tag=='OutputAxis':
+        w.u32(7)
+        w.text(_field(value, 'id'))
+        _write_physicsaxis(_field(value, 'value'), w)
+    elif tag=='OutputReflect':
+        w.u32(8)
+        w.text(_field(value, 'id'))
+        w.boolean(_field(value, 'value'))
+    elif tag=='OutputParameter':
+        w.u32(9)
+        w.text(_field(value, 'id'))
+        _write_physicstarget(_field(value, 'target'), w)
+    elif tag=='OutputNode':
+        w.u32(10)
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'node_id'))
+    elif tag=='VertexPosition':
+        w.u32(11)
+        w.text(_field(value, 'id'))
+        _write_physicsvector(_field(value, 'value'), w)
+    elif tag=='VertexRadius':
+        w.u32(12)
+        w.text(_field(value, 'id'))
+        w.scalar('f', _field(value, 'value'))
+    elif tag=='VertexMobility':
+        w.u32(13)
+        w.text(_field(value, 'id'))
+        w.scalar('f', _field(value, 'value'))
+    elif tag=='VertexDelay':
+        w.u32(14)
+        w.text(_field(value, 'id'))
+        w.scalar('f', _field(value, 'value'))
+    elif tag=='VertexAcceleration':
+        w.u32(15)
+        w.text(_field(value, 'id'))
+        w.scalar('f', _field(value, 'value'))
+    elif tag=='PositionNormalization':
+        w.u32(16)
+        _write_physicsrange(_field(value, 'value'), w)
+    elif tag=='AngleNormalization':
+        w.u32(17)
+        _write_physicsrange(_field(value, 'value'), w)
+    else:
+        raise TypeError("Unexpected PhysicsProperty variant")
+
+def _write_physicsaxis(value: object, w: Writer) -> None:
+    tag=string(_field(value,"value"))
+    if tag=='X':
+        w.u32(0)
+    elif tag=='Y':
+        w.u32(1)
+    elif tag=='Angle':
+        w.u32(2)
+    else:
+        raise TypeError("Unexpected PhysicsAxis variant")
+
+def _read_physicsaxis(r: Reader) -> m.PhysicsAxis:
+    tag=r.u32()
+    if tag==0:
+        return m.PhysicsAxis('X')
+    elif tag==1:
+        return m.PhysicsAxis('Y')
+    elif tag==2:
+        return m.PhysicsAxis('Angle')
+    raise ValueError("Unknown binary PhysicsAxis variant")
+
+def _write_physicstarget(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='unspecified':
+        w.u32(0)
+    elif tag=='resolved':
+        w.u32(1)
+        w.text(_field(value, 'parameter_id'))
+    elif tag=='unresolved':
+        w.u32(2)
+        w.text(_field(value, 'runtime_id'))
+    else:
+        raise TypeError("Unexpected PhysicsTarget variant")
+
+def _read_physicstarget(r: Reader) -> m.PhysicsTarget:
+    tag=r.u32()
+    if tag==0:
+        return m.PhysicsTargetUnspecified()
+    elif tag==1:
+        return m.PhysicsTargetResolved(parameter_id=r.text())
+    elif tag==2:
+        return m.PhysicsTargetUnresolved(runtime_id=r.text())
+    raise ValueError("Unknown binary PhysicsTarget variant")
+
+def _write_physicsrange(value: object, w: Writer) -> None:
+    w.scalar('f', _field(value, 'Minimum'))
+    w.scalar('f', _field(value, 'Default'))
+    w.scalar('f', _field(value, 'Maximum'))
+
+def _read_physicsrange(r: Reader) -> m.PhysicsRange:
+    return m.PhysicsRange(Minimum=number(r.scalar('f')), Default=number(r.scalar('f')), Maximum=number(r.scalar('f')))
+
+def _write_poseedit(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='create':
+        w.u32(0)
+        w.text(_field(value, 'id'))
+    elif tag=='create_group':
+        w.u32(1)
+        w.text(_field(value, 'pose_id'))
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'name'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='create_entry':
+        w.u32(2)
+        w.text(_field(value, 'group_id'))
+        w.text(_field(value, 'id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='create_link':
+        w.u32(3)
+        w.text(_field(value, 'entry_id'))
+        w.text(_field(value, 'id'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='patch':
+        w.u32(4)
+        w.text(_field(value, 'id'))
+        _write_posefields(_field(value, 'expected'), w)
+        _write_posefields(_field(value, 'fields'), w)
+    elif tag=='move':
+        w.u32(5)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        _write_posecollection(_field(value, 'destination'), w)
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='duplicate':
+        w.u32(6)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+        _write_posecollection(_field(value, 'destination'), w)
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    elif tag=='delete':
+        w.u32(7)
+        items0=sequence(_field(value, 'ids'))
+        w.u32(len(items0))
+        for item0 in items0:
+            w.text(item0)
+    elif tag=='dissolve_group':
+        w.u32(8)
+        w.text(_field(value, 'id'))
+        w.text(_field(value, 'destination'))
+        if _field(value, 'before') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(_field(value, 'before'))
+    else:
+        raise TypeError("Unexpected PoseEdit variant")
+
+def _write_posefields(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='asset':
+        w.u32(0)
+        if _field(value, 'fade_in') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.scalar('f', _field(value, 'fade_in'))
+    elif tag=='group':
+        w.u32(1)
+        w.text(_field(value, 'name'))
+    elif tag=='entry':
+        w.u32(2)
+        _write_posepartref(_field(value, 'part'), w)
+    elif tag=='link':
+        w.u32(3)
+        _write_posepartref(_field(value, 'target'), w)
+    else:
+        raise TypeError("Unexpected PoseFields variant")
+
+def _write_posepartref(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='unspecified':
+        w.u32(0)
+    elif tag=='resolved':
+        w.u32(1)
+        w.text(_field(value, 'part_id'))
+    elif tag=='unresolved':
+        w.u32(2)
+        w.text(_field(value, 'runtime_id'))
+    else:
+        raise TypeError("Unexpected PosePartRef variant")
+
+def _read_posepartref(r: Reader) -> m.PosePartRef:
+    tag=r.u32()
+    if tag==0:
+        return m.PosePartRefUnspecified()
+    elif tag==1:
+        return m.PosePartRefResolved(part_id=r.text())
+    elif tag==2:
+        return m.PosePartRefUnresolved(runtime_id=r.text())
+    raise ValueError("Unknown binary PosePartRef variant")
+
+def _write_posecollection(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='groups':
+        w.u32(0)
+    elif tag=='entries':
+        w.u32(1)
+        w.text(_field(value, 'group_id'))
+    elif tag=='links':
+        w.u32(2)
+        w.text(_field(value, 'entry_id'))
+    else:
+        raise TypeError("Unexpected PoseCollection variant")
+
+def _write_motionclip(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    w.text(_field(value, 'name'))
+    w.scalar('f', _field(value, 'duration'))
+    w.scalar('f', _field(value, 'fps'))
+    w.boolean(_field(value, 'looping'))
+    w.boolean(_field(value, 'restricted_beziers'))
+    if _field(value, 'fade_in') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_in'))
+    if _field(value, 'fade_out') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_out'))
+    items0=sequence(_field(value, 'track_order'))
+    w.u32(len(items0))
+    for item0 in items0:
+        w.text(item0)
+    items0=sequence(_field(value, 'tracks'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_motiontrack(item0, w)
+    items0=sequence(_field(value, 'events'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_motionevent(item0, w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+    items0=_mapping(_field(value, 'meta_extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+    if _field(value, 'opaque_source_ids') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        items0=_mapping(_field(value, 'opaque_source_ids'))
+        w.u32(len(items0))
+        for key0, value0 in items0.items():
+            w.text(key0)
+            w.text(value0)
+    if _field(value, 'opaque_source_content_hash') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.text(_field(value, 'opaque_source_content_hash'))
+
+def _read_motionclip(r: Reader) -> m.MotionClip:
+    return m.MotionClip(id=r.text(), name=r.text(), duration=number(r.scalar('f')), fps=number(r.scalar('f')), looping=r.boolean(), restricted_beziers=r.boolean(), fade_in=(number(r.scalar('f')) if r.optional() else None), fade_out=(number(r.scalar('f')) if r.optional() else None), track_order=tuple(r.text() for _ in range(r.count())), tracks=tuple(_read_motiontrack(r) for _ in range(r.count())), events=tuple(_read_motionevent(r) for _ in range(r.count())), extensions={r.text(): r.extension() for _ in range(r.count())}, meta_extensions={r.text(): r.extension() for _ in range(r.count())}, opaque_source_ids=({r.text(): r.text() for _ in range(r.count())} if r.optional() else None), opaque_source_content_hash=(r.text() if r.optional() else None))
+
+def _write_motiontrack(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    _write_motiontracktarget(_field(value, 'target'), w)
+    _write_motionkey(_field(value, 'initial'), w)
+    items0=sequence(_field(value, 'segments'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_motionsegment(item0, w)
+    if _field(value, 'fade_in') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_in'))
+    if _field(value, 'fade_out') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_out'))
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_motiontrack(r: Reader) -> m.MotionTrack:
+    return m.MotionTrack(id=r.text(), target=_read_motiontracktarget(r), initial=_read_motionkey(r), segments=tuple(_read_motionsegment(r) for _ in range(r.count())), fade_in=(number(r.scalar('f')) if r.optional() else None), fade_out=(number(r.scalar('f')) if r.optional() else None), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_motionkey(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    w.scalar('f', _field(value, 'time'))
+    w.scalar('f', _field(value, 'value'))
+
+def _read_motionkey(r: Reader) -> m.MotionKey:
+    return m.MotionKey(id=r.text(), time=number(r.scalar('f')), value=number(r.scalar('f')))
+
+def _write_motionsegment(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='linear':
+        w.u32(0)
+        _write_motionkey(_field(value, 'end'), w)
+    elif tag=='bezier':
+        w.u32(1)
+        _write_motionpoint(_field(value, 'control1'), w)
+        _write_motionpoint(_field(value, 'control2'), w)
+        _write_motionkey(_field(value, 'end'), w)
+    elif tag=='stepped':
+        w.u32(2)
+        _write_motionkey(_field(value, 'end'), w)
+    elif tag=='inverse_stepped':
+        w.u32(3)
+        _write_motionkey(_field(value, 'end'), w)
+    else:
+        raise TypeError("Unexpected MotionSegment variant")
+
+def _read_motionsegment(r: Reader) -> m.MotionSegment:
+    tag=r.u32()
+    if tag==0:
+        return m.MotionSegmentLinear(end=_read_motionkey(r))
+    elif tag==1:
+        return m.MotionSegmentBezier(control1=_read_motionpoint(r), control2=_read_motionpoint(r), end=_read_motionkey(r))
+    elif tag==2:
+        return m.MotionSegmentStepped(end=_read_motionkey(r))
+    elif tag==3:
+        return m.MotionSegmentInverseStepped(end=_read_motionkey(r))
+    raise ValueError("Unknown binary MotionSegment variant")
+
+def _write_motionpoint(value: object, w: Writer) -> None:
+    w.scalar('f', _field(value, 'time'))
+    w.scalar('f', _field(value, 'value'))
+
+def _read_motionpoint(r: Reader) -> m.MotionPoint:
+    return m.MotionPoint(time=number(r.scalar('f')), value=number(r.scalar('f')))
+
+def _write_expressionasset(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    w.text(_field(value, 'name'))
+    if _field(value, 'file_type') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.text(_field(value, 'file_type'))
+    if _field(value, 'fade_in') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_in'))
+    if _field(value, 'fade_out') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_out'))
+    items0=sequence(_field(value, 'entries'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_expressionentry(item0, w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+    if _field(value, 'opaque_source_ids') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        items0=_mapping(_field(value, 'opaque_source_ids'))
+        w.u32(len(items0))
+        for key0, value0 in items0.items():
+            w.text(key0)
+            w.text(value0)
+    if _field(value, 'opaque_source_content_hash') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.text(_field(value, 'opaque_source_content_hash'))
+
+def _read_expressionasset(r: Reader) -> m.ExpressionAsset:
+    return m.ExpressionAsset(id=r.text(), name=r.text(), file_type=(r.text() if r.optional() else None), fade_in=(number(r.scalar('f')) if r.optional() else None), fade_out=(number(r.scalar('f')) if r.optional() else None), entries=tuple(_read_expressionentry(r) for _ in range(r.count())), extensions={r.text(): r.extension() for _ in range(r.count())}, opaque_source_ids=({r.text(): r.text() for _ in range(r.count())} if r.optional() else None), opaque_source_content_hash=(r.text() if r.optional() else None))
+
+def _write_expressionentry(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    _write_expressiontarget(_field(value, 'target'), w)
+    w.scalar('f', _field(value, 'value'))
+    if _field(value, 'blend') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_expressionblend(_field(value, 'blend'), w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_expressionentry(r: Reader) -> m.ExpressionEntry:
+    return m.ExpressionEntry(id=r.text(), target=_read_expressiontarget(r), value=number(r.scalar('f')), blend=(_read_expressionblend(r) if r.optional() else None), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicsasset(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    _write_physicsdefinition(_field(value, 'data'), w)
+    if _field(value, 'opaque_source_ids') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        items0=_mapping(_field(value, 'opaque_source_ids'))
+        w.u32(len(items0))
+        for key0, value0 in items0.items():
+            w.text(key0)
+            w.text(value0)
+    if _field(value, 'opaque_source_content_hash') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.text(_field(value, 'opaque_source_content_hash'))
+
+def _read_physicsasset(r: Reader) -> m.PhysicsAsset:
+    return m.PhysicsAsset(id=r.text(), data=_read_physicsdefinition(r), opaque_source_ids=({r.text(): r.text() for _ in range(r.count())} if r.optional() else None), opaque_source_content_hash=(r.text() if r.optional() else None))
+
+def _write_physicsdefinition(value: object, w: Writer) -> None:
+    w.scalar('I', _field(value, 'version'))
+    _write_physicsmeta(_field(value, 'meta'), w)
+    items0=sequence(_field(value, 'settings'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_physicssetting(item0, w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicsdefinition(r: Reader) -> m.PhysicsDefinition:
+    return m.PhysicsDefinition(version=integer(r.scalar('I')), meta=_read_physicsmeta(r), settings=tuple(_read_physicssetting(r) for _ in range(r.count())), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicsmeta(value: object, w: Writer) -> None:
+    w.scalar('Q', _field(value, 'PhysicsSettingCount'))
+    w.scalar('Q', _field(value, 'TotalInputCount'))
+    w.scalar('Q', _field(value, 'TotalOutputCount'))
+    w.scalar('Q', _field(value, 'VertexCount'))
+    _write_physicsforces(_field(value, 'EffectiveForces'), w)
+    items0=sequence(_field(value, 'PhysicsDictionary'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_physicsdictionaryentry(item0, w)
+    if _field(value, 'Fps') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'Fps'))
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicsmeta(r: Reader) -> m.PhysicsMeta:
+    return m.PhysicsMeta(PhysicsSettingCount=integer(r.scalar('Q')), TotalInputCount=integer(r.scalar('Q')), TotalOutputCount=integer(r.scalar('Q')), VertexCount=integer(r.scalar('Q')), EffectiveForces=_read_physicsforces(r), PhysicsDictionary=tuple(_read_physicsdictionaryentry(r) for _ in range(r.count())), Fps=(number(r.scalar('f')) if r.optional() else None), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicsforces(value: object, w: Writer) -> None:
+    _write_physicsvector(_field(value, 'Gravity'), w)
+    _write_physicsvector(_field(value, 'Wind'), w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicsforces(r: Reader) -> m.PhysicsForces:
+    return m.PhysicsForces(Gravity=_read_physicsvector(r), Wind=_read_physicsvector(r), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicsdictionaryentry(value: object, w: Writer) -> None:
+    w.text(_field(value, 'Id'))
+    w.text(_field(value, 'Name'))
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicsdictionaryentry(r: Reader) -> m.PhysicsDictionaryEntry:
+    return m.PhysicsDictionaryEntry(Id=r.text(), Name=r.text(), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicssetting(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    w.text(_field(value, 'external_id'))
+    items0=sequence(_field(value, 'inputs'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_physicsinput(item0, w)
+    items0=sequence(_field(value, 'outputs'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_physicsoutput(item0, w)
+    items0=sequence(_field(value, 'vertices'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_physicsnode(item0, w)
+    _write_physicsnormalization(_field(value, 'normalization'), w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicssetting(r: Reader) -> m.PhysicsSetting:
+    return m.PhysicsSetting(id=r.text(), external_id=r.text(), inputs=tuple(_read_physicsinput(r) for _ in range(r.count())), outputs=tuple(_read_physicsoutput(r) for _ in range(r.count())), vertices=tuple(_read_physicsnode(r) for _ in range(r.count())), normalization=_read_physicsnormalization(r), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicsinput(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    _write_physicstarget(_field(value, 'source'), w)
+    items0=_mapping(_field(value, 'reference_extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+    w.scalar('f', _field(value, 'weight'))
+    _write_physicsaxis(_field(value, 'kind'), w)
+    w.boolean(_field(value, 'reflect'))
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicsinput(r: Reader) -> m.PhysicsInput:
+    return m.PhysicsInput(id=r.text(), source=_read_physicstarget(r), reference_extensions={r.text(): r.extension() for _ in range(r.count())}, weight=number(r.scalar('f')), kind=_read_physicsaxis(r), reflect=r.boolean(), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicsoutput(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    _write_physicstarget(_field(value, 'destination'), w)
+    items0=_mapping(_field(value, 'reference_extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+    w.text(_field(value, 'node_id'))
+    w.scalar('f', _field(value, 'scale'))
+    w.scalar('f', _field(value, 'weight'))
+    _write_physicsaxis(_field(value, 'kind'), w)
+    w.boolean(_field(value, 'reflect'))
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicsoutput(r: Reader) -> m.PhysicsOutput:
+    return m.PhysicsOutput(id=r.text(), destination=_read_physicstarget(r), reference_extensions={r.text(): r.extension() for _ in range(r.count())}, node_id=r.text(), scale=number(r.scalar('f')), weight=number(r.scalar('f')), kind=_read_physicsaxis(r), reflect=r.boolean(), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_physicsnormalization(value: object, w: Writer) -> None:
+    _write_physicsrange(_field(value, 'Position'), w)
+    _write_physicsrange(_field(value, 'Angle'), w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_physicsnormalization(r: Reader) -> m.PhysicsNormalization:
+    return m.PhysicsNormalization(Position=_read_physicsrange(r), Angle=_read_physicsrange(r), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_poseasset(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    if _field(value, 'file_type') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.text(_field(value, 'file_type'))
+    if _field(value, 'fade_in') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'fade_in'))
+    items0=sequence(_field(value, 'groups'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_posegroup(item0, w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+    if _field(value, 'opaque_source_ids') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        items0=_mapping(_field(value, 'opaque_source_ids'))
+        w.u32(len(items0))
+        for key0, value0 in items0.items():
+            w.text(key0)
+            w.text(value0)
+    if _field(value, 'opaque_source_content_hash') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.text(_field(value, 'opaque_source_content_hash'))
+
+def _read_poseasset(r: Reader) -> m.PoseAsset:
+    return m.PoseAsset(id=r.text(), file_type=(r.text() if r.optional() else None), fade_in=(number(r.scalar('f')) if r.optional() else None), groups=tuple(_read_posegroup(r) for _ in range(r.count())), extensions={r.text(): r.extension() for _ in range(r.count())}, opaque_source_ids=({r.text(): r.text() for _ in range(r.count())} if r.optional() else None), opaque_source_content_hash=(r.text() if r.optional() else None))
+
+def _write_posegroup(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    w.text(_field(value, 'name'))
+    items0=sequence(_field(value, 'entries'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_poseentry(item0, w)
+
+def _read_posegroup(r: Reader) -> m.PoseGroup:
+    return m.PoseGroup(id=r.text(), name=r.text(), entries=tuple(_read_poseentry(r) for _ in range(r.count())))
+
+def _write_poseentry(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    _write_posepartref(_field(value, 'part'), w)
+    if _field(value, 'links') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        items0=sequence(_field(value, 'links'))
+        w.u32(len(items0))
+        for item0 in items0:
+            _write_poselink(item0, w)
+    items0=_mapping(_field(value, 'extensions'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.extension(value0)
+
+def _read_poseentry(r: Reader) -> m.PoseEntry:
+    return m.PoseEntry(id=r.text(), part=_read_posepartref(r), links=(tuple(_read_poselink(r) for _ in range(r.count())) if r.optional() else None), extensions={r.text(): r.extension() for _ in range(r.count())})
+
+def _write_poselink(value: object, w: Writer) -> None:
+    w.text(_field(value, 'id'))
+    _write_posepartref(_field(value, 'target'), w)
+
+def _read_poselink(r: Reader) -> m.PoseLink:
+    return m.PoseLink(id=r.text(), target=_read_posepartref(r))
+
 def _write_modelsetup(value: object, w: Writer) -> None:
     if _field(value, 'source_canvas') is None:
         w.raw(b"\0")
@@ -3334,7 +4610,7 @@ def _write_planid(value: object, w: Writer) -> None:
     w.scalar("Q",raw["serial"])
 
 def _read_ownedmodelingrecords(r: Reader) -> m.OwnedModelingRecords:
-    return m.OwnedModelingRecords(document_id=r.text(), setup=_read_modelsetup(r), hierarchy_order=_read_hierarchyorder(r), editor_state=_read_editorstate(r), display_info=_read_displayinfo(r), model3_settings=_read_model3settings(r), draw_order_groups=(tuple(_read_drawordergroup(r) for _ in range(r.count())) if r.optional() else None), ids={r.text(): tuple(r.text() for _ in range(r.count())) for _ in range(r.count())}, assets=tuple((_read_imageasset(r) if r.optional() else None) for _ in range(r.count())), meshes=tuple((_read_mesh(r) if r.optional() else None) for _ in range(r.count())), parameters=tuple((_read_parameter(r) if r.optional() else None) for _ in range(r.count())), parts=tuple((_read_part(r) if r.optional() else None) for _ in range(r.count())), transforms=tuple((_read_transform(r) if r.optional() else None) for _ in range(r.count())), bindings=tuple((_read_meshbinding(r) if r.optional() else None) for _ in range(r.count())), scene_bindings=tuple((_read_scenebinding(r) if r.optional() else None) for _ in range(r.count())), blend_key_tables=tuple((_read_blendshapekeytable(r) if r.optional() else None) for _ in range(r.count())), blend_constraints=tuple((_read_blendshapeconstraint(r) if r.optional() else None) for _ in range(r.count())), blend_bindings=tuple((_read_blendshapebinding(r) if r.optional() else None) for _ in range(r.count())), glues=tuple((_read_glue(r) if r.optional() else None) for _ in range(r.count())), offscreens=tuple((_read_offscreen(r) if r.optional() else None) for _ in range(r.count())), parameter_groups=tuple((_read_cdiparametergroup(r) if r.optional() else None) for _ in range(r.count())), attachments=tuple((_read_packageattachment(r) if r.optional() else None) for _ in range(r.count())))
+    return m.OwnedModelingRecords(document_id=r.text(), setup=_read_modelsetup(r), hierarchy_order=_read_hierarchyorder(r), editor_state=_read_editorstate(r), display_info=_read_displayinfo(r), model3_settings=_read_model3settings(r), draw_order_groups=(tuple(_read_drawordergroup(r) for _ in range(r.count())) if r.optional() else None), ids={r.text(): tuple(r.text() for _ in range(r.count())) for _ in range(r.count())}, assets=tuple((_read_imageasset(r) if r.optional() else None) for _ in range(r.count())), meshes=tuple((_read_mesh(r) if r.optional() else None) for _ in range(r.count())), parameters=tuple((_read_parameter(r) if r.optional() else None) for _ in range(r.count())), parts=tuple((_read_part(r) if r.optional() else None) for _ in range(r.count())), transforms=tuple((_read_transform(r) if r.optional() else None) for _ in range(r.count())), bindings=tuple((_read_meshbinding(r) if r.optional() else None) for _ in range(r.count())), scene_bindings=tuple((_read_scenebinding(r) if r.optional() else None) for _ in range(r.count())), blend_key_tables=tuple((_read_blendshapekeytable(r) if r.optional() else None) for _ in range(r.count())), blend_constraints=tuple((_read_blendshapeconstraint(r) if r.optional() else None) for _ in range(r.count())), blend_bindings=tuple((_read_blendshapebinding(r) if r.optional() else None) for _ in range(r.count())), glues=tuple((_read_glue(r) if r.optional() else None) for _ in range(r.count())), offscreens=tuple((_read_offscreen(r) if r.optional() else None) for _ in range(r.count())), parameter_groups=tuple((_read_cdiparametergroup(r) if r.optional() else None) for _ in range(r.count())), attachments=tuple((_read_packageattachment(r) if r.optional() else None) for _ in range(r.count())), motions=tuple((_read_motionclip(r) if r.optional() else None) for _ in range(r.count())), motion_groups=tuple((_read_motiongroup(r) if r.optional() else None) for _ in range(r.count())), motion_registrations=tuple((_read_motionregistration(r) if r.optional() else None) for _ in range(r.count())), expressions=tuple((_read_expressionasset(r) if r.optional() else None) for _ in range(r.count())), physics=(_read_physicsasset(r) if r.optional() else None), pose=(_read_poseasset(r) if r.optional() else None))
 
 def _read_displayinfo(r: Reader) -> m.DisplayInfo:
     return m.DisplayInfo(origin=_read_displayinfoorigin(r), parameters=(tuple(_read_cdiparameterentry(r) for _ in range(r.count())) if r.optional() else None), parameter_groups=(tuple(_read_cdiparametergroup(r) for _ in range(r.count())) if r.optional() else None), parts=(tuple(_read_cdipartentry(r) for _ in range(r.count())) if r.optional() else None), combined_parameters=(tuple(_read_cdicombinedset(r) for _ in range(r.count())) if r.optional() else None), extensions={r.text(): r.extension() for _ in range(r.count())}, opaque_source_ids=(_read_cdinamespaceids(r) if r.optional() else None))
@@ -3384,6 +4660,9 @@ def _read_referenceentrymodeltargetref(r: Reader) -> m.ReferenceEntryModelTarget
 def _read_modelhitarea(r: Reader) -> m.ModelHitArea:
     return m.ModelHitArea(id=r.text(), name=r.text(), mesh=_read_modeltargetref(r), extensions={r.text(): r.extension() for _ in range(r.count())})
 
+def _read_motiongroup(r: Reader) -> m.MotionGroup:
+    return m.MotionGroup(id=r.text(), name=r.text(), entries=tuple(_read_motionregistration(r) for _ in range(r.count())))
+
 def _read_modelingsamples(r: Reader) -> m.ModelingSamples:
     return m.ModelingSamples(version=_read_version(r), parameters=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), frames=tuple(_read_drawableframe(r) for _ in range(r.count())), diagnostics=tuple(_read_geometrydiagnostic(r) for _ in range(r.count())))
 
@@ -3424,6 +4703,84 @@ def _read_geometrydiagnostickind(r: Reader) -> m.GeometryDiagnosticKind:
     elif tag==2:
         return m.GeometryDiagnosticKind('OutsideModelBounds')
     raise ValueError("Unknown binary GeometryDiagnosticKind variant")
+
+def _read_previewbatch(r: Reader) -> m.PreviewBatch:
+    return m.PreviewBatch(view=(_read_observationview(r) if r.optional() else None), queries=tuple(_read_spatialquery(r) for _ in range(r.count())), sequence=integer(r.scalar('Q')), frames=tuple(_read_previewframe(r) for _ in range(r.count())))
+
+def _read_observationview(r: Reader) -> m.ObservationView:
+    return m.ObservationView(width=integer(r.scalar('I')), height=integer(r.scalar('I')), roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), padding_model=number(r.scalar('f')))
+
+def _read_spatialquery(r: Reader) -> m.SpatialQuery:
+    tag=r.u32()
+    if tag==0:
+        return m.SpatialQueryBounds(targets=tuple(_read_objecttarget(r) for _ in range(r.count())), include_hidden=r.boolean())
+    elif tag==1:
+        return m.SpatialQueryHits(point=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('d', 2))), include_hidden=r.boolean(), details=r.boolean(), max_candidates=integer(r.scalar('Q')))
+    raise ValueError("Unknown binary SpatialQuery variant")
+
+def _read_objecttarget(r: Reader) -> m.ObjectTarget:
+    tag=r.u32()
+    if tag==0:
+        return m.ObjectTargetMesh(value=r.text())
+    elif tag==1:
+        return m.ObjectTargetPart(value=r.text())
+    raise ValueError("Unknown binary ObjectTarget variant")
+
+def _read_previewframe(r: Reader) -> m.PreviewFrame:
+    return m.PreviewFrame(observation=(_read_observationimage(r) if r.optional() else None), spatial=tuple(_read_spatialresult(r) for _ in range(r.count())), preview_id=integer(r.scalar('Q')), sequence=integer(r.scalar('Q')), index=integer(r.scalar('Q')), motion=_read_motionsnapshot(r), geometry=(_read_drawableframe(r) if r.optional() else None))
+
+def _read_observationimage(r: Reader) -> m.ObservationImage:
+    return m.ObservationImage(width=integer(r.scalar('I')), height=integer(r.scalar('I')), rgba=r.bytes(), png=r.bytes(), document_id=r.text(), evaluation_revision=integer(r.scalar('Q')), capture_id=r.text(), scene_digest=r.text(), render_digest=r.text(), input_sha256=r.text(), adapter_name=r.text(), adapter_backend=r.text(), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, visible_roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), scale=number(r.scalar('f')), offset=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('f', 2))), textures=tuple(_read_observedtexture(r) for _ in range(r.count())), drawable_bounds=tuple(_read_observedbounds(r) for _ in range(r.count())))
+
+def _read_observedtexture(r: Reader) -> m.ObservedTexture:
+    return m.ObservedTexture(asset_id=r.text(), sha256=r.text())
+
+def _read_observedbounds(r: Reader) -> m.ObservedBounds:
+    return m.ObservedBounds(id=r.text(), visible=r.boolean(), bounds=(cast('tuple[int, int, int, int]', tuple(v[0] for v in r.numeric('I', 4))) if r.optional() else None))
+
+def _read_spatialresult(r: Reader) -> m.SpatialResult:
+    tag=r.u32()
+    if tag==0:
+        return m.SpatialResultBounds(value=_read_objectbounds(r))
+    elif tag==1:
+        return m.SpatialResultHits(value=_read_geometryquery(r))
+    raise ValueError("Unknown binary SpatialResult variant")
+
+def _read_objectbounds(r: Reader) -> m.ObjectBounds:
+    return m.ObjectBounds(mesh_ids=tuple(r.text() for _ in range(r.count())), model_bounds=(cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('d', 4))) if r.optional() else None), empty_reason=(r.text() if r.optional() else None))
+
+def _read_geometryquery(r: Reader) -> m.GeometryQuery:
+    return m.GeometryQuery(hits=tuple(_read_geometryhit(r) for _ in range(r.count())), total=integer(r.scalar('Q')), truncated=r.boolean())
+
+def _read_geometryhit(r: Reader) -> m.GeometryHit:
+    return m.GeometryHit(mesh_id=r.text(), name=r.text(), part_path=tuple(r.text() for _ in range(r.count())), part_names=tuple(r.text() for _ in range(r.count())), enabled=r.boolean(), visible=r.boolean(), opacity=number(r.scalar('f')), render_order=integer(r.scalar('i')), triangles=tuple(_read_trianglehit(r) for _ in range(r.count())))
+
+def _read_trianglehit(r: Reader) -> m.TriangleHit:
+    return m.TriangleHit(triangle_index=integer(r.scalar('Q')), vertex_indices=cast('tuple[int, int, int]', tuple(v[0] for v in r.numeric('I', 3))), vertex_ids=(cast('tuple[int, int, int]', tuple(v[0] for v in r.numeric('I', 3))) if r.optional() else None), barycentric=cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('d', 3))), uv=(cast('tuple[float, float]', tuple(v[0] for v in r.numeric('d', 2))) if r.optional() else None))
+
+def _read_motionsnapshot(r: Reader) -> m.MotionSnapshot:
+    return m.MotionSnapshot(physics=tuple(_read_physicsrigsnapshot(r) for _ in range(r.count())), time=number(r.scalar('f')), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, part_opacity_channels={r.text(): number(r.scalar('f')) for _ in range(r.count())}, part_opacities={r.text(): number(r.scalar('f')) for _ in range(r.count())}, model_opacity=number(r.scalar('f')), active_motions=tuple(r.text() for _ in range(r.count())), active_expressions=tuple(r.text() for _ in range(r.count())), fired_events=tuple(_read_motioneventfired(r) for _ in range(r.count())), coverage=tuple(r.text() for _ in range(r.count())), motion_positions=tuple(_read_motionplaybackposition(r) for _ in range(r.count())))
+
+def _read_physicsrigsnapshot(r: Reader) -> m.PhysicsRigSnapshot:
+    return m.PhysicsRigSnapshot(id=r.text(), input_ids=tuple(r.text() for _ in range(r.count())), output_ids=tuple(r.text() for _ in range(r.count())), node_ids=tuple(r.text() for _ in range(r.count())), particles=cast('tuple[tuple[float, float], ...]', r.numeric('ff', r.count())), input_angle=number(r.scalar('f')), inputs=cast('tuple[float, ...]', tuple(v[0] for v in r.numeric('f', r.count()))), outputs=tuple((_read_physicsoutputsnapshot(r) if r.optional() else None) for _ in range(r.count())))
+
+def _read_physicsoutputsnapshot(r: Reader) -> m.PhysicsOutputSnapshot:
+    return m.PhysicsOutputSnapshot(raw=number(r.scalar('f')), before=number(r.scalar('f')), after=number(r.scalar('f')), clamped=r.boolean())
+
+def _read_motioneventfired(r: Reader) -> m.MotionEventFired:
+    return m.MotionEventFired(motion_id=r.text(), event_id=r.text(), value=r.text())
+
+def _read_motionplaybackposition(r: Reader) -> m.MotionPlaybackPosition:
+    return m.MotionPlaybackPosition(motion_id=r.text(), local_time=number(r.scalar('f')), period=number(r.scalar('f')), loop_index=integer(r.scalar('Q')), cycle_origin=number(r.scalar('f')))
+
+def _read_spatialsamples(r: Reader) -> m.SpatialSamples:
+    return m.SpatialSamples(version=_read_version(r), requested=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), queries=tuple(_read_spatialquery(r) for _ in range(r.count())), frames=tuple(_read_spatialframe(r) for _ in range(r.count())))
+
+def _read_spatialframe(r: Reader) -> m.SpatialFrame:
+    return m.SpatialFrame(parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, results=tuple(_read_spatialresult(r) for _ in range(r.count())))
+
+def _read_observationbatch(r: Reader) -> m.ObservationBatch:
+    return m.ObservationBatch(view=_read_observationview(r), requested=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), frames=tuple(_read_observationimage(r) for _ in range(r.count())))
 
 def _read_meshsnapshot(r: Reader) -> Snapshot[meshes.Mesh]:
     return Snapshot(_read_sourceref(r), meshes.Mesh(id=r.text(), name=r.text(), geometry=_read_meshgeometry(r)))
@@ -3487,6 +4844,27 @@ def decode_records(value: bytes, signature: str) -> m.OwnedModelingRecords:
     if signature!=OUTPUT_SIGNATURE: raise ValueError("Binary record contract differs")
     r=Reader(value)
     result=_read_ownedmodelingrecords(r)
+    r.finish()
+    return result
+
+def decode_observation(value: bytes, signature: str) -> m.ObservationBatch:
+    if signature!='926baacbaf017dc3d303ff29b6291edd': raise ValueError("Binary observation contract differs")
+    r=Reader(value)
+    result=_read_observationbatch(r)
+    r.finish()
+    return result
+
+def decode_spatial(value: bytes, signature: str) -> m.SpatialSamples:
+    if signature!='ba2052a3db49636e40cd87d49098a564': raise ValueError("Binary spatial contract differs")
+    r=Reader(value)
+    result=_read_spatialsamples(r)
+    r.finish()
+    return result
+
+def decode_preview(value: bytes, signature: str) -> m.PreviewBatch:
+    if signature!='06c25ac3ad39aea68174b152489be38a': raise ValueError("Binary preview contract differs")
+    r=Reader(value)
+    result=_read_previewbatch(r)
     r.finish()
     return result
 

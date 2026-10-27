@@ -17,24 +17,45 @@ impl PhysicsEditPlan {
         self.domain.affected_ids()
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct PhysicsCapabilities {
+    /// Read this object while its identity/context remains valid.
     pub inspect: CapabilityState,
+    /// Modify typed fields through a validated native intent/address.
     pub patch: CapabilityState,
+    /// Create owned child rows in this object.
     pub create_child: CapabilityState,
+    /// Duplicate the selected object while allocating fresh owned identities.
     pub duplicate: CapabilityState,
+    /// Delete the selected object subject to native reference and lock rules.
     pub delete: CapabilityState,
+    /// Move the selected object between compatible native owners.
     pub move_object: CapabilityState,
+    /// Change ordered sibling membership without changing identity.
     pub reorder: CapabilityState,
+    /// Repair an explicitly unresolved native reference.
     pub repair: CapabilityState,
+    /// Native preview eligibility; host preview API availability is advertised separately.
     pub preview: CapabilityState,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape,
+)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum PhysicsCollection {
     Groups,
-    Inputs { group_id: String },
-    Outputs { group_id: String },
-    Nodes { group_id: String },
+    Inputs {
+        /// Stable Physics rig ID owning the selected rows.
+        group_id: String,
+    },
+    Outputs {
+        /// Stable Physics rig ID owning the selected rows.
+        group_id: String,
+    },
+    Nodes {
+        /// Stable Physics rig ID owning the selected rows.
+        group_id: String,
+    },
 }
 #[derive(Debug, Clone, PartialEq)]
 enum FieldBaseline {
@@ -47,6 +68,7 @@ pub struct PhysicsFieldAddress {
     entity: ObjectHandle,
     owner: ObjectHandle,
     epoch: u64,
+    field_epoch: u64,
     expected: FieldBaseline,
 }
 impl PhysicsFieldAddress {
@@ -267,6 +289,7 @@ impl AuthoringSession {
             entity: self.handle(kind, id)?,
             owner: self.handle(ObjectKind::PhysicsGroup, owner)?,
             epoch: self.physics_contexts.get(id).map_or(0, |v| v.1),
+            field_epoch: self.animation_field_epoch(id),
             expected,
         })
     }
@@ -279,6 +302,7 @@ impl AuthoringSession {
         self.resolve_handle(&address.owner)?;
         let current = self.physics_baseline(address.id());
         if self.physics_contexts.get(address.id()).map_or(0, |v| v.1) != address.epoch
+            || self.animation_field_epoch(address.id()) != address.field_epoch
             || current.is_none_or(|(_, owner, value)| {
                 owner != address.owner.id() || value != address.expected
             })
@@ -399,4 +423,21 @@ fn physics_error(
     let mut error = SdkError::from_status(status, operation, vec![]);
     error.referrers = users.into();
     error
+}
+
+impl crate::AuthoringSnapshot {
+    /// Plan a typed physics edit on an immutable source, without changing preview/history.
+    pub fn plan_physics_edit(
+        &self,
+        intent: zipzi_core::document::PhysicsEdit,
+    ) -> Result<PhysicsEditPlan, SdkError> {
+        let domain = self
+            .document()
+            .plan_physics_edit(intent)
+            .map_err(|s| SdkError::from_status(s, "plan_physics_edit", vec![]))?;
+        Ok(PhysicsEditPlan {
+            version: self.version(),
+            domain,
+        })
+    }
 }

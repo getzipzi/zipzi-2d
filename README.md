@@ -13,7 +13,12 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
   [crate responsibilities](MONOREPO.md#crate-responsibilities).
 - **Python SDK:** [independent Runtime client](crates/zipzi-python2/README.md),
   [implemented capabilities](crates/zipzi-python2/CAPABILITIES.md) and
-  [Runtime R0–R4 integration](docs/plans/sdk-runtime/python2-r0-r4.md).
+  [Runtime R0–R4 integration](docs/plans/sdk-runtime/python2-r0-r4.md) and
+  [R5/P5 animation authoring](docs/plans/sdk-runtime/python2-r5-authoring.md).
+  [R5/R7 final acceptance](docs/plans/sdk-runtime/python2-r7-closeout.md) records
+  the current macOS/CPython 3.14 distribution, complete workflows and performance.
+  [Python P7 closeout](docs/plans/python-sdk-rewrite/p7.md) reconciles the complete
+  Python contract, capability evidence, ownership boundaries and measured costs.
 - **Contributing:** [repository structure](MONOREPO.md),
   [test gates](tools/README.md#test-coverage), [tools](tools/README.md) and
   [documentation index](docs/README.md).
@@ -62,6 +67,7 @@ commands from the repository root; inspect available modes with
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |
 | Editor UI (macOS/Metal) | `./tools/test-editor.sh ui <filter>` |
 | Runtime Python SDK (`zipzi-python2`), Local/Connected and types | `./tools/test-sdk.sh python2` ([scope](crates/zipzi-python2/README.md)) |
+| Runtime GPU observation / inspection (usable GPU required) | `./tools/test-sdk.sh python2 --observation`; [scope and evidence](docs/plans/sdk-runtime/python2-r5-observation.md) |
 | Python complete-call recovery, Edit state and Job timeout | `./tools/test-sdk.sh python2 --recovery` (optional `P3ARecovery.test_name`) |
 | Python collection pages, Session detach/close and offline catalog | `./tools/test-sdk.sh python2 --discovery` ([P3A-6 results and remaining gates](docs/plans/python-sdk-rewrite/p3a-6.md)) |
 | Installed new client, host discovery and session binding | `./tools/test-sdk.sh python2-connected` (optional `--editor-host /absolute/path/to/zipzi-editor`) |

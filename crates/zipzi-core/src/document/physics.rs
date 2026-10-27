@@ -16,11 +16,16 @@ pub use patch::{PhysicsAssetProperty, PhysicsPatch, PhysicsProperty, PhysicsRigP
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub struct PhysicsAsset {
+    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
+    /// Complete persistent Physics definition; simulation state lives outside the document.
     pub data: PhysicsDefinition,
+    /// Original runtime-ID namespace used to validate preservation of opaque imported fields.
     pub opaque_source_ids: Option<BTreeMap<String, String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Original imported-content hash used to detect unsupported changes to opaque fields.
     pub opaque_source_content_hash: Option<String>,
 }
 

@@ -5,7 +5,7 @@ use crate::{
     jobs::{ReadTask, Task},
 };
 impl Runtime {
-    fn queue_read(
+    pub(super) fn queue_read(
         &mut self,
         client: ClientId,
         source: SourceSnapshot,
@@ -18,6 +18,10 @@ impl Runtime {
         let base = source.source.version();
         let id = JobId::from_parts(self.instance, self.serial());
         let cancel = Arc::new(AtomicBool::new(false));
+        let gpu = matches!(
+            &task,
+            ReadTask::Observe { .. } | ReadTask::Preview { view: Some(_), .. }
+        );
         self.jobs.insert(
             id,
             JobEntry {
@@ -37,6 +41,8 @@ impl Runtime {
                 read_bytes: bytes,
                 read_only: true,
                 plan_result,
+                gpu,
+                gpu_resident: false,
             },
         );
         self.queue.push_back(Work {
@@ -159,17 +165,44 @@ impl Runtime {
         {
             return false;
         }
+        self.jobs.get_mut(&job).unwrap().gpu_resident = false;
         if !self.clients.contains(&client) {
             self.jobs.remove(&job);
             return true;
         }
-        if record.cancel.load(Ordering::Acquire) {
+        self.complete_preview_job(job);
+        let record = self.jobs.get(&job).unwrap();
+        // Preview steps commit in the SDK worker. A cancellation that arrives
+        // after the complete batch succeeded must report that actual outcome.
+        if record.cancel.load(Ordering::Acquire) && !matches!(&result, Ok(JobValue::Previewed(_))) {
             result = Err(RuntimeError::Cancelled);
         }
         let expected = record.read_source.as_ref().map(|s| s.source);
+        match &result {
+            Ok(JobValue::Observed(_)) => {
+                self.gpu_available = Some(true);
+                self.gpu_error = None;
+            }
+            Ok(JobValue::Previewed(value))
+                if value.samples.frames.iter().any(|f| f.observation.is_some()) =>
+            {
+                self.gpu_available = Some(true);
+                self.gpu_error = None;
+            }
+            Err(RuntimeError::Sdk(e))
+                if matches!(e.code.as_ref(), "GPU_ADAPTER" | "GPU_DEVICE") =>
+            {
+                self.gpu_available = Some(false);
+                self.gpu_error = Some(e.code.to_string());
+            }
+            _ => {}
+        }
         if let Ok(value) = &result {
             let actual = match value {
                 JobValue::Sampled(value) => Some(value.source),
+                JobValue::Spatial(value) => Some(value.source),
+                JobValue::Observed(value) => Some(value.source),
+                JobValue::Previewed(value) => Some(value.source),
                 JobValue::PreparedPlan(value) => Some(value.source.source),
                 _ => None,
             };

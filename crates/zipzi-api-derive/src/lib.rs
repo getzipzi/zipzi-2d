@@ -11,6 +11,7 @@ struct Serde {
     content: Option<String>,
     transparent: bool,
     skip: bool,
+    flatten: bool,
     default: Option<Option<String>>,
 }
 fn attrs(attrs: &[syn::Attribute]) -> syn::Result<Serde> {
@@ -40,6 +41,8 @@ fn attrs(attrs: &[syn::Attribute]) -> syn::Result<Serde> {
                 result.transparent = true;
             } else if m.path.is_ident("skip") {
                 result.skip = true;
+            } else if m.path.is_ident("flatten") {
+                result.flatten = true;
             } else if m.path.is_ident("deny_unknown_fields") {
             } else if m.path.is_ident("skip_serializing_if") {
                 let _: syn::LitStr = m.value()?.parse()?;
@@ -124,18 +127,34 @@ fn fields(
 ) -> syn::Result<proc_macro2::TokenStream> {
     let values = fields.iter().enumerate().map(|(i,f)| {
         let a=attrs(&f.attrs)?;
+        if a.flatten {
+            let supported = match &f.ty {
+                syn::Type::Path(path) => path.path.segments.last().is_some_and(|segment| {
+                    if segment.ident != "BTreeMap" { return false; }
+                    let syn::PathArguments::AngleBracketed(args) = &segment.arguments else { return false; };
+                    let names = args.args.iter().filter_map(|arg| {
+                        let syn::GenericArgument::Type(syn::Type::Path(path)) = arg else { return None; };
+                        path.path.segments.last().map(|s| s.ident.to_string())
+                    }).collect::<Vec<_>>();
+                    names == ["String", "Value"]
+                }),
+                _ => false,
+            };
+            if !supported { return Err(syn::Error::new_spanned(&f.ty, "Unsupported selected serde attribute: flatten requires a JSON extension map")); }
+        }
         let doc=doc_text(&f.attrs);
         let rust=f.ident.as_ref().map(ToString::to_string).unwrap_or_else(||i.to_string());
         let name=if let Some(n)=a.rename { n } else if f.ident.is_none() { if fields.len()==1 { "value".into() } else { format!("value{i}") } } else { wire(&rust, rename_all)? };
         let ty=&f.ty;
         let shape=if a.skip { quote!(zipzi_core::api_shape::Shape::Opaque {name: "__skipped".into()}) } else { quote!(<#ty as zipzi_core::api_shape::ApiShape>::api_shape()) };
         let skip=a.skip;
+        let flatten=a.flatten;
         let option=matches!(ty, syn::Type::Path(p) if p.path.segments.last().is_some_and(|s|s.ident=="Option"));
         let default=if skip {quote!(None)} else if let Some(default)=a.default.or(inherited_default.then_some(None)).or(option.then_some(None)) {
             let expr=if let Some(path)=default {let path:syn::Path=syn::parse_str(&path)?;quote!(#path())} else {quote!(<#ty as Default>::default())};
             quote!(zipzi_core::api_shape::serde_default(#expr))
         } else {quote!(None)};
-        Ok(quote!(zipzi_core::api_shape::SerdeField {doc:#doc.into(),rust_name:#rust.into(), name:#name.into(), shape:#shape, skip:#skip, default:#default}))
+        Ok(quote!(zipzi_core::api_shape::SerdeField {doc:#doc.into(),rust_name:#rust.into(), name:#name.into(), shape:#shape, skip:#skip, flatten:#flatten, default:#default}))
     }).collect::<syn::Result<Vec<_>>>()?;
     Ok(quote!(vec![#(#values),*]))
 }
@@ -155,7 +174,7 @@ pub fn api_fields(input: TokenStream) -> TokenStream {
                 doc:#doc.into(),
                 rust_name: #key.into(), name: #key.into(),
                 shape: zipzi_core::api_shape::Shape::Opaque { name: std::any::type_name::<#ty>().into() },
-                skip: false, default: None,
+                skip: false, flatten: false, default: None,
             })
         }).collect::<Vec<_>>()
     };

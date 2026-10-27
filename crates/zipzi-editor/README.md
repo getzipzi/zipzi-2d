@@ -134,6 +134,10 @@ The Release dual-viewport/background-client probe uses
 `ZIPZI_RUNTIME_INTERACTION_OUTPUT` and `ZIPZI_RUNTIME_INTERACTION_SAMPLES` (at
 least 30). It checks input reaches both current Metal surfaces while another
 session publishes Runtime jobs, and verifies visible history isolation.
+Set `ZIPZI_RUNTIME_INTERACTION_READS=1` to add continuous four-pose CPU sampling,
+independent Preview sampling and 96×96 GPU observation on that Runtime. The
+report retains per-input timings and verifies background execution overlaps the
+input loop. Use the identical driver in both Release builds for a comparison.
 
 ### Local Python connection (R3)
 
@@ -156,3 +160,22 @@ ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python2/tools/connected.py --install-
 
 The native acceptance requires the isolated client installed by the first
 command and a working Metal device; it fails when prerequisites are absent.
+
+R6 direct handoff has a separate synthetic native case using the same installed
+client and production IPC/Editor/Metal chain:
+
+```sh
+ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python2/tools/connected.py --install-only) \
+  env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
+  --features test-support --test runtime_handoff_acceptance
+```
+
+It covers one Python batch of mesh/texture/Motion changes, human property text
+input and Timeline dragging, Undo/Redo, a new Python process reading and extending
+the refinement, the installed command-line example, and temporary image cleanup.
+The same flow now finishes durable save/reopen, motion/runtime-package export,
+PCM attachment verification and redisplay of the paused animation after IO.
+See the [R5/R7 closeout record](../../docs/plans/sdk-runtime/python2-r7-closeout.md)
+for normal app/DMG installation and real-model acceptance.
+Committed content and resources survive each client exit. No licensed model is
+required. [Scope and evidence](../../docs/plans/sdk-runtime/python2-r6-handoff.md).

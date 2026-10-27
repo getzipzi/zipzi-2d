@@ -281,6 +281,13 @@ impl Document {
         self.revision
     }
 
+    /// Clones of the same unchanged content share this identity. Every content
+    /// mutation replaces it, even on branches with equal revision counters.
+    /// Saved-state and evaluation caches are not part of this comparison.
+    pub fn is_same_snapshot(&self, other: &Document) -> bool {
+        Arc::ptr_eq(&self.snapshot_identity, &other.snapshot_identity)
+    }
+
     pub fn same_content(&self, other: &Document) -> bool {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.same_content");

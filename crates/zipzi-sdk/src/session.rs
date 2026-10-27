@@ -2,8 +2,8 @@
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::edit::EditSession;
 use crate::types::*;
@@ -15,14 +15,14 @@ use zipzi_core::document::{
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::preview::PreviewState;
 use zipzi_core::{
-    evaluate_frame, BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas,
-    ChangeKind, Document, DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter,
-    Part, PreviewValues, SceneBinding, Transform,
+    BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas, ChangeKind, Document,
+    DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter, Part, PreviewValues,
+    SceneBinding, Transform, evaluate_frame,
 };
 use zipzi_project::{
-    export_cdi3, export_expression3, export_motion3, export_physics3, export_pose3,
     CdiProjectError, ExpressionProjectError, MotionProjectError, PhysicsProjectError,
-    PoseProjectError,
+    PoseProjectError, export_cdi3, export_expression3, export_motion3, export_physics3,
+    export_pose3,
 };
 use zipzi_project::{DocumentSession, FileSystem, NativeFileSystem};
 
@@ -48,6 +48,7 @@ pub struct AuthoringSession {
     pub(crate) next_incarnation: u64,
     // Owner-dependent field addresses must not revive after a move and undo.
     pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
+    pub(crate) animation_field_epochs: HashMap<String, u64>,
     pub(crate) document_epochs: HashMap<zipzi_core::document::DocumentField, u64>,
     pub(crate) resource_loads:
         std::sync::Mutex<HashMap<String, Arc<std::sync::atomic::AtomicBool>>>,
@@ -280,6 +281,7 @@ impl AuthoringSession {
             organization_contexts: HashMap::new(),
             expression_entry_contexts: HashMap::new(),
             motion_contexts: HashMap::new(),
+            animation_field_epochs: HashMap::new(),
             attachment_content_epochs: HashMap::new(),
             document_epochs: HashMap::new(),
             resource_loads: Default::default(),
@@ -920,6 +922,7 @@ impl AuthoringSession {
             self.document_epochs.clear();
             self.attachment_content_epochs.clear();
             self.motion_contexts.clear();
+            self.animation_field_epochs.clear();
             self.physics_contexts.clear();
             self.pose_contexts.clear();
             self.organization_contexts.clear();
@@ -972,6 +975,35 @@ impl AuthoringSession {
                     document.revision(),
                 );
             }
+        }
+        // Field edits and Undo/Redo retire an address even if its old value returns.
+        // Delta entities keep unrelated edits and sibling reorderings valid.
+        for entity in &changes.modified {
+            if matches!(
+                entity.kind,
+                ObjectKind::MotionRegistration
+                    | ObjectKind::ExpressionEntry
+                    | ObjectKind::PhysicsInput
+                    | ObjectKind::PhysicsOutput
+                    | ObjectKind::PhysicsNode
+            ) {
+                let epoch = self
+                    .animation_field_epochs
+                    .entry(entity.id.clone())
+                    .or_default();
+                *epoch = epoch
+                    .checked_add(1)
+                    .expect("animation field epoch exhausted");
+            }
+        }
+        for id in &changes.pose_field_changes {
+            let epoch = self.animation_field_epochs.entry(id.clone()).or_default();
+            *epoch = epoch
+                .checked_add(1)
+                .expect("animation field epoch exhausted");
+        }
+        for entity in &changes.deleted {
+            self.animation_field_epochs.remove(&entity.id);
         }
         for entity in changes.affected_entities() {
             let owner =
@@ -1133,6 +1165,10 @@ impl AuthoringSession {
             );
         }
         self.events.push(receipt);
+    }
+
+    pub(crate) fn animation_field_epoch(&self, id: &str) -> u64 {
+        self.animation_field_epochs.get(id).copied().unwrap_or(0)
     }
 
     pub(crate) fn refresh_incarnations(

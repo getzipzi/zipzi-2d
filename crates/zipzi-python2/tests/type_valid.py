@@ -153,3 +153,66 @@ def unified_planning(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi
     assert_type(zipzi.recover_call(session.plan, operation), zipzi.Plan)
     assert_type(zipzi.recover_call(edit.apply, meshes.Rename(id, "Again")), zipzi.WriteResult)
     return plan.report
+
+
+def resource_project_jobs(runtime: zipzi.Runtime, session: zipzi.Session, path: Path,
+                          png: bytes) -> modeling.ProjectReport:
+    with runtime.resources.prepare_buffer(png) as buffer:
+        assert_type(buffer, zipzi.Buffer)
+        assert_type(buffer.read(0, 8), bytes)
+        with runtime.resources.prepare_png(buffer) as job:
+            assert_type(job, zipzi.Job[resources.PreparedImage])
+            with job.wait() as image:
+                assert_type(image.pixels(), resources.ImagePixels)
+    assert_type(session.project.save(path), zipzi.Job[zipzi.SaveReceipt])
+    assert_type(session.project.open(path), zipzi.Job[modeling.ProjectReport])
+    assert_type(session.project.replace(path, modeling.ImportFormat.MODEL3), zipzi.Job[modeling.ProjectReport])
+    assert_type(session.project.diagnose(), zipzi.Job[modeling.ProjectReport])
+    export = zipzi.recover_call(session.project.export, path, modeling.ExportFormat.PACKAGE)
+    assert_type(export, zipzi.Job[modeling.ProjectReport])
+    return zipzi.recover_call(export.wait)
+
+
+def animation_authoring(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi.Snapshot[modeling.OwnedModelingRecords]:
+    operation = modeling.ModelingCommandMotion(intent=modeling.MotionEditCreateGroup(id=id, name="Motion group"))
+    assert_type(edit.apply(operation), zipzi.WriteResult)
+    assert_type(session.plan(operation), zipzi.Plan)
+    assert_type(zipzi.recover_call(edit.plan_async, operation), zipzi.Job[zipzi.Plan])
+    query = modeling.ModelingQuery(motions=(id,), expressions=(id,), physics=True, pose=True)
+    snapshot = session.modeling.records(query)
+    assert_type(snapshot.value.physics, modeling.PhysicsAsset | None)
+    with session.address(modeling.AddressSelectorPose(id=id)) as address:
+        assert_type(address.plan(modeling.AddressPatchPose(fields=modeling.PoseFieldsGroup(name="New"))), zipzi.Plan)
+    return snapshot
+
+from zipzi import animation
+from zipzi import observation,inspection
+
+def gpu_observation(session:zipzi.Session,edit:zipzi.Edit,path:Path)->inspection.Report:
+    view=observation.View(width=64,height=32,roi=(0.,0.,2.,1.))
+    assert_type(session.modeling.observe(({},),view),zipzi.Job[zipzi.Snapshot[observation.Batch]])
+    result=zipzi.recover_call(edit.modeling.observe,({},),view).wait()
+    assert_type(result.value.frames[0].rgba,bytes)
+    with session.preview() as preview:
+        frame=preview.seek(.5,view=view).wait().value.frames[0]
+        assert_type(frame.observation,observation.Image|None)
+    return inspection.save(result,path)
+from zipzi import spatial
+
+def spatial_queries(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi.Snapshot[spatial.Batch]:
+    query=spatial.Bounds(targets=(spatial.MeshTarget(value=id),))
+    assert_type(session.modeling.spatial(({},),(query,)),zipzi.Job[zipzi.Snapshot[spatial.Batch]])
+    assert_type(edit.modeling.spatial(({},),(query,)),zipzi.Job[zipzi.Snapshot[spatial.Batch]])
+    with session.preview() as preview:
+        result=preview.seek(.5,geometry=False,queries=(spatial.Hits(point=(0.,0.)),)).wait()
+        assert_type(result.value.frames[0].spatial,tuple[spatial.Result,...])
+    return zipzi.recover_call(session.modeling.spatial,({},),(query,)).wait()
+
+def animation_preview(session: zipzi.Session, edit: zipzi.Edit) -> zipzi.Snapshot[animation.Batch]:
+    with session.preview() as preview:
+        assert_type(preview.source,zipzi.Source)
+        assert_type(preview.id,int)
+        assert_type(preview.apply(animation.SetParameter(id="parameter",value=.5)),zipzi.Snapshot[animation.State])
+        assert_type(zipzi.recover_call(preview.seek,.5),zipzi.Job[zipzi.Snapshot[animation.Batch]])
+        assert_type(preview.advance_to(.5),zipzi.Job[zipzi.Snapshot[animation.Batch]])
+        return preview.sample((0.,.5),geometry=True).wait()

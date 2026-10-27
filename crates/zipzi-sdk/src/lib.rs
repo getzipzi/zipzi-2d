@@ -7,8 +7,8 @@ mod project_io;
 mod session;
 mod spatial;
 mod types;
-pub use zipzi_animation::canonical_motion_seek_time;
 pub use zipzi_animation::CompiledSegment;
+pub use zipzi_animation::canonical_motion_seek_time;
 
 pub use alpha_mesh::{
     alpha_mesh_geometry, build_edge_layout, sample_interior, triangulate_constrained, AlphaMask,
@@ -21,8 +21,9 @@ pub use diagnostics::{GeometryBounds, GeometryChecks, GeometryDiagnostic, Geomet
 pub use edit::EditSession;
 pub use session::{AuthoringSession, AuthoringSnapshot};
 pub use spatial::{
-    hit_test_geometry, object_bounds, resolve_mesh_ids, GeometryHit, GeometryQuery, ObjectBounds,
-    ObjectTarget, SpatialError, TriangleHit,
+    GeometryHit, GeometryQuery, ObjectBounds, ObjectTarget, SpatialError, SpatialFrame,
+    SpatialQuery, SpatialResult, SpatialSampler, SpatialSamples, TriangleHit, hit_test_geometry,
+    object_bounds, query_spatial_frame, resolve_mesh_ids, validate_spatial_queries,
 };
 pub use types::{
     EditReceipt, GeometrySnapshot, GeometrySpace, HistoryLimits, HistoryState, ImportReceipt,
@@ -30,13 +31,13 @@ pub use types::{
     TopologyReplacement, Version,
 };
 pub use zipzi_animation::{
-    apply_model_opacity, AnimationError, ExpressionPreview, ExpressionTransition, MotionEventFired,
-    MotionPreview, MotionSnapshot, PhysicsOutputSnapshot, PhysicsPreview, PhysicsRigSnapshot,
-    PreviewGeometryTimings, RuntimeSnapshot, SeekCacheStats,
+    AnimationError, ExpressionPreview, ExpressionTransition, MotionEventFired, MotionPreview,
+    MotionSnapshot, PhysicsOutputSnapshot, PhysicsPreview, PhysicsRigSnapshot,
+    PreviewGeometryTimings, RuntimeSnapshot, SeekCacheStats, apply_model_opacity,
 };
 pub use zipzi_animation::{
-    motion_bezier_time_is_monotonic, sample_motion_curve, CompiledCurve, MotionEditingPreview,
-    MotionPlaybackPosition,
+    CompiledCurve, MotionEditingPreview, MotionPlaybackPosition, motion_bezier_time_is_monotonic,
+    sample_motion_curve,
 };
 pub use zipzi_project::{
     Can3Artifact, Can3Options, Cmo3Artifact, Cmo3Diagnostic, Cmo3Error, Cmo3Options, Cmo3Report,
@@ -45,7 +46,7 @@ pub use zipzi_project::{
 };
 
 mod geometry;
-pub use geometry::{rectangle_grid_geometry, MeshGeometry};
+pub use geometry::{MeshGeometry, rectangle_grid_geometry};
 mod manual_mesh;
 pub use manual_mesh::{
     add_manual_interior_sites, edit_manual_mesh, extract_manual_meshing, AffineUvMap,
@@ -128,6 +129,6 @@ pub use authoring_collections::*;
 
 mod modeling;
 pub use modeling::{
-    modeling_records, ModelingIntent, ModelingPlan, ModelingPlanReport, ModelingQuery,
-    ModelingRecords, ModelingSamples, OwnedModelingRecords,
+    ModelingIntent, ModelingPlan, ModelingPlanReport, ModelingQuery, ModelingRecords,
+    ModelingSampler, ModelingSamples, OwnedModelingRecords, modeling_records,
 };

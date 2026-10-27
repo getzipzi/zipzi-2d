@@ -174,7 +174,7 @@ impl Executor for Threaded {
                 #[cfg(feature = "test-support")]
                 let result = control.run(work);
                 #[cfg(not(feature = "test-support"))]
-                let result = work.run();
+                let result = work.run_quantum();
                 let _ = completed.send(result);
             }) {
             Ok(thread) => {

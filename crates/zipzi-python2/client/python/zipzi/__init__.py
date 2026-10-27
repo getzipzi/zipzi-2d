@@ -1,6 +1,6 @@
 """Typed Python authoring API backed by the Zipzi Runtime."""
 from pathlib import Path
-from . import modeling as modeling, bindings, sampling, events, meshes, ops, parameters, resources, scene, references
+from . import modeling as modeling, bindings, sampling, events, meshes, ops, parameters, resources, scene, references, animation, spatial, observation, inspection
 from ._plans import Plan
 from ._generated.plan_values import PlanCost, PlanReport
 from .resources import PreparedImage
@@ -46,6 +46,8 @@ def connect(*, endpoint: Path | None = None, start: bool = False, host: Path | N
 
 __all__ = ["local", "connect", "Runtime", "Session", "Edit", "Job", "SdkFailure", "Busy", "OutcomeUnknown",
     "PendingRequest", "Version", "Source", "Receipt", "SaveReceipt", "SessionId", "SessionInfo", "ConnectionInfo", "ConnectionLimits", "WriteResult", "modeling", "bindings", "sampling", "events", "meshes", "ops", "parameters", "resources", "scene", "references", "Plan", "PreparedImage", "Buffer"]
+__all__ += ["animation", "spatial", "observation", "inspection"]
+
 __all__ += ["recover_call", "EditState", "JobState", "JobTimeout", "RecoveryAction"]
 
 from ._request_methods import register as _register_requests

@@ -1,8 +1,10 @@
 # zipzi-runtime
 
-CPU-only, single-owner host for `zipzi-sdk` authoring sessions. It owns the sole
-formal session and history, client/edit/job tables, project path reservations,
-bounded event streams and executor handoffs. There is no GPUI, PyO3 or GPU dependency. SDK does not depend on Runtime.
+Single-owner host for `zipzi-sdk` authoring sessions and independent CPU/GPU
+observation jobs. It owns the sole formal session and history, client/edit/job
+tables, project path reservations, bounded event streams and executor handoffs.
+There is no GPUI or PyO3 dependency. GPU observation uses `zipzi-sdk-observe` and
+initializes a device only on an explicit render worker. SDK does not depend on Runtime.
 
 The desktop Editor uses the same application-owned Runtime. Windows and tabs
 attach views. Closing a tab retains resident sessions and history; closing the last
@@ -64,14 +66,30 @@ consumes entered workers' actual results, then drops all sessions without saving
 Adapters must release the Python GIL while calling/waiting/closing, and must never
 invoke user callbacks or wait for this host's jobs inside a `call` closure.
 Its thin native adapter enters this host directly; no Python callbacks run here.
+Both LocalHost and desktop IPC use the host-owned persistent `WorkerPool`; a
+batch yield does not create an OS thread or block a GPUI executor thread.
 
 Focused foundation tests: `cargo test --locked -p zipzi-runtime --test host`;
 the queue admission test is under `--lib host::tests::`.
 
 `request_open`, `request_save`, `request_commit`, `request_undo` and `request_redo`
 queue ownership-carrying jobs. The application owns an `Executor`; `dispatch`
-passes it `Work`, the worker calls `Work::run`, and the application delivers the
-returned `Completion` to `Runtime::complete`. Accepted work must always deliver
+passes it `Work`, the worker calls `Work::run_quantum` (or `run_on_thread`), and the application delivers the
+returned `Completion` to `Runtime::complete` before dispatching again. Batch
+continuations keep their Job Running and produce no result/event until terminal.
+`Completion::is_terminal` lets desktop hosts avoid waking views for internal steps.
+`Work::run` remains available to explicitly execute a whole batch synchronously.
+GPU observation/Preview Jobs also acquire a resident admission slot on first
+execution. Its limit is `max(running_jobs - 1, 1)`, independent of the temporary
+execution slot: yields retain it until worker destruction and terminal completion.
+Waiting GPU Jobs do not block eligible CPU Jobs. This bounds resident Observer
+instances; it is not a byte-accurate device-memory limit.
+Cancellation of an entered continuation remains `Cancelling` until a worker
+has destroyed its partial output and GPU resources. Its accounting and GPU slot
+remain held meanwhile. Unentered read Jobs can still cancel immediately.
+Modeling and spatial batches use SDK-owned resumable samplers, also used by the
+synchronous SDK APIs; shared query validation runs once per batch.
+Accepted work must always deliver
 its completion; rejected submissions return the exact unexecuted work. Executors
 must not panic during submission. Runtime installs no thread pool or window hook.
 The CPU tests include a real threaded executor and filesystem panic injection.
@@ -186,7 +204,7 @@ continue via `Executor` and completion delivery. Terminal Job queries atomically
 transfer their results into the deduplicated request window and release Job slots.
 Request status queries do not advance the monotonic admission watermark.
 
-The current contract is `zipzi-runtime-manual-mesh-1`: big-endian u32 length, UTF-8 JSON control
+The current contract is `zipzi-runtime-r7-manual-mesh-1`: big-endian u32 length, UTF-8 JSON control
 frames (16 MiB maximum), strict handshake and runtime-scoped IDs. The high length
 bit selects binary framing: a bounded JSON header (16 KiB) plus at most 1 MiB raw
 payload. Each immutable blob is at most 256 MiB and SHA256 checked before use.
@@ -256,3 +274,36 @@ headless contexts return no snapshot. Native acceptance covers all object kinds,
 selection, relations, texture/property projection and a human gesture interleaved
 with an external stale candidate. See [R4 coverage](../../docs/runtime/r4-coverage.json)
 and [acceptance evidence](../../docs/plans/sdk-runtime/python2-r4-complete.md).
+
+## R5 animation authoring slice
+
+Typed Motion/registration/track/key/event, Expression, Physics and Pose edits,
+whole-asset commands, selected canonical records, SDK plans, field addresses and
+capability queries use the same Runtime handlers on Local and Connected. The
+host advertises `animation_authoring`; this does not advertise independent
+Preview or Observer support. Large animation values reuse binary admission and
+recovery. Native/IPC pairing is `zipzi-python2-18` / `zipzi-runtime-r5-observation-1`.
+
+The SDK now retains animation field epochs across edits and Undo. Physics change
+summaries compare stable row IDs so a sibling reorder preserves field addresses.
+The [R5/P5 record](../../docs/plans/sdk-runtime/python2-r5-authoring.md) tracks
+source/installed authoring evidence. The [CPU Preview slice](../../docs/plans/sdk-runtime/python2-r5-preview.md)
+adds client-owned frozen SDK simulations, exact-source batches and cancellable
+seek/advance Jobs. Preview controls never borrow the formal session or its
+default preview. One running read worker slot remains reserved for publication.
+[CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md) now reuse
+SDK geometry on frozen formal/candidate poses and exact Preview states, with
+cancellable workers, admission and binary results. [GPU observation](../../docs/plans/sdk-runtime/python2-r5-observation.md)
+adds explicit-view image Jobs and actual texture provenance.
+
+Read dispatch rotates between clients and FIFO between each client's jobs and
+continuations. Modeling/spatial batches yield after each pose; Preview batches
+yield after each target; image batches also yield around shared texture acquisition
+and after each rendered frame. A batch keeps one Observer and one texture acquisition
+across dispatches, charged to its original Job. Publications take priority, including
+on a single-worker host. An entered SDK seek/plan, image decode, texture acquisition
+or GPU submission finishes or cooperatively cancels before yielding; this is not a
+fixed wall-clock time slice. The desktop animation worker and native Metal display
+keep their own state and queue. Focused regressions are `--test scheduling` and
+Editor `timeline::runtime_isolation`; [scope and evidence](../../docs/plans/sdk-runtime/python2-r5-scheduling.md).
+R5 remains in progress pending integrated native performance/acceptance work.

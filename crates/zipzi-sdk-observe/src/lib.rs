@@ -106,6 +106,18 @@ pub struct ResolvedObservation {
 
 pub(crate) const MAX_CAPTURE_TEXTURE_BYTES: u64 = 256 * 1024 * 1024;
 
+fn check_capture(control: &zipzi_sdk::ConversionControl) -> Result<(), ObservationError> {
+    if control.is_cancelled() {
+        Err(ObservationError {
+            code: "CANCELLED".into(),
+            message: "Observation capture cancelled".into(),
+            asset_id: None,
+        })
+    } else {
+        Ok(())
+    }
+}
+
 impl ResolvedObservation {
     pub fn capture(input: ObservationInput) -> Result<Self, ObservationError> {
         Ok(Self::capture_many(vec![input])?.remove(0))
@@ -114,6 +126,16 @@ impl ResolvedObservation {
     /// Resolve the union of sample assets once and share their decoded bytes.
     /// All inputs must come from the same authoring snapshot.
     pub fn capture_many(inputs: Vec<ObservationInput>) -> Result<Vec<Self>, ObservationError> {
+        Self::capture_many_with_control(inputs, &zipzi_sdk::ConversionControl::default())
+    }
+
+    /// Cooperatively cancel between samples, texture decodes and scene digests.
+    /// An already entered image decode completes before cancellation is observed.
+    pub fn capture_many_with_control(
+        inputs: Vec<ObservationInput>,
+        control: &zipzi_sdk::ConversionControl,
+    ) -> Result<Vec<Self>, ObservationError> {
+        check_capture(control)?;
         if inputs.is_empty() || inputs.len() > 64 {
             return Err(ObservationError {
                 code: "OBSERVATION_BUDGET_EXCEEDED".into(),
@@ -124,6 +146,7 @@ impl ResolvedObservation {
         let first = &inputs[0];
         let mut assets = BTreeMap::<String, ImageAsset>::new();
         for input in &inputs {
+            check_capture(control)?;
             if input.version != first.version
                 || input.document_id != first.document_id
                 || input.evaluation_revision != first.evaluation_revision
@@ -137,6 +160,7 @@ impl ResolvedObservation {
                 });
             }
             for asset in &input.assets {
+                check_capture(control)?;
                 asset.image_content().map_err(|e| ObservationError {
                     code: e.code,
                     message: e.message,
@@ -170,6 +194,7 @@ impl ResolvedObservation {
         let textures: Vec<ResolvedTexture> = assets
             .into_values()
             .map(|asset| {
+                check_capture(control)?;
                 let data = match first.memory_images.get(&asset.id) {
                     Some(image) => image.read_asset(),
                     None => read_project_asset(&first.root, &asset),
@@ -179,6 +204,7 @@ impl ResolvedObservation {
                     message: status.message,
                     asset_id: Some(asset.id.clone()),
                 })?;
+                check_capture(control)?;
                 Ok(ResolvedTexture { asset, data })
             })
             .collect::<Result<_, _>>()?;
@@ -199,6 +225,7 @@ impl ResolvedObservation {
         inputs
             .into_iter()
             .map(|input| {
+                check_capture(control)?;
                 let mut capture = Self {
                     input,
                     textures: Arc::clone(&shared),
@@ -206,6 +233,7 @@ impl ResolvedObservation {
                     scene_digest: String::new(),
                 };
                 capture.scene_digest = capture.compute_scene_digest()?;
+                check_capture(control)?;
                 Ok(capture)
             })
             .collect()
@@ -396,8 +424,7 @@ impl ObservationInput {
     ) -> Result<Self, ObservationError> {
         let version = snapshot.version();
         if preview.source_identity() != Some((version.session_id, version.generation))
-            || preview.document_revision() != version.revision
-            || preview.document_id() != snapshot.document().id()
+            || !preview.matches_document(snapshot.document())
         {
             return Err(ObservationError {
                 code: "STALE_ANIMATION_PREVIEW".into(),

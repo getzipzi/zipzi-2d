@@ -2,11 +2,14 @@
 """Uniform, typed domain calls. Only registered hooks own execution policy."""
 from collections.abc import Sequence, Mapping
 from .. import meshes, parameters, bindings, resources, scene, sampling, modeling
+from .. import spatial as _spatial, observation
 from .. import _lifecycle
 from .._results import Snapshot, Batch, Page, PageCursor
 from .._values import Source, WriteResult
 from .._calls import project, single_id
 from .._facade_support import Collection, records, sample
+from .._spatial import sample as spatial_sample
+from .._observation import sample as observation_sample
 
 class Meshes(Collection[meshes.Mesh]):
     def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):
@@ -127,3 +130,11 @@ class Modeling:
     def sample_async(self, poses: Sequence[Mapping[str,float]], *, checks: sampling.Checks = sampling.Checks(), expected: Source | None = None) -> "_lifecycle.Job[Snapshot[sampling.Result]]":
         'Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().'
         return sample(self,poses,checks,expected,True)
+
+    def spatial(self, poses: Sequence[Mapping[str,float]], queries: Sequence[_spatial.Query], *, expected: Source | None = None) -> "_lifecycle.Job[Snapshot[_spatial.Batch]]":
+        'Submit frozen CPU geometry queries for explicit parameter poses. Returns Job[Snapshot[spatial.Batch]] with effective parameters, exact Source, requested queries and ordered bounds/hit results. Coordinates are Y-up model units, never screen pixels; hidden geometry is explicitly selectable. Candidate reads do not publish or abort an Edit. A lost submission/result recovers the original call rather than querying newer content. No textures, masks, occlusion or GPU are used.'
+        return spatial_sample(self,poses,queries,expected)
+
+    def observe(self, poses: Sequence[Mapping[str,float]], view: observation.View, *, expected: Source | None = None) -> "_lifecycle.Job[Snapshot[observation.Batch]]":
+        'Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.'
+        return observation_sample(self,poses,view,expected)

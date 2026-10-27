@@ -247,6 +247,17 @@ fn context_navigation_is_per_document_and_does_not_reevaluate_scene() -> anyhow:
     let revision = editor.tree_revision();
     editor.execute(EditorCommand::FocusParameter(p.clone()))?;
     editor.execute(EditorCommand::OpenBinding(binding.clone()))?;
+    // Opening a binding now focuses its target; parameter inspection can then
+    // be restored independently and must survive switching documents.
+    assert!(
+        editor
+            .document()
+            .unwrap()
+            .context()
+            .parameter_focus
+            .is_none()
+    );
+    editor.execute(EditorCommand::FocusParameter(p.clone()))?;
     editor.preview()?;
     assert_eq!(editor.evaluation_count(), count);
     assert_eq!(editor.tree_revision(), revision);

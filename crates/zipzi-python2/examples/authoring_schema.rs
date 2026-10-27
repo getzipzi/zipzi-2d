@@ -49,6 +49,7 @@ struct Operation {
 }
 #[derive(Serialize)]
 struct Contract {
+    protocol: &'static str,
     version: u32,
     bindings: Vec<Binding>,
     roots: Vec<Shape>,
@@ -67,6 +68,7 @@ fn main() {
     use zipzi_sdk::{MeshCreateSpec, MeshGeometry, MeshOperation};
     let (input, output) = MESH_QUERY.shapes();
     let contract = Contract {
+        protocol: zipzi_runtime::protocol::CONTRACT,
         version: 1,
         resources: Some(Box::new(resource_contract())),
         binary: Some(binary_contract()),
@@ -75,7 +77,7 @@ fn main() {
             serde_json::json!({"ObjectSummary":zipzi_runtime::ObjectSummary::api_shape(),"RuntimeCapabilities":zipzi_runtime::RuntimeCapabilities::api_shape(),"RuntimeLimits":zipzi_runtime::RuntimeLimits::api_shape()}),
         ),
         modeling: Some(
-            serde_json::json!({"version":1,"input_roots":[0,1,2,4,5,6,7,9,11],"native_only_roots":[zipzi_sdk::ParameterOperation::api_shape(),zipzi_sdk::MeshBindingOperation::api_shape(),zipzi_sdk::GeometryChecks::api_shape()],"roots":[zipzi_runtime::modeling::ModelingCommand::api_shape(),zipzi_sdk::ModelingIntent::api_shape(),zipzi_sdk::ModelingQuery::api_shape(),zipzi_sdk::OwnedModelingRecords::api_shape(),zipzi_runtime::addressing::AddressSelector::api_shape(),zipzi_runtime::addressing::AddressPatch::api_shape(),zipzi_runtime::addressing::CapabilityDomain::api_shape(),zipzi_runtime::addressing::CollectionQuery::api_shape(),zipzi_runtime::addressing::Capabilities::api_shape(),zipzi_sdk::ObjectKind::api_shape(),zipzi_sdk::ModelingSamples::api_shape(),zipzi_runtime::project_io::ProjectRequest::api_shape(),zipzi_runtime::project_io::ProjectReport::api_shape(),zipzi_runtime::editor_context::EditorContext::api_shape()]}),
+            serde_json::json!({"version":1,"input_roots":[0,1,2,4,5,6,7,9,11,14,17,19],"native_only_roots":[zipzi_sdk::ParameterOperation::api_shape(),zipzi_sdk::MeshBindingOperation::api_shape(),zipzi_sdk::GeometryChecks::api_shape()],"roots":[zipzi_runtime::modeling::ModelingCommand::api_shape(),zipzi_sdk::ModelingIntent::api_shape(),zipzi_sdk::ModelingQuery::api_shape(),zipzi_sdk::OwnedModelingRecords::api_shape(),zipzi_runtime::addressing::AddressSelector::api_shape(),zipzi_runtime::addressing::AddressPatch::api_shape(),zipzi_runtime::addressing::CapabilityDomain::api_shape(),zipzi_runtime::addressing::CollectionQuery::api_shape(),zipzi_runtime::addressing::Capabilities::api_shape(),zipzi_sdk::ObjectKind::api_shape(),zipzi_sdk::ModelingSamples::api_shape(),zipzi_runtime::project_io::ProjectRequest::api_shape(),zipzi_runtime::project_io::ProjectReport::api_shape(),zipzi_runtime::editor_context::EditorContext::api_shape(),zipzi_runtime::preview::PreviewCommand::api_shape(),zipzi_runtime::preview::PreviewState::api_shape(),zipzi_runtime::preview::PreviewBatch::api_shape(),zipzi_sdk::SpatialQuery::api_shape(),zipzi_sdk::SpatialSamples::api_shape(),zipzi_runtime::observation::ObservationView::api_shape(),zipzi_runtime::observation::ObservationBatch::api_shape()]}),
         ),
         scene: Some(serde_json::json!({
             "version": 1,
@@ -171,6 +173,7 @@ fn resource_contract() -> Contract {
     operation!(PREPARED_PIXELS_QUERY, "prepared_pixels", "query");
     operation!(PLAN_QUERY, "plan", "planning");
     Contract {
+        protocol: zipzi_runtime::protocol::CONTRACT,
         version: 1,
         resources: None,
         scene: None,
@@ -289,6 +292,12 @@ fn binary_contract() -> serde_json::Value {
         "source_variants":zipzi_runtime::SourceRef::VARIANTS,
         "source_fields":zipzi_runtime::SourceRef::VARIANT_FIELDS,
         "samples":zipzi_sdk::ModelingSamples::api_shape(),
+        "preview":zipzi_runtime::preview::PreviewBatch::api_shape(),
+        "observation":zipzi_runtime::observation::ObservationBatch::api_shape(),
+        "observation_signature":format!("{:032x}",zipzi_runtime::observation::ObservationBatch::SIGNATURE),
+        "spatial":zipzi_sdk::SpatialSamples::api_shape(),
+        "spatial_signature":format!("{:032x}",zipzi_sdk::SpatialSamples::SIGNATURE),
+        "preview_signature":format!("{:032x}",zipzi_runtime::preview::PreviewBatch::SIGNATURE),
         "sample_signature":format!("{:032x}",zipzi_sdk::ModelingSamples::SIGNATURE),
     })
 }

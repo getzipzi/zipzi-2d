@@ -236,17 +236,83 @@ impl Runtime {
         let running = self
             .jobs
             .values()
-            .filter(|j| j.info.state == JobState::Running)
+            .filter(|j| {
+                matches!(j.info.state, JobState::Running | JobState::Cancelling)
+                    && !self.queue.iter().any(|w| w.job == j.info.id)
+            })
             .count();
-        if running >= self.limits.running_jobs && self.jobs[&job].info.state != JobState::Cancelling
-        {
+        if running >= self.limits.running_jobs {
             return Err(RuntimeError::Busy);
         }
+        let read = self.jobs[&job].read_only;
+        if read {
+            let reads = self
+                .jobs
+                .values()
+                .filter(|j| {
+                    j.read_only
+                        && matches!(j.info.state, JobState::Running | JobState::Cancelling)
+                        && !self.queue.iter().any(|w| w.job == j.info.id)
+                })
+                .count();
+            if reads >= self.limits.running_jobs.saturating_sub(1).max(1)
+                || self.queue.iter().any(|w| !self.jobs[&w.job].read_only)
+                || self.next_read_index() != Some(position)
+            {
+                return Err(RuntimeError::Busy);
+            }
+        }
         let work = self.queue.remove(position).unwrap();
+        if read {
+            self.jobs.get_mut(&job).unwrap().gpu_resident = self.jobs[&job].gpu;
+            self.read_turns.pop_front();
+            self.read_turns.push_back(work.client);
+        }
         if self.jobs[&job].info.state != JobState::Cancelling {
             self.jobs.get_mut(&job).unwrap().info.state = JobState::Running;
         }
         Ok(work)
+    }
+    /// Cancel an unentered host Job without borrowing an executor slot. Return
+    /// ownership and release reservations before the host reports admission
+    /// failure. An entered Job must use ordinary cooperative cancellation.
+    pub fn cancel_queued_job(&mut self, client: ClientId, job: JobId) -> Result<()> {
+        self.job_info(client, job)?;
+        let position = self
+            .queue
+            .iter()
+            .position(|work| work.job == job)
+            .ok_or(RuntimeError::Busy)?;
+        if matches!(
+            self.queue[position].task,
+            Task::Read(crate::jobs::ReadTask::Batch(_))
+        ) {
+            // Entered continuations require worker-side cleanup, even when queued.
+            return Err(RuntimeError::Busy);
+        }
+        let Work {
+            job,
+            client,
+            session_id,
+            base,
+            session,
+            transfer,
+            task,
+            cancel,
+        } = self.queue.remove(position).unwrap();
+        cancel.store(true, Ordering::Release);
+        // Drop candidate/prepared roots before completion collects resources.
+        drop(task);
+        self.complete(Completion {
+            job,
+            client,
+            session_id,
+            base,
+            session,
+            transfer,
+            outcome: crate::jobs::WorkOutcome::Complete(Err(RuntimeError::Cancelled)),
+        });
+        Ok(())
     }
     pub fn find_project(&self, path: &Path) -> Result<Option<SessionId>> {
         Ok(self.paths.get(&identity(path)?).copied())
