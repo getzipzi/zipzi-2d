@@ -1,0 +1,5 @@
+#!/bin/sh
+# Run Python against this checkout without changing the caller's directory.
+set -eu
+tools_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec uv run --locked --project "$tools_dir/.." python -I "$tools_dir/python/dev_python.py" "$@"

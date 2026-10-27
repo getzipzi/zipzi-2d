@@ -11,10 +11,10 @@ uv run --locked python tools/test_tools.py -p test_cargo_domain.py -v
 
 ## Directory ownership
 
-The top level keeps five daily entrypoints: `test-sdk.sh`, `test-editor.sh`,
-`test_tools.py`, `dev-editor.sh` and `build-editor-app.sh`. Their implementation
-helpers and specialized commands live under the directories below. Paths in
-this guide are relative to `tools/` unless a command starts with `tools/`.
+The top level keeps six daily entrypoints: `test-sdk.sh`, `test-editor.sh`,
+`test_tools.py`, `dev-editor.sh`, `build-editor-app.sh` and `dev-python`.
+Their implementation helpers and specialized commands live under the directories
+below. Paths in this guide are relative to `tools/` unless a command starts with `tools/`.
 
 | Directory | Responsibility |
 | --- | --- |
@@ -41,6 +41,7 @@ arguments and output paths.
 | `test_tools.py` | Repository tooling tests; accepts unittest discovery flags (`-p`, `-k`, `-v`) |
 | `test-sdk.sh` | SDK fast, mesh, regression, stress, Python2 and full gates |
 | `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
+| `dev-python` | Source SDK experiments ([internal developer reference](../docs/references/dev-python.md)) |
 | `python/python2_contract.py` | P3A inventory, source/artifact freeze, complete target map/signatures, agent configuration and P3A-0 exit gate |
 | `python/python2_pairs.py` | Counterbalanced comparisons of frozen Python2 clients/Release binaries with the unchanged P0 workload and thresholds |
 | `python/python2_p0_migration.py` | Freeze an explicit shared P3A API adapter for both generations; guard original inputs, operations, assertions, measurement core and policy |
