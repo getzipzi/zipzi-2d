@@ -78,7 +78,7 @@ def main():
         with zipfile.ZipFile(pure) as wheel:
             for source in (PACKAGE/'client/python/zipzi/_generated').glob('*.py'):
                 assert wheel.read('zipzi/_generated/'+source.name)==source.read_bytes()
-        run('production-host',['cargo','build','--locked','--release','-p','zipzi-runtime','--example','local_host_fixture'],cwd=native)
+        run('production-host',['cargo','build','--locked','--release','-p','zipzi-runtime','--features','gpu-observation','--example','local_host_fixture'],cwd=native)
         import shutil
         host=output/'local_host_fixture'
         shutil.copy2(cargo_target/'release/examples/local_host_fixture',host)

@@ -1,6 +1,7 @@
 //! Finite transport projections; all evaluation, view mapping and rendering are SDK-owned.
 use serde::{Deserialize, Serialize};
 use zipzi_core::PreviewValues;
+#[cfg(feature = "gpu-observation")]
 use zipzi_sdk_observe::{Observer, ObserverConfig, ResolvedObservation};
 
 #[derive(
@@ -25,6 +26,7 @@ pub struct ObservationView {
     pub padding_model: f32,
 }
 impl ObservationView {
+    #[cfg(feature = "gpu-observation")]
     pub fn request(self) -> zipzi_sdk_observe::RenderRequest {
         let [x0, y0, x1, y1] = self.roi;
         zipzi_sdk_observe::RenderRequest {
@@ -38,6 +40,8 @@ impl ObservationView {
         if self.width > 4096 || self.height > 4096 {
             return Err(crate::RuntimeError::Budget("observation dimensions"));
         }
+        require_gpu_observation()?;
+        #[cfg(feature = "gpu-observation")]
         self.request().mapping().map_err(error)?;
         Ok(())
     }
@@ -113,6 +117,26 @@ pub struct ObservationSampleBatch {
     pub samples: ObservationBatch,
 }
 
+pub(crate) fn require_gpu_observation() -> crate::Result<()> {
+    if cfg!(feature = "gpu-observation") {
+        Ok(())
+    } else {
+        Err(gpu_unavailable())
+    }
+}
+pub(crate) fn gpu_unavailable() -> crate::RuntimeError {
+    crate::RuntimeError::Sdk(zipzi_sdk::SdkError {
+        code: "GPU_UNAVAILABLE".into(),
+        message: "This host was built without GPU observation support".into(),
+        operation: "observation",
+        object_ids: vec![],
+        field_path: None,
+        expected_version: None,
+        actual_version: None,
+        referrers: Box::new([]),
+    })
+}
+#[cfg(feature = "gpu-observation")]
 pub(crate) fn error(e: zipzi_sdk_observe::ObservationError) -> crate::RuntimeError {
     crate::RuntimeError::Sdk(zipzi_sdk::SdkError {
         code: e.code.into(),
@@ -132,6 +156,7 @@ pub(crate) fn check(cancel: &std::sync::atomic::AtomicBool) -> crate::Result<()>
         Ok(())
     }
 }
+#[cfg(feature = "gpu-observation")]
 pub(crate) fn observer(view: ObservationView) -> crate::Result<Observer> {
     view.validate()?;
     Observer::new(ObserverConfig {
@@ -141,6 +166,7 @@ pub(crate) fn observer(view: ObservationView) -> crate::Result<Observer> {
     })
     .map_err(error)
 }
+#[cfg(feature = "gpu-observation")]
 pub(crate) fn render(
     observer: &mut Observer,
     capture: &ResolvedObservation,

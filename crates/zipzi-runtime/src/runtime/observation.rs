@@ -1,7 +1,9 @@
 use super::*;
-use crate::{jobs::ReadTask, observation::*};
+#[cfg(feature = "gpu-observation")]
+use crate::jobs::ReadTask;
+use crate::observation::*;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "gpu-observation"))]
 mod tests {
     use super::*;
     #[derive(Default)]
@@ -112,6 +114,20 @@ impl Runtime {
             .saturating_add(output.saturating_mul(4))
             .saturating_add(1 << 20))
     }
+    #[cfg(not(feature = "gpu-observation"))]
+    pub fn request_observation(
+        &mut self,
+        client: ClientId,
+        session: SessionId,
+        edit: Option<EditId>,
+        _parameters: Vec<zipzi_core::PreviewValues>,
+        _view: ObservationView,
+        expected: Option<SourceRef>,
+    ) -> Result<JobId> {
+        self.check_authoring_source(client, session, edit, expected)?;
+        Err(gpu_unavailable())
+    }
+    #[cfg(feature = "gpu-observation")]
     pub fn request_observation(
         &mut self,
         client: ClientId,

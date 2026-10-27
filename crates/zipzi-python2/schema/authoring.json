@@ -121748,7 +121748,7 @@
         },
         {
           "default": null,
-          "doc": "Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.\nThis cached observation is not a guarantee for a later render; CPU sampling is independent.",
+          "doc": "GPU availability: false without GPU support; otherwise None before probing, true after rendering, false after adapter/device failure.\nThis cached observation is not a guarantee for a later render; CPU sampling is independent.",
           "name": "gpu",
           "rust_name": "gpu",
           "shape": {
@@ -121760,7 +121760,7 @@
           "skip": false
         },
         {
-          "doc": "Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.",
+          "doc": "Compiled observation backend family: Metal on macOS, WGPU elsewhere, or None without GPU support. No device is initialized by this read.",
           "name": "gpu_backend",
           "rust_name": "gpu_backend",
           "shape": {
@@ -121770,7 +121770,7 @@
         },
         {
           "default": null,
-          "doc": "Last adapter/device failure code, or None before probing or after a successful render.",
+          "doc": "GPU_UNAVAILABLE without GPU support; otherwise the last adapter/device failure code, or None before probing or after a successful render.",
           "name": "gpu_error",
           "rust_name": "gpu_error",
           "shape": {

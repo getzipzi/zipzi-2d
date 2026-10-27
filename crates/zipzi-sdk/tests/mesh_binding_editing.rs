@@ -108,14 +108,12 @@ fn caught_invalid_grid_or_keyform_failure_cannot_publish_partial_creation() {
         } else {
             let mut bad = keyform(1., 10.);
             bad.positions.pop();
-            assert!(
-                MeshBindingOperation::SetKeyform {
-                    id: created.unwrap(),
-                    keyform: bad
-                }
-                .apply(&mut e)
-                .is_err()
-            );
+            assert!(MeshBindingOperation::SetKeyform {
+                id: created.unwrap(),
+                keyform: bad
+            }
+            .apply(&mut e)
+            .is_err());
         }
         assert!(e.commit_to(&mut sdk).is_err());
         assert!(sdk.document().mesh_order().is_empty());
@@ -194,8 +192,8 @@ fn resumable_sampling_keeps_frozen_numeric_results_and_batch_order() {
 #[test]
 fn resumable_sampling_checks_empty_queries_and_cancellation_between_steps() {
     use std::sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
+        Arc,
     };
     use zipzi_sdk::{
         ConversionControl, ModelingSampler, ObjectTarget, SpatialQuery, SpatialSampler,
@@ -204,14 +202,12 @@ fn resumable_sampling_checks_empty_queries_and_cancellation_between_steps() {
     edit.commit_to(&mut sdk).unwrap();
     let snapshot = sdk.read_snapshot();
     let mut empty = ModelingSampler::new(&snapshot, vec![], Default::default());
-    assert!(
-        empty
-            .step(&Default::default())
-            .unwrap()
-            .unwrap()
-            .frames
-            .is_empty()
-    );
+    assert!(empty
+        .step(&Default::default())
+        .unwrap()
+        .unwrap()
+        .frames
+        .is_empty());
     let mut invalid = SpatialSampler::new(
         &snapshot,
         vec![],

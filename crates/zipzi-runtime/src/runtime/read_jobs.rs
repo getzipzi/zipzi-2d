@@ -18,10 +18,12 @@ impl Runtime {
         let base = source.source.version();
         let id = JobId::from_parts(self.instance, self.serial());
         let cancel = Arc::new(AtomicBool::new(false));
-        let gpu = matches!(
-            &task,
-            ReadTask::Observe { .. } | ReadTask::Preview { view: Some(_), .. }
-        );
+        let gpu = match &task {
+            #[cfg(feature = "gpu-observation")]
+            ReadTask::Observe { .. } => true,
+            ReadTask::Preview { view: Some(_), .. } => true,
+            _ => false,
+        };
         self.jobs.insert(
             id,
             JobEntry {

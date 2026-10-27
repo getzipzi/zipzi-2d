@@ -74,9 +74,9 @@ impl Drop for WorkerPool {
 mod tests {
     use super::*;
     use crate::{
-        Runtime, RuntimeLimits,
         authoring::ModelingSampleQuery,
         jobs::{ReadTask, Task, WorkOutcome},
+        Runtime, RuntimeLimits,
     };
     use std::{collections::HashSet, sync::mpsc, time::Duration};
 

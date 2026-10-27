@@ -1,7 +1,9 @@
 //! Worker-owned continuations. A yielded batch retains its frozen source,
 //! outputs and observer under the original Job's admission reservation.
 use super::*;
+#[cfg(feature = "gpu-observation")]
 use std::collections::VecDeque;
+#[cfg(feature = "gpu-observation")]
 use zipzi_sdk_observe::{ObservationInput, Observer, ResolvedObservation};
 
 pub(crate) struct ReadBatch {
@@ -21,6 +23,7 @@ impl Drop for ReadBatch {
 enum BatchKind {
     Sample(zipzi_sdk::ModelingSampler<Arc<zipzi_sdk::AuthoringSnapshot>>),
     Spatial(zipzi_sdk::SpatialSampler<Arc<zipzi_sdk::AuthoringSnapshot>>),
+    #[cfg(feature = "gpu-observation")]
     Observe {
         view: crate::observation::ObservationView,
         requested: Vec<zipzi_core::PreviewValues>,
@@ -53,6 +56,7 @@ impl ReadBatch {
                     zipzi_sdk::SpatialSampler::new(source.snapshot.clone(), parameters, queries);
                 (source, BatchKind::Spatial(sampler))
             }
+            #[cfg(feature = "gpu-observation")]
             ReadTask::Observe {
                 source,
                 parameters,
@@ -134,6 +138,7 @@ impl ReadBatch {
                     samples,
                 }))
             }
+            #[cfg(feature = "gpu-observation")]
             BatchKind::Observe {
                 view,
                 requested,

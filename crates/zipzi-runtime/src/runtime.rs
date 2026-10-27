@@ -29,8 +29,8 @@ use crate::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 use zipzi_core::{Canvas, Document, ModelSetup, Vec2};
 use zipzi_sdk::{AuthoringSession, AuthoringSnapshot, EditReceipt, EditSession, Version};
@@ -132,8 +132,16 @@ impl Runtime {
         let image_budget = zipzi_project::ImageMemoryBudget::new(limits.image_bytes);
         image_budget.bind_host_budget(0, limits.accounted_bytes);
         Self {
-            gpu_available: None,
-            gpu_error: None,
+            gpu_available: if cfg!(feature = "gpu-observation") {
+                None
+            } else {
+                Some(false)
+            },
+            gpu_error: if cfg!(feature = "gpu-observation") {
+                None
+            } else {
+                Some("GPU_UNAVAILABLE".into())
+            },
             previews: HashMap::new(),
             #[cfg(feature = "test-support")]
             control: Arc::default(),

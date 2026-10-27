@@ -1,6 +1,6 @@
 //! Client-owned preparation leases, distinct from document resources/history.
 use super::*;
-use crate::authoring::{ImagePixels, ImageSnapshot, MAX_IMAGE_BYTES, PreparedImageInfo};
+use crate::authoring::{ImagePixels, ImageSnapshot, PreparedImageInfo, MAX_IMAGE_BYTES};
 
 pub(super) struct ImageEntry {
     pub client: ClientId,

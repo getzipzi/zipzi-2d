@@ -340,6 +340,7 @@ impl Completion {
 
 pub(crate) enum ReadTask {
     Batch(Box<batches::ReadBatch>),
+    #[cfg(feature = "gpu-observation")]
     Observe {
         source: crate::SourceSnapshot,
         parameters: Vec<zipzi_core::PreviewValues>,

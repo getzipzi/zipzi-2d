@@ -247,6 +247,7 @@ fn queued_ownership_cancellation_restores_session_without_an_executor_slot() {
 }
 
 #[test]
+#[cfg(feature = "gpu-observation")]
 fn gpu_admission_survives_yields_and_cleanup_without_blocking_cpu_work() {
     let (mut rt, a, s) = fixture(2);
     let b = rt.register_client().unwrap();

@@ -642,7 +642,13 @@ mod tests {
         let evaluation = document.session.evaluation_revision();
         assert!(
             document
-                .validate_mesh_alpha(&ObjectRef::new(ObjectKind::Mesh, &id))
+                .validate_mesh_grid(
+                    &ObjectRef::new(ObjectKind::Mesh, &id),
+                    crate::MeshGridOptions {
+                        columns: 1,
+                        rows: 1
+                    },
+                )
                 .unwrap_err()
                 .to_string()
                 .contains("modeling topology")

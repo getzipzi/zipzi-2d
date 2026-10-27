@@ -16,13 +16,11 @@ fn id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
 fn xml(bytes: &[u8], workspace: usize) -> Result<String> {
-    let files = archive::read_limited(bytes, workspace / 8)?;
-    if files
+    let files = archive::read_limited(bytes, workspace / 4)?;
+    let source = files
         .get("main.xml")
-        .is_some_and(|xml| xml.len() > workspace / 512)
-    {
-        return Err(invalid("CAN3 XML workspace budget exceeded"));
-    }
+        .ok_or_else(|| invalid("CAN3 missing main.xml"))?;
+    super::workspace::check_xml(source, &files, workspace, "CAN3")?;
     String::from_utf8(
         files
             .get("main.xml")

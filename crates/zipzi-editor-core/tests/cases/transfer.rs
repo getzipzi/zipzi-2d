@@ -45,17 +45,26 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
         d.code.as_str(),
         "CAN3_BAKED_TRACK" | "CAN3_KEY_COLLISION" | "CAN3_TIME_GRID_UNRESOLVED"
     )));
-    // The external source has not received the old local draft's timing edits;
-    // repair diagnostics depend on those edits, while expression semantics must
-    // still be retained through this export.
-    for code in ["CAN3_EXPRESSION_SEMANTICS"] {
-        assert!(
-            report
-                .diagnostics
-                .iter()
-                .any(|diagnostic| diagnostic.code == code)
-        );
-    }
+    // Native CAN3 poses import as Add unless operation metadata is present.
+    // Only Multiply/Overwrite inputs require the expression-semantics notice.
+    let needs_semantics_notice = original.expression_order().iter().any(|id| {
+        original
+            .get_expression(id)
+            .unwrap()
+            .entries
+            .iter()
+            .any(|entry| {
+                use zipzi_core::document::ExpressionBlend;
+                entry.blend.unwrap_or(ExpressionBlend::Add) != ExpressionBlend::Add
+            })
+    });
+    assert_eq!(
+        report
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "CAN3_EXPRESSION_SEMANTICS"),
+        needs_semantics_notice,
+    );
     let model = zipzi_cmo3::import_model(&std::fs::read(destination.join("v3a9.cmo3"))?)?;
     let mut returned = model.document;
     zipzi_cmo3::import_animation(
@@ -108,7 +117,12 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
                 .iter()
                 .find(|candidate| candidate["Id"] == *runtime_id)
                 .unwrap();
-            assert_eq!(exported["Blend"], "Multiply");
+            let expected_blend = match entry.blend.unwrap_or(ExpressionBlend::Add) {
+                ExpressionBlend::Add => "Add",
+                ExpressionBlend::Multiply => "Multiply",
+                ExpressionBlend::Overwrite => "Overwrite",
+            };
+            assert_eq!(exported["Blend"], expected_blend);
             assert!((exported["Value"].as_f64().unwrap() as f32 - entry.value).abs() < 0.000001);
             reference_tracks.push(serde_json::json!({
                 "attribute": format!("live2dParam_{}", original.get_parameter(parameter_id).unwrap().runtime_id),

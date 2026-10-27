@@ -375,7 +375,9 @@ fn creation_settles_text_and_filtered_command_result_is_revealed_and_name_focuse
 #[gpui_kit::test]
 fn native_unavailable_reason_refreshes_when_availability_stays_disabled(cx: &mut TestAppContext) {
     let h = blank(cx);
-    invoke(&h, C::CreateMesh, CommandSource::Direct, cx);
+    // A non-mesh selection keeps ManualMesh disabled on both sides, so this
+    // regression still changes only the creation reason rather than menu states.
+    invoke(&h, C::CreateWarp, CommandSource::Direct, cx);
     let unowned = inspected(&h, cx);
     invoke(&h, C::CreatePart, CommandSource::Direct, cx);
     let part = inspected(&h, cx);

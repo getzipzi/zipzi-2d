@@ -103,7 +103,9 @@ pub(crate) fn modeling_and_parameters_screenshots(
             .within("parts-tree-panel")
             .click(format!("parts-lock-{mesh}"), cx);
         harness.view.read_with(cx, |view, _| {
-            assert!(view.editor.overlay().vertices.is_empty());
+            let vertices = view.editor.overlay().vertices;
+            assert!(!vertices.is_empty());
+            assert!(vertices.iter().all(|vertex| !vertex.editable));
             assert!(
                 view.editor
                     .document()

@@ -1,3 +1,5 @@
+#![cfg(feature = "gpu-observation")]
+
 use std::collections::VecDeque;
 use zipzi_runtime::{authoring::*, observation::*, *};
 #[derive(Default)]

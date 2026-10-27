@@ -3,8 +3,12 @@
 Single-owner host for `zipzi-sdk` authoring sessions and independent CPU/GPU
 observation jobs. It owns the sole formal session and history, client/edit/job
 tables, project path reservations, bounded event streams and executor handoffs.
-There is no GPUI or PyO3 dependency. GPU observation uses `zipzi-sdk-observe` and
-initializes a device only on an explicit render worker. SDK does not depend on Runtime.
+There is no GPUI or PyO3 dependency. The default build is CPU-only. The optional
+`gpu-observation` feature uses `zipzi-sdk-observe` and initializes a device only
+on an explicit render worker. Python's native adapter and the desktop Editor
+enable this feature. CPU hosts report `gpu=false` and reject image requests
+with `GPU_UNAVAILABLE` before admission; CPU sampling and previews remain available.
+SDK does not depend on Runtime.
 
 The desktop Editor uses the same application-owned Runtime. Windows and tabs
 attach views. Closing a tab retains resident sessions and history; closing the last
@@ -169,6 +173,7 @@ From the workspace root:
 cargo test --locked -p zipzi-sdk --test integration candidate_snapshot::
 env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration runtime::
 python3 tools/test_tools.py -p test_runtime_dependencies.py
+cargo test --locked -p zipzi-runtime --features gpu-observation --test observation -- --include-ignored
 ```
 
 See [R1 evidence](../../docs/plans/sdk-runtime/r1-core.md) for the CPU acceptance

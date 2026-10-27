@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 d2e7ef61598308add668663b327004d7474405ba01150fb1b0e8009d342cbddd.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 496edb57f7bdf333b112790f32eab283a5ae873e903c7dc8833e6d2b8db84420.
 
 
 ## zipzi.ApiDescription
@@ -1281,10 +1281,10 @@ source_checked_reads: Whether selected reads accept an exact expected Source.
 session_close: Whether this host supports explicit Session detach/close.
 binary_arrays: Whether this host supports the paired binary array transport.
 editor_windows: Whether Session window display is supported by this host.
-gpu: Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.
+gpu: GPU availability: false without GPU support; otherwise None before probing, true after rendering, false after adapter/device failure.
 This cached observation is not a guarantee for a later render; CPU sampling is independent.
-gpu_backend: Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.
-gpu_error: Last adapter/device failure code, or None before probing or after a successful render.
+gpu_backend: Compiled observation backend family: Metal on macOS, WGPU elsewhere, or None without GPU support. No device is initialized by this read.
+gpu_error: GPU_UNAVAILABLE without GPU support; otherwise the last adapter/device failure code, or None before probing or after a successful render.
 
 - `domains`: Finite domain names supported by this host; absence means the domain is unavailable.
 - `pagination`: Whether this host supports source-bound bounded collection pagination.
@@ -1292,10 +1292,10 @@ gpu_error: Last adapter/device failure code, or None before probing or after a s
 - `session_close`: Whether this host supports explicit Session detach/close.
 - `binary_arrays`: Whether this host supports the paired binary array transport.
 - `editor_windows`: Whether Session window display is supported by this host.
-- `gpu`: Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.
+- `gpu`: GPU availability: false without GPU support; otherwise None before probing, true after rendering, false after adapter/device failure.
 This cached observation is not a guarantee for a later render; CPU sampling is independent.
-- `gpu_backend`: Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.
-- `gpu_error`: Last adapter/device failure code, or None before probing or after a successful render.
+- `gpu_backend`: Compiled observation backend family: Metal on macOS, WGPU elsewhere, or None without GPU support. No device is initialized by this read.
+- `gpu_error`: GPU_UNAVAILABLE without GPU support; otherwise the last adapter/device failure code, or None before probing or after a successful render.
 
 ## zipzi.RuntimeCapabilities.__repr__
 

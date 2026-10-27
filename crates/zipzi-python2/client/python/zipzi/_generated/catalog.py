@@ -11,8 +11,8 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = 'zipzi-runtime-r7-manual-mesh-1'
 PACKAGE_VERSION = '0.1.0a1'
-CLIENT_SOURCE_SHA256 = 'd2e7ef61598308add668663b327004d7474405ba01150fb1b0e8009d342cbddd'
-CONTRACT_SHA256 = '99e632154904b160af39f53604c1685ea1e02f1332e879340531940e63dbe1f5'
+CLIENT_SOURCE_SHA256 = '496edb57f7bdf333b112790f32eab283a5ae873e903c7dc8833e6d2b8db84420'
+CONTRACT_SHA256 = '544b83dd122e08a3270d0e38d2d915bb4a27c66b111257a43cc334d9a19178b9'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -54,7 +54,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client '
-                            'source SHA-256 d2e7ef61598308add668663b327004d7474405ba01150fb1b0e8009d342cbddd.',
+                            'source SHA-256 496edb57f7bdf333b112790f32eab283a5ae873e903c7dc8833e6d2b8db84420.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -1806,14 +1806,17 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                 'transport.\n'
                                                 'editor_windows: Whether Session window display is supported by this '
                                                 'host.\n'
-                                                "gpu: Last render's GPU availability: None before probing, true after "
-                                                'rendering, false after adapter/device failure.\n'
+                                                'gpu: GPU availability: false without GPU support; otherwise None '
+                                                'before probing, true after rendering, false after adapter/device '
+                                                'failure.\n'
                                                 'This cached observation is not a guarantee for a later render; CPU '
                                                 'sampling is independent.\n'
                                                 'gpu_backend: Compiled observation backend family: Metal on macOS, '
-                                                'WGPU elsewhere. No device is initialized by this read.\n'
-                                                'gpu_error: Last adapter/device failure code, or None before probing '
-                                                'or after a successful render.',
+                                                'WGPU elsewhere, or None without GPU support. No device is initialized '
+                                                'by this read.\n'
+                                                'gpu_error: GPU_UNAVAILABLE without GPU support; otherwise the last '
+                                                'adapter/device failure code, or None before probing or after a '
+                                                'successful render.',
                                'example': 'docs/recipes.py',
                                'fields': [('domains',
                                            'Finite domain names supported by this host; absence means the domain is '
@@ -1829,16 +1832,16 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           ('editor_windows',
                                            'Whether Session window display is supported by this host.'),
                                           ('gpu',
-                                           "Last render's GPU availability: None before probing, true after rendering, "
-                                           'false after adapter/device failure.\n'
+                                           'GPU availability: false without GPU support; otherwise None before '
+                                           'probing, true after rendering, false after adapter/device failure.\n'
                                            'This cached observation is not a guarantee for a later render; CPU '
                                            'sampling is independent.'),
                                           ('gpu_backend',
-                                           'Compiled observation backend family: Metal on macOS, WGPU elsewhere. No '
-                                           'device is initialized by this read.'),
+                                           'Compiled observation backend family: Metal on macOS, WGPU elsewhere, or '
+                                           'None without GPU support. No device is initialized by this read.'),
                                           ('gpu_error',
-                                           'Last adapter/device failure code, or None before probing or after a '
-                                           'successful render.')],
+                                           'GPU_UNAVAILABLE without GPU support; otherwise the last adapter/device '
+                                           'failure code, or None before probing or after a successful render.')],
                                'kind': 'type',
                                'signature': '(domains: tuple[str, ...], pagination: bool, source_checked_reads: bool, '
                                             'session_close: bool, binary_arrays: bool, editor_windows: bool, gpu: bool '

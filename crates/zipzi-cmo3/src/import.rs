@@ -8,6 +8,7 @@ mod model;
 mod morph;
 #[cfg(feature = "test-support")]
 pub mod test_support;
+mod workspace;
 use crate::Cmo3Error;
 use std::collections::HashMap;
 use zipzi_core::Document;
@@ -29,16 +30,14 @@ pub fn import_model(bytes: &[u8]) -> Result<ImportedModel> {
 /// Bound archive expansion, XML nodes and resulting document before returning
 /// ownership. Hosts reserve `workspace` before calling this function.
 pub fn import_model_with_budget(bytes: &[u8], workspace: usize) -> Result<ImportedModel> {
-    let resources = archive::read_limited(bytes, workspace / 8)?;
+    let resources = archive::read_limited(bytes, workspace / 4)?;
     let xml = std::str::from_utf8(
         resources
             .get("main.xml")
             .ok_or_else(|| invalid("Missing main.xml"))?,
     )
     .map_err(|e| invalid(e.to_string()))?;
-    if xml.len() > workspace / 512 {
-        return Err(invalid("Cubism XML workspace budget exceeded"));
-    }
+    workspace::check_xml(xml.as_bytes(), &resources, workspace, "Cubism")?;
     let parsed = roxmltree::Document::parse(xml).map_err(|e| invalid(e.to_string()))?;
     let graph = graph::Graph::new(&parsed)?;
     let root = parsed
@@ -53,7 +52,7 @@ pub fn import_model_with_budget(bytes: &[u8], workspace: usize) -> Result<Import
         &resources,
         (workspace / 8).min(512 << 20),
     )?;
-    if model.document.estimated_content_bytes() > workspace / 4 {
+    if model.document.estimated_content_bytes() > workspace / 8 {
         return Err(invalid("Cubism document workspace budget exceeded"));
     }
     Ok(model)

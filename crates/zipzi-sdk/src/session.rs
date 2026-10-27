@@ -2,8 +2,8 @@
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use crate::edit::EditSession;
 use crate::types::*;
@@ -15,14 +15,14 @@ use zipzi_core::document::{
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::preview::PreviewState;
 use zipzi_core::{
-    BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas, ChangeKind, Document,
-    DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter, Part, PreviewValues,
-    SceneBinding, Transform, evaluate_frame,
+    evaluate_frame, BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas,
+    ChangeKind, Document, DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter,
+    Part, PreviewValues, SceneBinding, Transform,
 };
 use zipzi_project::{
+    export_cdi3, export_expression3, export_motion3, export_physics3, export_pose3,
     CdiProjectError, ExpressionProjectError, MotionProjectError, PhysicsProjectError,
-    PoseProjectError, export_cdi3, export_expression3, export_motion3, export_physics3,
-    export_pose3,
+    PoseProjectError,
 };
 use zipzi_project::{DocumentSession, FileSystem, NativeFileSystem};
 

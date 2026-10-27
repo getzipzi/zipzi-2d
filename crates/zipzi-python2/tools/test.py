@@ -68,7 +68,7 @@ def main() -> None:
         extension = native / ("_native" + sysconfig.get_config_var("EXT_SUFFIX"))
         shutil.copy2(libraries.pop(), extension)
         host_command = ["cargo", "build", "--locked", "-p", "zipzi-runtime", "--features",
-            "test-support,bench-instrumentation" if args.instrumented else "test-support", "--example", "local_host_fixture"]
+            "gpu-observation,test-support,bench-instrumentation" if args.instrumented else "gpu-observation,test-support", "--example", "local_host_fixture"]
         if args.release:
             host_command.append("--release")
         subprocess.run(host_command, cwd=ROOT, env=env, check=True)

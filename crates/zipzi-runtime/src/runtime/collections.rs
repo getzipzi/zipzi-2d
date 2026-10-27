@@ -136,12 +136,12 @@ pub struct RuntimeCapabilities {
     pub binary_arrays: bool,
     /// Whether Session window display is supported by this host.
     pub editor_windows: bool,
-    /// Last render's GPU availability: None before probing, true after rendering, false after adapter/device failure.
+    /// GPU availability: false without GPU support; otherwise None before probing, true after rendering, false after adapter/device failure.
     /// This cached observation is not a guarantee for a later render; CPU sampling is independent.
     pub gpu: Option<bool>,
-    /// Compiled observation backend family: Metal on macOS, WGPU elsewhere. No device is initialized by this read.
+    /// Compiled observation backend family: Metal on macOS, WGPU elsewhere, or None without GPU support. No device is initialized by this read.
     pub gpu_backend: String,
-    /// Last adapter/device failure code, or None before probing or after a successful render.
+    /// GPU_UNAVAILABLE without GPU support; otherwise the last adapter/device failure code, or None before probing or after a successful render.
     pub gpu_error: Option<String>,
 }
 
@@ -185,6 +185,7 @@ impl Runtime {
                 "references",
             ]
             .into_iter()
+            .filter(|domain| *domain != "observation" || cfg!(feature = "gpu-observation"))
             .map(str::to_owned)
             .collect(),
             pagination: true,
@@ -193,7 +194,9 @@ impl Runtime {
             binary_arrays: true,
             editor_windows: false,
             gpu: self.gpu_available,
-            gpu_backend: if cfg!(target_os = "macos") {
+            gpu_backend: if !cfg!(feature = "gpu-observation") {
+                "None"
+            } else if cfg!(target_os = "macos") {
                 "Metal"
             } else {
                 "WGPU"

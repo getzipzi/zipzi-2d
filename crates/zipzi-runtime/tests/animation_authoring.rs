@@ -1,5 +1,5 @@
 use zipzi_core::document::{ExpressionEdit, MotionContainer, MotionEdit, PhysicsEdit, PoseEdit};
-use zipzi_runtime::{Runtime, SourceRef, modeling::ModelingCommand};
+use zipzi_runtime::{modeling::ModelingCommand, Runtime, SourceRef};
 use zipzi_sdk::{ModelingIntent, ModelingQuery};
 
 fn id(n: u32) -> String {
@@ -80,13 +80,12 @@ fn animation_domains_share_candidate_publication_plans_and_selected_reads() {
     assert_eq!(selected.records.physics.as_ref().unwrap().id, id(5));
     assert_eq!(selected.records.pose.as_ref().unwrap().id, id(7));
     assert_eq!(rt.session_info(session).unwrap().version, before.version);
-    assert!(
-        rt.modeling_snapshot(client, session, None, query.clone())
-            .unwrap()
-            .records
-            .motions[0]
-            .is_none()
-    );
+    assert!(rt
+        .modeling_snapshot(client, session, None, query.clone())
+        .unwrap()
+        .records
+        .motions[0]
+        .is_none());
     rt.commit_edit(client, edit).unwrap();
     assert_eq!(rt.session_info(session).unwrap().history_lengths, (1, 0));
     let snapshot = rt.source_snapshot(session).unwrap();
@@ -117,16 +116,15 @@ fn animation_domains_share_candidate_publication_plans_and_selected_reads() {
         id(9)
     );
     rt.undo(client, session).unwrap();
-    assert!(
-        rt.modeling_snapshot(client, session, None, query.clone())
-            .unwrap()
-            .records
-            .expressions[0]
-            .as_ref()
-            .unwrap()
-            .entries
-            .is_empty()
-    );
+    assert!(rt
+        .modeling_snapshot(client, session, None, query.clone())
+        .unwrap()
+        .records
+        .expressions[0]
+        .as_ref()
+        .unwrap()
+        .entries
+        .is_empty());
     rt.redo(client, session).unwrap();
     assert_eq!(
         rt.modeling_snapshot(client, session, None, query)
@@ -140,13 +138,11 @@ fn animation_domains_share_candidate_publication_plans_and_selected_reads() {
         id(9)
     );
     // Selected snapshots own their old content after publication/Undo/Redo.
-    assert!(
-        selected.records.expressions[0]
-            .as_ref()
-            .unwrap()
-            .entries
-            .is_empty()
-    );
+    assert!(selected.records.expressions[0]
+        .as_ref()
+        .unwrap()
+        .entries
+        .is_empty());
 }
 
 #[test]
@@ -163,10 +159,9 @@ fn animation_selection_budget_refuses_before_expansion_without_poisoning_edit() 
         motions: vec![id(2); 4097],
         ..Default::default()
     };
-    assert!(
-        rt.modeling_snapshot(client, session, Some(edit), query)
-            .is_err()
-    );
+    assert!(rt
+        .modeling_snapshot(client, session, Some(edit), query)
+        .is_err());
     rt.apply_modeling(
         client,
         edit,

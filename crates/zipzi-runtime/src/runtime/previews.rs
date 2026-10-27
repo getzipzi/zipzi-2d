@@ -25,8 +25,11 @@ pub(crate) struct PreviewSampling {
     queries: Vec<zipzi_sdk::SpatialQuery>,
     view: Option<crate::observation::ObservationView>,
     initialized: bool,
+    #[cfg(feature = "gpu-observation")]
     observer: Option<zipzi_sdk_observe::Observer>,
+    #[cfg(feature = "gpu-observation")]
     inputs: Vec<zipzi_sdk_observe::ObservationInput>,
+    #[cfg(feature = "gpu-observation")]
     captures: Option<VecDeque<zipzi_sdk_observe::ResolvedObservation>>,
     frames: Vec<PreviewFrame>,
 }
@@ -51,8 +54,11 @@ impl PreviewSampling {
             queries,
             view,
             initialized: false,
+            #[cfg(feature = "gpu-observation")]
             observer: None,
+            #[cfg(feature = "gpu-observation")]
             inputs: vec![],
+            #[cfg(feature = "gpu-observation")]
             captures: None,
             frames: vec![],
         }
@@ -70,7 +76,13 @@ impl PreviewSampling {
                 &self.queries,
                 control,
             )?;
-            self.observer = self.view.map(crate::observation::observer).transpose()?;
+            if self.view.is_some() {
+                crate::observation::require_gpu_observation()?;
+            }
+            #[cfg(feature = "gpu-observation")]
+            {
+                self.observer = self.view.map(crate::observation::observer).transpose()?;
+            }
             self.initialized = true;
         }
         if let Some(time) = self.times.pop_front() {
@@ -111,6 +123,7 @@ impl PreviewSampling {
                     None
                 },
             });
+            #[cfg(feature = "gpu-observation")]
             if self.view.is_some() {
                 crate::observation::check(cancel)?;
                 self.inputs.push(
@@ -125,28 +138,10 @@ impl PreviewSampling {
             if !self.times.is_empty() || self.view.is_some() {
                 return Ok(None);
             }
-        } else if let Some(view) = self.view {
-            if self.captures.is_none() {
-                self.captures = Some(
-                    zipzi_sdk_observe::ResolvedObservation::capture_many_with_control(
-                        std::mem::take(&mut self.inputs),
-                        control,
-                    )
-                    .map_err(crate::observation::error)?
-                    .into(),
-                );
-                return Ok(None);
-            }
-            let captures = self.captures.as_mut().unwrap();
-            if let Some(capture) = captures.pop_front() {
-                let index = self.frames.len() - captures.len() - 1;
-                self.frames[index].observation = Some(crate::observation::render(
-                    self.observer.as_mut().unwrap(),
-                    &capture,
-                    view,
-                )?);
-            }
-            if !captures.is_empty() {
+        }
+        #[cfg(feature = "gpu-observation")]
+        if self.times.is_empty() && self.view.is_some() {
+            if !self.render_step(control)? {
                 return Ok(None);
             }
         }
@@ -159,6 +154,34 @@ impl PreviewSampling {
                 queries: std::mem::take(&mut self.queries),
             },
         }))))
+    }
+    #[cfg(feature = "gpu-observation")]
+    fn render_step(&mut self, control: &zipzi_sdk::ConversionControl) -> Result<bool> {
+        let view = self.view.expect("observation view");
+        if self.captures.is_none() {
+            self.captures = Some(
+                zipzi_sdk_observe::ResolvedObservation::capture_many_with_control(
+                    std::mem::take(&mut self.inputs),
+                    control,
+                )
+                .map_err(crate::observation::error)?
+                .into(),
+            );
+            return Ok(false);
+        }
+        let captures = self.captures.as_mut().unwrap();
+        if let Some(capture) = captures.pop_front() {
+            let index = self.frames.len() - captures.len() - 1;
+            self.frames[index].observation = Some(crate::observation::render(
+                self.observer.as_mut().unwrap(),
+                &capture,
+                view,
+            )?);
+        }
+        if !captures.is_empty() {
+            return Ok(false);
+        }
+        Ok(true)
     }
 }
 impl Runtime {

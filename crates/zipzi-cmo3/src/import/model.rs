@@ -260,7 +260,6 @@ pub(super) fn read(
         edit(document.create_scene_binding(binding))?;
     }
     let meshes = g.list(g.req(root, "drawableSourceSet")?, "_sources")?;
-    let mut decoded_budget = 0u64;
     let mut images = HashMap::new();
     let mut atlas_assets = std::collections::HashSet::new();
     let mut texture_ids: HashMap<String, String> = HashMap::new();
@@ -299,10 +298,10 @@ pub(super) fn read(
                     "Cubism texture dimensions exceed the supported range",
                 ));
             }
-            decoded_budget = decoded_budget
-                .checked_add(u64::from(width) * u64::from(height) * 4)
-                .ok_or_else(|| invalid("Texture budget overflow"))?;
-            if width > 16384 || height > 16384 || decoded_budget > texture_budget as u64 {
+            // Validation drops each decoded RGBA buffer before the next image.
+            // Retained encoded images are covered by the archive reservation.
+            let decoded_bytes = u64::from(width) * u64::from(height) * 4;
+            if decoded_bytes > texture_budget as u64 {
                 return Err(invalid("Cubism textures exceed the decoded memory budget"));
             }
             let decoded = zipzi_core::image::decode_png(&bytes).map_err(|s| invalid(s.message))?;

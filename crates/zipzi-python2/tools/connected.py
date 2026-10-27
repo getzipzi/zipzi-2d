@@ -39,7 +39,7 @@ def main() -> None:
         if args.install_only:
             print(python)
             return
-        subprocess.run(["cargo", "build", "--locked", "-p", "zipzi-runtime", "--features", "test-support",
+        subprocess.run(["cargo", "build", "--locked", "-p", "zipzi-runtime", "--features", "gpu-observation,test-support",
             "--example", "local_host_fixture"], cwd=ROOT, check=True)
         host = output / "local_host_fixture"
         shutil.copy2(ROOT / "target/debug/examples/local_host_fixture", host)
