@@ -126,6 +126,12 @@ impl EditorView {
         self.editor.invalidate_animation();
         self.frozen_frames.clear();
         self.editor.invalidate_preview();
+        if self.animation_worker.is_none() {
+            self.init_animation(cx);
+        }
+        if !preview::available() {
+            return;
+        }
         let (requests, frames, device) = match preview::start(window) {
             Ok(connection) => connection,
             Err(error) => {
@@ -136,9 +142,6 @@ impl EditorView {
                 return;
             }
         };
-        if self.animation_worker.is_none() {
-            self.init_animation(cx);
-        }
         self.gpu_device = device;
         self._frames = Some(cx.spawn(async move |this, cx| {
             while let Ok(frame) = frames.recv().await {
@@ -307,6 +310,7 @@ impl EditorView {
                         canvas: Some(canvas),
                         animation: None,
                         scene: preview.scene,
+                        #[cfg(target_os = "macos")]
                         target: zipzi_editor_render::MetalTargetConfig {
                             width,
                             height,

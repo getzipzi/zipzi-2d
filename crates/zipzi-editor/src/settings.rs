@@ -65,6 +65,12 @@ impl Settings {
         let root = std::env::var_os("ZIPZI_CONFIG_DIR")
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| {
+                if cfg!(target_os = "windows") {
+                    return std::env::var_os("APPDATA")
+                        .map(std::path::PathBuf::from)
+                        .unwrap_or_else(std::env::temp_dir)
+                        .join("Zipzi Editor");
+                }
                 std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
                     .join("Library/Application Support/Zipzi Editor")
             });

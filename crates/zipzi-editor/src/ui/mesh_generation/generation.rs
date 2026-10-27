@@ -1,5 +1,6 @@
 //! Debounced generation, stale-request filtering and preview readiness.
 use super::*;
+use crate::platform::GpuContext;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -17,7 +18,7 @@ impl Candidate {
     fn new(
         plan: MeshGenerationPlan,
         texture: Option<zipzi_editor_core::SceneTexture>,
-        gpu: Option<SharedMetalContext>,
+        gpu: Option<GpuContext>,
         preview_cache: crate::ui::mesh_preview::MeshPreviewCache,
     ) -> anyhow::Result<Self> {
         let geometry = plan.geometry();
@@ -77,7 +78,7 @@ enum GenerationState {
 }
 pub(super) struct PreviewGeneration {
     pub(super) source: Arc<MeshGenerationSource>,
-    gpu: Option<SharedMetalContext>,
+    gpu: Option<GpuContext>,
     preview_cache: crate::ui::mesh_preview::MeshPreviewCache,
     latest_request: Arc<AtomicU64>,
     requested: Option<MeshGenerationOptions>,
@@ -86,7 +87,7 @@ pub(super) struct PreviewGeneration {
     state: GenerationState,
 }
 impl PreviewGeneration {
-    pub(super) fn new(source: Arc<MeshGenerationSource>, gpu: Option<SharedMetalContext>) -> Self {
+    pub(super) fn new(source: Arc<MeshGenerationSource>, gpu: Option<GpuContext>) -> Self {
         Self {
             source,
             gpu,
@@ -205,7 +206,7 @@ impl MeshGenerationForm {
                 return None;
             }
             Some(plan.and_then(|plan| {
-                objc2::rc::autoreleasepool(|_| {
+                crate::platform::autorelease(|| {
                     Candidate::new(plan, source.texture.clone(), gpu, preview_cache)
                 })
             }))

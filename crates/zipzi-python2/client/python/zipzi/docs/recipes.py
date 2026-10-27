@@ -6,6 +6,7 @@ be an absolute directory accessible to that host. No source import path is added
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import argparse
+import os
 import zipzi
 from zipzi import meshes,parameters,bindings,scene
 
@@ -31,7 +32,9 @@ def author_and_save(runtime:zipzi.Runtime,folder:Path)->zipzi.SaveReceipt:
         with session.edit('image') as edit:asset=edit.resources.create_image('Pixel',image)
     assert session.resources.get(asset).value.pixels.rgba==bytes((255,7,9,255))
     saved=session.project.save(folder/'project').wait()
-    assert saved.durable
+    # Windows Local publication cannot synchronize directories. Connected
+    # receipts describe the host, so keep their durability check intact.
+    assert saved.durable or (os.name == "nt" and runtime.connection is None)
     session.close()
     reopened=runtime.sessions.open(saved.manifest).wait()
     assert reopened.resources.get(asset).value.pixels.rgba==bytes((255,7,9,255))

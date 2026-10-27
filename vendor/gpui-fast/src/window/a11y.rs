@@ -120,6 +120,16 @@ pub(crate) const ROOT_NODE_ID: NodeId = NodeId(0);
 pub(crate) type A11yActionListener =
     Box<dyn FnMut(Option<&accesskit::ActionData>, &mut Window, &mut App) + 'static>;
 
+/// Accessibility state retained before a speculative prepaint pass.
+pub(crate) struct PrepaintCheckpoint {
+    all_nodes_len: usize,
+    ids_stack: SmallVec<[NodeId; 16]>,
+    nodes_stack: SmallVec<[accesskit::Node; 16]>,
+    focus: Option<NodeId>,
+    active_descendant: Option<NodeId>,
+    log: (usize, usize, usize),
+}
+
 /// Per-window accessibility state.
 ///
 /// Manages the AccessKit tree that is built each frame and the mappings
@@ -165,6 +175,35 @@ pub(crate) struct A11y {
 }
 
 impl A11y {
+    /// Snapshot only open ancestors; completed subtrees are rolled back by index.
+    pub(crate) fn prepaint_checkpoint(&self) -> Option<PrepaintCheckpoint> {
+        self.is_active().then(|| PrepaintCheckpoint {
+            all_nodes_len: self.nodes.all_nodes.len(),
+            ids_stack: self.nodes.ids_stack.clone(),
+            nodes_stack: self.nodes.nodes_stack.clone(),
+            focus: self.nodes.focus,
+            active_descendant: self.nodes.active_descendant,
+            log: self.nodes.fast.prepaint_checkpoint(),
+        })
+    }
+
+    pub(crate) fn rollback_prepaint(&mut self, checkpoint: PrepaintCheckpoint) {
+        debug_assert_eq!(self.nodes.ids_stack, checkpoint.ids_stack);
+        for (id, _) in self.nodes.all_nodes.drain(checkpoint.all_nodes_len..) {
+            self.nodes.seen_ids.remove(&id);
+            self.node_bounds.remove(&id);
+            self.focus_ids.remove(&id);
+            self.action_listeners.remove(&id);
+            #[cfg(debug_assertions)]
+            self.nodes.node_info.remove(&id);
+        }
+        self.nodes.ids_stack = checkpoint.ids_stack;
+        self.nodes.nodes_stack = checkpoint.nodes_stack;
+        self.nodes.focus = checkpoint.focus;
+        self.nodes.active_descendant = checkpoint.active_descendant;
+        self.nodes.fast.rollback_prepaint(checkpoint.log);
+    }
+
     pub(crate) fn new(
         active_flag: Arc<AtomicBool>,
         force_disabled: bool,
@@ -666,6 +705,34 @@ mod tests {
         let mut a11y = A11y::new(Arc::new(AtomicBool::new(true)), false, None);
         a11y.begin_frame();
         a11y
+    }
+
+    #[test]
+    fn prepaint_rollback_allows_retry_without_duplicate_nodes() {
+        let mut a11y = new_a11y();
+        let parent = NodeId(1);
+        let child = NodeId(2);
+        assert!(a11y.nodes.push(parent, test_node()));
+        let checkpoint = a11y.prepaint_checkpoint().unwrap();
+        let log = checkpoint.log;
+        assert!(a11y.nodes.push(child, test_node()));
+        a11y.set_focusable(child, FocusId::default());
+        a11y.set_focus(child);
+        a11y.node_bounds.insert(child, crate::Bounds::default());
+        a11y.nodes.pop();
+        a11y.rollback_prepaint(checkpoint);
+        assert_eq!(a11y.nodes.focus, None);
+        assert!(!a11y.nodes.seen_ids.contains(&child));
+        assert!(!a11y.node_bounds.contains_key(&child));
+        assert!(!a11y.focus_ids.contains_key(&child));
+        assert!(a11y.nodes.current_node_mut().unwrap().children().is_empty());
+        assert_eq!(a11y.nodes.fast.prepaint_checkpoint(), log);
+        assert!(a11y.nodes.push(child, test_node()));
+        a11y.nodes.pop();
+        assert_eq!(a11y.nodes.current_node_mut().unwrap().children(), &[child]);
+        a11y.nodes.pop();
+        let update = a11y.end_frame(Default::default());
+        assert_eq!(update.nodes.iter().filter(|(id, _)| *id == child).count(), 1);
     }
 
     #[test]

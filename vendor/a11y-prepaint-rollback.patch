@@ -1,0 +1,203 @@
+diff --git a/vendor/gpui-fast/Cargo.toml b/vendor/gpui-fast/Cargo.toml
+index 00c07e7d..22a810bc 100644
+--- a/vendor/gpui-fast/Cargo.toml
++++ b/vendor/gpui-fast/Cargo.toml
+@@ -88,6 +88,11 @@ x11 = ["scap?/x11"]
+ name = "gpui"
+ path = "src/gpui.rs"
+ 
++[[test]]
++name = "a11y_prepaint_rollback"
++path = "tests/a11y_prepaint_rollback.rs"
++required-features = ["test-support"]
++
+ [dependencies.accesskit]
+ version = "0.24.0"
+ features = ["enumn"]
+diff --git a/vendor/gpui-fast/src/fast/a11y.rs b/vendor/gpui-fast/src/fast/a11y.rs
+index e1e8e930..0da58344 100644
+--- a/vendor/gpui-fast/src/fast/a11y.rs
++++ b/vendor/gpui-fast/src/fast/a11y.rs
+@@ -90,6 +90,19 @@ pub(crate) struct A11yLog {
+ }
+ 
+ impl A11yLog {
++    pub(crate) fn prepaint_checkpoint(&self) -> (usize, usize, usize) {
++        (self.ops.len(), self.actions.len(), self.replay_open.len())
++    }
++
++    pub(crate) fn rollback_prepaint(&mut self, checkpoint: (usize, usize, usize)) {
++        self.ops.truncate(checkpoint.0);
++        self.actions.truncate(checkpoint.1);
++        self.replay_open.truncate(checkpoint.2);
++        // Retained stretches measured during the abandoned pass may contain
++        // discarded operation indices. Rebuild them on the next frame.
++        self.diverged = true;
++    }
++
+     #[inline]
+     pub(crate) fn push(log: &mut Self, id: NodeId) {
+         if log.recording {
+diff --git a/vendor/gpui-fast/src/window.rs b/vendor/gpui-fast/src/window.rs
+index f7f3025e..00fd548a 100644
+--- a/vendor/gpui-fast/src/window.rs
++++ b/vendor/gpui-fast/src/window.rs
+@@ -4283,8 +4283,12 @@ impl Window {
+     pub fn transact<T, U>(&mut self, f: impl FnOnce(&mut Self) -> Result<T, U>) -> Result<T, U> {
+         self.invalidator.debug_assert_prepaint();
+         let index = self.prepaint_index();
++        let a11y = self.a11y.prepaint_checkpoint();
+         let result = f(self);
+         if result.is_err() {
++            if let Some(checkpoint) = a11y {
++                self.a11y.rollback_prepaint(checkpoint);
++            }
+             self.next_frame.hitboxes.truncate(index.hitboxes_index);
+             self.next_frame
+                 .tooltip_requests
+diff --git a/vendor/gpui-fast/src/window/a11y.rs b/vendor/gpui-fast/src/window/a11y.rs
+index e8b6fb00..a455e38a 100644
+--- a/vendor/gpui-fast/src/window/a11y.rs
++++ b/vendor/gpui-fast/src/window/a11y.rs
+@@ -120,6 +120,16 @@ pub(crate) const ROOT_NODE_ID: NodeId = NodeId(0);
+ pub(crate) type A11yActionListener =
+     Box<dyn FnMut(Option<&accesskit::ActionData>, &mut Window, &mut App) + 'static>;
+ 
++/// Accessibility state retained before a speculative prepaint pass.
++pub(crate) struct PrepaintCheckpoint {
++    all_nodes_len: usize,
++    ids_stack: SmallVec<[NodeId; 16]>,
++    nodes_stack: SmallVec<[accesskit::Node; 16]>,
++    focus: Option<NodeId>,
++    active_descendant: Option<NodeId>,
++    log: (usize, usize, usize),
++}
++
+ /// Per-window accessibility state.
+ ///
+ /// Manages the AccessKit tree that is built each frame and the mappings
+@@ -165,6 +175,35 @@ pub(crate) struct A11y {
+ }
+ 
+ impl A11y {
++    /// Snapshot only open ancestors; completed subtrees are rolled back by index.
++    pub(crate) fn prepaint_checkpoint(&self) -> Option<PrepaintCheckpoint> {
++        self.is_active().then(|| PrepaintCheckpoint {
++            all_nodes_len: self.nodes.all_nodes.len(),
++            ids_stack: self.nodes.ids_stack.clone(),
++            nodes_stack: self.nodes.nodes_stack.clone(),
++            focus: self.nodes.focus,
++            active_descendant: self.nodes.active_descendant,
++            log: self.nodes.fast.prepaint_checkpoint(),
++        })
++    }
++
++    pub(crate) fn rollback_prepaint(&mut self, checkpoint: PrepaintCheckpoint) {
++        debug_assert_eq!(self.nodes.ids_stack, checkpoint.ids_stack);
++        for (id, _) in self.nodes.all_nodes.drain(checkpoint.all_nodes_len..) {
++            self.nodes.seen_ids.remove(&id);
++            self.node_bounds.remove(&id);
++            self.focus_ids.remove(&id);
++            self.action_listeners.remove(&id);
++            #[cfg(debug_assertions)]
++            self.nodes.node_info.remove(&id);
++        }
++        self.nodes.ids_stack = checkpoint.ids_stack;
++        self.nodes.nodes_stack = checkpoint.nodes_stack;
++        self.nodes.focus = checkpoint.focus;
++        self.nodes.active_descendant = checkpoint.active_descendant;
++        self.nodes.fast.rollback_prepaint(checkpoint.log);
++    }
++
+     pub(crate) fn new(
+         active_flag: Arc<AtomicBool>,
+         force_disabled: bool,
+@@ -668,6 +707,34 @@ mod tests {
+         a11y
+     }
+ 
++    #[test]
++    fn prepaint_rollback_allows_retry_without_duplicate_nodes() {
++        let mut a11y = new_a11y();
++        let parent = NodeId(1);
++        let child = NodeId(2);
++        assert!(a11y.nodes.push(parent, test_node()));
++        let checkpoint = a11y.prepaint_checkpoint().unwrap();
++        let log = checkpoint.log;
++        assert!(a11y.nodes.push(child, test_node()));
++        a11y.set_focusable(child, FocusId::default());
++        a11y.set_focus(child);
++        a11y.node_bounds.insert(child, crate::Bounds::default());
++        a11y.nodes.pop();
++        a11y.rollback_prepaint(checkpoint);
++        assert_eq!(a11y.nodes.focus, None);
++        assert!(!a11y.nodes.seen_ids.contains(&child));
++        assert!(!a11y.node_bounds.contains_key(&child));
++        assert!(!a11y.focus_ids.contains_key(&child));
++        assert!(a11y.nodes.current_node_mut().unwrap().children().is_empty());
++        assert_eq!(a11y.nodes.fast.prepaint_checkpoint(), log);
++        assert!(a11y.nodes.push(child, test_node()));
++        a11y.nodes.pop();
++        assert_eq!(a11y.nodes.current_node_mut().unwrap().children(), &[child]);
++        a11y.nodes.pop();
++        let update = a11y.end_frame(Default::default());
++        assert_eq!(update.nodes.iter().filter(|(id, _)| *id == child).count(), 1);
++    }
++
+     #[test]
+     fn accessibility_enabled_is_independent_of_activation() {
+         for force_disabled in [false, true] {
+diff --git a/vendor/gpui-fast/tests/a11y_prepaint_rollback.rs b/vendor/gpui-fast/tests/a11y_prepaint_rollback.rs
+new file mode 100644
+index 00000000..c74dc04f
+--- /dev/null
++++ b/vendor/gpui-fast/tests/a11y_prepaint_rollback.rs
+@@ -0,0 +1,48 @@
++//! Exercise the production prepaint transaction without GPUI's upstream unit fixtures.
++use gpui::{
++    AnyElement, AvailableSpace, Context, Render, Role, TestAppContext, Window, canvas, div,
++    prelude::*, px,
++};
++
++struct RetryView;
++
++fn child() -> AnyElement {
++    div()
++        .id("retry-child")
++        .role(Role::Button)
++        .aria_label("Retried child")
++        .size(px(24.))
++        .into_any_element()
++}
++
++impl Render for RetryView {
++    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
++        canvas(
++            |bounds, window, cx| {
++                let space = bounds.size.map(AvailableSpace::Definite);
++                let abandoned: Result<(), ()> = window.transact(|window| {
++                    child().prepaint_as_root(bounds.origin, space, window, cx);
++                    Err(())
++                });
++                assert!(abandoned.is_err());
++                let mut retry = child();
++                retry.prepaint_as_root(bounds.origin, space, window, cx);
++                retry
++            },
++            |_, mut child, window, cx| child.paint(window, cx),
++        )
++        .size_full()
++    }
++}
++
++#[gpui::test]
++fn discarded_prepaint_can_retry_the_same_accessibility_node(cx: &mut TestAppContext) {
++    // This integration binary has a single test and no application windows yet.
++    unsafe { std::env::set_var("GPUI_A11Y_ACTIVE", "1") };
++    let (_, cx) = cx.add_window_view(|_, _| RetryView);
++    cx.run_until_parked();
++    let tree = cx
++        .update(|window, _| window.debug_a11y_tree_json())
++        .unwrap();
++    assert_eq!(tree.matches("Retried child").count(), 1, "{tree}");
++}

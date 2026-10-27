@@ -62,13 +62,18 @@ mod context_menu;
 mod deformer_bar;
 mod input;
 mod isolation;
+#[cfg(target_os = "macos")]
 mod painting;
+#[cfg(target_os = "macos")]
 use painting::CanvasOverlay;
+#[cfg(not(target_os = "macos"))]
+#[derive(Default)]
+struct CanvasOverlay;
 mod animation;
 mod background;
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
 mod test_scene;
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
 pub(crate) use test_scene::ViewportScene;
 mod modeling;
 mod navigation;
@@ -290,6 +295,7 @@ impl Focusable for ViewportSurface {
         self.focus.clone()
     }
 }
+#[cfg(target_os = "macos")]
 impl Render for ViewportSurface {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let _span = benchmark::parameter_overlay::ui_span("ui.viewport_render");
@@ -443,4 +449,20 @@ pub(super) struct SurfaceContent {
     hand_tool: bool,
     controls: Option<fn(&ViewportSurface, bool, &mut Context<ViewportSurface>) -> AnyElement>,
     cursor: Option<CursorStyle>,
+}
+
+#[cfg(not(target_os = "macos"))]
+impl Render for ViewportSurface {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .id("viewport-rendering-disabled")
+            .size_full()
+            .flex()
+            .items_center()
+            .justify_center()
+            .bg(crate::theme::viewport_background(cx))
+            .text_sm()
+            .text_color(cx.theme().muted_foreground)
+            .child(t!("editor.viewport_rendering_disabled"))
+    }
 }

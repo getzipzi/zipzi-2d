@@ -72,15 +72,30 @@ pub(crate) fn local_path(path: &Path) -> Result<PathBuf, Status> {
     for component in path.components() {
         match component {
             Component::CurDir => (),
+            // A Windows prefix such as `\\?\C:` is not a path to inspect by
+            // itself. Wait for RootDir before accessing the filesystem.
+            Component::Prefix(prefix) => result.push(prefix.as_os_str()),
             Component::ParentDir => {
                 result.pop();
             }
             other => {
                 result.push(other.as_os_str());
                 match fs::symlink_metadata(&result) {
-                    Ok(_) => result = fs::canonicalize(&result).map_err(io_error)?,
+                    Ok(_) => {
+                        result = fs::canonicalize(&result).map_err(|error| {
+                            Status::error(
+                                "PROJECT_IO",
+                                format!("Cannot resolve {}: {error}", result.display()),
+                            )
+                        })?;
+                    }
                     Err(e) if e.kind() == io::ErrorKind::NotFound => (),
-                    Err(e) => return Err(io_error(e)),
+                    Err(e) => {
+                        return Err(Status::error(
+                            "PROJECT_IO",
+                            format!("Cannot inspect {}: {e}", result.display()),
+                        ));
+                    }
                 }
             }
         }
@@ -162,5 +177,23 @@ impl Publication {
             .warnings
             .push("Published; directory synchronization is not available on this platform".into());
         result
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_path_resolves_windows_drive_and_verbatim_prefixes() {
+        let directory = std::env::temp_dir();
+        let canonical = fs::canonicalize(&directory).unwrap();
+        let suffix = format!("zipzi-missing-{}", unique_name());
+        for root in [directory, canonical.clone()] {
+            assert_eq!(
+                local_path(&root.join(&suffix).join("project.zipzi.json")).unwrap(),
+                canonical.join(&suffix).join("project.zipzi.json"),
+            );
+        }
     }
 }

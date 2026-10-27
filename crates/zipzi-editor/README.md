@@ -1,10 +1,22 @@
 # zipzi-editor
 
-The native macOS application for Zipzi 2D, built with GPUI Kit and Metal.
+The desktop application for Zipzi 2D, built with GPUI Kit and a Metal viewport on macOS.
 This crate owns application startup, window/workspace presentation, panels,
 input routing and native UI integration. It consumes
 [`zipzi-editor-core`](../zipzi-editor-core/README.md) for editing state and
 [`zipzi-editor-render`](../zipzi-editor-render/README.md) for scene rendering.
+
+On Windows, the same binary starts the Editor with viewport rendering disabled:
+
+```powershell
+cargo run --locked -p zipzi-editor --bin zipzi-editor
+```
+
+Requires Rust 1.95+ and MSVC C++ Build Tools with the Windows SDK. This runs the
+existing Editor window, document state, docking, panels, commands and timeline.
+Viewport panels show a disabled-rendering message; no Metal device, overlay or
+preview worker is created. The resident Unix socket is unavailable on Windows;
+the Editor still owns its in-process Runtime. Settings use `%APPDATA%\Zipzi Editor`.
 
 ## Develop and test
 
