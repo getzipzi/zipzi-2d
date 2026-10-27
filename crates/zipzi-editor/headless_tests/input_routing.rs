@@ -370,7 +370,7 @@ fn timeline_hover_uses_its_binding_and_text_focus_keeps_its_keys(cx: &mut TestAp
         window.click("timeline-search", cx);
         window.hover("canvas-body", cx);
         let tool = h.view.read(cx).editor.active_tool();
-        window.press("g", cx);
+        window.press("l", cx);
         assert_eq!(h.view.read(cx).editor.active_tool(), tool);
         assert!(window.has_focused_input(cx));
         let saved = h
@@ -391,7 +391,7 @@ fn chrome_and_popups_do_not_reuse_the_previous_viewport(cx: &mut TestAppContext)
         let tool = h.view.read(cx).editor.active_tool();
         window.hover("workspace-animation", cx);
         window.press("cmd-=", cx);
-        window.press("g", cx);
+        window.press("l", cx);
         assert_eq!(h.view.read(cx).editor.view(), before);
         assert_eq!(h.view.read(cx).editor.active_tool(), tool);
         window.hover("object-property-name", cx);
@@ -413,7 +413,7 @@ fn chrome_and_popups_do_not_reuse_the_previous_viewport(cx: &mut TestAppContext)
         assert!(window.try_find("popup-menu").is_some());
         let before = h.view.read(cx).editor.view();
         let tool = h.view.read(cx).editor.active_tool();
-        window.press("g", cx);
+        window.press("l", cx);
         window.press("cmd-=", cx);
         assert_eq!(h.view.read(cx).editor.view(), before);
         assert_eq!(h.view.read(cx).editor.active_tool(), tool);
@@ -661,7 +661,9 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         assert!(status_bar.read(cx).hints().is_empty());
 
         // 2. Non-default Modeling tools (Glue / Hand) display concise tool hints.
-        window.click("tool_glue", cx);
+        h.view.update(cx, |view, cx| {
+            view.run_command(CommandId::GlueTool, window, cx)
+        });
         window.render_frame(cx);
         assert_eq!(
             status_bar.read(cx).hint_context(),

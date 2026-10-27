@@ -613,7 +613,14 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
                 .read_with(cx, |view, _| view.editor.active_tool()),
             zipzi_editor_core::ToolId::Select
         );
-        window.click("tool_glue", cx);
+        window.press("g", cx);
+        assert_eq!(
+            harness.view.read(cx).editor.active_tool(),
+            zipzi_editor_core::ToolId::Select
+        );
+        harness.view.update(cx, |view, cx| {
+            view.run_command(zipzi_editor_core::CommandId::GlueTool, window, cx)
+        });
         assert_eq!(
             harness
                 .view

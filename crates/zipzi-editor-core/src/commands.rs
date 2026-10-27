@@ -564,7 +564,7 @@ specs![
         false,
         []
     ),
-    (GlueTool, "editor.tool_glue", Viewport, false, ["g"]),
+    (GlueTool, "editor.tool_glue", Viewport, false, []),
     (HandTool, "editor.tool_hand", Viewport, false, ["h"]),
     (
         ToggleDeformers,

@@ -99,7 +99,9 @@ fn switching_uses_distinct_viewport_types_and_keeps_document_and_modeling_tool(
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("tool_glue", cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::GlueTool, window, cx)
+        });
         window.click("workspace-animation", cx);
         window.render_frame(cx);
         assert!(window.try_find("tool_select").is_none());
@@ -173,7 +175,9 @@ fn project_select_restores_mode_tools_and_layout(cx: &mut TestAppContext) {
     let second = cx
         .update_window(harness.window, |_, window, cx| {
             let first = harness.view.read(cx).editor.active_id().unwrap();
-            window.click("tool_glue", cx);
+            harness.view.update(cx, |view, cx| {
+                view.run_command(CommandId::GlueTool, window, cx)
+            });
             harness
                 .view
                 .update(cx, |view, cx| view.run_command(CommandId::New, window, cx));
@@ -188,7 +192,8 @@ fn project_select_restores_mode_tools_and_layout(cx: &mut TestAppContext) {
                 assert_eq!(view.editor.workspace(), WorkspaceKind::Modeling);
                 assert_eq!(view.editor.active_tool(), ToolId::Glue);
             });
-            assert!(window.try_find("tool_glue").is_some());
+            assert!(window.try_find("tool_glue").is_none());
+            assert!(window.try_find("tool_select").is_some());
             assert!(window.try_find("animation-timeline").is_none());
             second
         })
@@ -214,7 +219,8 @@ fn project_select_restores_mode_tools_and_layout(cx: &mut TestAppContext) {
             harness.view.read(cx).editor.workspace(),
             WorkspaceKind::Modeling
         );
-        assert!(window.try_find("tool_glue").is_some());
+        assert!(window.try_find("tool_glue").is_none());
+        assert!(window.try_find("tool_select").is_some());
         assert!(window.try_find("animation-timeline").is_none());
     })
     .unwrap();

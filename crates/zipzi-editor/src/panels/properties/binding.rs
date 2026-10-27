@@ -9,13 +9,7 @@ pub(super) fn rows(doc: &zipzi_editor_core::Document, target: &PropertyTarget) -
     let source = &target.object;
     if !matches!(
         source.kind,
-        K::Mesh
-            | K::Deformer
-            | K::Part
-            | K::MeshBinding
-            | K::SceneBinding
-            | K::BindingAxis
-            | K::BindingSample
+        K::MeshBinding | K::SceneBinding | K::BindingAxis | K::BindingSample
     ) {
         return vec![];
     }
@@ -27,14 +21,9 @@ pub(super) fn rows(doc: &zipzi_editor_core::Document, target: &PropertyTarget) -
             label,
         })
     };
-    let binding = doc.ordinary_binding(source);
-    if matches!(source.kind, K::Mesh | K::Deformer | K::Part) {
-        if binding.is_none() {
-            add(source.clone(), Control::Create, Control::Create.label());
-        }
+    let Some(b) = doc.ordinary_binding(source) else {
         return rows;
-    }
-    let Some(b) = binding else { return rows };
+    };
     add(
         b.reference.clone(),
         Control::Target,

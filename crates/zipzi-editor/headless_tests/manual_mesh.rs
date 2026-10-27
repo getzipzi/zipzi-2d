@@ -117,6 +117,7 @@ fn manual_mesh_toolbar_only_shows_relevant_tools(cx: &mut TestAppContext) {
     cx.update_window(h.window, |_, window, _| {
         assert!(window.find("tool_select").visible());
         assert!(window.find("tool_lasso").visible());
+        assert!(window.try_find("tool_glue").is_none());
         assert!(window.find("mesh-edit-actions").visible());
         let secondary = window.find("mesh-edit-actions").bounds();
         for tool in [

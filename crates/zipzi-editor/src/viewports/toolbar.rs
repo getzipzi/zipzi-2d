@@ -69,11 +69,6 @@ impl ToolbarRegistry {
                 command: CommandId::LassoTool,
             },
             ToolbarItemConfig {
-                id: "tool_glue",
-                icon: IconName::Link,
-                command: CommandId::GlueTool,
-            },
-            ToolbarItemConfig {
                 id: "tool_manual_mesh",
                 icon: IconName::GitBranch,
                 command: CommandId::ManualMesh,

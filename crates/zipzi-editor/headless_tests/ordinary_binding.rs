@@ -71,7 +71,7 @@ fn number(h: &Harness, value: &str, cx: &mut TestAppContext) {
 }
 fn create(h: &Harness, cx: &mut TestAppContext) -> R {
     let mesh = selected(h, cx);
-    click(h, format!("binding-create-{}", mesh.id), cx);
+    run(h, mesh, Control::Create, cx);
     let b = selected(h, cx);
     assert_eq!(b.kind, K::MeshBinding);
     b

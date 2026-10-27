@@ -264,11 +264,11 @@ pub(crate) fn compact_screenshots(directory: &std::path::Path) -> anyhow::Result
             })??;
             metrics.push(data);
             harness.cx.update_window(harness.window, |_, window, cx| {
-                window.hover("tool_glue", cx);
+                window.hover("tool_lasso", cx);
             })?;
             let hovered = harness.capture()?;
             harness.cx.update_window(harness.window, |_, window, cx| {
-                let bounds = window.find("tool_glue").bounds();
+                let bounds = window.find("tool_lasso").bounds();
                 let display_scale = window.scale_factor();
                 for point in [
                     point(bounds.left(), bounds.center().y),

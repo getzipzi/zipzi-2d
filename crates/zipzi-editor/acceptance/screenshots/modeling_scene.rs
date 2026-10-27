@@ -43,7 +43,7 @@ pub(crate) fn modeling_and_parameters_screenshots(
             "Animation transport is missing"
         );
         anyhow::ensure!(
-            window.try_find("tool_glue").is_none(),
+            window.try_find("tool_select").is_none(),
             "Animation must hide modeling tools"
         );
         Ok::<_, anyhow::Error>(())
