@@ -20,6 +20,14 @@ impl Document {
         ensure!(selection.len() == 1, "Select one mesh");
         let object = &selection[0];
         ensure!(object.kind == crate::ObjectKind::Mesh, "Select one mesh");
+        self.manual_mesh_target_for(object)
+    }
+
+    /// Re-resolve a mode's stable identity, independently of inspector navigation.
+    pub(crate) fn manual_mesh_target_for(
+        &self,
+        object: &crate::ObjectRef,
+    ) -> Result<ManualMeshTarget> {
         self.ensure_editable(std::slice::from_ref(object))?;
         ensure!(!self.has_pending_edit(), "Finish the current edit first");
         let model = self.model();
@@ -92,7 +100,19 @@ impl Document {
         })
     }
 
+    /// Mode ownership constrains transient navigation, never document history.
+    pub(crate) fn retain_manual_mesh_context(&mut self, object: &crate::ObjectRef) {
+        let exists = self.model().get_mesh(&object.id).is_some();
+        self.context.selections = if exists { vec![object.clone()] } else { vec![] };
+        self.context.selection = exists.then(|| object.clone());
+        self.context.inspected = self.context.selection.clone();
+        self.context.active_binding = None;
+        self.context.parameter_focus = None;
+        self.selected = exists.then(|| object.id.clone());
+    }
+
     pub(crate) fn validate_manual_target(&self, target: &ManualMeshTarget) -> Result<()> {
+        self.ensure_editable(std::slice::from_ref(&target.object))?;
         ensure!(
             self.context().selections.as_slice() == [target.object.clone()],
             "Mesh Edit target changed"
@@ -164,6 +184,10 @@ impl Document {
                 .clone()])));
         }
         Ok(true)
+    }
+
+    pub(crate) fn has_manual_mesh_gesture(&self) -> bool {
+        self.manual_pending.is_some()
     }
 
     pub fn finish_manual_mesh_gesture(&mut self) -> Result<()> {

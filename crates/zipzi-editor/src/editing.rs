@@ -153,7 +153,7 @@ impl EditorView {
         true
     }
 
-    pub(super) fn prepare_property_inputs(
+    pub(crate) fn prepare_property_inputs(
         &mut self,
         id: DocumentId,
         window: &mut Window,

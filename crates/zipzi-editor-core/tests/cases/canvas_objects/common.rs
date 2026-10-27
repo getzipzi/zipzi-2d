@@ -22,6 +22,7 @@ pub(super) fn click(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyho
     crate::support::pointer_input(
         editor,
         CanvasInput::Down {
+            primary: false,
             point: p,
             shift,
             alt: false,
@@ -41,6 +42,7 @@ pub(super) fn select_area(
     crate::support::pointer_input(
         editor,
         CanvasInput::Down {
+            primary: false,
             point: min,
             shift,
             alt,
@@ -197,6 +199,7 @@ pub(super) fn drag(
     crate::support::pointer_input(
         editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift,
             alt: false,

@@ -34,7 +34,9 @@ impl ToolController {
                 }
                 Ok(false)
             }
-            CanvasInput::Down { point, shift, alt } => {
+            CanvasInput::Down {
+                point, shift, alt, ..
+            } => {
                 ensure!(
                     point.x.is_finite() && point.y.is_finite(),
                     "Invalid pointer position"

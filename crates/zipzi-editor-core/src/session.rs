@@ -105,10 +105,16 @@ impl DocumentSession {
             .take()
             .or_else(|| self.previous_geometry.take());
         self.appearance_geometry = None;
-        self.modeling.tools.reconcile(&self.document);
+        self.modeling.tools.reconcile(&mut self.document);
     }
     pub fn cancel_gesture(&mut self) {
         if self.modeling.tools.cancel(&mut self.document) {
+            self.invalidate_scene();
+        }
+    }
+    pub(crate) fn exit_manual_mesh(&mut self) {
+        if self.modeling.tools.manual_active() {
+            self.modeling.tools.exit_manual(&mut self.document);
             self.invalidate_scene();
         }
     }
@@ -117,12 +123,6 @@ impl DocumentSession {
         // Keep the checked candidate through owner cancellation and publication.
         let mut prepared_properties = None;
         match &command {
-            EditorCommand::SetTool(tool) => {
-                ensure!(
-                    self.modeling.tools.tool_available(*tool),
-                    "Exit Mesh Edit before using this tool"
-                );
-            }
             EditorCommand::ReplacePhysics {
                 asset,
                 expected_revision,
@@ -146,6 +146,11 @@ impl DocumentSession {
                 prepared_properties = Some((patch, prepared));
             }
             _ => {}
+        }
+        // Only mesh commands and view/history controls belong to the mode.
+        // All other intents leave through the same lifecycle before execution.
+        if !command.preserves_manual_mesh() {
+            self.exit_manual_mesh();
         }
         if self.document.has_inspector_edit()
             && !matches!(
@@ -272,7 +277,7 @@ impl DocumentSession {
                     .document
                     .generate_mesh_grid(&object, options, expected_revision);
                 if result.is_ok() {
-                    self.modeling.tools.clear();
+                    self.modeling.tools.clear_selection();
                 }
                 result
             }
@@ -285,10 +290,34 @@ impl DocumentSession {
                             .tools
                             .after_manual_generation(&self.document)?;
                     } else {
-                        self.modeling.tools.clear();
+                        self.modeling.tools.clear_selection();
                     }
                 }
                 result
+            }
+            EditorCommand::SetMeshConstraint {
+                target,
+                endpoints: [a, b],
+                constrained,
+            } => {
+                anyhow::ensure!(
+                    self.modeling.tools.manual_editable()
+                        && self
+                            .modeling
+                            .tools
+                            .manual_target()
+                            .is_some_and(|current| current.object == target.object),
+                    "Mesh Edit target changed"
+                );
+                self.document.apply_manual_mesh_once(
+                    &target,
+                    if constrained {
+                        zipzi_sdk::ManualMeshOperation::ConstrainEdge { a, b }
+                    } else {
+                        zipzi_sdk::ManualMeshOperation::ReleaseConstraint { a, b }
+                    },
+                )?;
+                self.modeling.tools.refresh_manual_source(&self.document)
             }
             EditorCommand::ToggleDeformers => {
                 self.modeling.tools.deformer_visibility.all =
@@ -310,13 +339,13 @@ impl DocumentSession {
             EditorCommand::ToggleOriginalPoints => {
                 self.modeling.tools.cancel(&mut self.document);
                 self.modeling.tools.original_points = !self.modeling.tools.original_points;
-                self.modeling.tools.clear();
+                self.modeling.tools.clear_selection();
                 self.invalidate_scene();
                 return Ok(());
             }
             EditorCommand::ToggleWarpFine => {
                 self.modeling.tools.warp_fine = !self.modeling.tools.warp_fine;
-                self.modeling.tools.clear();
+                self.modeling.tools.clear_selection();
                 return Ok(());
             }
             EditorCommand::ToggleDeformerGrid => {
@@ -391,19 +420,10 @@ impl DocumentSession {
         if selection && self.modeling.tools.original_points {
             self.invalidate_scene();
         }
-        if selection {
-            self.modeling.tools.clear();
-        } else if lock_or_history {
-            if !self.modeling.tools.manual_active()
-                || self
-                    .modeling
-                    .tools
-                    .after_manual_generation(&self.document)
-                    .is_err()
-            {
-                self.modeling.tools.clear();
-            }
+        if selection || lock_or_history {
+            self.modeling.tools.clear_selection();
         }
+        self.modeling.tools.reconcile(&mut self.document);
         // Editor lock edits are standalone transactions. Other metadata history
         // (for example names) must refresh labels captured in canvas topology.
         let lock_history = history_state.is_some_and(|before| {
@@ -430,7 +450,12 @@ impl DocumentSession {
         let _benchmark_span = zipzi_core::benchmark::span("editor.scene");
         if self.cache.is_none() {
             let mut scene = self.document.snapshot()?;
-            if let Some(target) = self.modeling.tools.manual_target() {
+            if let Some(target) = self
+                .modeling
+                .tools
+                .manual_target()
+                .filter(|_| self.modeling.tools.manual_editable())
+            {
                 scene = scene
                     .with_manual_reference(target, self.modeling.tools.manual_preview_result());
             }

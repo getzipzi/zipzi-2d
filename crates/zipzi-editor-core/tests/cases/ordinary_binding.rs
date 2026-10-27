@@ -439,6 +439,7 @@ fn three_axis_stored_form_remains_editable_in_the_canvas_and_capture_can_cancel(
     support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: p,
             shift: false,
             alt: false,

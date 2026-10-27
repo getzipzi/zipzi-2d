@@ -104,6 +104,7 @@ fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Resul
     super::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,

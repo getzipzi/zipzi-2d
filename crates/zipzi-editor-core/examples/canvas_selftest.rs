@@ -54,7 +54,7 @@ fn main() -> anyhow::Result<()> {
                         candidate_count += 1;
                     }
                     let token = editor
-                        .begin_canvas_gesture(binding, p, false, false)?
+                        .begin_canvas_gesture(binding, p, false, false, false)?
                         .capture
                         .unwrap();
                     editor.update_canvas_gesture(token, CanvasInput::Up { point: p })?;
@@ -89,7 +89,7 @@ fn main() -> anyhow::Result<()> {
                 &editor.document().unwrap().context().selections, ToolId::Select, DeformerVisibility::default()),
                 Some(HitTarget::Component(ComponentRef { object, .. })) if object.id == mesh.id));
             let token = editor
-                .begin_canvas_gesture(binding, start, false, false)?
+                .begin_canvas_gesture(binding, start, false, false, false)?
                 .capture
                 .unwrap();
             match editor.update_canvas_gesture(
@@ -141,7 +141,7 @@ fn main() -> anyhow::Result<()> {
             };
             let point = handle.position;
             let token = editor
-                .begin_canvas_gesture(binding, point, false, false)?
+                .begin_canvas_gesture(binding, point, false, false, false)?
                 .capture
                 .unwrap();
             let changed = editor.update_canvas_gesture(

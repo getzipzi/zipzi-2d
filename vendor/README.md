@@ -117,7 +117,9 @@ functional regressions live in
 11px text and shortcuts, 14px line height, 6px horizontal and 1px vertical padding,
 and a 6px gap between text and shortcuts. All sizes use rem units to follow UI
 scaling. Shared overlays and native GPUI tooltips reuse the same content
-component.
+component. Text tooltips wrap at 360 logical pixels (scaled with rem) and shrink
+to the window width with room for popup margins. Content can shrink within the
+row instead of extending beyond the viewport.
 
 The shared overlay tracks the triggering element's full GPUI identity per
 window. Leaving an old button cannot close a newer button's tooltip or cancel
@@ -127,7 +129,8 @@ redraws, avoiding dependence on hover-callback order.
 [tooltips.rs](../crates/zipzi-editor/headless_tests/tooltips.rs) covers repeated
 switching in both directions, switching before first display, staying beyond
 the hide grace period, normal hiding on departure, click dismissal and pending
-display cancellation. Kit's standard `test_support()` interface exposes the outer
+display cancellation, plus long English/Chinese Mesh Edit and deformer
+descriptions in narrow windows at multiple UI scales. Kit's standard `test_support()` interface exposes the outer
 tooltip for tests; observation is a no-op in production builds.
 
 [compact_popups.rs](../crates/zipzi-editor/headless_tests/compact_popups.rs)

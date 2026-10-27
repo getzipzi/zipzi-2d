@@ -134,6 +134,7 @@ impl crate::DocumentSession {
         operation: impl FnOnce(&mut Document) -> anyhow::Result<OperationResult>,
     ) -> anyhow::Result<OperationResult> {
         self.ensure_authoring_idle()?;
+        self.exit_manual_mesh();
         let evaluation = self.document.evaluation_revision();
         let textures = self.document.textures.snapshot();
         let result = operation(&mut self.document)?;
@@ -152,6 +153,8 @@ impl crate::DocumentSession {
         {
             self.invalidate_scene();
         }
+        // Refresh tool projections even for label-only publications.
+        self.modeling.tools.reconcile(&mut self.document);
         self.reconcile_animation();
         Ok(result)
     }

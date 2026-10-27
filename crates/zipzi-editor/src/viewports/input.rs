@@ -174,6 +174,7 @@ impl ViewportSurface {
         } else {
             self.input(
                 CanvasInput::Down {
+                    primary: event.modifiers.platform,
                     point: self.local(event.position),
                     shift: event.modifiers.shift,
                     alt: event.modifiers.alt,
@@ -209,6 +210,18 @@ impl ViewportSurface {
             }))
             .on_pinch(cx.listener(|this, event: &PinchEvent, window, cx| {
                 this.pinch(event, window, cx);
+            }))
+            .on_modifiers_changed(cx.listener(|this, _, _, cx| {
+                if this.kind == zipzi_editor_core::ViewportKind::Modeling
+                    && this
+                        .owner
+                        .upgrade()
+                        .is_some_and(|owner| owner.read(cx).editor.manual_active())
+                {
+                    // Modifier-only presses must update the cursor and guidance
+                    // without requiring mouse movement or changing the gesture.
+                    cx.notify();
+                }
             }))
             .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
                 if !hovered && this.navigation.pan.is_none() {

@@ -189,6 +189,7 @@ fn lock_undo_redo_reuse_frames_and_live_picking_skips_locked_top_surface() -> an
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,
@@ -233,6 +234,7 @@ fn locking_during_a_drag_cancels_unpublished_geometry_and_late_pointer_events() 
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,
@@ -280,6 +282,7 @@ fn rectangle_selection_never_adds_locked_objects_or_components() -> anyhow::Resu
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: ViewportPoint { x: 0., y: 0. },
             shift: false,
             alt: false,

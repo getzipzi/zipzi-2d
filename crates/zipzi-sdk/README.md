@@ -90,8 +90,12 @@ External model exports use the actual triangles and do not preserve modeling con
 `extract_manual_meshing` validates an existing single-boundary triangulation without
 changing its faces. `edit_manual_mesh` is the pure manual edit layer: insert, move,
 delete, constrain, release and reconnect return complete `MeshGeometry`, stable ID
-mapping and affected edges. Local edits retain unaffected triangle edges; reconnect
-globally rebuilds free edges. Pass a fresh ID from a persistent
+mapping and affected edges. Moving or deleting vertices rebuilds automatic edges
+and releases generated EdgeSupport constraints; authored User constraints remain
+fixed. The outline expands locally to enclose retained sites, including splitting
+new boundary segments through collinear sites. Unrelated concavities stay intact.
+Insertion retains unaffected faces; reconnect rebuilds free edges. Pass a fresh ID
+from a persistent
 `ManualVertexIdAllocator` for insertion, keeping the allocator across canceled
 candidates so old references cannot name a later point. `AffineUvMap::from_geometry`
 recovers the fixed image transform, including reflections. The focused gate is

@@ -26,7 +26,18 @@ diff --git a/vendor/gpui-kit/crates/component/src/tooltip.rs b/vendor/gpui-kit/c
      TooltipRequest as BaseTooltipRequest, TooltipTransition as BaseTooltipTransition,
  };
  
-@@ -106,7 +111,7 @@
+@@ -92,6 +97,10 @@
+ }
+ impl Render for Tooltip {
+     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
++        // Long descriptions must wrap before the overlay is positioned. Account
++        // for the outer margin so even narrow windows can contain the popup.
++        let max_width = (window.rem_size() * 22.5)
++            .min((window.viewport_size().width - window.rem_size() * 3.).max(px(1.)));
+         let key_binding = if let Some(key_binding) = &self.key_binding {
+             Some(key_binding.clone())
+         } else {
+@@ -106,7 +115,7 @@
              }
          };
  
@@ -35,7 +46,7 @@ diff --git a/vendor/gpui-kit/crates/component/src/tooltip.rs b/vendor/gpui-kit/c
              // Wrap in a child, to ensure the left margin is applied to the tooltip
              BaseTooltip::new("tooltip-popup")
                  .h_flex()
-@@ -120,10 +125,12 @@
+@@ -120,21 +129,32 @@
                  .shadow_md()
                  .rounded(cx.theme().radius)
                  .justify_between()
@@ -49,10 +60,27 @@ diff --git a/vendor/gpui-kit/crates/component/src/tooltip.rs b/vendor/gpui-kit/c
 +                .text_size(rems(11. / 16.))
 +                .line_height(rems(14. / 16.))
 +                .gap(rems(6. / 16.))
++                .max_w(max_width)
++                .whitespace_normal()
                  .refine_style(&self.style)
                  .map(|this| {
-                     this.child(div().map(|this| match self.content {
-@@ -134,7 +141,6 @@
+-                    this.child(div().map(|this| match self.content {
+-                        TooltipContext::Text(ref text) => this.child(text.clone()),
+-                        TooltipContext::Element(ref builder) => this.child(builder(window, cx)),
+-                    }))
++                    this.child(
++                        div()
++                            .min_w_0()
++                            .max_w((max_width - px(12.)).max(px(1.)))
++                            .whitespace_normal()
++                            .map(|this| match self.content {
++                                TooltipContext::Text(ref text) => this.child(text.clone()),
++                                TooltipContext::Element(ref builder) => {
++                                    this.child(builder(window, cx))
++                                }
++                            }),
++                    )
+                 })
                  .when_some(key_binding, |this, kbd| {
                      this.child(
                          div()
@@ -60,7 +88,18 @@ diff --git a/vendor/gpui-kit/crates/component/src/tooltip.rs b/vendor/gpui-kit/c
                              .flex_shrink_0()
                              .text_color(cx.theme().muted_foreground)
                              .child(kbd.appearance(false)),
-@@ -255,16 +261,28 @@
+@@ -230,9 +250,7 @@
+ // ── Managed tooltips for application-owned triggers ─────────────────────────
+ 
+ /// Attach the window's shared tooltip overlay without refreshing unrelated views.
+-pub trait ManagedTooltipExt:
+-    StatefulInteractiveElement + crate::ElementExt + Sized
+-{
++pub trait ManagedTooltipExt: StatefulInteractiveElement + crate::ElementExt + Sized {
+     fn managed_tooltip(
+         self,
+         build_tooltip: impl Fn(&mut Window, &mut App) -> AnyView + 'static,
+@@ -256,16 +274,28 @@
      ) -> Self {
          let build_tooltip = Rc::new(build_tooltip);
          let trigger_bounds_cell: Rc<Cell<Bounds<Pixels>>> = Rc::new(Cell::new(Bounds::default()));

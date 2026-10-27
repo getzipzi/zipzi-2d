@@ -19,6 +19,7 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: ViewportPoint { x: 1., y: 1. },
             shift: false,
             alt: false,
@@ -44,6 +45,7 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: p,
             shift: false,
             alt: false,
@@ -124,6 +126,7 @@ fn vertex_marquee_can_start_inside_selected_meshes_without_changing_objects() ->
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,
@@ -198,6 +201,7 @@ fn invisible_offscreen_members_have_no_handles_and_are_excluded_from_marquee() -
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: ViewportPoint { x: 1., y: 1. },
             shift: false,
             alt: false,
@@ -317,6 +321,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point: start,
                 shift: false,
                 alt: false,
@@ -350,6 +355,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: points[1],
             shift: false,
             alt: false,
@@ -387,6 +393,7 @@ fn pose_updates_share_topology_but_publish_independent_positions() -> anyhow::Re
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,
@@ -458,6 +465,7 @@ fn mesh_drag_reuses_unchanged_meshes_without_changing_old_frames() -> anyhow::Re
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,

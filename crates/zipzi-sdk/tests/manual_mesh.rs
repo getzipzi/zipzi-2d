@@ -207,7 +207,7 @@ fn constrain_reconnect_release_and_reject_crossing() {
 }
 
 #[test]
-fn move_reflected_mapping_promotes_support_and_rejects_invalid_target() {
+fn move_reflected_mapping_releases_generated_support_and_rejects_invalid_target() {
     let mut g = square_geometry();
     g.meshing = Some(extract_manual_meshing(&g).unwrap());
     g.meshing
@@ -229,10 +229,7 @@ fn move_reflected_mapping_promotes_support_and_rejects_invalid_target() {
         },
     )
     .unwrap();
-    assert_eq!(
-        moved.geometry.meshing.unwrap().constraints[0].kind,
-        MeshConstraintKind::User
-    );
+    assert!(moved.geometry.meshing.unwrap().constraints.is_empty());
     assert_eq!(moved.geometry.positions[0], Vec2::new(-0.2, 0.2));
     assert!(moved.affected_edges.contains(&[10, 30]));
     assert!(edit_manual_mesh(
@@ -284,6 +281,173 @@ fn boundary_delete_and_chained_constraint_keep_single_domain() {
             },
         ]
     );
+}
+
+fn with_sites(mut geometry: MeshGeometry, sites: &[(u32, f32, f32)]) -> MeshGeometry {
+    for &(id, x, y) in sites {
+        geometry = edit_manual_mesh(
+            &geometry,
+            ManualMeshOperation::InsertVertex {
+                id,
+                uv: Vec2::new(x, y),
+            },
+        )
+        .unwrap()
+        .geometry;
+    }
+    geometry
+}
+
+#[test]
+fn free_vertex_crosses_old_triangles_and_generated_support() {
+    let mut g = with_sites(square_geometry(), &[(50, 0.2, 0.3), (60, 0.7, 0.6)]);
+    g = edit_manual_mesh(&g, ManualMeshOperation::ConstrainEdge { a: 10, b: 30 })
+        .unwrap()
+        .geometry;
+    g.meshing.as_mut().unwrap().constraints[0].kind = MeshConstraintKind::EdgeSupport;
+    let moved = edit_manual_mesh(
+        &g,
+        ManualMeshOperation::MoveVertices {
+            targets: vec![target(50, Vec2::new(0.85, 0.25))],
+            motion_from: None,
+        },
+    )
+    .unwrap()
+    .geometry;
+    assert_eq!(
+        moved.uvs[moved.vertex_ids.iter().position(|id| *id == 50).unwrap()],
+        Vec2::new(0.85, 0.25)
+    );
+    assert!(moved.meshing.as_ref().unwrap().constraints.is_empty());
+    assert_eq!(moved.vertex_ids, g.vertex_ids);
+
+    let mut fixed = g.clone();
+    fixed.meshing.as_mut().unwrap().constraints[0].kind = MeshConstraintKind::User;
+    let moved = edit_manual_mesh(
+        &fixed,
+        ManualMeshOperation::MoveVertices {
+            targets: vec![target(50, Vec2::new(0.85, 0.25))],
+            motion_from: None,
+        },
+    )
+    .unwrap()
+    .geometry;
+    assert_eq!(
+        moved.meshing.as_ref().unwrap().constraints,
+        fixed.meshing.as_ref().unwrap().constraints
+    );
+}
+
+#[test]
+fn boundary_delete_encloses_retained_sites_and_splits_new_outline() {
+    let g = with_sites(square_geometry(), &[(50, 0.5, 0.5), (60, 0.8, 0.2)]);
+    let deleted = edit_manual_mesh(&g, ManualMeshOperation::DeleteVertices { ids: vec![20] })
+        .unwrap()
+        .geometry;
+    assert_eq!(deleted.vertex_ids, vec![10, 30, 40, 50, 60]);
+    assert!(deleted.meshing.as_ref().unwrap().boundary.contains(&60));
+    let deleted = edit_manual_mesh(
+        &deleted,
+        ManualMeshOperation::DeleteVertices { ids: vec![60] },
+    )
+    .unwrap()
+    .geometry;
+    assert_eq!(
+        deleted.meshing.as_ref().unwrap().boundary,
+        vec![10, 50, 30, 40]
+    );
+    let split = edit_manual_mesh(
+        &deleted,
+        ManualMeshOperation::InsertVertex {
+            id: 70,
+            uv: Vec2::new(0.25, 0.25),
+        },
+    )
+    .unwrap()
+    .geometry;
+    assert!(split.meshing.unwrap().boundary.contains(&70));
+}
+
+#[test]
+fn boundary_moves_past_free_sites_and_batch_delete_recovers_an_outline() {
+    let g = with_sites(
+        square_geometry(),
+        &[(50, 0.2, 0.2), (60, 0.8, 0.2), (70, 0.5, 0.7)],
+    );
+    let moved = edit_manual_mesh(
+        &g,
+        ManualMeshOperation::MoveVertices {
+            targets: vec![target(10, Vec2::new(0.4, 0.4))],
+            motion_from: None,
+        },
+    )
+    .unwrap()
+    .geometry;
+    assert!(moved.meshing.as_ref().unwrap().boundary.contains(&50));
+    assert_eq!(moved.vertex_ids, g.vertex_ids);
+    let deleted = edit_manual_mesh(
+        &g,
+        ManualMeshOperation::DeleteVertices {
+            ids: vec![10, 20, 30, 40],
+        },
+    )
+    .unwrap()
+    .geometry;
+    assert_eq!(deleted.vertex_ids, vec![50, 60, 70]);
+    assert_eq!(deleted.triangles.len(), 1);
+}
+
+#[test]
+fn generated_outline_supports_delete_move_and_projected_split() {
+    let alpha: Vec<_> = (0..256)
+        .flat_map(|y| {
+            (0..256).map(move |x| {
+                if ((x as f64 - 128.) / 100.).powi(2) + ((y as f64 - 128.) / 85.).powi(2) < 1. {
+                    255
+                } else {
+                    0
+                }
+            })
+        })
+        .collect();
+    let g = zipzi_sdk::alpha_mesh_geometry(
+        zipzi_sdk::AlphaMask {
+            width: 256,
+            height: 256,
+            alpha: &alpha,
+        },
+        &zipzi_sdk::AlphaMeshOptions {
+            outside_spacing: 28.,
+            inside_spacing: 32.,
+            ..zipzi_sdk::AlphaMeshOptions::deformation_large()
+        },
+    )
+    .unwrap();
+    let boundary = &g.meshing.as_ref().unwrap().boundary;
+    let uv = |id| g.uvs[g.vertex_ids.iter().position(|v| *v == id).unwrap()];
+    for i in (0..boundary.len()).step_by((boundary.len() / 6).max(1)) {
+        let id = boundary[i];
+        edit_manual_mesh(&g, ManualMeshOperation::DeleteVertices { ids: vec![id] })
+            .unwrap_or_else(|e| panic!("delete generated boundary {id}: {e}"));
+        let p = uv(id);
+        edit_manual_mesh(
+            &g,
+            ManualMeshOperation::MoveVertices {
+                targets: vec![target(id, Vec2::new(p.x * 0.7 + 0.15, p.y * 0.7 + 0.15))],
+                motion_from: None,
+            },
+        )
+        .unwrap_or_else(|e| panic!("move generated boundary {id}: {e}"));
+        let q = uv(boundary[(i + 1) % boundary.len()]);
+        edit_manual_mesh(
+            &g,
+            ManualMeshOperation::InsertVertex {
+                id: g.vertex_ids.iter().max().unwrap() + 1,
+                uv: Vec2::new(p.x * 0.63 + q.x * 0.37, p.y * 0.63 + q.y * 0.37),
+            },
+        )
+        .unwrap_or_else(|e| panic!("split generated boundary {id}: {e}"));
+    }
 }
 
 #[test]

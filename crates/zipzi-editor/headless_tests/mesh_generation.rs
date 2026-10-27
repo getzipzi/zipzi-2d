@@ -17,7 +17,9 @@ fn open(harness: &Harness, cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         window.activate_window();
         window.render_frame(cx);
-        window.click("tool_generate_mesh", cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::GenerateMesh, window, cx)
+        });
     })
     .unwrap();
     settle(cx);
@@ -39,7 +41,7 @@ fn fill(harness: &Harness, field: &'static str, value: &str, cx: &mut TestAppCon
 }
 
 #[gpui_kit::test]
-fn toolbar_generation_submits_once_and_refreshes_history(cx: &mut TestAppContext) {
+fn generation_submits_once_and_refreshes_history(cx: &mut TestAppContext) {
     let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
     let harness = setup_with_document(cx, doc, assets);
     open_grid(&harness, cx);

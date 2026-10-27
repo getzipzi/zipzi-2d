@@ -13,7 +13,7 @@ mod overlay;
 mod region;
 mod select;
 pub use hints::{HintAction, InteractionHint};
-pub use manual_mesh::ManualTool;
+pub use manual_mesh::{ManualMeshEdge, ManualMeshFeedback, ManualTool};
 
 use crate::{
     CanvasScene, ComponentRef, Document, HitTarget, ObjectKind, ObjectRef, ViewportPoint,
@@ -102,19 +102,15 @@ impl ToolController {
             .is_some_and(|gesture| gesture.accepts_frame(version))
     }
 
-    pub fn clear(&mut self) {
-        self.manual = None;
+    /// Clear ordinary tool projections. Document modes have an explicit lifecycle.
+    pub fn clear_selection(&mut self) {
         self.components.clear();
         self.hovered = None;
         self.hovered_binding = None;
     }
-    pub fn reconcile(&mut self, document: &Document) {
-        if self
-            .manual
-            .as_ref()
-            .is_some_and(|mode| !mode.target_matches(document))
-        {
-            self.manual = None;
+    pub fn reconcile(&mut self, document: &mut Document) {
+        if let Some(mode) = &mut self.manual {
+            mode.reconcile(document);
         }
         let locks = document.object_state_index();
         let model = document.model();
@@ -143,38 +139,35 @@ impl ToolController {
         self.hovered_binding = None;
         changed
     }
-    pub(crate) fn tool_available(&self, tool: ToolId) -> bool {
-        !self.manual_active() || matches!(tool, ToolId::Select | ToolId::Hand)
-    }
     pub fn set_tool(&mut self, tool: ToolId, document: &mut Document) -> bool {
-        if !self.tool_available(tool) {
-            return false;
-        }
         let changed = self.cancel(document);
-        // Mesh Edit is a document mode, not a disposable ordinary tool state.
-        // Navigation and selection changes must keep its target and source image.
-        if let Some(mode) = &mut self.manual {
-            self.active = tool;
-            if tool == ToolId::Select {
-                mode.tool = ManualTool::Select;
-            }
-            return changed;
-        }
         let preserve_components = self.active.preserves_components(tool);
         self.active = tool;
         if !preserve_components {
-            self.clear();
+            self.clear_selection();
         }
         changed
     }
     pub fn manual_active(&self) -> bool {
         self.manual.is_some()
     }
+    pub fn manual_editable(&self) -> bool {
+        self.manual
+            .as_ref()
+            .is_some_and(|mode| mode.blocked.is_none())
+    }
     pub fn manual_tool(&self) -> Option<ManualTool> {
         self.manual.as_ref().map(|mode| mode.tool)
     }
     pub fn manual_target(&self) -> Option<&crate::ManualMeshTarget> {
         self.manual.as_ref().map(|mode| &mode.target)
+    }
+    pub fn manual_edge_at(
+        &self,
+        frame: &CanvasFrame,
+        point: crate::ViewportPoint,
+    ) -> Option<crate::ManualMeshEdge> {
+        self.manual.as_ref()?.edge_at(frame, point)
     }
     pub fn manual_preview_result(&self) -> bool {
         self.manual.as_ref().is_some_and(|mode| mode.preview_result)
@@ -191,14 +184,10 @@ impl ToolController {
         Ok(())
     }
     pub fn after_manual_generation(&mut self, document: &Document) -> anyhow::Result<()> {
-        if let Some(previous) = &self.manual {
-            let tool = previous.tool;
-            let preview_result = previous.preview_result;
-            let target = document.manual_mesh_target()?;
-            let mut mode = manual_mesh::ManualMeshMode::new(target, document);
-            mode.tool = tool;
-            mode.preview_result = preview_result;
-            self.manual = Some(mode);
+        if let Some(mode) = &mut self.manual {
+            mode.refresh_source(document)?;
+            mode.selected.clear();
+            mode.selected_edge = None;
         }
         Ok(())
     }
@@ -243,6 +232,8 @@ pub enum CanvasInput {
         point: ViewportPoint,
         shift: bool,
         alt: bool,
+        /// Platform primary modifier (Command on macOS), captured on press.
+        primary: bool,
     },
     Move {
         point: ViewportPoint,

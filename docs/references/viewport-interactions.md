@@ -52,7 +52,7 @@ requires a current displayed frame. Text inputs retain their own Select All acti
 owns interaction acquisition and
 release for both UI and synchronous core clients:
 
-1. `begin_canvas_gesture(binding, point, shift, alt)` checks the displayed frame before taking
+1. `begin_canvas_gesture(binding, point, shift, alt, primary)` checks the displayed frame before taking
    ownership. A rejected stale press leaves a running drag intact.
 2. The result supplies the current capture token. Captured UI events use
    `update_canvas_gesture(token, input)` to reject old serials and repeated presses.
@@ -148,3 +148,53 @@ configured-key hint resolution. Routing policy tests cover focus/IME ownership,
 capture/hover/focus priority, scope filtering, Escape and repeat decisions without
 a GPUI window. Input-routing headless regressions also cover Properties target
 rebinding and stale/window-local Timeline hint snapshots.
+
+## Mesh Edit direct gestures
+
+Generate Mesh lives in the top secondary toolbar while Mesh Edit is active.
+Switching to any primary tool exits Mesh Edit and retains
+completed edits and their undo history. The secondary toolbar has no exit or help
+button. Selecting objects, changing properties, creating parameters and switching
+to Select/Hand/Lasso/Glue exit the mode before
+performing the requested operation. They preserve completed mesh edits, cancel any
+unfinished mesh gesture and retire its capture; no second click is required.
+
+Mode lifetime is independent of ordinary tool cleanup and document source versions.
+A shared command boundary preserves only mesh operations, view controls and history;
+other commands and authoring publications use the explicit exit lifecycle. Inspector
+preview exits before acquiring its own candidate. External changes still revalidate
+the stable Mesh ID; an unavailable target suspends input until recovery or exit.
+
+Mesh Edit uses one default interaction: click empty space or an edge to insert a
+point, drag an existing point to move the selection, and drag empty space to box
+select. Delete/Backspace removes selected points; right-click opens the normal
+context menu. Shift adds and Option subtracts selection; Shift-click selects an
+edge for edge commands. A click is distinguished from a marquee at release using
+the drag threshold, so box selection never inserts a point.
+
+Command-drag from a point connects it to another point or inserts and connects at
+the release position. Command-click on a dashed automatic edge makes it a fixed
+User constraint without adding vertices. Command-click on empty space or an
+already-fixed edge does nothing; plain click remains the insertion gesture.
+Command+Shift-click deletion remains supported. Press modifiers fix the operation
+until release or cancellation. Modifier-only changes immediately switch to a pointing-hand cursor on connectable
+vertices and automatic edges, or a prohibited cursor on empty space and fixed edges;
+an active connection keeps its cursor after Command is released. Instructions
+appear only in the multiline Mesh Edit tooltip, without a persistent status-bar
+hint or viewport hint overlay. Target vertices highlight and the preview snaps to their positions. Each
+completed edit creates one undo step; Escape, lost button and focus loss cancel the current gesture. The secondary
+toolbar contains generation and result preview; Retriangulate Mesh is available
+in the Mesh Edit context menu. Right-clicking an automatic edge offers Constrain Edge without needing Command.
+Right-clicking a constrained edge instead offers
+Release Edge Constraint, which preserves both endpoints and the current triangles
+and creates one undo step. Automatic edges and outline edges cannot be released.
+There are no separate
+Select/Create/Delete tools. The Mesh Edit entry tooltip explains the default
+interaction in both locales.
+
+Moving and deleting vertices retriangulate free edges instead of treating the old
+triangles as motion barriers. Generated support constraints are released by those
+edits; explicit User constraints remain fixed. The outline locally encloses
+surviving points after a corner moves or is deleted. Boundary and fixed-edge
+crossings, coincident points, image limits and degenerate final meshes still reject
+atomically and preserve the last valid preview.

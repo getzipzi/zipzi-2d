@@ -16,6 +16,26 @@ pub enum ManualTool {
     Delete,
 }
 
+/// An interior edge that can be fixed or released through the context menu.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ManualMeshEdge {
+    pub endpoints: [VertexId; 2],
+    pub constrained: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ManualMeshFeedback {
+    Empty,
+    Vertex,
+    AutomaticEdge,
+    FixedEdge,
+    ConnectStart,
+    ConnectVertex,
+    ConnectNewVertex,
+    FixEdge,
+    Cancelled,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Hit {
     Vertex(VertexId),
@@ -31,8 +51,9 @@ enum EdgeHitKind {
 
 enum GestureKind {
     Drag(Vec<ManualVertexTarget>),
-    Marquee { shift: bool, alt: bool },
+    Marquee { shift: bool, alt: bool, hit: Hit },
     Create(Hit),
+    Connect(Hit),
     Delete(Hit),
 }
 
@@ -63,6 +84,7 @@ pub(super) struct ManualMeshMode {
     pub selected: Vec<VertexId>,
     pub selected_edge: Option<[VertexId; 2]>,
     pub diagnostic: Option<String>,
+    pub blocked: Option<String>,
     hover: Hit,
     gesture: Option<Gesture>,
     allocator: ManualVertexIdAllocator,
@@ -71,12 +93,26 @@ pub(super) struct ManualMeshMode {
 }
 
 impl ManualMeshMode {
-    pub fn target_matches(&self, document: &Document) -> bool {
-        document.validate_manual_target(&self.target).is_ok()
+    /// Publications update an operation source, not the lifetime of the mode.
+    /// Invalid targets stay suspended so Undo can recover them and Exit stays available.
+    pub fn reconcile(&mut self, document: &mut Document) {
+        document.retain_manual_mesh_context(&self.target.object);
+        if self.blocked.is_none() && document.validate_manual_target(&self.target).is_ok() {
+            return;
+        }
+        self.cancel(document);
+        if let Err(error) = self.refresh_source(document) {
+            let reason = format!("Mesh Edit paused: {error}");
+            self.blocked = Some(reason.clone());
+            self.diagnostic = Some(reason);
+        }
     }
 
     pub(super) fn refresh_source(&mut self, document: &Document) -> Result<()> {
-        self.target.source = document.manual_mesh_target()?.source;
+        self.target = document.manual_mesh_target_for(&self.target.object)?;
+        self.blocked = None;
+        self.diagnostic = None;
+        self.projected.borrow_mut().clear();
         let model = document.model();
         if let Some(mesh) = model.get_mesh(&self.target.object.id) {
             self.selected.retain(|id| mesh.vertex_ids.contains(id));
@@ -107,6 +143,7 @@ impl ManualMeshMode {
             selected: Vec::new(),
             selected_edge: None,
             diagnostic: None,
+            blocked: None,
             hover: Hit::Empty,
             gesture: None,
             allocator,
@@ -135,12 +172,12 @@ impl ManualMeshMode {
     pub fn cancel(&mut self, document: &mut Document) -> bool {
         let active = self.gesture.take().is_some();
         let changed = document.cancel_manual_mesh_gesture();
-        self.diagnostic = None;
+        self.diagnostic = self.blocked.clone();
         active || changed
     }
     pub fn settle(&mut self, document: &mut Document) -> Result<bool> {
         let active = self.gesture.take().is_some();
-        let changed = document.has_pending_edit();
+        let changed = document.has_manual_mesh_gesture();
         document.finish_manual_mesh_gesture()?;
         if changed {
             self.refresh_source(document)?;
@@ -149,6 +186,9 @@ impl ManualMeshMode {
     }
 
     pub fn select_all(&mut self, document: &Document) {
+        if self.blocked.is_some() {
+            return;
+        }
         if let Some(mesh) = document.model().get_mesh(&self.target.object.id) {
             self.selected = mesh.vertex_ids.clone();
             self.selected_edge = None;
@@ -156,6 +196,9 @@ impl ManualMeshMode {
     }
 
     pub fn delete_selection(&mut self, document: &mut Document) -> Result<bool> {
+        if self.blocked.is_some() {
+            return Ok(false);
+        }
         let operation = if !self.selected.is_empty() {
             Some(ManualMeshOperation::DeleteVertices {
                 ids: self.selected.clone(),
@@ -218,6 +261,21 @@ impl ManualMeshMode {
         Hit::Empty
     }
 
+    pub fn edge_at(&self, frame: &CanvasFrame, point: ViewportPoint) -> Option<ManualMeshEdge> {
+        if self.blocked.is_some() || self.dragging() || self.preview_result {
+            return None;
+        }
+        match self.hit(frame, point) {
+            Hit::Edge(endpoints, kind @ (EdgeHitKind::Constraint | EdgeHitKind::Automatic)) => {
+                Some(ManualMeshEdge {
+                    endpoints,
+                    constrained: kind == EdgeHitKind::Constraint,
+                })
+            }
+            _ => None,
+        }
+    }
+
     fn selected_starts(&self, document: &Document) -> Vec<ManualVertexTarget> {
         let model = document.model();
         let Some(mesh) = model.get_mesh(&self.target.object.id) else {
@@ -237,41 +295,72 @@ impl ManualMeshMode {
         frame: &CanvasFrame,
         event: CanvasInput,
     ) -> Result<bool> {
+        if self.blocked.is_some() && !matches!(event, CanvasInput::Cancel) {
+            return Ok(false);
+        }
         match event {
             CanvasInput::Cancel => Ok(self.cancel(document)),
             CanvasInput::Leave => {
                 self.hover = Hit::Empty;
                 Ok(false)
             }
-            CanvasInput::Down { point, shift, alt } => {
+            CanvasInput::Down {
+                point,
+                shift,
+                alt,
+                primary,
+            } => {
                 self.cancel(document);
                 self.hover = self.hit(frame, point);
-                let kind = match self.tool {
-                    ManualTool::Select => match self.hover {
-                        Hit::Vertex(id) => {
-                            if alt {
-                                self.selected.retain(|selected| *selected != id);
-                            } else if shift {
-                                if !self.selected.contains(&id) {
-                                    self.selected.push(id);
+                // Resolve once at press time: releasing a modifier during a drag
+                // must not change the gesture or the persistent toolbar tool.
+                let tool = if primary {
+                    if shift {
+                        ManualTool::Delete
+                    } else {
+                        ManualTool::Create
+                    }
+                } else {
+                    self.tool
+                };
+                let kind = if primary && !shift {
+                    GestureKind::Connect(self.hover)
+                } else {
+                    match tool {
+                        ManualTool::Select => match self.hover {
+                            Hit::Vertex(id) => {
+                                if alt {
+                                    self.selected.retain(|selected| *selected != id);
+                                } else if shift {
+                                    if !self.selected.contains(&id) {
+                                        self.selected.push(id);
+                                    }
+                                } else if !self.selected.contains(&id) {
+                                    self.selected = vec![id];
                                 }
-                            } else if !self.selected.contains(&id) {
-                                self.selected = vec![id];
+                                self.selected_edge = None;
+                                GestureKind::Drag(self.selected_starts(document))
                             }
-                            self.selected_edge = None;
-                            GestureKind::Drag(self.selected_starts(document))
-                        }
-                        Hit::Edge(ids, _) => {
-                            if !shift && !alt {
-                                self.selected.clear();
+                            Hit::Edge(ids, _) => {
+                                if !alt {
+                                    self.selected.clear();
+                                }
+                                self.selected_edge = (shift && !alt).then_some(ids);
+                                GestureKind::Marquee {
+                                    shift,
+                                    alt,
+                                    hit: self.hover,
+                                }
                             }
-                            self.selected_edge = Some(ids);
-                            GestureKind::Marquee { shift, alt }
-                        }
-                        _ => GestureKind::Marquee { shift, alt },
-                    },
-                    ManualTool::Create => GestureKind::Create(self.hover),
-                    ManualTool::Delete => GestureKind::Delete(self.hover),
+                            _ => GestureKind::Marquee {
+                                shift,
+                                alt,
+                                hit: self.hover,
+                            },
+                        },
+                        ManualTool::Create => GestureKind::Create(self.hover),
+                        ManualTool::Delete => GestureKind::Delete(self.hover),
+                    }
                 };
                 self.gesture = Some(Gesture {
                     version: frame.version,
@@ -291,6 +380,11 @@ impl ManualMeshMode {
                 if !left_down {
                     return Ok(self.cancel(document));
                 }
+                if self.gesture.as_ref().is_some_and(|g| {
+                    matches!(g.kind, GestureKind::Connect(_) | GestureKind::Create(_))
+                }) {
+                    self.hover = self.hit(frame, point);
+                }
                 self.update_drag(document, point)
             }
             CanvasInput::Up { point } => {
@@ -304,17 +398,18 @@ impl ManualMeshMode {
                     false
                 };
                 let gesture = self.gesture.take().unwrap();
+                let connecting = matches!(gesture.kind, GestureKind::Connect(_));
                 match gesture.kind {
                     GestureKind::Drag(_) => {
-                        let had_candidate = document.has_pending_edit();
+                        let had_candidate = document.has_manual_mesh_gesture();
                         document.finish_manual_mesh_gesture()?;
                         changed |= had_candidate;
                         if had_candidate {
                             self.refresh_source(document)?;
                         }
                     }
-                    GestureKind::Marquee { shift, alt } => {
-                        if gesture.moved {
+                    GestureKind::Marquee { shift, alt, hit } => {
+                        if gesture.moved || crate::picking::distance2(gesture.start, point) >= 9. {
                             let Some(mesh) = frame.geometry.mesh(&self.target.object.id) else {
                                 return Ok(false);
                             };
@@ -347,12 +442,17 @@ impl ManualMeshMode {
                                 self.selected = ids;
                             }
                             self.selected_edge = None;
-                        } else if gesture.start == point && self.hover == Hit::Empty && !shift {
-                            self.selected.clear();
-                            self.selected_edge = None;
+                        } else if !shift && !alt {
+                            changed = self.create_vertex_at(
+                                document,
+                                gesture.transform,
+                                gesture.start,
+                                hit,
+                                None,
+                            )?;
                         }
                     }
-                    GestureKind::Create(hit) => {
+                    GestureKind::Create(hit) | GestureKind::Connect(hit) => {
                         if let Hit::Vertex(a) = hit {
                             self.selected = vec![a];
                             self.selected_edge = None;
@@ -378,16 +478,33 @@ impl ManualMeshMode {
                         } else if !gesture.moved
                             && crate::picking::distance2(gesture.start, point) < 9.
                         {
-                            changed = self.create_vertex_at(
-                                document,
-                                gesture.transform,
-                                gesture.start,
-                                hit,
-                                None,
-                            )?;
+                            if connecting {
+                                if let Hit::Edge([a, b], EdgeHitKind::Automatic) = hit {
+                                    changed = self.apply_once(
+                                        document,
+                                        ManualMeshOperation::ConstrainEdge { a, b },
+                                    )?;
+                                    if changed {
+                                        self.hover = Hit::Edge([a, b], EdgeHitKind::Constraint);
+                                    }
+                                    self.selected.clear();
+                                    self.selected_edge = Some([a, b]);
+                                }
+                            } else {
+                                changed = self.create_vertex_at(
+                                    document,
+                                    gesture.transform,
+                                    gesture.start,
+                                    hit,
+                                    None,
+                                )?;
+                            }
                         }
                     }
                     GestureKind::Delete(hit) => {
+                        if gesture.moved || crate::picking::distance2(gesture.start, point) >= 9. {
+                            return Ok(changed);
+                        }
                         changed = match hit {
                             Hit::Vertex(id) => self.apply_once(
                                 document,
@@ -543,6 +660,13 @@ impl ManualMeshMode {
 
     pub fn overlay(&self, frame: &CanvasFrame) -> OverlaySnapshot {
         let mut out = OverlaySnapshot::default();
+        if let Some(reason) = &self.blocked {
+            out.target_label = Some(self.target.object.id.clone());
+            out.interaction_label = Some(reason.clone());
+            out.point_unavailable = Some(reason.clone());
+            out.unavailable = Some(reason.clone());
+            return out;
+        }
         let Some(mesh) = frame.geometry.mesh(&self.target.object.id) else {
             return out;
         };
@@ -621,7 +745,7 @@ impl ManualMeshMode {
                 .to_viewport(crate::ModelPoint { x: p.x, y: p.y })
         });
         for i in 0..4 {
-            out.reference_lines.push((corners[i], corners[(i + 1) % 4]));
+            out.image_bounds.push((corners[i], corners[(i + 1) % 4]));
         }
         for edge in topology
             .boundary
@@ -649,27 +773,61 @@ impl ManualMeshMode {
                 editable: true,
             });
         }
+        out.manual_mesh_feedback = Some(match self.hover {
+            Hit::Vertex(_) => ManualMeshFeedback::Vertex,
+            Hit::Edge(_, EdgeHitKind::Automatic) => ManualMeshFeedback::AutomaticEdge,
+            Hit::Edge(..) => ManualMeshFeedback::FixedEdge,
+            Hit::Empty => ManualMeshFeedback::Empty,
+        });
         if let Some(gesture) = &self.gesture {
             match gesture.kind {
                 GestureKind::Marquee { .. } if gesture.moved => {
                     out.marquee = Some((gesture.start, gesture.current));
                 }
-                GestureKind::Create(Hit::Vertex(id)) if gesture.moved => {
+                GestureKind::Create(Hit::Vertex(id)) | GestureKind::Connect(Hit::Vertex(id)) => {
+                    out.manual_mesh_feedback = Some(match self.hover {
+                        Hit::Vertex(target) if target == id => ManualMeshFeedback::ConnectStart,
+                        Hit::Vertex(_) => ManualMeshFeedback::ConnectVertex,
+                        _ => ManualMeshFeedback::ConnectNewVertex,
+                    });
                     if let Some((_, position)) =
                         mesh.vertices.iter().find(|(vertex, _)| *vertex == id)
                     {
-                        out.gizmo_lines
-                            .push((frame.transform.to_viewport(*position), gesture.current));
+                        if gesture.moved {
+                            let end = if let Hit::Vertex(target) = self.hover {
+                                mesh.vertices
+                                    .iter()
+                                    .find(|(id, _)| *id == target)
+                                    .map(|(_, p)| frame.transform.to_viewport(*p))
+                                    .unwrap_or(gesture.current)
+                            } else {
+                                gesture.current
+                            };
+                            out.gizmo_lines
+                                .push((frame.transform.to_viewport(*position), end));
+                        }
                     }
+                }
+                GestureKind::Connect(Hit::Edge(_, EdgeHitKind::Automatic)) => {
+                    out.manual_mesh_feedback = Some(if gesture.moved {
+                        ManualMeshFeedback::Cancelled
+                    } else {
+                        ManualMeshFeedback::FixEdge
+                    });
                 }
                 _ => {}
             }
         }
         out.target_label = Some(self.target.object.id.clone());
+        let tool = match self.gesture.as_ref().map(|gesture| &gesture.kind) {
+            Some(GestureKind::Create(_) | GestureKind::Connect(_)) => ManualTool::Create,
+            Some(GestureKind::Delete(_)) => ManualTool::Delete,
+            _ => self.tool,
+        };
         out.interaction_label = Some(if projected.truncated {
-            format!("Mesh Edit · {:?} · showing first 100000 edges", self.tool)
+            format!("Mesh Edit · {tool:?} · showing first 100000 edges")
         } else {
-            format!("Mesh Edit · {:?}", self.tool)
+            format!("Mesh Edit · {tool:?}")
         });
         if let Some(reason) = &self.diagnostic {
             out.interaction_label = Some(reason.clone());

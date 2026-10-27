@@ -14,27 +14,85 @@ fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
             .canvas
             .transform
             .to_viewport(p);
-        window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
-    })?;
-    Ok(())
-}
-fn drag_model(h: &mut Harness, a: ModelPoint, b: ModelPoint) -> anyhow::Result<()> {
-    h.cx.update_window(h.window, |_, window, cx| {
-        let t = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
-        let origin = window.find("canvas-body").bounds().origin;
-        let a = t.to_viewport(a);
-        let b = t.to_viewport(b);
-        window.drag(
-            origin + point(px(a.x), px(a.y)),
-            origin + point(px(b.x), px(b.y)),
+        // Keyboard helpers retain modifier state after Undo/Redo. This is a
+        // plain click, so explicitly release those modifiers for the event.
+        window.click_with_options(
+            "canvas-body",
+            gpui_kit::test::ClickOptions::new().with_offset(point(px(p.x), px(p.y))),
             cx,
         );
     })?;
     Ok(())
 }
+fn gesture_model(
+    h: &mut Harness,
+    a: ModelPoint,
+    b: ModelPoint,
+    modifiers: gpui_kit::Modifiers,
+) -> anyhow::Result<()> {
+    use gpui_kit::{InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+    h.cx.update_window(h.window, |_, window, cx| {
+        let t = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
+        let origin = window.find("canvas-body").bounds().origin;
+        let screen = |p| {
+            let p = t.to_viewport(p);
+            origin + point(px(p.x), px(p.y))
+        };
+        let a = screen(a);
+        let b = screen(b);
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: a,
+                modifiers,
+                click_count: 1,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        if a != b {
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: b,
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+        }
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: b,
+                modifiers,
+                click_count: 1,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })?;
+    Ok(())
+}
+fn delete_edge(h: &mut Harness, point: ModelPoint) -> anyhow::Result<()> {
+    gesture_model(
+        h,
+        point,
+        point,
+        gpui_kit::Modifiers {
+            shift: true,
+            ..Default::default()
+        },
+    )?;
+    h.cx.update_window(h.window, |_, window, cx| window.press("delete", cx))?;
+    Ok(())
+}
 fn click(h: &mut Harness, id: &'static str) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| {
-        window.click(id, cx);
+        window.click_with_options(id, gpui_kit::test::ClickOptions::new(), cx);
     })?;
     Ok(())
 }
@@ -74,35 +132,32 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     })?;
     let image = h.capture()?;
     save(&image, directory, "manual-mesh-01-enter.png")?;
-    click(&mut h, "tool_manual_create")?;
-    h.capture()?;
     click_model(&mut h, ModelPoint { x: 128., y: 128. })?;
     let image = h.capture()?;
     check(&h, 5, (1, 0));
     save(&image, directory, "manual-mesh-02-add.png")?;
-    h.cx.update_window(h.window, |_, window, cx| window.press("v", cx))?;
-    h.capture()?;
-    drag_model(
+    gesture_model(
         &mut h,
         ModelPoint { x: 128., y: 128. },
         ModelPoint { x: 155., y: 140. },
+        gpui_kit::Modifiers::default(),
     )?;
     let image = h.capture()?;
     check(&h, 5, (2, 0));
     save(&image, directory, "manual-mesh-03-drag.png")?;
-    click(&mut h, "tool_manual_create")?;
-    h.capture()?;
-    drag_model(
+    gesture_model(
         &mut h,
         ModelPoint { x: 24., y: 24. },
         ModelPoint { x: 155., y: 140. },
+        gpui_kit::Modifiers {
+            platform: true,
+            ..Default::default()
+        },
     )?;
     let image = h.capture()?;
     check(&h, 5, (3, 0));
     save(&image, directory, "manual-mesh-04-constraint.png")?;
-    click(&mut h, "tool_manual_delete")?;
-    h.capture()?;
-    click_model(&mut h, ModelPoint { x: 89.5, y: 82. })?;
+    delete_edge(&mut h, ModelPoint { x: 89.5, y: 82. })?;
     h.capture()?;
     check(&h, 5, (4, 0));
     h.cx.update_window(h.window, |_, window, cx| window.press("cmd-z", cx))?;
@@ -111,8 +166,6 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| window.press("cmd-shift-z", cx))?;
     h.capture()?;
     check(&h, 5, (4, 0));
-    click(&mut h, "tool_manual_create")?;
-    h.capture()?;
     click_model(&mut h, ModelPoint { x: 128., y: 244. })?;
     let image = h.capture()?;
     assert!(
@@ -146,18 +199,18 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     click(&mut h, "tool_manual_preview")?;
     let image = h.capture()?;
     save(&image, directory, "manual-mesh-08-isolated.png")?;
-    click(&mut h, "tool_manual_delete")?;
-    h.capture()?;
-    click_model(&mut h, ModelPoint { x: 128., y: 24. })?;
+    delete_edge(&mut h, ModelPoint { x: 128., y: 24. })?;
     let image = h.capture()?;
     check(&h, 5, (5, 0));
     save(&image, directory, "manual-mesh-09-outline-delete.png")?;
-    click(&mut h, "tool_manual_create")?;
-    h.capture()?;
-    drag_model(
+    gesture_model(
         &mut h,
         ModelPoint { x: 24., y: 24. },
         ModelPoint { x: 128., y: 60. },
+        gpui_kit::Modifiers {
+            platform: true,
+            ..Default::default()
+        },
     )?;
     let image = h.capture()?;
     check(&h, 6, (6, 0));

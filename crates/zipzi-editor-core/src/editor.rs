@@ -48,6 +48,11 @@ pub enum EditorCommand {
         expected_revision: u64,
     },
     ApplyMeshGeneration(std::sync::Arc<crate::MeshGenerationPreview>),
+    SetMeshConstraint {
+        target: crate::ManualMeshTarget,
+        endpoints: [zipzi_core::VertexId; 2],
+        constrained: bool,
+    },
     ToggleDeformers,
     ToggleAncestorDeformers,
     ToggleDeformerGrid,
@@ -97,6 +102,26 @@ pub enum EditorCommand {
     CancelEdit,
     Undo,
     Redo,
+}
+
+impl EditorCommand {
+    pub(crate) fn preserves_manual_mesh(&self) -> bool {
+        matches!(
+            self,
+            Self::GenerateMeshGrid { .. }
+                | Self::ApplyMeshGeneration(_)
+                | Self::SetMeshConstraint { .. }
+                | Self::ToggleDeformers
+                | Self::ToggleAncestorDeformers
+                | Self::ToggleDeformerGrid
+                | Self::ToggleWarpFine
+                | Self::ToggleOriginalPoints
+                | Self::FinishEdit
+                | Self::CancelEdit
+                | Self::Undo
+                | Self::Redo
+        )
+    }
 }
 
 /// File paths are supplied by the host; loading can run on its background executor.

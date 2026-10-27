@@ -106,6 +106,7 @@ fn isolation_freezes_scope_and_filters_picking_overlays_and_marquee() -> anyhow:
         &mut editor,
         binding,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,
@@ -236,7 +237,7 @@ fn isolation_allows_navigation_but_blocks_modeling_interactions() -> anyhow::Res
             let frame = editor.preview_for(binding)?.canvas.unwrap();
             assert!(editor.present_frame(frame));
             editor
-                .begin_canvas_gesture(binding, ViewportPoint { x: 5., y: 5. }, false, false)?
+                .begin_canvas_gesture(binding, ViewportPoint { x: 5., y: 5. }, false, false, false)?
                 .capture
                 .unwrap()
         };

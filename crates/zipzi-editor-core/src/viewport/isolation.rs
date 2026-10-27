@@ -169,7 +169,7 @@ impl Editor {
         };
         let tools = &mut self.active_session_mut().unwrap().modeling.tools;
         if !tools.manual_active() {
-            tools.clear();
+            tools.clear_selection();
         }
         let presentation = self.viewport_presentation_mut(binding.viewport).unwrap();
         presentation.isolation.scope = scope;

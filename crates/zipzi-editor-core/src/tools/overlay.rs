@@ -52,6 +52,7 @@ pub struct OverlayGluePoint {
 }
 #[derive(Clone, Debug, Default)]
 pub struct OverlaySnapshot {
+    pub manual_mesh_feedback: Option<super::ManualMeshFeedback>,
     pub vertices: Vec<OverlayVertex>,
     /// Mesh topology; controls retain their own semantic line groups below.
     pub lines: Vec<(ViewportPoint, ViewportPoint)>,
@@ -60,6 +61,8 @@ pub struct OverlaySnapshot {
     pub accent_lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub hover_lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub reference_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    /// Source image extent, distinct from editable mesh topology.
+    pub image_bounds: Vec<(ViewportPoint, ViewportPoint)>,
     pub deformers: Vec<OverlayDeformer>,
     pub glues: Vec<OverlayGlue>,
     pub marquee: Option<(ViewportPoint, ViewportPoint)>,

@@ -267,7 +267,7 @@ fn resizing_another_instance_cannot_cancel_the_primary_modeling_candidate() -> a
     editor.register_viewport(second, ViewportKind::Modeling)?;
     let point = editor.overlay().vertices[0].position;
     let token = editor
-        .begin_canvas_gesture(first, point, false, false)?
+        .begin_canvas_gesture(first, point, false, false, false)?
         .capture
         .unwrap();
     editor.update_canvas_gesture(

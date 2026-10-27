@@ -24,6 +24,7 @@ fn lasso(
     crate::support::pointer_input(
         editor,
         CanvasInput::Down {
+            primary: false,
             point: path[0],
             shift,
             alt,
@@ -144,6 +145,7 @@ fn lasso_vertex_hover_and_drag_match_select_and_cancel_restores_geometry() -> an
             crate::support::pointer_input(
                 &mut editor,
                 CanvasInput::Down {
+                    primary: false,
                     point: vertex.position,
                     shift: false,
                     alt: false,
@@ -212,6 +214,7 @@ fn lasso_gesture_keeps_selecting_when_it_crosses_a_vertex() -> anyhow::Result<()
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: path[0],
             shift: false,
             alt: false,
@@ -261,6 +264,7 @@ fn lasso_cancel_lost_button_tool_switch_and_resize_preserve_selection() -> anyho
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point: p(5., 5.),
                 shift: false,
                 alt: false,
@@ -329,6 +333,7 @@ fn lasso_degenerate_paths_preserve_selection_and_surface_click_matches_select() 
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: v,
             shift: false,
             alt: false,
@@ -386,6 +391,7 @@ fn lasso_blank_click_clears_objects_and_components_even_with_modifiers() -> anyh
             crate::support::pointer_input(
                 &mut editor,
                 CanvasInput::Down {
+                    primary: false,
                     point: p(-100., -100.),
                     shift,
                     alt,
@@ -546,6 +552,7 @@ fn lasso_deformer_handle_drags_match_select() -> anyhow::Result<()> {
             crate::support::pointer_input(
                 &mut editor,
                 CanvasInput::Down {
+                    primary: false,
                     point: start,
                     shift: false,
                     alt: false,
@@ -603,6 +610,7 @@ fn lasso_isolation_and_viewport_ownership_keep_other_geometry_out_of_the_gesture
         &mut editor,
         first,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,

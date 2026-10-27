@@ -334,6 +334,137 @@ fn canonical_boundary(ids: &mut Vec<VertexId>, points: &HashMap<VertexId, [f64; 
     }
 }
 
+fn segments_conflict(a: Edge, b: Edge, points: &HashMap<VertexId, [f64; 2]>) -> bool {
+    proper_cross(points[&a[0]], points[&a[1]], points[&b[0]], points[&b[1]])
+        || a.iter()
+            .any(|id| !b.contains(id) && between(points[id], points[&b[0]], points[&b[1]]))
+        || b.iter()
+            .any(|id| !a.contains(id) && between(points[id], points[&a[0]], points[&a[1]]))
+}
+
+/// Keep the authored outline, expanding only segments that exclude surviving
+/// sites after a move or deletion. In particular, deleting a corner must not
+/// delete its interior neighbours or turn unrelated concavities into a hull.
+fn enclose_vertices(g: &MeshGeometry, m: &mut MeshMeshing) -> Result<(), SdkError> {
+    let points = uv_map(g);
+    let area: f64 = (0..m.boundary.len())
+        .map(|i| {
+            det(
+                points[&m.boundary[i]],
+                points[&m.boundary[(i + 1) % m.boundary.len()]],
+            )
+        })
+        .sum();
+    if m.boundary.len() < 3 || area.abs() < f64::EPSILON {
+        // If the original outline was removed, the surviving sites supply it.
+        let mut sites = g.vertex_ids.clone();
+        sites.sort_by(|a, b| {
+            points[a][0]
+                .total_cmp(&points[b][0])
+                .then_with(|| points[a][1].total_cmp(&points[b][1]))
+                .then(a.cmp(b))
+        });
+        let mut hull = Vec::new();
+        for ids in [sites.clone(), sites.into_iter().rev().collect()] {
+            let start = hull.len();
+            for id in ids {
+                while hull.len() >= start + 2
+                    && cross(
+                        points[&hull[hull.len() - 2]],
+                        points[&hull[hull.len() - 1]],
+                        points[&id],
+                    ) <= 0.
+                {
+                    hull.pop();
+                }
+                hull.push(id);
+            }
+            hull.pop();
+        }
+        if hull.len() < 3 {
+            return Err(bad("editing requires at least three noncollinear vertices"));
+        }
+        m.boundary = hull;
+    }
+    canonical_boundary(&mut m.boundary, &points);
+    let mut sites = g.vertex_ids.clone();
+    sites.sort_unstable();
+    for &id in &sites {
+        if m.boundary.contains(&id)
+            || polygon_contains(points[&id], &m.boundary, &points)
+            || (0..m.boundary.len()).any(|i| {
+                between(
+                    points[&id],
+                    points[&m.boundary[i]],
+                    points[&m.boundary[(i + 1) % m.boundary.len()]],
+                )
+            })
+        {
+            continue;
+        }
+        let edges: Vec<_> = (0..m.boundary.len())
+            .map(|i| [m.boundary[i], m.boundary[(i + 1) % m.boundary.len()]])
+            .collect();
+        let insert = edges
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &[a, b])| {
+                let area = cross(points[&a], points[&b], points[&id]);
+                if area >= 0.
+                    || edges.iter().enumerate().any(|(j, &e)| {
+                        i != j
+                            && (segments_conflict([a, id], e, &points)
+                                || segments_conflict([id, b], e, &points))
+                    })
+                {
+                    None
+                } else {
+                    Some((i, -area))
+                }
+            })
+            .min_by(|a, b| a.1.total_cmp(&b.1).then(a.0.cmp(&b.0)))
+            .ok_or_else(|| bad(format!("cannot extend a single boundary to vertex {id}")))?
+            .0;
+        m.boundary.insert(insert + 1, id);
+    }
+    // A new shortcut can pass exactly through retained sites. Include these
+    // in the loop so the metadata describes the actual subdivided CDT edges.
+    let mut boundary = Vec::new();
+    for i in 0..m.boundary.len() {
+        let (a, b) = (m.boundary[i], m.boundary[(i + 1) % m.boundary.len()]);
+        boundary.push(a);
+        let mut on_edge: Vec<_> = sites
+            .iter()
+            .copied()
+            .filter(|id| !m.boundary.contains(id) && between(points[id], points[&a], points[&b]))
+            .collect();
+        on_edge.sort_by(|x, y| {
+            let distance = |id: &VertexId| {
+                let d = sub(points[id], points[&a]);
+                d[0] * d[0] + d[1] * d[1]
+            };
+            distance(x).total_cmp(&distance(y))
+        });
+        boundary.extend(on_edge);
+    }
+    m.boundary = boundary;
+    canonical_boundary(&mut m.boundary, &points);
+    let boundary = boundary_edges(&m.boundary);
+    m.constraints.retain(|c| !boundary.contains(&c.endpoints));
+    Ok(())
+}
+
+fn uv_winding(g: &MeshGeometry) -> f64 {
+    let points = uv_map(g);
+    g.triangles
+        .first()
+        .map(|t| {
+            let [a, b, c] = t.map(|id| points[&id]);
+            cross(a, b, c).signum()
+        })
+        .unwrap_or(1.)
+}
+
 /// Recover a fixed image-to-authoring affine transform from the existing mesh.
 /// A reflection is valid. Every vertex must obey the same transform.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -626,8 +757,9 @@ fn triangulate(
     g: &MeshGeometry,
     m: &MeshMeshing,
     preserved: &BTreeSet<Edge>,
+    winding: f64,
 ) -> Result<Vec<[VertexId; 3]>, SdkError> {
-    triangulate_with_extension(g, m, preserved, None)
+    triangulate_with_extension(g, m, preserved, None, winding)
 }
 
 fn triangulate_with_extension(
@@ -635,6 +767,7 @@ fn triangulate_with_extension(
     m: &MeshMeshing,
     preserved: &BTreeSet<Edge>,
     extension: Option<VertexId>,
+    winding: f64,
 ) -> Result<Vec<[VertexId; 3]>, SdkError> {
     let points = uv_map(g);
     let mut cdt = Cdt::new();
@@ -670,15 +803,6 @@ fn triangulate_with_extension(
             return Err(bad(format!("edge {e:?}: crosses a retained edge")));
         }
     }
-    let old_sign = g
-        .triangles
-        .first()
-        .and_then(|t| {
-            let [a, b, c] = t.map(|id| points.get(&id).copied());
-            Some(cross(a?, b?, c?))
-        })
-        .unwrap_or(1.0)
-        .signum();
     let mut faces = Vec::new();
     for face in cdt.inner_faces() {
         let center = face.center();
@@ -692,7 +816,7 @@ fn triangulate_with_extension(
         {
             continue;
         }
-        if old_sign < 0. {
+        if winding < 0. {
             t.swap(1, 2);
         }
         let i = (0..3).min_by_key(|&i| t[i]).unwrap();
@@ -721,6 +845,7 @@ pub fn edit_manual_mesh(
         return Ok(inserted);
     }
     let original = extract_manual_meshing(source)?;
+    let winding = uv_winding(source);
     let mut g = source.clone();
     g.meshing = Some(original.clone());
     let mut m = original.clone();
@@ -772,7 +897,7 @@ pub fn edit_manual_mesh(
             if outside {
                 // Keep every old face/edge, adding the new point's exterior fan.
                 // Unlike a convex hull this leaves unrelated concavities intact.
-                g.triangles = triangulate_with_extension(&g, &m, &preserved, Some(id))?;
+                g.triangles = triangulate_with_extension(&g, &m, &preserved, Some(id), winding)?;
                 g.meshing = None;
                 let expanded = extract_manual_meshing(&g);
                 if let Ok(expanded) = expanded {
@@ -790,7 +915,7 @@ pub fn edit_manual_mesh(
                         let mut candidate = m.clone();
                         candidate.boundary.insert(i + 1, id);
                         let mut trial = g.clone();
-                        if let Ok(faces) = triangulate(&trial, &candidate, &preserved) {
+                        if let Ok(faces) = triangulate(&trial, &candidate, &preserved, winding) {
                             trial.triangles = faces;
                             if validate(&trial, &candidate).is_ok() {
                                 accepted = Some((candidate, trial.triangles));
@@ -889,12 +1014,29 @@ pub fn edit_manual_mesh(
                     return Err(bad(format!("vertex {id}: UV outside source image")));
                 }
             }
-            preserved.retain(|e| !moved.contains(&e[0]) && !moved.contains(&e[1]));
+            // Automatic edges and generated support are triangulation output,
+            // not barriers to editing. Only the outline and authored fixed
+            // edges constrain motion; free triangles may flip and reconnect.
+            let fixed: BTreeSet<_> = boundary_edges(&m.boundary)
+                .into_iter()
+                .chain(
+                    m.constraints
+                        .iter()
+                        .filter(|c| c.kind == MeshConstraintKind::User)
+                        .map(|c| c.endpoints),
+                )
+                .collect();
             let endpoints: HashMap<_, _> = targets.iter().map(|v| (v.id, v.uv)).collect();
-            if let Some((a, b)) = motion_crossing(&old_edges, &old, &from, &endpoints) {
+            if let Some((a, b)) = motion_crossing(&fixed, &old, &from, &endpoints) {
                 return Err(bad(format!("motion crosses edges {a:?} and {b:?}")));
             }
-            if let Some(face) = motion_face_collapse(&g.triangles, &old, &from, &endpoints) {
+            let fixed_faces: Vec<_> = g
+                .triangles
+                .iter()
+                .copied()
+                .filter(|t| (0..3).all(|i| fixed.contains(&edge(t[i], t[(i + 1) % 3]))))
+                .collect();
+            if let Some(face) = motion_face_collapse(&fixed_faces, &old, &from, &endpoints) {
                 return Err(bad(format!("motion collapses triangle {face:?}")));
             }
             for ManualVertexTarget { id, uv: to } in targets {
@@ -908,14 +1050,12 @@ pub fn edit_manual_mesh(
                     g.positions[i] = map.position(to);
                 }
             }
-            for c in &mut m.constraints {
-                if (moved.contains(&c.endpoints[0]) || moved.contains(&c.endpoints[1]))
-                    && c.kind == MeshConstraintKind::EdgeSupport
-                {
-                    c.kind = MeshConstraintKind::User;
-                }
-            }
             force_rebuild = !moved.is_empty();
+            if force_rebuild {
+                preserved.clear();
+                m.constraints.retain(|c| c.kind == MeshConstraintKind::User);
+                enclose_vertices(&g, &mut m)?;
+            }
         }
         ManualMeshOperation::DeleteVertices { ids } => {
             let drop: BTreeSet<_> = ids.into_iter().collect();
@@ -926,9 +1066,6 @@ pub fn edit_manual_mesh(
                 }
             }
             m.boundary.retain(|id| !drop.contains(id));
-            if m.boundary.len() < 3 {
-                return Err(bad("deletion leaves fewer than three boundary vertices"));
-            }
             m.constraints
                 .retain(|c| !drop.contains(&c.endpoints[0]) && !drop.contains(&c.endpoints[1]));
             for i in (0..g.vertex_ids.len()).rev() {
@@ -939,8 +1076,12 @@ pub fn edit_manual_mesh(
                 }
             }
             removed.sort_unstable();
-            preserved.retain(|e| !drop.contains(&e[0]) && !drop.contains(&e[1]));
             force_rebuild = !drop.is_empty();
+            if force_rebuild {
+                preserved.clear();
+                m.constraints.retain(|c| c.kind == MeshConstraintKind::User);
+                enclose_vertices(&g, &mut m)?;
+            }
         }
         ManualMeshOperation::ConstrainEdge { a, b } => {
             if a == b || !g.vertex_ids.contains(&a) || !g.vertex_ids.contains(&b) {
@@ -1001,7 +1142,7 @@ pub fn edit_manual_mesh(
         }
     }
     if force_rebuild {
-        g.triangles = triangulate(&g, &m, &preserved)?;
+        g.triangles = triangulate(&g, &m, &preserved, winding)?;
     }
     g.meshing = Some(m.clone());
     validate(&g, &m)?;
@@ -1126,7 +1267,7 @@ pub fn add_manual_interior_sites(
         });
     }
     geometry.meshing = Some(meshing.clone());
-    geometry.triangles = triangulate(&geometry, &meshing, &BTreeSet::new())?;
+    geometry.triangles = triangulate(&geometry, &meshing, &BTreeSet::new(), uv_winding(source))?;
     validate(&geometry, &meshing)?;
     let new_edges = mesh_edges(&geometry.triangles);
     Ok(ManualMeshResult {
@@ -1173,7 +1314,9 @@ impl crate::EditSession<'_> {
                 .filter_map(|id| doc.get_glue(id))
                 .any(|g| g.mesh_a_id == mesh_id || g.mesh_b_id == mesh_id)
         {
-            return Err(bad(format!("mesh {mesh_id}: manual editing requires no deformation, binding, BlendShape or Glue")));
+            return Err(bad(format!(
+                "mesh {mesh_id}: manual editing requires no deformation, binding, BlendShape or Glue"
+            )));
         }
         let source = GeometrySnapshot {
             version: self.base_version(),

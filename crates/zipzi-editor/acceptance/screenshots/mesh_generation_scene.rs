@@ -3,7 +3,7 @@ use super::common::save;
 use crate::{i18n, theme};
 use gpui_kit::{point, px, test::TestWindowExt};
 use std::time::Duration;
-use zipzi_editor_core::Editor;
+use zipzi_editor_core::{CommandId, Editor};
 
 pub(crate) fn mesh_generation_screenshots(
     harness: &mut Harness,
@@ -16,7 +16,9 @@ pub(crate) fn mesh_generation_screenshots(
             view.redraw(cx);
         });
         window.render_frame(cx);
-        window.click("tool_generate_mesh", cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::GenerateMesh, window, cx)
+        });
     })?;
     harness._assets = assets;
     harness.cx.run_until_parked();
@@ -41,7 +43,9 @@ pub(crate) fn mesh_generation_screenshots(
         window.click("mesh-generation-cancel", cx);
         i18n::activate(Some("en"));
         theme::change(gpui_kit::component::ThemeMode::Dark, cx);
-        window.click("tool_generate_mesh", cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::GenerateMesh, window, cx)
+        });
     })?;
     harness.cx.run_until_parked();
     harness.cx.advance_clock(Duration::from_millis(150));
@@ -107,7 +111,9 @@ pub(crate) fn mesh_generation_screenshots(
             view.redraw(cx);
         });
         window.render_frame(cx);
-        window.click("tool_generate_mesh", cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::GenerateMesh, window, cx)
+        });
     })?;
     harness._assets = assets;
     harness.capture()?;

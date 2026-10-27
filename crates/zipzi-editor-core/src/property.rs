@@ -641,6 +641,7 @@ impl crate::Editor {
         self.document()
             .unwrap()
             .validate_property_preview(&object, patch)?;
+        self.exit_manual_mesh();
         // A new inspector gesture replaces the previous inspector candidate.
         // Committing it here would invalidate the already checked baseline
         // when both gestures edit the same field.

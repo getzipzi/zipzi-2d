@@ -137,24 +137,9 @@ fn render_mesh_edit_bar(
         .gap(compact::rem(1.));
     for (id, icon, command) in [
         (
-            "tool_manual_select",
-            IconName::MousePointer,
-            CommandId::ManualSelect,
-        ),
-        (
-            "tool_manual_create",
-            IconName::Plus,
-            CommandId::ManualCreate,
-        ),
-        (
-            "tool_manual_delete",
-            IconName::Trash,
-            CommandId::ManualDelete,
-        ),
-        (
-            "tool_manual_reconnect",
-            IconName::GitBranch,
-            CommandId::ManualReconnect,
+            "tool_generate_mesh",
+            IconName::Grid2x2,
+            CommandId::GenerateMesh,
         ),
         (
             "tool_manual_preview",
@@ -164,12 +149,16 @@ fn render_mesh_edit_bar(
     ] {
         let invocation = canvas.command(&state.editor, command, CommandSource::Toolbar);
         let status = state.editor.command_state(invocation);
+        let label = command.spec().label;
         let canvas = cx.entity();
         let owner = owner.clone();
-        let button = compact::toggle(Button::new(id), status.checked)
+        let button = compact::button(Button::new(id))
+            .when(command == CommandId::ManualPreviewResult, |button| {
+                compact::toggle(button, status.checked)
+            })
             .icon(icon)
-            .accessibility_label(t!(command.spec().label).into_owned())
-            .tooltip(t!(command.spec().label))
+            .accessibility_label(t!(label).into_owned())
+            .tooltip(t!(label))
             .disabled(modal || !status.enabled)
             .on_click(move |_, window, cx| {
                 let focus = canvas.read(cx).focus.clone();

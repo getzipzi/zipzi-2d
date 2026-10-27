@@ -83,6 +83,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,
@@ -132,6 +133,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point: handle,
                 shift: false,
                 alt: false,
@@ -152,6 +154,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point: handle,
                 shift: false,
                 alt: false,
@@ -437,6 +440,7 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
             crate::support::pointer_input(
                 &mut editor,
                 CanvasInput::Down {
+                    primary: false,
                     point,
                     shift: false,
                     alt: false,
@@ -525,6 +529,7 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
             crate::support::pointer_input(
                 &mut editor,
                 CanvasInput::Down {
+                    primary: false,
                     point: ViewportPoint {
                         x: point.x - 6.,
                         y: point.y - 6.,
@@ -557,6 +562,7 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
             crate::support::pointer_input(
                 &mut editor,
                 CanvasInput::Down {
+                    primary: false,
                     point,
                     shift: false,
                     alt: false,
@@ -593,6 +599,7 @@ fn mesh_drag_reuses_binding_index_without_mutating_retained_snapshots() -> anyho
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,
@@ -632,6 +639,7 @@ fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point: start,
                 shift: false,
                 alt: false,

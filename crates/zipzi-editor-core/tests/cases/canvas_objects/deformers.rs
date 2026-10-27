@@ -73,6 +73,7 @@ fn warp_and_rotation_drags_present_intermediate_geometry_before_the_latest_pose(
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point: start,
                 shift: false,
                 alt: false,
@@ -219,6 +220,7 @@ fn warp_gizmo_scales_all_points_and_cancels_as_one_edit() -> anyhow::Result<()> 
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,
@@ -362,6 +364,7 @@ fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()>
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,

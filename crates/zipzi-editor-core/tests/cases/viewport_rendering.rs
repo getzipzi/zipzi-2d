@@ -28,7 +28,7 @@ fn cancel_command_only_releases_its_target_viewport() -> anyhow::Result<()> {
     let original = editor.document().unwrap().selected_vertex_positions();
     let point = editor.overlay_for_viewport(a).vertices[0].position;
     let token = editor
-        .begin_canvas_gesture(a, point, false, false)?
+        .begin_canvas_gesture(a, point, false, false, false)?
         .capture
         .unwrap();
     editor.update_canvas_gesture(
@@ -107,7 +107,7 @@ fn modeling_instances_share_content_but_keep_requests_images_and_hit_geometry_in
     let original = editor.document().unwrap().selected_vertex_positions();
     let point = editor.overlay_for_viewport(b).vertices[0].position;
     let token = editor
-        .begin_canvas_gesture(b, point, false, false)?
+        .begin_canvas_gesture(b, point, false, false, false)?
         .capture
         .unwrap();
     editor.update_canvas_gesture(
@@ -274,7 +274,7 @@ fn hover_and_marquee_overlays_belong_to_their_instance_and_binding() -> anyhow::
             .any(|vertex| vertex.hovered)
     );
     let token = editor
-        .begin_canvas_gesture(a, ViewportPoint { x: 5., y: 5. }, false, false)?
+        .begin_canvas_gesture(a, ViewportPoint { x: 5., y: 5. }, false, false, false)?
         .capture
         .unwrap();
     editor.update_canvas_gesture(
@@ -306,6 +306,7 @@ fn hiding_or_destroying_a_domain_input_owner_cancels_its_candidate_without_a_ui_
             &mut editor,
             a,
             CanvasInput::Down {
+                primary: false,
                 point,
                 shift: false,
                 alt: false,

@@ -16,6 +16,7 @@ fn down(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyhow::Result<()
     crate::support::pointer_input(
         editor,
         CanvasInput::Down {
+            primary: false,
             point: p,
             shift,
             alt: false,

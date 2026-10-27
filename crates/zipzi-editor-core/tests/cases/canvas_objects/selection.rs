@@ -164,6 +164,7 @@ fn selection_tools_share_region_modifiers_and_option_click_subtraction() -> anyh
             crate::support::pointer_input(
                 &mut editor,
                 CanvasInput::Down {
+                    primary: false,
                     point: vertices[0].position,
                     shift: true,
                     alt: true,
@@ -208,6 +209,7 @@ fn selection_tools_share_object_click_and_option_subtraction() -> anyhow::Result
             crate::support::pointer_input(
                 &mut editor,
                 CanvasInput::Down {
+                    primary: false,
                     point,
                     shift: true,
                     alt: true,
@@ -238,6 +240,7 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,
@@ -286,6 +289,7 @@ fn surface_press_cancellation_preserves_selection_and_components() -> anyhow::Re
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point,
                 shift: false,
                 alt: false,
@@ -324,6 +328,7 @@ fn object_marquee_can_start_on_an_unselected_surface() -> anyhow::Result<()> {
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point,
                 shift: false,
                 alt: false,
@@ -362,6 +367,7 @@ fn surface_marquee_uses_original_component_selection_and_shift() -> anyhow::Resu
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
+                primary: false,
                 point,
                 shift,
                 alt: false,
@@ -580,6 +586,7 @@ fn shift_selection_and_marquee_share_document_selection_without_history() -> any
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: a,
             shift: false,
             alt: false,
@@ -608,6 +615,7 @@ fn tool_state_is_per_document_and_vertex_click_opens_no_candidate() -> anyhow::R
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: p,
             shift: false,
             alt: false,
@@ -650,6 +658,7 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: p,
             shift: false,
             alt: false,
@@ -807,6 +816,7 @@ fn deselect_command_clears_all_selection_and_cancel_gesture_preserves_selection(
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: vertex_pos,
             shift: false,
             alt: false,
@@ -889,6 +899,7 @@ fn glue_original_points_switch_refreshes_controls_and_keeps_final_artwork() -> a
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: raw_point,
             shift: false,
             alt: false,
@@ -930,6 +941,7 @@ fn glue_drag_keeps_last_valid_preview_when_inverse_cannot_continue() -> anyhow::
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,

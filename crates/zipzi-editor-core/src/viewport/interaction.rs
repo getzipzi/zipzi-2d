@@ -43,7 +43,10 @@ impl Editor {
         Ok(token)
     }
     pub fn viewport_interaction_valid(&self, token: ViewportInteractionToken) -> bool {
-        self.viewport_interaction == Some(token) && self.viewport_binding_valid(token.binding)
+        self.viewport_interaction == Some(token)
+            && self.viewport_binding_valid(token.binding)
+            && (token.kind == ViewportInteractionKind::Navigation
+                || self.gesture_active_for(token.binding))
     }
     pub fn cancel_viewport_interaction(&mut self, token: ViewportInteractionToken) -> bool {
         if self.viewport_interaction != Some(token) {
@@ -90,12 +93,21 @@ impl Editor {
         point: crate::ViewportPoint,
         shift: bool,
         alt: bool,
+        primary: bool,
     ) -> Result<ViewportInputUpdate> {
         self.validate_modeling_binding(binding)?;
         self.validate_modeling_press(binding)?;
         let token =
             self.acquire_viewport_interaction(binding, ViewportInteractionKind::Modeling)?;
-        self.process_canvas_gesture(token, CanvasInput::Down { point, shift, alt })
+        self.process_canvas_gesture(
+            token,
+            CanvasInput::Down {
+                point,
+                shift,
+                alt,
+                primary,
+            },
+        )
     }
 
     /// Continue the captured gesture. A new press must acquire a new owner through begin.

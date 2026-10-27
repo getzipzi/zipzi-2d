@@ -30,9 +30,15 @@ pub fn pointer_input_for(
     input: zipzi_editor_core::CanvasInput,
 ) -> anyhow::Result<bool> {
     use zipzi_editor_core::CanvasInput;
-    if let CanvasInput::Down { point, shift, alt } = input {
+    if let CanvasInput::Down {
+        point,
+        shift,
+        alt,
+        primary,
+    } = input
+    {
         return editor
-            .begin_canvas_gesture(binding, point, shift, alt)
+            .begin_canvas_gesture(binding, point, shift, alt, primary)
             .map(|update| update.model_changed);
     }
     if let Some(token) = editor.current_viewport_interaction().filter(|token| {

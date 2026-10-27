@@ -38,6 +38,75 @@ impl ViewportSurface {
             return menu;
         };
         let visibility = state.editor.deformer_visibility();
+        if state.editor.manual_active() {
+            let edge = state
+                .modeling_frame_for(canvas.read(cx).viewport)
+                .and_then(|frame| state.editor.manual_edge_at(&frame.canvas, point));
+            let target = state.editor.manual_target();
+            let command = CommandId::ManualReconnect;
+            let invocation = state.editor.command_for_viewport(
+                command,
+                binding,
+                zipzi_editor_core::CommandSource::ContextMenu,
+            );
+            let enabled = state.editor.command_state(invocation).enabled;
+            let owner = owner.downgrade();
+            let canvas = canvas.downgrade();
+            menu = menu.item(
+                PopupMenuItem::new(t!(command.spec().label).into_owned())
+                    .disabled(!enabled)
+                    .on_click(move |_, window, cx| {
+                        if let Some(owner) = owner.upgrade() {
+                            owner.update(cx, |owner, cx| {
+                                owner.run_invocation(invocation, window, cx);
+                            });
+                        }
+                        if let Some(canvas) = canvas.upgrade() {
+                            let focus = canvas.read(cx).focus.clone();
+                            window.defer(cx, move |window, cx| window.focus(&focus, cx));
+                        }
+                    }),
+            );
+            let edge_owner = menu_owner.clone();
+            let edge_canvas = menu_canvas.clone();
+            menu = menu
+                .item(
+                    PopupMenuItem::new(if edge.is_some_and(|edge| !edge.constrained) {
+                        t!("editor.manual_constrain_edge")
+                    } else {
+                        t!("editor.manual_release_constraint")
+                    })
+                    .disabled(edge.is_none() || target.is_none())
+                    .on_click(move |_, window, cx| {
+                        let (Some(owner), Some(target), Some(edge)) =
+                            (edge_owner.upgrade(), target.clone(), edge)
+                        else {
+                            return;
+                        };
+                        owner.update(cx, |owner, cx| {
+                            if !owner.editor.viewport_binding_valid(binding)
+                                || owner.editor.editing_context()
+                                    != Some(zipzi_editor_core::EditingContext::Modeling)
+                                || owner.modal
+                                || owner.editor.is_busy()
+                            {
+                                return;
+                            }
+                            let result = owner.editor.execute(EditorCommand::SetMeshConstraint {
+                                target,
+                                endpoints: edge.endpoints,
+                                constrained: !edge.constrained,
+                            });
+                            owner.complete_edit(result, cx);
+                        });
+                        if let Some(canvas) = edge_canvas.upgrade() {
+                            let focus = canvas.read(cx).focus.clone();
+                            window.defer(cx, move |window, cx| window.focus(&focus, cx));
+                        }
+                    }),
+                )
+                .separator();
+        }
         if candidates.is_empty() {
             menu = menu.item(PopupMenuItem::new(t!("editor.no_canvas_objects")).disabled(true));
         }

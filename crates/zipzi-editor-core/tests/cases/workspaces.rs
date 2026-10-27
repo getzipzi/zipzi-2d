@@ -282,6 +282,7 @@ fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> any
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,

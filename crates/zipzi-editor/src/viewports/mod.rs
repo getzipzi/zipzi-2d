@@ -314,6 +314,21 @@ impl Render for ViewportSurface {
         }
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
+        let connection_cursor = (!modal && !hand_tool)
+            .then(|| {
+                crate::ui::manual_mesh::connection_cursor(
+                    overlay.manual_mesh_feedback,
+                    window.modifiers(),
+                    self.binding(&state.editor)
+                        .is_some_and(|binding| state.editor.gesture_active_for(binding)),
+                )
+            })
+            .flatten();
+        let cursor = if overlay.point_unavailable.is_some() {
+            cursor
+        } else {
+            connection_cursor.or(cursor)
+        };
         if modal {
             self.cancel_pointer();
         }

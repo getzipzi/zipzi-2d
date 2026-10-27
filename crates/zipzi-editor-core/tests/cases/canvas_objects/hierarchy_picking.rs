@@ -256,6 +256,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: p,
             shift: false,
             alt: false,
@@ -283,6 +284,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: p,
             shift: false,
             alt: false,
@@ -345,6 +347,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,
@@ -377,6 +380,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,

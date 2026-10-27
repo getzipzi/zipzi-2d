@@ -21,7 +21,7 @@ fn pointer_release_finishes_the_candidate_and_capture_in_one_core_call() -> anyh
     let binding = editor.viewport_binding(viewport).unwrap();
     let start = editor.overlay().vertices[0].position;
     let original = editor.document().unwrap().selected_vertex_positions();
-    let down = editor.begin_canvas_gesture(binding, start, false, false)?;
+    let down = editor.begin_canvas_gesture(binding, start, false, false, false)?;
     let token = down.capture.unwrap();
     assert!(!down.model_changed);
 
@@ -45,6 +45,7 @@ fn pointer_release_finishes_the_candidate_and_capture_in_one_core_call() -> anyh
             .update_canvas_gesture(
                 token,
                 CanvasInput::Down {
+                    primary: false,
                     point: start,
                     shift: false,
                     alt: false,
@@ -97,7 +98,7 @@ fn cancelled_lost_or_abandoned_captures_release_the_candidate_without_history() 
         let start = editor.overlay().vertices[0].position;
         let original = editor.document().unwrap().selected_vertex_positions();
         let token = editor
-            .begin_canvas_gesture(binding, start, false, false)?
+            .begin_canvas_gesture(binding, start, false, false, false)?
             .capture
             .unwrap();
         let end = ViewportPoint {
@@ -178,7 +179,7 @@ fn command_cancellation_releases_capture_and_restores_hover_without_ui() -> anyh
             let start = editor.overlay().vertices[0].position;
             let original = editor.document().unwrap().selected_vertex_positions();
             let token = editor
-                .begin_canvas_gesture(binding, start, false, false)?
+                .begin_canvas_gesture(binding, start, false, false, false)?
                 .capture
                 .unwrap();
             if drag {
@@ -244,7 +245,7 @@ fn command_cancellation_releases_capture_and_restores_hover_without_ui() -> anyh
             editor.hover_canvas(binding, Some(start))?;
             assert!(editor.overlay().vertices[0].hovered);
             let replacement = editor
-                .begin_canvas_gesture(binding, start, false, false)?
+                .begin_canvas_gesture(binding, start, false, false, false)?
                 .capture
                 .unwrap();
             assert!(!editor.cancel_viewport_interaction(token));
@@ -282,7 +283,7 @@ fn selection_release_changes_selection_without_evaluating_or_opening_an_edit() -
     let evaluations = editor.evaluation_count();
     let vertex = editor.overlay().vertices[0].position;
     let token = editor
-        .begin_canvas_gesture(binding, vertex, false, false)?
+        .begin_canvas_gesture(binding, vertex, false, false, false)?
         .capture
         .unwrap();
     editor.update_canvas_gesture(token, CanvasInput::Up { point: vertex })?;
@@ -296,7 +297,7 @@ fn selection_release_changes_selection_without_evaluating_or_opening_an_edit() -
         y: -1000.,
     };
     let token = editor
-        .begin_canvas_gesture(binding, blank, false, false)?
+        .begin_canvas_gesture(binding, blank, false, false, false)?
         .capture
         .unwrap();
     let update = editor.update_canvas_gesture(token, CanvasInput::Up { point: blank })?;
@@ -353,6 +354,7 @@ fn commands_require_registered_targets_and_fixed_viewport_capabilities() -> anyh
             &mut editor,
             binding,
             CanvasInput::Down {
+                primary: false,
                 point: ViewportPoint::default(),
                 shift: false,
                 alt: false,
@@ -443,6 +445,7 @@ fn delayed_cancellation_cannot_cancel_a_new_modeling_candidate() -> anyhow::Resu
             start,
             false,
             false,
+            false,
         )?
         .capture
         .unwrap();
@@ -467,6 +470,7 @@ fn delayed_cancellation_cannot_cancel_a_new_modeling_candidate() -> anyhow::Resu
         .begin_canvas_gesture(
             editor.viewport_binding(viewport).unwrap(),
             start,
+            false,
             false,
             false,
         )?
@@ -547,6 +551,7 @@ fn resizing_and_exit_do_not_leave_a_revivable_capture() -> anyhow::Result<()> {
         .begin_canvas_gesture(
             editor.viewport_binding(viewport).unwrap(),
             ViewportPoint { x: 5., y: 5. },
+            false,
             false,
             false,
         )?

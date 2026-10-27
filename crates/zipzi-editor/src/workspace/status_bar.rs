@@ -129,7 +129,9 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
         .editor
         .current_viewport_interaction()
         .and_then(|token| {
-            (!view.modal && token.kind == zipzi_editor_core::ViewportInteractionKind::Modeling)
+            (!view.modal
+                && !view.editor.manual_active()
+                && token.kind == zipzi_editor_core::ViewportInteractionKind::Modeling)
                 .then(|| {
                     view.editor
                         .overlay_for_viewport(token.binding)
@@ -141,19 +143,8 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
         && view.editor.editing_context() == Some(zipzi_editor_core::EditingContext::Modeling))
     .then(|| view.editor.manual_tool())
     .flatten()
-    .map(|tool| {
-        view.editor
-            .canvas_notice()
-            .map(|reason| crate::ui::manual_mesh::diagnostic(&reason))
-            .unwrap_or_else(|| {
-                match tool {
-                    zipzi_editor_core::ManualTool::Select => t!("manual_mesh.select_hint"),
-                    zipzi_editor_core::ManualTool::Create => t!("manual_mesh.create_hint"),
-                    zipzi_editor_core::ManualTool::Delete => t!("manual_mesh.delete_hint"),
-                }
-                .into_owned()
-            })
-    });
+    .and_then(|_| view.editor.canvas_notice())
+    .map(|reason| crate::ui::manual_mesh::diagnostic(&reason));
     let message = error
         .clone()
         .or(manual_message)
@@ -185,6 +176,11 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
 }
 
 pub(crate) fn resolve_hint_context(view: &EditorView, _cx: &App) -> HintContext {
+    if view.editor.manual_active()
+        && view.editor.editing_context() == Some(EditingContext::Modeling)
+    {
+        return &[];
+    }
     if let Some(token) = view.editor.current_viewport_interaction() {
         return view.editor.viewport_interaction_hints(token);
     }

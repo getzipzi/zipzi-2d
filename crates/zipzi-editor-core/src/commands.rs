@@ -986,10 +986,11 @@ impl Editor {
                     && !self.is_busy()
                     && !self.exiting()
                     && !self.gesture_active()
-                    && (self.manual_active()
-                        || self
-                            .document()
-                            .is_some_and(|d| d.mesh_generation_target().is_ok()))
+                    && if self.manual_active() {
+                        self.manual_editable()
+                    } else {
+                        self.document().is_some_and(|d| d.mesh_generation_target().is_ok())
+                    }
             }
             ManualMesh => {
                 modeling
@@ -1006,7 +1007,7 @@ impl Editor {
             | ManualDelete
             | ManualReconnect
             | ManualRemoveSelection
-            | ManualPreviewResult => modeling && target && !self.is_busy() && self.manual_active(),
+            | ManualPreviewResult => modeling && target && !self.is_busy() && self.manual_editable(),
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {
                 target && !self.is_busy() && !self.exiting()
             }
@@ -1072,7 +1073,7 @@ impl Editor {
                 CommandTarget::Viewport(binding) if self.can_toggle_viewport_isolation(binding))
             }
             CancelGesture => target && !self.is_busy(),
-            LassoTool | GlueTool => modeling && target && !self.is_busy() && !self.manual_active(),
+            LassoTool | GlueTool => modeling && target && !self.is_busy(),
             HandTool => target && !self.is_busy() && (modeling || animation_navigation),
             _ => modeling && target && !self.is_busy(),
         }
@@ -1145,14 +1146,6 @@ impl Editor {
                     .is_some_and(|binding| binding.kind == crate::ViewportKind::Animation) =>
             {
                 // Animation exposes navigation without changing the document's Modeling tool.
-            }
-            SelectTool if self.manual_active() => {
-                let session = self.active_session_mut().unwrap();
-                session
-                    .modeling
-                    .tools
-                    .set_manual_tool(crate::ManualTool::Select, &mut session.document);
-                session.invalidate_scene();
             }
             SelectTool | LassoTool | GlueTool | HandTool => {
                 let tool = match command.id {

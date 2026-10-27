@@ -403,6 +403,10 @@ impl Editor {
         self.active_session()
             .is_some_and(|s| s.modeling.tools.manual_active())
     }
+    pub fn manual_editable(&self) -> bool {
+        self.active_session()
+            .is_some_and(|s| s.modeling.tools.manual_editable())
+    }
     pub fn manual_tool(&self) -> Option<crate::ManualTool> {
         self.active_session()
             .and_then(|s| s.modeling.tools.manual_tool())
@@ -410,6 +414,20 @@ impl Editor {
     pub fn manual_target(&self) -> Option<crate::ManualMeshTarget> {
         self.active_session()
             .and_then(|s| s.modeling.tools.manual_target().cloned())
+    }
+    pub fn manual_edge_at(
+        &self,
+        frame: &crate::CanvasFrame,
+        point: crate::ViewportPoint,
+    ) -> Option<crate::ManualMeshEdge> {
+        if !self.viewport_binding_valid(frame.version.binding) {
+            return None;
+        }
+        let session = self.active_session()?;
+        if frame.version.scene != session.scene_revision {
+            return None;
+        }
+        session.modeling.tools.manual_edge_at(frame, point)
     }
     pub fn enter_manual_mesh(&mut self, id: DocumentId) -> Result<()> {
         self.sync_runtime()?;
@@ -431,9 +449,13 @@ impl Editor {
         Ok(())
     }
     pub fn exit_manual_mesh(&mut self) {
+        if self.manual_active() {
+            if let Some(token) = self.current_viewport_interaction() {
+                self.cancel_viewport_interaction(token);
+            }
+        }
         if let Some(session) = self.active_session_mut() {
-            session.modeling.tools.exit_manual(&mut session.document);
-            session.invalidate_scene();
+            session.exit_manual_mesh();
         }
     }
     pub fn deformer_visibility(&self) -> crate::DeformerVisibility {

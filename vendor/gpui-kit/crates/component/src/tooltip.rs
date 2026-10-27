@@ -97,6 +97,10 @@ impl Styled for Tooltip {
 }
 impl Render for Tooltip {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Long descriptions must wrap before the overlay is positioned. Account
+        // for the outer margin so even narrow windows can contain the popup.
+        let max_width = (window.rem_size() * 22.5)
+            .min((window.viewport_size().width - window.rem_size() * 3.).max(px(1.)));
         let key_binding = if let Some(key_binding) = &self.key_binding {
             Some(key_binding.clone())
         } else {
@@ -131,12 +135,22 @@ impl Render for Tooltip {
                 .text_size(rems(11. / 16.))
                 .line_height(rems(14. / 16.))
                 .gap(rems(6. / 16.))
+                .max_w(max_width)
+                .whitespace_normal()
                 .refine_style(&self.style)
                 .map(|this| {
-                    this.child(div().map(|this| match self.content {
-                        TooltipContext::Text(ref text) => this.child(text.clone()),
-                        TooltipContext::Element(ref builder) => this.child(builder(window, cx)),
-                    }))
+                    this.child(
+                        div()
+                            .min_w_0()
+                            .max_w((max_width - px(12.)).max(px(1.)))
+                            .whitespace_normal()
+                            .map(|this| match self.content {
+                                TooltipContext::Text(ref text) => this.child(text.clone()),
+                                TooltipContext::Element(ref builder) => {
+                                    this.child(builder(window, cx))
+                                }
+                            }),
+                    )
                 })
                 .when_some(key_binding, |this, kbd| {
                     this.child(
@@ -236,9 +250,7 @@ impl ComponentTooltip {
 // ── Managed tooltips for application-owned triggers ─────────────────────────
 
 /// Attach the window's shared tooltip overlay without refreshing unrelated views.
-pub trait ManagedTooltipExt:
-    StatefulInteractiveElement + crate::ElementExt + Sized
-{
+pub trait ManagedTooltipExt: StatefulInteractiveElement + crate::ElementExt + Sized {
     fn managed_tooltip(
         self,
         build_tooltip: impl Fn(&mut Window, &mut App) -> AnyView + 'static,

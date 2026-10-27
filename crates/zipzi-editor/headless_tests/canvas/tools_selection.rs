@@ -327,7 +327,7 @@ fn viewport_transform_delta_updates_status_bar_and_clears_on_finish_or_cancel(
                 .1;
             let token = view
                 .editor
-                .begin_canvas_gesture(frame.version.binding, start, false, false)
+                .begin_canvas_gesture(frame.version.binding, start, false, false, false)
                 .unwrap()
                 .capture
                 .unwrap();
@@ -512,7 +512,7 @@ fn losing_the_presented_frame_rolls_back_a_live_edit_and_notifies_observers(
         let binding = view.editor.primary_viewport_binding().unwrap();
         let token = view
             .editor
-            .begin_canvas_gesture(binding, start, false, false)
+            .begin_canvas_gesture(binding, start, false, false, false)
             .unwrap()
             .capture
             .unwrap();

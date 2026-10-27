@@ -223,7 +223,7 @@ impl Editor {
         self.refresh_viewport_bindings();
     }
     pub fn viewport_interaction_active(&self) -> bool {
-        self.viewport_interaction.is_some()
+        self.current_viewport_interaction().is_some()
     }
     pub fn viewport_interaction_binding(&self) -> Option<ViewportBinding> {
         self.viewport_interaction

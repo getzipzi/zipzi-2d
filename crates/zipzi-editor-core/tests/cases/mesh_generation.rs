@@ -163,6 +163,7 @@ fn manual_mesh_mode_uses_full_reference_and_one_history_step_per_point() -> anyh
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,
@@ -217,6 +218,7 @@ fn manual_mesh_drag_keeps_last_valid_candidate_and_undo_cancels_gesture() -> any
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,
@@ -276,6 +278,7 @@ fn manual_mesh_drag_keeps_last_valid_candidate_and_undo_cancels_gesture() -> any
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,
@@ -322,6 +325,7 @@ fn manual_mesh_edge_selection_pins_and_releases_an_automatic_connection() -> any
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: a,
             shift: false,
             alt: false,
@@ -345,8 +349,9 @@ fn manual_mesh_edge_selection_pins_and_releases_an_automatic_connection() -> any
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: midpoint,
-            shift: false,
+            shift: true,
             alt: false,
         },
     )?;
@@ -393,6 +398,7 @@ fn manual_mesh_saving_drag_commits_the_last_valid_candidate() -> anyhow::Result<
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,
@@ -875,6 +881,7 @@ fn manual_click(editor: &mut Editor, point: ViewportPoint) -> anyhow::Result<()>
     crate::support::pointer_input(
         editor,
         CanvasInput::Down {
+            primary: false,
             point,
             shift: false,
             alt: false,
@@ -908,6 +915,7 @@ fn manual_mesh_create_click_selects_an_existing_point() -> anyhow::Result<()> {
 #[test]
 fn manual_mesh_create_near_boundary_snaps_to_the_highlighted_edge() -> anyhow::Result<()> {
     let (mut editor, _dir) = manual_interaction_fixture()?;
+    editor.dispatch(editor.command(CommandId::ManualSelect))?;
     let frame = crate::support::present_canvas(&mut editor)?;
     let geometry = frame
         .geometry
@@ -936,6 +944,70 @@ fn manual_mesh_create_near_boundary_snaps_to_the_highlighted_edge() -> anyhow::R
 }
 
 #[test]
+fn manual_mesh_plain_edit_retriangulates_outline_and_undo_restores_geometry() -> anyhow::Result<()>
+{
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    editor.dispatch(editor.command(CommandId::ManualSelect))?;
+    let original = edited_mesh(&editor);
+    for point in [
+        ModelPoint { x: 70., y: 80. },
+        ModelPoint { x: 170., y: 60. },
+    ] {
+        let frame = crate::support::present_canvas(&mut editor)?;
+        manual_click(&mut editor, frame.transform.to_viewport(point))?;
+    }
+    let created = edited_mesh(&editor);
+    assert_eq!(created.vertex_ids.len(), 6);
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let start = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+    let to = frame.transform.to_viewport(ModelPoint { x: 105., y: 105. });
+    let token = editor
+        .begin_canvas_gesture(frame.version.binding, start, false, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(
+        token,
+        CanvasInput::Move {
+            point: to,
+            left_down: true,
+        },
+    )?;
+    editor.update_canvas_gesture(token, CanvasInput::Up { point: to })?;
+    let moved = edited_mesh(&editor);
+    assert_ne!(
+        moved.base_positions,
+        created.base_positions,
+        "{:?}",
+        editor.canvas_notice()
+    );
+    assert_eq!(moved.vertex_ids, created.vertex_ids);
+    assert_eq!(editor.document().unwrap().history_lengths(), (3, 0));
+
+    let frame = crate::support::present_canvas(&mut editor)?;
+    manual_click(
+        &mut editor,
+        frame.transform.to_viewport(ModelPoint { x: 232., y: 24. }),
+    )?;
+    editor.dispatch(editor.command(CommandId::ManualRemoveSelection))?;
+    let deleted = edited_mesh(&editor);
+    assert_eq!(deleted.vertex_ids.len(), 5, "{:?}", editor.canvas_notice());
+    assert_eq!(editor.document().unwrap().history_lengths(), (4, 0));
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), moved);
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), created);
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), original);
+    for _ in 0..4 {
+        editor.dispatch(editor.command(CommandId::Redo))?;
+    }
+    assert_eq!(edited_mesh(&editor), deleted);
+    assert!(editor.manual_active());
+    Ok(())
+}
+
+#[test]
 fn manual_mesh_create_drag_from_empty_space_does_not_insert_a_point() -> anyhow::Result<()> {
     let (mut editor, _dir) = manual_interaction_fixture()?;
     let frame = crate::support::present_canvas(&mut editor)?;
@@ -947,6 +1019,7 @@ fn manual_mesh_create_drag_from_empty_space_does_not_insert_a_point() -> anyhow:
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: start,
             shift: false,
             alt: false,
@@ -1050,6 +1123,7 @@ fn manual_mesh_drag_to_empty_space_creates_connected_point_with_one_undo() -> an
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
+            primary: false,
             point: from,
             shift: false,
             alt: false,
@@ -1100,44 +1174,465 @@ fn manual_mesh_delete_outer_edge_then_create_outside_the_new_outline() -> anyhow
 }
 
 #[test]
-fn manual_mesh_primary_tool_commands_do_not_exit_the_mode() -> anyhow::Result<()> {
-    let (mut editor, _dir) = manual_interaction_fixture()?;
-    let original = edited_mesh(&editor);
+fn manual_mesh_all_primary_tools_exit_without_changing_geometry_or_history() -> anyhow::Result<()> {
     for (command, tool) in [
+        (CommandId::SelectTool, ToolId::Select),
+        (CommandId::HandTool, ToolId::Hand),
         (CommandId::LassoTool, ToolId::Lasso),
         (CommandId::GlueTool, ToolId::Glue),
     ] {
-        assert!(
-            !editor.command_available(editor.command(command)),
-            "Unsupported tools must be disabled in Mesh Edit"
-        );
-        assert!(editor.dispatch(editor.command(command)).is_err());
-        assert!(editor.execute(EditorCommand::SetTool(tool)).is_err());
-        assert!(editor.manual_active());
-        assert_eq!(editor.manual_tool(), Some(ManualTool::Create));
-    }
-    editor.dispatch(editor.command(CommandId::HandTool))?;
-    assert!(editor.manual_active());
-    assert_eq!(editor.active_tool(), ToolId::Hand);
-    editor.dispatch(editor.command(CommandId::ManualCreate))?;
-    assert!(editor.manual_active());
-    assert_eq!(
-        editor.active_tool(),
-        ToolId::Select,
-        "Mesh tools must leave navigation mode"
-    );
-    editor.dispatch(editor.command(CommandId::SelectTool))?;
-    assert!(editor.manual_active());
-    assert_eq!(editor.manual_tool(), Some(ManualTool::Select));
-    editor.execute(EditorCommand::SetTool(ToolId::Select))?;
-    assert!(editor.manual_active());
-    assert_eq!(edited_mesh(&editor), original);
-    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
-    editor.dispatch(editor.command(CommandId::ManualMesh))?;
-    assert!(!editor.manual_active());
-    for command in [CommandId::LassoTool, CommandId::GlueTool] {
-        assert!(editor.command_available(editor.command(command)));
+        let (mut editor, _dir) = manual_interaction_fixture()?;
+        let original = edited_mesh(&editor);
         editor.dispatch(editor.command(command))?;
+        assert!(!editor.manual_active());
+        assert_eq!(editor.active_tool(), tool);
+        assert_eq!(edited_mesh(&editor), original);
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        editor.enter_manual_mesh(editor.active_id().unwrap())?;
+        editor.execute(EditorCommand::SetTool(tool))?;
+        assert!(!editor.manual_active());
+        assert_eq!(editor.active_tool(), tool);
     }
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_primary_gestures_create_move_delete_without_switching_tools() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    editor.dispatch(editor.command(CommandId::ManualSelect))?;
+    let original = edited_mesh(&editor);
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let point = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
+    let binding = frame.version.binding;
+    let token = editor
+        .begin_canvas_gesture(binding, point, false, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
+    let created = edited_mesh(&editor);
+    assert_eq!(created.vertex_ids.len(), 5);
+    assert_eq!(editor.manual_tool(), Some(ManualTool::Select));
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let to = frame.transform.to_viewport(ModelPoint { x: 140., y: 140. });
+    let token = editor
+        .begin_canvas_gesture(binding, point, false, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(
+        token,
+        CanvasInput::Move {
+            point: to,
+            left_down: true,
+        },
+    )?;
+    editor.update_canvas_gesture(token, CanvasInput::Up { point: to })?;
+    let moved = edited_mesh(&editor);
+    assert_ne!(moved, created);
+    assert_eq!(moved.vertex_ids.len(), 5);
+    assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
+
+    crate::support::present_canvas(&mut editor)?;
+    let token = editor
+        .begin_canvas_gesture(binding, to, true, false, true)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(token, CanvasInput::Up { point: to })?;
+    assert_eq!(edited_mesh(&editor).vertex_ids.len(), 4);
+    assert_eq!(editor.manual_tool(), Some(ManualTool::Select));
+    assert_eq!(editor.document().unwrap().history_lengths(), (3, 0));
+    for expected in [&moved, &created, &original] {
+        editor.dispatch(editor.command(CommandId::Undo))?;
+        assert_eq!(&edited_mesh(&editor), expected);
+    }
+    for expected in [&created, &moved] {
+        editor.dispatch(editor.command(CommandId::Redo))?;
+        assert_eq!(&edited_mesh(&editor), expected);
+    }
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_plain_split_then_primary_connect_in_a_single_gesture() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    // Plain click splits; Command is reserved for fixed connections.
+    editor.dispatch(editor.command(CommandId::ManualSelect))?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let edge = frame.transform.to_viewport(ModelPoint { x: 128., y: 24. });
+    let binding = frame.version.binding;
+    let token = editor
+        .begin_canvas_gesture(binding, edge, false, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(token, CanvasInput::Up { point: edge })?;
+    let split = edited_mesh(&editor);
+    assert_eq!(split.vertex_ids.len(), 5);
+    assert_eq!(split.meshing.as_ref().unwrap().boundary.len(), 5);
+    assert_eq!(editor.manual_tool(), Some(ManualTool::Select));
+
+    editor.dispatch(editor.command(CommandId::ManualDelete))?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let to = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
+    let token = editor
+        .begin_canvas_gesture(binding, edge, false, false, true)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(
+        token,
+        CanvasInput::Move {
+            point: to,
+            left_down: true,
+        },
+    )?;
+    editor.update_canvas_gesture(token, CanvasInput::Up { point: to })?;
+    let connected = edited_mesh(&editor);
+    assert_eq!(connected.vertex_ids.len(), 6);
+    assert_eq!(connected.meshing.as_ref().unwrap().constraints.len(), 1);
+    assert_eq!(editor.manual_tool(), Some(ManualTool::Delete));
+    assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), split);
+    editor.dispatch(editor.command(CommandId::Redo))?;
+    assert_eq!(edited_mesh(&editor), connected);
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_primary_delete_cancels_on_drag_escape_or_lost_button() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let original = edited_mesh(&editor);
+    for ending in 0..3 {
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let point = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+        let away = ViewportPoint {
+            x: point.x + 20.,
+            y: point.y + 20.,
+        };
+        let token = editor
+            .begin_canvas_gesture(frame.version.binding, point, true, false, true)?
+            .capture
+            .unwrap();
+        match ending {
+            0 => {
+                editor.update_canvas_gesture(
+                    token,
+                    CanvasInput::Move {
+                        point: away,
+                        left_down: true,
+                    },
+                )?;
+                editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
+            }
+            1 => {
+                editor.update_canvas_gesture(token, CanvasInput::Cancel)?;
+            }
+            _ => {
+                editor.update_canvas_gesture(
+                    token,
+                    CanvasInput::Move {
+                        point,
+                        left_down: false,
+                    },
+                )?;
+            }
+        }
+        assert_eq!(edited_mesh(&editor), original);
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        assert_eq!(editor.manual_tool(), Some(ManualTool::Create));
+        assert!(editor.current_viewport_interaction().is_none());
+    }
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_cmd_click_fixes_only_automatic_edges_with_one_undo() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    editor.dispatch(editor.command(CommandId::ManualSelect))?;
+    let original = edited_mesh(&editor);
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let binding = frame.version.binding;
+    let (a, b) = editor.overlay_for_viewport(binding).automatic_lines[0];
+    let point = ViewportPoint {
+        x: (a.x + b.x) * 0.5,
+        y: (a.y + b.y) * 0.5,
+    };
+    for cancel in [true, false] {
+        let token = editor
+            .begin_canvas_gesture(binding, point, false, false, true)?
+            .capture
+            .unwrap();
+        assert_eq!(
+            editor.overlay_for_viewport(binding).manual_mesh_feedback,
+            Some(zipzi_editor_core::ManualMeshFeedback::FixEdge)
+        );
+        assert_eq!(edited_mesh(&editor), original);
+        if cancel {
+            editor.update_canvas_gesture(
+                token,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: point.x + 20.,
+                        y: point.y,
+                    },
+                    left_down: true,
+                },
+            )?;
+            editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
+            assert_eq!(edited_mesh(&editor), original);
+            assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        } else {
+            editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
+        }
+    }
+    let fixed = edited_mesh(&editor);
+    assert_eq!(fixed.vertex_ids, original.vertex_ids);
+    assert_eq!(fixed.triangles, original.triangles);
+    assert_eq!(fixed.meshing.as_ref().unwrap().constraints.len(), 1);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    crate::support::present_canvas(&mut editor)?;
+    // Clicking a fixed edge or empty space with Command does not add points.
+    for point in [
+        point,
+        frame.transform.to_viewport(ModelPoint { x: 80., y: 128. }),
+    ] {
+        let token = editor
+            .begin_canvas_gesture(binding, point, false, false, true)?
+            .capture
+            .unwrap();
+        editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
+        assert_eq!(edited_mesh(&editor), fixed);
+    }
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), original);
+    editor.dispatch(editor.command(CommandId::Redo))?;
+    assert_eq!(edited_mesh(&editor), fixed);
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_plain_shift_and_option_selection_still_work() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    editor.dispatch(editor.command(CommandId::ManualSelect))?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let binding = frame.version.binding;
+    let a = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+    let b = frame.transform.to_viewport(ModelPoint { x: 232., y: 24. });
+    for (point, shift, alt, count) in [
+        (a, false, false, 1),
+        (b, true, false, 2),
+        (a, false, true, 1),
+    ] {
+        let token = editor
+            .begin_canvas_gesture(binding, point, shift, alt, false)?
+            .capture
+            .unwrap();
+        editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
+        let overlay = editor.overlay_for_viewport(binding);
+        assert_eq!(
+            overlay.vertices.iter().filter(|v| v.selected).count(),
+            count
+        );
+    }
+    let start = frame.transform.to_viewport(ModelPoint { x: 10., y: 10. });
+    let end = frame.transform.to_viewport(ModelPoint { x: 240., y: 240. });
+    let token = editor
+        .begin_canvas_gesture(binding, start, false, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(
+        token,
+        CanvasInput::Move {
+            point: end,
+            left_down: true,
+        },
+    )?;
+    editor.update_canvas_gesture(token, CanvasInput::Up { point: end })?;
+    assert_eq!(
+        editor
+            .overlay_for_viewport(binding)
+            .vertices
+            .iter()
+            .filter(|v| v.selected)
+            .count(),
+        4
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_other_intents_exit_without_blocking_selection_or_properties() -> anyhow::Result<()> {
+    for command in [
+        EditorCommand::Select(mesh().id),
+        EditorCommand::SelectObject(ObjectRef::new(ObjectKind::Part, id(903))),
+        EditorCommand::SelectObjects(vec![mesh(), ObjectRef::new(ObjectKind::Part, id(903))]),
+        EditorCommand::SelectCanvasObjects(vec![]),
+        EditorCommand::Navigate(ObjectRef::new(ObjectKind::Part, id(903))),
+        EditorCommand::CreateParameter(NewParameter::default()),
+        EditorCommand::SetObjectProperty {
+            object: mesh(),
+            field: "name".into(),
+            value: serde_json::json!("Renamed"),
+        },
+        EditorCommand::PreviewName("Renamed".into()),
+        EditorCommand::SetObjectsLocked {
+            objects: vec![mesh()],
+            locked: true,
+        },
+        EditorCommand::SetTool(ToolId::Lasso),
+        EditorCommand::SetTool(ToolId::Glue),
+    ] {
+        let (mut editor, _dir) = manual_interaction_fixture()?;
+        editor.execute(command)?;
+        assert!(!editor.manual_active());
+        assert!(editor.manual_target().is_none());
+        editor.execute(EditorCommand::FinishEdit)?;
+        assert!(
+            editor
+                .preview()?
+                .scene
+                .viewport_frame
+                .drawables
+                .iter()
+                .all(|drawable| !drawable.id.starts_with("__manual_mesh_reference_"))
+        );
+    }
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    assert!(editor.command_available(editor.command(CommandId::Deselect)));
+    editor.dispatch(editor.command(CommandId::Deselect))?;
+    assert!(!editor.manual_active());
+    assert!(editor.document().unwrap().context().selections.is_empty());
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_interruption_keeps_completed_edits_cancels_drag_and_retires_capture()
+-> anyhow::Result<()> {
+    for authoring in [false, true] {
+        let (mut editor, _dir) = manual_interaction_fixture()?;
+        let frame = support::present_canvas(&mut editor)?;
+        manual_click(
+            &mut editor,
+            frame.transform.to_viewport(ModelPoint { x: 128., y: 128. }),
+        )?;
+        let completed = edited_mesh(&editor);
+        editor.dispatch(editor.command(CommandId::ManualSelect))?;
+        let frame = support::present_canvas(&mut editor)?;
+        let start = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+        let end = frame.transform.to_viewport(ModelPoint { x: 32., y: 32. });
+        let token = editor
+            .begin_canvas_gesture(frame.version.binding, start, false, false, false)?
+            .capture
+            .unwrap();
+        editor.update_canvas_gesture(
+            token,
+            CanvasInput::Move {
+                point: end,
+                left_down: true,
+            },
+        )?;
+        assert!(editor.document().unwrap().has_pending_edit());
+        if authoring {
+            let plan = editor.document().unwrap().plan_parameter_object_creation(
+                ObjectKind::Parameter,
+                "Created".into(),
+                &[],
+            )?;
+            editor.execute_organization_authoring(editor.active_id().unwrap(), &plan)?;
+            assert_eq!(editor.document().unwrap().parameters().len(), 1);
+        } else {
+            let other = ObjectRef::new(ObjectKind::Part, id(903));
+            editor.execute(EditorCommand::SelectObject(other.clone()))?;
+            assert_eq!(editor.document().unwrap().context().selection, Some(other));
+        }
+        assert!(!editor.manual_active());
+        assert!(!editor.document().unwrap().has_pending_edit());
+        assert!(editor.current_viewport_interaction().is_none());
+        assert!(!editor.viewport_interaction_active());
+        assert!(!editor.viewport_interaction_valid(token));
+        assert!(
+            editor
+                .update_canvas_gesture(token, CanvasInput::Up { point: end })
+                .is_err()
+        );
+        assert_eq!(edited_mesh(&editor), completed);
+        if authoring {
+            editor.execute(EditorCommand::Undo)?;
+        }
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(edited_mesh(&editor).vertex_ids.len(), 4);
+        assert!(!editor.manual_active());
+    }
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_inspector_preview_exits_before_acquiring_its_candidate() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let object = mesh();
+    let field = property::mesh::OPACITY.key;
+    let previous = editor.document().unwrap().property_values(&object)?[&field].clone();
+    let patch = PropertyPatch {
+        scope: editor.document().unwrap().property_scope(&object),
+        expected: [(field, previous)].into(),
+        changes: [(field, PropertyValue::Float(0.5))].into(),
+    };
+    let token = editor.begin_property_edit(
+        editor.editing_context_token().unwrap(),
+        object.clone(),
+        &patch,
+    )?;
+    assert!(!editor.manual_active());
+    editor.update_property_edit(&token, &patch)?;
+    assert!(editor.property_edit_owned(&token));
+    editor.finish_property_edit(&token)?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    assert_eq!(
+        editor.document().unwrap().property_values(&object)?[&field],
+        patch.changes[&field]
+    );
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_authoring_creation_and_deletion_exit_cleanly() -> anyhow::Result<()> {
+    for kind in [ObjectKind::Parameter, ObjectKind::ParameterGroup] {
+        let (mut editor, _dir) = manual_interaction_fixture()?;
+        let plan = editor.document().unwrap().plan_parameter_object_creation(
+            kind,
+            "Created".into(),
+            &[],
+        )?;
+        let result = editor.execute_organization_authoring(editor.active_id().unwrap(), &plan)?;
+        assert!(!editor.manual_active());
+        let created = result
+            .suggested_selection
+            .iter()
+            .find(|object| object.kind == kind)
+            .unwrap()
+            .clone();
+        editor.inspect_authoring_object(editor.active_id().unwrap(), created.clone())?;
+        assert_eq!(
+            editor.document().unwrap().context().inspected,
+            Some(created)
+        );
+    }
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let plan = editor
+        .document()
+        .unwrap()
+        .plan_scene_authoring(zipzi_sdk::SceneEdit::Delete {
+            ids: vec![mesh().id],
+            scope: zipzi_sdk::SceneCopyScope::Selected,
+        })?;
+    editor.execute_scene_authoring(editor.active_id().unwrap(), &plan)?;
+    assert!(!editor.manual_active());
+    editor.execute(EditorCommand::Undo)?;
+    assert!(!editor.manual_active());
+    editor.execute(EditorCommand::SelectObject(mesh()))?;
+    editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    assert!(editor.manual_editable());
     Ok(())
 }

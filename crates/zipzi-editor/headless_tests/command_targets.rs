@@ -81,6 +81,7 @@ fn an_old_canvas_blur_cannot_release_a_replacement_capture(cx: &mut TestAppConte
                         view.editor.overlay().vertices[0].position,
                         false,
                         false,
+                        false,
                     )
                     .unwrap()
                     .capture

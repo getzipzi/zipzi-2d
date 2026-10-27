@@ -74,11 +74,6 @@ impl ToolbarRegistry {
                 command: CommandId::GlueTool,
             },
             ToolbarItemConfig {
-                id: "tool_generate_mesh",
-                icon: IconName::Grid2x2,
-                command: CommandId::GenerateMesh,
-            },
-            ToolbarItemConfig {
                 id: "tool_manual_mesh",
                 icon: IconName::GitBranch,
                 command: CommandId::ManualMesh,
@@ -148,10 +143,7 @@ impl RenderOnce for CanvasToolbar {
             let owner = owner.clone();
             let canvas = canvas.clone();
             tools = tools.content(
-                compact::button(Button::new(item.id))
-                    .when(command != CommandId::GenerateMesh, |button| {
-                        compact::toggle(button, selected)
-                    })
+                compact::toggle(Button::new(item.id), selected)
                     .xsmall()
                     .w(compact::rem(PRIMARY.button_size))
                     .h(compact::rem(PRIMARY.button_size))
@@ -159,7 +151,12 @@ impl RenderOnce for CanvasToolbar {
                     .map(|button| attached_button(button, PRIMARY, cx))
                     .icon(item.icon)
                     .accessibility_label(t!(command.spec().label).into_owned())
-                    .tooltip(t!(command.spec().label))
+                    .tooltip(t!(match command {
+                        CommandId::SelectTool => "editor.tool_select_hint",
+                        CommandId::LassoTool => "editor.tool_lasso_hint",
+                        CommandId::ManualMesh => "editor.manual_mesh_edit_hint",
+                        _ => command.spec().label,
+                    }))
                     .disabled(!enabled)
                     .on_click(move |_, window, cx| {
                         let id = canvas.entity_id();

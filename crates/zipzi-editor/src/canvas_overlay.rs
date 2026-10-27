@@ -25,6 +25,7 @@ impl Painter for Window {
 #[derive(Clone, Copy)]
 pub(crate) struct Palette {
     pub mesh: Hsla,
+    pub image_bounds: Hsla,
     pub deformer: Hsla,
     pub deformer_frame: Hsla,
     pub glue: Hsla,
@@ -38,6 +39,7 @@ impl Palette {
     pub fn new(dark: bool) -> Self {
         Self {
             mesh: rgb(0x909090).into(),
+            image_bounds: rgb(if dark { 0x6b91b5 } else { 0x476b8e }).into(),
             deformer: rgb(0x62c878).into(),
             deformer_frame: rgb(if dark { 0x669eff } else { 0x2864dc }).into(),
             glue: rgb(0xffd000).into(),
@@ -74,6 +76,18 @@ pub(crate) fn paint_lines(
         });
     };
     lines(&overlay.reference_lines, 0.75, p.mesh.opacity(0.5));
+    let image_bounds: Vec<_> = overlay
+        .image_bounds
+        .iter()
+        .flat_map(|&(a, b)| {
+            dashed_segments(
+                a,
+                b,
+                [bounds.size.width.as_f32(), bounds.size.height.as_f32()],
+            )
+        })
+        .collect();
+    lines(&image_bounds, 0.75, p.image_bounds.opacity(0.55));
     let automatic: Vec<_> = overlay
         .automatic_lines
         .iter()
