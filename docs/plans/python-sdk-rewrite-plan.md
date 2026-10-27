@@ -1,14 +1,14 @@
 # zipzi-python2 Python SDK 建设计划
 
-日期：2026-10-25，2026-10-27 更新。状态：**P3A-0–6、Runtime R4、P3B 与 P4 资源/工程范围已完成；见 [P3B](python-sdk-rewrite/p3b.md)和 [P4](python-sdk-rewrite/p4.md) 核销记录。P5 与 Runtime R5 同步实施中，动画创作、独立 CPU Preview、空间查询、GPU 观察及基础 inspection 已接通，客户端公平轮转、批次续执行和 Editor 播放/Physics 隔离已接通并通过定向回归，配对发行复验已通过，原生性能与最终总验收继续收尾。P3A 本轮 P0 稳定性沿用用户明确豁免，模型/服务修订身份门禁按用户决定移除。** 结果见[实施记录](python-sdk-rewrite/README.md)、[能力清单](../../crates/zipzi-python2/CAPABILITIES.md)和[包说明](../../crates/zipzi-python2/README.md)。
+日期：2026-10-25，2026-10-27 更新。状态：**P3A-0–6、Runtime R4、P3B、P4 与 R5/P5 当前范围已完成；简化 R6 和 Runtime R7 已验收。** 动画创作、独立 Preview、空间/GPU 观察、公平调度、Editor 隔离与当前 macOS/CPython 3.14 分发已验证；[最终记录](sdk-runtime/python2-r7-closeout.md)包含 151 项性能指标。Python P7 的独立汇总仍单列；P3A 的用户豁免和移除模型/服务身份门禁的决定保持。
 
 2026-10-27 人机交接范围调整：用户确认前期直接将一批修改提交到 Editor 当前 Session，再由人检查/精修，agent 读取最新版本接续。[Runtime R6](sdk-runtime-implementation-plan.md#r6editor-直写与人工接续) 收缩为该闭环的补齐和验收。Connected 使用现有 `Edit.commit().wait()` 或 Edit 上下文管理器完成 flush；不新增 flush API。Proposal/seal、专用对比和接受/拒绝流程后置，不作为 Python 当前交付或 Runtime R7 的依赖。
 
-随后已交付[简化 R6 闭环](sdk-runtime/python2-r6-handoff.md)：随包 `zipzi.docs.editor_handoff` 示例、安装纯客户端与真实 Editor/Metal 的人工精修/agent 接续验收通过。R5/P5 性能余项及 P6/Runtime R7 的最终发行范围继续保留。
+随后已交付[简化 R6 闭环](sdk-runtime/python2-r6-handoff.md)：随包 `zipzi.docs.editor_handoff` 示例、安装纯客户端与真实 Editor/Metal 的人工精修/agent 接续验收通过。R5/P5 性能与 Runtime R7 的当前平台发行范围随后完成，见下段。
 
-本轮继续[发行与总验收](sdk-runtime/python2-r7-closeout.md)：正常配对 sdist/wheel 与两后端 GPU recipe、离线文档、app/DMG 和实际安装位置的自动发现/冷启动通过；合成精修流程延伸到保存重开、动画/模型包/音频导出，修复 IO 后静止动画图像未重请求。R5 性能余项与 R7 最终范围未提前核销。
+本轮继续[发行与总验收](sdk-runtime/python2-r7-closeout.md)：正常配对 sdist/wheel 与两后端 GPU recipe、离线文档、app/DMG 和实际安装位置的自动发现/冷启动通过；合成精修流程延伸到保存重开、动画/模型包/音频导出，修复 IO 后静止动画图像未重请求。当前平台的实际窗口和配对发行复验随后均已完成。
 
-五对 Release 原生比较共 122 项通过；正常 app 的 Mao 实际创作/保存重开/导出/重连及导出物 Metal 动画验收通过。实际窗口性能仍待桌面解锁，最终发行修订的产物身份另行刷新。
+五对 Release 原生比较共 122 项通过；正常 app 的 Mao 实际创作/保存重开/导出/重连及导出物 Metal 动画验收通过。本轮再完成十对实际窗口比较 29 项，合计 151 项通过；发行身份与干净修订在最终产物清单记录。
 
 **2026-10-26 收尾完成：**正式分发、生成摘要、当前文档及受影响验证已收敛。用户确认验收运行配置为 `gpt-6.1-sol/high`，明确删除模型/服务身份门禁；配置与可选服务元数据只记录，不参与通过或停止派发判定。固定功能门禁原评分 38/42、补充复核 41/42 和已有确定性/安装/Editor 证据保留。具体结果见 [P3A-6 完成决定](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)。
 
@@ -177,8 +177,8 @@ zipzi-python2/
 | **P3A API 与 agent 契约重构** | **P3A-0–6 已通过** | [P3A-6 完成决定](python-sdk-rewrite/p3a-6.md#2026-10-26-移除服务身份门禁并完成-p3a)：D/C、安装、Editor 和固定功能门禁已有证据；本轮 P0 稳定性沿用用户豁免；模型/服务身份改为记录信息，无此验收门禁 |
 | **P3B Modeling 剩余能力** | **已完成原定范围核销与补验** | [P3B 记录](python-sdk-rewrite/p3b.md)：复用 R4，实现不重复；新增公共 recipe、类型与隔离安装验证均通过 |
 | **P4 资源与工程** | **资源/工程范围核销和补验完成** | [P4 记录](python-sdk-rewrite/p4.md)：复用 R4；补大附件/图片保存/另存/包往返、generation 与失败验证；独立附件便利子集合按需另列，平台/app 总验收归 P6/Runtime R7 |
-| **P5 动画与观察** | **实施中；动画创作、CPU Preview、空间与 GPU 观察已接通** | [R5/P5 记录](sdk-runtime/python2-r5-authoring.md)：Motion/Expression/Physics/Pose、records/Plan/地址已接通；[CPU Preview/动画采样](sdk-runtime/python2-r5-preview.md)、[CPU 空间查询](sdk-runtime/python2-r5-spatial.md)及[GPU 观察/检查导出](sdk-runtime/python2-r5-observation.md)已接通，完整调度与 Editor 接入待交付 |
-| **P6 分发与使用** | 双 wheel、配对 sdist 和真实宿主选定链路已有证据 | 每阶段同步安装、文档/agent 验收；最后补齐平台、发行 app 位置与全能力组合 |
+| **P5 动画与观察** | **当前范围已完成** | 四动画领域、records/Plan/地址、独立 Preview、空间与 GPU 观察、inspection、公平调度及 Editor 隔离均交付；[Runtime R7](sdk-runtime/python2-r7-closeout.md)完成当前平台组合、发行及性能验收 |
+| **P6 分发与使用** | 当前 macOS arm64 / CPython 3.14 配对发行范围已验收 | 正常双 wheel/配对 sdist、实际 app 安装发现、完整领域 recipe、文档和生命周期通过；其他平台不得据此宣称支持 |
 | **P7 全量收尾** | 未开始 | 汇总新契约全部承诺、性能/资源、生成/手写边界、agent 任务及发行证据 |
 
 实际执行顺序为：**R4 主体实现 → P3A-0 至 P3A-6 → R4 最后复验 → 核销 P3B/P4 重复待办并补真实新增差异 → P5 → P7**。P0/P6 贯穿各阶段。P3B/P4 的公共 Python 扩展以 P3A 为前置；已有二进制工作和独立 Rust 领域研究继续保留，不回退、不冒充已验收。若 P3A 需要某项尚未完成的 Runtime 分页/关闭/预算能力，明确纳入 P3A 子任务，不能靠 Python 镜像、无限重试或跳过测试绕过。
@@ -307,6 +307,6 @@ C01–C08 确定性回归、G01–G08 安装包 agent 任务、42 次运行的�
 
 `zipzi-python2` 完成需要：本项目明确承诺的能力均接线且独立验证；两后端共用 Rust 领域路径；公开签名、返回、恢复、来源、事务、资源和 Job 规则一致；生成与手写职责可从唯一目录追踪；随包文档、自省和 agent 任务达标；所有阶段有实际源码/安装/宿主/性能证据。
 
-**P3A、R4 收尾、P3B 与 P4 资源/工程范围已完成，R5/P5 正在实施。** 动画创作、独立 CPU Preview、空间查询和 GPU 观察接通，批次调度、Editor 隔离与简化 R6 已交付，性能和 R7 总验收继续收尾。沿用已通过的公共契约；新增领域继续补实际实现和独立证据。Runtime R0–R7 编号及状态独立维护。P0/P6 持续跟随，P7 汇总完整发布范围。
+**P3A、R4 收尾、P3B、P4 与 R5/P5 当前范围已完成。** 简化 R6 和 Runtime R7 的 macOS/CPython 3.14 组合、发行和性能验收已通过；证据见 [R7 记录](sdk-runtime/python2-r7-closeout.md)。P0 的历史口径和用户豁免保持，Python P7 的独立全量汇总不由 Runtime 阶段编号代替。
 
 每完成一个切片，更新能力清单和实施记录，只保留简明验收结果：改动范围、必要检查及结果、未满足项和用户明确豁免项。临时日志、JSON 清单、哈希和测量报告不写入计划目录；不为重建已删除的历史产物反复验收。不因删除旧 API 而删除独立行为预期。阶段结论留在[实施记录](python-sdk-rewrite/README.md)，计划据此调整状态与下一步，不把目标改写为完成结果。

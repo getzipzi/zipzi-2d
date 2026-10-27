@@ -74,11 +74,11 @@ is connected in the first R5/P5 slice. [CPU Preview and animation sampling](../.
 are connected on independent frozen sources. [CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md)
 cover formal/candidate poses and animated frames. [GPU observation and PNG/JSON inspection](../../docs/plans/sdk-runtime/python2-r5-observation.md) are connected;
 [Fair batch scheduling and Editor playback isolation](../../docs/plans/sdk-runtime/python2-r5-scheduling.md)
-are connected and covered by focused regressions; integrated Release performance remains pending in R5/P5.
-Final integrated acceptance is also pending.
+are delivered with the R5/P5 regressions and final Release comparisons.
+Runtime R7 acceptance is complete for macOS arm64 and CPython 3.14.
 The [R5/R7 closeout record](../../docs/plans/sdk-runtime/python2-r7-closeout.md)
 tracks paired normal sdists/wheels, the macOS app/installer, installed-app
-discovery and the handoff/save/reopen/export flow; final performance remains open.
+discovery, handoff/save/reopen/export and the 151 native/window performance checks.
 The opt-in `tests/installed_model_workflow.py` also checks real-model authoring,
 Preview, save/reopen, motion/package export and reconnection against a normal
 desktop executable. Run it with an installed pure interpreter, `-I`, and explicit
@@ -278,7 +278,8 @@ also searches the user/system `Applications/Zipzi Editor.app` locations.
 request. `sessions.list()` and `sessions.attach(id)` work on both backends.
 `SessionInfo` includes state/path/version/history. `show_window()` requires a
 desktop host. Modeling, resource and project routes also work through this
-connection. Packaged application location acceptance remains pending.
+connection. Packaged application discovery/startup is verified at the supported
+macOS installation location in the R7 acceptance record.
 
 ### Direct Editor handoff (R6)
 
@@ -517,8 +518,8 @@ CPU animation Preview is available through `session.preview()` / `edit.preview()
 Use `session/edit.modeling.spatial(poses, queries)` for geometric bounds and hits,
 or pass `queries` to Preview sampling; both return explicit Jobs with exact Sources.
 GPU renders use `modeling.observe(poses, observation.View(...))` or Preview
-`view=...`. Use `inspection.save` for local PNG/JSON evidence. Editor playback
-integration remains pending. See the
+`view=...`. Use `inspection.save` for local PNG/JSON evidence. Agent previews stay
+independent of human Editor playback. See the
 [construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
 [implementation record](../../docs/plans/python-sdk-rewrite/README.md).
 

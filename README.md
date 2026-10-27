@@ -15,6 +15,8 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
   [implemented capabilities](crates/zipzi-python2/CAPABILITIES.md) and
   [Runtime R0–R4 integration](docs/plans/sdk-runtime/python2-r0-r4.md) and
   [R5/P5 animation authoring](docs/plans/sdk-runtime/python2-r5-authoring.md).
+  [R5/R7 final acceptance](docs/plans/sdk-runtime/python2-r7-closeout.md) records
+  the current macOS/CPython 3.14 distribution, complete workflows and performance.
 - **Contributing:** [repository structure](MONOREPO.md),
   [test gates](tools/README.md#test-coverage), [tools](tools/README.md) and
   [documentation index](docs/README.md).

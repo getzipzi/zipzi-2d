@@ -160,8 +160,7 @@ Pending work refuses changes to that Preview. An interrupted SDK seek preserves 
 prior state; cancellation after a completed batch reports its success, while a cancelled batch can retain completed targets, and incremental
 advance can retain completed steps. Cancelled output is discarded. Close the
 Preview to release its lease and cancel pending work, then wait/close the Job.
-Other clients/views and authored history are unaffected. Editor per-view playback
-integration remains pending.
+Other clients/views, Editor playback and authored history are unaffected.
 
 Use `modeling.spatial` for frozen formal/candidate geometry, or pass `queries` to
 Preview sampling to query its exact animated frame, even with `geometry=False`:
