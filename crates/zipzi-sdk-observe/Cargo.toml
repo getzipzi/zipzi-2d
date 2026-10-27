@@ -9,6 +9,7 @@ description = "Immutable observation inputs and GPU capture for Zipzi SDK"
 [features]
 default = ["framework-texture-filtering"]
 framework-texture-filtering = []
+wgpu-backend = ["dep:zipzi-render-wgpu", "dep:wgpu"]
 
 [dependencies]
 zipzi-animation = { version = "=0.1.0-alpha.1", path = "../zipzi-animation" }
@@ -21,6 +22,9 @@ sha2 = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
+
+zipzi-render-wgpu = { version = "=0.1.0-alpha.1", path = "../zipzi-render-wgpu", optional = true }
+wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]
 

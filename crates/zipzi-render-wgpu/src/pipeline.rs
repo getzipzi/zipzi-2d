@@ -1,443 +1,372 @@
-use super::*;
+use bytemuck::{Pod, Zeroable};
+use zipzi_render::Affine2;
 
-pub(super) use zipzi_render::gpu::Vertex;
-
-pub(super) const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 3] = wgpu::vertex_attr_array![
-    0 => Float32x2,
-    1 => Float32x2,
-    2 => Float32x2,
-];
-
-pub(super) const VERTEX_LAYOUT: wgpu::VertexBufferLayout<'static> = wgpu::VertexBufferLayout {
-    array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-    step_mode: wgpu::VertexStepMode::Vertex,
-    attributes: &VERTEX_ATTRIBUTES,
-};
-
-pub(super) fn premultiplied_blend() -> wgpu::BlendState {
-    wgpu::BlendState {
-        color: wgpu::BlendComponent {
-            src_factor: wgpu::BlendFactor::One,
-            dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-            operation: wgpu::BlendOperation::Add,
-        },
-        alpha: wgpu::BlendComponent {
-            src_factor: wgpu::BlendFactor::One,
-            dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-            operation: wgpu::BlendOperation::Add,
-        },
-    }
-}
-
-pub(super) fn additive_blend() -> wgpu::BlendState {
-    wgpu::BlendState {
-        color: wgpu::BlendComponent {
-            src_factor: wgpu::BlendFactor::One,
-            dst_factor: wgpu::BlendFactor::One,
-            operation: wgpu::BlendOperation::Add,
-        },
-        alpha: wgpu::BlendComponent {
-            src_factor: wgpu::BlendFactor::Zero,
-            dst_factor: wgpu::BlendFactor::One,
-            operation: wgpu::BlendOperation::Add,
-        },
-    }
-}
-
-pub(super) fn multiplicative_blend() -> wgpu::BlendState {
-    wgpu::BlendState {
-        color: wgpu::BlendComponent {
-            src_factor: wgpu::BlendFactor::Zero,
-            dst_factor: wgpu::BlendFactor::Src,
-            operation: wgpu::BlendOperation::Add,
-        },
-        alpha: wgpu::BlendComponent {
-            src_factor: wgpu::BlendFactor::Zero,
-            dst_factor: wgpu::BlendFactor::One,
-            operation: wgpu::BlendOperation::Add,
-        },
-    }
-}
+use crate::mask::MaskAttachment;
 
 #[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
-pub(super) struct DrawUniform {
-    pub(super) target_size: [f32; 2],
-    pub(super) padding: [f32; 2],
-    pub(super) multiply_color: [f32; 4],
-    pub(super) screen_color: [f32; 4],
-    pub(super) opacity: f32,
-    // WGSL aligns the following vec3 to 16 bytes. Keep mask_bounds at byte 80.
-    pub(super) padding_end: [f32; 7],
-    pub(super) mask_bounds: [f32; 4],
-    pub(super) mask_flags: [u32; 4],
-    pub(super) blend_modes: [u32; 4],
-    pub(super) view_a: [f32; 4],
-    pub(super) view_b: [f32; 4],
-    pub(super) view_origin: [f32; 4],
-    pub(super) mask_a: [f32; 4],
-    pub(super) mask_b: [f32; 4],
-    pub(super) mask_origin: [f32; 4],
+#[derive(Clone, Copy, Default, Pod, Zeroable)]
+pub(crate) struct Uniform {
+    pub view_a: [f32; 4],
+    pub view_b: [f32; 4],
+    pub mask_a: [f32; 4],
+    pub mask_b: [f32; 4],
+    pub mask_region: [f32; 4],
+    pub base_color: [f32; 4],
+    pub multiply_color: [f32; 4],
+    pub screen_color: [f32; 4],
+    pub opacity: [f32; 4],
+    pub flags: [u32; 4],
+    pub blend_mode: [u32; 4],
+    pub alpha_mode: [u32; 4],
 }
 
-#[derive(Clone, Copy)]
-pub(super) struct MaskBinding<'a> {
-    pub(super) view: &'a wgpu::TextureView,
+pub(crate) type UniformKey = [u8; std::mem::size_of::<Uniform>()];
+
+impl Uniform {
+    pub fn new(
+        size: (u32, u32),
+        view: Affine2,
+        multiply_color: [f32; 4],
+        screen_color: [f32; 4],
+        opacity: f32,
+    ) -> Self {
+        let w = size.0.max(1) as f32;
+        let h = size.1.max(1) as f32;
+        Self {
+            view_a: [
+                2.0 * view.a.x / w,
+                2.0 * view.b.x / w,
+                0.0,
+                2.0 * view.origin.x / w - 1.0,
+            ],
+            view_b: [
+                -2.0 * view.a.y / h,
+                -2.0 * view.b.y / h,
+                0.0,
+                1.0 - 2.0 * view.origin.y / h,
+            ],
+            mask_a: [1.0, 0.0, 0.0, 0.0],
+            mask_b: [0.0, 1.0, 0.0, 0.0],
+            mask_region: [0.0, 0.0, 1.0, 1.0],
+            base_color: [size.0 as f32, size.1 as f32, 0.0, 0.0],
+            multiply_color,
+            screen_color,
+            opacity: [opacity, 0.0, 0.0, 0.0],
+            flags: [0; 4],
+            blend_mode: [0; 4],
+            alpha_mode: [0; 4],
+        }
+    }
+
+    pub fn mask(&mut self, attachment: &MaskAttachment, mask_view: Affine2, inverted: bool) {
+        let layout = attachment.layout;
+        let lw = layout.logical_size.x.max(f32::EPSILON);
+        let lh = layout.logical_size.y.max(f32::EPSILON);
+        self.mask_a = [
+            mask_view.a.x / lw,
+            mask_view.b.x / lw,
+            0.0,
+            (mask_view.origin.x - layout.origin.x) / lw,
+        ];
+        self.mask_b = [
+            mask_view.a.y / lh,
+            mask_view.b.y / lh,
+            0.0,
+            (mask_view.origin.y - layout.origin.y) / lh,
+        ];
+        self.mask_region = attachment.region;
+        self.flags[0] = 1;
+        self.flags[2] = u32::from(inverted);
+    }
+
+    pub fn raw_blend(&mut self, raw: u32) {
+        self.blend_mode[0] = raw & 0xff;
+        self.alpha_mode[0] = (raw >> 8) & 0xff;
+    }
 }
 
-#[derive(Clone, Copy)]
-pub(super) struct DestinationBinding<'a> {
-    pub(super) view: &'a wgpu::TextureView,
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FaceMode {
+    DoubleSided = 0,
+    CullBackCcw = 1,
+    CullBackCw = 2,
 }
 
-pub(super) struct ResourceInput<'a> {
-    pub(super) device: &'a wgpu::Device,
-    pub(super) texture_view: &'a wgpu::TextureView,
-    pub(super) texture_repeat: bool,
-    pub(super) vertices: &'a [Vertex],
-    pub(super) indices: &'a [u32],
-    pub(super) uniform: DrawUniform,
-    pub(super) mask: Option<MaskBinding<'a>>,
-    pub(super) destination: Option<DestinationBinding<'a>>,
+impl FaceMode {
+    pub fn for_draw(double_sided: bool, uniform: &Uniform) -> Self {
+        if double_sided {
+            Self::DoubleSided
+        } else {
+            let determinant =
+                uniform.view_a[0] * uniform.view_b[1] - uniform.view_a[1] * uniform.view_b[0];
+            if determinant < 0.0 {
+                Self::CullBackCw
+            } else {
+                Self::CullBackCcw
+            }
+        }
+    }
 }
 
-#[derive(Clone)]
-pub(super) struct DrawResources {
-    pub(super) vertex_buffer: wgpu::Buffer,
-    pub(super) index_buffer: wgpu::Buffer,
-    pub(super) _uniform_buffer: wgpu::Buffer,
-    pub(super) texture_bind_group: wgpu::BindGroup,
-    pub(super) uniform_bind_group: wgpu::BindGroup,
-    pub(super) mask_bind_group: Option<wgpu::BindGroup>,
-    pub(super) destination_bind_group: Option<wgpu::BindGroup>,
-    pub(super) index_count: u32,
+pub(crate) struct PipelineSet([wgpu::RenderPipeline; 3]);
+
+impl PipelineSet {
+    pub fn get(&self, mode: FaceMode) -> &wgpu::RenderPipeline {
+        &self.0[mode as usize]
+    }
 }
 
-pub(super) fn create_pipeline(
-    device: &wgpu::Device,
-    layout: &wgpu::PipelineLayout,
-    shader: &wgpu::ShaderModule,
-    format: wgpu::TextureFormat,
-    blend: Option<wgpu::BlendState>,
-    label: &'static str,
-) -> wgpu::RenderPipeline {
-    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some(label),
-        layout: Some(layout),
-        vertex: wgpu::VertexState {
-            module: shader,
-            entry_point: Some("vs_main"),
-            compilation_options: Default::default(),
-            buffers: &[VERTEX_LAYOUT],
-        },
-        primitive: wgpu::PrimitiveState {
-            topology: wgpu::PrimitiveTopology::TriangleList,
-            strip_index_format: None,
-            front_face: wgpu::FrontFace::Ccw,
-            cull_mode: None,
-            unclipped_depth: false,
-            polygon_mode: wgpu::PolygonMode::Fill,
-            conservative: false,
-        },
-        depth_stencil: None,
-        multisample: wgpu::MultisampleState::default(),
-        fragment: Some(wgpu::FragmentState {
-            module: shader,
-            entry_point: Some("fs_main"),
-            compilation_options: Default::default(),
-            targets: &[Some(wgpu::ColorTargetState {
-                format,
-                blend,
-                write_mask: wgpu::ColorWrites::ALL,
-            })],
-        }),
-        multiview_mask: None,
-        cache: None,
-    })
+pub(crate) struct Pipelines {
+    pub bind_group_layout: wgpu::BindGroupLayout,
+    pub draw: PipelineSet,
+    pub additive: PipelineSet,
+    pub multiplicative: PipelineSet,
+    pub extended_draw: PipelineSet,
+    pub mask: PipelineSet,
+    pub present: wgpu::RenderPipeline,
+    pub present_replace: wgpu::RenderPipeline,
+    pub linear_clamp: wgpu::Sampler,
+    pub linear_repeat: wgpu::Sampler,
 }
 
-/// Pipeline and binding resources owned by the scene renderer.
-pub(super) struct WgpuPipelines {
-    pub(super) target: WgpuTargetConfig,
-    pub(super) pipeline: wgpu::RenderPipeline,
-    pub(super) additive_pipeline: wgpu::RenderPipeline,
-    pub(super) multiplicative_pipeline: wgpu::RenderPipeline,
-    pub(super) composite_pipeline: wgpu::RenderPipeline,
-    pub(super) masked_pipeline: wgpu::RenderPipeline,
-    pub(super) masked_additive_pipeline: wgpu::RenderPipeline,
-    pub(super) masked_multiplicative_pipeline: wgpu::RenderPipeline,
-    pub(super) masked_composite_pipeline: wgpu::RenderPipeline,
-    pub(super) extended_pipeline: wgpu::RenderPipeline,
-    pub(super) extended_composite_pipeline: wgpu::RenderPipeline,
-    pub(super) masked_extended_pipeline: wgpu::RenderPipeline,
-    pub(super) masked_extended_composite_pipeline: wgpu::RenderPipeline,
-    pub(super) mask_pipeline: wgpu::RenderPipeline,
-    pub(super) texture_layout: wgpu::BindGroupLayout,
-    pub(super) uniform_layout: wgpu::BindGroupLayout,
-    pub(super) mask_layout: wgpu::BindGroupLayout,
-    pub(super) destination_layout: wgpu::BindGroupLayout,
-    pub(super) sampler: wgpu::Sampler,
-    pub(super) repeat_sampler: wgpu::Sampler,
-}
-
-impl WgpuPipelines {
-    pub(super) fn new(device: &wgpu::Device, target: WgpuTargetConfig) -> Self {
+impl Pipelines {
+    pub fn new(device: &wgpu::Device, color_format: wgpu::TextureFormat) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("zipzi.wgpu.basic.shader"),
-            source: wgpu::ShaderSource::Wgsl(BASIC_SHADER.into()),
+            label: Some("zipzi.wgsl"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("zipzi.wgsl").into()),
         });
-        let composite_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("zipzi.wgpu.composite.shader"),
-            source: wgpu::ShaderSource::Wgsl(COMPOSITE_SHADER.into()),
-        });
-        let masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("zipzi.wgpu.masked.shader"),
-            source: wgpu::ShaderSource::Wgsl(MASKED_SHADER.into()),
-        });
-        let masked_composite_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("zipzi.wgpu.masked-composite.shader"),
-            source: wgpu::ShaderSource::Wgsl(MASKED_COMPOSITE_SHADER.into()),
-        });
-        let mask_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("zipzi.wgpu.mask-source.shader"),
-            source: wgpu::ShaderSource::Wgsl(MASK_SHADER.into()),
-        });
-        let extended_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("zipzi.wgpu.extended.shader"),
-            source: wgpu::ShaderSource::Wgsl(extended_shader_source(false, false).into()),
-        });
-        let extended_composite_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("zipzi.wgpu.extended-composite.shader"),
-            source: wgpu::ShaderSource::Wgsl(extended_shader_source(true, false).into()),
-        });
-        let masked_extended_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("zipzi.wgpu.masked-extended.shader"),
-            source: wgpu::ShaderSource::Wgsl(extended_shader_source(false, true).into()),
-        });
-        let masked_extended_composite_shader =
-            device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("zipzi.wgpu.masked-extended-composite.shader"),
-                source: wgpu::ShaderSource::Wgsl(extended_shader_source(true, true).into()),
-            });
-        let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("zipzi.wgpu.basic.texture-layout"),
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("zipzi.bind_group_layout"),
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: std::num::NonZeroU64::new(
+                            std::mem::size_of::<Uniform>() as u64,
+                        ),
                     },
                     count: None,
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
                 },
-            ],
-        });
-        let uniform_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("zipzi.wgpu.basic.uniform-layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-        });
-        let mask_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("zipzi.wgpu.mask.texture-layout"),
-            entries: &[
                 wgpu::BindGroupLayoutEntry {
-                    binding: 0,
+                    binding: 3,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D2,
                         multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
                     },
                     count: None,
                 },
                 wgpu::BindGroupLayoutEntry {
-                    binding: 1,
+                    binding: 4,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
                 },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 5,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
             ],
         });
-        let destination_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("zipzi.wgpu.destination.texture-layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count: None,
-                    },
-                ],
-            });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("zipzi.wgpu.basic.pipeline-layout"),
-            bind_group_layouts: &[Some(&texture_layout), Some(&uniform_layout)],
+            label: Some("zipzi.pipeline_layout"),
+            bind_group_layouts: &[Some(&bind_group_layout)],
             immediate_size: 0,
         });
-        let masked_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("zipzi.wgpu.masked.pipeline-layout"),
-                bind_group_layouts: &[
-                    Some(&texture_layout),
-                    Some(&uniform_layout),
-                    Some(&mask_layout),
-                ],
-                immediate_size: 0,
-            });
-        let extended_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("zipzi.wgpu.extended.pipeline-layout"),
-                bind_group_layouts: &[
-                    Some(&texture_layout),
-                    Some(&uniform_layout),
-                    Some(&destination_layout),
-                ],
-                immediate_size: 0,
-            });
-        let masked_extended_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("zipzi.wgpu.masked-extended.pipeline-layout"),
-                bind_group_layouts: &[
-                    Some(&texture_layout),
-                    Some(&uniform_layout),
-                    Some(&destination_layout),
-                    Some(&mask_layout),
-                ],
-                immediate_size: 0,
-            });
-        let pipeline = create_pipeline(
-            device,
-            &pipeline_layout,
-            &shader,
-            target.format,
-            Some(premultiplied_blend()),
-            "zipzi.wgpu.basic.pipeline",
+        let vertex_buffers = [
+            wgpu::VertexBufferLayout {
+                array_stride: 8,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &[wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x2,
+                    offset: 0,
+                    shader_location: 0,
+                }],
+            },
+            wgpu::VertexBufferLayout {
+                array_stride: 8,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &[wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x2,
+                    offset: 0,
+                    shader_location: 1,
+                }],
+            },
+        ];
+        let build_one = |label: &str,
+                         fragment_entry: &str,
+                         format: wgpu::TextureFormat,
+                         blend: Option<wgpu::BlendState>,
+                         cull_mode: Option<wgpu::Face>,
+                         front_face: wgpu::FrontFace| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some(label),
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: Some("vs_draw"),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    buffers: &vertex_buffers,
+                },
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face,
+                    cull_mode,
+                    unclipped_depth: false,
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some(fragment_entry),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format,
+                        blend,
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                multiview_mask: None,
+                cache: None,
+            })
+        };
+        let build_set = |label: &str,
+                         fragment_entry: &str,
+                         format: wgpu::TextureFormat,
+                         blend: Option<wgpu::BlendState>| {
+            PipelineSet([
+                build_one(
+                    label,
+                    fragment_entry,
+                    format,
+                    blend,
+                    None,
+                    wgpu::FrontFace::Ccw,
+                ),
+                build_one(
+                    label,
+                    fragment_entry,
+                    format,
+                    blend,
+                    Some(wgpu::Face::Back),
+                    wgpu::FrontFace::Ccw,
+                ),
+                build_one(
+                    label,
+                    fragment_entry,
+                    format,
+                    blend,
+                    Some(wgpu::Face::Back),
+                    wgpu::FrontFace::Cw,
+                ),
+            ])
+        };
+
+        let normal_blend = Some(wgpu::BlendState {
+            color: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::One,
+                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                operation: wgpu::BlendOperation::Add,
+            },
+            alpha: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::One,
+                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                operation: wgpu::BlendOperation::Add,
+            },
+        });
+        let additive_blend = Some(wgpu::BlendState {
+            color: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::One,
+                dst_factor: wgpu::BlendFactor::One,
+                operation: wgpu::BlendOperation::Add,
+            },
+            alpha: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::Zero,
+                dst_factor: wgpu::BlendFactor::One,
+                operation: wgpu::BlendOperation::Add,
+            },
+        });
+        let multiplicative_blend = Some(wgpu::BlendState {
+            color: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::Zero,
+                dst_factor: wgpu::BlendFactor::Src,
+                operation: wgpu::BlendOperation::Add,
+            },
+            alpha: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::Zero,
+                dst_factor: wgpu::BlendFactor::One,
+                operation: wgpu::BlendOperation::Add,
+            },
+        });
+
+        let draw = build_set("zipzi.draw", "fs_draw", color_format, normal_blend);
+        let additive = build_set("zipzi.additive", "fs_draw", color_format, additive_blend);
+        let multiplicative = build_set(
+            "zipzi.multiplicative",
+            "fs_draw",
+            color_format,
+            multiplicative_blend,
         );
-        let additive_pipeline = create_pipeline(
-            device,
-            &pipeline_layout,
-            &shader,
-            target.format,
-            Some(additive_blend()),
-            "zipzi.wgpu.additive.pipeline",
-        );
-        let multiplicative_pipeline = create_pipeline(
-            device,
-            &pipeline_layout,
-            &shader,
-            target.format,
-            Some(multiplicative_blend()),
-            "zipzi.wgpu.multiplicative.pipeline",
-        );
-        let composite_pipeline = create_pipeline(
-            device,
-            &pipeline_layout,
-            &composite_shader,
-            target.format,
-            Some(premultiplied_blend()),
-            "zipzi.wgpu.composite.pipeline",
-        );
-        let masked_pipeline = create_pipeline(
-            device,
-            &masked_pipeline_layout,
-            &masked_shader,
-            target.format,
-            Some(premultiplied_blend()),
-            "zipzi.wgpu.masked.pipeline",
-        );
-        let masked_additive_pipeline = create_pipeline(
-            device,
-            &masked_pipeline_layout,
-            &masked_shader,
-            target.format,
-            Some(additive_blend()),
-            "zipzi.wgpu.masked-additive.pipeline",
-        );
-        let masked_multiplicative_pipeline = create_pipeline(
-            device,
-            &masked_pipeline_layout,
-            &masked_shader,
-            target.format,
-            Some(multiplicative_blend()),
-            "zipzi.wgpu.masked-multiplicative.pipeline",
-        );
-        let masked_composite_pipeline = create_pipeline(
-            device,
-            &masked_pipeline_layout,
-            &masked_composite_shader,
-            target.format,
-            Some(premultiplied_blend()),
-            "zipzi.wgpu.masked-composite.pipeline",
-        );
-        let extended_pipeline = create_pipeline(
-            device,
-            &extended_pipeline_layout,
-            &extended_shader,
-            target.format,
+        let extended_draw = build_set(
+            "zipzi.extended_draw",
+            "fs_extended_draw",
+            color_format,
             None,
-            "zipzi.wgpu.extended.pipeline",
         );
-        let extended_composite_pipeline = create_pipeline(
-            device,
-            &extended_pipeline_layout,
-            &extended_composite_shader,
-            target.format,
-            None,
-            "zipzi.wgpu.extended-composite.pipeline",
-        );
-        let masked_extended_pipeline = create_pipeline(
-            device,
-            &masked_extended_pipeline_layout,
-            &masked_extended_shader,
-            target.format,
-            None,
-            "zipzi.wgpu.masked-extended.pipeline",
-        );
-        let masked_extended_composite_pipeline = create_pipeline(
-            device,
-            &masked_extended_pipeline_layout,
-            &masked_extended_composite_shader,
-            target.format,
-            None,
-            "zipzi.wgpu.masked-extended-composite.pipeline",
-        );
-        let mask_pipeline = create_pipeline(
-            device,
-            &pipeline_layout,
-            &mask_shader,
+        let mask = build_set(
+            "zipzi.mask",
+            "fs_mask",
             wgpu::TextureFormat::Rgba8Unorm,
-            Some(premultiplied_blend()),
-            "zipzi.wgpu.mask-source.pipeline",
+            normal_blend,
         );
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("zipzi.wgpu.basic.sampler"),
+        let present = build_one(
+            "zipzi.present",
+            "fs_present",
+            color_format,
+            normal_blend,
+            None,
+            wgpu::FrontFace::Ccw,
+        );
+        let present_replace = build_one(
+            "zipzi.present_replace",
+            "fs_present",
+            color_format,
+            None,
+            None,
+            wgpu::FrontFace::Ccw,
+        );
+
+        let linear_clamp = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("zipzi.sampler.clamp"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
@@ -446,8 +375,8 @@ impl WgpuPipelines {
             mipmap_filter: wgpu::MipmapFilterMode::Linear,
             ..Default::default()
         });
-        let repeat_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("zipzi.wgpu.basic.repeat-sampler"),
+        let linear_repeat = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("zipzi.sampler.repeat"),
             address_mode_u: wgpu::AddressMode::Repeat,
             address_mode_v: wgpu::AddressMode::Repeat,
             address_mode_w: wgpu::AddressMode::Repeat,
@@ -458,153 +387,16 @@ impl WgpuPipelines {
         });
 
         Self {
-            target,
-            pipeline,
-            additive_pipeline,
-            multiplicative_pipeline,
-            composite_pipeline,
-            masked_pipeline,
-            masked_additive_pipeline,
-            masked_multiplicative_pipeline,
-            masked_composite_pipeline,
-            extended_pipeline,
-            extended_composite_pipeline,
-            masked_extended_pipeline,
-            masked_extended_composite_pipeline,
-            mask_pipeline,
-            texture_layout,
-            uniform_layout,
-            mask_layout,
-            destination_layout,
-            sampler,
-            repeat_sampler,
-        }
-    }
-
-    pub(super) fn scene_pipelines(&self) -> ScenePipelines<'_> {
-        ScenePipelines {
-            draw: &self.pipeline,
-            additive_draw: &self.additive_pipeline,
-            multiplicative_draw: &self.multiplicative_pipeline,
-            composite: &self.composite_pipeline,
-            masked_draw: &self.masked_pipeline,
-            masked_additive_draw: &self.masked_additive_pipeline,
-            masked_multiplicative_draw: &self.masked_multiplicative_pipeline,
-            masked_composite: &self.masked_composite_pipeline,
-            extended_draw: &self.extended_pipeline,
-            extended_composite: &self.extended_composite_pipeline,
-            masked_extended_draw: &self.masked_extended_pipeline,
-            masked_extended_composite: &self.masked_extended_composite_pipeline,
-            mask_source: &self.mask_pipeline,
-        }
-    }
-
-    pub(super) fn create_resources(&self, input: ResourceInput<'_>) -> DrawResources {
-        let vertex_buffer = input
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("zipzi.wgpu.scene.vertices"),
-                contents: bytemuck::cast_slice(input.vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-        let index_buffer = input
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("zipzi.wgpu.scene.indices"),
-                contents: bytemuck::cast_slice(input.indices),
-                usage: wgpu::BufferUsages::INDEX,
-            });
-        self.create_resources_with_geometry(input, vertex_buffer, index_buffer)
-    }
-
-    pub(super) fn create_resources_with_geometry(
-        &self,
-        input: ResourceInput<'_>,
-        vertex_buffer: wgpu::Buffer,
-        index_buffer: wgpu::Buffer,
-    ) -> DrawResources {
-        let ResourceInput {
-            device,
-            texture_view,
-            texture_repeat,
-            vertices: _,
-            indices,
-            uniform,
+            bind_group_layout,
+            draw,
+            additive,
+            multiplicative,
+            extended_draw,
             mask,
-            destination,
-        } = input;
-        let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("zipzi.wgpu.scene.uniform"),
-            contents: bytemuck::bytes_of(&uniform),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-        let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("zipzi.wgpu.scene.texture-bind-group"),
-            layout: &self.texture_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(if texture_repeat {
-                        &self.repeat_sampler
-                    } else {
-                        &self.sampler
-                    }),
-                },
-            ],
-        });
-        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("zipzi.wgpu.scene.uniform-bind-group"),
-            layout: &self.uniform_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
-            }],
-        });
-        let mask_bind_group = mask.map(|mask| {
-            device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("zipzi.wgpu.scene.mask-bind-group"),
-                layout: &self.mask_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(mask.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&self.sampler),
-                    },
-                ],
-            })
-        });
-        let destination_bind_group = destination.map(|destination| {
-            device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("zipzi.wgpu.scene.destination-bind-group"),
-                layout: &self.destination_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(destination.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&self.sampler),
-                    },
-                ],
-            })
-        });
-        DrawResources {
-            vertex_buffer,
-            index_buffer,
-            _uniform_buffer: uniform_buffer,
-            texture_bind_group,
-            uniform_bind_group,
-            mask_bind_group,
-            destination_bind_group,
-            index_count: indices.len() as u32,
+            present,
+            present_replace,
+            linear_clamp,
+            linear_repeat,
         }
     }
 }

@@ -7,7 +7,11 @@ use gpui_kit::{
 };
 use metal::MTLPixelFormat;
 use zipzi_editor_core::{Document, SceneSnapshot, ViewState, ViewportPoint};
-use zipzi_editor_render::{MetalSceneRenderer, MetalTargetConfig};
+use zipzi_editor_render::MetalTargetConfig;
+#[cfg(not(feature = "wgpu-backend"))]
+use zipzi_editor_render::MetalSceneRenderer;
+#[cfg(feature = "wgpu-backend")]
+use zipzi_editor_render::WgpuMetalSceneRenderer as MetalSceneRenderer;
 #[path = "../../../zipzi-editor-core/tests/support/mod.rs"]
 mod support;
 

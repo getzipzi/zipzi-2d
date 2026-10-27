@@ -85,7 +85,9 @@ reservation including host output, masks and atlas packing overhead;
 `mask_resolution_limit` reports the mask edge limit chosen for the frame.
 
 On macOS, `zipzi-sdk-observe` and the Python `observe` feature use this
-native backend. Other platforms keep `zipzi-render-wgpu`. Python builds
+native backend by default. The `wgpu-backend` feature selects
+`zipzi-render-wgpu` for local parity and cross-platform route validation.
+Other platforms use `zipzi-render-wgpu`. Python builds
 without `observe` do not include a GPU renderer.
 
 ```sh

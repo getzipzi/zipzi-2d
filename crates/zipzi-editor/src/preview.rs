@@ -4,7 +4,11 @@ use gpui_kit::{IntoElement, Styled, Window, frame_trace};
 use metal::MTLPixelFormat;
 use std::sync::{Arc, Condvar, Mutex};
 use zipzi_editor_core::{SceneSnapshot, ViewportBinding, ViewportId};
-use zipzi_editor_render::{MetalSceneRenderer, MetalTargetConfig};
+use zipzi_editor_render::MetalTargetConfig;
+#[cfg(not(feature = "wgpu-backend"))]
+use zipzi_editor_render::MetalSceneRenderer;
+#[cfg(feature = "wgpu-backend")]
+use zipzi_editor_render::WgpuMetalSceneRenderer as MetalSceneRenderer;
 
 pub type Image = metal::Texture;
 #[derive(Clone)]

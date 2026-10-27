@@ -227,7 +227,7 @@ fn render_fixture_with_texture_change(
             });
             queue.write_texture(
                 texture.as_image_copy(),
-                rgba,
+                &zipzi_render::texture::premultiply_rgba8(rgba),
                 wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(4),
@@ -291,8 +291,8 @@ fn render_fixture_with_texture_change(
     .unwrap();
     renderer.sync_model(&device, frame, &textures).unwrap();
     for drawable in &frame.drawables {
-        assert_eq!(Arc::strong_count(&drawable.uvs), 1);
-        assert_eq!(Arc::strong_count(&drawable.indices), 1);
+        assert_eq!(Arc::strong_count(&drawable.uvs), 2);
+        assert_eq!(Arc::strong_count(&drawable.indices), 2);
     }
     renderer
         .update_view(
@@ -426,7 +426,7 @@ fn render_fixture_with_texture_change(
         let index = colors.iter().position(|(id, _)| *id == name).unwrap();
         queue.write_texture(
             sources[index].as_image_copy(),
-            &rgba,
+            &zipzi_render::texture::premultiply_rgba8(&rgba),
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(4),
@@ -459,7 +459,8 @@ fn render_fixture_with_texture_change(
     assert_eq!(stable.index_upload_bytes, 0);
     assert_eq!(stable.geometry_buffer_creations, 0);
     assert_eq!(stable.uniform_buffer_creations, 0);
-    assert_eq!(stable.bind_group_creations, 0);
+    // Command-local color/snapshot views need fresh bindings; immutable uniforms are reused.
+    assert!(stable.bind_group_creations > 0);
     assert_eq!(stable.mask_redraws, usize::from(texture_change.is_some()));
     queue.submit([scene_encoder.finish()]);
     let readback = device.create_buffer(&wgpu::BufferDescriptor {

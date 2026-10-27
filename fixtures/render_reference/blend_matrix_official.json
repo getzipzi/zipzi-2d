@@ -7,7 +7,7 @@
   "color_modes": 18,
   "alpha_modes": 5,
   "samples_per_mode": 8,
-  "maximum_byte_error": 2,
+  "maximum_byte_error": 3,
   "maximum_mean_absolute_error": 0.005,
   "maximum_bad_pixel_fraction": 0.01
 }

@@ -64,6 +64,7 @@ commands from the repository root; inspect available modes with
 | Local protocol / installed Python client | `./tools/test-sdk.sh python2-connected` |
 | SDK authoring behavior | `./tools/test-sdk.sh fast <filter>` |
 | Alpha mesh generation | `./tools/test-sdk.sh mesh` |
+| wgpu backend / local GPU parity | `cargo test --locked -p zipzi-render-wgpu --tests`; [host selection](crates/zipzi-render-wgpu/README.md#application-routes-on-macos) |
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |
 | Editor UI (macOS/Metal) | `./tools/test-editor.sh ui <filter>` |
 | Runtime Python SDK (`zipzi-python2`), Local/Connected and types | `./tools/test-sdk.sh python2` ([scope](crates/zipzi-python2/README.md)) |

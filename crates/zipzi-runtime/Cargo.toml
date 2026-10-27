@@ -7,6 +7,7 @@ license.workspace = true
 description = "UI-independent host for Zipzi authoring sessions"
 
 [features]
+wgpu-backend = ["gpu-observation", "zipzi-sdk-observe/wgpu-backend"]
 gpu-observation = ["dep:zipzi-sdk-observe"]
 test-support = []
 bench-instrumentation = ["zipzi-project/bench-instrumentation"]

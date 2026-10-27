@@ -382,8 +382,10 @@ fn renders_unsaved_session_and_reuses_gpu_across_changes() {
     .unwrap();
     let original = ObservationInput::capture(&session, &PreviewValues::new()).unwrap();
     let first = observer.observe(&original).unwrap();
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
     assert_eq!(first.adapter_backend, "Metal");
+    #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+    assert!(first.adapter_backend.starts_with("wgpu ("));
     assert_eq!(first.rgba.len(), 64 * 64 * 4);
     assert!(first
         .rgba

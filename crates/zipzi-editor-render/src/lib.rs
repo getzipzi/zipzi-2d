@@ -517,3 +517,12 @@ mod tests {
         })
     }
 }
+
+#[cfg(feature = "wgpu-backend")]
+mod wgpu;
+#[cfg(feature = "wgpu-backend")]
+pub use wgpu::{WgpuSceneRenderer, WgpuSubmittedFrame};
+#[cfg(all(feature = "wgpu-backend", target_os = "macos"))]
+mod wgpu_macos;
+#[cfg(all(feature = "wgpu-backend", target_os = "macos"))]
+pub use wgpu_macos::WgpuMetalSceneRenderer;

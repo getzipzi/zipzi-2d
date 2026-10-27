@@ -13,6 +13,7 @@ test = false
 doctest = false
 
 [features]
+wgpu-backend = ["zipzi-runtime/wgpu-backend"]
 test-support = ["zipzi-runtime/test-support"]
 bench-instrumentation = ["zipzi-runtime/bench-instrumentation"]
 

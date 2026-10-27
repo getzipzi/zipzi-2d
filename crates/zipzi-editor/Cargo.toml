@@ -8,6 +8,7 @@ license = "GPL-3.0-only"
 publish = false
 
 [features]
+wgpu-backend = ["zipzi-editor-render/wgpu-backend", "zipzi-runtime/wgpu-backend"]
 debug-tools = ["dep:gpui-fps"]
 test-support = ["gpui-kit/test-support", "dep:tempfile", "image/png"]
 bench-instrumentation = ["zipzi-editor-core/bench-instrumentation", "zipzi-editor-render/bench-instrumentation"]

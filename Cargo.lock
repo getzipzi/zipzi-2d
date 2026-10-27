@@ -9243,10 +9243,13 @@ version = "0.1.0-alpha.1"
 dependencies = [
  "anyhow",
  "objc2 0.6.4",
+ "png 0.17.16",
+ "wgpu",
  "zipzi-core",
  "zipzi-editor-core",
  "zipzi-render",
  "zipzi-render-metal",
+ "zipzi-render-wgpu",
 ]
 
 [[package]]
@@ -9353,6 +9356,7 @@ dependencies = [
  "wgpu",
  "zipzi-core",
  "zipzi-render",
+ "zipzi-render-metal",
 ]
 
 [[package]]

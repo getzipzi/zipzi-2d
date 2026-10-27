@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             queue.write_texture(
                 texture.as_image_copy(),
-                rgba,
+                &zipzi_render::texture::premultiply_rgba8(rgba),
                 wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(4),
@@ -255,7 +255,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     renderer_result(renderer.update_view(
         &device,
         ViewportConfig {
-            transform: Affine2::IDENTITY,
+            transform: Affine2 {
+                b: Vec2::new(0.0, -1.0),
+                ..Affine2::IDENTITY
+            },
             target_extent: Vec2::new(WIDTH as f32, HEIGHT as f32),
             mask_scale: 1.0,
         },

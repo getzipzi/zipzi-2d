@@ -1,6 +1,6 @@
-use super::*;
+use std::collections::{HashMap, HashSet};
+use zipzi_render::{TextureCatalog, TextureInfo};
 
-/// The external color target supplied by the eventual wgpu host.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WgpuTargetConfig {
     pub width: u32,
@@ -8,29 +8,15 @@ pub struct WgpuTargetConfig {
     pub format: wgpu::TextureFormat,
 }
 
-impl Default for WgpuTargetConfig {
-    fn default() -> Self {
-        Self {
-            width: 1,
-            height: 1,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-        }
-    }
-}
-
-/// A host-owned texture view made available to the wgpu backend.
-///
-/// The host remains responsible for image decoding and texture lifetime. The
-/// backend only needs the view for binding and the dimensions for the shared
-/// preflight contract.
+#[derive(Clone, Copy, Debug)]
 pub struct WgpuTexture<'a> {
+    /// Premultiplied RGBA/BGRA view, such as one created from [`crate::upload_rgba8`].
     pub view: &'a wgpu::TextureView,
     pub width: u32,
     pub height: u32,
 }
 
-/// Texture catalog used by [`WgpuRenderer`]. The catalog owns the map but
-/// borrows the host-created texture views.
+#[derive(Clone, Debug, Default)]
 pub struct WgpuTextureCatalog<'a> {
     textures: HashMap<String, WgpuTexture<'a>>,
     revisions: HashMap<String, u64>,
@@ -50,8 +36,6 @@ impl<'a> WgpuTextureCatalog<'a> {
         self.textures.get(id)
     }
 
-    /// Use Framework-style repeating UVs for one source texture. Other
-    /// textures continue to clamp at their edges.
     pub fn set_repeat(&mut self, id: impl Into<String>, repeat: bool) {
         let id = id.into();
         if repeat {
@@ -65,9 +49,6 @@ impl<'a> WgpuTextureCatalog<'a> {
         self.repeating.contains(id)
     }
 
-    /// Declare the content revision of a host texture. Reusing a revision
-    /// promises that its pixels have not changed, even when the view is reused.
-    /// Without a revision, dependent masks are conservatively redrawn.
     pub fn set_revision(&mut self, id: impl Into<String>, revision: u64) {
         self.revisions.insert(id.into(), revision);
     }
@@ -78,8 +59,8 @@ impl<'a> WgpuTextureCatalog<'a> {
 }
 
 impl TextureCatalog for WgpuTextureCatalog<'_> {
-    fn texture_info(&self, id: &str) -> Option<zipzi_render::TextureInfo> {
-        self.get(id).map(|texture| zipzi_render::TextureInfo {
+    fn texture_info(&self, id: &str) -> Option<TextureInfo> {
+        self.get(id).map(|texture| TextureInfo {
             width: texture.width,
             height: texture.height,
         })

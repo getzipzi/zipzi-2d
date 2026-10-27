@@ -44,6 +44,24 @@ Explicit relative model/output arguments and `CARGO_TARGET_DIR` are relative to 
 caller; defaults use the repository root. `CARGO_BUILD_TARGET` is supported through
 Cargo artifact messages. Dev builds intentionally override `CARGO_TARGET_DIR`.
 
+## wgpu model preview on macOS
+
+`cargo run --locked -p zipzi-editor --features wgpu-backend` selects wgpu for
+model preview and Runtime GPU observation. This uses the real wgpu pipeline on
+macOS, with a GPU texture handoff into the existing GPUI Metal surface. Completion
+is synchronized on the rendering worker before the texture is published.
+Window rendering and interaction overlays remain Metal-specific.
+
+For focused application composition coverage:
+
+```sh
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
+  --features test-support,wgpu-backend --test native_render metal::
+```
+
+See the [wgpu backend](../zipzi-render-wgpu/README.md) for pixel parity and
+real-model comparison commands.
+
 ## Local model acceptance
 
 Licensed model acceptance discovers optional assets under the repository root `models/local/` and

@@ -1,763 +1,621 @@
-use super::*;
+//! Command-local targets and batched render passes. No queued uniform overwrites.
+use crate::{
+    geometry::MeshBuffers,
+    mask::{fit_mask_budget, CachedMask, MaskAttachment, MaskJob},
+    pipeline::{FaceMode, Uniform, UniformKey},
+    surface::{PooledTexture, SurfaceLayout},
+    WgpuEncodeTarget, WgpuOutputMode, WgpuRenderStats, WgpuRenderer, WgpuTextureCatalog,
+};
+use std::collections::{HashMap, HashSet};
+use wgpu::util::DeviceExt;
+use zipzi_core::{BlendMode, Status, Vec2};
+use zipzi_render::gpu::{compose_affine, inverse_affine};
+use zipzi_render::{Affine2, TargetId, TargetItem};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum SceneEvent<'a> {
-    Draw(DrawItem<'a>),
-    Composite(&'a str),
+struct DrawCall {
+    mesh: MeshBuffers,
+    bindings: wgpu::BindGroup,
+    pipeline: wgpu::RenderPipeline,
+    scissor: Option<(u32, u32, u32, u32)>,
 }
-
-pub(super) struct SceneGraph<'a> {
-    pub(super) main: Vec<SceneEvent<'a>>,
-    pub(super) surfaces: HashMap<&'a str, Vec<SceneEvent<'a>>>,
+struct FrameEncoder<'a, 'b> {
+    renderer: &'a WgpuRenderer,
+    encoder: &'a mut wgpu::CommandEncoder,
+    textures: &'a WgpuTextureCatalog<'b>,
+    layouts: Vec<SurfaceLayout>,
+    pool: Vec<PooledTexture>,
+    masks: HashMap<String, MaskAttachment>,
+    stats: WgpuRenderStats,
+    uniforms: HashMap<UniformKey, wgpu::Buffer>,
+    used_uniforms: HashSet<UniformKey>,
 }
-
-#[derive(Clone, Copy)]
-pub(super) enum PipelineKind {
-    Draw,
-    Composite,
-    MaskedDraw,
-    MaskedComposite,
-    AdditiveDraw,
-    MultiplicativeDraw,
-    MaskedAdditiveDraw,
-    MaskedMultiplicativeDraw,
-    ExtendedDraw,
-    ExtendedComposite,
-    MaskedExtendedDraw,
-    MaskedExtendedComposite,
-    MaskSource,
-}
-
-pub(super) struct SceneCommand {
-    pub(super) resource_index: usize,
-    pub(super) pipeline: PipelineKind,
-}
-
-pub(super) struct ScenePipelines<'a> {
-    pub(super) draw: &'a wgpu::RenderPipeline,
-    pub(super) additive_draw: &'a wgpu::RenderPipeline,
-    pub(super) multiplicative_draw: &'a wgpu::RenderPipeline,
-    pub(super) composite: &'a wgpu::RenderPipeline,
-    pub(super) masked_draw: &'a wgpu::RenderPipeline,
-    pub(super) masked_additive_draw: &'a wgpu::RenderPipeline,
-    pub(super) masked_multiplicative_draw: &'a wgpu::RenderPipeline,
-    pub(super) masked_composite: &'a wgpu::RenderPipeline,
-    pub(super) extended_draw: &'a wgpu::RenderPipeline,
-    pub(super) extended_composite: &'a wgpu::RenderPipeline,
-    pub(super) masked_extended_draw: &'a wgpu::RenderPipeline,
-    pub(super) masked_extended_composite: &'a wgpu::RenderPipeline,
-    pub(super) mask_source: &'a wgpu::RenderPipeline,
-}
-
-pub(super) struct MaskRenderInfo {
-    pub(super) key: MaskKey,
-    pub(super) width: u32,
-    pub(super) height: u32,
-    pub(super) origin: Vec2,
-    pub(super) scale: f32,
-    pub(super) source_ids: Vec<String>,
-    pub(super) view: wgpu::TextureView,
-}
-
-pub(super) struct SceneEncoder<'renderer, 'context, 'frame, 'texture> {
-    pub(super) renderer: &'renderer WgpuPipelines,
-    pub(super) pipelines: ScenePipelines<'renderer>,
-    pub(super) device: &'context wgpu::Device,
-    pub(super) encoder: &'context mut wgpu::CommandEncoder,
-    pub(super) resources: &'context mut Vec<DrawResources>,
-    pub(super) scene: &'context SceneGraph<'frame>,
-    pub(super) surface_pool: &'context WgpuSurfacePool,
-    pub(super) mask_pool: &'context WgpuMaskPool,
-    pub(super) destination_pool: &'context WgpuDestinationPool,
-    pub(super) frame: &'frame DrawableFrame,
-    pub(super) textures: &'context WgpuTextureCatalog<'texture>,
-    pub(super) prepared: &'context PreparedFrame<'frame>,
-    pub(super) surface_to_model: Affine2,
-    pub(super) queue: &'context wgpu::Queue,
-    pub(super) geometry: Option<&'context mut modern::GeometryCache>,
-    pub(super) bindings: Option<&'context mut modern::BindingCache>,
-    pub(super) dirty_masks: Option<&'context HashSet<MaskKey>>,
-}
-
-pub(super) struct TargetEncoding<'frame, 'context> {
-    pub(super) id: Option<&'frame str>,
-    pub(super) view: &'context wgpu::TextureView,
-    pub(super) texture: Option<&'context wgpu::Texture>,
-    pub(super) size: (u32, u32),
-    pub(super) draw_transform: Affine2,
-    pub(super) composite_transform: Affine2,
-    pub(super) label: &'static str,
-}
-
-impl<'renderer, 'context, 'frame, 'texture> SceneEncoder<'renderer, 'context, 'frame, 'texture> {
-    pub(super) fn encode_masks(&mut self) -> Result<(), Status> {
-        let masks: Vec<MaskRenderInfo> = self
-            .mask_pool
-            .masks
+impl WgpuRenderer {
+    pub fn encode(
+        &mut self,
+        target: WgpuEncodeTarget<'_>,
+        textures: &WgpuTextureCatalog<'_>,
+    ) -> Result<WgpuRenderStats, Status> {
+        self.ensure_device(target.device)?;
+        if self.scene.targets().is_empty() {
+            return Err(Status::error("MISSING_MODEL", "Submit a model first"));
+        }
+        let view = self.viewport.ok_or_else(|| {
+            Status::error("MISSING_VIEW", "Submit model and view before encoding")
+        })?;
+        self.validate_frame_textures(&self.frame, textures)?;
+        let output = target.output.texture();
+        if output.width() != self.target.width
+            || output.height() != self.target.height
+            || output.format() != self.target.format
+            || output.dimension() != wgpu::TextureDimension::D2
+            || output.depth_or_array_layers() != 1
+            || output.sample_count() != 1
+            || !output
+                .usage()
+                .contains(wgpu::TextureUsages::RENDER_ATTACHMENT)
+        {
+            return Err(Status::error(
+                "INVALID_TARGET",
+                "Output extent, format or usage differs from target",
+            ));
+        }
+        let color = self.color_layout(view, target.output_mode)?;
+        self.validate_layouts(&color)?;
+        let mut jobs = Vec::new();
+        let mut consumers = HashMap::new();
+        let (_, mask_view, budget) = fit_mask_budget(
+            view,
+            self.device.limits().max_texture_dimension_2d,
+            |v, mv| {
+                let (candidate, mapping) = self.mask_jobs(v, mv, textures)?;
+                let bytes = color.bytes
+                    + u64::from(self.target.width) * u64::from(self.target.height) * 4
+                    + candidate
+                        .iter()
+                        .map(|j| u64::from(j.layout.width) * u64::from(j.layout.height) * 4)
+                        .sum::<u64>();
+                if bytes > zipzi_render::OFFSCREEN_BUDGET_BYTES as u64 {
+                    return Err(Status::error(
+                        "OFFSCREEN_BUDGET_EXCEEDED",
+                        "Attachments exceed budget",
+                    ));
+                }
+                jobs = candidate;
+                consumers = mapping;
+                Ok(bytes)
+            },
+        )?;
+        let mut cache = std::mem::take(&mut self.mask_cache);
+        let mut pages = std::mem::take(&mut self.atlas_pages);
+        let mut stats = WgpuRenderStats {
+            vertex_upload_bytes: std::mem::take(&mut self.pending_vertex_bytes),
+            index_upload_bytes: std::mem::take(&mut self.pending_index_bytes),
+            geometry_buffer_creations: std::mem::take(&mut self.pending_uploads),
+            active_surfaces: self.scene.active_target_count(),
+            masks: jobs.len(),
+            attachment_bytes: budget,
+            mask_resolution_limit: mask_view.max_dimension,
+            ..Default::default()
+        };
+        let slots = prepare_atlas(self, &jobs, &mut cache, &mut pages, budget);
+        stats.attachment_bytes += pages
             .iter()
-            .map(|(key, mask)| MaskRenderInfo {
-                key: key.clone(),
-                width: mask.width,
-                height: mask.height,
-                origin: mask.origin,
-                scale: mask.scale,
-                source_ids: mask.source_ids.clone(),
-                view: mask.view.clone(),
-            })
-            .collect();
-
-        for mask in masks {
-            if self
-                .dirty_masks
-                .is_some_and(|dirty| !dirty.contains(&mask.key))
-            {
+            .map(|t| u64::from(t.size.0) * u64::from(t.size.1) * 4)
+            .sum::<u64>();
+        let uniforms = std::mem::take(&mut self.uniforms);
+        let mut state = FrameEncoder {
+            uniforms,
+            used_uniforms: HashSet::new(),
+            renderer: self,
+            encoder: target.encoder,
+            textures,
+            layouts: color.surfaces,
+            pool: Vec::new(),
+            masks: HashMap::new(),
+            stats,
+        };
+        let mut attachments = Vec::new();
+        let mut cleared_pages = HashSet::new();
+        let mut atlas_draws: Vec<Vec<DrawCall>> = (0..pages.len()).map(|_| Vec::new()).collect();
+        for (index, job) in jobs.iter().enumerate() {
+            if let Some(cached) = cache.get(&job.key).filter(|c| {
+                c.sources == job.stamps && job.stamps.iter().all(|s| s.revision.is_some())
+            }) {
+                attachments.push(cached.attachment.clone());
+                state.stats.mask_cache_hits += 1;
                 continue;
             }
-            let transform = Affine2 {
-                a: Vec2::new(mask.scale, 0.0),
-                b: Vec2::new(0.0, mask.scale),
-                origin: Vec2::new(-mask.origin.x * mask.scale, -mask.origin.y * mask.scale),
+            let atlas_page = slots.get(&index).copied();
+            let (texture, x, y) = if let Some((page, x, y)) = atlas_page {
+                cleared_pages.insert(page);
+                (pages[page].clone(), x, y)
+            } else {
+                let texture = cache
+                    .get(&job.key)
+                    .filter(|c| {
+                        c.attachment.region == [0., 0., 1., 1.]
+                            && c.attachment.texture.size == (job.layout.width, job.layout.height)
+                    })
+                    .map(|c| c.attachment.texture.clone())
+                    .unwrap_or_else(|| {
+                        PooledTexture::new(
+                            &self.device,
+                            (job.layout.width, job.layout.height),
+                            wgpu::TextureFormat::Rgba8Unorm,
+                        )
+                    });
+                (texture, 0, 0)
             };
-            let mut commands = Vec::new();
-            for source_id in &mask.source_ids {
-                let drawable = self
-                    .frame
-                    .drawables
-                    .iter()
-                    .find(|drawable| drawable.id == *source_id)
-                    .ok_or_else(|| Status::error("INVALID_MASK", source_id))?;
-                if drawable.indices.is_empty() {
-                    continue;
+            let l = job.layout;
+            let transform = Affine2 {
+                a: Vec2::new(l.scale, 0.),
+                b: Vec2::new(0., l.scale),
+                origin: Vec2::new(
+                    -l.origin.x * l.scale + x as f32,
+                    -l.origin.y * l.scale + y as f32,
+                ),
+            };
+            let mut local_draws = Vec::new();
+            let draws = if let Some((page, _, _)) = atlas_page {
+                &mut atlas_draws[page]
+            } else {
+                &mut local_draws
+            };
+            if job.key.layout.is_some() {
+                for &i in &job.sources {
+                    let Some(mesh) = &self.geometry[i] else {
+                        continue;
+                    };
+                    let d = &self.frame.drawables[i];
+                    let uniform = Uniform::new(texture.size, transform, [1.; 4], [0.; 4], 1.);
+                    let t = textures
+                        .get(&d.texture_asset_id)
+                        .expect("preflight textures");
+                    let mut call = state.draw_call(
+                        mesh,
+                        &uniform,
+                        t.view,
+                        None,
+                        None,
+                        textures.repeats(&d.texture_asset_id),
+                        self.pipelines
+                            .mask
+                            .get(FaceMode::for_draw(d.double_sided, &uniform)),
+                    );
+                    call.scissor = Some((x, y, l.width, l.height));
+                    draws.push(call);
                 }
-                let texture = self
-                    .textures
-                    .get(&drawable.texture_asset_id)
-                    .ok_or_else(|| Status::error("MISSING_TEXTURE", &drawable.texture_asset_id))?;
-                let target_size = (mask.width, mask.height);
-                let cache_geometry = self.geometry.is_some();
-                let vertices = vertices_for(
-                    drawable,
-                    self.frame,
-                    ViewportConfig {
-                        transform: if cache_geometry {
-                            Affine2::IDENTITY
-                        } else {
-                            transform
-                        },
-                        target_extent: Vec2::new(mask.width as f32, mask.height as f32),
-                        mask_scale: 1.0,
-                    },
-                );
-                let indices = triangle_indices(&drawable.indices);
-                let resource_index = self.resources.len();
-                let mut uniform = draw_uniform(target_size, [1.0; 4], [0.0, 0.0, 0.0, 1.0], 1.0);
-                if cache_geometry {
-                    uniform = with_view_transform(uniform, transform);
-                }
-                let input = ResourceInput {
-                    device: self.device,
-                    texture_view: texture.view,
-                    texture_repeat: self.textures.repeats(&drawable.texture_asset_id),
-                    vertices: &vertices,
-                    indices: &indices,
-                    uniform,
-                    mask: None,
-                    destination: None,
-                };
-                let resource = if let Some(cache) = self.geometry.as_deref_mut() {
-                    let (vertex_buffer, index_buffer) =
-                        cache.sync(self.device, self.queue, source_id, &vertices, &indices);
-                    if let Some(bindings) = self.bindings.as_deref_mut() {
-                        bindings.prepare(
-                            modern::DrawKey::MaskSource {
-                                mask: mask.key.clone(),
-                                mesh: source_id.clone(),
-                            },
-                            self.renderer,
-                            self.queue,
-                            input,
-                            vertex_buffer,
-                            index_buffer,
-                        )
-                    } else {
-                        self.renderer.create_resources_with_geometry(
-                            input,
-                            vertex_buffer,
-                            index_buffer,
-                        )
-                    }
-                } else {
-                    self.renderer.create_resources(input)
-                };
-                self.resources.push(resource);
-                commands.push(SceneCommand {
-                    resource_index,
-                    pipeline: PipelineKind::MaskSource,
-                });
             }
-            encode_render_pass(
-                self.encoder,
-                &mask.view,
-                &self.pipelines,
-                self.resources,
-                &commands,
-                wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                "zipzi.wgpu.scene.mask-pass",
+            if atlas_page.is_none() {
+                let mut clear = true;
+                state.flush(&texture.view, &mut local_draws, &mut clear);
+            }
+            let attachment = MaskAttachment {
+                region: [
+                    x as f32 / texture.size.0 as f32,
+                    y as f32 / texture.size.1 as f32,
+                    l.width as f32 / texture.size.0 as f32,
+                    l.height as f32 / texture.size.1 as f32,
+                ],
+                texture,
+                layout: l,
+            };
+            cache.insert(
+                job.key.clone(),
+                CachedMask {
+                    attachment: attachment.clone(),
+                    sources: job.stamps.clone(),
+                },
             );
+            attachments.push(attachment);
+            state.stats.mask_redraws += 1;
         }
-        Ok(())
-    }
-
-    pub(super) fn encode_surface(
-        &mut self,
-        rendered_surfaces: &mut HashSet<&'frame str>,
-        id: &'frame str,
-        surface_size: (u32, u32),
-    ) -> Result<(), Status> {
-        if !rendered_surfaces.insert(id) {
-            return Ok(());
-        }
-        let events = self
-            .scene
-            .surfaces
-            .get(id)
-            .ok_or_else(|| {
-                Status::error(
-                    "INVALID_RENDER_PLAN",
-                    "Missing surface scene for offscreen target.",
-                )
-            })?
-            .clone();
-        for event in events.iter().copied() {
-            if let SceneEvent::Composite(child) = event {
-                if self.prepared.active_offscreens.contains(child) {
-                    self.encode_surface(rendered_surfaces, child, surface_size)?;
-                }
+        for (page, mut draws) in atlas_draws.into_iter().enumerate() {
+            if cleared_pages.contains(&page) || !draws.is_empty() {
+                let mut clear = cleared_pages.contains(&page);
+                state.flush(&pages[page].view, &mut draws, &mut clear);
             }
         }
-
-        let (surface_view, surface_texture) = self
-            .surface_pool
-            .get(id)
-            .map(|surface| (surface.view.clone(), surface._texture.clone()))
-            .ok_or_else(|| {
-                Status::error(
-                    "MISSING_SURFACE",
-                    format!("No wgpu surface was allocated for {id}."),
-                )
-            })?;
-        self.encode_target(
-            TargetEncoding {
-                id: Some(id),
-                view: &surface_view,
-                texture: Some(&surface_texture),
-                size: surface_size,
-                draw_transform: self.prepared.surface_transform,
-                composite_transform: Affine2::IDENTITY,
-                label: "zipzi.wgpu.scene.offscreen-pass",
-            },
-            events,
-        )
+        for (id, i) in consumers {
+            state.masks.insert(id, attachments[i].clone());
+        }
+        let main = state.acquire((self.target.width, self.target.height));
+        state.encode_target(TargetId::MAIN, &main)?;
+        let transform = Affine2 {
+            a: Vec2::new(self.target.width as f32, 0.),
+            b: Vec2::new(0., self.target.height as f32),
+            origin: Vec2::default(),
+        };
+        let uniform = Uniform::new(main.size, transform, [1.; 4], [0.; 4], 1.);
+        let pipeline = if target.output_mode == WgpuOutputMode::Replace {
+            &self.pipelines.present_replace
+        } else {
+            &self.pipelines.present
+        };
+        let call = state.draw_call(
+            &self.quad, &uniform, &main.view, None, None, false, pipeline,
+        );
+        let mut present_clear = target.output_mode == WgpuOutputMode::Replace;
+        state.flush(
+            target.output,
+            &mut vec![call],
+            &mut present_clear,
+        );
+        let stats = state.stats;
+        state
+            .uniforms
+            .retain(|k, _| state.used_uniforms.contains(k));
+        let uniforms = state.uniforms;
+        self.uniforms = uniforms;
+        debug_assert_eq!(stats.color_attachment_bytes, color.bytes);
+        cache.retain(|k, _| jobs.iter().any(|j| j.key == *k));
+        self.mask_cache = cache;
+        self.atlas_pages = pages;
+        Ok(stats)
     }
+}
 
-    pub(super) fn encode_target<'target, I>(
-        &mut self,
-        target: TargetEncoding<'frame, 'target>,
-        events: I,
-    ) -> Result<(), Status>
-    where
-        I: IntoIterator<Item = SceneEvent<'frame>>,
+fn prepare_atlas(
+    renderer: &WgpuRenderer,
+    jobs: &[MaskJob],
+    cache: &mut HashMap<crate::mask::MaskCacheKey, CachedMask>,
+    pages: &mut Vec<PooledTexture>,
+    budget: u64,
+) -> HashMap<usize, (usize, u32, u32)> {
+    let mut slots = HashMap::new();
+    if renderer.scene.masks().len() < 32 || jobs.is_empty() {
+        if !pages.is_empty() {
+            cache.clear();
+            pages.clear();
+        }
+        return slots;
+    }
+    let old_bytes: u64 = pages
+        .iter()
+        .map(|t| u64::from(t.size.0) * u64::from(t.size.1) * 4)
+        .sum();
+    if !pages.is_empty()
+        && budget + old_bytes <= zipzi_render::OFFSCREEN_BUDGET_BYTES as u64
+        && jobs.iter().all(|j| {
+            cache.get(&j.key).is_some_and(|c| {
+                c.sources == j.stamps && j.stamps.iter().all(|s| s.revision.is_some())
+            })
+        })
     {
-        let mut commands = Vec::new();
-        let mut first_pass = true;
-        for event in events {
-            if self.destination_read(event) {
-                encode_render_pass(
-                    self.encoder,
-                    target.view,
-                    &self.pipelines,
-                    self.resources,
-                    &commands,
-                    if first_pass {
-                        wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
-                    } else {
-                        wgpu::LoadOp::Load
-                    },
-                    target.label,
-                );
-                first_pass = false;
-                commands.clear();
-                self.copy_destination(target.id, target.texture, target.size)?;
-            }
-            self.append_scene_command(
-                &mut commands,
-                event,
-                target.id,
-                target.size,
-                target.draw_transform,
-                target.composite_transform,
-            )?;
+        return slots;
+    }
+    cache.clear();
+    let side = 1024u32.min(renderer.device.limits().max_texture_dimension_2d);
+    let mut sizes: Vec<(u32, u32)> = Vec::new();
+    let (mut x, mut y, mut row) = (0, 0, 0);
+    for (i, j) in jobs.iter().enumerate() {
+        let (w, h) = (j.layout.width, j.layout.height);
+        if sizes.is_empty()
+            || w > side
+            || h > side
+            || sizes.last().is_some_and(|&(w, h)| w > side || h > side)
+        {
+            sizes.push((0, 0));
+            (x, y, row) = (0, 0, 0);
         }
-        if first_pass || !commands.is_empty() {
-            encode_render_pass(
-                self.encoder,
-                target.view,
-                &self.pipelines,
-                self.resources,
-                &commands,
-                if first_pass {
+        if x + w > side && x != 0 {
+            y += row;
+            x = 0;
+            row = 0;
+        }
+        if y + h > side && y != 0 {
+            sizes.push((0, 0));
+            (x, y, row) = (0, 0, 0);
+        }
+        let page = sizes.len() - 1;
+        slots.insert(i, (page, x, y));
+        sizes[page].0 = sizes[page].0.max(x + w);
+        sizes[page].1 = sizes[page].1.max(y + h);
+        x += w;
+        row = row.max(h);
+    }
+    let bytes: u64 = sizes
+        .iter()
+        .map(|&(w, h)| u64::from(w) * u64::from(h) * 4)
+        .sum();
+    if budget + bytes > zipzi_render::OFFSCREEN_BUDGET_BYTES as u64 {
+        pages.clear();
+        return HashMap::new();
+    }
+    let old = std::mem::take(pages);
+    *pages = sizes
+        .into_iter()
+        .enumerate()
+        .map(|(i, size)| {
+            old.get(i)
+                .filter(|p| p.size == size)
+                .cloned()
+                .unwrap_or_else(|| {
+                    PooledTexture::new(&renderer.device, size, wgpu::TextureFormat::Rgba8Unorm)
+                })
+        })
+        .collect();
+    slots
+}
+
+impl FrameEncoder<'_, '_> {
+    fn acquire(&mut self, size: (u32, u32)) -> PooledTexture {
+        if let Some(i) = self.pool.iter().position(|t| t.size == size) {
+            return self.pool.swap_remove(i);
+        }
+        self.stats.color_attachment_bytes += u64::from(size.0) * u64::from(size.1) * 4;
+        PooledTexture::new(&self.renderer.device, size, self.renderer.target.format)
+    }
+    #[allow(clippy::too_many_arguments)]
+    fn draw_call(
+        &mut self,
+        mesh: &MeshBuffers,
+        uniform: &Uniform,
+        source: &wgpu::TextureView,
+        mask: Option<&wgpu::TextureView>,
+        destination: Option<&wgpu::TextureView>,
+        repeat: bool,
+        pipeline: &wgpu::RenderPipeline,
+    ) -> DrawCall {
+        let r = self.renderer;
+        let key: UniformKey = bytemuck::bytes_of(uniform).try_into().unwrap();
+        self.used_uniforms.insert(key);
+        let buffer = self.uniforms.entry(key).or_insert_with(|| {
+            self.stats.uniform_buffer_creations += 1;
+            r.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("zipzi.uniform"),
+                    contents: &key,
+                    usage: wgpu::BufferUsages::UNIFORM,
+                })
+        });
+        let sampler = if repeat {
+            &r.pipelines.linear_repeat
+        } else {
+            &r.pipelines.linear_clamp
+        };
+        let bindings = r.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("zipzi.draw"),
+            layout: &r.pipelines.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(source),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(mask.unwrap_or(&r.fallback.view)),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: wgpu::BindingResource::Sampler(&r.pipelines.linear_clamp),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::TextureView(
+                        destination.unwrap_or(&r.fallback.view),
+                    ),
+                },
+            ],
+        });
+        self.stats.bind_group_creations += 1;
+        DrawCall {
+            mesh: mesh.clone(),
+            bindings,
+            pipeline: pipeline.clone(),
+            scissor: None,
+        }
+    }
+    fn flush(&mut self, target: &wgpu::TextureView, draws: &mut Vec<DrawCall>, clear: &mut bool) {
+        if draws.is_empty() && !*clear {
+            return;
+        }
+        let colors = [Some(wgpu::RenderPassColorAttachment {
+            view: target,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: if std::mem::replace(clear, false) {
                     wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
                 } else {
                     wgpu::LoadOp::Load
                 },
-                target.label,
-            );
-        }
-        Ok(())
-    }
-
-    pub(super) fn destination_read(&self, event: SceneEvent<'frame>) -> bool {
-        match event {
-            SceneEvent::Draw(item) => {
-                self.prepared.destination_reads.contains(item.drawable_id)
-                    && self
-                        .frame
-                        .drawables
-                        .iter()
-                        .find(|drawable| drawable.id == item.drawable_id)
-                        .is_some_and(|drawable| {
-                            drawable.visible
-                                && drawable.opacity > 0.0
-                                && !drawable.indices.is_empty()
-                        })
-            }
-            SceneEvent::Composite(id) => {
-                self.prepared.destination_reads.contains(id)
-                    && self.prepared.active_offscreens.contains(id)
-            }
-        }
-    }
-
-    pub(super) fn copy_destination(
-        &mut self,
-        target_id: Option<&'frame str>,
-        target_texture: Option<&wgpu::Texture>,
-        target_size: (u32, u32),
-    ) -> Result<(), Status> {
-        let source = target_texture
-            .or_else(|| target_id.and_then(|id| self.surface_pool.get(id).map(|s| &s._texture)))
-            .ok_or_else(|| {
-                Status::error(
-                    "MISSING_TARGET_TEXTURE",
-                    "Destination reads require the main target texture, not only its view.",
-                )
-            })?;
-        if !source.usage().contains(wgpu::TextureUsages::COPY_SRC) {
-            return Err(Status::error(
-                "INVALID_TARGET_USAGE",
-                "Destination reads require COPY_SRC usage on the target texture.",
-            ));
-        }
-        let destination = self.destination_pool.get(target_id).ok_or_else(|| {
-            Status::error(
-                "MISSING_DESTINATION",
-                "No destination snapshot was allocated for the active target.",
-            )
-        })?;
-        self.encoder.copy_texture_to_texture(
-            source.as_image_copy(),
-            destination._texture.as_image_copy(),
-            wgpu::Extent3d {
-                width: target_size.0,
-                height: target_size.1,
-                depth_or_array_layers: 1,
+                store: wgpu::StoreOp::Store,
             },
-        );
-        Ok(())
-    }
-
-    pub(super) fn append_scene_command(
-        &mut self,
-        commands: &mut Vec<SceneCommand>,
-        event: SceneEvent<'frame>,
-        target_id: Option<&'frame str>,
-        target_size: (u32, u32),
-        draw_transform: Affine2,
-        composite_transform: Affine2,
-    ) -> Result<(), Status> {
-        match event {
-            SceneEvent::Draw(item) => {
-                let drawable = self
-                    .frame
-                    .drawables
-                    .iter()
-                    .find(|drawable| drawable.id == item.drawable_id)
-                    .ok_or_else(|| Status::error("INVALID_RENDER_PLAN", item.drawable_id))?;
-                if !drawable.visible || drawable.opacity <= 0.0 || drawable.indices.is_empty() {
-                    return Ok(());
-                }
-                let destination_read = drawable.raw_blend_mode.is_some();
-                let texture = self
-                    .textures
-                    .get(item.texture_id)
-                    .ok_or_else(|| Status::error("MISSING_TEXTURE", item.texture_id))?;
-                let cache_geometry = self.geometry.is_some();
-                let vertices = vertices_for(
-                    drawable,
-                    self.frame,
-                    ViewportConfig {
-                        transform: if cache_geometry {
-                            Affine2::IDENTITY
-                        } else {
-                            draw_transform
-                        },
-                        target_extent: Vec2::new(target_size.0 as f32, target_size.1 as f32),
-                        mask_scale: 1.0,
-                    },
-                );
-                let indices = triangle_indices(&drawable.indices);
-                let mask_data = if drawable.masks.is_empty() {
-                    None
-                } else {
-                    let mask = self
-                        .mask_pool
-                        .get_for_target(&drawable.id)
-                        .ok_or_else(|| Status::error("MISSING_MASK", &drawable.id))?;
-                    Some((
-                        mask.view.clone(),
-                        [
-                            mask.origin.x,
-                            mask.origin.y,
-                            mask.logical_size.x,
-                            mask.logical_size.y,
-                        ],
-                        drawable.inverted_mask,
-                    ))
-                };
-                let mut uniform = draw_uniform(
-                    target_size,
-                    drawable.multiply_color,
-                    drawable.screen_color,
-                    drawable.opacity,
-                );
-                if cache_geometry {
-                    uniform = with_view_transform(uniform, draw_transform);
-                }
-                if let Some((_, bounds, inverted)) = &mask_data {
-                    uniform.mask_bounds = *bounds;
-                    uniform.mask_flags = [1, u32::from(*inverted), 0, 0];
-                }
-                if let Some(mode) = drawable.raw_blend_mode {
-                    uniform = with_blend_mode(uniform, mode);
-                } else {
-                    uniform = with_fixed_blend_mode(uniform, drawable.blend_mode);
-                }
-                let mask_binding = mask_data.as_ref().map(|(view, _, _)| MaskBinding { view });
-                let destination_binding = if destination_read {
-                    Some(DestinationBinding {
-                        view: &self
-                            .destination_pool
-                            .get(target_id)
-                            .ok_or_else(|| {
-                                Status::error(
-                                    "MISSING_DESTINATION",
-                                    "No destination snapshot was allocated for the active target.",
-                                )
-                            })?
-                            .view,
-                    })
-                } else {
-                    None
-                };
-                let resource_index = self.resources.len();
-                let input = ResourceInput {
-                    device: self.device,
-                    texture_view: texture.view,
-                    texture_repeat: self.textures.repeats(&drawable.texture_asset_id),
-                    vertices: &vertices,
-                    indices: &indices,
-                    uniform,
-                    mask: mask_binding,
-                    destination: destination_binding,
-                };
-                let resource = if let Some(cache) = self.geometry.as_deref_mut() {
-                    let (vertex_buffer, index_buffer) = cache.sync(
-                        self.device,
-                        self.queue,
-                        item.drawable_id,
-                        &vertices,
-                        &indices,
-                    );
-                    if let Some(bindings) = self.bindings.as_deref_mut() {
-                        bindings.prepare(
-                            modern::DrawKey::Mesh(item.drawable_id.to_owned()),
-                            self.renderer,
-                            self.queue,
-                            input,
-                            vertex_buffer,
-                            index_buffer,
-                        )
-                    } else {
-                        self.renderer.create_resources_with_geometry(
-                            input,
-                            vertex_buffer,
-                            index_buffer,
-                        )
-                    }
-                } else {
-                    self.renderer.create_resources(input)
-                };
-                self.resources.push(resource);
-                let pipeline = if destination_read {
-                    if mask_data.is_some() {
-                        PipelineKind::MaskedExtendedDraw
-                    } else {
-                        PipelineKind::ExtendedDraw
-                    }
-                } else {
-                    match (drawable.blend_mode, mask_data.is_some()) {
-                        (BlendMode::Normal, false) => PipelineKind::Draw,
-                        (BlendMode::Normal, true) => PipelineKind::MaskedDraw,
-                        (BlendMode::Additive, false) => PipelineKind::AdditiveDraw,
-                        (BlendMode::Additive, true) => PipelineKind::MaskedAdditiveDraw,
-                        (BlendMode::Multiplicative, false) => PipelineKind::MultiplicativeDraw,
-                        (BlendMode::Multiplicative, true) => PipelineKind::MaskedMultiplicativeDraw,
-                    }
-                };
-                commands.push(SceneCommand {
-                    resource_index,
-                    pipeline,
-                });
-            }
-            SceneEvent::Composite(id) => {
-                if !self.prepared.active_offscreens.contains(id) {
-                    return Ok(());
-                }
-                let surface = self.surface_pool.get(id).ok_or_else(|| {
-                    Status::error(
-                        "MISSING_SURFACE",
-                        format!("No wgpu surface was allocated for {id}."),
-                    )
-                })?;
-                let offscreen = self
-                    .frame
-                    .offscreens
-                    .iter()
-                    .find(|offscreen| offscreen.id == id)
-                    .ok_or_else(|| Status::error("INVALID_RENDER_PLAN", id))?;
-                let destination_read = offscreen.blend_mode != 0;
-                let cache_geometry = self.geometry.is_some();
-                let source_scale = Affine2 {
-                    a: Vec2::new(surface.width as f32, 0.0),
-                    b: Vec2::new(0.0, surface.height as f32),
-                    origin: Vec2::new(0.0, 0.0),
-                };
-                let vertices = quad_vertices(
-                    if cache_geometry {
-                        (1, 1)
-                    } else {
-                        (surface.width, surface.height)
-                    },
-                    if cache_geometry {
-                        Affine2::IDENTITY
-                    } else {
-                        composite_transform
-                    },
-                    if cache_geometry {
-                        Affine2::IDENTITY
-                    } else {
-                        self.surface_to_model
-                    },
-                );
-                let indices = quad_indices();
-                let mask_data = if offscreen.masks.is_empty() {
-                    None
-                } else {
-                    let mask = self
-                        .mask_pool
-                        .get_for_target(id)
-                        .ok_or_else(|| Status::error("MISSING_MASK", id))?;
-                    Some((
-                        mask.view.clone(),
-                        [
-                            mask.origin.x,
-                            mask.origin.y,
-                            mask.logical_size.x,
-                            mask.logical_size.y,
-                        ],
-                        offscreen.flags & 8 != 0,
-                    ))
-                };
-                let mut uniform = draw_uniform(
-                    target_size,
-                    offscreen.multiply_color,
-                    offscreen.screen_color,
-                    offscreen.opacity,
-                );
-                if cache_geometry {
-                    uniform = with_view_transform(
-                        uniform,
-                        compose_affine(composite_transform, source_scale),
-                    );
-                    uniform = with_mask_transform(
-                        uniform,
-                        compose_affine(self.surface_to_model, source_scale),
-                    );
-                }
-                if let Some((_, bounds, inverted)) = &mask_data {
-                    uniform.mask_bounds = *bounds;
-                    uniform.mask_flags = [1, u32::from(*inverted), 0, 0];
-                }
-                if destination_read {
-                    uniform = with_blend_mode(uniform, offscreen.blend_mode);
-                }
-                let mask_binding = mask_data.as_ref().map(|(view, _, _)| MaskBinding { view });
-                let destination_binding = if destination_read {
-                    Some(DestinationBinding {
-                        view: &self
-                            .destination_pool
-                            .get(target_id)
-                            .ok_or_else(|| {
-                                Status::error(
-                                    "MISSING_DESTINATION",
-                                    "No destination snapshot was allocated for the active target.",
-                                )
-                            })?
-                            .view,
-                    })
-                } else {
-                    None
-                };
-                let resource_index = self.resources.len();
-                let input = ResourceInput {
-                    device: self.device,
-                    texture_view: &surface.view,
-                    texture_repeat: false,
-                    vertices: &vertices,
-                    indices: &indices,
-                    uniform,
-                    mask: mask_binding,
-                    destination: destination_binding,
-                };
-                let resource = if let Some(bindings) = self.bindings.as_deref_mut() {
-                    let (vertex_buffer, index_buffer) = self
-                        .geometry
-                        .as_deref_mut()
-                        .expect("binding cache requires geometry cache")
-                        .sync(
-                            self.device,
-                            self.queue,
-                            &format!("\0composite:{id}"),
-                            &vertices,
-                            &indices,
-                        );
-                    bindings.prepare(
-                        modern::DrawKey::Composite(id.to_owned()),
-                        self.renderer,
-                        self.queue,
-                        input,
-                        vertex_buffer,
-                        index_buffer,
-                    )
-                } else {
-                    self.renderer.create_resources(input)
-                };
-                self.resources.push(resource);
-                commands.push(SceneCommand {
-                    resource_index,
-                    pipeline: if destination_read {
-                        if mask_data.is_some() {
-                            PipelineKind::MaskedExtendedComposite
-                        } else {
-                            PipelineKind::ExtendedComposite
-                        }
-                    } else if mask_data.is_some() {
-                        PipelineKind::MaskedComposite
-                    } else {
-                        PipelineKind::Composite
-                    },
-                });
-            }
-        }
-        Ok(())
-    }
-}
-
-pub(super) fn encode_render_pass(
-    encoder: &mut wgpu::CommandEncoder,
-    target_view: &wgpu::TextureView,
-    pipelines: &ScenePipelines<'_>,
-    resources: &[DrawResources],
-    commands: &[SceneCommand],
-    load: wgpu::LoadOp<wgpu::Color>,
-    label: &'static str,
-) {
-    let color_attachments = [Some(wgpu::RenderPassColorAttachment {
-        view: target_view,
-        depth_slice: None,
-        resolve_target: None,
-        ops: wgpu::Operations {
-            load,
-            store: wgpu::StoreOp::Store,
-        },
-    })];
-    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some(label),
-        color_attachments: &color_attachments,
-        depth_stencil_attachment: None,
-        timestamp_writes: None,
-        occlusion_query_set: None,
-        multiview_mask: None,
-    });
-    for command in commands {
-        let resource = &resources[command.resource_index];
-        pass.set_pipeline(match command.pipeline {
-            PipelineKind::Draw => pipelines.draw,
-            PipelineKind::Composite => pipelines.composite,
-            PipelineKind::MaskedDraw => pipelines.masked_draw,
-            PipelineKind::MaskedComposite => pipelines.masked_composite,
-            PipelineKind::AdditiveDraw => pipelines.additive_draw,
-            PipelineKind::MultiplicativeDraw => pipelines.multiplicative_draw,
-            PipelineKind::MaskedAdditiveDraw => pipelines.masked_additive_draw,
-            PipelineKind::MaskedMultiplicativeDraw => pipelines.masked_multiplicative_draw,
-            PipelineKind::ExtendedDraw => pipelines.extended_draw,
-            PipelineKind::ExtendedComposite => pipelines.extended_composite,
-            PipelineKind::MaskedExtendedDraw => pipelines.masked_extended_draw,
-            PipelineKind::MaskedExtendedComposite => pipelines.masked_extended_composite,
-            PipelineKind::MaskSource => pipelines.mask_source,
+        })];
+        let mut pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("zipzi.pass"),
+            color_attachments: &colors,
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
         });
-        pass.set_bind_group(0, &resource.texture_bind_group, &[]);
-        pass.set_bind_group(1, &resource.uniform_bind_group, &[]);
-        match command.pipeline {
-            PipelineKind::ExtendedDraw | PipelineKind::ExtendedComposite => {
-                if let Some(destination_bind_group) = &resource.destination_bind_group {
-                    pass.set_bind_group(2, destination_bind_group, &[]);
-                }
+        self.stats.render_passes += 1;
+        for call in draws.iter() {
+            let m = &call.mesh;
+            pass.set_pipeline(&call.pipeline);
+            pass.set_bind_group(0, &call.bindings, &[]);
+            pass.set_vertex_buffer(
+                0,
+                m.positions
+                    .slice(m.position_offset..m.position_offset + m.position_bytes),
+            );
+            pass.set_vertex_buffer(1, m.uvs.slice(m.uv_offset..m.uv_offset + m.uv_bytes));
+            pass.set_index_buffer(
+                m.indices
+                    .slice(m.index_offset..m.index_offset + m.index_bytes),
+                wgpu::IndexFormat::Uint32,
+            );
+            if let Some((x, y, w, h)) = call.scissor {
+                pass.set_scissor_rect(x, y, w, h);
             }
-            PipelineKind::MaskedExtendedDraw | PipelineKind::MaskedExtendedComposite => {
-                if let Some(destination_bind_group) = &resource.destination_bind_group {
-                    pass.set_bind_group(2, destination_bind_group, &[]);
-                }
-                if let Some(mask_bind_group) = &resource.mask_bind_group {
-                    pass.set_bind_group(3, mask_bind_group, &[]);
-                }
-            }
-            PipelineKind::MaskedDraw
-            | PipelineKind::MaskedComposite
-            | PipelineKind::MaskedAdditiveDraw
-            | PipelineKind::MaskedMultiplicativeDraw => {
-                if let Some(mask_bind_group) = &resource.mask_bind_group {
-                    pass.set_bind_group(2, mask_bind_group, &[]);
-                }
-            }
-            PipelineKind::Draw
-            | PipelineKind::Composite
-            | PipelineKind::AdditiveDraw
-            | PipelineKind::MultiplicativeDraw
-            | PipelineKind::MaskSource => {}
+            pass.draw_indexed(0..m.index_count, 0, 0..1);
+            self.stats.draw_calls += 1;
         }
-        pass.set_vertex_buffer(0, resource.vertex_buffer.slice(..));
-        pass.set_index_buffer(resource.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        pass.draw_indexed(0..resource.index_count, 0, 0..1);
+        drop(pass);
+        draws.clear();
+    }
+    fn encode_target(&mut self, id: TargetId, target: &PooledTexture) -> Result<(), Status> {
+        let r = self.renderer;
+        let mut draws = Vec::new();
+        let mut clear = true;
+        let mut has_destination = false;
+        for &item in &r.scene.targets()[id.0].items {
+            let child = if let TargetItem::Composite(child) = item {
+                if !r.scene.targets()[child.0].active {
+                    continue;
+                }
+                self.flush(&target.view, &mut draws, &mut clear);
+                let texture = self.acquire(self.layouts[child.0].size);
+                self.encode_target(child, &texture)?;
+                Some(texture)
+            } else {
+                None
+            };
+            let destination = if r.item_reads_destination(item) {
+                self.flush(&target.view, &mut draws, &mut clear);
+                let snapshot = self.acquire(target.size);
+                self.encoder.copy_texture_to_texture(
+                    target.texture.as_image_copy(),
+                    snapshot.texture.as_image_copy(),
+                    target.texture.size(),
+                );
+                self.stats.destination_copies += 1;
+                has_destination = true;
+                Some(snapshot)
+            } else {
+                None
+            };
+            let (mesh, source, mut uniform, repeat, double_sided, blend, raw) = match item {
+                TargetItem::Draw(i) => {
+                    let d = &r.frame.drawables[i.0];
+                    if !d.visible || d.opacity <= 0. || d.indices.is_empty() {
+                        continue;
+                    }
+                    let Some(mesh) = &r.geometry[i.0] else {
+                        continue;
+                    };
+                    let mut u = Uniform::new(
+                        target.size,
+                        self.layouts[id.0].transform,
+                        d.multiply_color,
+                        d.screen_color,
+                        d.opacity,
+                    );
+                    if let Some(mask) = self.masks.get(&d.id) {
+                        u.mask(mask, Affine2::IDENTITY, d.inverted_mask);
+                    }
+                    (
+                        mesh,
+                        self.textures
+                            .get(&d.texture_asset_id)
+                            .expect("validated textures")
+                            .view,
+                        u,
+                        self.textures.repeats(&d.texture_asset_id),
+                        d.double_sided,
+                        d.blend_mode,
+                        d.raw_blend_mode,
+                    )
+                }
+                TargetItem::Composite(c) => {
+                    let d = &r.frame.offscreens[c.0 - 1];
+                    let layout = self.layouts[c.0];
+                    let parent = self.layouts[id.0];
+                    let scale = Affine2 {
+                        a: Vec2::new(layout.size.0 as f32, 0.),
+                        b: Vec2::new(0., layout.size.1 as f32),
+                        origin: Vec2::default(),
+                    };
+                    let transform = Affine2 {
+                        origin: Vec2::new(
+                            layout.screen_origin.x - parent.screen_origin.x,
+                            layout.screen_origin.y - parent.screen_origin.y,
+                        ),
+                        ..scale
+                    };
+                    let mut u = Uniform::new(
+                        target.size,
+                        transform,
+                        d.multiply_color,
+                        d.screen_color,
+                        d.opacity,
+                    );
+                    u.flags[1] = 1;
+                    if let Some(mask) = self.masks.get(&d.id) {
+                        u.mask(
+                            mask,
+                            compose_affine(inverse_affine(layout.transform)?, scale),
+                            d.flags & 8 != 0,
+                        );
+                    }
+                    (
+                        &r.quad,
+                        &child.as_ref().unwrap().view,
+                        u,
+                        false,
+                        true,
+                        BlendMode::Normal,
+                        if d.blend_mode != 0 {
+                            Some(d.blend_mode)
+                        } else {
+                            None
+                        },
+                    )
+                }
+            };
+            let mode = FaceMode::for_draw(double_sided, &uniform);
+            let pipeline = if let Some(raw) = raw {
+                uniform.raw_blend(raw);
+                r.pipelines.extended_draw.get(mode)
+            } else {
+                match blend {
+                    BlendMode::Normal => r.pipelines.draw.get(mode),
+                    BlendMode::Additive => {
+                        uniform.blend_mode[0] = 1;
+                        r.pipelines.additive.get(mode)
+                    }
+                    BlendMode::Multiplicative => {
+                        uniform.blend_mode[0] = 2;
+                        r.pipelines.multiplicative.get(mode)
+                    }
+                }
+            };
+            let mask_id = match item {
+                TargetItem::Draw(i) => &r.frame.drawables[i.0].id,
+                TargetItem::Composite(i) => &r.frame.offscreens[i.0 - 1].id,
+            };
+            let mask = self.masks.get(mask_id).map(|m| m.texture.view.clone());
+            draws.push(self.draw_call(
+                mesh,
+                &uniform,
+                source,
+                mask.as_ref(),
+                destination.as_ref().map(|t| &t.view),
+                repeat,
+                pipeline,
+            ));
+            // Any subsequent acquire flushes `draws` before writing to a pooled texture.
+            if let Some(t) = destination {
+                self.pool.push(t);
+            }
+            if let Some(t) = child {
+                self.pool.push(t);
+            }
+        }
+        self.flush(&target.view, &mut draws, &mut clear);
+        if has_destination {
+            self.stats.destination_targets += 1;
+        }
+        Ok(())
     }
 }

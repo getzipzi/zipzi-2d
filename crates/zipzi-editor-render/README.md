@@ -35,3 +35,20 @@ suite. A successful compile does not establish GPU execution coverage; see
 
 Licensed **GPL-3.0-only**; not published to crates.io. The underlying SDK render
 crates retain their own MIT licensing. See [component licensing](../../LICENSING.md).
+
+## wgpu model adapter
+
+The `wgpu-backend` feature exposes `WgpuSceneRenderer` with the same scene
+snapshot, content-keyed texture cache and viewport inputs. `wgpu_preview` loads
+an Editor model3 and captures three views through both model backends, reporting
+pixel differences and geometry uploads. On macOS `WgpuMetalSceneRenderer` bridges
+the completed wgpu output into the existing GPUI Metal surface without readback.
+It waits for the wgpu queue on the rendering worker before publishing; this is a
+correctness bridge, not yet a shared-event asynchronous presentation path.
+
+```sh
+cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu_preview -- \
+  models/local/mao/runtime/mao_pro.model3.json target/wgpu-mao
+```
+
+Overlay rendering and GPUI platform integration remain native Metal.

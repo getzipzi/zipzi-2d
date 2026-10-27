@@ -125,7 +125,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     renderer_result(renderer.update_view(
         &device,
         ViewportConfig {
-            transform: Affine2::IDENTITY,
+            transform: Affine2 {
+                b: Vec2::new(0.0, -1.0),
+                ..Affine2::IDENTITY
+            },
             target_extent: Vec2::new(SIDE as f32, SIDE as f32),
             mask_scale: 1.0,
         },
