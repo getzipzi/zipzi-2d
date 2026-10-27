@@ -19,6 +19,7 @@ class DesktopConnection(unittest.TestCase):
         self.assertIsNone(importlib.util.find_spec("zipzi_native"))
         host = Path(os.environ["ZIPZI_PYTHON2_EDITOR"])
         self.assertTrue(host.is_absolute() and host.is_file())
+        discover = os.environ.get("ZIPZI_PYTHON2_EDITOR_DISCOVERY") == "1"
         with tempfile.TemporaryDirectory(prefix="zzpy2e-", dir="/tmp") as directory:
             folder = Path(directory)
             endpoint = folder / "test.sock"
@@ -30,7 +31,9 @@ import json,sys,time,zipzi
 from pathlib import Path
 from zipzi import bindings,events,meshes,parameters
 while not Path(sys.argv[4]).exists(): time.sleep(.005)
-with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
+# The packaged-app gate leaves host selection to the public discovery path.
+host_options = {} if sys.argv[5]=='discover' else dict(host=Path(sys.argv[2]))
+with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,**host_options) as r:
  assert r.connection is not None
  print(json.dumps(dict(pid=r.connection.host_pid,runtime=r.connection.runtime)),flush=True)
  assert 'show_window' in r.connection.capabilities
@@ -61,8 +64,12 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                 gate = folder / "go"
                 environment = {k: v for k, v in os.environ.items()
                     if k not in {"ZIPZI_DEV_SESSION_DIR", "ZIPZI_DEV_PID_FILE", "ZIPZI_DEV_READY_FILE", "PYTHONPATH"}}
+                environment["ZIPZI_CONFIG_DIR"] = str(folder / "config")
+                environment.pop("ZIPZI_RUNTIME_OWNER_FD", None)
+                if discover:
+                    environment.pop("ZIPZI_EDITOR_HOST", None)
                 for index in range(2):
-                    processes.append(subprocess.Popen([sys.executable, "-I", "-c", script, str(endpoint), str(host), str(index), str(gate)],
+                    processes.append(subprocess.Popen([sys.executable, "-I", "-c", script, str(endpoint), str(host), str(index), str(gate), "discover" if discover else "explicit"],
                         cwd="/tmp", env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
                 gate.touch()
                 identities = []

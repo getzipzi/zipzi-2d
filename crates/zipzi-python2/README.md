@@ -75,7 +75,14 @@ are connected on independent frozen sources. [CPU spatial queries](../../docs/pl
 cover formal/candidate poses and animated frames. [GPU observation and PNG/JSON inspection](../../docs/plans/sdk-runtime/python2-r5-observation.md) are connected;
 [Fair batch scheduling and Editor playback isolation](../../docs/plans/sdk-runtime/python2-r5-scheduling.md)
 are connected and covered by focused regressions; integrated Release performance remains pending in R5/P5.
-Full platform/app distribution acceptance is also pending.
+Final integrated acceptance is also pending.
+The [R5/R7 closeout record](../../docs/plans/sdk-runtime/python2-r7-closeout.md)
+tracks paired normal sdists/wheels, the macOS app/installer, installed-app
+discovery and the handoff/save/reopen/export flow; final performance remains open.
+The opt-in `tests/installed_model_workflow.py` also checks real-model authoring,
+Preview, save/reopen, motion/package export and reconnection against a normal
+desktop executable. Run it with an installed pure interpreter, `-I`, and explicit
+`--host`, `--model`, `--output` paths; model assets are not bundled.
 See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence.
 
 [P3B scope reconciliation](../../docs/plans/python-sdk-rewrite/p3b.md) is complete:

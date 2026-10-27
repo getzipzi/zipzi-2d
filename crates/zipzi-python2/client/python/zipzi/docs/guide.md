@@ -2,8 +2,7 @@
 
 Import `zipzi` and use `zipzi.describe("zipzi")` to discover the installed API.
 Use `zipzi.describe("Session.meshes.list")` for one method at a time. The reference
-and recipes in this directory belong to this exact client contract. Historical
-repository plans are not usage documentation.
+and recipes here match this installed client.
 
 ## Choose an execution host
 
@@ -14,8 +13,8 @@ changes an established connection. Pure imports and `describe` require neither a
 native wheel, a host nor a GPU.
 
 Query `runtime.capabilities()` and `runtime.limits()` before selecting work. These
-are actual host facts and do not reserve future admission. Local has no Editor
-windows or GPU observer. `runtime.connection` is cached handshake information.
+describe current availability without reserving admission. Local has no Editor
+windows. `runtime.connection` caches handshake information.
 
 ## Select and read
 
@@ -69,15 +68,10 @@ or pre-execution budget refusals preserve the candidate; act on recovery_action.
 
 ## Continue work in the Editor
 
-Connect to the desktop host, list resident Sessions and attach the intended
-`SessionId`. A batch submitted with `edit.commit().wait()` updates that same
-in-memory document and creates one Undo step when content changes. Normal Edit
-context exit also commits and waits. The Editor refreshes its views; a person can
-inspect, undo or refine the content, and the next Edit reads their current work.
-Saving remains separate. Busy, version conflicts and recovery follow the normal
-Edit/Job contract. Script exit retains committed content and its resources.
-
-The installed `editor_handoff.py` example selects the Session and mesh explicitly:
+Attach the desktop Session. `edit.commit().wait()` updates its in-memory document
+and adds one Undo step when changed. Editor views refresh; people can refine the
+content and the next Edit reads their changes. Script exit retains committed
+resources; saving is separate. Use the installed example:
 
 ```sh
 python -I -m zipzi.docs.editor_handoff list
@@ -86,7 +80,7 @@ python -I -m zipzi.docs.editor_handoff rename \
 ```
 
 Use `--endpoint /absolute/path/to/profile.sock` before the subcommand for a
-specific host. This example uses the ordinary commit path and shared history.
+specific host.
 
 ## Recover and wait
 
@@ -108,9 +102,8 @@ cancels. Pending status/cancel requests must be recovered first.
 
 ## Verify, save and release
 
-After confirmed commit, reread the intended objects and compare content, Source,
-numeric values, pixels or history against the task. Bounded repr and `summary()`
-perform no RPC and avoid expanding arrays/bytes; explicitly access fields when needed.
+After commit, reread objects and verify content, Source, values, pixels or history.
+Bounded repr and `summary()` perform no RPC or array/byte expansion.
 
 Prepare images independently with `runtime.resources.prepare_image`; preparation
 is not a document write. Accept or replace through an Edit. Prepared images,
@@ -210,7 +203,6 @@ PNG and JSON locally into a new directory, even after Runtime closure.
 
 Save with `session.project.save(absolute_host_path).wait()` and inspect `durable`
 and the receipt version. Paths refer to the execution host, not the client machine.
-A client-side file existence check does not prove a remote host saved durably.
 
 `session.detach()` invalidates all aliases in this client and retains the host
 session; active work refuses detach. `session.close()` actually frees the session,

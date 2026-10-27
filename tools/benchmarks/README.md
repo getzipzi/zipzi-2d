@@ -397,6 +397,17 @@ records `/usr/bin/time -l`, and fingerprints executables/models for safe resume.
 It needs macOS, an unlocked native desktop, Metal and the local model. It does not
 relax existing timing limits or accept incomplete native traces.
 
+For R5 comparisons, `--read-batches` adds continuous CPU, independent Preview and
+GPU observation cases to `interaction`. Copy the same interaction driver and its
+`background.rs` module into both source versions before building. Each case warms
+one batch, continues four-target batches during the pointer loop, and cancels and
+joins its worker afterward. Reports retain raw input samples and background
+completion/worker-step counts; startup work alone does not satisfy overlap.
+Runtime admission and completion stay on the UI thread; workers execute Work
+without touching RuntimeHost or retaining its locks.
+These test-window timings end at a current Metal draw and exclude the compositor;
+they do not replace real-window animation playback measurements.
+
 The interaction driver alternates native pointer gestures between two Metal
 surfaces, verifies actual panning and current displayed frames, then repeats while
 a different Runtime client publishes another model on a worker. The R1 control

@@ -2,6 +2,39 @@ use super::common::*;
 use zipzi_editor_core::*;
 
 #[test]
+fn external_io_restores_a_paused_animation_target_without_changing_its_clock() -> anyhow::Result<()>
+{
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 0)?;
+    editor.seek_animation(editor.active_id().unwrap(), 0.75)?;
+    let mut evaluator = AnimationEvaluator::default();
+    let shown = evaluate(&mut editor, &mut evaluator)?;
+    assert!(editor.present_animation(shown.identity, shown.snapshot));
+    assert!(editor.animation_request().is_none());
+    let host = editor.runtime_host();
+    let session = editor.document().unwrap().runtime_session_id();
+    let client = host.write().register_client()?;
+    let folder = tempfile::tempdir()?;
+    let job = host.write().request_save(client, session, folder.path())?;
+    let work = host.write().take_work(job)?;
+    assert!(editor.sync_runtime()?);
+    assert!(editor.animation_request().is_none());
+    assert!(host.write().complete(work.run()));
+    assert!(editor.sync_runtime()?);
+    let restored = editor
+        .animation_request()
+        .expect("IO hid the old GPU target; reissue it");
+    assert_eq!(restored.identity.time, 0.75);
+    assert!(!editor.animation().unwrap().playing);
+    assert!(!editor.accepts_animation(shown.identity));
+    let frame = evaluator.evaluate(&restored, |_, _| true)?;
+    assert!(editor.present_animation(frame.identity, frame.snapshot));
+    host.write().release_job(client, job)?;
+    host.write().release_client(client);
+    Ok(())
+}
+
+#[test]
 fn changed_resources_pause_revalidate_and_rebuild_expression_recipe() -> anyhow::Result<()> {
     let (mut editor, _assets) = setup()?;
     expression(&mut editor, 0)?;

@@ -43,5 +43,5 @@ Editor 关闭标签页走此入口；客户端 detach 仍返回 Busy。A08 同�
 Python Preview/空间/取消/大二进制定向回归另 4 项在两后端通过。
 Python Session 别名/detach/关闭、断线响应恢复及其他客户端保护另 3 项通过，正反静态类型通过。
 
-尚待核销：持续后台批次与真实人工交互的 Release 延迟/工作量比较，以及最终配对发行复验。
-随后 R6 已按用户 2026-10-27 的决定收缩并完成[Editor 直写与人工接续](python2-r6-handoff.md)交付，Proposal/专用 Review 后置。R5 性能/发行复验与 R7 总验收仍独立跟踪。
+本轮[发行与总验收](python2-r7-closeout.md)已完成正常配对 sdist/wheel 和两后端 GPU recipe 复验，持续后台批次与人工交互的 Release 延迟/工作量比较继续收尾。
+随后 R6 已按用户 2026-10-27 的决定收缩并完成[Editor 直写与人工接续](python2-r6-handoff.md)交付，Proposal/专用 Review 后置。本轮五对原生 Release 比较 122 项通过，实际窗口性能余项与 R7 总验收继续单列。

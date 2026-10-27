@@ -37,7 +37,7 @@ fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow:
 }
 
 #[test]
-fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Result<()> {
+fn default_views_fit_once_per_workspace_and_preserve_navigation() -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document()?;
     let mut editor = support::editor_from_document(document);
     support::attach_viewports(&mut editor);
@@ -68,6 +68,7 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
     };
     for workspace in WorkspaceKind::ALL {
         editor.set_workspace(workspace)?;
+        let mut initial = None;
         for (width, height, scale_factor) in [(800., 600., 1.), (420., 280., 2.)] {
             editor.set_canvas_metrics(ViewportMetrics {
                 width,
@@ -82,7 +83,9 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
                     let _ = editor.animation_request();
                 }
             }
-            assert_view(editor.view(), fitted(&editor));
+            // First measured layout fits; later layouts retain that navigation.
+            let expected = *initial.get_or_insert_with(|| fitted(&editor));
+            assert_view(editor.view(), expected);
         }
         match workspace {
             WorkspaceKind::Modeling => assert!(editor.preview_if_needed()?.is_none()),

@@ -259,7 +259,10 @@ def collect(root: Path = ROOT, *, shared_only: bool = False) -> dict:
                 continue
             rows.append(dict(id=f"sdk::{method['owner']}.{method['name']}",
                 location=str(path.relative_to(ROOT)), **method, domain="observe-preview",
-                classification="local-helper" if method["owner"] in {"free", "CompiledCurve", "CompiledSegment"} or method["name"] == "matches_document" else "connected",
+                # Runtime consumes this estimate for admission; it is not a
+                # separate client operation or an omitted Preview capability.
+                classification="host-only" if method["owner"] == "MotionPreview" and method["name"] == "canonical_motion_output_bytes" else
+                    "local-helper" if method["owner"] in {"free", "CompiledCurve", "CompiledSegment"} or method["name"] == "matches_document" else "connected",
                 stage="R5", source_ref="explicit curve arguments" if method["owner"] in {"free", "CompiledCurve", "CompiledSegment"} else "independent frozen Preview",
                 effect="no formal history", lifecycle="client-owned Preview or local curve value; explicit release",
                 bulk="ordered schedule and sample arrays", scheduling="captured source; bounded replay worker",

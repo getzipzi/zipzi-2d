@@ -12,10 +12,18 @@ use std::{
 use zipzi_editor_core::{Document, Editor, ViewportId, ViewportKind};
 
 type FinishBatch = Box<dyn FnOnce() -> anyhow::Result<()>>;
+mod background;
 
-fn ready(h: &mut Harness, ids: &[ViewportId]) -> anyhow::Result<()> {
+fn ready(
+    h: &mut Harness,
+    ids: &[ViewportId],
+    mut background: Option<&mut background::Background>,
+) -> anyhow::Result<()> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
+        if let Some(background) = background.as_deref_mut() {
+            background.poll()?;
+        }
         h.cx.run_until_parked();
         let current = h.cx.update_window(h.window, |_, window, cx| {
             window.draw(cx).clear(cx);
@@ -40,9 +48,11 @@ fn ready(h: &mut Harness, ids: &[ViewportId]) -> anyhow::Result<()> {
         std::thread::sleep(Duration::from_millis(1));
     }
 }
-fn stats(mut values: Vec<f64>) -> serde_json::Value {
+fn stats(values: Vec<f64>) -> serde_json::Value {
+    let raw = values.clone();
+    let mut values = values;
     values.sort_by(f64::total_cmp);
-    json!({"samples":values.len(), "p50_ms":values[(values.len()-1)/2], "p95_ms":values[((values.len()-1) as f64*0.95).ceil() as usize]})
+    json!({"samples":values.len(), "p50_ms":values[(values.len()-1)/2], "p95_ms":values[((values.len()-1) as f64*0.95).ceil() as usize],"raw_ms":raw})
 }
 
 pub(super) fn run() -> anyhow::Result<()> {
@@ -72,7 +82,7 @@ pub(super) fn run() -> anyhow::Result<()> {
             )
         })
     })?;
-    ready(&mut h, &ids)?;
+    ready(&mut h, &ids, None)?;
     let mut sdk = zipzi_sdk::AuthoringSession::new(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::ModelSetup::default(),
@@ -116,11 +126,31 @@ pub(super) fn run() -> anyhow::Result<()> {
         view.editor.document().unwrap().history_lengths()
     });
     let mut report = serde_json::Map::new();
-    for background in [false, true] {
+    let mut background_work = serde_json::Map::new();
+    let mut cases = vec![
+        ("dual_viewport_switch", false, None),
+        ("other_session_batch", true, None),
+    ];
+    if std::env::var_os("ZIPZI_RUNTIME_INTERACTION_READS").is_some() {
+        for kind in [
+            background::Kind::Cpu,
+            background::Kind::Preview,
+            background::Kind::Observe,
+        ] {
+            cases.push((kind.name(), false, Some(kind)));
+        }
+    }
+    for (name, publication, reads) in cases {
+        let mut continuous = reads
+            .map(|kind| background::Background::start(runtime.clone(), session, kind))
+            .transpose()?;
         let mut latency = vec![];
         let mut dispatch = vec![];
         for index in 0..samples + 10 {
-            let finish = if background {
+            if let Some(background) = &mut continuous {
+                background.poll()?;
+            }
+            let finish = if publication {
                 Some(batch(index)?)
             } else {
                 None
@@ -173,7 +203,7 @@ pub(super) fn run() -> anyhow::Result<()> {
                 );
             })?;
             let cpu = start.elapsed().as_secs_f64() * 1000.;
-            ready(&mut h, &ids)?;
+            ready(&mut h, &ids, continuous.as_mut())?;
             let displayed = start.elapsed().as_secs_f64() * 1000.;
             ensure!(
                 h.view.read_with(&h.cx, |view, _| view
@@ -192,13 +222,16 @@ pub(super) fn run() -> anyhow::Result<()> {
                 latency.push(displayed);
             }
         }
+        if let Some(continuous) = continuous {
+            let (jobs, quanta, warmup) = continuous.finish()?;
+            ensure!(
+                jobs > 0 && quanta > warmup,
+                "background work did not overlap measured input"
+            );
+            background_work.insert(name.into(), json!({"completed_jobs":jobs,"worker_steps":quanta,"warmup_steps":warmup,"poses_per_batch":4}));
+        }
         report.insert(
-            if background {
-                "other_session_batch"
-            } else {
-                "dual_viewport_switch"
-            }
-            .into(),
+            name.into(),
             json!({"dispatch":stats(dispatch),"to_current_metal_draw":stats(latency)}),
         );
     }
@@ -214,7 +247,7 @@ pub(super) fn run() -> anyhow::Result<()> {
     std::fs::write(
         output.join("results.json"),
         serde_json::to_vec_pretty(
-            &json!({"profile":if cfg!(debug_assertions){"debug"}else{"release"},"measurement":"injected GPUI input to both current Metal surfaces; excludes screenshot readback and compositor","samples":samples,"warmup":10,"visible_history_unchanged":true,"measurements":report}),
+            &json!({"profile":if cfg!(debug_assertions){"debug"}else{"release"},"measurement":"injected GPUI input to both current Metal surfaces; excludes screenshot readback and compositor","samples":samples,"warmup":10,"visible_history_unchanged":true,"measurements":report,"background_work":background_work}),
         )?,
     )?;
     Ok(())

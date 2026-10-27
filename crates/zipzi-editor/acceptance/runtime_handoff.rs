@@ -1,4 +1,4 @@
-//! A19: installed Python -> native Editor -> human refinement -> fresh Python.
+//! A19/A20: installed Python -> native Editor -> human refinement -> persistence/export.
 use super::harness::{Harness, command, update};
 use super::runtime_ipc::{client, setup};
 use anyhow::{Context as _, ensure};
@@ -19,7 +19,17 @@ pub(super) fn run() -> anyhow::Result<()> {
         .context("ZIPZI_CLIENT_PYTHON must point to an isolated installed client")?;
     let python = Path::new(&python);
     ensure!(python.is_absolute(), "client interpreter must be absolute");
-    let (document, _assets) = super::fixture::animation_document()?;
+    // The shared animation fixture deliberately references missing test.wav to
+    // test unsupported-audio diagnostics. Use real input for the export path.
+    let mut wav = b"RIFF".to_vec();
+    wav.extend_from_slice(&1636_u32.to_le_bytes());
+    wav.extend_from_slice(b"WAVEfmt \x10\0\0\0\x01\0\x01\0");
+    wav.extend_from_slice(&8000_u32.to_le_bytes());
+    wav.extend_from_slice(&16000_u32.to_le_bytes());
+    wav.extend_from_slice(b"\x02\0\x10\0data");
+    wav.extend_from_slice(&1600_u32.to_le_bytes());
+    wav.resize(1644, 0);
+    let (document, _assets) = super::fixture::animation_document_with_sound_bytes(Some(&wav))?;
     let (mut h, host, endpoint) = setup(document)?;
     let (session, mesh, clip, parameter) = h.view.read_with(&h.cx, |v, _| {
         let d = v.editor.document().unwrap();
@@ -339,8 +349,55 @@ runpy.run_module('zipzi.docs.editor_handoff',run_name='__main__')
         );
         Ok(())
     })?;
+    // Finish the same human/agent document through the public installed IO API.
+    let persisted = tempfile::tempdir()?;
+    args.push(persisted.path().to_string_lossy().into_owned());
+    client(
+        &mut h,
+        python,
+        endpoint.path(),
+        r#"
+import json,sys,wave,zipzi
+from pathlib import Path
+from zipzi import modeling as m
+with zipzi.connect() as runtime:
+ s=runtime.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
+ folder=Path(sys.argv[9]); identity=s.id
+ before=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
+ saved=s.project.save(folder/'project').wait()
+ assert saved.durable and not s.info().modified
+ reopened=s.project.open(saved.manifest).wait()
+ assert reopened.after.generation>reopened.before.generation and s.id==identity
+ assert s.meshes.get(sys.argv[3]).value.name=='Recipe continued'
+ assert s.resources.get(sys.argv[4]).value.pixels.rgba==bytes((240,40,50,255))
+ after=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
+ assert after==before and abs(after.tracks[0].segments[0].end.value-float(sys.argv[7]))<1e-5
+ assert s.info().history==(0,0)
+ exported=s.project.export(folder/'clip.motion3.json',m.ExportFormat.MOTION3,object_id=sys.argv[5]).wait()
+ assert exported.published
+ motion=json.loads((folder/'clip.motion3.json').read_text())
+ assert abs(motion['Curves'][0]['Segments'][-1]-float(sys.argv[7]))<1e-5
+ package=s.project.export(folder/'package',m.ExportFormat.PACKAGE,allow_loss=True).wait()
+ assert package.published and (folder/'package/model.model3.json').is_file()
+ with wave.open(str(folder/'package/test.wav'),'rb') as sound:
+  assert sound.getframerate()==8000 and sound.readframes(800)==bytes(1600)
+"#,
+        &args,
+    )?;
+    h.capture()?;
+    ensure!(
+        h.view
+            .read_with(&h.cx, |v, _| v.editor.document().is_some_and(|d| {
+                d.runtime_session_id() == session
+                    && d.layers()
+                        .iter()
+                        .any(|layer| layer.id == mesh && layer.name == "Recipe continued")
+                    && !d.modified()
+            })),
+        "saved/reopened human refinement did not return to the Editor"
+    );
     println!(
-        "R6 A19: installed Python mixed batch -> resident memory texture/Metal -> human property input/Undo/Redo/Timeline drag -> fresh Python reads and continues -> atomic Undo -> installed recipe/no-op/cancel cleanup -> native animation passed"
+        "R6/R7 A19/A20: installed Python mixed batch -> resident memory texture/Metal -> human property input/Undo/Redo/Timeline drag -> fresh Python continuation -> atomic Undo/no-op/cancel cleanup -> native animation -> durable save/reopen -> motion/runtime-package export passed"
     );
     Ok(())
 }
