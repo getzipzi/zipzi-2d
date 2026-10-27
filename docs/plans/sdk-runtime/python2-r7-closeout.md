@@ -9,6 +9,7 @@
 - 共享 SDK 清单漏记 `MotionPreview::canonical_motion_output_bytes`。审查确认它是 Runtime 使用的输出预算估计，归为 host-only；其余差异为行号变化。共享清单现为 1,088 项，未读取退役 Python 包。
 - 串联人工精修、保存、重开与导出时发现：IO 期间视口解绑并清除 GPU 图像，恢复后静止动画仍认为已请求过同一姿态，未再提交帧。恢复 DocumentSession 时设置动画请求屏障，保留播放时钟，重新请求图像并拒绝旧结果。新增 CPU 用例先复现失败，修复后复验。
 - 原动画 fixture 故意保留不存在的 `test.wav`，用于缺失资源诊断。为完整导出提供带实际 PCM WAV 附件的变体，原 fixture 行为保持；导出的音频由安装版 Python `wave` 独立读取验证。
+- 最终统一版本检查发现 `zipzi-sdk` 的四条内部 path 依赖未声明精确版本。为 api-derive/core/animation/project 补齐现有 `=0.1.0-alpha.1` 约束；Cargo.lock 和解析版本保持不变，版本检查及 5 项发行工具回归通过。
 
 ## 已通过的发行与回归
 
@@ -100,7 +101,7 @@ R5 新增 `--read-batches` / `ZIPZI_RUNTIME_INTERACTION_READS=1`：在同一 Run
 
 `8a35de62` 的正常配对发行 12 步通过且 `dirty_files=[]`；两后端领域报告一致，离线 D01/D02/D04/D07/D08 全过。正常 app 的安装位置发现/并发冷启动/窗口重开/被杀客户端清理/保存重启再次通过。Mao 无窗口创作、Preview、保存重开、Motion3/runtime package 导出及新客户端重连通过，warnings/diagnostics 为空。完整源码包校验 2,399 个文件；app 与 DMG 内容及 ad hoc 签名通过。
 
-收尾另纠正安装指南和仓库说明中“Editor playback 尚未接通”的过时文字，重新生成客户端来源摘要。该收尾提交仅改变文档/说明摘要，SDK、Runtime、Editor 逻辑及测量驱动保持与 `8a35de62` 相同；最后配对发行及正常 app 的实际提交身份、源码/产物 SHA 和复验结果由 `target/r7-final-release/verification.json` 记录。
+收尾另纠正安装指南和仓库说明中“Editor playback 尚未接通”的过时文字，重新生成客户端来源摘要，并补齐上述内部依赖版本约束。实际依赖版本、SDK/Runtime/Editor 逻辑及测量驱动保持与 `8a35de62` 相同；最后配对发行及正常 app 的实际提交身份、源码/产物 SHA 和复验结果由 `target/r7-final-release/verification.json` 记录。
 
 ## 产物与阶段结论
 
