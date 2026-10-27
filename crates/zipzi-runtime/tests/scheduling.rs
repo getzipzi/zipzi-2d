@@ -89,6 +89,8 @@ fn a_publication_preempts_a_continuation_even_on_a_single_worker_host() {
     assert_eq!(rt.job_info(c, publish).unwrap().state, JobState::Succeeded);
     assert_eq!(rt.job_info(c, batch).unwrap().state, JobState::Running);
     rt.cancel_job(c, batch).unwrap();
+    assert_eq!(rt.job_info(c, batch).unwrap().state, JobState::Cancelling);
+    assert_eq!(step(&mut rt, &mut workers), batch);
     assert_eq!(rt.job_info(c, batch).unwrap().state, JobState::Cancelled);
     rt.dispatch(&mut workers);
     assert!(workers.0.is_empty());
@@ -107,7 +109,12 @@ fn cancelling_a_yielded_preview_releases_busy_and_preserves_completed_targets() 
         rt.preview_state(c, preview),
         Err(RuntimeError::Busy)
     ));
+    let reserved = rt.accounted_bytes();
     rt.cancel_job(c, job).unwrap();
+    assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Cancelling);
+    assert_eq!(rt.accounted_bytes(), reserved);
+    assert_eq!(rt.release_job(c, job), Err(RuntimeError::Busy));
+    assert_eq!(step(&mut rt, &mut workers), job);
     assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Cancelled);
     assert_eq!(rt.preview_state(c, preview).unwrap().1.time, 0.25);
     rt.release_job(c, job).unwrap();
@@ -152,6 +159,13 @@ fn client_expiry_drops_a_returned_continuation_and_all_its_reservations() {
     assert!(rt.accounted_bytes() > baseline);
     rt.release_client(c);
     assert!(rt.complete(completion));
+    assert_eq!(
+        rt.live_counts().3,
+        1,
+        "cleanup retains its Job until the worker returns"
+    );
+    rt.dispatch(&mut workers);
+    assert!(rt.complete(workers.0.pop_front().unwrap().run_quantum()));
     assert_eq!(rt.preview_count(), 0);
     assert_eq!(rt.live_counts().3, 0);
     assert!(rt.accounted_bytes() <= baseline);
@@ -230,4 +244,41 @@ fn queued_ownership_cancellation_restores_session_without_an_executor_slot() {
     let work = rt.take_work(retry).unwrap();
     assert!(rt.complete(work.run()));
     assert_eq!(rt.job_info(c, retry).unwrap().state, JobState::Succeeded);
+}
+
+#[test]
+fn gpu_admission_survives_yields_and_cleanup_without_blocking_cpu_work() {
+    let (mut rt, a, s) = fixture(2);
+    let b = rt.register_client().unwrap();
+    let view = observation::ObservationView {
+        width: 8,
+        height: 8,
+        roi: [0., 0., 1., 1.],
+        padding_model: 0.,
+    };
+    let first = rt
+        .request_observation(a, s, None, vec![Default::default(); 2], view, None)
+        .unwrap();
+    let second = rt
+        .request_observation(b, s, None, vec![Default::default(); 2], view, None)
+        .unwrap();
+    let mut workers = Manual::default();
+    // Only capture a CPU pose; this deterministic test needs no GPU device.
+    assert_eq!(step(&mut rt, &mut workers), first);
+    let cpu = samples(&mut rt, b, s, 1);
+    assert_eq!(step(&mut rt, &mut workers), cpu);
+    assert!(matches!(rt.take_work(second), Err(RuntimeError::Busy)));
+    let reserved = rt.accounted_bytes();
+    rt.cancel_job(a, first).unwrap();
+    assert_eq!(rt.accounted_bytes(), reserved);
+    assert_eq!(rt.cancel_queued_job(a, first), Err(RuntimeError::Busy));
+    assert!(matches!(rt.take_work(second), Err(RuntimeError::Busy)));
+    // Even after the cleanup worker returns, admission waits for publication.
+    let cleanup = rt.take_work(first).unwrap().run_quantum();
+    assert!(matches!(rt.take_work(second), Err(RuntimeError::Busy)));
+    assert!(rt.complete(cleanup));
+    assert_eq!(rt.job_info(a, first).unwrap().state, JobState::Cancelled);
+    assert_eq!(step(&mut rt, &mut workers), second);
+    rt.cancel_job(b, second).unwrap();
+    assert_eq!(step(&mut rt, &mut workers), second);
 }

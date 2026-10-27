@@ -9,7 +9,7 @@
 - Modeling/空间查询每个姿态让出；独立 Preview 每个时间目标让出；图像捕获、共享纹理解析、
   逐帧 GPU 渲染之间让出。继续执行保留同一 Job、冻结 Source、序号、输出次序和预算预留。
 - 同批 Observer、已解析纹理和 capture identity 跨调度保留，正式或候选资源在间隙替换不会混入批次。
-  取消已排队的续执行单元立即终结 Job、释放持有并恢复 Preview 可用性；已完成时间目标继续保留。
+  取消已排队的续执行单元进入 Cancelling，由 worker 释放持有后终结 Job 并恢复 Preview 可用性；已完成时间目标继续保留。
 - LocalHost、Connected fixture 和桌面 IPC 使用 `Work::run_quantum` / `run_on_thread`；
   `Runtime::complete` 接收续执行所有权并重新排队。桌面只在终结时通知视图，避免逐样本唤醒 UI。
   显式 `take_work` 遵守同一客户端轮转和并发上限，执行器拒收保留原轮次。
@@ -45,3 +45,25 @@ Python Session 别名/detach/关闭、断线响应恢复及其他客户端保护
 
 本轮[发行与总验收](python2-r7-closeout.md)已完成正常配对 sdist/wheel 和两后端 GPU recipe 复验，持续后台批次与交互的原生比较、实际窗口性能及工作量复验均通过。
 随后 R6 已按用户 2026-10-27 的决定收缩并完成[Editor 直写与人工接续](python2-r6-handoff.md)交付，Proposal/专用 Review 后置。本轮五对原生 Release 比较 122 项通过，随后实际窗口十对比较 29 项也通过，合计 151 项，R7 当前平台范围完成。
+
+
+## 2026-10-27 架构 Review 修复
+
+GPU Job 首次派发时取得驻留配额，数量上限为 `max(running_jobs - 1, 1)`；
+配额跨 quantum 保留到 worker 释放资源且 Runtime 接收终态。等待配额的 GPU Job
+不阻塞可运行的 CPU Job。取消/客户端过期的续执行任务回到 worker 清理，期间保留
+Job 字节计费和 GPU 配额，避免在 UI/Runtime 写锁内析构部分输出与 Observer。
+未进入执行器的普通读取仍可立即取消；已进入的续执行任务需等待取消终态后 release。
+
+桌面 IPC 与 LocalHost 共用持久 WorkerPool。每个 quantum 通过完成信箱归还，
+不再每个姿态创建 OS 线程或让 GPUI 后台线程阻塞 join。Modeling/Spatial 批次状态
+由 SDK sampler 持有，同步 SDK API 与 Runtime 共用一次校验、逐姿态求值和结果组装。
+驻留配额约束 Observer 实例数量，不承诺精确 GPU 字节上限；本次也不改变单个 SDK
+求值/seek/解码仍是协作执行单元的边界。
+
+定向验证通过：Runtime 调度 9 项、worker 复用/取消与过期析构线程 1 项、LocalHost 5 项、
+Preview 6 项、冻结读取 3 项、空间查询 3 项、实际 Metal observation 3 项；SDK 绑定/可恢复
+采样 4 项。Python Local/Connected GPU/inspection 6 项及正反静态类型通过，40 个生成
+产物一致。桌面库编译与安装纯客户端的 `runtime_ipc_acceptance` 原生 IPC/Metal 验收通过。
+共享 inventory 更新为 1,092 项（新增 4 个 SDK sampler helper 方法），3 项清单工具测试通过。
+本次未重跑 Release 性能比较、全套 Editor/SDK 或发行打包；历史性能数据不作为本次实测。

@@ -5,8 +5,9 @@ use crate::{
     Work,
 };
 use std::sync::{
+    Arc, Mutex,
     atomic::{AtomicBool, AtomicUsize, Ordering},
-    mpsc, Arc, Mutex,
+    mpsc,
 };
 use std::thread::{self, JoinHandle};
 
@@ -177,8 +178,7 @@ impl Drop for LocalHost {
 }
 
 struct Workers {
-    queue: async_channel::Sender<Work>,
-    threads: Vec<JoinHandle<()>>,
+    pool: crate::WorkerPool,
     active: usize,
 }
 impl Workers {
@@ -187,57 +187,34 @@ impl Workers {
         complete: mpsc::Sender<Message>,
         #[cfg(feature = "test-support")] control: Arc<crate::test_support::Control>,
     ) -> std::io::Result<Self> {
-        let (queue, receiver) = async_channel::bounded::<Work>(count);
-        let mut workers = Self {
-            queue,
-            threads: vec![],
-            active: 0,
-        };
-        for index in 0..count {
-            let receiver = receiver.clone();
-            let complete = complete.clone();
-            #[cfg(feature = "test-support")]
-            let control = control.clone();
-            workers.threads.push(
-                thread::Builder::new()
-                    .name(format!("zipzi-local-io-{index}"))
-                    .stack_size(16 << 20)
-                    .spawn(move || {
-                        while let Ok(work) = receiver.recv_blocking() {
-                            #[cfg(feature = "test-support")]
-                            let completion = control.run(work);
-                            #[cfg(not(feature = "test-support"))]
-                            let completion = work.run_quantum();
-                            if complete
-                                .send(Message::Complete(Box::new(completion)))
-                                .is_err()
-                            {
-                                break;
-                            }
-                        }
-                    })?,
-            );
-        }
-        Ok(workers)
+        let pool = crate::WorkerPool::with_runner(
+            count,
+            16 << 20,
+            move |work| {
+                #[cfg(feature = "test-support")]
+                {
+                    control.run(work)
+                }
+                #[cfg(not(feature = "test-support"))]
+                {
+                    work.run_quantum()
+                }
+            },
+            move |completion| {
+                let _ = complete.send(Message::Complete(Box::new(completion)));
+            },
+        )?;
+        Ok(Self { pool, active: 0 })
     }
 }
 impl Executor for Workers {
     fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
-        self.queue
-            .try_send(work)
-            .map_err(|error| Box::new(error.into_inner()))?;
+        self.pool.submit(work)?;
         self.active += 1;
         Ok(())
     }
 }
-impl Drop for Workers {
-    fn drop(&mut self) {
-        self.queue.close();
-        for worker in self.threads.drain(..) {
-            let _ = worker.join();
-        }
-    }
-}
+
 fn notify(runtime: &Runtime, waiters: &mut Vec<Waiter>) {
     let mut i = 0;
     while i < waiters.len() {

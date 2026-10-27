@@ -2,7 +2,7 @@
 use super::*;
 use std::time::{Duration, Instant};
 use zipzi_runtime::{
-    Executor, Work,
+    WorkerPool,
     local::{Endpoint, Inbound, Owner, read_frame, write_frame},
     protocol::CONTRACT,
 };
@@ -57,6 +57,38 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
         .read()
         .transport_budget();
     let (server, incoming) = owner.listen_with_budget(budget)?;
+    // One host-owned pool survives every batch yield. Completions return through
+    // this mailbox rather than blocking GPUI executor threads on OS-thread joins.
+    let (complete, completions) = async_channel::unbounded();
+    let count = cx
+        .global::<host::DesktopHost>()
+        .runtime
+        .read()
+        .limits()
+        .running_jobs;
+    let workers = std::rc::Rc::new(std::cell::RefCell::new(WorkerPool::new(
+        count,
+        16 << 20,
+        move |completion| {
+            let _ = complete.try_send(completion);
+        },
+    )?));
+    let returning_workers = workers.clone();
+    cx.spawn(async move |cx| {
+        while let Ok(completion) = completions.recv().await {
+            cx.update(|cx| {
+                let host = cx.global::<host::DesktopHost>().clone();
+                let terminal = completion.is_terminal();
+                host.runtime.write().complete(completion);
+                if terminal {
+                    host.completed();
+                }
+                dispatch(host, &returning_workers);
+            });
+        }
+    })
+    .detach();
+
     if let Some(ready_file) = std::env::var_os("ZIPZI_DEV_READY_FILE") {
         let endpoint = Endpoint::from_env()?;
         // The PID record establishes launch ownership early. Development
@@ -82,6 +114,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
     }
     let protocol = cx.global::<host::DesktopHost>().protocol.clone();
     let expiry = protocol.clone();
+    let expiry_workers = workers.clone();
     cx.spawn(async move |cx| {
         loop {
             cx.background_executor().timer(Duration::from_secs(1)).await;
@@ -90,6 +123,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                 expiry
                     .borrow_mut()
                     .expire(&mut host.runtime.write(), Instant::now());
+                dispatch(host, &expiry_workers);
             });
         }
     })
@@ -118,7 +152,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                         if let Some(session) = protocol.borrow_mut().take_window_request() {
                             show_session(session, cx);
                         }
-                        dispatch(host, cx);
+                        dispatch(host, &workers);
                     }
                     Inbound::Disconnected(auth) => protocol.borrow_mut().disconnect(
                         auth.client,
@@ -141,7 +175,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                         );
                         result.transfer = Some(_transfer);
                         let _ = reply.send(result);
-                        dispatch(host, cx);
+                        dispatch(host, &workers);
                     }
                 }
             });
@@ -182,33 +216,6 @@ fn show_session(session: Option<zipzi_runtime::SessionId>, cx: &mut App) {
         });
     }
 }
-#[derive(Default)]
-struct Batch(Vec<Work>);
-impl Executor for Batch {
-    fn submit(&mut self, work: Work) -> Result<(), Box<Work>> {
-        self.0.push(work);
-        Ok(())
-    }
-}
-fn dispatch(host: host::DesktopHost, cx: &mut App) {
-    let mut batch = Batch::default();
-    host.runtime.write().dispatch(&mut batch);
-    for work in batch.0 {
-        let host = host.clone();
-        let task = cx
-            .background_executor()
-            .spawn(async move { work.run_on_thread("zipzi-ipc-job", 16 << 20) });
-        cx.spawn(async move |cx| {
-            let completion = task.await;
-            cx.update(|cx| {
-                let terminal = completion.is_terminal();
-                host.runtime.write().complete(completion);
-                if terminal {
-                    host.completed();
-                }
-                dispatch(host, cx);
-            });
-        })
-        .detach();
-    }
+fn dispatch(host: host::DesktopHost, workers: &std::cell::RefCell<WorkerPool>) {
+    host.runtime.write().dispatch(&mut *workers.borrow_mut());
 }

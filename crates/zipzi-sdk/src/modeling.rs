@@ -496,25 +496,77 @@ impl crate::AuthoringSnapshot {
         checks: crate::GeometryChecks,
         control: &crate::ConversionControl,
     ) -> Result<ModelingSamples, crate::SdkError> {
+        let mut sampler = ModelingSampler::new(self, parameters, checks);
+        loop {
+            if let Some(samples) = sampler.step(control)? {
+                return Ok(samples);
+            }
+        }
+    }
+}
+
+/// Resumable sampling of one frozen source. Validation and result assembly are
+/// shared with `sample_modeling_with_control`; hosts only schedule `step` calls.
+/// A completed or failed sampler must be discarded.
+pub struct ModelingSampler<S> {
+    source: S,
+    requested: Vec<zipzi_core::PreviewValues>,
+    checks: crate::GeometryChecks,
+    output: Option<ModelingSamples>,
+    finished: bool,
+}
+impl<S: std::borrow::Borrow<crate::AuthoringSnapshot>> ModelingSampler<S> {
+    pub fn new(
+        source: S,
+        requested: Vec<zipzi_core::PreviewValues>,
+        checks: crate::GeometryChecks,
+    ) -> Self {
+        Self {
+            source,
+            requested,
+            checks,
+            output: None,
+            finished: false,
+        }
+    }
+    /// Evaluate at most one pose. `None` means there are more poses to sample.
+    pub fn step(
+        &mut self,
+        control: &crate::ConversionControl,
+    ) -> Result<Option<ModelingSamples>, crate::SdkError> {
         let check = || {
             control
                 .check()
                 .map_err(|s| crate::SdkError::from_status(s, "sample_modeling", vec![]))
         };
         check()?;
-        let diagnostics = self.diagnose_geometry_with_control(checks, control)?;
-        let mut frames = Vec::with_capacity(parameters.len());
-        for p in &parameters {
-            check()?;
-            frames.push(self.evaluate(p)?);
+        if self.finished {
+            return Err(crate::SdkError::new(
+                "SAMPLING_FINISHED",
+                "Sampler already completed",
+                "sample_modeling",
+            ));
+        }
+        let source = self.source.borrow();
+        if self.output.is_none() {
+            self.output = Some(ModelingSamples {
+                version: source.version(),
+                parameters: vec![],
+                frames: Vec::with_capacity(self.requested.len()),
+                diagnostics: source.diagnose_geometry_with_control(self.checks, control)?,
+            });
+        }
+        let output = self.output.as_mut().unwrap();
+        if let Some(pose) = self.requested.get(output.frames.len()) {
+            output.frames.push(source.evaluate(pose)?);
         }
         check()?;
-        Ok(ModelingSamples {
-            version: self.version(),
-            parameters,
-            frames,
-            diagnostics,
-        })
+        if output.frames.len() < self.requested.len() {
+            return Ok(None);
+        }
+        output.parameters = std::mem::take(&mut self.requested);
+        self.finished = true;
+        Ok(self.output.take())
     }
 }
 

@@ -18,6 +18,10 @@ impl Runtime {
         let base = source.source.version();
         let id = JobId::from_parts(self.instance, self.serial());
         let cancel = Arc::new(AtomicBool::new(false));
+        let gpu = matches!(
+            &task,
+            ReadTask::Observe { .. } | ReadTask::Preview { view: Some(_), .. }
+        );
         self.jobs.insert(
             id,
             JobEntry {
@@ -37,6 +41,8 @@ impl Runtime {
                 read_bytes: bytes,
                 read_only: true,
                 plan_result,
+                gpu,
+                gpu_resident: false,
             },
         );
         self.queue.push_back(Work {
@@ -159,6 +165,7 @@ impl Runtime {
         {
             return false;
         }
+        self.jobs.get_mut(&job).unwrap().gpu_resident = false;
         if !self.clients.contains(&client) {
             self.jobs.remove(&job);
             return true;

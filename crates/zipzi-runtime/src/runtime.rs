@@ -29,8 +29,8 @@ use crate::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use zipzi_core::{Canvas, Document, ModelSetup, Vec2};
 use zipzi_sdk::{AuthoringSession, AuthoringSnapshot, EditReceipt, EditSession, Version};
@@ -69,6 +69,9 @@ struct JobEntry {
     read_bytes: usize,
     read_only: bool,
     plan_result: bool,
+    gpu: bool,
+    // Admission lives across yields until worker-side destruction completes.
+    gpu_resident: bool,
 }
 
 pub struct SessionSubscription {
@@ -1035,6 +1038,8 @@ impl Runtime {
                 read_bytes: 0,
                 read_only: false,
                 plan_result: false,
+                gpu: false,
+                gpu_resident: false,
             },
         );
         if let Some(target) = target {
@@ -1108,6 +1113,7 @@ impl Runtime {
                         entry.info.state = JobState::Running;
                     }
                     if entry.read_only {
+                        entry.gpu_resident = entry.gpu;
                         self.read_turns.pop_front();
                         self.read_turns.push_back(client);
                     }
@@ -1120,21 +1126,31 @@ impl Runtime {
             }
         }
     }
+    fn read_dispatchable(&self, work: &Work) -> bool {
+        let entry = &self.jobs[&work.job];
+        entry.read_only
+            && (!entry.gpu
+                || entry.gpu_resident
+                || self.jobs.values().filter(|j| j.gpu_resident).count()
+                    < self.limits.running_jobs.saturating_sub(1).max(1))
+    }
     fn next_read_index(&mut self) -> Option<usize> {
-        self.read_turns.retain(|client| {
-            self.queue
-                .iter()
-                .any(|w| w.client == *client && self.jobs[&w.job].read_only)
-        });
-        for work in &self.queue {
-            if self.jobs[&work.job].read_only && !self.read_turns.contains(&work.client) {
-                self.read_turns.push_back(work.client);
+        let eligible: Vec<_> = self
+            .queue
+            .iter()
+            .filter(|w| self.read_dispatchable(w))
+            .map(|w| w.client)
+            .collect();
+        self.read_turns.retain(|client| eligible.contains(client));
+        for client in eligible {
+            if !self.read_turns.contains(&client) {
+                self.read_turns.push_back(client);
             }
         }
         let client = self.read_turns.front()?;
         self.queue
             .iter()
-            .position(|w| w.client == *client && self.jobs[&w.job].read_only)
+            .position(|w| w.client == *client && self.read_dispatchable(w))
     }
     pub fn job_info(&self, client: ClientId, job: JobId) -> Result<JobInfo> {
         self.client(client)?;
@@ -1153,7 +1169,11 @@ impl Runtime {
         }
         let queued = self.jobs[&job]
             .read_only
-            .then(|| self.queue.iter().position(|w| w.job == job))
+            .then(|| {
+                self.queue.iter().position(|w| {
+                    w.job == job && !matches!(w.task, Task::Read(crate::jobs::ReadTask::Batch(_)))
+                })
+            })
             .flatten();
         if let Some(index) = queued {
             let work = self.queue.remove(index).unwrap();
@@ -1217,13 +1237,11 @@ impl Runtime {
                     return false;
                 }
                 if record.cancel.load(Ordering::Acquire) || !self.clients.contains(&client) {
-                    return self.complete_read(
-                        job,
-                        client,
-                        session,
-                        base,
-                        Err(RuntimeError::Cancelled),
-                    );
+                    // The continuation may own GPU objects and a large partial
+                    // result. Its next worker step observes cancellation and
+                    // destroys them before publishing the terminal completion.
+                    record.cancel.store(true, Ordering::Release);
+                    self.jobs.get_mut(&job).unwrap().info.state = JobState::Cancelling;
                 }
                 self.queue.push_back(*work);
                 return true;

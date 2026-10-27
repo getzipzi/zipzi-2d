@@ -7,17 +7,20 @@ use zipzi_sdk_observe::{ObservationInput, Observer, ResolvedObservation};
 pub(crate) struct ReadBatch {
     source: crate::SourceSnapshot,
     kind: BatchKind,
+    #[cfg(test)]
+    pub(crate) drop_probe: Option<std::sync::mpsc::Sender<std::thread::ThreadId>>,
+}
+#[cfg(test)]
+impl Drop for ReadBatch {
+    fn drop(&mut self) {
+        if let Some(probe) = &self.drop_probe {
+            let _ = probe.send(std::thread::current().id());
+        }
+    }
 }
 enum BatchKind {
-    Sample {
-        pending: VecDeque<zipzi_core::PreviewValues>,
-        checks: zipzi_sdk::GeometryChecks,
-        output: Option<zipzi_sdk::ModelingSamples>,
-    },
-    Spatial {
-        pending: VecDeque<zipzi_core::PreviewValues>,
-        output: zipzi_sdk::SpatialSamples,
-    },
+    Sample(zipzi_sdk::ModelingSampler<Arc<zipzi_sdk::AuthoringSnapshot>>),
+    Spatial(zipzi_sdk::SpatialSampler<Arc<zipzi_sdk::AuthoringSnapshot>>),
     Observe {
         view: crate::observation::ObservationView,
         requested: Vec<zipzi_core::PreviewValues>,
@@ -36,32 +39,19 @@ impl ReadBatch {
                 source,
                 parameters,
                 checks,
-            } => (
-                source,
-                BatchKind::Sample {
-                    pending: parameters.into(),
-                    checks,
-                    output: None,
-                },
-            ),
+            } => {
+                let sampler =
+                    zipzi_sdk::ModelingSampler::new(source.snapshot.clone(), parameters, checks);
+                (source, BatchKind::Sample(sampler))
+            }
             ReadTask::Spatial {
                 source,
                 parameters,
                 queries,
             } => {
-                let output = zipzi_sdk::SpatialSamples {
-                    version: source.snapshot.version(),
-                    requested: vec![],
-                    queries,
-                    frames: vec![],
-                };
-                (
-                    source,
-                    BatchKind::Spatial {
-                        pending: parameters.into(),
-                        output,
-                    },
-                )
+                let sampler =
+                    zipzi_sdk::SpatialSampler::new(source.snapshot.clone(), parameters, queries);
+                (source, BatchKind::Spatial(sampler))
             }
             ReadTask::Observe {
                 source,
@@ -103,7 +93,12 @@ impl ReadBatch {
             ),
             task => return Err(task),
         };
-        Ok(Box::new(Self { source, kind }))
+        Ok(Box::new(Self {
+            source,
+            kind,
+            #[cfg(test)]
+            drop_probe: None,
+        }))
     }
     pub(super) fn step(
         &mut self,
@@ -113,26 +108,10 @@ impl ReadBatch {
         crate::observation::check(cancel)?;
         let source = &self.source;
         let result = match &mut self.kind {
-            BatchKind::Sample {
-                pending,
-                checks,
-                output,
-            } => {
-                if output.is_none() {
-                    *output = Some(source.snapshot.sample_modeling_with_control(
-                        vec![],
-                        *checks,
-                        control,
-                    )?);
-                }
-                let samples = output.as_mut().unwrap();
-                if let Some(pose) = pending.pop_front() {
-                    samples.frames.push(source.snapshot.evaluate(&pose)?);
-                    samples.parameters.push(pose);
-                }
-                if !pending.is_empty() {
+            BatchKind::Sample(sampler) => {
+                let Some(samples) = sampler.step(control)? else {
                     return Ok(None);
-                }
+                };
                 let state = match source.state {
                     crate::SessionState::Ready => "ready",
                     crate::SessionState::Busy(_) => "busy",
@@ -143,29 +122,16 @@ impl ReadBatch {
                     source: source.source,
                     lease: None,
                     state,
-                    samples: output.take().unwrap(),
+                    samples,
                 }))
             }
-            BatchKind::Spatial { pending, output } => {
-                let poses = pending.pop_front().into_iter().collect();
-                let samples = source.snapshot.sample_spatial_with_control(
-                    poses,
-                    output.queries.clone(),
-                    control,
-                )?;
-                output.requested.extend(samples.requested);
-                output.frames.extend(samples.frames);
-                if !pending.is_empty() {
+            BatchKind::Spatial(sampler) => {
+                let Some(samples) = sampler.step(control)? else {
                     return Ok(None);
-                }
+                };
                 JobValue::Spatial(Arc::new(crate::spatial::SpatialSampleBatch {
                     source: source.source,
-                    samples: zipzi_sdk::SpatialSamples {
-                        version: output.version,
-                        requested: std::mem::take(&mut output.requested),
-                        queries: std::mem::take(&mut output.queries),
-                        frames: std::mem::take(&mut output.frames),
-                    },
+                    samples,
                 }))
             }
             BatchKind::Observe {

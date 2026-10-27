@@ -19,14 +19,16 @@ pub mod protocol;
 mod runtime;
 pub mod spatial;
 mod types;
+mod workers;
+pub use workers::WorkerPool;
 
 pub use config::RuntimeLimits;
 pub use events::{EventCursor, EventKind, RuntimeEvent};
 pub use jobs::{Completion, Executor, PreparedModelingPlan, Work};
 pub use runtime::{
-    CandidateWork, LabelAddressInfo, ModelingRecordBatch, ModelingRecordBlob,
+    AUTHORING_MAGIC, CandidateWork, LabelAddressInfo, ModelingRecordBatch, ModelingRecordBlob,
     ModelingRecordResponse, ObjectRefInfo, RegistrySubscription, Runtime, SessionEventSubscription,
-    SessionSubscription, AUTHORING_MAGIC,
+    SessionSubscription,
 };
 pub use types::*;
 pub use zipzi_project::TransferReservation;

@@ -66,6 +66,8 @@ consumes entered workers' actual results, then drops all sessions without saving
 Adapters must release the Python GIL while calling/waiting/closing, and must never
 invoke user callbacks or wait for this host's jobs inside a `call` closure.
 Its thin native adapter enters this host directly; no Python callbacks run here.
+Both LocalHost and desktop IPC use the host-owned persistent `WorkerPool`; a
+batch yield does not create an OS thread or block a GPUI executor thread.
 
 Focused foundation tests: `cargo test --locked -p zipzi-runtime --test host`;
 the queue admission test is under `--lib host::tests::`.
@@ -77,6 +79,16 @@ returned `Completion` to `Runtime::complete` before dispatching again. Batch
 continuations keep their Job Running and produce no result/event until terminal.
 `Completion::is_terminal` lets desktop hosts avoid waking views for internal steps.
 `Work::run` remains available to explicitly execute a whole batch synchronously.
+GPU observation/Preview Jobs also acquire a resident admission slot on first
+execution. Its limit is `max(running_jobs - 1, 1)`, independent of the temporary
+execution slot: yields retain it until worker destruction and terminal completion.
+Waiting GPU Jobs do not block eligible CPU Jobs. This bounds resident Observer
+instances; it is not a byte-accurate device-memory limit.
+Cancellation of an entered continuation remains `Cancelling` until a worker
+has destroyed its partial output and GPU resources. Its accounting and GPU slot
+remain held meanwhile. Unentered read Jobs can still cancel immediately.
+Modeling and spatial batches use SDK-owned resumable samplers, also used by the
+synchronous SDK APIs; shared query validation runs once per batch.
 Accepted work must always deliver
 its completion; rejected submissions return the exact unexecuted work. Executors
 must not panic during submission. Runtime installs no thread pool or window hook.

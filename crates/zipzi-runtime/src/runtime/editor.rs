@@ -264,6 +264,7 @@ impl Runtime {
         }
         let work = self.queue.remove(position).unwrap();
         if read {
+            self.jobs.get_mut(&job).unwrap().gpu_resident = self.jobs[&job].gpu;
             self.read_turns.pop_front();
             self.read_turns.push_back(work.client);
         }
@@ -282,6 +283,13 @@ impl Runtime {
             .iter()
             .position(|work| work.job == job)
             .ok_or(RuntimeError::Busy)?;
+        if matches!(
+            self.queue[position].task,
+            Task::Read(crate::jobs::ReadTask::Batch(_))
+        ) {
+            // Entered continuations require worker-side cleanup, even when queued.
+            return Err(RuntimeError::Busy);
+        }
         let Work {
             job,
             client,

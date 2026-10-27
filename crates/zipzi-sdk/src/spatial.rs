@@ -321,37 +321,81 @@ impl crate::AuthoringSnapshot {
         queries: Vec<SpatialQuery>,
         control: &ConversionControl,
     ) -> Result<SpatialSamples, SdkError> {
-        validate_spatial_queries(self.document(), &queries, control)?;
-        let mut frames = Vec::with_capacity(requested.len());
-        for values in &requested {
-            cancelled(control).map_err(spatial_error)?;
+        let mut sampler = SpatialSampler::new(self, requested, queries);
+        loop {
+            if let Some(samples) = sampler.step(control)? {
+                return Ok(samples);
+            }
+        }
+    }
+}
+
+/// Resumable spatial sampling with one validation of the shared queries.
+/// A completed or failed sampler must be discarded.
+pub struct SpatialSampler<S> {
+    source: S,
+    output: Option<SpatialSamples>,
+    validated: bool,
+}
+impl<S: std::borrow::Borrow<crate::AuthoringSnapshot>> SpatialSampler<S> {
+    pub fn new(
+        source: S,
+        requested: Vec<zipzi_core::PreviewValues>,
+        queries: Vec<SpatialQuery>,
+    ) -> Self {
+        let version = source.borrow().version();
+        let capacity = requested.len();
+        Self {
+            source,
+            output: Some(SpatialSamples {
+                version,
+                requested,
+                queries,
+                frames: Vec::with_capacity(capacity),
+            }),
+            validated: false,
+        }
+    }
+    /// Evaluate at most one pose, preserving requested order and duplicates.
+    pub fn step(
+        &mut self,
+        control: &ConversionControl,
+    ) -> Result<Option<SpatialSamples>, SdkError> {
+        cancelled(control).map_err(spatial_error)?;
+        let output = self.output.as_mut().ok_or_else(|| {
+            SdkError::new("SAMPLING_FINISHED", "Sampler already completed", "spatial")
+        })?;
+        let source = self.source.borrow();
+        if !self.validated {
+            validate_spatial_queries(source.document(), &output.queries, control)?;
+            self.validated = true;
+        }
+        if let Some(values) = output.requested.get(output.frames.len()) {
             let mut frame = DrawableFrame::default();
             let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
-                self.document(),
+                source.document(),
                 values,
                 &mut frame,
             );
             if !status.is_ok() {
                 return Err(SdkError::from_status(status, "spatial", vec![]));
             }
-            let results = query_spatial_frame(self.document(), &frame, &queries, control)?;
+            let results = query_spatial_frame(source.document(), &frame, &output.queries, control)?;
             let parameters = frame
                 .parameters
                 .iter()
                 .map(|p| (p.id.clone(), p.value))
                 .collect();
-            frames.push(SpatialFrame {
+            output.frames.push(SpatialFrame {
                 parameters,
                 results,
             });
         }
         cancelled(control).map_err(spatial_error)?;
-        Ok(SpatialSamples {
-            version: self.version(),
-            requested,
-            queries,
-            frames,
-        })
+        if output.frames.len() < output.requested.len() {
+            return Ok(None);
+        }
+        Ok(self.output.take())
     }
 }
 
