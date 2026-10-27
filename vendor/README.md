@@ -29,6 +29,25 @@ The Fast backend and local cache-boundary fix are the accepted default. See the
 [Kit comparison and adoption decision](../docs/archive/gpui-kit-old-vs-fast.md)
 for CPU measurements and presentation-latency tradeoffs.
 
+## Accessibility prepaint transactions
+
+[a11y-prepaint-rollback.patch](a11y-prepaint-rollback.patch) makes `Window::transact` roll back accessibility
+nodes and retained accessibility logs when virtual-list autoscroll retries a
+prepaint pass. It restores open ancestors, focus and descendant state, removes
+abandoned node IDs/bounds, and invalidates retained log ranges from the failed
+pass. This addresses duplicate accessibility node panics observed when expanding
+Editor property details with assistive technology active. Run the focused
+integration regression from the repository root:
+
+```sh
+cargo test --manifest-path vendor/gpui-fast/Cargo.toml --locked --features test-support --test a11y_prepaint_rollback --target-dir target
+```
+
+The unit regression `prepaint_rollback_allows_retry_without_duplicate_nodes` in
+`gpui-fast/src/window/a11y.rs` additionally checks ancestor and focus restoration.
+Native Windows Mao inspector verification remains pending. Reapply this patch
+when updating GPUI Fast.
+
 ## Upstream baselines
 
 The three Fast packages come from the crates.io **0.1.7** releases and provide

@@ -3,7 +3,7 @@ use crate::{EditorView, t, ui::compact};
 use gpui_kit::component::{
     ActiveTheme, Disableable, IconName, Side, TitleBar,
     button::{Button, ButtonVariants},
-    menu::{DropdownMenu, PopupMenuItem},
+    menu::{DropdownMenu, PopupMenu, PopupMenuItem},
 };
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::CommandId;
@@ -28,7 +28,11 @@ pub fn render_title_bar(
     let owner = cx.entity();
     // Kit reserves 80px for traffic lights, or a 12px inset in fullscreen.
     // Compensate for that inset so the segment stays at the window's center.
-    let native_inset = px(if window.is_fullscreen() { 12. } else { 80. });
+    let native_inset = px(if cfg!(target_os = "macos") {
+        if window.is_fullscreen() { 12. } else { 80. }
+    } else {
+        0.
+    });
     let left_width = (window.viewport_size().width - compact::scaled(WORKSPACE_SWITCHER_WIDTH, cx))
         / 2.
         - native_inset;
@@ -48,6 +52,27 @@ pub fn render_title_bar(
                 .flex_shrink_0()
                 .items_center()
                 .gap(compact::rem(compact::PADDING))
+                .when(!cfg!(target_os = "macos"), |left| {
+                    left.child(
+                        control_region("application-menu-control").child(
+                            compact::button(Button::new("application-menu"))
+                                .ghost()
+                                .icon(gpui_kit::assets::IconName::Menu)
+                                .accessibility_label(t!("menu.application_menu"))
+                                .tooltip(t!("menu.application_menu"))
+                                .disabled(modal)
+                                .dropdown_menu(|menu, window, cx| {
+                                    let items = cx
+                                        .get_menus()
+                                        .unwrap_or_default()
+                                        .into_iter()
+                                        .map(OwnedMenuItem::Submenu)
+                                        .collect();
+                                    application_menu(compact::menu(menu), items, window, cx)
+                                }),
+                        ),
+                    )
+                })
                 .child(
                     control_region("project-select-control")
                         .w(project_width)
@@ -85,6 +110,33 @@ pub fn render_title_bar(
                 .when(window.is_fullscreen(), |bar| bar.pl_0())
                 .child(div().relative().flex_1().min_w_0().h_full().child(chrome)),
         )
+}
+
+fn application_menu(
+    mut menu: PopupMenu,
+    items: Vec<OwnedMenuItem>,
+    window: &mut Window,
+    cx: &mut Context<PopupMenu>,
+) -> PopupMenu {
+    for item in items {
+        menu = match item {
+            OwnedMenuItem::Action {
+                name,
+                action,
+                checked,
+                disabled,
+                ..
+            } => menu.menu_with_check_and_disabled(name, checked, action, disabled),
+            OwnedMenuItem::Separator => menu.separator(),
+            OwnedMenuItem::Submenu(submenu) => {
+                menu.submenu(submenu.name, window, cx, move |menu, window, cx| {
+                    application_menu(compact::menu(menu), submenu.items.clone(), window, cx)
+                })
+            }
+            OwnedMenuItem::SystemMenu(_) => menu,
+        };
+    }
+    menu
 }
 
 /// Controls must not arm native window dragging or double-click zooming.

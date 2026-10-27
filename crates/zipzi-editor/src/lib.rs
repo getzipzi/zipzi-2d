@@ -7,17 +7,19 @@ mod actions;
 mod animation;
 mod authoring;
 mod benchmark;
+#[cfg(target_os = "macos")]
 mod canvas_overlay;
 mod commands;
 mod dev_session;
 mod docking;
 mod editing;
-#[cfg(test)]
+#[cfg(all(test, target_os = "macos"))]
 #[path = "../headless_tests/mod.rs"]
 mod headless_tests;
 mod host;
 mod i18n;
 mod input_routing;
+#[cfg(unix)]
 mod ipc;
 mod keybindings;
 mod menus;
@@ -25,12 +27,17 @@ mod mesh_edges;
 mod mesh_thumbnails;
 mod panel_lifecycle;
 mod panels;
+mod platform;
 mod presentation;
+#[cfg(target_os = "macos")]
+mod preview;
+#[cfg(not(target_os = "macos"))]
+#[path = "preview_disabled.rs"]
 mod preview;
 mod project;
 mod properties;
 mod settings;
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
 #[path = "../../zipzi-editor-core/tests/support/mod.rs"]
 pub(crate) mod test_fixture;
 mod theme;
@@ -81,7 +88,7 @@ struct EditorView {
     status_message_task: Option<Task<()>>,
     viewport_notice: Option<(zipzi_editor_core::DocumentId, String)>,
     requests: Option<preview::RequestSender>,
-    gpu_device: Option<metal::Device>,
+    gpu_device: Option<preview::Device>,
     _frames: Option<Task<()>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
     dev_session: Option<dev_session::DevSession>,
@@ -407,7 +414,9 @@ impl EditorView {
 }
 
 pub fn run() {
+    #[cfg(unix)]
     let endpoint = zipzi_runtime::local::Endpoint::from_env().expect("private Runtime endpoint");
+    #[cfg(unix)]
     let owner = match endpoint.inherit_or_claim().expect("Runtime owner lock") {
         Some(owner) => owner,
         None => {
@@ -443,6 +452,7 @@ pub fn run() {
         actions::init(cx);
         theme::init(cx);
         cx.set_global(host::DesktopHost::new(no_window));
+        #[cfg(unix)]
         ipc::start(owner, cx).expect("start local Runtime listener");
         if !no_window {
             host::open_window(cx, !background_launch);

@@ -4283,8 +4283,12 @@ impl Window {
     pub fn transact<T, U>(&mut self, f: impl FnOnce(&mut Self) -> Result<T, U>) -> Result<T, U> {
         self.invalidator.debug_assert_prepaint();
         let index = self.prepaint_index();
+        let a11y = self.a11y.prepaint_checkpoint();
         let result = f(self);
         if result.is_err() {
+            if let Some(checkpoint) = a11y {
+                self.a11y.rollback_prepaint(checkpoint);
+            }
             self.next_frame.hitboxes.truncate(index.hitboxes_index);
             self.next_frame
                 .tooltip_requests

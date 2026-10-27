@@ -271,6 +271,7 @@ impl EditorView {
                 animation: Some(state),
                 transform,
                 scene: evaluated.scene.clone(),
+                #[cfg(target_os = "macos")]
                 target: zipzi_editor_render::MetalTargetConfig {
                     width,
                     height,
