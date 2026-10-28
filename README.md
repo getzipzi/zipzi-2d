@@ -1,9 +1,16 @@
 # Zipzi 2D
 
-Zipzi 2D brings the Zipzi Rust authoring SDK, Python bindings and desktop Editor into one workspace. It supports editable 2D model documents, animation,
-Live2D/Cubism format interoperability, and WGPU/Metal rendering. The project is
-under development with no stable release; APIs and file formats may change.
-See [release preparation and Alpha downloads](docs/RELEASING.md).
+
+Zipzi 2D is a 2D modeling and animation tool and an alternative to Live2D
+Cubism Editor. Create and edit models in the desktop editor, use the Python
+package to work programmatically and collaborate with AI agents.
+
+**Platforms:** macOS and Windows (development prototype).
+
+**Under development:** Zipzi 2D has no stable release yet, and APIs and file
+formats may change. Download Alpha builds from [GitHub Releases](https://github.com/getzipzi/zipzi-2d/releases).
+
+![Zipzi 2D editor screenshot](docs/editor-screenshot.png)
 
 ## Start here
 

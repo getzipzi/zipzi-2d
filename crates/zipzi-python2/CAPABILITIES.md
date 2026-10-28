@@ -45,9 +45,10 @@ and the [guide](client/python/zipzi/docs/guide.md),
 | GPU observation | `modeling.observe()`, Preview `view`, `inspection.save()` | Requires a host with GPU observation and a usable device. Inspection saves PNG/JSON output locally. |
 | Editor mesh generation | `zipzi.mesh_generation.generate()` | Connected Editor hosts may offer this synchronous, bounded service. Local hosts do not provide it; generation returns geometry without modifying the document. |
 
-The packages target CPython 3.14; source tests run on macOS/Unix. The desktop
-host, GPU features and platform-specific installation must meet their own
-requirements. Limits can also require smaller batches or payloads.
+The packages target CPython 3.14. Native wheels are prepared for macOS arm64
+and Windows x86-64. The desktop host, GPU features and platform-specific
+installation must meet their own requirements. Limits can also require smaller
+batches or payloads.
 
 ## Validation
 

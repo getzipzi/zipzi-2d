@@ -100,8 +100,10 @@ samples before constructing canonical keyforms; a numeric key is not a sample ID
 ### Mesh quality scope
 
 The Python modeling API currently exposes rectangle remeshing, manual topology
-edits and complete topology replacement, but no Alpha contour meshing entry.
-The Rust SDK's Alpha mesher is not yet bound to Python. Topology replacement
+edits and complete topology replacement. A connected Editor may also offer
+`zipzi.mesh_generation.generate()` for alpha-based mesh generation; check
+`runtime.connection.capabilities` for `editor_mesh_generate`. The Rust SDK's
+Alpha mesher is not bound to Python. Topology replacement
 requires explicit dependency/binding and vertex-mapping handling; do not assume
 arbitrary remeshing automatically migrates every keyform, BlendShape or Glue.
 
@@ -155,9 +157,9 @@ Use `--endpoint /absolute/path/to/profile.sock` before the subcommand for a
 specific Unix host. Windows uses a local Named Pipe name. Prefer discovery with
 `ZIPZI_RUNTIME_DIR` (an absolute directory) and `ZIPZI_RUNTIME_PROFILE` (a short
 lowercase name); `zipzi.connect(start=True, host=absolute_host_path)` uses those
-settings. Windows currently supports the CPU Runtime fixture; desktop Editor
-handoff remains pending. Installing the pure client does not install or launch
-a host unless `start=True` is explicitly requested.
+settings. The Windows Editor supports connected sessions; desktop validation
+is still in progress. Installing the pure client does not install or launch a
+host unless `start=True` is explicitly requested.
 
 ## Recover and wait
 
