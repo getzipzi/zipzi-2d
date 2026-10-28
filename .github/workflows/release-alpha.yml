@@ -118,6 +118,8 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
       - uses: astral-sh/setup-uv@v6
         with:
           version: '0.10.7'

@@ -476,7 +476,7 @@ def render(contract):
             if path.endswith('.rs'):
                 temporary = Path(folder) / Path(path).name
                 temporary.write_text(content, encoding='utf-8')
-                subprocess.run(['rustfmt', '--edition', '2021', '--config', 'style_edition=2024,skip_children=true', str(temporary)], check=True, capture_output=True)
+                subprocess.run(['rustfmt', '--edition', '2021', '--config', 'style_edition=2024,skip_children=true', str(temporary)], check=True)
                 output[path] = temporary.read_text(encoding='utf-8')
     return output
 
