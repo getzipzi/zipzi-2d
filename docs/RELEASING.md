@@ -22,10 +22,12 @@ the Python client version and its native dependency requirement.
 | App `ZipziReleaseVersion` | `0.1.0-alpha.1` |
 | App `ZipziSourceRevision` | source commit SHA |
 
-Prepare the next version from the repository root:
+Prepare the next version from the repository root. Regenerate the Python SDK
+catalog and reference so their embedded package version is synchronized:
 
 ```sh
 python3 tools/packaging/release.py set 0.1.0-alpha.2
+uv run --locked python crates/zipzi-python2/tools/generate.py
 cargo metadata --locked --offline --no-deps --format-version 1 > /dev/null
 python3 tools/packaging/release.py check --tag v0.1.0-alpha.2
 ```

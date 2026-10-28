@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 5b617607d6faf34d491efcaa28a9836d0b73aec5fb9e6f0320c12dbaa877f4cf.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 5b617607d6faf34d491efcaa28a9836d0b73aec5fb9e6f0320c12dbaa877f4cf.
 
 
 ## zipzi.ApiDescription
