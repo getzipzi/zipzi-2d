@@ -10,6 +10,10 @@ mod overlay;
 mod wgpu;
 #[cfg(feature = "wgpu-backend")]
 pub use wgpu::{WgpuSceneRenderer, WgpuSubmittedFrame, WgpuTargetConfig};
+#[cfg(feature = "wgpu-backend")]
+mod wgpu_readback;
+#[cfg(feature = "wgpu-backend")]
+pub use wgpu_readback::WgpuImageReadback;
 #[cfg(all(feature = "wgpu-backend", target_os = "macos"))]
 mod wgpu_macos;
 #[cfg(all(feature = "wgpu-backend", target_os = "macos"))]

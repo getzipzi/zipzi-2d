@@ -125,6 +125,12 @@ def analyze(records, budget_ms=1000 / 120):
     compositions = collections.defaultdict(set)
     for event in events:
         if event["stage"] == "published":
+            if "texture" not in event["fields"]:
+                # The Windows image bridge publishes CPU pixels, not a Metal
+                # texture. Keep its rows, but do not invent a surface identity.
+                if metadata.get("platform") != "windows":
+                    issues.append(f"published frame {event['id']} has no texture identity")
+                continue
             publications[event["fields"]["texture"]].append((event["at_ns"], event["id"]))
         elif event["stage"] == "compose_surface":
             if "preview" in event["fields"]:
@@ -132,7 +138,7 @@ def analyze(records, budget_ms=1000 / 120):
                 if request_id:
                     publication = groups.get(request_id, {}).get("published")
                     if (publication is None or publication["at_ns"] > event["at_ns"]
-                            or publication["fields"]["texture"] != event["fields"]["texture"]):
+                            or publication["fields"].get("texture") != event["fields"]["texture"]):
                         issues.append(f"invalid preview surface identity {request_id}")
                     else:
                         compositions[request_id].add(event["id"])
@@ -181,6 +187,7 @@ def analyze(records, budget_ms=1000 / 120):
         else:
             compose = None
             row["outcome"] = next((s for s in ("delivery_coalesced", "coalesced", "cancelled", "rejected", "render_error", "send_error") if s in group),
+                                  "painted_unconfirmed" if "compose_image" in group else
                                   "accepted_not_composed" if "accepted" in group else "incomplete")
         if compose:
             times.update({name: e["at_ns"] for name, e in compose.items()})

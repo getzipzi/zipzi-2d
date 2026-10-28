@@ -44,6 +44,7 @@ pub fn init(cx: &mut App) {
 pub struct ImageData {
     pixels: Arc<RenderImage>,
     painted: AtomicBool,
+    trace_id: u64,
 }
 impl Drop for ImageData {
     fn drop(&mut self) {
@@ -65,51 +66,29 @@ pub fn target(width: u32, height: u32) -> WgpuTargetConfig {
 }
 
 pub fn read_image(
-    renderer: &WgpuSceneRenderer,
+    renderer: &mut WgpuSceneRenderer,
     texture: &wgpu::Texture,
     trace_id: u64,
 ) -> anyhow::Result<Image> {
     let start = std::time::Instant::now();
-    let mut rgba = renderer
-        .context()
-        .read_rgba8(texture)
-        .map_err(|e| anyhow::anyhow!("{}: {}", e.code, e.message))?;
+    let bgra = renderer.read_straight_bgra8(texture)?;
     let readback_ns = start.elapsed().as_nanos() as u64;
-    straight_bgra(&mut rgba);
     frame_trace::emit(
         trace_id,
         "readback",
         &[
             ("readback_ns", readback_ns),
-            (
-                "conversion_ns",
-                start.elapsed().as_nanos() as u64 - readback_ns,
-            ),
-            ("bytes", rgba.len() as u64),
+            ("gpu_conversion", 1),
+            ("bytes", bgra.len() as u64),
         ],
     );
-    let buffer = image::RgbaImage::from_raw(texture.width(), texture.height(), rgba)
+    let buffer = image::RgbaImage::from_raw(texture.width(), texture.height(), bgra)
         .ok_or_else(|| anyhow::anyhow!("Invalid readback dimensions"))?;
     Ok(Arc::new(ImageData {
         pixels: Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])),
         painted: AtomicBool::new(false),
+        trace_id,
     }))
-}
-
-fn straight_bgra(pixels: &mut [u8]) {
-    for pixel in pixels.as_chunks_mut::<4>().0 {
-        let [red, green, blue, alpha] = *pixel;
-        *pixel = match alpha {
-            0 => [0; 4],
-            255 => [blue, green, red, alpha],
-            _ => {
-                let alpha32 = u32::from(alpha);
-                let straight =
-                    |value: u8| ((u32::from(value) * 255 + alpha32 / 2) / alpha32).min(255) as u8;
-                [straight(blue), straight(green), straight(red), alpha]
-            }
-        };
-    }
 }
 
 pub fn paint(image: &Image, bounds: Bounds<Pixels>, window: &mut Window) -> anyhow::Result<()> {
@@ -122,6 +101,11 @@ pub fn paint_in_bounds(
     window: &mut Window,
 ) -> anyhow::Result<()> {
     image.painted.store(true, Ordering::Relaxed);
+    frame_trace::emit(
+        image.trace_id,
+        "compose_image",
+        &[("image", image.pixels.id.0 as u64)],
+    );
     window.paint_image(
         bounds,
         content,
@@ -199,7 +183,7 @@ pub fn start(_window: &Window) -> anyhow::Result<Connection> {
                         request.transform,
                         |stage| frame_trace::emit(trace_id, stage, &[]),
                     )
-                    .and_then(|frame| read_image(&renderer, &frame.image, trace_id))
+                    .and_then(|frame| read_image(&mut renderer, &frame.image, trace_id))
                     .map_err(|e| e.to_string());
                 frame_trace::emit(
                     trace_id,
@@ -241,21 +225,12 @@ pub fn start(_window: &Window) -> anyhow::Result<Connection> {
 }
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn gpui_receives_straight_bgra_including_transparent_texels() {
-        let mut bytes = [128, 64, 0, 128, 90, 80, 70, 0, 1, 2, 3, 255];
-        super::straight_bgra(&mut bytes);
-        assert_eq!(bytes, [0, 128, 255, 128, 0, 0, 0, 0, 3, 2, 1, 255]);
-    }
-}
-
-#[cfg(test)]
 pub fn test_image() -> Image {
     Arc::new(ImageData {
         pixels: Arc::new(RenderImage::new(vec![image::Frame::new(
             image::RgbaImage::new(1, 1),
         )])),
         painted: AtomicBool::new(false),
+        trace_id: 0,
     })
 }

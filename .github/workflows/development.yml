@@ -31,9 +31,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95.0
       - name: Check native Editor and platform examples
         run: cargo check --locked -p zipzi-editor -p zipzi-editor-render --all-targets --features zipzi-editor/test-support,zipzi-editor/wgpu-backend
-      - name: Windows image conversion
-        if: runner.os == 'Windows'
-        run: cargo test --locked -p zipzi-editor --lib preview::readback::tests
       - name: Windows presentation scheduling
         if: runner.os == 'Windows'
         run: cargo test --locked -p zipzi-editor --lib headless_tests::ui_performance

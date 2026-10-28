@@ -38,6 +38,7 @@ pub struct WgpuSceneRenderer {
     cache_budget: u64,
     synced_scene: Option<SceneSnapshot>,
     last_stats: zipzi_render_wgpu::WgpuRenderStats,
+    image_readback: Option<crate::WgpuImageReadback>,
 }
 
 fn status(error: zipzi_core::Status) -> anyhow::Error {
@@ -58,6 +59,7 @@ impl WgpuSceneRenderer {
             cache_budget: 128 * 1024 * 1024,
             synced_scene: None,
             last_stats: Default::default(),
+            image_readback: None,
         })
     }
 
@@ -253,5 +255,13 @@ impl WgpuSceneRenderer {
     }
     pub fn context(&self) -> &WgpuContext {
         &self.context
+    }
+
+    /// Worker-side conversion/readback for GPUI's straight BGRA image atlas.
+    pub fn read_straight_bgra8(&mut self, texture: &wgpu::Texture) -> Result<Vec<u8>> {
+        let readback = self
+            .image_readback
+            .get_or_insert_with(|| crate::WgpuImageReadback::new(self.context.device()));
+        readback.read(&self.context, texture)
     }
 }

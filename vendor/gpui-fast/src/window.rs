@@ -3445,6 +3445,7 @@ impl Window {
     pub fn draw(&mut self, cx: &mut App) -> ArenaClearNeeded {
         let trace_id = crate::frame_trace::next_id();
         crate::frame_trace::emit(trace_id, "ui_draw_begin", &[]);
+        self.next_frame.scene.frame_trace_id = trace_id;
         // Drain every draw in profiler builds so a previous frame's
         // first-invalidation timestamp can't be attributed to this one.
         #[cfg(feature = "profiler")]
@@ -3483,7 +3484,9 @@ impl Window {
             }
         }
         if !cx.mode.skip_drawing() {
+            crate::frame_trace::emit(trace_id, "ui_roots_begin", &[]);
             self.draw_roots(cx);
+            crate::frame_trace::emit(trace_id, "ui_roots_end", &[]);
             #[cfg(feature = "profiler")]
             {
                 let viewport_size = self.viewport_size;
@@ -3636,7 +3639,12 @@ impl Window {
         let _foreground_turn = profiler::journal::foreground_turn();
         #[cfg(feature = "profiler")]
         let present_start = Instant::now();
+        let trace_id = self.rendered_frame.scene.frame_trace_id;
+        crate::frame_trace::emit(trace_id, "platform_draw_begin", &[]);
         crate::fast::composition::present(self);
+        // CPU call boundary, including driver submission/Present where the
+        // platform performs it synchronously. This is not a GPU/display timestamp.
+        crate::frame_trace::emit(trace_id, "platform_draw_end", &[]);
         #[cfg(feature = "profiler")]
         self.window_profiler.record_present(
             present_start,
@@ -3730,8 +3738,12 @@ impl Window {
         let scale_factor = self.scale_factor();
         #[cfg(feature = "profiler")]
         let request_layout_start = Instant::now();
+        let trace_id = self.next_frame.scene.frame_trace_id;
+        crate::frame_trace::emit(trace_id, "ui_build_begin", &[]);
         let mut root_element = self.root.as_ref().unwrap().clone().into_any_element();
         let root_layout_id = root_element.request_layout(self, cx);
+        crate::frame_trace::emit(trace_id, "ui_build_end", &[]);
+        crate::frame_trace::emit(trace_id, "ui_prepaint_begin", &[]);
         crate::fast::stats::FramePhaseTimes::end_build(&mut self.fast_layout.phase_times);
         #[cfg(feature = "profiler")]
         let prepaint_start = Instant::now();
@@ -3773,6 +3785,8 @@ impl Window {
         self.mouse_hit_test = crate::fast::layers::hover_freeze::hit_test(self);
 
         // Now actually paint the elements.
+        crate::frame_trace::emit(trace_id, "ui_prepaint_end", &[]);
+        crate::frame_trace::emit(trace_id, "ui_paint_begin", &[]);
         #[cfg(feature = "profiler")]
         let paint_start = Instant::now();
         self.invalidator.set_phase(DrawPhase::Paint);
@@ -3796,6 +3810,7 @@ impl Window {
         #[cfg(any(feature = "inspector", debug_assertions))]
         self.paint_inspector_hitbox(cx);
         crate::fast::stats::FramePhaseTimes::end_paint(&mut self.fast_layout.phase_times);
+        crate::frame_trace::emit(trace_id, "ui_paint_end", &[]);
 
         #[cfg(feature = "profiler")]
         self.window_profiler
@@ -5115,9 +5130,13 @@ impl Window {
             frame_index,
         };
 
+        let trace_id = crate::frame_trace::next_id();
+        let atlas_start = (trace_id != 0).then(crate::frame_trace::now_ns);
+        let mut cache_miss = false;
         let tile = self
             .sprite_atlas
             .get_or_insert_with(params.into(), &mut || {
+                cache_miss = true;
                 Ok(Some((
                     data.size(frame_index),
                     Cow::Borrowed(
@@ -5127,6 +5146,23 @@ impl Window {
                 )))
             })?
             .expect("Callback above only returns Some");
+        if let Some(start) = atlas_start {
+            crate::frame_trace::emit_at(
+                trace_id,
+                "image_atlas",
+                start,
+                &[
+                    ("end_ns", crate::frame_trace::now_ns()),
+                    ("cpu_frame", self.next_frame.scene.frame_trace_id),
+                    ("image", data.id.0 as u64),
+                    ("miss", u64::from(cache_miss)),
+                    (
+                        "bytes",
+                        data.as_bytes(frame_index).map_or(0, |bytes| bytes.len()) as u64,
+                    ),
+                ],
+            );
+        }
 
         let visible_bounds_snapped = self.snap_bounds(visible_bounds);
 
@@ -5228,7 +5264,6 @@ impl Window {
     pub fn metal_context(&self) -> Option<crate::SharedMetalContext> {
         self.platform_window.metal_context()
     }
-
 
     /// Removes an image from the sprite atlas.
     pub fn drop_image(&mut self, data: Arc<RenderImage>) -> Result<()> {

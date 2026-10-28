@@ -1,6 +1,6 @@
 use super::{
     Harness, document_fixture,
-    properties::{fill, show},
+    properties::{fill, select_all, show},
     setup_with_document,
 };
 use gpui_kit::component::WindowExt;
@@ -458,7 +458,7 @@ fn mesh_color_session_cancels_on_keyform_switch_and_save_settles_the_new_session
         window.click("property-color-multiply", cx);
         window.render_frame(cx);
         window.click("color-picker-hex", cx);
-        window.press("cmd-a", cx);
+        select_all(window, cx);
         window.input("#804020", cx);
         window.render_frame(cx);
     })
@@ -514,7 +514,7 @@ fn mesh_color_inline_input_enter_in_one_event_batch_commits_the_live_value(
     show(&h, "property-input-multiply", cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click("property-input-multiply", cx);
-        window.press("cmd-a", cx);
+        select_all(window, cx);
         window.input("#FFB080", cx);
         window.press("enter", cx);
         window.render_frame(cx);
@@ -637,7 +637,7 @@ fn mesh_color_suffix_reset_replaces_a_popup_preview_without_committing_it_first(
         window.click("property-color-multiply", cx);
         window.render_frame(cx);
         window.click("color-picker-hex", cx);
-        window.press("cmd-a", cx);
+        select_all(window, cx);
         window.input("#AA3344", cx);
         window.render_frame(cx);
     })

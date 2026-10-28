@@ -9,6 +9,8 @@ struct Options {
     detail: bool,
     eager_canvas: bool,
     uncached_creation_menus: bool,
+    unlayered_markers: bool,
+    tessellated_edges: bool,
 }
 static OPTIONS: OnceLock<Options> = OnceLock::new();
 static INITIAL: OnceLock<std::sync::Arc<zipzi_core::DrawableFrame>> = OnceLock::new();
@@ -20,6 +22,8 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
     let eager_canvas = std::env::var("ZIPZI_BENCH_EAGER_CANVAS").is_ok_and(|v| v == "1");
     let uncached_creation_menus =
         std::env::var("ZIPZI_BENCH_UNCACHED_CREATION_MENUS").is_ok_and(|v| v == "1");
+    let unlayered_markers = std::env::var("ZIPZI_BENCH_UNLAYERED_MARKERS").is_ok_and(|v| v == "1");
+    let tessellated_edges = std::env::var("ZIPZI_BENCH_TESSELLATED_EDGES").is_ok_and(|v| v == "1");
     ensure!(
         ["first", "none", "all"].contains(&selection.as_str()),
         "invalid benchmark selection"
@@ -38,6 +42,8 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
             && !detail
             && !eager_canvas
             && !uncached_creation_menus
+            && !unlayered_markers
+            && !tessellated_edges
             || automatic && std::env::var("ZIPZI_BENCH_PARAMETERS").is_ok_and(|v| v == "1"),
         "overlay diagnostics require automatic parameter workload"
     );
@@ -47,6 +53,8 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
         detail,
         eager_canvas,
         uncached_creation_menus,
+        unlayered_markers,
+        tessellated_edges,
     });
     Ok(())
 }
@@ -56,12 +64,22 @@ pub(super) fn metadata() -> serde_json::Value {
         serde_json::json!({
             "selection": o.selection, "paint": o.paint, "detail": o.detail,
             "eager_canvas": o.eager_canvas, "uncached_creation_menus": o.uncached_creation_menus,
+            "unlayered_markers": o.unlayered_markers,
+            "tessellated_edges": o.tessellated_edges,
         })
     })
 }
 
 pub(crate) fn eager_canvas() -> bool {
     OPTIONS.get().is_some_and(|o| o.eager_canvas)
+}
+
+pub(crate) fn layer_markers() -> bool {
+    !OPTIONS.get().is_some_and(|o| o.unlayered_markers)
+}
+
+pub(crate) fn tessellated_edges() -> bool {
+    OPTIONS.get().is_some_and(|o| o.tessellated_edges)
 }
 pub(crate) fn uncached_creation_menus() -> bool {
     OPTIONS.get().is_some_and(|o| o.uncached_creation_menus)

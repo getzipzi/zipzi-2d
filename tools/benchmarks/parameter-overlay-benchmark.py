@@ -109,7 +109,9 @@ def run(args, folder, case):
                ZIPZI_WINDOW_BENCH='1', ZIPZI_BENCH_PARAMETERS='1', ZIPZI_BENCH_MODEL=str(args.model),
                ZIPZI_BENCH_SAMPLES=str(args.samples), ZIPZI_BENCH_WARMUP=str(args.warmup),
                ZIPZI_BENCH_HZ=str(args.hz), ZIPZI_BENCH_SELECTION=selection,
-               ZIPZI_BENCH_OVERLAY_PAINT=paint, ZIPZI_BENCH_OVERLAY_DETAIL=str(int(detail)))
+               ZIPZI_BENCH_OVERLAY_PAINT=paint, ZIPZI_BENCH_OVERLAY_DETAIL=str(int(detail)),
+               ZIPZI_BENCH_UNLAYERED_MARKERS=str(int(args.unlayered_markers)),
+               ZIPZI_BENCH_TESSELLATED_EDGES=str(int(args.tessellated_edges)))
     snapshots = [process_snapshot()]
     with (folder/'application.log').open('w') as log:
         process = subprocess.Popen(['caffeinate', '-d', '-i', str(args.binary)], env=env, stdout=log, stderr=log)
@@ -143,6 +145,8 @@ def main():
     parser.add_argument('--hz', type=int, default=120)
     parser.add_argument('--rounds', type=int, default=3)
     parser.add_argument('--allow-debug', action='store_true', help='diagnosis only; retain the debug-build warning')
+    parser.add_argument('--unlayered-markers', action='store_true', help='reference: order each marker individually')
+    parser.add_argument('--tessellated-edges', action='store_true', help='reference: use the general cached stroke tessellator')
     parser.add_argument('--cases', nargs='+', choices=CASES, default=['unselected','selected','no_paint','vertices','edges'])
     args = parser.parse_args()
     args.binary, args.model, args.output = args.binary.resolve(), args.model.resolve(), args.output.resolve()
@@ -150,7 +154,9 @@ def main():
     provenance = {'binary': str(args.binary), 'binary_sha256': digest(args.binary),
                   'model': str(args.model), 'model_sha256': digest(args.model),
                   'driver_sha256': digest(Path(__file__)), 'samples': args.samples, 'warmup': args.warmup,
-                  'hz': args.hz, 'rounds': args.rounds, 'cases': args.cases}
+                  'hz': args.hz, 'rounds': args.rounds, 'cases': args.cases,
+                  'unlayered_markers': args.unlayered_markers,
+                  'tessellated_edges': args.tessellated_edges}
     (args.output/'run.json').write_text(json.dumps(provenance, indent=2)+'\n')
     results = []
     for round in range(1, args.rounds+1):

@@ -279,11 +279,22 @@ pub(super) fn show(harness: &super::Harness, field: &str, cx: &mut TestAppContex
     .unwrap();
 }
 
+pub(super) fn select_all(window: &mut gpui_kit::Window, cx: &mut gpui_kit::App) {
+    window.press(
+        if cfg!(target_os = "macos") {
+            "cmd-a"
+        } else {
+            "ctrl-a"
+        },
+        cx,
+    );
+}
+
 pub(super) fn fill(harness: &super::Harness, field: &str, text: &str, cx: &mut TestAppContext) {
     show(harness, field, cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.click(field.to_owned(), cx);
-        window.press("cmd-a", cx);
+        select_all(window, cx);
         window.input(text, cx);
     })
     .unwrap();

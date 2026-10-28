@@ -7,6 +7,8 @@ use serde_json::Value;
 use super::{Document, StructureIssue};
 use crate::types::{ChangeKind, EditResult, Status};
 mod authoring;
+#[cfg(test)]
+mod validation_tests;
 pub(super) use authoring::MotionLookup;
 pub use authoring::{
     DisabledMotionTrack, MotionContainer, MotionDisabledReason, MotionEdit, MotionPlan,
@@ -576,6 +578,7 @@ impl Document {
             return Status::error("INVALID_TRACK_ORDER", &clip.id);
         }
         let mut ids = HashSet::new();
+        let base_ids = self.base_identity_set();
         for (index, track) in clip.tracks.iter().enumerate() {
             if !super::valid_uuid(&track.id)
                 || !ids.insert(track.id.as_str())
@@ -586,8 +589,7 @@ impl Document {
                     format!("{}.tracks[{index}]", clip.id),
                 );
             }
-            if self.contains_base_identity(&track.id)
-                || nested_elsewhere.contains(track.id.as_str())
+            if base_ids.contains(track.id.as_str()) || nested_elsewhere.contains(track.id.as_str())
             {
                 return Status::error("DUPLICATE_ID", &track.id);
             }
@@ -596,7 +598,7 @@ impl Document {
                     return Status::error("INVALID_MOTION_KEY_ID", &key.id);
                 }
                 if key.id == clip.id
-                    || self.contains_base_identity(&key.id)
+                    || base_ids.contains(key.id.as_str())
                     || nested_elsewhere.contains(key.id.as_str())
                 {
                     return Status::error("DUPLICATE_ID", &key.id);
@@ -703,8 +705,7 @@ impl Document {
                     format!("{}.events[{index}]", clip.id),
                 );
             }
-            if self.contains_base_identity(&event.id)
-                || nested_elsewhere.contains(event.id.as_str())
+            if base_ids.contains(event.id.as_str()) || nested_elsewhere.contains(event.id.as_str())
             {
                 return Status::error("DUPLICATE_ID", &event.id);
             }

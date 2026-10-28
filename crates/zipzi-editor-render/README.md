@@ -54,6 +54,14 @@ cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu
 
 macOS overlays remain native Metal. Windows uses GPUI paths/markers and a
 background WGPU readback-to-image bridge in `zipzi-editor/src/preview/readback.rs`.
+`WgpuSceneRenderer::read_straight_bgra8` converts premultiplied linear UNORM output
+to straight BGRA on the GPU using the previous CPU integer rounding, then reads a
+tightly packed storage buffer. Its worker-local `WgpuImageReadback` retains one
+conversion/staging buffer pair, replaced when the byte size changes. CPU images
+remain independent and immutable. Each buffer is limited by the device's storage
+binding/buffer limits (128 MiB storage binding with the current default limits);
+this cache does not impose a total preview memory budget. sRGB inputs are rejected
+to avoid implicit linearization during conversion.
 
 On Windows, the Editor enables `wgpu-backend` automatically. To verify the
 scene adapter on a real GPU independently of GPUI:
@@ -63,5 +71,22 @@ cargo test --locked -p zipzi-editor-render --features wgpu-backend --test wgpu_r
 ```
 
 This test requires a GPU, asserts pixels and frame immutability, and reports the
-adapter/backend. It does not establish native window performance. The existing
+adapter/backend. It also exhausts all 256×256 channel/alpha combinations for RGBA
+and BGRA sources, including zero alpha, saturation, odd row widths and staging
+reuse/resizing. It does not establish native window performance. The existing
 Metal comparison examples explicitly require macOS.
+
+For a paired worker-stage comparison with the former CPU conversion path:
+
+```powershell
+cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu_readback_benchmark -- 1061 1478 60
+cargo run --locked --release -p zipzi-editor-render --features wgpu-backend --example wgpu_readback_benchmark -- 1061 1478 60
+```
+
+The harness warms up 20 frames, alternates readback order, changes the view each
+frame and requires byte-identical output from both paths. CSV separates CPU
+submission, readback and CPU conversion; the new readback includes GPU conversion.
+Readback also includes any pending render completion when that path runs first.
+GPUI upload, presentation and OS input latency are excluded. See the
+[Windows P5 record](../../docs/plans/windows-development.md#p5-回读成本与未完成项)
+for paired results and separate native-window evidence.

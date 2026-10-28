@@ -36,10 +36,13 @@ after reload. This handshake is enabled only by the development launcher.
 Readback frames retain independent viewport identity and are released from the
 GPUI image atlas when their final presentation owner is dropped. Mesh generation
 candidates render off the UI thread at a maximum 2048px longest edge (16 MiB);
-zoom magnifies that preview raster. Main preview readback/conversion timing and
-bytes are recorded as `readback` events with `ZIPZI_FRAME_TRACE` enabled. These
-measurements exclude GPUI upload/presentation; end-to-end latency still needs
-native-window measurement.
+zoom magnifies that preview raster. Main and candidate previews convert to
+straight BGRA on the GPU and reuse worker-local conversion/staging buffers.
+With `ZIPZI_FRAME_TRACE` enabled, main preview `readback` events record the combined
+GPU conversion/readback/CPU copy duration as `readback_ns`, with `gpu_conversion=1`
+and the image byte count. The former CPU `conversion_ns` field is no longer emitted.
+These measurements exclude GPUI upload/presentation; end-to-end latency still
+needs native-window measurement.
 
 Focused Windows checks (run in a desktop session for the installed Editor gate):
 

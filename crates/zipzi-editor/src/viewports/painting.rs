@@ -156,13 +156,23 @@ impl ViewportSurface {
                         let gpui_edges = result.is_err();
                         #[cfg(not(target_os = "macos"))]
                         let gpui_edges = true;
-                        if gpui_edges {
+                        if gpui_edges && benchmark::parameter_overlay::paint_edges() {
+                            #[cfg(feature = "bench-instrumentation")]
+                            let _span = zipzi_core::benchmark::span("overlay.gpui_mesh_edges");
                             let to_window =
                                 |p: ViewportPoint| bounds.origin + point(px(p.x), px(p.y));
                             if benchmark::batch_mesh_edges() {
-                                mesh_edges::paint_edges(&overlay.lines, bounds.origin, |path| {
-                                    window.paint_path(path, palette.mesh.opacity(0.45));
-                                });
+                                let paint =
+                                    |path| window.paint_path(path, palette.mesh.opacity(0.45));
+                                if benchmark::parameter_overlay::tessellated_edges() {
+                                    mesh_edges::paint_edges_tessellated(
+                                        &overlay.lines,
+                                        bounds.origin,
+                                        paint,
+                                    );
+                                } else {
+                                    mesh_edges::paint_edges(&overlay.lines, bounds.origin, paint);
+                                }
                             } else {
                                 for (a, b) in &overlay.lines {
                                     let mut path = PathBuilder::stroke(px(1.));
@@ -177,7 +187,13 @@ impl ViewportSurface {
                         if benchmark::parameter_overlay::paint_edges() {
                             #[cfg(feature = "bench-instrumentation")]
                             let _span = zipzi_core::benchmark::span("overlay.gpui_lines");
-                            crate::canvas_overlay::paint_lines(&overlay, bounds, palette, window);
+                            crate::canvas_overlay::paint_lines(
+                                &overlay,
+                                bounds,
+                                palette,
+                                benchmark::parameter_overlay::tessellated_edges(),
+                                window,
+                            );
                         }
                         #[cfg(target_os = "macos")]
                         let marker_result = overlay_renderer.borrow_mut().paint(
@@ -199,6 +215,7 @@ impl ViewportSurface {
                                 bounds.origin,
                                 palette,
                                 gpui_markers,
+                                benchmark::parameter_overlay::layer_markers(),
                                 window,
                             );
                         }

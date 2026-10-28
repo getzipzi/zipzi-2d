@@ -23,6 +23,14 @@ The workspace enables `gpui-fast` on GPUI Kit and the optional FPS monitor.
 The local Fast patches support native Metal surfaces, shared queues, headless
 rendering and frame tracing. Kit retains upstream `gpui-pre` 0.3.9 dependencies
 in its graph; its Fast feature selects the Fast re-exports used by the Editor.
+
+`gpui-diagnostics.patch` adds opt-in cross-platform CPU frame boundaries to
+`gpui-fast/src/window.rs`: root build, prepaint, paint, image-atlas lookup/upload,
+and the platform draw call. Hooks use the existing frame-trace sink; atlas timing
+does not read clocks when tracing is disabled. `platform_draw_*` measures the CPU
+call (including synchronous driver/Present work on Windows), not GPU execution or
+screen presentation. The image event retains cache-hit/miss, byte count and CPU
+frame identity. It does not change invalidation, rendering or presentation policy.
 Test renderers also use `gpui-fast-apple`.
 
 The Fast backend and local cache-boundary fix are the accepted default. See the

@@ -41,6 +41,19 @@ def composition(id, start, texture=123, present=None):
 
 
 class TraceReportTest(unittest.TestCase):
+    def test_windows_image_paint_does_not_invent_presentation_or_fps(self):
+        raw = capture(*request(10, 1, 0), event(10, 'compose_image', 4, image=99))
+        raw[0].update(platform='windows', automatic=True, samples=1, workloads=[1])
+        raw.insert(1, event(1, 'benchmark_tick', 0, mode=1, sample=0, warmup=0, timer_late_ns=0))
+        raw.insert(-1, event(20, 'benchmark_done', 10))
+        next(e for e in raw if e.get('stage') == 'published')['fields'] = {}
+        rows, summary = report.analyze(raw)
+        self.assertEqual(rows[0]['outcome'], 'painted_unconfirmed')
+        self.assertIsNone(summary['modes']['pan']['window_present_fps'])
+        self.assertIsNone(summary['modes']['pan']['new_preview_present_fps'])
+        self.assertNotIn('input_to_present_ms', rows[0])
+        self.assertTrue(any('no correlated presentation' in issue for issue in summary['issues']))
+
     def test_overlay_reusing_preview_address_is_not_a_model_frame(self):
         first = composition(100, 4, present=10)
         next(e for e in first if e['stage'] == 'compose_surface')['fields']['preview'] = 0

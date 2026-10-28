@@ -273,6 +273,16 @@ struct ScenePainter {
     mask: ContentMask<Pixels>,
 }
 impl canvas_overlay::Painter for ScenePainter {
+    fn quad_layer(&mut self, bounds: Bounds<Pixels>, paint: impl FnOnce(&mut Self)) {
+        let clipped = bounds.intersect(&self.mask.bounds);
+        if !clipped.is_empty() {
+            self.scene.push_layer(clipped.scale(self.scale));
+        }
+        paint(self);
+        if !clipped.is_empty() {
+            self.scene.pop_layer();
+        }
+    }
     fn paint_quad(&mut self, q: gpui_kit::PaintQuad) {
         self.scene.insert_primitive(Quad {
             order: 0,
@@ -400,11 +410,18 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 .collect(),
                 ..Default::default()
             };
-            canvas_overlay::paint_lines(&overlay, painter.mask.bounds, palette, &mut painter);
+            canvas_overlay::paint_lines(
+                &overlay,
+                painter.mask.bounds,
+                palette,
+                false,
+                &mut painter,
+            );
             canvas_overlay::paint_markers(
                 &overlay,
                 point(px(0.), px(0.)),
                 palette,
+                true,
                 true,
                 &mut painter,
             );

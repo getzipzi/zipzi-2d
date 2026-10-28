@@ -406,10 +406,50 @@ RTX 5060；场景渲染 WGPU/Vulkan，窗口图片合成 GPUI/D3D11，Rust dev �
 | 24 个暖机帧回读中位数 / 最大值 | 2.994 / 5.352 ms |
 | 24 个暖机帧转换中位数 / 最大值 | 15.123 / 15.649 ms |
 
-以上为合成小模型、未优化 dev 构建的 worker 阶段计时，**不包含 GPUI 图片上传、屏幕呈现
+以上为初版合成小模型、未优化 dev 构建的 worker 阶段计时，**不包含 GPUI 图片上传、屏幕呈现
 或输入到显示延迟**，不能作为 60/120 Hz 或复杂模型的达标证据。初版相同尺寸转换约
-127–132 ms，已消除该明显开销；暖机阶段合计仍超过 16.7 ms，性能路线继续保留优化构建
-测量和 GPU 互操作评估。日志位于本地 `target/windows-p5/`（不随源码提交）。
+127–132 ms，第一次优化后暖机阶段合计仍超过 16.7 ms；后续修复与测量见下。
+日志位于本地 `target/windows-p5/`（不随源码提交）。
+
+2026-10-28 回读瓶颈修复：主要开销来自未优化的 CPU 逐像素去预乘／通道交换；旧回读
+每帧还新建 staging buffer 并逐行去除 padding。现在 Editor renderer 使用 compute shader
+按原 CPU 整数舍入与饱和规则直接生成紧凑 straight BGRA storage buffer，再复制到可复用的
+staging buffer。CPU 只复制最终字节。主画布与候选预览共用该路径，返回图像仍各自独立，
+macOS Metal／WGPU texture handoff 未改。每个 renderer 最多缓存一对转换／回读缓冲区，
+字节数变化时替换；每个缓冲区受 device storage binding／buffer 上限约束（当前默认
+storage binding 128 MiB），不能据此声称预览总内存有硬上限。
+
+新增 `wgpu_readback_benchmark` 对照 harness：同机 RTX 5060／Vulkan，1061×1478，
+6,272,632 bytes，混合透明度纹理三角形，20 帧预热后采样 60 帧。每帧平移视图，旧／新
+路径读取同一提交图像，交替先后顺序并逐字节比较结果。下表仅为桥接阶段，即旧路径
+「回读＋CPU 转换」与新路径「GPU 转换＋回读＋CPU 复制」，均排除 CPU 场景提交与 GPUI：
+
+| 构建 | 旧路径中位数 / P95 / 最大值 | 新路径中位数 / P95 / 最大值 |
+| --- | --- | --- |
+| dev | 19.632 / 20.342 / 22.749 ms | 2.321 / 3.160 / 6.591 ms |
+| release | 6.058 / 6.471 / 7.147 ms | 2.143 / 2.723 / 6.410 ms |
+
+dev 旧回读／CPU 转换中位数为 3.287／16.362 ms；release 为 3.093／2.936 ms，说明
+优化构建能减轻但未消除桥接开销。GPU 转换后不再单独记录 CPU `conversion_ns`；trace
+`readback_ns` 包含 GPU 转换及最终 CPU 复制，并以 `gpu_conversion=1` 标记。此处回读包含
+排在前面的场景命令完成等待，**不是独立 GPU 时间戳，也不是输入到屏幕延迟或 FPS**。
+
+独立 Windows dev Editor 原生窗口也已验证：自有棋盘模型显示与透明合成正常，60 次
+编辑／撤销后名称、未修改状态恢复。1061×1478 的 60 个暖机帧中位数／P95／最大值
+2.984／5.535／9.926 ms，冷启动首次转换 47.291 ms（包含首次 shader/pipeline 建立）。
+最大化后 1654×1865、12,338,840 bytes 的 60 个暖机帧为 4.447／6.374／6.467 ms；
+该尺寸首次为 5.387 ms。trace `lost_events=0`，测试实例安全退出。隐藏启动探针未产生
+画布请求，不计入这些结果；修正启动方式后才采集实际窗口帧。原生 trace 同样只计 worker
+桥接阶段，不涵盖 GPUI 上传／屏幕呈现。GPU 互操作及端到端测量继续保留为后续路线。
+
+聚焦验证：`zipzi-editor-render --features wgpu-backend --test wgpu_readback` 实际通过
+2 项 GPU 测试，覆盖全部颜色通道／alpha 组合、RGBA/BGRA、零 alpha、越 alpha 饱和、
+非对齐宽度、缓冲区复用／resize、sRGB 拒绝及多视口旧帧不可变性；Editor／renderer
+`--all-targets` 加 `test-support,wgpu-backend` 检查通过，Editor dev／release build 与 UI performance
+10 项测试通过。CI 移除已不存在的 CPU 转换测试过滤器，GPU 转换由本机真实 GPU 门禁验证。
+相关修改文件的格式检查及 `git diff --check` 通过；工作区全量 `cargo fmt --all --check`
+仍报告其他既有文件格式差异，未为本次修复改写这些文件。原始 CSV、汇总 JSON 与原生 trace
+保留在本地 `target/windows-p5/readback-*`、`target/windows-p5/perf-fix/`，不随源码提交。
 
 当前单 worker 串行完成 GPU/回读，请求与结果按视口合并；图片最终所有者释放后从 atlas
 回收，网格候选最长边 2048px / 每图最多 16 MiB。**这些局部限制尚不构成预览总内存硬上限**；
@@ -419,3 +459,231 @@ P5 保持实施中。尚需完成：双视口真实窗口同时显示（已有�
 测试不替代此项）、动画播放、候选网格高 DPI 质量、GUI 导入/文件对话框/拖放、中文 IME、
 多显示器缩放、完整关闭最后窗口/连接客户端常驻交互、端到端帧延迟与内存上限，以及 macOS
 Metal/WGPU 原生回归。正式安装器和签名不属于本阶段。
+
+### P5 GPUI 性能基线（2026-10-28）
+
+本轮先测量，不调整渲染、缓存或调度策略。GPUI 公共窗口层补充 opt-in trace：
+root build、prepaint/layout、paint、图片 atlas lookup/upload 和 platform draw CPU 边界；
+Windows 预览以 `compose_image` 将不可变图片关联到 UI 帧。未启用 trace 时不读取新增
+atlas 时钟。`vendor/gpui-diagnostics.patch` 保存该补丁，可反向校验。
+
+使用同机 Windows／RTX 5060，GPUI D3D11 与 WGPU Vulkan；WMI 报告主输出 3840×2160、
+60 Hz，另存在 GameViewer 虚拟适配器。原生窗口为默认 1100×740 logical，画布图像
+1061×1478、6,272,632 bytes。对自有棋盘项目与本地 Mao model3，各执行 Dev／Release
+两轮，第二轮交换构建顺序；每轮平移、缩放、透明度三种 workload 各预热 30 次、测量
+180 次。构建结束后复制并固定二进制，测量时没有 Cargo/rustc。每份 trace 完整结束、
+`lost_events=0`。窗口可见／active 由 driver 每次输入检查。Mao Dev 第一轮额外截图确认
+模型确实绘制，不把该轮截图期间的尾部峰值解释为纯应用成本；下面主表采用无截图的第二轮，
+第一轮及所有峰值仍保留在原始数据中。
+
+以下为第二轮**平移**的每帧 CPU 中位数／P95，单位 ms：
+
+| 模型／构建 | UI draw | root build | prepaint/layout | paint（含 atlas） | atlas miss | platform draw |
+| --- | --- | --- | --- | --- | --- | --- |
+| 棋盘 Dev | 6.85 / 7.97 | 3.31 / 3.71 | 1.22 / 1.59 | 1.80 / 2.18 | 0.57 / 0.66 | 0.16 / 0.18 |
+| 棋盘 Release | 4.25 / 4.52 | 1.59 / 1.77 | 0.80 / 0.89 | 1.44 / 1.57 | 0.59 / 0.62 | 0.13 / 0.15 |
+| Mao Dev | 10.00 / 10.83 | 4.78 / 5.28 | 1.98 / 2.18 | 2.48 / 2.82 | 0.60 / 0.68 | 0.17 / 0.20 |
+| Mao Release | 6.25 / 7.14 | 2.32 / 2.72 | 1.26 / 1.51 | 1.97 / 2.37 | 0.62 / 0.74 | 0.16 / 0.20 |
+
+UI draw 包含 Editor／Kit element construction、GPUI prepaint/layout、paint 和帧收尾，
+不能把 root build 全部归因于 GPUI 核心；其中也有 Editor 的 Render 实现和 Kit 控件构造。
+这些 scope 嵌套，不能相加独立 P95。Mao Dev 第二轮平移／缩放 UI 峰值为 24.04／24.58 ms，
+说明中位数外仍存在超过 16.7 ms 的帧。新图像 atlas API 调用通常约 0.6 ms，CPU platform
+调用通常约 0.15 ms；这两项在当前 CPU 采样中不是最大项，但未测量其异步 GPU 执行时间。
+
+另增加 `ZIPZI_BENCH_UI_ONLY=1` 控制，只 notify 当前 canvas，保持原有图片，**不请求新
+模型渲染／回读**；每模型／构建采样 180 次。四份 trace 实测 request=0、上传 bytes=0，
+每份有 170–178 个 UI draw，排除“没有实际重绘”的假控制。UI draw 中位数／P95：
+
+| 控制组 | Dev | Release |
+| --- | --- | --- |
+| 棋盘，复用图片 | 5.43 / 6.45 ms | 3.30 / 3.62 ms |
+| Mao，复用图片 | 8.85 / 9.48 ms | 5.03 / 5.53 ms |
+
+控制组证明 UI 重绘开销可独立于 WGPU 回读／新图片上传复现。这是保留完整 Editor/Kit
+面板的 canvas 重绘基线，不是空 GPUI 程序。后续优先细分 UI subtree 构建／布局、缓存失效
+范围，再核查 Windows 帧调度；现有数据不能直接证明某个子树必然多余重建。
+
+第二轮 Mao 的新图像 **CPU platform-return 事件**速率：Dev 平移 50.82、缩放 48.88、
+透明度 38.63 次／秒；Release 分别 59.83、60.01、58.95。各场景 180 个输入中，Dev
+22／26／0 个没有关联到新图片提交，Release 为 11／11／12；这些未关联输入保留在报告，
+不能只展示成功样本。透明度输入到首张对应新图片的 CPU platform-return 中位数／P95：
+Dev 33.01／39.52 ms，Release 15.75／25.78 ms。这些都是合成 GPUI dispatch 到 CPU
+调用返回的测量，**不是 OS 输入到屏幕延迟，也不是实际屏幕 FPS**。
+
+driver 目标输入频率为 120 Hz，但大多数输入间隔实际约 16 ms；Mao Dev 透明度为
+28.68 ms 中位数，即使 UI-only Release 控制的间隔也约 15.84–15.94 ms。后续测试必须先
+区分 driver timer／Windows 消息循环节奏与渲染吞吐，不能用目标 120 Hz 宣称达标／掉帧。
+该 CPU 基线没有 D3D11 GPU timestamp、DWM 队列或 scanout 证据，不能据此排除
+GPU／桌面合成瓶颈；后续系统呈现测量见下一节。
+
+原始 12 次运行、复制二进制及 SHA-256、trace、完整逐项分位数、显示信息与脚本位于
+本地 `target/windows-gpui/`；`summary.json` 为八次实际交互，`control-summary.json`
+为四次静态图片控制。通用分析器为 `tools/benchmarks/windows-gpui-trace-report.py`，
+拒绝未完成、丢事件、缺 workload 和失败运行，保留同一 scene 的重复 platform 调用。
+3 项工具回归、10 项 Editor UI performance 回归及 Dev／Release 构建通过。
+复现环境及计时边界见 `tools/benchmarks/README.md` 的 Windows GPUI 小节。
+
+### 现有 UI benchmark 的 Windows 呈现帧率（2026-10-28）
+
+按用户要求，使用现有 `tools/benchmarks/window-benchmark.sh` 对应的生产驱动
+`crates/zipzi-editor/src/benchmark.rs` 运行 Release／Mao：pan、zoom、opacity 各
+30 次预热＋300 次正式输入，目标 120 Hz。只以 Windows subprocess 替换脚本中 macOS
+专用的启动／环境采集，不改负载。第一轮应用正常完成、trace 丢失 0；原 Metal 报告器
+遇到 Windows CPU 图片没有 `published.texture` 时崩溃。已做最小兼容处理，输出
+`painted_unconfirmed`，保留缺呈现时间戳的 INCOMPLETE 判定及空 FPS，而非伪造成功。
+该报告器 16 项聚焦回归通过。
+
+随后复跑相同完整轮次，并由本机已安装的 PresentMon 1.8.0（UE 安装附带的 console）
+采集 DXGI／DWM 呈现事件。普通权限返回 access denied；用户明确允许 UAC 并手动确认后，
+只提权运行采集器，Editor 仍以普通用户运行。Windows PowerShell 的脚本策略阻止首次启动，
+改用现有 PowerShell 7，不修改执行策略。另一次没有启动目标的空采集未计入结果。
+
+benchmark trace metadata 新增 opt-in QPC 校准：以两次 trace-clock 读数夹住
+QueryPerformanceCounter，同时记录 frequency；本次 bracket 为 100 ns。PresentMon
+使用 `-qpc_time`，由此精确映射到已有 trace 时间域，不估计应用启动耗时。采集得到同一
+测试 PID、同一 swapchain、`Composed: Flip` 的 1,035 个 DXGI Present，全部在对应的
+GPUI `platform_draw_begin/end` 区间内匹配；应用 trace 共 1,036 次 platform call，
+其中一次没有对应的 PresentMon row，未补造该帧。PresentMon 正常退出，无丢事件警告；
+应用正常完成 900 次正式输入，trace `lost_events=0`。
+
+按原 UI 报告的时间窗口口径，排除启动、预热及阶段间等待，统计正式输入首／末 tick
+之间的**系统报告显示时间戳**。这次输出为 3840×2160／60 Hz：
+
+| 负载 | 窗口显示 FPS | 新预览首次显示 FPS | 显示帧间隔 P95 / 最大值 | 输入到新预览显示 P50 / P95 |
+| --- | --- | --- | --- | --- |
+| 平移 | 60.00 | 59.57 | 16.74 / 16.79 ms | 41.72 / 50.23 ms |
+| 缩放 | 60.00 | 59.78 | 16.73 / 16.79 ms | 41.49 / 50.66 ms |
+| 透明度更新 | 60.00 | 58.54 | 16.72 / 17.18 ms | 41.90 / 51.76 ms |
+
+三个正式输入时间窗口分别有 282／281／288 次确认显示，区间内的 Present 丢弃均为 0。
+整个目标进程采样包含 1,033 次显示、2 次丢弃；后两者在上述正式输入区间之外，仍保留
+在原始 CSV。每项 300 个正式请求中，281／281／282 个被关联到首次显示，剩余
+19／19／18 个保留为没有确认显示；不能把 300 个请求全部解释为独立显示帧。
+
+窗口 FPS 使用所有已显示窗口帧；新预览 FPS 对不可变图片请求去重，仅计首次显示。
+图片由 `compose_image` 关联到单视口 CPU 场景，再关联到该场景的实际 DXGI Present；
+由 `QPCTime + msUntilDisplayed` 得到系统显示时间，`Dropped=1` 不参与显示 FPS。
+帧率使用 `(N-1)/(last-first)`，沿用现有 UI 报告，不计算瞬时 FPS 的平均数。
+该轮证明 Release 在当前 60 Hz 环境下窗口呈现约 60 FPS，但应用输入到新图像显示仍约
+42 ms 中位数／50–52 ms P95。自动输入从 GPUI dispatch 开始；这不是硬件输入到光子延迟，
+也不是 Dev 构建或 120 Hz 显示器的验收。没有新增 GPU 执行时长的结论。
+
+本地原始数据及固定二进制位于 `target/ui-benchmark-windows-20261028/`。
+有效 ETW 轮次在 `presentmon-measured/`：`presents.csv`、`trace.jsonl`、`process.json`
+（PID／二进制 SHA-256）、`presentmon-joined.csv`、`display-requests.csv` 和
+`display-summary.json`；`analyze.py` 保留校准、逐行匹配及分组计算。
+原 Metal-only `summary.json` 仍明确 INCOMPLETE；补充的 `display-summary.json` 才是
+上述 Windows 系统呈现结果，不以修改原报告的 GPU／呈现字段填补缺失覆盖。
+
+### 全场景定位与首批修复（2026-10-28）
+
+使用仓库现有 native UI driver 完成 68 个场景：Properties 45 项（Mesh 33、
+Physics 12）、Parameter 8 项、Natural／Dense Timeline 各 7 项，以及 canvas
+reference。全部运行的功能断言通过，trace 完整且无丢事件。新增的 8 项 Timeline
+scroll／zoom／seek／key 探针存在迟到后零间隔连续投递的问题，其帧率排除；用户要求
+不再重跑。其余 60 项保留原始结果，不能把功能断言通过解释为性能达标。
+原始数据在 `target/ui-all-20261028/`，其中 3 项 Parameter detail 是独立的插桩诊断，
+不与普通构建混为同一基准。Windows 仍未运行 macOS 专属的完整 Timeline 像素／持久化验收。
+
+Release、Mao、3840×2160／60 Hz 的现有 PresentMon 结果中，Properties 透明度拖动
+40.8 FPS、色相／SV 拖动 37.2／36.4 FPS，Parameter 未选中／全选 59.5／51.4 FPS，
+Natural／Dense Timeline 数值拖动 60.0／23.9 FPS。以下针对性 CPU 诊断用于定位和
+验证修复，**没有重新采集系统呈现 FPS**。
+
+1. Dense 数值拖动的主要耗时在 UI 输入处理内的 `core.validate_motion`，不是增量投影
+   （约 0.1 ms）或预览读回。完整校验原先对每个关键帧调用 `contains_base_identity`，
+   反复扫描 Physics、Pose、motion 注册等集合。改为一次校验建立一份借用的身份集合，
+   不引入跨文档修订缓存，不跳过曲线时间、数值、身份冲突和跨 clip 检查。
+2. Properties Mesh 外观候选每次调用 `EditorView::redraw`，使整窗失效。Modeling 下
+   成功的 Mesh 候选改用已有 `complete_preview_edit`，由新预览到达驱动画布刷新；
+   inspector 自行通知，提交、取消和错误仍走现有路径。其余工作区／资源编辑保留原刷新。
+3. Parameter 的全选对照确认 Windows 后备 overlay 绘制有明显成本。插桩运行中，
+   保留全部选择而关闭绘制后，UI draw P95 从 14.63 降到 9.47 ms、窗口 FPS 从
+   51.22 到 58.26；无选择为 7.96 ms、58.92 FPS。Windows 使用 GPUI 路径，
+   macOS 使用专用 Metal overlay；当前只定位，尚未实现 Windows 的对应优化。
+
+固定 Release 插桩二进制、相同输入驱动的局部 CPU 对比（单位 ms）：
+
+| 测量 | 修改前 | 修改后 |
+| --- | --- | --- |
+| Dense Timeline 完整校验平均耗时 | 44.06 | 8.02 |
+| Dense Timeline 输入处理 P95 | 48.82 | 10.16 |
+| Properties 透明度 UI draw P95 | 18.77 | 14.74 |
+| Properties 色相 UI draw P95 | 21.27 | 20.16 |
+| Properties SV UI draw P95 | 20.52 | 11.80 |
+
+Timeline 各 32 次输入，Properties 各 3 次预热＋30 次正式输入；只通过原 driver
+分发事件，不强制逐输入绘帧。上表使用无 Cargo／rustc／link 干扰的短采样，
+早期与编译重叠的探索数据另行保留，不作为主对比。原始 trace、脚本、完整分位数及
+固定二进制 SHA-256 在 `target/ui-diagnosis-20261028/`；Timeline 主对比为
+`before/` 与 `after-clean/`，Properties 为 `properties-before-clean/` 与
+`properties-after/`，汇总为 `cpu-summary.json`。这些是线程 wall time，含调度影响，
+不能换算为修复后的实际 FPS。
+
+34 项聚焦回归通过：core 身份／跨 clip 校验 2 项、SDK motion editing 20 项、
+Mesh Properties 9 项、外观预览保留整窗 1 项、draw-order 提交／取消 1 项、
+benchmark 迟到调度 1 项。新增工作量回归同时要求每次输入替换预览且历史不变，
+避免“不更新界面”造成假性能提升。相关 UI 测试辅助的全选快捷键已按平台选择
+macOS `cmd-a` 或 Windows `ctrl-a`。
+
+首批修复只缓解已确认的两处开销。色相拖动仍约 20 ms UI draw P95，Parameter
+全选 overlay 仍需优化；Dense 校验也仍约 8 ms。P5 的 UI 性能不能据此整体结项。
+
+### Parameter 后备 overlay 修复（2026-10-28）
+
+继续定位全选 Parameter 拖动：Mao 的 150 个选中 Mesh 会产生 5,159 个顶点标记、
+12,202 条网格边及 2,825 条边界线。耗时主要发生在显示这些变形结果的 GPUI overlay。
+本次不修改 Runtime 参数求值、模型渲染或 wgpu readback。
+
+- 标记原先逐个进入 GPUI bounds tree。连续的纯 Quad 标记改为使用 paint layer，
+  保留先普通、后选中／悬停的顺序，并把混合 Path 的旋转中心十字线留在层外。
+  GPUI 本来就能合并相邻 Quad；这里减少的是 CPU 遮挡排序，不是把数千次 GPU draw
+  合并成一次。实际 Scene 回归确认重叠 Quad 的顺序和图元数量保留。
+- 独立直线原先经过通用 `PathBuilder`／Lyon 描边细分及 `KeptPaths` 缓存。
+  参数每次变形会产生新的大路径；按形状数量限制的通用缓存会保留大量旧姿态几何。
+  改为直接生成每段直线的两个实心三角形，保留 butt cap、线宽、三角形方向、
+  MSAA 复制边界和原有 4,096 条边的分块，绕开通用形状缓存。曲线和填充仍使用原路径。
+- 修正 Windows `vertices` 诊断仍绘制 mesh edges 的开关问题。先前数据保留，
+  但不能将旧 Windows `vertices` 结果解释为纯顶点消融。
+
+使用同一个固定 Release 插桩二进制，通过两个 opt-in 开关选择旧／新路径，继续运行
+现有生产 Parameter window driver。每进程 30 次预热＋180 次正式输入、目标 120 Hz；
+两轮交换新旧顺序。下表关闭详细计时，只保留已有 frame trace：
+
+| 轮次 | UI draw P50：旧 → 新 | UI draw P95：旧 → 新 | 进程峰值工作集：旧 → 新 |
+| --- | --- | --- | --- |
+| 1 | 11.31 → 9.71 ms | 15.34 → 11.72 ms | 1,045 → 561 MiB |
+| 2（交换顺序） | 11.52 → 9.75 ms | 15.29 → 11.61 ms | 1,028 → 579 MiB |
+
+进程峰值 commit 分别从 1,692／1,694 MiB 降到 1,168／1,182 MiB。
+工作集／commit 是整个测试进程的启动到退出峰值，不是 GPU 内存或单一缓存的独立计量。
+原始 `GetProcessMemoryInfo` 样本每 250 ms 保留一次。
+
+单独的详细计时对照（每项 177 次实际绘制）中，各 scope 的中位数／P95，单位 ms：
+
+| Scope | 旧路径 | 新路径 |
+| --- | --- | --- |
+| `overlay.gpui_mesh_edges` | 2.46 / 2.91 | 0.76 / 0.88 |
+| `overlay.gpui_lines`（语义／控制线） | 0.76 / 1.06 | 0.17 / 0.23 |
+| `overlay.gpui_markers` | 1.59 / 1.77 | 0.59 / 0.63 |
+
+详细对照的 UI draw P95 为 15.50 → 11.40 ms；嵌套 scope 的独立分位数不可相加。
+前期仅分层标记的 10 个探索进程也保留：标记函数变快，但详细轮整帧 P95 曾从
+15.20 到 17.00 ms，未将这轮解释为整体改善；新增 mesh-edge scope 后才继续修复直线。
+修正后的纯顶点对照确认没有 mesh-edge scope；仅边对照没有 marker scope。
+
+10 个探索进程与 6 个主对照进程均正常完成，trace 无丢事件。主对照每项均验证实际
+变形的 Mesh 数为 93、选择数 150、顶点／边数量一致；输入不是无效操作。
+主对照的编译进程前后快照为空，采样时没有运行构建。10 项 Editor 聚焦回归和
+3 项工具归因回归通过：包含新旧描边在分数原点／线宽下的覆盖与方向比较、退化输入、
+完整保留数千标记、重叠排序，以及拖动预览／越界拖动／失焦取消。
+macOS 原有 native overlay 像素验收已接入新路径，本机 Windows 没有执行该 Metal 测试。
+
+可复现控制为 `ZIPZI_BENCH_UNLAYERED_MARKERS=1` 与
+`ZIPZI_BENCH_TESSELLATED_EDGES=1`；两者同时开启为旧路径，默认均关闭。
+Python launcher 对应 `--unlayered-markers --tessellated-edges`，其启动包装仍限 macOS；
+Windows 本次仅用 subprocess 包装相同生产驱动，CPU 归因复用现有报告器 `diagnose`。
+本地 `target/parameter-path-20261028/` 保留探索数据，`direct-edges/` 为主对照，
+含固定二进制／SHA-256、原始 trace、audit、逐项分位数、内存样本和运行脚本。
+本轮没有采集新的 PresentMon，以上改善只确认 CPU 时间和进程内存，不宣称新的显示 FPS。

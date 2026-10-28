@@ -104,7 +104,7 @@ during iteration and reserve full runs for broad regression acceptance.
 
 ### CI coverage
 
-Development gates run on relevant pull requests on Windows and macOS. They run native Python entrypoint controls and focused SDK physics/Editor Core timeline tests. The Editor compile matrix checks all targets with WGPU/test-support enabled; Windows additionally runs image conversion and presentation scheduling logic tests. These hosted jobs do not replace real GPU/window acceptance. SDK CI, Editor CI and Prepare Python Packages remain manual-only. Ordinary branch pushes do not start the full CI suites. Only an explicitly pushed
+Development gates run on relevant pull requests on Windows and macOS. They run native Python entrypoint controls and focused SDK physics/Editor Core timeline tests. The Editor compile matrix checks all targets with WGPU/test-support enabled; Windows additionally runs presentation scheduling logic tests. GPU image conversion is verified locally by the Editor renderer's `wgpu_readback` test; hosted jobs do not replace real GPU/window acceptance. SDK CI, Editor CI and Prepare Python Packages remain manual-only. Ordinary branch pushes do not start the full CI suites. Only an explicitly pushed
 `vX.Y.Z-alpha.N` tag starts Package macOS App and its GitHub prerelease upload.
 See [the release guide](../docs/RELEASING.md) for versioning and tag commands.
 

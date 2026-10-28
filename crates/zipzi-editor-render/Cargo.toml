@@ -31,6 +31,10 @@ required-features = ["wgpu-backend"]
 name = "wgpu_benchmark"
 required-features = ["wgpu-backend"]
 
+[[example]]
+name = "wgpu_readback_benchmark"
+required-features = ["wgpu-backend"]
+
 [target.'cfg(target_os = "macos")'.dependencies]
 zipzi-render-metal.workspace = true
 

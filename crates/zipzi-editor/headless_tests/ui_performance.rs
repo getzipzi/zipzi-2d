@@ -6,6 +6,81 @@ use gpui_kit::{AppContext as _, TestAppContext};
 use zipzi_editor_core::property as schema;
 
 #[gpui_kit::test]
+fn mesh_appearance_scrubs_keep_unrelated_editor_views_retained(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::{point, px};
+    use std::{cell::Cell, rc::Rc};
+    use zipzi_editor_core::{ObjectKind, ObjectRef};
+
+    let (mut doc, assets) = super::document_fixture::sample_document_with_two_layers().unwrap();
+    let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
+    doc.navigate(object).unwrap();
+    let history = doc.history_lengths();
+    let h = setup_with_document(cx, doc, assets);
+    h.view.update(cx, |view, cx| {
+        view._frames = None;
+        view.requests = Some(crate::preview::RequestSender::deferred());
+        view.sync_viewport_notice(cx);
+    });
+    super::properties::show(&h, "property-input-opacity", cx);
+    let origin = cx
+        .update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            let origin = window
+                .within("property-input-opacity")
+                .find("slide-number-input")
+                .bounds()
+                .center();
+            press(window, origin, cx);
+            origin
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let notifications = Rc::new(Cell::new(0));
+    let observed = notifications.clone();
+    let _observe =
+        cx.update(|cx| cx.observe(&h.view, move |_, _| observed.set(observed.get() + 1)));
+    let mut last_revision = None;
+    for sample in 1..=6 {
+        cx.update_window(h.window, |_, window, cx| {
+            slide(
+                window,
+                origin - point(px(sample as f32 * 12.), px(0.)),
+                false,
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        h.view.read_with(cx, |view, _| {
+            let request = view.requests.as_ref().unwrap().take_pending().unwrap();
+            assert_ne!(
+                last_revision,
+                Some(request.revision),
+                "appearance preview was not replaced"
+            );
+            last_revision = Some(request.revision);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), history);
+            assert!(view.edit_error.is_none());
+        });
+    }
+    assert_eq!(
+        notifications.get(),
+        0,
+        "appearance preview invalidated the editor owner"
+    );
+    cx.update_window(h.window, |_, window, cx| {
+        window.press("escape", cx);
+        release(window, origin, cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), history);
+    });
+}
+
+#[gpui_kit::test]
 fn parameter_previews_refresh_the_canvas_only_when_the_new_frame_arrives(cx: &mut TestAppContext) {
     use std::{cell::Cell, rc::Rc};
     use zipzi_editor_core::EditorCommand;
