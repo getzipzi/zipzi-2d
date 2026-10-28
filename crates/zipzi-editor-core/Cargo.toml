@@ -21,6 +21,10 @@ zipzi-runtime.workspace = true
 zipzi-project.workspace = true
 uuid.workspace = true
 
+geo = { version = "0.33.1", default-features = false }
+spade = "2.15.1"
+thiserror.workspace = true
+
 [dev-dependencies]
 tempfile.workspace = true
 zipzi-cmo3 = { version = "=0.1.0-alpha.1", path = "../zipzi-cmo3", features = ["test-support"] }

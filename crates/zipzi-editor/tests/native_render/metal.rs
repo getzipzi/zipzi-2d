@@ -38,7 +38,7 @@ fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {
 fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
         use zipzi_core::{Canvas, Vec2};
-        use zipzi_editor_core::{AlphaMeshOptions, MeshGenerationOptions, ObjectKind, ObjectRef};
+        use zipzi_editor_core::{MeshGenerationOptions, MeshSettings, ObjectKind, ObjectRef};
         let dir = tempfile::tempdir()?;
         let mut session = zipzi_sdk::AuthoringSession::new(
             &uuid::Uuid::new_v4().to_string(),
@@ -61,14 +61,12 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
         let saved = session.save_project(&dir.path().join("solid.zipzi"), None)?;
         let mut doc = Document::open(&saved.manifest)?;
         let source = doc.mesh_generation_source(&ObjectRef::new(ObjectKind::Mesh, mesh_id))?;
-        let plan = source.generate(MeshGenerationOptions::Alpha(AlphaMeshOptions {
-            outside_spacing: 16.,
-            inside_spacing: 16.,
-            outside_margin: 8.,
-            minimum_margin: 3.,
-            inside_margin: 4.,
+        let plan = source.generate(MeshGenerationOptions::Alpha(MeshSettings {
+            edge_spacing: 16.,
+            interior_spacing: 16.,
+            outer_margin: 8.,
             clip_to_image: false,
-            ..AlphaMeshOptions::deformation_small()
+            ..MeshSettings::default()
         }))?;
         let preview = plan.scene(source.texture.unwrap());
         let mut frames = vec![preview];

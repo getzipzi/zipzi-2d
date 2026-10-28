@@ -63,7 +63,7 @@ impl Render for MeshGenerationForm {
             .into_iter()
             .enumerate()
             {
-                let preset = AlphaMeshOptions {
+                let preset = MeshSettings {
                     clip_to_image: self.preview.source.manual_available(),
                     ..alpha_presets()[i]
                 };
@@ -84,39 +84,82 @@ impl Render for MeshGenerationForm {
                     .text_color(cx.theme().muted_foreground)
                     .child(t!("mesh_generation.pixel_units")),
             );
+            for (id, label, select) in [
+                (
+                    "mesh-generation-edge-mode",
+                    t!("mesh_generation.edge_mode"),
+                    self.edge_mode.clone(),
+                ),
+                (
+                    "mesh-generation-fill-algorithm",
+                    t!("mesh_generation.fill_algorithm"),
+                    self.fill_algorithm.clone(),
+                ),
+            ] {
+                settings = settings.child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_1()
+                        .text_xs()
+                        .child(label)
+                        .child(
+                            crate::ui::compact::select(Select::new(&select))
+                                .id(id)
+                                .w_full(),
+                        ),
+                );
+            }
             for (i, (id, label)) in [
                 (
-                    "mesh-generation-outside-spacing",
-                    t!("mesh_generation.outside_spacing"),
+                    "mesh-generation-edge-spacing",
+                    t!("mesh_generation.edge_spacing"),
                 ),
                 (
-                    "mesh-generation-inside-spacing",
-                    t!("mesh_generation.inside_spacing"),
+                    "mesh-generation-interior-spacing",
+                    t!("mesh_generation.interior_spacing"),
                 ),
                 (
-                    "mesh-generation-outside-margin",
-                    t!("mesh_generation.outside_margin"),
+                    "mesh-generation-outer-margin",
+                    t!("mesh_generation.outer_margin"),
                 ),
                 (
-                    "mesh-generation-inside-margin",
-                    t!("mesh_generation.inside_margin"),
+                    "mesh-generation-edge-width",
+                    t!("mesh_generation.edge_width"),
                 ),
-                (
-                    "mesh-generation-minimum-margin",
-                    t!("mesh_generation.minimum_margin"),
-                ),
-                (
-                    "mesh-generation-boundary-points",
-                    t!("mesh_generation.boundary_points"),
-                ),
+                ("mesh-generation-wrap", t!("mesh_generation.wrap")),
                 (
                     "mesh-generation-alpha-threshold",
                     t!("mesh_generation.alpha_threshold"),
                 ),
+                (
+                    "mesh-generation-edge-ratio",
+                    t!("mesh_generation.edge_ratio"),
+                ),
+                ("mesh-generation-gradation", t!("mesh_generation.gradation")),
+                ("mesh-generation-jitter", t!("mesh_generation.jitter")),
+                ("mesh-generation-angle", t!("mesh_generation.fill_angle")),
+                ("mesh-generation-max-rows", t!("mesh_generation.max_rows")),
             ]
             .into_iter()
             .enumerate()
             {
+                let edge = self.edge_kind(cx);
+                let fill = self.fill_kind(cx);
+                if (i == 2 && edge != MeshEdgeMode::Single)
+                    || (i == 3 && edge == MeshEdgeMode::Single)
+                    || (i >= 6 && fill == MeshFillAlgorithm::SimpleTriangles)
+                    || (i == 8 && fill != MeshFillAlgorithm::GradedPoisson)
+                    || (i == 9
+                        && !matches!(
+                            fill,
+                            MeshFillAlgorithm::AdaptiveQuadtree
+                                | MeshFillAlgorithm::TriangleFractal
+                        ))
+                    || (i == 10 && fill != MeshFillAlgorithm::ContourPaving)
+                {
+                    continue;
+                }
                 let options =
                     self.alpha_fields[i].options(&self.alpha_inputs[i], self.dialog.closed(), cx);
                 self.alpha_numbers[i]
@@ -139,31 +182,17 @@ impl Render for MeshGenerationForm {
                 );
             }
             settings = settings.child(
-                Checkbox::new("mesh-generation-remove-faint-islands")
+                Checkbox::new("mesh-generation-suppress-diagonals")
                     .small()
-                    .label(t!("mesh_generation.remove_faint_islands").to_string())
-                    .checked(self.remove_faint_islands)
+                    .label(t!("mesh_generation.suppress_diagonals").to_string())
+                    .checked(self.suppress_boundary_diagonals)
                     .on_click(cx.listener(|this, value: &bool, _, cx| {
-                        this.remove_faint_islands = *value;
+                        this.suppress_boundary_diagonals = *value;
                         this.dialog.edited();
                         this.refresh(cx);
                         cx.notify();
                     })),
             );
-            if !self.preview.source.manual_available() {
-                settings = settings.child(
-                    Checkbox::new("mesh-generation-preserve-holes")
-                        .small()
-                        .label(t!("mesh_generation.preserve_holes").to_string())
-                        .checked(self.preserve_holes)
-                        .on_click(cx.listener(|this, value: &bool, _, cx| {
-                            this.preserve_holes = *value;
-                            this.dialog.edited();
-                            this.refresh(cx);
-                            cx.notify();
-                        })),
-                );
-            }
         } else if !self.is_reconnect(cx) {
             let mut presets = div().flex().gap_1();
             for (id, label, count) in [

@@ -2,28 +2,28 @@
 #[path = "mesh_generation_alpha.rs"]
 mod alpha;
 use super::Document;
+pub use crate::adaptive_mesh::MeshSettings;
+use crate::adaptive_mesh::{MeshGenerationStage, generate_mesh};
 use crate::{ObjectKind, ObjectRef};
 use alpha::TextureTransform;
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use std::sync::{
     Arc,
     atomic::{AtomicU64, Ordering},
 };
-pub use zipzi_sdk::AlphaMeshOptions;
 use zipzi_sdk::{
-    AlphaMask, ManualMeshOperation, ManualVertexIdAllocator, MeshGeometry, TopologyReplacement,
-    add_manual_interior_sites, alpha_mesh_geometry, build_edge_layout, edit_manual_mesh,
-    rectangle_grid_geometry, sample_interior,
+    ManualMeshOperation, ManualVertexIdAllocator, MeshGeometry, TopologyReplacement,
+    add_manual_interior_sites, edit_manual_mesh, rectangle_grid_geometry,
 };
 
 /// Each backend owns its typed configuration. Preview and apply share this dispatch.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MeshGenerationOptions {
     Grid(MeshGridOptions),
-    Alpha(AlphaMeshOptions),
-    ManualEdge(AlphaMeshOptions),
-    ManualInterior(AlphaMeshOptions),
-    ManualFull(AlphaMeshOptions),
+    Alpha(MeshSettings),
+    ManualEdge(MeshSettings),
+    ManualInterior(MeshSettings),
+    ManualFull(MeshSettings),
     ManualReconnect,
 }
 
@@ -125,25 +125,33 @@ impl MeshGenerationSource {
                     .iter()
                     .map(|p| p[3])
                     .collect();
-                let mask = AlphaMask {
-                    width: texture.width,
-                    height: texture.height,
-                    alpha: &alpha,
-                };
                 // The chosen phase is kept in the outer enum, separate from
                 // alpha tuning values shared by all phases.
                 let mut geometry = match phase {
                     MeshGenerationOptions::ManualEdge(_) => {
-                        build_edge_layout(mask, &alpha_options)?.preview_geometry()?
-                    }
-                    MeshGenerationOptions::ManualInterior(_) => {
-                        let sites = sample_interior(build_edge_layout(mask, &alpha_options)?)?;
-                        let additions = filter_interior_sites(
-                            &self.geometry,
-                            sites.added_uvs(),
+                        generate_mesh(
                             texture.width,
                             texture.height,
-                            (alpha_options.inside_spacing * 0.3).max(0.001),
+                            &alpha,
+                            &alpha_options,
+                            MeshGenerationStage::Edges,
+                        )?
+                        .geometry
+                    }
+                    MeshGenerationOptions::ManualInterior(_) => {
+                        let sites = generate_mesh(
+                            texture.width,
+                            texture.height,
+                            &alpha,
+                            &alpha_options,
+                            MeshGenerationStage::Full,
+                        )?;
+                        let additions = filter_interior_sites(
+                            &self.geometry,
+                            &sites.interior_uvs,
+                            texture.width,
+                            texture.height,
+                            (alpha_options.interior_spacing * 0.3).max(0.001),
                         );
                         ensure!(
                             self.geometry.vertex_ids.len() + additions.len()
@@ -155,7 +163,14 @@ impl MeshGenerationSource {
                             .geometry
                     }
                     MeshGenerationOptions::ManualFull(_) | MeshGenerationOptions::Alpha(_) => {
-                        alpha_mesh_geometry(mask, &alpha_options)?
+                        generate_mesh(
+                            texture.width,
+                            texture.height,
+                            &alpha,
+                            &alpha_options,
+                            MeshGenerationStage::Full,
+                        )?
+                        .geometry
                     }
                     _ => unreachable!(),
                 };
@@ -164,10 +179,8 @@ impl MeshGenerationSource {
                     padded_texture = alpha::pad_texture(texture, &mut geometry)?;
                 }
                 if self.manual_target.is_some() {
-                    ensure!(
-                        zipzi_sdk::extract_manual_meshing(&geometry).is_ok(),
-                        "Generated mesh has holes or separate regions"
-                    );
+                    zipzi_sdk::extract_manual_meshing(&geometry)
+                        .context("Generated mesh is not editable")?;
                 }
                 geometry
             }
@@ -247,6 +260,36 @@ fn filter_interior_sites(
     clearance: f64,
 ) -> Vec<zipzi_core::Vec2> {
     use std::collections::HashMap;
+    // Refinement can place a point arbitrarily close to an existing structural
+    // segment. Preserve a pixel-space clearance, not just vertex separation,
+    // before the SDK retriangulates at normalized f32 UV precision.
+    let slots: HashMap<_, _> = geometry
+        .vertex_ids
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(i, id)| (id, i))
+        .collect();
+    let mut segments = Vec::new();
+    let meshing = zipzi_sdk::extract_manual_meshing(geometry).ok();
+    if let Some(m) = &meshing {
+        for i in 0..m.boundary.len() {
+            segments.push([m.boundary[i], m.boundary[(i + 1) % m.boundary.len()]]);
+        }
+        segments.extend(m.constraints.iter().map(|c| c.endpoints));
+    }
+    let near_segment = |uv: zipzi_core::Vec2| {
+        segments.iter().any(|e| {
+            let a = geometry.uvs[slots[&e[0]]];
+            let b = geometry.uvs[slots[&e[1]]];
+            let dx = (b.x as f64 - a.x as f64) * width as f64;
+            let dy = (b.y as f64 - a.y as f64) * height as f64;
+            let px = (uv.x as f64 - a.x as f64) * width as f64;
+            let py = (uv.y as f64 - a.y as f64) * height as f64;
+            let t = ((px * dx + py * dy) / (dx * dx + dy * dy).max(1e-12)).clamp(0., 1.);
+            (px - dx * t).hypot(py - dy * t) < clearance
+        })
+    };
     let mut occupied: HashMap<(i64, i64), Vec<(f64, f64)>> = HashMap::new();
     let cell = |x: f64, y: f64| {
         (
@@ -280,7 +323,7 @@ fn filter_interior_sites(
     sites
         .iter()
         .copied()
-        .filter(|&uv| insert(uv, true))
+        .filter(|&uv| !near_segment(uv) && insert(uv, true))
         .collect()
 }
 

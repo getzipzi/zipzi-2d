@@ -36,23 +36,28 @@ impl MeshGenerationForm {
                 .map(|input| input.read(cx).value())
                 .collect();
             let invalid = || anyhow::anyhow!(t!("mesh_generation.invalid_alpha"));
-            let number = |i: usize| truncated_number(&values[i]).ok_or_else(invalid);
-            let options = AlphaMeshOptions {
-                outside_spacing: number(0)?,
-                inside_spacing: number(1)?,
-                outside_margin: number(2)?,
-                inside_margin: number(3)?,
-                minimum_margin: number(4)?,
-                minimum_boundary_points: number(5)?.to_string().parse().map_err(|_| invalid())?,
-                alpha_threshold: number(6)?.to_string().parse().map_err(|_| invalid())?,
-                preserve_holes: if self.preview.source.manual_available() {
-                    false
-                } else {
-                    self.preserve_holes
-                },
+            let number = |i: usize| parsed_number(&values[i]).ok_or_else(invalid);
+            let threshold = number(5)?;
+            anyhow::ensure!(
+                threshold.fract() == 0. && (1. ..=255.).contains(&threshold),
+                invalid()
+            );
+            let mut fill_parameters = self.fill_parameters;
+            *fill_parameters.get_mut(self.fill_kind(cx)) =
+                self.read_fill_parameters(cx).ok_or_else(invalid)?;
+            let options = MeshSettings {
+                edge_mode: self.edge_kind(cx),
+                edge_spacing: number(0)?,
+                interior_spacing: number(1)?,
+                outer_margin: number(2)?,
+                edge_width: number(3)?,
+                wrap: number(4)?,
+                alpha_threshold: threshold as u8,
+                fill_algorithm: self.fill_kind(cx),
+                fill_parameters,
+                suppress_boundary_diagonals: self.suppress_boundary_diagonals,
                 clip_to_image: self.preview.source.manual_available(),
-                remove_faint_islands: self.remove_faint_islands,
-                ..AlphaMeshOptions::default()
+                ..MeshSettings::default()
             };
             options.validate().map_err(|_| invalid())?;
             return Ok(self.wrap_alpha(options, cx));

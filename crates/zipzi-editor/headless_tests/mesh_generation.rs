@@ -85,7 +85,7 @@ fn invalid_bound_counts_and_cancel_leave_mesh_unchanged(cx: &mut TestAppContext)
     // Existing deformation bindings cannot use alpha generation: default to grid.
     cx.update_window(harness.window, |_, window, _cx| {
         assert!(window.find("mesh-generation-columns").visible());
-        assert!(window.try_find("mesh-generation-outside-spacing").is_none());
+        assert!(window.try_find("mesh-generation-edge-spacing").is_none());
     })
     .unwrap();
     for value in ["0", "-1", "abc", "256", "4"] {
@@ -333,7 +333,7 @@ fn open_grid(harness: &Harness, cx: &mut TestAppContext) {
 fn assert_alpha_default(harness: &Harness, cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(window.find("mesh-generation-outside-spacing").visible());
+        assert!(window.find("mesh-generation-edge-spacing").visible());
         assert!(window.try_find("mesh-generation-columns").is_none());
     })
     .unwrap();
@@ -358,7 +358,7 @@ fn alpha_controls_preview_apply_and_reopen(cx: &mut TestAppContext) {
         });
     }
     for value in ["0", "NaN", "-1"] {
-        fill(&harness, "mesh-generation-outside-spacing", value, cx);
+        fill(&harness, "mesh-generation-edge-spacing", value, cx);
         cx.update_window(harness.window, |_, window, cx| {
             window.render_frame(cx);
             assert!(window.try_find("mesh-generation-counts").is_none());
@@ -376,7 +376,7 @@ fn alpha_controls_preview_apply_and_reopen(cx: &mut TestAppContext) {
         })
         .unwrap();
     }
-    fill(&harness, "mesh-generation-outside-spacing", "25", cx);
+    fill(&harness, "mesh-generation-edge-spacing", "25", cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.click("mesh-generation-alpha-heavy", cx);
     })
@@ -397,7 +397,7 @@ fn alpha_controls_preview_apply_and_reopen(cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         // Generated contours reopen directly in Alpha mode.
-        assert!(window.find("mesh-generation-outside-spacing").visible());
+        assert!(window.find("mesh-generation-edge-spacing").visible());
         window.click("mesh-generation-cancel", cx);
         harness
             .view
@@ -522,33 +522,31 @@ fn grid_number_sliding_keeps_integer_counts_and_refreshes_preview(cx: &mut TestA
 }
 
 #[gpui_kit::test]
-fn alpha_number_sliding_truncates_and_escape_only_cancels_the_drag(cx: &mut TestAppContext) {
+fn alpha_number_sliding_and_escape_only_cancels_the_drag(cx: &mut TestAppContext) {
     use super::slide_number_input::{press, release, slide};
     use gpui_kit::{point, px};
     let (doc, assets) = document_fixture::alpha_document().unwrap();
     let harness = setup_with_document(cx, doc, assets);
     open(&harness, cx);
-    scrub_number(&harness, "mesh-generation-outside-spacing", 20., false, cx);
-    assert_eq!(
-        number_value(&harness, "mesh-generation-outside-spacing", cx),
-        "162"
-    );
-    scrub_number(&harness, "mesh-generation-boundary-points", 100., true, cx);
-    assert_eq!(
-        number_value(&harness, "mesh-generation-boundary-points", cx),
-        "16"
+    scrub_number(&harness, "mesh-generation-edge-spacing", 20., false, cx);
+    assert!(
+        number_value(&harness, "mesh-generation-edge-spacing", cx)
+            .parse::<f64>()
+            .unwrap()
+            > 6.
     );
     scrub_number(&harness, "mesh-generation-alpha-threshold", 20., false, cx);
-    assert_eq!(
-        number_value(&harness, "mesh-generation-alpha-threshold", cx),
-        "2"
-    );
-    let original = number_value(&harness, "mesh-generation-outside-margin", cx);
+    let threshold = number_value(&harness, "mesh-generation-alpha-threshold", cx)
+        .parse::<f64>()
+        .unwrap();
+    assert!(threshold > 8.);
+    assert_eq!(threshold.fract(), 0.);
+    let original = number_value(&harness, "mesh-generation-outer-margin", cx);
     let origin = cx
         .update_window(harness.window, |_, window, cx| {
             window.render_frame(cx);
             let origin = window
-                .find("mesh-generation-outside-margin")
+                .find("mesh-generation-outer-margin")
                 .bounds()
                 .center();
             press(window, origin, cx);
@@ -566,7 +564,7 @@ fn alpha_number_sliding_truncates_and_escape_only_cancels_the_drag(cx: &mut Test
     })
     .unwrap();
     assert_eq!(
-        number_value(&harness, "mesh-generation-outside-margin", cx),
+        number_value(&harness, "mesh-generation-outer-margin", cx),
         original
     );
     settle(cx);
@@ -589,18 +587,15 @@ fn alpha_number_sliding_truncates_and_escape_only_cancels_the_drag(cx: &mut Test
 }
 
 #[gpui_kit::test]
-fn alpha_decimal_inputs_truncate_on_commit_and_generate(cx: &mut TestAppContext) {
+fn alpha_decimal_inputs_preserve_precision_and_generate(cx: &mut TestAppContext) {
     let (doc, assets) = document_fixture::alpha_document().unwrap();
     let harness = setup_with_document(cx, doc, assets);
     open(&harness, cx);
     for (field, value, expected) in [
-        ("mesh-generation-outside-spacing", "160.9", "160"),
-        ("mesh-generation-inside-spacing", "160.9", "160"),
-        ("mesh-generation-outside-margin", "14.9", "14"),
-        ("mesh-generation-inside-margin", "14.9", "14"),
-        ("mesh-generation-minimum-margin", "5.9", "5"),
-        ("mesh-generation-boundary-points", "15.9", "15"),
-        ("mesh-generation-alpha-threshold", "0.9", "0"),
+        ("mesh-generation-edge-spacing", "12.9", "12.9"),
+        ("mesh-generation-interior-spacing", "40.9", "40.9"),
+        ("mesh-generation-outer-margin", "1.9", "1.9"),
+        ("mesh-generation-alpha-threshold", "8", "8"),
     ] {
         fill(&harness, field, value, cx);
         cx.update_window(harness.window, |_, window, cx| window.blur(cx))
@@ -628,6 +623,56 @@ fn alpha_decimal_inputs_truncate_on_commit_and_generate(cx: &mut TestAppContext)
                 .history_lengths(),
             (1, 0)
         );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn edge_and_fill_choices_are_independent_and_retain_fill_settings(cx: &mut TestAppContext) {
+    let (doc, assets) = document_fixture::alpha_document().unwrap();
+    let harness = setup_with_document(cx, doc, assets);
+    open(&harness, cx);
+    fill(&harness, "mesh-generation-edge-ratio", "1.5", cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-generation-edge-mode", cx);
+        window.press("down", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    settle(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-edge-width").visible());
+        assert!(window.try_find("mesh-generation-outer-margin").is_none());
+        window.click("mesh-generation-fill-algorithm", cx);
+        window.press("down", cx);
+        window.press("down", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    settle(cx);
+    assert_eq!(
+        number_value(&harness, "mesh-generation-edge-ratio", cx),
+        "2"
+    );
+    fill(&harness, "mesh-generation-edge-ratio", "3", cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-generation-fill-algorithm", cx);
+        window.press("up", cx);
+        window.press("up", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    settle(cx);
+    assert_eq!(
+        number_value(&harness, "mesh-generation-edge-ratio", cx),
+        "1.5"
+    );
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-edge-width").visible());
+        assert!(window.find("mesh-generation-counts").visible());
+        window.click("mesh-generation-cancel", cx);
     })
     .unwrap();
 }

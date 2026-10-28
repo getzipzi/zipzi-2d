@@ -1,4 +1,5 @@
 //! UI-independent editor coordination, SDK-backed document editing and CPU-only previews.
+pub mod adaptive_mesh;
 mod animation;
 mod physics;
 pub use physics::*;
@@ -34,13 +35,13 @@ mod workspace_kind;
 pub use workspace_kind::WorkspaceKind;
 
 pub use document::{
-    AlphaMeshOptions, AnimationDeletionPlan, AnimationLibraryPlan, AnimationRemoval,
-    AuthoringAction, AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
+    AnimationDeletionPlan, AnimationLibraryPlan, AnimationRemoval, AuthoringAction,
+    AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
     AuthoringSessionReason, BusinessAction, BusinessDestination, BusinessPlan, Document,
     ExpressionAuthoringCapabilities, ExpressionEntryEditToken, Layer, ManualMeshTarget,
     MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource, MeshGridOptions,
-    MotionCopyKind, MotionCopyPlan, NewParameter, ObjectAuthoringCapabilities, ObjectState,
-    ObjectStateIndex, OperationResult, OrdinaryBindingAction, OrdinaryBindingCapture,
+    MeshSettings, MotionCopyKind, MotionCopyPlan, NewParameter, ObjectAuthoringCapabilities,
+    ObjectState, ObjectStateIndex, OperationResult, OrdinaryBindingAction, OrdinaryBindingCapture,
     OrdinaryBindingPlan, OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination,
     PaletteMovePlan, PaletteMovePlanningError, PalettePosition, PalettePreservation,
     PaletteProjection, PaletteReparentCapture, PaletteReparentPlan, ParameterCreateError,

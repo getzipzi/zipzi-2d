@@ -16,6 +16,14 @@ pub fn alpha_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
     rectangle_with_texture(false, include_bytes!("../fixtures/alpha-asymmetric.png"))
 }
 
+#[allow(dead_code)]
+pub fn cropped_alpha_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
+    rectangle_with_texture(
+        false,
+        include_bytes!("../../../../fixtures/mesh-generation/opaque32.png"),
+    )
+}
+
 fn rectangle_with_texture(
     bound: bool,
     pixels: &[u8],

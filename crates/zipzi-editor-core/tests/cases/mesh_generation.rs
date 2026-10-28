@@ -43,16 +43,13 @@ fn manual_mesh_stages_preview_apply_and_reject_stale_options() -> anyhow::Result
     let (mut doc, dir) = support::alpha_document()?;
     let target = doc.manual_mesh_target()?;
     let source = doc.mesh_generation_source_manual(&target)?;
-    let options = AlphaMeshOptions {
-        outside_spacing: 8.,
-        inside_spacing: 8.,
-        outside_margin: 0.,
-        inside_margin: 2.,
-        minimum_margin: 0.,
+    let options = MeshSettings {
+        edge_spacing: 8.,
+        interior_spacing: 8.,
+        outer_margin: 0.,
         alpha_threshold: 64,
-        preserve_holes: false,
         clip_to_image: true,
-        ..AlphaMeshOptions::deformation_large()
+        ..MeshSettings::default()
     };
     let stale = source.generate(MeshGenerationOptions::ManualEdge(options))?;
     assert!(stale.geometry().meshing.is_some());
@@ -651,14 +648,12 @@ fn alpha_preview_maps_source_pixels_and_survives_regeneration_history_and_save()
     support::attach_viewports(&mut editor);
     let source = editor.document().unwrap().mesh_generation_source(&mesh())?;
     assert!(source.alpha_error().is_none());
-    let options = MeshGenerationOptions::Alpha(AlphaMeshOptions {
-        outside_spacing: 8.,
-        inside_spacing: 8.,
-        outside_margin: 0.,
-        inside_margin: 2.,
-        minimum_margin: 0.,
+    let options = MeshGenerationOptions::Alpha(MeshSettings {
+        edge_spacing: 8.,
+        interior_spacing: 8.,
+        outer_margin: 0.,
         alpha_threshold: 64,
-        ..AlphaMeshOptions::deformation_large()
+        ..MeshSettings::default()
     });
     let preview = source.generate(options)?;
     let geometry = preview.geometry().clone();
@@ -724,9 +719,9 @@ fn alpha_preview_maps_source_pixels_and_survives_regeneration_history_and_save()
 }
 
 #[test]
-fn alpha_rejects_dependencies_empty_masks_and_stale_plans_without_edits() -> anyhow::Result<()> {
+fn alpha_threshold_is_inclusive_and_stale_plans_do_not_edit() -> anyhow::Result<()> {
     let (bound, _dir) = support::rectangle_document(true)?;
-    let options = MeshGenerationOptions::Alpha(AlphaMeshOptions::deformation_large());
+    let options = MeshGenerationOptions::Alpha(MeshSettings::default());
     assert!(
         bound
             .mesh_generation_source(&mesh())?
@@ -738,11 +733,11 @@ fn alpha_rejects_dependencies_empty_masks_and_stale_plans_without_edits() -> any
     let source = doc.mesh_generation_source(&mesh())?;
     assert!(
         source
-            .generate(MeshGenerationOptions::Alpha(AlphaMeshOptions {
+            .generate(MeshGenerationOptions::Alpha(MeshSettings {
                 alpha_threshold: 255,
-                ..AlphaMeshOptions::default()
+                ..MeshSettings::default()
             }))
-            .is_err()
+            .is_ok()
     );
     assert_eq!(doc.history_lengths(), (0, 0));
     let preview = source.generate(options)?;
@@ -754,19 +749,17 @@ fn alpha_rejects_dependencies_empty_masks_and_stale_plans_without_edits() -> any
 }
 
 #[test]
-fn alpha_outside_margin_pads_texture_atomically_and_regenerates_after_save() -> anyhow::Result<()> {
-    let (mut doc, dir) = support::alpha_document()?;
+fn alpha_edge_band_pads_texture_atomically_and_regenerates_after_save() -> anyhow::Result<()> {
+    let (mut doc, dir) = support::cropped_alpha_document()?;
     let source = doc.mesh_generation_source(&mesh())?;
     let original = source.texture.clone().unwrap();
-    let settings = MeshGenerationOptions::Alpha(AlphaMeshOptions {
-        outside_spacing: 16.,
-        inside_spacing: 16.,
-        outside_margin: 24.,
-        minimum_margin: 8.,
-        inside_margin: 4.,
+    let settings = MeshGenerationOptions::Alpha(MeshSettings {
+        edge_spacing: 16.,
+        interior_spacing: 16.,
+        edge_mode: zipzi_editor_core::adaptive_mesh::MeshEdgeMode::Triple,
+        edge_width: 8.,
         clip_to_image: false,
-        remove_faint_islands: true,
-        ..AlphaMeshOptions::deformation_small()
+        ..MeshSettings::default()
     });
     let preview = source.generate(settings)?;
     let padded = preview.render_texture(original.clone());
@@ -1046,10 +1039,10 @@ fn manual_mesh_sparse_interior_is_a_valid_noop_on_an_untouched_mesh() -> anyhow:
     let (mut doc, _dir) = support::alpha_document()?;
     let target = doc.manual_mesh_target()?;
     let source = doc.mesh_generation_source_manual(&target)?;
-    let options = AlphaMeshOptions {
+    let options = MeshSettings {
         clip_to_image: true,
-        inside_spacing: 10000.,
-        ..AlphaMeshOptions::deformation_large()
+        interior_spacing: 10000.,
+        ..MeshSettings::default()
     };
     let preview = source.generate(MeshGenerationOptions::ManualInterior(options))?;
     assert_eq!(preview.geometry().vertex_ids.len(), 4);

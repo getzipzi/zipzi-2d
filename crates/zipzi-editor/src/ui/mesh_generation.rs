@@ -13,9 +13,13 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 use std::sync::Arc;
+use zipzi_editor_core::adaptive_mesh::{
+    FillParameters, MeshEdgeMode, MeshFillAlgorithm, MeshFillParameters,
+};
 use zipzi_editor_core::{
-    AlphaMeshOptions, CommandId, DocumentId, EditorCommand, MeshGenerationOptions,
-    MeshGenerationPreview as MeshGenerationPlan, MeshGenerationSource, MeshGridOptions, ObjectRef,
+    CommandId, DocumentId, EditorCommand, MeshGenerationOptions,
+    MeshGenerationPreview as MeshGenerationPlan, MeshGenerationSource, MeshGridOptions,
+    MeshSettings, ObjectRef,
 };
 mod generation;
 mod validation;
@@ -38,12 +42,12 @@ const MESH_SLIDE_DISTANCE_PX: f64 = 2000.;
 
 impl NumberField {
     fn options(self, input: &Entity<InputState>, disabled: bool, cx: &App) -> SlideNumberOptions {
-        let value = truncated_number(&input.read(cx).value()).unwrap_or(self.min);
+        let value = parsed_number(&input.read(cx).value()).unwrap_or(self.min);
         SlideNumberOptions {
             value,
             min: self.min,
             max: self.max,
-            step: 1.,
+            step: if self.max <= 4. { 0.05 } else { 1. },
             drag_distance: Some(MESH_SLIDE_DISTANCE_PX),
             disabled,
         }
@@ -76,11 +80,14 @@ pub(crate) struct MeshGenerationForm {
     algorithm: Entity<SelectState<Vec<AlgorithmChoice>>>,
     inputs: [Entity<InputState>; 2],
     numbers: [Entity<SlideNumberInput>; 2],
-    alpha_inputs: [Entity<InputState>; 7],
-    alpha_numbers: [Entity<SlideNumberInput>; 7],
-    alpha_fields: [NumberField; 7],
-    preserve_holes: bool,
-    remove_faint_islands: bool,
+    alpha_inputs: [Entity<InputState>; 11],
+    alpha_numbers: [Entity<SlideNumberInput>; 11],
+    alpha_fields: [NumberField; 11],
+    edge_mode: Entity<SelectState<Vec<AlgorithmChoice>>>,
+    fill_algorithm: Entity<SelectState<Vec<AlgorithmChoice>>>,
+    active_fill: MeshFillAlgorithm,
+    fill_parameters: MeshFillParameters,
+    suppress_boundary_diagonals: bool,
     dialog: FormDialogState,
     validation: anyhow::Result<MeshGenerationOptions>,
     preview: generation::PreviewGeneration,
@@ -150,7 +157,7 @@ impl MeshGenerationForm {
                 .as_ref()
                 .map_or(256., |texture| texture.width.max(texture.height) as f64);
             let spacing = NumberField {
-                min: 1.,
+                min: 6.,
                 max: image_side.max(256.),
             };
             let margin = NumberField {
@@ -162,12 +169,16 @@ impl MeshGenerationForm {
                 spacing,
                 margin,
                 margin,
-                margin,
-                NumberField { min: 3., max: 256. },
-                NumberField { min: 0., max: 255. },
+                NumberField { min: 0., max: 64. },
+                NumberField { min: 1., max: 255. },
+                NumberField { min: 1., max: 4. },
+                NumberField { min: 0.25, max: 4. },
+                NumberField { min: 0., max: 1. },
+                NumberField { min: 0., max: 90. },
+                NumberField { min: 0., max: 24. },
             ];
-            let alpha_defaults = alpha_input_values(alpha_presets()[0]);
-            let alpha_inputs: [Entity<InputState>; 7] = std::array::from_fn(|i| {
+            let alpha_defaults = alpha_input_values(alpha_presets()[1]);
+            let alpha_inputs: [Entity<InputState>; 11] = std::array::from_fn(|i| {
                 cx.new(|cx| {
                     InputState::new(window, cx)
                         .step(1.)
@@ -188,14 +199,18 @@ impl MeshGenerationForm {
             });
             let alpha_numbers = std::array::from_fn(|i| {
                 cx.new(|cx| {
-                    SlideNumberInput::new(
+                    let number = SlideNumberInput::new(
                         alpha_inputs[i].clone(),
                         "",
                         alpha_fields[i].options(&alpha_inputs[i], false, cx),
                         window,
                         cx,
-                    )
-                    .truncate_to_integer()
+                    );
+                    if matches!(i, 5 | 10) {
+                        number.truncate_to_integer()
+                    } else {
+                        number
+                    }
                 })
             });
             let choices = if source.manual_available() {
@@ -253,6 +268,64 @@ impl MeshGenerationForm {
                     cx,
                 )
             });
+            let edge_mode = cx.new(|cx| {
+                SelectState::new(
+                    vec![
+                        AlgorithmChoice {
+                            label: t!("mesh_generation.edge_single").into(),
+                            id: "single",
+                            available: true,
+                        },
+                        AlgorithmChoice {
+                            label: t!("mesh_generation.edge_double").into(),
+                            id: "double",
+                            available: true,
+                        },
+                        AlgorithmChoice {
+                            label: t!("mesh_generation.edge_triple").into(),
+                            id: "triple",
+                            available: true,
+                        },
+                    ],
+                    Some(IndexPath::new(0)),
+                    window,
+                    cx,
+                )
+            });
+            let fill_algorithm = cx.new(|cx| {
+                SelectState::new(
+                    vec![
+                        AlgorithmChoice {
+                            label: t!("mesh_generation.fill_poisson").into(),
+                            id: "poisson",
+                            available: true,
+                        },
+                        AlgorithmChoice {
+                            label: t!("mesh_generation.fill_simple").into(),
+                            id: "simple",
+                            available: true,
+                        },
+                        AlgorithmChoice {
+                            label: t!("mesh_generation.fill_quadtree").into(),
+                            id: "quadtree",
+                            available: true,
+                        },
+                        AlgorithmChoice {
+                            label: t!("mesh_generation.fill_fractal").into(),
+                            id: "fractal",
+                            available: true,
+                        },
+                        AlgorithmChoice {
+                            label: t!("mesh_generation.fill_paving").into(),
+                            id: "paving",
+                            available: true,
+                        },
+                    ],
+                    Some(IndexPath::new(0)),
+                    window,
+                    cx,
+                )
+            });
             let mut subscriptions = Vec::new();
             for (number, input) in numbers
                 .iter()
@@ -286,7 +359,7 @@ impl MeshGenerationForm {
                         }
                         if matches!(event, InputEvent::Blur | InputEvent::PressEnter { .. }) {
                             let text = input.read(cx).value();
-                            if let Some(value) = truncated_number(&text) {
+                            if let Some(value) = parsed_number(&text) {
                                 let value = value.to_string();
                                 if text.as_ref() != value {
                                     input
@@ -307,6 +380,42 @@ impl MeshGenerationForm {
             subscriptions.push(cx.subscribe(
                 &algorithm,
                 |this: &mut Self, _, _: &SelectEvent<Vec<AlgorithmChoice>>, cx| {
+                    this.dialog.edited();
+                    this.refresh(cx);
+                    cx.notify();
+                },
+            ));
+            subscriptions.push(cx.subscribe(
+                &edge_mode,
+                |this: &mut Self, _, _: &SelectEvent<Vec<AlgorithmChoice>>, cx| {
+                    this.dialog.edited();
+                    this.refresh(cx);
+                    cx.notify();
+                },
+            ));
+            subscriptions.push(cx.subscribe_in(
+                &fill_algorithm,
+                window,
+                |this: &mut Self, _, _: &SelectEvent<Vec<AlgorithmChoice>>, window, cx| {
+                    if let Some(parameters) = this.read_fill_parameters(cx) {
+                        *this.fill_parameters.get_mut(this.active_fill) = parameters;
+                    }
+                    this.active_fill = this.fill_kind(cx);
+                    let p = this.fill_parameters.get(this.active_fill);
+                    for (i, value) in [
+                        p.edge_ratio,
+                        p.gradation,
+                        p.jitter,
+                        p.angle,
+                        p.max_rows as f64,
+                    ]
+                    .into_iter()
+                    .enumerate()
+                    {
+                        this.alpha_inputs[i + 6].update(cx, |input, cx| {
+                            input.set_value(value.to_string(), window, cx)
+                        });
+                    }
                     this.dialog.edited();
                     this.refresh(cx);
                     cx.notify();
@@ -351,17 +460,20 @@ impl MeshGenerationForm {
                 alpha_inputs,
                 alpha_numbers,
                 alpha_fields,
-                preserve_holes: false,
-                remove_faint_islands: true,
+                edge_mode,
+                fill_algorithm,
+                active_fill: MeshFillAlgorithm::GradedPoisson,
+                fill_parameters: MeshFillParameters::default(),
+                suppress_boundary_diagonals: false,
                 dialog: FormDialogState::new(cx),
                 validation: Ok(if alpha_available {
                     if source.manual_available() {
-                        MeshGenerationOptions::ManualEdge(AlphaMeshOptions {
+                        MeshGenerationOptions::ManualEdge(MeshSettings {
                             clip_to_image: true,
-                            ..alpha_presets()[0]
+                            ..alpha_presets()[1]
                         })
                     } else {
-                        MeshGenerationOptions::Alpha(alpha_presets()[0])
+                        MeshGenerationOptions::Alpha(alpha_presets()[1])
                     }
                 } else {
                     MeshGenerationOptions::Grid(defaults)
@@ -396,7 +508,7 @@ impl MeshGenerationForm {
         self.algorithm.read(cx).selected_value() == Some(&"manual-reconnect")
     }
 
-    fn wrap_alpha(&self, options: AlphaMeshOptions, cx: &App) -> MeshGenerationOptions {
+    fn wrap_alpha(&self, options: MeshSettings, cx: &App) -> MeshGenerationOptions {
         match self.algorithm.read(cx).selected_value().copied() {
             Some("manual-edge") => MeshGenerationOptions::ManualEdge(options),
             Some("manual-interior") => MeshGenerationOptions::ManualInterior(options),
@@ -406,13 +518,14 @@ impl MeshGenerationForm {
     }
 
     fn alpha_preset(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
-        let options = alpha_presets()[index];
+        let mut options = alpha_presets()[index];
+        options.fill_algorithm = self.fill_kind(cx);
+        options.fill_parameters = self.fill_parameters;
         let values = alpha_input_values(options);
         for (input, value) in self.alpha_inputs.iter().zip(values) {
             input.update(cx, |input, cx| input.set_value(value, window, cx));
         }
-        self.preserve_holes = options.preserve_holes;
-        self.remove_faint_islands = options.remove_faint_islands;
+        self.suppress_boundary_diagonals = options.suppress_boundary_diagonals;
         self.dialog.edited();
         self.refresh(cx);
         cx.notify();
@@ -482,30 +595,72 @@ fn truncated_number(text: &str) -> Option<f64> {
         .map(|value| value.trunc() + 0.)
 }
 
-fn alpha_input_values(options: AlphaMeshOptions) -> [String; 7] {
+fn alpha_input_values(options: MeshSettings) -> [String; 11] {
+    let p = options.fill_parameters.get(options.fill_algorithm);
     [
-        options.outside_spacing.trunc().to_string(),
-        options.inside_spacing.trunc().to_string(),
-        options.outside_margin.trunc().to_string(),
-        options.inside_margin.trunc().to_string(),
-        options.minimum_margin.trunc().to_string(),
-        options.minimum_boundary_points.to_string(),
-        options.alpha_threshold.to_string(),
+        options.edge_spacing,
+        options.interior_spacing,
+        options.outer_margin,
+        options.edge_width,
+        options.wrap,
+        options.alpha_threshold as f64,
+        p.edge_ratio,
+        p.gradation,
+        p.jitter,
+        p.angle,
+        p.max_rows as f64,
+    ]
+    .map(|v| v.to_string())
+}
+
+fn alpha_presets() -> [MeshSettings; 3] {
+    [
+        MeshSettings {
+            edge_spacing: 12.,
+            interior_spacing: 64.,
+            ..MeshSettings::default()
+        },
+        MeshSettings::default(),
+        MeshSettings {
+            edge_spacing: 6.,
+            interior_spacing: 20.,
+            ..MeshSettings::default()
+        },
     ]
 }
 
-fn alpha_presets() -> [AlphaMeshOptions; 3] {
-    [
-        AlphaMeshOptions {
-            minimum_boundary_points: 15,
-            ..AlphaMeshOptions::deformation_small()
-        },
-        AlphaMeshOptions::standard(),
-        AlphaMeshOptions::deformation_large(),
-    ]
-    .map(|options| AlphaMeshOptions {
-        clip_to_image: false,
-        remove_faint_islands: true,
-        ..options
-    })
+impl MeshGenerationForm {
+    fn fill_kind(&self, cx: &App) -> MeshFillAlgorithm {
+        match self.fill_algorithm.read(cx).selected_value().copied() {
+            Some("simple") => MeshFillAlgorithm::SimpleTriangles,
+            Some("quadtree") => MeshFillAlgorithm::AdaptiveQuadtree,
+            Some("fractal") => MeshFillAlgorithm::TriangleFractal,
+            Some("paving") => MeshFillAlgorithm::ContourPaving,
+            _ => MeshFillAlgorithm::GradedPoisson,
+        }
+    }
+    fn edge_kind(&self, cx: &App) -> MeshEdgeMode {
+        match self.edge_mode.read(cx).selected_value().copied() {
+            Some("double") => MeshEdgeMode::Double,
+            Some("triple") => MeshEdgeMode::Triple,
+            _ => MeshEdgeMode::Single,
+        }
+    }
+    fn read_fill_parameters(&self, cx: &App) -> Option<FillParameters> {
+        let get = |i: usize| parsed_number(&self.alpha_inputs[i].read(cx).value());
+        let rows = get(10)?;
+        if rows.fract() != 0. || !(0. ..=24.).contains(&rows) {
+            return None;
+        }
+        Some(FillParameters {
+            edge_ratio: get(6)?,
+            gradation: get(7)?,
+            jitter: get(8)?,
+            angle: get(9)?,
+            max_rows: rows as usize,
+        })
+    }
+}
+fn parsed_number(text: &str) -> Option<f64> {
+    text.trim().parse::<f64>().ok().filter(|v| v.is_finite())
 }

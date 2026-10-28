@@ -16,8 +16,8 @@ pub use object_state::{ObjectState, ObjectStateIndex};
 #[path = "mesh_generation.rs"]
 mod mesh_generation;
 pub use mesh_generation::{
-    AlphaMeshOptions, MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource,
-    MeshGridOptions,
+    MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource, MeshGridOptions,
+    MeshSettings,
 };
 
 #[path = "document/manual_mesh.rs"]

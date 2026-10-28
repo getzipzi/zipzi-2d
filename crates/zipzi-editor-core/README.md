@@ -16,6 +16,7 @@ and viewport transforms provide the rendering boundary consumed by
 - `src/animation/`, `src/timeline/`, `src/physics.rs`: animation and physics editing.
 - `src/transfer.rs`: import/export coordination.
 - `src/tools/`, `src/picking/`, `src/viewport/`: interaction, picking and view transforms.
+- `src/adaptive_mesh/`: PSD2Live-derived contour/band and interior fill strategies; see its README for provenance, API and reference tests.
 - `src/scene.rs`: immutable scene data for previews.
 - `src/lib.rs`: public types and exports.
 
