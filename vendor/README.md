@@ -37,6 +37,25 @@ The Fast backend and local cache-boundary fix are the accepted default. See the
 [Kit comparison and adoption decision](../docs/archive/gpui-kit-old-vs-fast.md)
 for CPU measurements and presentation-latency tradeoffs.
 
+## Accessibility prepaint transactions
+
+`gpui-fast/src/window.rs`, `window/a11y.rs` and `fast/a11y.rs` roll back
+accessibility nodes and retained logs when a virtual list retries speculative
+prepaint for autoscroll. The rollback restores open ancestors and focus, removes
+discarded node IDs and bounds, and invalidates abandoned retained log ranges.
+Without it, expanding Properties details can panic with `Duplicate a11y node id`.
+This restores the source fix removed in `f032d769`, with its regression in the
+Editor workspace so the root lockfile and normal GPUI feature selection apply:
+
+```sh
+cargo test --locked -p zipzi-editor -p zipzi-editor-core -p zipzi-editor-render \
+  --features zipzi-editor/test-support --test gpui_prepaint_rollback
+```
+
+Reapply these changes when updating GPUI Fast. Mesh selection/Details interaction
+coverage lives in `zipzi-editor/headless_tests/mesh_properties.rs`; its ignored Mao
+case requires the separately obtained local model.
+
 ## Upstream baselines
 
 The four Fast packages come from the crates.io **0.1.7** releases and provide

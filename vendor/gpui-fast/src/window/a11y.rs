@@ -120,6 +120,16 @@ pub(crate) const ROOT_NODE_ID: NodeId = NodeId(0);
 pub(crate) type A11yActionListener =
     Box<dyn FnMut(Option<&accesskit::ActionData>, &mut Window, &mut App) + 'static>;
 
+/// Accessibility state before a speculative prepaint pass.
+pub(crate) struct PrepaintCheckpoint {
+    all_nodes_len: usize,
+    ids_stack: SmallVec<[NodeId; 16]>,
+    nodes_stack: SmallVec<[accesskit::Node; 16]>,
+    focus: Option<NodeId>,
+    active_descendant: Option<NodeId>,
+    log: (usize, usize, usize),
+}
+
 /// Per-window accessibility state.
 ///
 /// Manages the AccessKit tree that is built each frame and the mappings
@@ -165,6 +175,35 @@ pub(crate) struct A11y {
 }
 
 impl A11y {
+    /// Completed nodes can be discarded by index; open ancestors need restoring.
+    pub(crate) fn prepaint_checkpoint(&self) -> Option<PrepaintCheckpoint> {
+        self.is_active().then(|| PrepaintCheckpoint {
+            all_nodes_len: self.nodes.all_nodes.len(),
+            ids_stack: self.nodes.ids_stack.clone(),
+            nodes_stack: self.nodes.nodes_stack.clone(),
+            focus: self.nodes.focus,
+            active_descendant: self.nodes.active_descendant,
+            log: self.nodes.fast.prepaint_checkpoint(),
+        })
+    }
+
+    pub(crate) fn rollback_prepaint(&mut self, checkpoint: PrepaintCheckpoint) {
+        debug_assert_eq!(self.nodes.ids_stack, checkpoint.ids_stack);
+        for (id, _) in self.nodes.all_nodes.drain(checkpoint.all_nodes_len..) {
+            self.nodes.seen_ids.remove(&id);
+            self.node_bounds.remove(&id);
+            self.focus_ids.remove(&id);
+            self.action_listeners.remove(&id);
+            #[cfg(debug_assertions)]
+            self.nodes.node_info.remove(&id);
+        }
+        self.nodes.ids_stack = checkpoint.ids_stack;
+        self.nodes.nodes_stack = checkpoint.nodes_stack;
+        self.nodes.focus = checkpoint.focus;
+        self.nodes.active_descendant = checkpoint.active_descendant;
+        self.nodes.fast.rollback_prepaint(checkpoint.log);
+    }
+
     pub(crate) fn new(
         active_flag: Arc<AtomicBool>,
         force_disabled: bool,
