@@ -16,6 +16,38 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_catalog_navigation_and_public_query_defaults(self):
+        output=gen.render(self.contract());namespace={}
+        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
+        catalog=namespace['CATALOG']
+        for path in catalog:
+            parent=path.rpartition('.')[0]
+            if parent in catalog:
+                self.assertIn(path,catalog[parent]['children'])
+        for path in ('Runtime.sessions','Runtime.resources','Session.project'):
+            self.assertTrue(catalog['zipzi.'+path]['children'])
+        signature=catalog['zipzi.modeling.ModelingQuery']['signature']
+        self.assertNotIn('field(',signature)
+        self.assertIn('assets: tuple[str, ...] = ()',signature)
+        self.assertIn('physics: bool = False',signature)
+        self.assertIn('`'+signature+'`',output['client/python/zipzi/docs/reference.md'])
+
+    def test_full_help_preserves_content_and_query_runtime_defaults(self):
+        import sys
+        with patch.object(sys,'path',[str(PACKAGE/'client/python'),*sys.path]):
+            from zipzi import ApiDescription, modeling
+            help=ApiDescription('zipzi.test','type','signature'*100,'documentation'*100,
+                (('field','meaning'*100),),('zipzi.test.child',),'docs/recipes.py')
+            full=help.format()
+            for value in (help.path,help.kind,help.signature,help.documentation,
+                          help.fields[0][1],help.children[0],help.example):
+                self.assertIn(value,full)
+            self.assertLess(len(repr(help)),len(full))
+            query=modeling.ModelingQuery()
+            self.assertEqual(query.assets,())
+            self.assertIs(query.physics,False)
+            self.assertIs(query.pose,False)
+
     def test_flattened_physics_extensions_roundtrip_and_cannot_shadow_fields(self):
         import sys
         with patch.object(sys, 'path', [str(PACKAGE / 'client/python'), *sys.path]):

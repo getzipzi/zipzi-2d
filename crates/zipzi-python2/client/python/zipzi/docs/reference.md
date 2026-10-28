@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 a99f219e9050aff87efbae01b9ced70b71dba501bf390ebaf5b9624c47bad08e.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 3e7a81f621352431059cf6513bbffdce19f60d53ace07cf504e85e50004787bf.
 
 
 ## zipzi.ApiDescription
@@ -41,6 +41,16 @@ Return a local summary capped at 1,024 characters, with no RPC/full scan.
 
 Large arrays and bytes show bounded samples/counts. Explicit field access
 still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.ApiDescription.format
+
+`() -> str`
+
+Return complete help text without truncation or IO.
+
+Use print(description.format()) for full help. repr, str and summary
+remain bounded previews; formatting does not recursively query children.
 
 
 ## zipzi.ApiDescription.summary
@@ -2926,6 +2936,8 @@ Look up an exact public path, e.g. Session.meshes.list, without IO or eval.
 
 Unknown paths raise KeyError. Short paths are normalized under zipzi.
 The root description links the bundled short guide and executable recipes.
+Use print(describe(path).format()) for complete help; direct printing is a
+bounded preview. Fields and child paths are also available individually.
 This describes the installed API, while runtime.capabilities() describes
 the connected host. No resource is constructed or RPC sent by this query.
 
@@ -5166,7 +5178,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.BindingAxis
 
-`(id: str = field(default_factory=lambda: string('')), samples: tuple[BindingSample, ...] = field(default_factory=lambda: tuple((read_BindingSample(v0) for v0 in sequence([])))), parameter_id: str)`
+`(id: str = '', samples: tuple[BindingSample, ...] = (), parameter_id: str)`
 
 Immutable owned BindingAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -5813,7 +5825,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.BlendShapeConstraint
 
-`(samples: tuple[ConstraintSample, ...] = field(default_factory=lambda: tuple((read_ConstraintSample(v0) for v0 in sequence([])))), id: str, parameter_id: str)`
+`(samples: tuple[ConstraintSample, ...] = (), id: str, parameter_id: str)`
 
 Immutable owned BlendShapeConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -5845,7 +5857,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.BlendShapeKeyTable
 
-`(samples: tuple[BindingSample, ...] = field(default_factory=lambda: tuple((read_BindingSample(v0) for v0 in sequence([])))), base_sample_id: str = field(default_factory=lambda: string('')), id: str, parameter_id: str)`
+`(samples: tuple[BindingSample, ...] = (), base_sample_id: str = '', id: str, parameter_id: str)`
 
 Immutable owned BlendShapeKeyTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -6077,7 +6089,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.Canvas
 
-`(width: float, height: float, origin: Vec2, pixels_per_unit: float, flag: int = field(default_factory=lambda: integer(1)))`
+`(width: float, height: float, origin: Vec2, pixels_per_unit: float, flag: int = 1)`
 
 Immutable owned Canvas value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -7404,7 +7416,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DeltaGlueKeyform
 
-`(sample_id: str = field(default_factory=lambda: string('')), intensity: float)`
+`(sample_id: str = '', intensity: float)`
 
 Immutable owned DeltaGlueKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -7621,7 +7633,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DeltaMeshKeyform
 
-`(sample_id: str = field(default_factory=lambda: string('')), positions: tuple[Vec2, ...], opacity: float | None = None, draw_order: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(sample_id: str = '', positions: tuple[Vec2, ...], opacity: float | None = None, draw_order: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned DeltaMeshKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -7663,7 +7675,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DeltaOffscreenKeyform
 
-`(sample_id: str = field(default_factory=lambda: string('')), opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(sample_id: str = '', opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned DeltaOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -7701,7 +7713,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DeltaPartKeyform
 
-`(sample_id: str = field(default_factory=lambda: string('')), draw_order: float)`
+`(sample_id: str = '', draw_order: float)`
 
 Immutable owned DeltaPartKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -7731,7 +7743,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DeltaRotationKeyform
 
-`(sample_id: str = field(default_factory=lambda: string('')), origin: Vec2 | None = None, angle: float | None = None, scale: float | None = None, opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(sample_id: str = '', origin: Vec2 | None = None, angle: float | None = None, scale: float | None = None, opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned DeltaRotationKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -7777,7 +7789,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DeltaWarpKeyform
 
-`(sample_id: str = field(default_factory=lambda: string('')), points: tuple[Vec2, ...], opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(sample_id: str = '', points: tuple[Vec2, ...], opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned DeltaWarpKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -8141,7 +8153,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.Drawable
 
-`(id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None = None, texture_asset_id: str, texture_slot: int, renderable: bool = field(default_factory=lambda: _boolean(True)), positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], indices: tuple[int, ...], draw_order: int, render_order: int, opacity: float, multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...])`
+`(id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None = None, texture_asset_id: str, texture_slot: int, renderable: bool = True, positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], indices: tuple[int, ...], draw_order: int, render_order: int, opacity: float, multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...])`
 
 Immutable owned Drawable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -9310,7 +9322,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.GlueKeyform
 
-`(samples: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), intensity: float)`
+`(samples: tuple[str, ...] = (), intensity: float)`
 
 Immutable owned GlueKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -9633,7 +9645,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.HierarchyOrder
 
-`(organization: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), deformation: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), glues: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))))`
+`(organization: tuple[str, ...] = (), deformation: tuple[str, ...] = (), glues: tuple[str, ...] = ())`
 
 Immutable owned HierarchyOrder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -10391,7 +10403,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.MeshKeyform
 
-`(samples: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), positions: tuple[Vec2, ...], appearance: Appearance, draw_order: float | None = None)`
+`(samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: Appearance, draw_order: float | None = None)`
 
 Immutable owned MeshKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -12433,7 +12445,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ModelingQuery
 
-`(assets: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), meshes: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parameters: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parts: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), transforms: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), scene_bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_key_tables: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_constraints: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), blend_bindings: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), glues: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), offscreens: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), parameter_groups: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), attachments: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), motions: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), motion_groups: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), motion_registrations: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), expressions: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), physics: bool = field(default_factory=lambda: _boolean(False)), pose: bool = field(default_factory=lambda: _boolean(False)))`
+`(assets: tuple[str, ...] = (), meshes: tuple[str, ...] = (), parameters: tuple[str, ...] = (), parts: tuple[str, ...] = (), transforms: tuple[str, ...] = (), bindings: tuple[str, ...] = (), scene_bindings: tuple[str, ...] = (), blend_key_tables: tuple[str, ...] = (), blend_constraints: tuple[str, ...] = (), blend_bindings: tuple[str, ...] = (), glues: tuple[str, ...] = (), offscreens: tuple[str, ...] = (), parameter_groups: tuple[str, ...] = (), attachments: tuple[str, ...] = (), motions: tuple[str, ...] = (), motion_groups: tuple[str, ...] = (), motion_registrations: tuple[str, ...] = (), expressions: tuple[str, ...] = (), physics: bool = False, pose: bool = False)`
 
 Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -13800,7 +13812,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.MotionSnapshot
 
-`(physics: tuple[PhysicsRigSnapshot, ...] = field(default_factory=lambda: tuple((read_PhysicsRigSnapshot(v0) for v0 in sequence([])))), time: float, parameters: _Mapping[str, float], part_opacity_channels: _Mapping[str, float], part_opacities: _Mapping[str, float], model_opacity: float, active_motions: tuple[str, ...], active_expressions: tuple[str, ...], fired_events: tuple[MotionEventFired, ...], coverage: tuple[str, ...], motion_positions: tuple[MotionPlaybackPosition, ...])`
+`(physics: tuple[PhysicsRigSnapshot, ...] = (), time: float, parameters: _Mapping[str, float], part_opacity_channels: _Mapping[str, float], part_opacities: _Mapping[str, float], model_opacity: float, active_motions: tuple[str, ...], active_expressions: tuple[str, ...], fired_events: tuple[MotionEventFired, ...], coverage: tuple[str, ...], motion_positions: tuple[MotionPlaybackPosition, ...])`
 
 Immutable owned MotionSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -14111,7 +14123,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ObjectEditorState
 
-`(hidden_in_editor: bool = field(default_factory=lambda: _boolean(False)), locked: bool = field(default_factory=lambda: _boolean(False)))`
+`(hidden_in_editor: bool = False, locked: bool = False)`
 
 Immutable owned ObjectEditorState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -14305,7 +14317,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ObservationView
 
-`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = field(default_factory=lambda: number(0.0)))`
+`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0)`
 
 Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -14401,7 +14413,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.Offscreen
 
-`(id: str, runtime_id: str, name: str, part_id: str, enabled: bool = field(default_factory=lambda: _boolean(True)), blend_mode: int, flags: int, masks: tuple[str, ...], part_keyform_indices: tuple[int, ...], keyforms: tuple[OffscreenKeyform, ...])`
+`(id: str, runtime_id: str, name: str, part_id: str, enabled: bool = True, blend_mode: int, flags: int, masks: tuple[str, ...], part_keyform_indices: tuple[int, ...], keyforms: tuple[OffscreenKeyform, ...])`
 
 Immutable owned Offscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -14534,7 +14546,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.OffscreenFrame
 
-`(renderable: bool = field(default_factory=lambda: _boolean(True)), id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: str | None = None, render_order: int, opacity: float, enabled: bool, blend_mode: int, flags: int, masks: tuple[str, ...], multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float])`
+`(renderable: bool = True, id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: str | None = None, render_order: int, opacity: float, enabled: bool, blend_mode: int, flags: int, masks: tuple[str, ...], multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float])`
 
 Immutable owned OffscreenFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -15245,7 +15257,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.Parameter
 
-`(id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int = field(default_factory=lambda: integer(6)), kind: ParameterKind = field(default_factory=lambda: read_ParameterKind('normal')), repeat: bool = field(default_factory=lambda: _boolean(False)))`
+`(id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int = 6, kind: ParameterKind = field(default_factory=lambda: read_ParameterKind('normal')), repeat: bool = False)`
 
 Immutable owned Parameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -15407,7 +15419,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.PartKeyform
 
-`(samples: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), draw_order: float)`
+`(samples: tuple[str, ...] = (), draw_order: float)`
 
 Immutable owned PartKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -19514,7 +19526,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ReparentEdit
 
-`(sources: tuple[str, ...], parent_id: str, strategy: ReparentStrategy, placement: ReparentPlacement | None = None, tolerance: float, relative_tolerance: float = field(default_factory=lambda: number(1e-06)), context: ReparentContext | None = None)`
+`(sources: tuple[str, ...], parent_id: str, strategy: ReparentStrategy, placement: ReparentPlacement | None = None, tolerance: float, relative_tolerance: float = 1e-06, context: ReparentContext | None = None)`
 
 Immutable owned ReparentEdit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -19862,7 +19874,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.RotationKeyform
 
-`(samples: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), rotation: RotationPose, appearance: Appearance)`
+`(samples: tuple[str, ...] = (), rotation: RotationPose, appearance: Appearance)`
 
 Immutable owned RotationKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -20986,7 +20998,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.SceneContentEditWarpPoints
 
-`(transform_id: str, target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'})), updates: tuple[WarpPointPatch, ...], clear_bezier: bool = field(default_factory=lambda: _boolean(False)))`
+`(transform_id: str, target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'})), updates: tuple[WarpPointPatch, ...], clear_bezier: bool = False)`
 
 Immutable owned SceneContentEditWarpPoints value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -21843,7 +21855,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.SceneEditPatch
 
-`(id: str, expected: SceneFieldValue, value: SceneFieldValue, clear_glue_pairs: bool = field(default_factory=lambda: _boolean(False)))`
+`(id: str, expected: SceneFieldValue, value: SceneFieldValue, clear_glue_pairs: bool = False)`
 
 Immutable owned SceneEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -22794,7 +22806,7 @@ Typed public API entry.
 
 ## zipzi.modeling.SpatialQueryBounds
 
-`(targets: tuple[ObjectTarget, ...], include_hidden: bool = field(default_factory=lambda: _boolean(False)))`
+`(targets: tuple[ObjectTarget, ...], include_hidden: bool = False)`
 
 Immutable owned SpatialQueryBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -22824,7 +22836,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.SpatialQueryHits
 
-`(point: tuple[float, float], include_hidden: bool = field(default_factory=lambda: _boolean(False)), details: bool = field(default_factory=lambda: _boolean(False)), max_candidates: int = field(default_factory=lambda: integer(32)))`
+`(point: tuple[float, float], include_hidden: bool = False, details: bool = False, max_candidates: int = 32)`
 
 Immutable owned SpatialQueryHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -23402,7 +23414,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.WarpKeyform
 
-`(bezier: WarpBezier | None = None, samples: tuple[str, ...] = field(default_factory=lambda: tuple((string(v0) for v0 in sequence([])))), positions: tuple[Vec2, ...], appearance: Appearance)`
+`(bezier: WarpBezier | None = None, samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: Appearance)`
 
 Immutable owned WarpKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -23667,7 +23679,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.observation.View
 
-`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = field(default_factory=lambda: number(0.0)))`
+`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0)`
 
 Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -26575,7 +26587,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.spatial.Bounds
 
-`(targets: tuple[ObjectTarget, ...], include_hidden: bool = field(default_factory=lambda: _boolean(False)))`
+`(targets: tuple[ObjectTarget, ...], include_hidden: bool = False)`
 
 Immutable owned SpatialQueryBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -26741,7 +26753,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.spatial.Hits
 
-`(point: tuple[float, float], include_hidden: bool = field(default_factory=lambda: _boolean(False)), details: bool = field(default_factory=lambda: _boolean(False)), max_candidates: int = field(default_factory=lambda: integer(32)))`
+`(point: tuple[float, float], include_hidden: bool = False, details: bool = False, max_candidates: int = 32)`
 
 Immutable owned SpatialQueryHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

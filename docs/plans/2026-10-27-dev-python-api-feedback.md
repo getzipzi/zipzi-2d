@@ -1,6 +1,6 @@
 # dev-python API 易用性与网格工具问题记录
 
-日期：2026-10-27。状态：仅记录，尚未修复。
+日期：2026-10-27。状态：2026-10-28 已修复公开帮助问题；新增能力和待核实项见下表。
 
 本轮使用 `./tools/dev-python` 验证 `zipzi-python2` 的 Editor 连接、模型结构读取和编辑。
 用户另提供了一轮只通过 `zipzi.describe()` 发现接口的结构读取反馈。
@@ -20,7 +20,29 @@
 - **已确认行为，契约待澄清**：行为发生过，但不能直接判定实现错误，需要明确适用条件或补充说明。
 - **待核实项**：有疑问或用户报告，尚不足以认定缺陷；列明后续所需证据。
 
-以下改进建议均为待办，不表示实现已经修改或补验通过。
+以下历史观察保留原始证据；当前处理状态以本节更新为准。
+
+## 2026-10-28 核验与处理
+
+| 项目 | 当前处理 |
+| --- | --- |
+| Runtime.sessions 导航遗漏 | 属实；改为从所有已注册路径生成父子导航，同时补齐 Runtime.resources、Session.project 和根域导航 |
+| ModelingQuery 签名实现细节 | 属实；从编译契约渲染空集合和标量公共默认值，不改变运行时 factory |
+| 完整帮助输出 | 新增 ApiDescription.format()；describe 文档和安装指南提供完整打印入口，保留有界 repr/summary |
+| 根关系、Mesh 读取链路、身份与返回值差异 | 属实；安装指南补充转换规则、带 Source 前提的纹理读取示例和身份解释；保留既有数据契约 |
+| SessionInfo 显示名称 | 缺口仍存在；指南明确 path 不是 Editor 标题，不能从目录名冒充显示名称 |
+| Alpha 布网 | Python 公开入口缺口仍存在；源码确认 Rust SDK 已有 alpha_mesh_geometry 等算法，需单独接入 Runtime/Python，尚未实现 |
+| 动画质量报告、GPU 拓扑图层 | 缺口仍存在；指南明确现有检查范围，新增报告和图层尚未实现 |
+| 创建 Part 的绘制分组 | 当前源码仅在已有显式分组时追加空 Part 分组；dev-python 新建 Local 会话实测 scene.CreatePart 前后均为 None，历史现象未复现为普遍行为 |
+| 宿主断连、复杂换父级、任意布网迁移、活动文档发现 | 原记录没有足以定位实现缺陷的证据，仍待针对性复现；未修改用户模型或活动 Editor |
+
+修复来源为目录生成器和手写帮助类，生成目录与 reference 同步更新。
+验证：代码生成测试共 21 项，首次 20 项通过；唯一生成产物漂移失败由生成与检查
+并发造成，待生成结束后该项单独重跑通过。`generate.py --check` 验证 40 个文件
+一致；`./tools/dev-python` 验证公开导航、签名、完整帮助、默认值、同 Source 的
+Mesh→纹理读取，以及新建 Local 会话中 CreatePart 前后均无显式分组。
+`git diff --check` 通过。本文中的模型制作质量问题不等同于 SDK 实现错误，
+本轮没有对磁盘模型执行重新布网。
 
 ## 复现环境
 
@@ -115,7 +137,7 @@ query 签名包含上述实现表达式；对象摘要截断而各字段内容�
 这是已确认的元数据便利性缺口；目录名不能保证等于 Editor 文档标题，
 也不适用于没有关联路径的会话。
 
-证据：[`SessionInfo` 定义](../../../../crates/zipzi-python2/client/python/zipzi/_values.py)。
+证据：[`SessionInfo` 定义](../../crates/zipzi-python2/client/python/zipzi/_values.py)。
 建议明确提供显示名称的入口及其与路径、未命名文档的关系。
 
 ### 根节点与未分配关系的表示不一致
@@ -124,8 +146,8 @@ query 签名包含上述实现表达式；对象摘要截断而各字段内容�
 及 `modeling.Part.parent_id` 使用空字符串表示根或未分配。
 读取 Part 树和完整建模记录时，需要做额外转换，不能直接混用这些字段。
 
-证据：[`scene.Summary`](../../../../crates/zipzi-python2/client/python/zipzi/_generated/scene.py)
-及 [canonical Mesh/Part](../../../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
+证据：[`scene.Summary`](../../crates/zipzi-python2/client/python/zipzi/_generated/scene.py)
+及 [canonical Mesh/Part](../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
 这属于已确认的表示差异；两侧已有字段说明，不能记为根节点语义完全未定义。
 建议统一公开表示，或在跨接口示例中明确转换规则。
 
@@ -139,8 +161,8 @@ query 签名包含上述实现表达式；对象摘要截断而各字段内容�
 本轮识别网格语义时实际使用了“ID 目录 → 完整网格与资源元数据 → 图像”的链路。
 这些逻辑读取步骤不等于底层 RPC 数量；本轮未测量其固定延迟或证明存在性能回归。
 
-证据：[`meshes.Mesh`](../../../../crates/zipzi-python2/client/python/zipzi/_generated/meshes.py)
-及 [canonical Mesh 与 SceneReference](../../../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
+证据：[`meshes.Mesh`](../../crates/zipzi-python2/client/python/zipzi/_generated/meshes.py)
+及 [canonical Mesh 与 SceneReference](../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
 建议补充选择入口的指南，以及从一个网格读取组织、外观和纹理的完整示例。
 是否需要聚合检查接口，应由实际调用成本决定。
 
@@ -159,9 +181,9 @@ query 签名包含上述实现表达式；对象摘要截断而各字段内容�
 正确字段已在文档中说明，该次失败是使用错误；不能以此证明 API 返回错误字段。
 同样，模型编辑时直接查看类型定义是操作选择，不足以证明只能查源码才能使用这些接口。
 
-证据：[`Version/Source/WriteResult`](../../../../crates/zipzi-python2/client/python/zipzi/_values.py)、
-[`bindings` 值](../../../../crates/zipzi-python2/client/python/zipzi/_generated/binding_values.py)
-及 [canonical 引用与绑定类型](../../../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
+证据：[`Version/Source/WriteResult`](../../crates/zipzi-python2/client/python/zipzi/_values.py)、
+[`bindings` 值](../../crates/zipzi-python2/client/python/zipzi/_generated/binding_values.py)
+及 [canonical 引用与绑定类型](../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
 
 ## 已确认行为但契约待澄清
 
@@ -195,7 +217,7 @@ query 签名包含上述实现表达式；对象摘要截断而各字段内容�
 `ModelingCommandReplaceTopology` 可以提交包含几何、绑定和顶点映射的完整替换。
 这些能力可以支持自建布网流程，不能笼统记为“不支持手工拓扑”或“不能修复”。
 
-证据：[公开建模命令与拓扑类型](../../../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
+证据：[公开建模命令与拓扑类型](../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
 建议补充轮廓感知布网入口，或提供从图像轮廓、特征点到受约束拓扑的公开工作流。
 
 ### 内置采样诊断不覆盖动画网格质量
@@ -210,7 +232,7 @@ query 签名包含上述实现表达式；对象摘要截断而各字段内容�
 跨关键形面积与边长拉伸等指标。上述指标可以从公开几何与图像自建计算，
 不能把“没有内置报告”写成“无法检查”。
 
-证据：[`sampling.Checks/DiagnosticKind`](../../../../crates/zipzi-python2/client/python/zipzi/_generated/sampling_values.py)。
+证据：[`sampling.Checks/DiagnosticKind`](../../crates/zipzi-python2/client/python/zipzi/_generated/sampling_values.py)。
 建议提供几何有效性与动画质量分开的报告，并明确检查坐标空间及采样范围。
 
 ### GPU 观察接口缺少拓扑检查图层
@@ -223,7 +245,7 @@ query 签名包含上述实现表达式；对象摘要截断而各字段内容�
 不是当前 GPU 观察接口已经具备该能力。
 建议提供与同一 `Source` 和视图映射绑定的拓扑叠加输出。
 
-证据：[`ObservationView`](../../../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
+证据：[`ObservationView`](../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)。
 
 ### 本轮网格质量问题与处理责任
 

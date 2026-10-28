@@ -11,7 +11,7 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = 'zipzi-runtime-r7-manual-mesh-1'
 PACKAGE_VERSION = '0.1.0a1'
-CLIENT_SOURCE_SHA256 = 'a99f219e9050aff87efbae01b9ced70b71dba501bf390ebaf5b9624c47bad08e'
+CLIENT_SOURCE_SHA256 = '3e7a81f621352431059cf6513bbffdce19f60d53ace07cf504e85e50004787bf'
 CONTRACT_SHA256 = '544b83dd122e08a3270d0e38d2d915bb4a27c66b111257a43cc334d9a19178b9'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
@@ -47,18 +47,34 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Source',
                         'zipzi.Version',
                         'zipzi.WriteResult',
+                        'zipzi.animation',
+                        'zipzi.bindings',
                         'zipzi.connect',
                         'zipzi.describe',
+                        'zipzi.events',
+                        'zipzi.inspection',
                         'zipzi.local',
-                        'zipzi.recover_call'),
+                        'zipzi.meshes',
+                        'zipzi.modeling',
+                        'zipzi.observation',
+                        'zipzi.ops',
+                        'zipzi.parameters',
+                        'zipzi.recover_call',
+                        'zipzi.references',
+                        'zipzi.resources',
+                        'zipzi.sampling',
+                        'zipzi.scene',
+                        'zipzi.spatial'),
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client '
-                            'source SHA-256 a99f219e9050aff87efbae01b9ced70b71dba501bf390ebaf5b9624c47bad08e.',
+                            'source SHA-256 3e7a81f621352431059cf6513bbffdce19f60d53ace07cf504e85e50004787bf.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
- 'zipzi.ApiDescription': {'children': ('zipzi.ApiDescription.__repr__', 'zipzi.ApiDescription.summary'),
+ 'zipzi.ApiDescription': {'children': ('zipzi.ApiDescription.__repr__',
+                                       'zipzi.ApiDescription.format',
+                                       'zipzi.ApiDescription.summary'),
                           'documentation': 'One installed offline API entry; it describes the client package rather '
                                            'than probing host support.\n'
                                            '\n'
@@ -104,6 +120,17 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '() -> str'},
+ 'zipzi.ApiDescription.format': {'children': (),
+                                 'documentation': 'Return complete help text without truncation or IO.\n'
+                                                  '\n'
+                                                  'Use print(description.format()) for full help. repr, str and '
+                                                  'summary\n'
+                                                  'remain bounded previews; formatting does not recursively query '
+                                                  'children.',
+                                 'example': 'docs/recipes.py',
+                                 'fields': [],
+                                 'kind': 'callable',
+                                 'signature': '() -> str'},
  'zipzi.ApiDescription.summary': {'children': (),
                                   'documentation': 'Return a bounded, local summary; full fields remain explicitly '
                                                    'accessible.',
@@ -1604,7 +1631,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                 'zipzi.Runtime.close',
                                 'zipzi.Runtime.connection',
                                 'zipzi.Runtime.events_since',
-                                'zipzi.Runtime.limits'),
+                                'zipzi.Runtime.limits',
+                                'zipzi.Runtime.resources',
+                                'zipzi.Runtime.sessions'),
                    'documentation': 'Explicit client lifetime. Construct with zipzi.local() or zipzi.connect(); '
                                     'Connected keeps formal sessions resident after client close.',
                    'example': 'docs/recipes.py',
@@ -2100,6 +2129,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                 'zipzi.Session.plan',
                                 'zipzi.Session.plan_async',
                                 'zipzi.Session.preview',
+                                'zipzi.Session.project',
                                 'zipzi.Session.redo',
                                 'zipzi.Session.reference',
                                 'zipzi.Session.resources',
@@ -4088,6 +4118,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                      '\n'
                                      'Unknown paths raise KeyError. Short paths are normalized under zipzi.\n'
                                      'The root description links the bundled short guide and executable recipes.\n'
+                                     'Use print(describe(path).format()) for complete help; direct printing is a\n'
+                                     'bounded preview. Fields and child paths are also available individually.\n'
                                      'This describes the installed API, while runtime.capabilities() describes\n'
                                      'the connected host. No resource is constructed or RPC sent by this query.',
                     'example': 'docs/recipes.py',
@@ -7577,9 +7609,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'pending/unassigned\n'
                                             'axis.')],
                                 'kind': 'type',
-                                'signature': "(id: str = field(default_factory=lambda: string('')), samples: "
-                                             'tuple[BindingSample, ...] = field(default_factory=lambda: '
-                                             'tuple((read_BindingSample(v0) for v0 in sequence([])))), parameter_id: '
+                                'signature': "(id: str = '', samples: tuple[BindingSample, ...] = (), parameter_id: "
                                              'str)'},
  'zipzi.modeling.BindingAxis.__repr__': {'children': (),
                                          'documentation': 'Return a local summary capped at 1,024 characters, with no '
@@ -8432,9 +8462,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                      'Stable document parameter ID, not its exported runtime '
                                                      'identifier.')],
                                          'kind': 'type',
-                                         'signature': '(samples: tuple[ConstraintSample, ...] = '
-                                                      'field(default_factory=lambda: tuple((read_ConstraintSample(v0) '
-                                                      'for v0 in sequence([])))), id: str, parameter_id: str)'},
+                                         'signature': '(samples: tuple[ConstraintSample, ...] = (), id: str, '
+                                                      'parameter_id: str)'},
  'zipzi.modeling.BlendShapeConstraint.__repr__': {'children': (),
                                                   'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                    'with no RPC/full scan.\n'
@@ -8484,11 +8513,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                    'Stable document parameter ID, not its exported runtime '
                                                    'identifier.')],
                                        'kind': 'type',
-                                       'signature': '(samples: tuple[BindingSample, ...] = '
-                                                    'field(default_factory=lambda: tuple((read_BindingSample(v0) for '
-                                                    'v0 in sequence([])))), base_sample_id: str = '
-                                                    "field(default_factory=lambda: string('')), id: str, parameter_id: "
-                                                    'str)'},
+                                       'signature': '(samples: tuple[BindingSample, ...] = (), base_sample_id: str = '
+                                                    "'', id: str, parameter_id: str)"},
  'zipzi.modeling.BlendShapeKeyTable.__repr__': {'children': (),
                                                 'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                  'with no RPC/full scan.\n'
@@ -8782,7 +8808,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        'by this DTO.')],
                            'kind': 'type',
                            'signature': '(width: float, height: float, origin: Vec2, pixels_per_unit: float, flag: int '
-                                        '= field(default_factory=lambda: integer(1)))'},
+                                        '= 1)'},
  'zipzi.modeling.Canvas.__repr__': {'children': (),
                                     'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                      'RPC/full scan.\n'
@@ -10394,8 +10420,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'numeric parameter value.'),
                                                 ('intensity', 'Additive Glue intensity delta; zero is neutral.')],
                                      'kind': 'type',
-                                     'signature': "(sample_id: str = field(default_factory=lambda: string('')), "
-                                                  'intensity: float)'},
+                                     'signature': "(sample_id: str = '', intensity: float)"},
  'zipzi.modeling.DeltaGlueKeyform.__repr__': {'children': (),
                                               'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                'with no RPC/full scan.\n'
@@ -10679,11 +10704,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'no delta for this\n'
                                                  'channel.')],
                                      'kind': 'type',
-                                     'signature': "(sample_id: str = field(default_factory=lambda: string('')), "
-                                                  'positions: tuple[Vec2, ...], opacity: float | None = None, '
-                                                  'draw_order: float | None = None, multiply: tuple[float, float, '
-                                                  'float] | None = None, screen: tuple[float, float, float] | None = '
-                                                  'None)'},
+                                     'signature': "(sample_id: str = '', positions: tuple[Vec2, ...], opacity: float | "
+                                                  'None = None, draw_order: float | None = None, multiply: '
+                                                  'tuple[float, float, float] | None = None, screen: tuple[float, '
+                                                  'float, float] | None = None)'},
  'zipzi.modeling.DeltaMeshKeyform.__repr__': {'children': (),
                                               'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                'with no RPC/full scan.\n'
@@ -10735,9 +10759,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                       'supplies no delta for this\n'
                                                       'channel.')],
                                           'kind': 'type',
-                                          'signature': "(sample_id: str = field(default_factory=lambda: string('')), "
-                                                       'opacity: float, multiply: tuple[float, float, float] | None = '
-                                                       'None, screen: tuple[float, float, float] | None = None)'},
+                                          'signature': "(sample_id: str = '', opacity: float, multiply: tuple[float, "
+                                                       'float, float] | None = None, screen: tuple[float, float, '
+                                                       'float] | None = None)'},
  'zipzi.modeling.DeltaOffscreenKeyform.__repr__': {'children': (),
                                                    'documentation': 'Return a local summary capped at 1,024 '
                                                                     'characters, with no RPC/full scan.\n'
@@ -10773,8 +10797,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'numeric parameter value.'),
                                                 ('draw_order', 'Additive drawing-order delta; zero is neutral.')],
                                      'kind': 'type',
-                                     'signature': "(sample_id: str = field(default_factory=lambda: string('')), "
-                                                  'draw_order: float)'},
+                                     'signature': "(sample_id: str = '', draw_order: float)"},
  'zipzi.modeling.DeltaPartKeyform.__repr__': {'children': (),
                                               'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                'with no RPC/full scan.\n'
@@ -10844,11 +10867,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                      'supplies no delta for this\n'
                                                      'channel.')],
                                          'kind': 'type',
-                                         'signature': "(sample_id: str = field(default_factory=lambda: string('')), "
-                                                      'origin: Vec2 | None = None, angle: float | None = None, scale: '
-                                                      'float | None = None, opacity: float | None = None, multiply: '
-                                                      'tuple[float, float, float] | None = None, screen: tuple[float, '
-                                                      'float, float] | None = None)'},
+                                         'signature': "(sample_id: str = '', origin: Vec2 | None = None, angle: float "
+                                                      '| None = None, scale: float | None = None, opacity: float | '
+                                                      'None = None, multiply: tuple[float, float, float] | None = '
+                                                      'None, screen: tuple[float, float, float] | None = None)'},
  'zipzi.modeling.DeltaRotationKeyform.__repr__': {'children': (),
                                                   'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                    'with no RPC/full scan.\n'
@@ -10905,10 +10927,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'no delta for this\n'
                                                  'channel.')],
                                      'kind': 'type',
-                                     'signature': "(sample_id: str = field(default_factory=lambda: string('')), "
-                                                  'points: tuple[Vec2, ...], opacity: float | None = None, multiply: '
-                                                  'tuple[float, float, float] | None = None, screen: tuple[float, '
-                                                  'float, float] | None = None)'},
+                                     'signature': "(sample_id: str = '', points: tuple[Vec2, ...], opacity: float | "
+                                                  'None = None, multiply: tuple[float, float, float] | None = None, '
+                                                  'screen: tuple[float, float, float] | None = None)'},
  'zipzi.modeling.DeltaWarpKeyform.__repr__': {'children': (),
                                               'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                'with no RPC/full scan.\n'
@@ -11466,13 +11487,12 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                          'Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.')],
                              'kind': 'type',
                              'signature': '(id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None = None, '
-                                          'texture_asset_id: str, texture_slot: int, renderable: bool = '
-                                          'field(default_factory=lambda: _boolean(True)), positions: tuple[Vec2, ...], '
-                                          'uvs: tuple[Vec2, ...], indices: tuple[int, ...], draw_order: int, '
-                                          'render_order: int, opacity: float, multiply_color: tuple[float, float, '
-                                          'float, float], screen_color: tuple[float, float, float, float], blend_mode: '
-                                          'BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: '
-                                          'bool, masks: tuple[str, ...])'},
+                                          'texture_asset_id: str, texture_slot: int, renderable: bool = True, '
+                                          'positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], indices: tuple[int, '
+                                          '...], draw_order: int, render_order: int, opacity: float, multiply_color: '
+                                          'tuple[float, float, float, float], screen_color: tuple[float, float, float, '
+                                          'float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: '
+                                          'bool, inverted_mask: bool, masks: tuple[str, ...])'},
  'zipzi.modeling.Drawable.__repr__': {'children': (),
                                       'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                        'RPC/full scan.\n'
@@ -12973,8 +12993,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'Glue influence factor; 0 disables the connection and 1 applies its full '
                                             'influence.')],
                                 'kind': 'type',
-                                'signature': '(samples: tuple[str, ...] = field(default_factory=lambda: '
-                                             'tuple((string(v0) for v0 in sequence([])))), intensity: float)'},
+                                'signature': '(samples: tuple[str, ...] = (), intensity: float)'},
  'zipzi.modeling.GlueKeyform.__repr__': {'children': (),
                                          'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                           'RPC/full scan.\n'
@@ -13400,12 +13419,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                'Management order only. Glue evaluation retains its native execution '
                                                'order.')],
                                    'kind': 'type',
-                                   'signature': '(organization: tuple[str, ...] = field(default_factory=lambda: '
-                                                'tuple((string(v0) for v0 in sequence([])))), deformation: tuple[str, '
-                                                '...] = field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                                'sequence([])))), glues: tuple[str, ...] = '
-                                                'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                                'sequence([])))))'},
+                                   'signature': '(organization: tuple[str, ...] = (), deformation: tuple[str, ...] = '
+                                                '(), glues: tuple[str, ...] = ())'},
  'zipzi.modeling.HierarchyOrder.__repr__': {'children': (),
                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                              'no RPC/full scan.\n'
@@ -14414,9 +14429,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'use its\n'
                                             'unoverridden order.')],
                                 'kind': 'type',
-                                'signature': '(samples: tuple[str, ...] = field(default_factory=lambda: '
-                                             'tuple((string(v0) for v0 in sequence([])))), positions: tuple[Vec2, '
-                                             '...], appearance: Appearance, draw_order: float | None = None)'},
+                                'signature': '(samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: '
+                                             'Appearance, draw_order: float | None = None)'},
  'zipzi.modeling.MeshKeyform.__repr__': {'children': (),
                                          'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                           'RPC/full scan.\n'
@@ -17353,44 +17367,17 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                              ('pose',
                                               'Request the Pose singleton payload; false requests no Pose content.')],
                                   'kind': 'type',
-                                  'signature': '(assets: tuple[str, ...] = field(default_factory=lambda: '
-                                               'tuple((string(v0) for v0 in sequence([])))), meshes: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), parameters: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), parts: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), transforms: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), bindings: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), scene_bindings: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), blend_key_tables: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), blend_constraints: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), blend_bindings: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), glues: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), offscreens: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), parameter_groups: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), attachments: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), motions: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), motion_groups: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), motion_registrations: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), expressions: tuple[str, ...] = '
-                                               'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                               'sequence([])))), physics: bool = field(default_factory=lambda: '
-                                               '_boolean(False)), pose: bool = field(default_factory=lambda: '
-                                               '_boolean(False)))'},
+                                  'signature': '(assets: tuple[str, ...] = (), meshes: tuple[str, ...] = (), '
+                                               'parameters: tuple[str, ...] = (), parts: tuple[str, ...] = (), '
+                                               'transforms: tuple[str, ...] = (), bindings: tuple[str, ...] = (), '
+                                               'scene_bindings: tuple[str, ...] = (), blend_key_tables: tuple[str, '
+                                               '...] = (), blend_constraints: tuple[str, ...] = (), blend_bindings: '
+                                               'tuple[str, ...] = (), glues: tuple[str, ...] = (), offscreens: '
+                                               'tuple[str, ...] = (), parameter_groups: tuple[str, ...] = (), '
+                                               'attachments: tuple[str, ...] = (), motions: tuple[str, ...] = (), '
+                                               'motion_groups: tuple[str, ...] = (), motion_registrations: tuple[str, '
+                                               '...] = (), expressions: tuple[str, ...] = (), physics: bool = False, '
+                                               'pose: bool = False)'},
  'zipzi.modeling.ModelingQuery.__repr__': {'children': (),
                                            'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                             'no RPC/full scan.\n'
@@ -19188,12 +19175,11 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                'SDK sampling coordinates, including the duration + 1 / FPS loop '
                                                'tail.')],
                                    'kind': 'type',
-                                   'signature': '(physics: tuple[PhysicsRigSnapshot, ...] = '
-                                                'field(default_factory=lambda: tuple((read_PhysicsRigSnapshot(v0) for '
-                                                'v0 in sequence([])))), time: float, parameters: _Mapping[str, float], '
-                                                'part_opacity_channels: _Mapping[str, float], part_opacities: '
-                                                '_Mapping[str, float], model_opacity: float, active_motions: '
-                                                'tuple[str, ...], active_expressions: tuple[str, ...], fired_events: '
+                                   'signature': '(physics: tuple[PhysicsRigSnapshot, ...] = (), time: float, '
+                                                'parameters: _Mapping[str, float], part_opacity_channels: '
+                                                '_Mapping[str, float], part_opacities: _Mapping[str, float], '
+                                                'model_opacity: float, active_motions: tuple[str, ...], '
+                                                'active_expressions: tuple[str, ...], fired_events: '
                                                 'tuple[MotionEventFired, ...], coverage: tuple[str, ...], '
                                                 'motion_positions: tuple[MotionPlaybackPosition, ...])'},
  'zipzi.modeling.MotionSnapshot.__repr__': {'children': (),
@@ -19569,9 +19555,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   'Authoring lock state; native edit admission and capabilities '
                                                   'enforce the lock.')],
                                       'kind': 'type',
-                                      'signature': '(hidden_in_editor: bool = field(default_factory=lambda: '
-                                                   '_boolean(False)), locked: bool = field(default_factory=lambda: '
-                                                   '_boolean(False)))'},
+                                      'signature': '(hidden_in_editor: bool = False, locked: bool = False)'},
  'zipzi.modeling.ObjectEditorState.__repr__': {'children': (),
                                                'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                 'with no RPC/full scan.\n'
@@ -19848,7 +19832,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                 'preserved.')],
                                     'kind': 'type',
                                     'signature': '(width: int, height: int, roi: tuple[float, float, float, float], '
-                                                 'padding_model: float = field(default_factory=lambda: number(0.0)))'},
+                                                 'padding_model: float = 0.0)'},
  'zipzi.modeling.ObservationView.__repr__': {'children': (),
                                              'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                               'no RPC/full scan.\n'
@@ -19998,10 +19982,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'axes or key\n'
                                           'table.')],
                               'kind': 'type',
-                              'signature': '(id: str, runtime_id: str, name: str, part_id: str, enabled: bool = '
-                                           'field(default_factory=lambda: _boolean(True)), blend_mode: int, flags: '
-                                           'int, masks: tuple[str, ...], part_keyform_indices: tuple[int, ...], '
-                                           'keyforms: tuple[OffscreenKeyform, ...])'},
+                              'signature': '(id: str, runtime_id: str, name: str, part_id: str, enabled: bool = True, '
+                                           'blend_mode: int, flags: int, masks: tuple[str, ...], part_keyform_indices: '
+                                           'tuple[int, ...], keyforms: tuple[OffscreenKeyform, ...])'},
  'zipzi.modeling.Offscreen.__repr__': {'children': (),
                                        'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                         'RPC/full scan.\n'
@@ -20194,12 +20177,11 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                               ('screen_color',
                                                'Evaluated RGBA screen factors, channel order R, G, B, A.')],
                                    'kind': 'type',
-                                   'signature': '(renderable: bool = field(default_factory=lambda: _boolean(True)), '
-                                                'id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: '
-                                                'str | None = None, render_order: int, opacity: float, enabled: bool, '
-                                                'blend_mode: int, flags: int, masks: tuple[str, ...], multiply_color: '
-                                                'tuple[float, float, float, float], screen_color: tuple[float, float, '
-                                                'float, float])'},
+                                   'signature': '(renderable: bool = True, id: str, runtime_id: str, owner_part_id: '
+                                                'str, parent_offscreen_id: str | None = None, render_order: int, '
+                                                'opacity: float, enabled: bool, blend_mode: int, flags: int, masks: '
+                                                'tuple[str, ...], multiply_color: tuple[float, float, float, float], '
+                                                'screen_color: tuple[float, float, float, float])'},
  'zipzi.modeling.OffscreenFrame.__repr__': {'children': (),
                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                              'no RPC/full scan.\n'
@@ -21215,10 +21197,9 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'is false.')],
                               'kind': 'type',
                               'signature': '(id: str, runtime_id: str, name: str, minimum: float, maximum: float, '
-                                           'default_value: float, decimal_places: int = field(default_factory=lambda: '
-                                           'integer(6)), kind: ParameterKind = field(default_factory=lambda: '
-                                           "read_ParameterKind('normal')), repeat: bool = "
-                                           'field(default_factory=lambda: _boolean(False)))'},
+                                           'default_value: float, decimal_places: int = 6, kind: ParameterKind = '
+                                           "field(default_factory=lambda: read_ParameterKind('normal')), repeat: bool "
+                                           '= False)'},
  'zipzi.modeling.Parameter.__repr__': {'children': (),
                                        'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                         'RPC/full scan.\n'
@@ -21409,8 +21390,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'Drawing-order coordinate; distinct from the final evaluated '
                                             'render_order.')],
                                 'kind': 'type',
-                                'signature': '(samples: tuple[str, ...] = field(default_factory=lambda: '
-                                             'tuple((string(v0) for v0 in sequence([])))), draw_order: float)'},
+                                'signature': '(samples: tuple[str, ...] = (), draw_order: float)'},
  'zipzi.modeling.PartKeyform.__repr__': {'children': (),
                                          'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                           'RPC/full scan.\n'
@@ -26852,8 +26832,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'kind': 'type',
                                  'signature': '(sources: tuple[str, ...], parent_id: str, strategy: ReparentStrategy, '
                                               'placement: ReparentPlacement | None = None, tolerance: float, '
-                                              'relative_tolerance: float = field(default_factory=lambda: '
-                                              'number(1e-06)), context: ReparentContext | None = None)'},
+                                              'relative_tolerance: float = 1e-06, context: ReparentContext | None = '
+                                              'None)'},
  'zipzi.modeling.ReparentEdit.__repr__': {'children': (),
                                           'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                            'RPC/full scan.\n'
@@ -27297,9 +27277,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                ('appearance',
                                                 'Opacity and multiply/screen color factors for this object or shape.')],
                                     'kind': 'type',
-                                    'signature': '(samples: tuple[str, ...] = field(default_factory=lambda: '
-                                                 'tuple((string(v0) for v0 in sequence([])))), rotation: RotationPose, '
-                                                 'appearance: Appearance)'},
+                                    'signature': '(samples: tuple[str, ...] = (), rotation: RotationPose, appearance: '
+                                                 'Appearance)'},
  'zipzi.modeling.RotationKeyform.__repr__': {'children': (),
                                              'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                               'no RPC/full scan.\n'
@@ -28880,8 +28859,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                'signature': '(transform_id: str, target: ShapeTarget = '
                                                             "field(default_factory=lambda: read_ShapeTarget({'kind': "
                                                             "'base'})), updates: tuple[WarpPointPatch, ...], "
-                                                            'clear_bezier: bool = field(default_factory=lambda: '
-                                                            '_boolean(False)))'},
+                                                            'clear_bezier: bool = False)'},
  'zipzi.modeling.SceneContentEditWarpPoints.__repr__': {'children': (),
                                                         'documentation': 'Return a local summary capped at 1,024 '
                                                                          'characters, with no RPC/full scan.\n'
@@ -29996,8 +29974,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                'endpoints.')],
                                    'kind': 'type',
                                    'signature': '(id: str, expected: SceneFieldValue, value: SceneFieldValue, '
-                                                'clear_glue_pairs: bool = field(default_factory=lambda: '
-                                                '_boolean(False)))'},
+                                                'clear_glue_pairs: bool = False)'},
  'zipzi.modeling.SceneEditPatch.__repr__': {'children': (),
                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                              'no RPC/full scan.\n'
@@ -31142,7 +31119,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                    'Include disabled, hidden and zero-opacity geometry in the union.')],
                                        'kind': 'type',
                                        'signature': '(targets: tuple[ObjectTarget, ...], include_hidden: bool = '
-                                                    'field(default_factory=lambda: _boolean(False)))'},
+                                                    'False)'},
  'zipzi.modeling.SpatialQueryBounds.__repr__': {'children': (),
                                                 'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                  'with no RPC/full scan.\n'
@@ -31190,10 +31167,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'Maximum mesh candidates retained in descending draw order; total '
                                                  'remains untruncated.')],
                                      'kind': 'type',
-                                     'signature': '(point: tuple[float, float], include_hidden: bool = '
-                                                  'field(default_factory=lambda: _boolean(False)), details: bool = '
-                                                  'field(default_factory=lambda: _boolean(False)), max_candidates: int '
-                                                  '= field(default_factory=lambda: integer(32)))'},
+                                     'signature': '(point: tuple[float, float], include_hidden: bool = False, details: '
+                                                  'bool = False, max_candidates: int = 32)'},
  'zipzi.modeling.SpatialQueryHits.__repr__': {'children': (),
                                               'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                'with no RPC/full scan.\n'
@@ -31920,9 +31895,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                            ('appearance',
                                             'Opacity and multiply/screen color factors for this object or shape.')],
                                 'kind': 'type',
-                                'signature': '(bezier: WarpBezier | None = None, samples: tuple[str, ...] = '
-                                             'field(default_factory=lambda: tuple((string(v0) for v0 in '
-                                             'sequence([])))), positions: tuple[Vec2, ...], appearance: Appearance)'},
+                                'signature': '(bezier: WarpBezier | None = None, samples: tuple[str, ...] = (), '
+                                             'positions: tuple[Vec2, ...], appearance: Appearance)'},
  'zipzi.modeling.WarpKeyform.__repr__': {'children': (),
                                          'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                           'RPC/full scan.\n'
@@ -32287,7 +32261,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                         'preserved.')],
                             'kind': 'type',
                             'signature': '(width: int, height: int, roi: tuple[float, float, float, float], '
-                                         'padding_model: float = field(default_factory=lambda: number(0.0)))'},
+                                         'padding_model: float = 0.0)'},
  'zipzi.observation.View.__repr__': {'children': (),
                                      'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                       'RPC/full scan.\n'
@@ -36254,8 +36228,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                      ('include_hidden',
                                       'Include disabled, hidden and zero-opacity geometry in the union.')],
                           'kind': 'type',
-                          'signature': '(targets: tuple[ObjectTarget, ...], include_hidden: bool = '
-                                       'field(default_factory=lambda: _boolean(False)))'},
+                          'signature': '(targets: tuple[ObjectTarget, ...], include_hidden: bool = False)'},
  'zipzi.spatial.Bounds.__repr__': {'children': (),
                                    'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                     'RPC/full scan.\n'
@@ -36453,10 +36426,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                     'Maximum mesh candidates retained in descending draw order; total remains '
                                     'untruncated.')],
                         'kind': 'type',
-                        'signature': '(point: tuple[float, float], include_hidden: bool = '
-                                     'field(default_factory=lambda: _boolean(False)), details: bool = '
-                                     'field(default_factory=lambda: _boolean(False)), max_candidates: int = '
-                                     'field(default_factory=lambda: integer(32)))'},
+                        'signature': '(point: tuple[float, float], include_hidden: bool = False, details: bool = '
+                                     'False, max_candidates: int = 32)'},
  'zipzi.spatial.Hits.__repr__': {'children': (),
                                  'documentation': 'Return a local summary capped at 1,024 characters, with no RPC/full '
                                                   'scan.\n'

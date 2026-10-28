@@ -4,6 +4,10 @@ Import `zipzi` and use `zipzi.describe("zipzi")` to discover the installed API.
 Use `zipzi.describe("Session.meshes.list")` for one method at a time. The reference
 and recipes here match this installed client.
 
+`print(zipzi.describe("modeling.ModelingQuery").format())` prints complete help,
+including fields and child paths. Direct printing, `repr` and `summary` are bounded
+previews. Describing or formatting help sends no host requests.
+
 ## Choose an execution host
 
 `with zipzi.local() as runtime:` explicitly owns a process-local Runtime and needs
@@ -39,6 +43,74 @@ Read `snapshot.value` or `batch.items`; source is on the outer container, includ
 empty results. `get_many` preserves order and duplicate IDs and fails as a whole
 for missing IDs or budget refusals. Queries do not poison an Edit. Explicit
 `expected=source` rejects a changed source atomically on the host.
+
+### Choose mesh records and follow references
+
+`meshes.get/get_many` returns identity, name and geometry. Use canonical
+`modeling.records` for texture references, Part/deformer membership, appearance,
+draw order and other authoring metadata. Requested record slots may be `None`
+when an ID is absent. This example assumes an attached `session` and a known
+`mesh_id`; it keeps subsequent image reads on the same Source:
+
+```python
+from zipzi import modeling
+
+snapshot = session.modeling.records(modeling.ModelingQuery(meshes=(mesh_id,)))
+mesh = snapshot.value.meshes[0]
+if mesh is not None:
+    part_id = mesh.part_id or None
+    parent_id = mesh.deformer_id or None
+    print(part_id, parent_id, mesh.appearance, mesh.draw_order)
+    texture = mesh.texture_asset_id
+    if isinstance(texture, modeling.SceneReferenceResolved):
+        image = session.resources.get(texture.object_id, expected=snapshot.source)
+        print(image.value)
+    elif isinstance(texture, modeling.SceneReferenceUnresolved):
+        print("Texture reference is unresolved:", texture)
+    else:
+        print("No texture reference was specified")
+```
+
+Canonical `Mesh.part_id/deformer_id` and `Part.parent_id` use `""` for the root
+or an unassigned relationship. Scene summaries use `None`. Convert canonical
+values with `value or None` when comparing to summaries; use `value or ""` when
+constructing canonical records. Resolved references expose `.object_id`, ordinary
+objects `.id`, and typed `PartId`/`TransformId` wrappers `.value`; unresolved
+references must not be treated as existing object IDs.
+
+`SessionInfo.id` and `Source.session` identify a Runtime session;
+`SessionInfo.version.session_id` and `Source.version.session_id` identify the SDK
+authoring session. Do not compare their serial numbers as if they share an ID
+namespace. `SessionInfo.path` is a project path, not an Editor display title;
+there is currently no SessionInfo display-name field. A pathless session remains
+selectable by its Runtime identity. Optional `editor_context()` alone does not
+guarantee a unique active document across windows.
+
+Convenience `edit.meshes.create` and `edit.parameters.create` return IDs directly.
+`edit.apply(scene.CreatePart(scene.PartSpec("Face")))` returns a `WriteResult`;
+the created Part ID is in `.ids[0]`. Organization membership and drawing groups
+are independent: `MoveToPart` does not promise to change draw-group membership.
+Inspect canonical drawing groups as well as the evaluated order when reorganizing.
+
+Convenience `bindings.Axis.keys` and `bindings.Keyform.keys` use numeric parameter
+coordinates. Canonical binding axes contain samples with stable UUIDs; canonical
+keyforms refer to those sample identities. Match numeric coordinates to the axis
+samples before constructing canonical keyforms; a numeric key is not a sample ID.
+
+### Mesh quality scope
+
+The Python modeling API currently exposes rectangle remeshing, manual topology
+edits and complete topology replacement, but no Alpha contour meshing entry.
+The Rust SDK's Alpha mesher is not yet bound to Python. Topology replacement
+requires explicit dependency/binding and vertex-mapping handling; do not assume
+arbitrary remeshing automatically migrates every keyform, BlendShape or Glue.
+
+Sampling checks cover small triangles, inconsistent winding and model bounds.
+An empty diagnostic list says nothing about unsampled poses, minimum angles,
+texture contour fit or animation stretch. GPU observation provides appearance
+images without wireframe/vertex/constraint overlays. For topology inspection,
+read geometry at the same Source and draw it separately using its documented
+coordinate space; evaluate key poses and intermediate poses explicitly.
 
 ## Edit and plan
 

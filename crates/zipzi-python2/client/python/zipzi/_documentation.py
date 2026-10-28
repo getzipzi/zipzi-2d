@@ -14,12 +14,31 @@ class ApiDescription(CompactValue):
     children:tuple[str,...]=()
     example:str=''
 
+    def format(self) -> str:
+        """Return complete help text without truncation or IO.
+
+        Use print(description.format()) for full help. repr, str and summary
+        remain bounded previews; formatting does not recursively query children.
+        """
+        lines=[self.path+' ('+self.kind+')']
+        if self.signature:lines.extend(('',self.signature))
+        if self.documentation:lines.extend(('',self.documentation))
+        if self.fields:
+            lines.extend(('', 'Fields:'))
+            lines.extend(name+': '+text for name,text in self.fields)
+        if self.children:
+            lines.extend(('', 'Children:', *self.children))
+        if self.example:lines.extend(('', 'Example: '+self.example))
+        return '\n'.join(lines)
+
 
 def describe(path:str)->ApiDescription:
     """Look up an exact public path, e.g. Session.meshes.list, without IO or eval.
 
     Unknown paths raise KeyError. Short paths are normalized under zipzi.
     The root description links the bundled short guide and executable recipes.
+    Use print(describe(path).format()) for complete help; direct printing is a
+    bounded preview. Fields and child paths are also available individually.
     This describes the installed API, while runtime.capabilities() describes
     the connected host. No resource is constructed or RPC sent by this query.
     """

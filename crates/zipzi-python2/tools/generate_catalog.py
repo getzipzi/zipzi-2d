@@ -154,7 +154,21 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
             if any(a.arg in {'backend','token','session','edit'} for a in init.args.args[1:]) and node.name in {'Runtime','Session','Edit','Job','Plan','PreparedImage','ImageLease','Buffer','Preview','ObjectRef','LabelAddress','FieldAddress'}:return '(factory-owned; use the documented public entry)'
             return signature(init)
         fields=[n for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_') and not (isinstance(n.annotation,ast.Subscript) and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})]
-        return '('+', '.join(n.target.id+': '+ast.unparse(n.annotation)+(' = '+ast.unparse(n.value) if n.value else '') for n in fields)+')'
+        shape=class_shapes.get((node_modules.get(id(node),'').rsplit('.',1)[-1],node.name),{})
+        declared={f['name']+('_' if keyword.iskeyword(f['name']) else ''):f for f in shape.get('fields',[])}
+        def default(field):
+            if field.value is None:return ''
+            source=declared.get(field.target.id,{})
+            value=source.get('default')
+            kind=source.get('shape',{}).get('kind')
+            # Render public values from the compiled contract, never evaluate
+            # generated factories or change their runtime implementation.
+            if value is not None:
+                if kind=='sequence' and value==[]:return ' = ()'
+                if kind in {'string','bool','u8','u16','u32','u64','usize','i32','i64','f32','f64'} and not isinstance(value,dict):
+                    return ' = '+repr(value)
+            return ' = '+ast.unparse(field.value)
+        return '('+', '.join(n.target.id+': '+ast.unparse(n.annotation)+default(n) for n in fields)+')'
     for module,tree in trees.items():
         table={}
         for node in tree.body:
@@ -254,6 +268,11 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
     for owner,module,cls in [('Runtime.sessions','_lifecycle','Sessions'),('Session.project','_lifecycle','Project'),('Runtime.resources','resources','Resources')]:
         node=resolve(module,cls)
         if node:add('zipzi.'+owner,node)
+    # Derive navigation from registered paths, including bound properties and
+    # domain modules, so direct lookup and parent traversal cannot diverge.
+    for path in catalog:
+        parent=path.rpartition('.')[0]
+        if parent in catalog:catalog[parent]['children'].append(path)
     fingerprint=hashlib.sha256()
     for path,source in sorted(sources.items()):
         if not path.startswith(prefix) or path.endswith('/catalog.py'):continue
