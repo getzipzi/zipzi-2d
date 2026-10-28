@@ -1,12 +1,14 @@
 //! Metal overlay rendering, GPUI fallback and measured canvas capture.
 use super::*;
 
+#[cfg(target_os = "macos")]
 #[derive(Default)]
 pub(super) struct CanvasOverlay {
     device: Option<metal::Device>,
     renderer: Option<zipzi_editor_render::MetalOverlayRenderer>,
     error: Option<String>,
 }
+#[cfg(target_os = "macos")]
 impl CanvasOverlay {
     fn paint(
         &mut self,
@@ -103,6 +105,7 @@ impl ViewportSurface {
         let view = cx.entity();
         let measure = view.clone();
         let mouse = view.clone();
+        #[cfg(target_os = "macos")]
         let overlay_renderer = self.overlay_renderer.clone();
         let selection_outline = palette.selection_region;
         let selection_fill = selection_outline.opacity(0.12);
@@ -140,6 +143,7 @@ impl ViewportSurface {
             move |bounds, _, window, _cx| {
                 benchmark::parameter_overlay::capture(4, || {
                     if benchmark::parameter_overlay::paint_any() {
+                        #[cfg(target_os = "macos")]
                         let result = overlay_renderer.borrow_mut().paint(
                             bounds,
                             &overlay,
@@ -148,7 +152,11 @@ impl ViewportSurface {
                             window,
                         );
                         // Preserve editing visibility if shader/device setup is unavailable.
-                        if result.is_err() {
+                        #[cfg(target_os = "macos")]
+                        let gpui_edges = result.is_err();
+                        #[cfg(not(target_os = "macos"))]
+                        let gpui_edges = true;
+                        if gpui_edges {
                             let to_window =
                                 |p: ViewportPoint| bounds.origin + point(px(p.x), px(p.y));
                             if benchmark::batch_mesh_edges() {
@@ -171,6 +179,7 @@ impl ViewportSurface {
                             let _span = zipzi_core::benchmark::span("overlay.gpui_lines");
                             crate::canvas_overlay::paint_lines(&overlay, bounds, palette, window);
                         }
+                        #[cfg(target_os = "macos")]
                         let marker_result = overlay_renderer.borrow_mut().paint(
                             bounds,
                             &overlay,
@@ -178,6 +187,10 @@ impl ViewportSurface {
                             zipzi_editor_render::OverlayPass::Vertices,
                             window,
                         );
+                        #[cfg(target_os = "macos")]
+                        let gpui_markers = marker_result.is_err();
+                        #[cfg(not(target_os = "macos"))]
+                        let gpui_markers = true;
                         if benchmark::parameter_overlay::paint_vertices() {
                             #[cfg(feature = "bench-instrumentation")]
                             let _span = zipzi_core::benchmark::span("overlay.gpui_markers");
@@ -185,7 +198,7 @@ impl ViewportSurface {
                                 &overlay,
                                 bounds.origin,
                                 palette,
-                                marker_result.is_err(),
+                                gpui_markers,
                                 window,
                             );
                         }

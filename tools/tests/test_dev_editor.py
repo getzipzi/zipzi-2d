@@ -5,8 +5,9 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'workspace'))
 from dev_editor import Editor
@@ -16,7 +17,8 @@ class EditorBuild(unittest.TestCase):
     def test_json_artifact_custom_target_and_publication(self):
         with tempfile.TemporaryDirectory(prefix='中文 editor ') as folder:
             editor = Editor(Path(folder))
-            (editor.root / 'LICENSE-GPL-3.0').write_text('fixture')
+            for name in ('LICENSE-GPL-3.0', 'LICENSE-MIT', 'LICENSING.md', 'THIRD_PARTY_NOTICES.md'):
+                (editor.root / name).write_text('fixture')
             artifact = editor.root / 'custom triple/debug/editor.exe'
             artifact.parent.mkdir(parents=True)
             artifact.write_bytes(b'fixture binary')
@@ -29,6 +31,8 @@ class EditorBuild(unittest.TestCase):
             self.assertEqual(command, [str(artifact)])
             self.assertEqual(editor.publish(command), [str(editor.binary)])
             self.assertEqual(editor.binary.read_bytes(), b'fixture binary')
+            if sys.platform == 'win32':
+                self.assertEqual((editor.binary.parent / 'THIRD_PARTY_NOTICES.md').read_text(), 'fixture')
 
     def test_build_failure_preserves_published_binary(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -49,3 +53,39 @@ class EditorBuild(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'Untracked'):
                     editor.guard([])
                 editor.guard([identity])
+
+    def test_windows_exit_refusal_preserves_owner(self):
+        with tempfile.TemporaryDirectory() as folder:
+            editor = Editor(Path(folder))
+            owner = SimpleNamespace(pid=123, process=Mock(return_value=object()))
+            def refuse(path, value):
+                path.write_text(json.dumps(value))
+                path.with_suffix('.reply.json').write_text(json.dumps({
+                    'nonce': value['nonce'], 'error': 'Save unsaved documents first'}))
+            with patch('dev_editor.sys.platform', 'win32'), patch('dev_editor.save', side_effect=refuse):
+                with self.assertRaisesRegex(RuntimeError, 'Save unsaved'):
+                    editor.request_stop([owner])
+            self.assertIsNotNone(owner.process())
+            self.assertEqual(list(editor.state.glob('quit-*')), [])
+
+    def test_windows_missing_exit_reply_times_out_without_stopping_owner(self):
+        with tempfile.TemporaryDirectory() as folder:
+            editor = Editor(Path(folder))
+            owner = SimpleNamespace(pid=123, process=Mock(return_value=object()))
+            with patch('dev_editor.sys.platform', 'win32'), patch('dev_editor.time.monotonic', side_effect=[0., 16.]):
+                with self.assertRaisesRegex(TimeoutError, 'preserved'):
+                    editor.request_stop([owner])
+            self.assertIsNotNone(owner.process())
+            self.assertEqual(list(editor.state.glob('quit-*')), [])
+
+    def test_windows_exit_acknowledgment_waits_for_process_exit(self):
+        with tempfile.TemporaryDirectory() as folder:
+            editor = Editor(Path(folder))
+            owner = SimpleNamespace(pid=123, process=Mock(side_effect=[object(), object(), None]))
+            def acknowledge(path, value):
+                path.write_text(json.dumps(value))
+                path.with_suffix('.reply.json').write_text(json.dumps({'nonce': value['nonce'], 'error': None}))
+            with patch('dev_editor.sys.platform', 'win32'), patch('dev_editor.save', side_effect=acknowledge), patch('dev_editor.time.sleep'):
+                editor.request_stop([owner])
+            self.assertEqual(owner.process.call_count, 3)
+            self.assertEqual(list(editor.state.glob('quit-*')), [])

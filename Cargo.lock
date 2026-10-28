@@ -9198,6 +9198,7 @@ version = "0.1.0-alpha.1"
 dependencies = [
  "anyhow",
  "async-channel",
+ "embed-resource",
  "gpui-fast-apple",
  "gpui-fps",
  "gpui-kit",
@@ -9212,6 +9213,7 @@ dependencies = [
  "tempfile",
  "toml 0.8.23",
  "uuid",
+ "wgpu",
  "zipzi-core",
  "zipzi-editor-core",
  "zipzi-editor-render",

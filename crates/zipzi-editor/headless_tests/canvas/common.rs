@@ -48,12 +48,8 @@ pub(super) fn present_canvas(harness: &super::super::Harness, cx: &mut TestAppCo
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             let frame = view.editor.preview().unwrap().canvas.unwrap();
-            let device = metal::Device::system_default().unwrap();
-            let descriptor = metal::TextureDescriptor::new();
-            descriptor.set_width(1);
-            descriptor.set_height(1);
-            descriptor.set_pixel_format(metal::MTLPixelFormat::RGBA8Unorm);
-            let image = device.new_texture(&descriptor);
+
+            let image = crate::preview::test_image();
             assert!(view.editor.present_frame(frame.clone()));
             view.viewport_frames
                 .entry(view.viewport_slots[0])

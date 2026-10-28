@@ -61,9 +61,9 @@ def launch(command, *, cwd, env, log):
 def stop(identity, *, timeout=5):
     """Stop only the verified owner and its observed descendants; never escalate.
 
-Windows terminate is an OS process termination, not a UI close request. The P5
-Editor integration must supply its explicit save/exit handshake before using
-this operation for real windows. Failure leaves ownership records recoverable.
+Windows terminate is an OS process termination, not a UI close request. The Windows
+Editor launcher completes its explicit save/exit handshake before invoking this
+operation; other development processes may use OS termination directly. Failure leaves ownership records recoverable.
 """
     owner = identity.process()
     if owner is None:

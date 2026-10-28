@@ -120,6 +120,9 @@ pub(super) fn open_window(
     if !cx.windows().is_empty() {
         if activate {
             cx.activate(true);
+            for handle in cx.windows() {
+                let _ = handle.update(cx, |_, window, _| window.activate_window());
+            }
         }
         return None;
     }
@@ -139,6 +142,7 @@ pub(super) fn open_window(
     .expect("open Editor window");
     if activate {
         cx.activate(true);
+        let _ = opened.0.update(cx, |_, window, _| window.activate_window());
     }
     Some(opened)
 }

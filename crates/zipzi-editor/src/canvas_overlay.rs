@@ -50,6 +50,7 @@ impl Palette {
             restricted_border: rgb(0x505050).into(),
         }
     }
+    #[cfg(target_os = "macos")]
     pub fn metal(self) -> zipzi_editor_render::OverlayStyle {
         let color = |c: Hsla| {
             let c: gpui_kit::Rgba = c.into();

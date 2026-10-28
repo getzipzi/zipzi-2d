@@ -45,12 +45,8 @@ fn parameter_previews_refresh_the_canvas_only_when_the_new_frame_arrives(cx: &mu
         h.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.document().unwrap().parameters()[0].value, value);
         });
-        let device = metal::Device::system_default().unwrap();
-        let descriptor = metal::TextureDescriptor::new();
-        descriptor.set_width(1);
-        descriptor.set_height(1);
-        descriptor.set_pixel_format(metal::MTLPixelFormat::RGBA8Unorm);
-        let image = device.new_texture(&descriptor);
+
+        let image = crate::preview::test_image();
         h.view.update(cx, |view, cx| {
             view.receive_viewport_frame(
                 crate::preview::Frame {

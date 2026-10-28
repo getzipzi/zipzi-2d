@@ -16,10 +16,10 @@ HELP = '''Usage: python tools/dev.py COMMAND [arguments...]
   test editor MODE    fast, ui, regression, acceptance, tools, full
   test tools ARGS     unittest discovery arguments (-p, -k, -v)
   python ARGS         source SDK Python
-  editor MODE         watch (default), reload, run, stop; Windows UI awaits P5
+  editor MODE         watch (default), reload, run, stop; Windows development prototype
 
 Cargo filters and arguments after -- are passed through unchanged.
-UI/native Editor modes require macOS until Windows P5 is complete.
+Windows UI logic tests are available; Metal native acceptance targets require macOS.
 '''
 
 

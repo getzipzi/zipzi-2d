@@ -126,6 +126,11 @@ impl EditorView {
         self.editor.invalidate_animation();
         self.frozen_frames.clear();
         self.editor.invalidate_preview();
+        #[cfg(any(test, feature = "test-support"))]
+        if cx.is_test() {
+            // Logic-test windows use manually delivered frames, not native GPUs.
+            return;
+        }
         let (requests, frames, device) = match preview::start(window) {
             Ok(connection) => connection,
             Err(error) => {
@@ -307,11 +312,7 @@ impl EditorView {
                         canvas: Some(canvas),
                         animation: None,
                         scene: preview.scene,
-                        target: zipzi_editor_render::MetalTargetConfig {
-                            width,
-                            height,
-                            format: metal::MTLPixelFormat::RGBA8Unorm,
-                        },
+                        target: preview::Target { width, height },
                     });
                 }
                 Ok(None) => {}

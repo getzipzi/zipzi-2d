@@ -9,6 +9,8 @@ mod authoring;
 mod benchmark;
 mod canvas_overlay;
 mod commands;
+#[cfg(windows)]
+mod dev_control;
 mod dev_session;
 mod docking;
 mod editing;
@@ -18,7 +20,6 @@ mod headless_tests;
 mod host;
 mod i18n;
 mod input_routing;
-#[cfg(unix)]
 mod ipc;
 mod keybindings;
 mod menus;
@@ -82,7 +83,7 @@ struct EditorView {
     status_message_task: Option<Task<()>>,
     viewport_notice: Option<(zipzi_editor_core::DocumentId, String)>,
     requests: Option<preview::RequestSender>,
-    gpu_device: Option<metal::Device>,
+    gpu_device: Option<preview::Device>,
     _frames: Option<Task<()>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
     dev_session: Option<dev_session::DevSession>,
@@ -408,9 +409,7 @@ impl EditorView {
 }
 
 pub fn run() {
-    #[cfg(unix)]
     let endpoint = zipzi_runtime::local::Endpoint::from_env().expect("private Runtime endpoint");
-    #[cfg(unix)]
     let owner = match endpoint.inherit_or_claim().expect("Runtime owner lock") {
         Some(owner) => owner,
         None => {
@@ -436,6 +435,8 @@ pub fn run() {
     });
     application.run(move |cx| {
         gpui_kit::init(cx);
+        #[cfg(target_os = "windows")]
+        preview::init(cx);
         cx.on_app_quit(|_| async {
             benchmark::finish();
         })
@@ -446,7 +447,8 @@ pub fn run() {
         actions::init(cx);
         theme::init(cx);
         cx.set_global(host::DesktopHost::new(no_window));
-        #[cfg(unix)]
+        #[cfg(windows)]
+        dev_control::start(cx);
         ipc::start(owner, cx).expect("start local Runtime listener");
         if !no_window {
             host::open_window(cx, !background_launch);

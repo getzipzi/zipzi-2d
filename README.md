@@ -1,6 +1,6 @@
 # Zipzi 2D
 
-Zipzi 2D brings the Zipzi Rust authoring SDK, Python bindings and native macOS
+Zipzi 2D brings the Zipzi Rust authoring SDK, Python bindings and native desktop
 Editor into one workspace. It supports editable 2D model documents, animation,
 Live2D/Cubism format interoperability, and WGPU/Metal rendering. The project is
 under development with no stable release; APIs and file formats may change.
@@ -26,9 +26,9 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
 ## Development
 
 Use Rust 1.95 or newer, uv 0.10.7 or newer, and CPython 3.14.
-The Editor additionally requires macOS, Xcode Command Line Tools and a
-Metal-capable GPU. The [Windows port](crates/zipzi-editor/README.md) will use the
-shared wgpu backend; Windows rendering integration is pending.
+The macOS Editor additionally requires Xcode Command Line Tools and a
+Metal-capable GPU. The [Windows development prototype](crates/zipzi-editor/README.md)
+uses WGPU with GPUI D3D11 image composition and requires MSVC/Windows SDK.
 Run these commands from the repository root:
 
 ```sh
@@ -66,7 +66,7 @@ uv run --locked python tools/dev.py test sdk python2-connected
 
 The Connected gate builds a CPU fixture and installs the pure client in an
 isolated environment. It does not launch the desktop Editor. Windows desktop
-launching and GPU/UI integration remain P5 work; current verification and
+integration is now a P5 development prototype; current verification and
 remaining gates are tracked in the [Windows plan](docs/plans/windows-development.md).
 
 ## Tests

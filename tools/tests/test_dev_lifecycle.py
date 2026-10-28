@@ -25,6 +25,21 @@ else:
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_refused_exit_preserves_process_record_and_does_not_publish(self):
+        first = self.reload()['owned']
+        def refuse(owners):
+            self.assertEqual(owners, [first])
+            raise RuntimeError('unsaved document')
+        with patch('dev_lifecycle.stop') as stop, patch('dev_lifecycle.launch') as launch:
+            with self.assertRaisesRegex(RuntimeError, 'unsaved document'):
+                self.lifecycle.reload(lambda: ['new-editor'], cwd=self.root, env=os.environ, before_stop=refuse)
+            stop.assert_not_called()
+            launch.assert_not_called()
+        self.assertEqual(self.lifecycle.owners(), [first])
+        with self.assertRaisesRegex(RuntimeError, 'unsaved document'):
+            self.lifecycle.stop(before_stop=refuse)
+        self.assertIsNotNone(first.process())
+
     def test_interrupted_launcher_is_recovered_without_duplicate_owner(self):
         module_path = str(Path(__file__).resolve().parents[1] / 'workspace')
         code = (f'import sys; sys.path.insert(0, {module_path!r}); '

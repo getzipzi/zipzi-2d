@@ -16,14 +16,12 @@ anyhow.workspace = true
 zipzi-editor-core.workspace = true
 zipzi-core.workspace = true
 zipzi-render.workspace = true
-zipzi-render-metal.workspace = true
 
 zipzi-render-wgpu = { path = "../zipzi-render-wgpu", optional = true }
 wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]
 png.workspace = true
-objc2.workspace = true
 
 [[example]]
 name = "wgpu_preview"
@@ -32,3 +30,9 @@ required-features = ["wgpu-backend"]
 [[example]]
 name = "wgpu_benchmark"
 required-features = ["wgpu-backend"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+zipzi-render-metal.workspace = true
+
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+objc2.workspace = true

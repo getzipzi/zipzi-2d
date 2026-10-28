@@ -1,6 +1,6 @@
 # Windows 原生开发支持实施方案
 
-状态：P0–P4 实施与验收中；Windows 分发闭环已通过，干净 checkout 和双平台最终验收待完成。更新日期：2026-10-28。
+状态：P0–P4 验收收尾；P5 已提前开始，Windows 桌面原型和开发重载已接通，性能与双平台最终验收待完成。更新日期：2026-10-28。
 
 目标是在 Windows 原生环境中完成 Rust SDK、Python SDK 和桌面 Editor 的开发、
 聚焦测试与调试，并保持 macOS 开发能力。日常开发不依赖 WSL、Git Bash 或 MSYS。
@@ -123,7 +123,8 @@ Python SDK 环境的真实构建与运行在 P3 验收。
 
 ## P5：最后接入 GPUI/WGPU 与桌面 Editor
 
-前置条件：P0–P4 已验收。复用已有 `WgpuSceneRenderer` 和 macOS WGPU 路径，
+原定前置条件：P0–P4 已验收。2026-10-28 用户明确要求直接开始 P5，故提前推进；
+P0–P4 未完成的验收继续保留，不视为已通过。复用已有 `WgpuSceneRenderer` 和 macOS WGPU 路径，
 先复核届时锁定的 GPUI Windows 后端能力，再实现显示与合成。
 
 工作内容：
@@ -154,7 +155,7 @@ Editor 测试继续清理 `ZIPZI_DEV_SESSION_DIR`。只有宽范围改动或阶�
 | P2 Runtime IPC | 实施中 | Named Pipe、纯 Python 传输和冷启动仲裁已接线；Windows 真实 fixture 握手、4 进程竞争启动与崩溃重启通过；完整安装后契约待验证 |
 | P3 Python 开发与分发 | 实施中 | Windows 源码 Local adapter 构建、版本化发布、仓库外调用及并发准备通过；wheel/sdist 与完整测试工具迁移待完成 |
 | P4 基础设施收口 | 实施中 | 已补充根 README、工具入口与 Python Windows 文档；干净 checkout 和双平台 CI 最终验收待完成 |
-| P5 GPUI/WGPU 与桌面验收 | 待实施 | 待记录 |
+| P5 GPUI/WGPU 与桌面验收 | 实施中 | 原生窗口、WGPU 像素、Python 共享编辑/保存重开、开发安全重载通过；端到端延迟、资源上限与完整桌面验收未完成 |
 
 完成证据应包含变更范围、实际命令、操作系统/工具链、结果和未覆盖项。源码调查、
 macOS 交叉编译或 CI 配置存在都不能单独证明 Windows 运行行为。
@@ -348,3 +349,73 @@ Windows source launcher 工具测试（1 项 Unix inode 专项跳过）。CPU、
 相对路径，10 项入口测试通过。
 
 源码身份验收补强：build.rs 与 source_identity.rs 测试共用实际 digest 实现；固定 fixture 的跨平台期望 SHA-256 为 763a744031f58117890a73c612f3e02df911a4ed874b464311af6a78527f71c9。Windows 验证 LF/CRLF、输入顺序、中文相对路径和真实源码变化共 3 项通过；macOS 同一黄金样本仍需 CI 实际执行。此改动发生在验证快照之后，已在主工作区执行聚焦测试。
+
+### 2026-10-28 P5 首批接线
+
+按用户要求提前开始 P5。Metal 渲染器、Apple 开发依赖及原生比较 example 已隔离；
+Windows Editor 默认启用 WGPU，模型帧在独立线程完成渲染和回读，再转换成 GPUI
+D3D11 所需的 straight BGRA 图片。请求与结果仍按视口合并，保持不可变帧及过期拒绝。
+图片由共享所有者保留，最终释放后通过 UI mailbox 回收 GPUI atlas；未显示帧不入 atlas。
+网格 overlay 使用现有 GPUI paths/markers，候选预览在生成线程栅格化后合成，最长边
+2048 像素（每图最多 16 MiB）；候选放大时会放大该栅格，尚需高 DPI/缩放质量验收。
+
+Editor IPC 已复用 P2 listener，并新增跨平台有界连接入口，用于重复启动和真实 readiness
+握手；Windows 客户端验证 Named Pipe 服务端用户。配置和文件对话框接入 P1 目录服务。
+Windows icon 来自现有 vector.icns 的 256px PNG；DPI/权限 manifest 沿用锁定的 gpui-pre
+依赖自带 PerMonitorV2/asInvoker/common-controls 资源。额外嵌入 manifest 会触发资源 ID 1
+重复链接错误，已移除重复资源。开发入口补充许可证/notices 复制。
+
+已执行：Windows `cargo check --locked -p zipzi-editor`；
+`cargo build --locked -p zipzi-editor`；
+`cargo test --locked -p zipzi-editor-render --features wgpu-backend --test wgpu_readback -- --nocapture`
+1 项通过，RTX 5060 / Vulkan，覆盖透明像素、非对齐行宽、视图变换复用、纹理更新和已提交
+图像不可变性；`cargo test --locked -p zipzi-runtime --lib local::windows::` 2 项通过；
+`tools/test_tools.py -p test_dev_editor.py -v` 最终 6 项通过（含拒绝退出、无回复超时、
+确认后等待进程退出）；`test_dev_lifecycle.py` 7 项和 `test_dev_entrypoint.py` 10 项通过。
+Windows Editor/renderer 的 `--all-targets` 加 `test-support,wgpu-backend` 检查通过；
+颜色转换单测 1 项、UI presentation 调度测试 10 项、worker queue 测试 3 项通过。
+CI 新增 Windows/macOS Editor all-target 编译矩阵和 Windows 聚焦逻辑测试，尚未取得远端
+运行结果；不能把本机 Windows 结果作为 macOS 回归通过。
+
+原生桌面验收机器：Windows 11 Pro 10.0.26300，AMD Ryzen 5 5600GT，NVIDIA GeForce
+RTX 5060；场景渲染 WGPU/Vulkan，窗口图片合成 GPUI/D3D11，Rust dev 未优化构建。
+真实 Editor `--no-window` 启动及 readiness 握手通过，`show_window` 唤起后确认：
+
+- 自有合成棋盘模型显示、透明区域、中文名称、网格线/顶点、缩放与裁剪、动画工作区静态
+  姿态、弹出菜单遮挡均可见。中文名称来自 SDK，不代表中文 IME 已验收。
+- Python 修改名称在窗口中同步；实际 UI Ctrl+Z 撤销后，Python 读到相同 Runtime、原名称、
+  history `(0, 1)` 及 `modified=False`。重复启动复用同一 host，而非新建 Runtime。
+- 安装版 pure-client 的真实 Editor 验收现已跨平台：并发冷启动、共享 mesh/parameter/
+  binding 与 CPU pose、窗口复用、被终止客户端的 grace 回收、保存/重启/重开，共 1 项通过。
+  共享传输测试辅助代码后，CPU fixture Connected 回归共 18 项：15 通过、3 项 Unix 专属跳过。
+  复现：`uv run --locked python tools/dev.py test sdk python2-connected --editor-host <absolute-exe>`。
+- Windows 开发重启新增显式退出握手：拒绝未保存文档、连接中的 Python 客户端、待完成任务、
+  活跃对话框/手势/无效输入，失败和超时均保留原进程。原生脏文档拒绝及干净文档退出已验证。
+  `tools/dev.py editor reload` 实际发布便携 exe、正常退出旧进程并启动新进程，恢复中文路径
+  项目并保持未修改；`editor stop` 正常结束。四份许可证/notices 与仓库源文件逐字节一致。
+
+### P5 回读成本与未完成项
+
+将透明/不透明像素转换改为直接赋值，避免每像素嵌套循环和不必要的除法。实际便携版窗口
+执行 12 次编辑/撤销循环，trace 共 25 个回读帧（含冷启动帧），`lost_events=0`：
+
+| 采样项 | 结果 |
+| --- | --- |
+| 每帧 RGBA/BGRA 数据量 | 6,272,632 bytes（约 5.98 MiB） |
+| 冷启动回读 / 转换 | 40.05 / 14.64 ms |
+| 24 个暖机帧回读中位数 / 最大值 | 2.994 / 5.352 ms |
+| 24 个暖机帧转换中位数 / 最大值 | 15.123 / 15.649 ms |
+
+以上为合成小模型、未优化 dev 构建的 worker 阶段计时，**不包含 GPUI 图片上传、屏幕呈现
+或输入到显示延迟**，不能作为 60/120 Hz 或复杂模型的达标证据。初版相同尺寸转换约
+127–132 ms，已消除该明显开销；暖机阶段合计仍超过 16.7 ms，性能路线继续保留优化构建
+测量和 GPU 互操作评估。日志位于本地 `target/windows-p5/`（不随源码提交）。
+
+当前单 worker 串行完成 GPU/回读，请求与结果按视口合并；图片最终所有者释放后从 atlas
+回收，网格候选最长边 2048px / 每图最多 16 MiB。**这些局部限制尚不构成预览总内存硬上限**；
+需要补齐冻结文档/多窗口图片预算和长时间动画资源增长验收。
+
+P5 保持实施中。尚需完成：双视口真实窗口同时显示（已有不可变图像 GPU 测试和调度逻辑
+测试不替代此项）、动画播放、候选网格高 DPI 质量、GUI 导入/文件对话框/拖放、中文 IME、
+多显示器缩放、完整关闭最后窗口/连接客户端常驻交互、端到端帧延迟与内存上限，以及 macOS
+Metal/WGPU 原生回归。正式安装器和签名不属于本阶段。

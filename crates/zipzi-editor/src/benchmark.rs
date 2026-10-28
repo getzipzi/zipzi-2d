@@ -253,6 +253,7 @@ pub fn init() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 pub fn metal_mesh_overlay() -> bool {
     METAL_MESH_OVERLAY.load(Ordering::Relaxed)
 }

@@ -7,16 +7,56 @@ input routing and native UI integration. It consumes
 [`zipzi-editor-core`](../zipzi-editor-core/README.md) for editing state and
 [`zipzi-editor-render`](../zipzi-editor-render/README.md) for scene rendering.
 
-The Windows port will use the shared [wgpu backend](../zipzi-render-wgpu/README.md).
-The macOS wgpu model-preview route is already available; Windows window,
-viewport and overlay integration remains to be connected and validated.
-Windows development requires Rust 1.95+, MSVC C++ Build Tools and the Windows SDK.
-Settings use `%APPDATA%\Zipzi Editor`. The resident Unix socket is unavailable
-on Windows; the Editor owns its in-process Runtime.
+Windows now has a P5 development prototype using the shared
+[wgpu backend](../zipzi-render-wgpu/README.md), background readback and GPUI D3D11
+image composition. It requires Rust 1.95+, MSVC C++ Build Tools, Windows SDK and
+a usable GPU. Settings use `%APPDATA%\Zipzi Editor`; Named Pipe clients share the
+resident Editor Runtime, including `--no-window` and window reopening.
+
+```powershell
+cargo run --locked -p zipzi-editor
+uv run --locked python tools/dev.py editor run
+uv run --locked python tools/dev.py editor reload
+uv run --locked python tools/dev.py editor stop
+```
+
+The developer executable and license/notices files are published under
+`target/dev-editor`. GPUI assets and the app icon are embedded; GPUI Kit's pinned
+`gpui-pre` dependency supplies the PerMonitorV2/asInvoker manifest. Do not embed
+another manifest resource 1. This is a development portable build, not a signed
+installer. Desktop acceptance and performance are tracked in the
+[Windows plan](../../docs/plans/windows-development.md).
+
+Windows development reload/stop asks the owned Editor to exit safely before
+replacing the executable. Unsaved documents, active dialogs/gestures, pending
+jobs or connected Python clients block restart and preserve the running process.
+Save work and disconnect clients before retrying. Clean project tabs are restored
+after reload. This handshake is enabled only by the development launcher.
+
+Readback frames retain independent viewport identity and are released from the
+GPUI image atlas when their final presentation owner is dropped. Mesh generation
+candidates render off the UI thread at a maximum 2048px longest edge (16 MiB);
+zoom magnifies that preview raster. Main preview readback/conversion timing and
+bytes are recorded as `readback` events with `ZIPZI_FRAME_TRACE` enabled. These
+measurements exclude GPUI upload/presentation; end-to-end latency still needs
+native-window measurement.
+
+Focused Windows checks (run in a desktop session for the installed Editor gate):
+
+```powershell
+cargo check --locked -p zipzi-editor -p zipzi-editor-render --all-targets --features zipzi-editor/test-support,zipzi-editor/wgpu-backend
+cargo test --locked -p zipzi-editor-render --features wgpu-backend --test wgpu_readback -- --nocapture
+uv run --locked python tools/dev.py test editor ui headless_tests::ui_performance
+uv run --locked python tools/dev.py test sdk python2-connected --editor-host C:\absolute\path\to\zipzi-editor.exe
+```
+
+The installed Editor gate covers concurrent cold start, shared history/CPU
+poses, window reuse, disconnected-client recovery and save/restart/open. It does
+not assert screen pixels, IME behavior or end-to-end presentation latency.
 
 ## Develop and test
 
-Requires macOS, a Metal-capable GPU, Rust 1.95+ and Xcode Command Line Tools
+On macOS, requires a Metal-capable GPU, Rust 1.95+ and Xcode Command Line Tools
 (`xcode-select --install`). SDK sources are in the same workspace; no sibling
 checkout is needed. Dependency pins and patch details are in
 [`vendor/README.md`](../../vendor/README.md#dependencies).

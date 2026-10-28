@@ -63,6 +63,7 @@ mod deformer_bar;
 mod input;
 mod isolation;
 mod painting;
+#[cfg(target_os = "macos")]
 use painting::CanvasOverlay;
 mod animation;
 mod background;
@@ -106,6 +107,7 @@ pub struct ViewportSurface {
     pub(crate) toolbar: toolbar::ToolbarRegistry,
     pub(super) show_transparency_grid: bool,
     pub(super) show_origin_crosshair: bool,
+    #[cfg(target_os = "macos")]
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     navigation: navigation::ViewportNavigation,
@@ -220,6 +222,7 @@ impl ViewportSurface {
                 toolbar,
                 show_transparency_grid: false,
                 show_origin_crosshair: true,
+                #[cfg(target_os = "macos")]
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 navigation: Default::default(),

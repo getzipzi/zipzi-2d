@@ -1,8 +1,8 @@
 # zipzi-editor-render
 
-Native Metal preview adapter for the Editor. It consumes
+Metal and WGPU scene adapters for the Editor. They consume
 [`zipzi-editor-core`](../zipzi-editor-core/README.md) scene snapshots and viewport transforms,
-and delegates model rendering to [`zipzi-render-metal`](../zipzi-render-metal/README.md).
+and delegate model rendering to the shared Metal/WGPU backends.
 Document editing and project I/O remain outside this crate.
 
 ## Rendering boundary
@@ -13,14 +13,15 @@ queue. `SubmittedFrame` retains the output texture and command buffer so callers
 can track GPU completion without blocking the UI thread. `MetalOverlayRenderer`
 and the overlay types draw Editor interaction overlays.
 
-The implementation is in `src/lib.rs` and `src/overlay.rs`. Backend-independent
+The Metal implementation is in `src/metal.rs` and `src/overlay.rs`; the WGPU
+adapter is in `src/wgpu.rs`. Backend-independent
 render planning belongs in `zipzi-render`; reusable Metal rendering belongs in
 `zipzi-render-metal`. This crate adapts those facilities to Editor scene and
 interaction data.
 
 ## Build and test
 
-Requires macOS and Metal. Run from the repository root:
+For native Metal, run on macOS from the repository root:
 
 ```sh
 cargo check --locked -p zipzi-editor-render
@@ -51,4 +52,16 @@ cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu
   models/local/mao/runtime/mao_pro.model3.json target/wgpu-mao
 ```
 
-Overlay rendering and GPUI platform integration remain native Metal.
+macOS overlays remain native Metal. Windows uses GPUI paths/markers and a
+background WGPU readback-to-image bridge in `zipzi-editor/src/preview/readback.rs`.
+
+On Windows, the Editor enables `wgpu-backend` automatically. To verify the
+scene adapter on a real GPU independently of GPUI:
+
+```powershell
+cargo test --locked -p zipzi-editor-render --features wgpu-backend --test wgpu_readback -- --nocapture
+```
+
+This test requires a GPU, asserts pixels and frame immutability, and reports the
+adapter/backend. It does not establish native window performance. The existing
+Metal comparison examples explicitly require macOS.

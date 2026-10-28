@@ -1,4 +1,4 @@
-name: Development CPU gates
+name: Development gates
 env:
   PYTHONUTF8: '1'
 on:
@@ -18,6 +18,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  editor-compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Check native Editor and platform examples
+        run: cargo check --locked -p zipzi-editor -p zipzi-editor-render --all-targets --features zipzi-editor/test-support,zipzi-editor/wgpu-backend
+      - name: Windows image conversion
+        if: runner.os == 'Windows'
+        run: cargo test --locked -p zipzi-editor --lib preview::readback::tests
+      - name: Windows presentation scheduling
+        if: runner.os == 'Windows'
+        run: cargo test --locked -p zipzi-editor --lib headless_tests::ui_performance
+
   focused:
     strategy:
       fail-fast: false

@@ -28,6 +28,17 @@ fn invalid(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::PermissionDenied, message)
 }
 impl Endpoint {
+    /// Connect with the same bounded client interface as the Windows transport.
+    pub fn connect(
+        &self,
+        read_timeout: Duration,
+        write_timeout: Duration,
+    ) -> io::Result<impl io::Read + io::Write> {
+        let stream = UnixStream::connect(&self.socket)?;
+        stream.set_read_timeout(Some(read_timeout))?;
+        stream.set_write_timeout(Some(write_timeout))?;
+        Ok(stream)
+    }
     pub fn from_env() -> io::Result<Self> {
         // SAFETY: getuid has no preconditions.
         let uid = unsafe { libc::getuid() };

@@ -58,11 +58,13 @@ class Lifecycle:
             path.with_suffix('.pid').unlink(missing_ok=True)
             path.with_suffix('.ready').unlink(missing_ok=True)
 
-    def stop(self):
+    def stop(self, before_stop=None):
         with file_lock(self.directory / 'operation.lock', blocking=False):
+            if before_stop is not None:
+                before_stop(self.owners())
             self._stop()
 
-    def reload(self, build, *, cwd, env, timeout=5, publish=None, guard=None):
+    def reload(self, build, *, cwd, env, timeout=5, publish=None, guard=None, before_stop=None):
         """Build before stopping; a failed build preserves the running instance.
 
         build returns the launch argv, after publishing a checkout-private binary.
@@ -73,6 +75,8 @@ class Lifecycle:
             command = build()
             if guard is not None:
                 guard(self.owners())
+            if before_stop is not None:
+                before_stop(self.owners())
             self._stop()
             if publish is not None:
                 command = publish(command)

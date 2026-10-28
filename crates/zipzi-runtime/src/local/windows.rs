@@ -25,6 +25,32 @@ pub struct Endpoint {
     sid: String,
 }
 impl Endpoint {
+    /// Connect to the current user's server with bounded overlapped I/O.
+    pub fn connect(
+        &self,
+        read_timeout: Duration,
+        write_timeout: Duration,
+    ) -> io::Result<impl io::Read + io::Write> {
+        let mut pipe = Pipe::client(&self.socket.to_string_lossy()).map_err(|error| {
+            if error.raw_os_error() == Some(windows_sys::Win32::Foundation::ERROR_PIPE_BUSY as i32)
+            {
+                io::Error::new(io::ErrorKind::WouldBlock, error)
+            } else {
+                error
+            }
+        })?;
+        let mut pid = 0;
+        if unsafe {
+            windows_sys::Win32::System::Pipes::GetNamedPipeServerProcessId(pipe.raw(), &mut pid)
+        } == 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+        verify_process_user(pid, &self.sid)?;
+        pipe.read_timeout = read_timeout;
+        pipe.write_timeout = write_timeout;
+        Ok(pipe)
+    }
     pub fn from_env() -> io::Result<Self> {
         let directory = std::env::var_os("ZIPZI_RUNTIME_DIR")
             .map(PathBuf::from)
@@ -204,7 +230,9 @@ mod tests {
         let owner = endpoint.claim().unwrap().unwrap();
         assert!(endpoint.claim().unwrap().is_none());
         let (server, messages) = owner.listen().unwrap();
-        let mut client = Pipe::client(&endpoint.socket.to_string_lossy()).unwrap();
+        let mut client = endpoint
+            .connect(Duration::from_secs(1), Duration::from_secs(1))
+            .unwrap();
         super::super::write_frame(&mut client, &serde_json::json!({"probe": 1})).unwrap();
         let message = messages.recv_blocking().unwrap();
         match message {

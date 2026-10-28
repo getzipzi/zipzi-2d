@@ -85,7 +85,7 @@ pub fn format_parent_path(path: &Path) -> String {
         return String::new();
     };
     let parent_str = parent.to_string_lossy();
-    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+    if let Ok(home) = zipzi_editor_core::platform_paths::user_home() {
         let home_str = home.to_string_lossy();
         if parent_str.starts_with(&*home_str) {
             return format!("~{}", &parent_str[home_str.len()..]);
