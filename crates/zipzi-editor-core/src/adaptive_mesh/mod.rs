@@ -3,11 +3,13 @@
 //! See README.md for provenance, numerical substitutions and focused validation.
 mod bands;
 mod contour;
+mod existing;
 mod fill;
 mod geometry;
 mod ribbon;
 mod structured;
 mod triangulate;
+pub use existing::fill_existing_geometry;
 use geometry::*;
 use std::collections::{BTreeMap, BTreeSet};
 use zipzi_core::Vec2;

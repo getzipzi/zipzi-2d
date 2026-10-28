@@ -14,7 +14,7 @@ pub fn render_deformer_bar(
         return div().into_any_element();
     };
     let state = owner.read(cx);
-    if state.editor.manual_active() {
+    if state.editor.manual_active() || state.mesh_generation.is_some() {
         return render_mesh_edit_bar(canvas, modal, cx);
     }
     if !state.editor.document().is_some_and(|d| {
@@ -152,14 +152,16 @@ fn render_mesh_edit_bar(
         let label = command.spec().label;
         let canvas = cx.entity();
         let owner = owner.clone();
+        let generating = state.mesh_generation.is_some() && command == CommandId::GenerateMesh;
         let button = compact::button(Button::new(id))
+            .when(generating, |button| compact::toggle(button, true))
             .when(command == CommandId::ManualPreviewResult, |button| {
                 compact::toggle(button, status.checked)
             })
             .icon(icon)
             .accessibility_label(t!(label).into_owned())
             .tooltip(t!(label))
-            .disabled(modal || !status.enabled)
+            .disabled(modal || (!status.enabled && !generating))
             .on_click(move |_, window, cx| {
                 let focus = canvas.read(cx).focus.clone();
                 window.focus(&focus, cx);

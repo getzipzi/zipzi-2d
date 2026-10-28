@@ -583,3 +583,174 @@ fn generated_band_edges_are_free_until_the_user_constrains_them() {
     );
     assert!(edges_of(&filled.geometry).contains(&[a, b]));
 }
+
+#[test]
+fn interior_generation_uses_authored_contours_and_keeps_vertex_identities() {
+    use zipzi_sdk::{ManualMeshOperation, edit_manual_mesh};
+    let alpha = mask(192, 160, |x, y| {
+        (x - 96.).powi(2) / 78_f64.powi(2) + (y - 80.).powi(2) / 62_f64.powi(2) < 1.
+    });
+    let source = generate_mesh(
+        192,
+        160,
+        &alpha,
+        &MeshSettings {
+            edge_mode: MeshEdgeMode::Double,
+            ..settings()
+        },
+        MeshGenerationStage::Edges,
+    )
+    .unwrap()
+    .geometry;
+    let boundary = &source.meshing.as_ref().unwrap().boundary;
+    let rim: BTreeSet<_> = (0..boundary.len())
+        .map(|i| {
+            edge(
+                boundary[i] as usize,
+                boundary[(i + 1) % boundary.len()] as usize,
+            )
+        })
+        .collect();
+    let e = source
+        .triangles
+        .iter()
+        .flat_map(|t| edges(t.map(|i| i as usize)))
+        .find(|e| !rim.contains(e))
+        .unwrap();
+    let source = edit_manual_mesh(
+        &source,
+        ManualMeshOperation::ConstrainEdge {
+            a: e[0] as u32,
+            b: e[1] as u32,
+        },
+    )
+    .unwrap()
+    .geometry;
+    for fill_algorithm in [
+        MeshFillAlgorithm::GradedPoisson,
+        MeshFillAlgorithm::SimpleTriangles,
+        MeshFillAlgorithm::AdaptiveQuadtree,
+        MeshFillAlgorithm::TriangleFractal,
+        MeshFillAlgorithm::ContourPaving,
+    ] {
+        let s = MeshSettings {
+            fill_algorithm,
+            interior_spacing: 24.,
+            ..settings()
+        };
+        let filled = fill_existing_geometry(&source, 192, 160, &s)
+            .unwrap_or_else(|e| panic!("{fill_algorithm:?}: {e}"));
+        assert!(filled.vertex_ids.len() > source.vertex_ids.len());
+        assert_eq!(
+            &filled.vertex_ids[..source.vertex_ids.len()],
+            &source.vertex_ids
+        );
+        assert_eq!(
+            &filled.positions[..source.positions.len()],
+            &source.positions
+        );
+        assert_eq!(&filled.uvs[..source.uvs.len()], &source.uvs);
+        assert_eq!(filled.meshing, source.meshing);
+        let other = fill_existing_geometry(
+            &source,
+            192,
+            160,
+            &MeshSettings {
+                edge_spacing: 70.,
+                alpha_threshold: 255,
+                wrap: 64.,
+                outer_margin: 40.,
+                ..s
+            },
+        )
+        .unwrap();
+        assert_eq!(filled, other, "interior changes must never retrace alpha");
+    }
+}
+
+#[test]
+fn filling_a_coarse_authored_rectangle_does_not_crowd_its_fixed_sides() {
+    let source = MeshGeometry {
+        vertex_ids: vec![10, 20, 30, 40],
+        positions: vec![
+            Vec2::new(0., 0.),
+            Vec2::new(96., 0.),
+            Vec2::new(96., 64.),
+            Vec2::new(0., 64.),
+        ],
+        uvs: vec![
+            Vec2::new(0., 0.),
+            Vec2::new(1., 0.),
+            Vec2::new(1., 1.),
+            Vec2::new(0., 1.),
+        ],
+        triangles: vec![[10, 20, 30], [10, 30, 40]],
+        meshing: None,
+    };
+    for fill_algorithm in [
+        MeshFillAlgorithm::GradedPoisson,
+        MeshFillAlgorithm::SimpleTriangles,
+        MeshFillAlgorithm::AdaptiveQuadtree,
+        MeshFillAlgorithm::TriangleFractal,
+        MeshFillAlgorithm::ContourPaving,
+    ] {
+        let filled = fill_existing_geometry(
+            &source,
+            96,
+            64,
+            &MeshSettings {
+                fill_algorithm,
+                interior_spacing: 12.,
+                ..settings()
+            },
+        )
+        .unwrap_or_else(|e| panic!("{fill_algorithm:?}: {e}"));
+        assert_eq!(&filled.vertex_ids[..4], &source.vertex_ids);
+        assert_eq!(&filled.positions[..4], &source.positions);
+        assert_eq!(&filled.uvs[..4], &source.uvs);
+        assert!(zipzi_sdk::extract_manual_meshing(&filled).is_ok());
+        // Sites may fill the interior, but must not form collapsing layers
+        // along the four original sides, which stay fixed during generation.
+        assert!(filled.positions.len() < 100);
+        assert!(
+            filled
+                .positions
+                .iter()
+                .skip(4)
+                .all(|p| { p.x.min(96. - p.x).min(p.y).min(64. - p.y) > 0.1 })
+        );
+    }
+}
+
+#[test]
+fn filling_authored_islands_preserves_holes_and_winding() {
+    let alpha = mask(192, 128, |x, y| {
+        let r = (x - 54.).hypot(y - 64.);
+        (r < 42. && r > 18.) || (x > 126. && x < 175. && y > 20. && y < 105.)
+    });
+    let source = generate_mesh(192, 128, &alpha, &settings(), MeshGenerationStage::Edges)
+        .unwrap()
+        .geometry;
+    let filled = fill_existing_geometry(&source, 192, 128, &settings()).unwrap();
+    let slots: BTreeMap<_, _> = filled
+        .vertex_ids
+        .iter()
+        .enumerate()
+        .map(|(i, &id)| (id, i))
+        .collect();
+    for t in &filled.triangles {
+        let p = t.map(|id| {
+            let p = filled.positions[slots[&id]];
+            [p.x as f64, p.y as f64]
+        });
+        assert!(cross(p[0], p[1], p[2]) > 0.);
+        let center = mul(add(add(p[0], p[1]), p[2]), 1. / 3.);
+        assert!(distance(center, [54., 64.]) > 15.);
+        assert!(!(center[0] > 102. && center[0] < 122.));
+    }
+    assert_eq!(
+        &filled.positions[..source.positions.len()],
+        &source.positions
+    );
+    assert!(filled.meshing.is_none());
+}

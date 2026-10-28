@@ -12,8 +12,8 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
 };
 use zipzi_sdk::{
-    ManualMeshOperation, ManualVertexIdAllocator, MeshGeometry, TopologyReplacement,
-    add_manual_interior_sites, edit_manual_mesh, rectangle_grid_geometry,
+    ManualMeshOperation, MeshGeometry, TopologyReplacement, edit_manual_mesh,
+    rectangle_grid_geometry,
 };
 
 /// Each backend owns its typed configuration. Preview and apply share this dispatch.
@@ -58,6 +58,9 @@ pub struct MeshGenerationPreview {
 }
 
 impl MeshGenerationSource {
+    pub fn target(&self) -> &ObjectRef {
+        &self.target
+    }
     pub fn alpha_error(&self) -> Option<&str> {
         self.alpha_error.as_deref()
     }
@@ -75,7 +78,8 @@ impl MeshGenerationSource {
     }
     pub fn is_current(&self, document: &Document) -> bool {
         document.mesh_generation_revision() == self.revision
-            && !document.has_pending_edit()
+            && document.pending.is_none()
+            && document.manual_pending.is_none()
             && self
                 .manual_target
                 .as_ref()
@@ -92,6 +96,13 @@ impl MeshGenerationSource {
             })
     }
 
+    /// Rebase the interior stage on an accepted contour preview, not on alpha.
+    pub fn with_geometry(&self, geometry: MeshGeometry) -> Self {
+        Self {
+            geometry,
+            ..self.clone()
+        }
+    }
     pub fn generate(&self, options: MeshGenerationOptions) -> Result<MeshGenerationPreview> {
         let generation_id = self.generation.load(Ordering::SeqCst);
         let phase = options;
@@ -118,59 +129,34 @@ impl MeshGenerationSource {
                     .texture
                     .as_ref()
                     .ok_or_else(|| anyhow::anyhow!("Missing source texture"))?;
-                let alpha: Vec<_> = texture
-                    .rgba
-                    .as_chunks::<4>()
-                    .0
-                    .iter()
-                    .map(|p| p[3])
-                    .collect();
                 // The chosen phase is kept in the outer enum, separate from
                 // alpha tuning values shared by all phases.
                 let mut geometry = match phase {
-                    MeshGenerationOptions::ManualEdge(_) => {
-                        generate_mesh(
-                            texture.width,
-                            texture.height,
-                            &alpha,
-                            &alpha_options,
-                            MeshGenerationStage::Edges,
-                        )?
-                        .geometry
-                    }
                     MeshGenerationOptions::ManualInterior(_) => {
-                        let sites = generate_mesh(
-                            texture.width,
-                            texture.height,
-                            &alpha,
-                            &alpha_options,
-                            MeshGenerationStage::Full,
-                        )?;
-                        let additions = filter_interior_sites(
+                        crate::adaptive_mesh::fill_existing_geometry(
                             &self.geometry,
-                            &sites.interior_uvs,
                             texture.width,
                             texture.height,
-                            (alpha_options.interior_spacing * 0.3).max(0.001),
-                        );
-                        ensure!(
-                            self.geometry.vertex_ids.len() + additions.len()
-                                <= alpha_options.max_vertices,
-                            "Interior sites exceed the mesh vertex budget"
-                        );
-                        let mut allocator = ManualVertexIdAllocator::new(&self.geometry);
-                        add_manual_interior_sites(&self.geometry, &additions, &mut allocator)?
-                            .geometry
-                    }
-                    MeshGenerationOptions::ManualFull(_) | MeshGenerationOptions::Alpha(_) => {
-                        generate_mesh(
-                            texture.width,
-                            texture.height,
-                            &alpha,
                             &alpha_options,
-                            MeshGenerationStage::Full,
                         )?
-                        .geometry
+                    }
+                    MeshGenerationOptions::ManualEdge(_)
+                    | MeshGenerationOptions::ManualFull(_)
+                    | MeshGenerationOptions::Alpha(_) => {
+                        let alpha: Vec<_> = texture
+                            .rgba
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|p| p[3])
+                            .collect();
+                        let stage = if matches!(phase, MeshGenerationOptions::ManualEdge(_)) {
+                            MeshGenerationStage::Edges
+                        } else {
+                            MeshGenerationStage::Full
+                        };
+                        generate_mesh(texture.width, texture.height, &alpha, &alpha_options, stage)?
+                            .geometry
                     }
                     _ => unreachable!(),
                 };
@@ -250,81 +236,6 @@ impl MeshGenerationSource {
             generation_id,
         })
     }
-}
-
-fn filter_interior_sites(
-    geometry: &MeshGeometry,
-    sites: &[zipzi_core::Vec2],
-    width: u32,
-    height: u32,
-    clearance: f64,
-) -> Vec<zipzi_core::Vec2> {
-    use std::collections::HashMap;
-    // Refinement can place a point arbitrarily close to an existing structural
-    // segment. Preserve a pixel-space clearance, not just vertex separation,
-    // before the SDK retriangulates at normalized f32 UV precision.
-    let slots: HashMap<_, _> = geometry
-        .vertex_ids
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(i, id)| (id, i))
-        .collect();
-    let mut segments = Vec::new();
-    let meshing = zipzi_sdk::extract_manual_meshing(geometry).ok();
-    if let Some(m) = &meshing {
-        for i in 0..m.boundary.len() {
-            segments.push([m.boundary[i], m.boundary[(i + 1) % m.boundary.len()]]);
-        }
-        segments.extend(m.constraints.iter().map(|c| c.endpoints));
-    }
-    let near_segment = |uv: zipzi_core::Vec2| {
-        segments.iter().any(|e| {
-            let a = geometry.uvs[slots[&e[0]]];
-            let b = geometry.uvs[slots[&e[1]]];
-            let dx = (b.x as f64 - a.x as f64) * width as f64;
-            let dy = (b.y as f64 - a.y as f64) * height as f64;
-            let px = (uv.x as f64 - a.x as f64) * width as f64;
-            let py = (uv.y as f64 - a.y as f64) * height as f64;
-            let t = ((px * dx + py * dy) / (dx * dx + dy * dy).max(1e-12)).clamp(0., 1.);
-            (px - dx * t).hypot(py - dy * t) < clearance
-        })
-    };
-    let mut occupied: HashMap<(i64, i64), Vec<(f64, f64)>> = HashMap::new();
-    let cell = |x: f64, y: f64| {
-        (
-            (x / clearance).floor() as i64,
-            (y / clearance).floor() as i64,
-        )
-    };
-    let mut insert = |uv: zipzi_core::Vec2, test: bool| {
-        let x = uv.x as f64 * width as f64;
-        let y = uv.y as f64 * height as f64;
-        let (cx, cy) = cell(x, y);
-        if test
-            && (-1..=1).any(|dx| {
-                (-1..=1).any(|dy| {
-                    occupied.get(&(cx + dx, cy + dy)).is_some_and(|points| {
-                        points
-                            .iter()
-                            .any(|&(px, py)| (px - x).hypot(py - y) < clearance)
-                    })
-                })
-            })
-        {
-            return false;
-        }
-        occupied.entry((cx, cy)).or_default().push((x, y));
-        true
-    };
-    for &uv in &geometry.uvs {
-        insert(uv, false);
-    }
-    sites
-        .iter()
-        .copied()
-        .filter(|&uv| !near_segment(uv) && insert(uv, true))
-        .collect()
 }
 
 impl MeshGenerationPreview {
@@ -449,7 +360,78 @@ impl Document {
         })
     }
 
+    /// A generation preview is disposable and never committed by FinishEdit/Save.
+    pub fn clear_mesh_generation_preview(&mut self) -> bool {
+        if self.generation_pending.take().is_none() {
+            return false;
+        }
+        self.generation_texture = None;
+        self.preview_revision += 1;
+        self.invalidate_canvas_topology(None);
+        true
+    }
+
+    pub fn preview_mesh_generation(&mut self, preview: &MeshGenerationPreview) -> Result<()> {
+        ensure!(
+            self.projection_revision == preview.revision,
+            "Document has changed"
+        );
+        ensure!(
+            preview.generation.load(Ordering::SeqCst) == preview.generation_id,
+            "Generation options changed"
+        );
+        ensure!(
+            self.pending.is_none() && self.manual_pending.is_none(),
+            "Finish the current edit first"
+        );
+        if let Some(target) = &preview.manual_target {
+            self.validate_manual_target(target)?;
+        }
+        let source = self
+            .session
+            .geometry(&preview.target.id)
+            .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
+        let mut mesh = self.session.mesh(&preview.target.id).unwrap();
+        let g = &preview.geometry;
+        mesh.vertex_ids = g.vertex_ids.clone();
+        mesh.base_positions = g.positions.clone();
+        mesh.uvs = g.uvs.clone();
+        mesh.triangles = g.triangles.clone();
+        mesh.meshing = g.meshing.clone();
+        let mapping = source
+            .vertex_ids
+            .iter()
+            .map(|&id| (id, g.vertex_ids.contains(&id).then_some(id)))
+            .collect();
+        let mut edit = self
+            .session
+            .begin_owned_edit("Generate mesh preview", Some(source.version))?;
+        edit.apply(|edit| {
+            edit.replace_topology(
+                &source,
+                TopologyReplacement {
+                    mesh,
+                    binding: None,
+                    blend_bindings: vec![],
+                    glues: vec![],
+                    vertex_mapping: mapping,
+                },
+            )?;
+            Ok(())
+        })?;
+        self.generation_texture = preview.padded_texture.clone();
+        self.generation_pending = Some(super::ManualPending {
+            edit,
+            preview: Default::default(),
+            changed: false,
+        });
+        self.preview_revision += 1;
+        self.invalidate_canvas_topology(None);
+        Ok(())
+    }
+
     pub fn apply_mesh_generation(&mut self, preview: &MeshGenerationPreview) -> Result<()> {
+        self.clear_mesh_generation_preview();
         ensure!(
             preview.generation.load(Ordering::SeqCst) == preview.generation_id,
             "Generation options changed"

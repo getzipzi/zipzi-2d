@@ -1,7 +1,7 @@
 use super::super::{fixture, harness::Harness};
 use super::common::save;
 use crate::{i18n, theme};
-use gpui_kit::{point, px, test::TestWindowExt};
+use gpui_kit::{component::WindowExt, test::TestWindowExt};
 use std::time::Duration;
 use zipzi_editor_core::{CommandId, Editor};
 
@@ -9,7 +9,7 @@ pub(crate) fn mesh_generation_screenshots(
     harness: &mut Harness,
     directory: &std::path::Path,
 ) -> anyhow::Result<()> {
-    let (document, assets) = fixture::rectangle_document(false)?;
+    let (document, assets) = fixture::alpha_document()?;
     harness.cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.replace_editor(Editor::from_document(document), cx);
@@ -21,136 +21,70 @@ pub(crate) fn mesh_generation_screenshots(
         });
     })?;
     harness._assets = assets;
-    harness.cx.run_until_parked();
-    harness.cx.advance_clock(Duration::from_millis(150));
-    harness.cx.run_until_parked();
-    let mesh_preview = harness.capture()?;
-    save(
-        &harness.dialog_image(&mesh_preview)?,
-        directory,
-        "mesh-generation-zh-light.png",
-    )?;
-    let wire = harness.element_image(&mesh_preview, "mesh-generation-preview")?;
+    for _ in 0..4 {
+        harness.cx.run_until_parked();
+        harness.cx.advance_clock(Duration::from_millis(150));
+    }
+    let edges = harness.capture()?;
+    let edge_vertices = harness
+        .view
+        .read_with(&harness.cx, |view, _| view.editor.layers()[0].vertices);
     harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("preview-wireframe", cx);
+        assert!(!window.has_active_dialog(cx));
+        assert!(window.find("mesh-generation-panel").visible());
+        assert!(window.find("mesh-generation-counts").visible());
+        window.click("mesh-generation-stage-interior", cx);
     })?;
-    let artwork = harness.capture()?;
+    save(&edges, directory, "mesh-generation-edges.png")?;
+    for _ in 0..4 {
+        harness.cx.run_until_parked();
+        harness.cx.advance_clock(Duration::from_millis(150));
+    }
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        for (field, value) in [
+            ("mesh-generation-interior-spacing", "12"),
+            ("mesh-generation-edge-ratio", "1"),
+        ] {
+            window.click(field, cx);
+            window.press("cmd-a", cx);
+            window.input(value, cx);
+            window.blur(cx);
+        }
+    })?;
+    for _ in 0..4 {
+        harness.cx.run_until_parked();
+        harness.cx.advance_clock(Duration::from_millis(150));
+    }
+    let interior = harness.capture()?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.find("mesh-generation-counts").visible());
+        assert!(harness.view.read(cx).editor.layers()[0].vertices > edge_vertices);
+    })?;
+    save(&interior, directory, "mesh-generation-interior.png")?;
     anyhow::ensure!(
-        wire != harness.element_image(&artwork, "mesh-generation-preview")?,
-        "Wireframe toggle must change preview pixels"
+        edges != interior,
+        "Interior generation must update viewport presentation"
     );
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        i18n::activate(Some("en"));
+        theme::change(gpui_kit::component::ThemeMode::Dark, cx);
+        window.refresh();
+    })?;
+    save(&harness.capture()?, directory, "mesh-generation-dark.png")?;
+    harness.cx.update_window(harness.window, |_, window, _| {
+        i18n::activate(Some("zh-CN"));
+        window.refresh();
+    })?;
+    save(&harness.capture()?, directory, "mesh-generation-zh.png")?;
     harness.cx.update_window(harness.window, |_, window, cx| {
         window.click("mesh-generation-cancel", cx);
         i18n::activate(Some("en"));
-        theme::change(gpui_kit::component::ThemeMode::Dark, cx);
-        harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::GenerateMesh, window, cx)
-        });
+        window.refresh();
     })?;
     harness.cx.run_until_parked();
-    harness.cx.advance_clock(Duration::from_millis(150));
-    harness.cx.run_until_parked();
-    let mesh_preview = harness.capture()?;
-    save(
-        &harness.dialog_image(&mesh_preview)?,
-        directory,
-        "mesh-generation-dark.png",
-    )?;
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("preview-fit", cx);
-    })?;
-    let fit_preview = harness.capture()?;
-    let fitted = harness.element_image(&fit_preview, "preview-viewport")?;
-    anyhow::ensure!(fitted.width() == fitted.height(), "Preview must be square");
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("preview-zoom-in", cx);
-    })?;
-    let zoomed = harness.capture()?;
-    let zoomed_view = harness.element_image(&zoomed, "preview-viewport")?;
-    anyhow::ensure!(fitted != zoomed_view, "Zoom must change preview pixels");
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        let center = window.find("preview-viewport").bounds().center();
-        window.drag(center, center + point(px(50.), px(30.)), cx);
-    })?;
-    let panned = harness.capture()?;
-    anyhow::ensure!(
-        zoomed_view != harness.element_image(&panned, "preview-viewport")?,
-        "Dragging must pan the image"
-    );
-    save(
-        &harness.dialog_image(&panned)?,
-        directory,
-        "mesh-generation-panned.png",
-    )?;
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("preview-fit", cx);
-    })?;
-    let reset = harness.capture()?;
-    anyhow::ensure!(
-        fitted == harness.element_image(&reset, "preview-viewport")?,
-        "Fit must restore both zoom and pan"
-    );
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("mesh-generation-cancel", cx);
-        assert_eq!(
-            harness
-                .view
-                .read(cx)
-                .editor
-                .document()
-                .unwrap()
-                .history_lengths(),
-            (0, 0)
-        );
-    })?;
-    let (document, assets) = fixture::alpha_document()?;
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        i18n::activate(Some("zh-CN"));
-        harness.view.update(cx, |view, cx| {
-            view.replace_editor(Editor::from_document(document), cx);
-            view.redraw(cx);
-        });
-        window.render_frame(cx);
-        harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::GenerateMesh, window, cx)
-        });
-    })?;
-    harness._assets = assets;
-    harness.capture()?;
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("mesh-generation-alpha-heavy", cx);
-    })?;
-    harness.cx.run_until_parked();
-    harness.cx.advance_clock(Duration::from_millis(150));
-    harness.cx.run_until_parked();
-    let alpha = harness.capture()?;
-    save(
-        &harness.dialog_image(&alpha)?,
-        directory,
-        "mesh-generation-alpha.png",
-    )?;
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        assert!(window.find("mesh-generation-counts").visible());
-        window.click("preview-wireframe", cx);
-    })?;
-    let artwork = harness.capture()?;
-    anyhow::ensure!(
-        harness.element_image(&alpha, "mesh-generation-preview")?
-            != harness.element_image(&artwork, "mesh-generation-preview")?,
-        "Alpha mesh wireframe must change rendered pixels"
-    );
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("mesh-generation-cancel", cx);
-        assert_eq!(
-            harness
-                .view
-                .read(cx)
-                .editor
-                .document()
-                .unwrap()
-                .history_lengths(),
-            (0, 0)
-        );
-    })?;
+    harness.view.read_with(&harness.cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        assert_eq!(view.editor.layers()[0].vertices, 4);
+    });
     Ok(())
 }

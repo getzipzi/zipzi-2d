@@ -312,6 +312,11 @@ impl Render for ViewportSurface {
         if benchmark::hide_mesh_edges() {
             overlay.lines.clear();
         }
+        let generation_panel = state
+            .mesh_generation
+            .as_ref()
+            .filter(|panel| panel.read(cx).viewport == self.viewport)
+            .cloned();
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
         let connection_cursor = (!modal && !hand_tool)
@@ -394,6 +399,18 @@ impl Render for ViewportSurface {
                 })
             })
             .children(controls.map(|render| render(self, modal, cx)))
+            .children(generation_panel.map(|panel| {
+                div()
+                    .absolute()
+                    .top(crate::ui::compact::rem(
+                        toolbar::SECONDARY.button_size + toolbar::SECONDARY.inset * 2.,
+                    ))
+                    .left_0()
+                    .w_full()
+                    .flex()
+                    .justify_center()
+                    .child(panel.clone())
+            }))
             // Include our own occluding toolbar/controls in the viewport region.
             // Later popup layers can still occlude the entire region.
             .child(self.input_region.marker())

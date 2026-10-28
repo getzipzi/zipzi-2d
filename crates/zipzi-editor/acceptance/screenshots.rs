@@ -32,6 +32,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("mesh-generation") {
+        let mut harness = Harness::new()?;
+        mesh_generation_scene::mesh_generation_screenshots(&mut harness, &directory)?;
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("parameter-pad") {
         parameter_pad_scene::run(&directory)?;
         println!("Linked parameter pad screenshots passed.");

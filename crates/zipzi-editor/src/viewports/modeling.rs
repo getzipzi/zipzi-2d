@@ -126,6 +126,9 @@ impl ViewportSurface {
         }
         let owner = self.owner.clone();
         let _ = owner.update(cx, |owner, cx| {
+            if owner.mesh_generation.is_some() {
+                return;
+            }
             if owner.modal
                 || owner.editor.is_busy()
                 || owner.editor.editing_context()

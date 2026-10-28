@@ -202,6 +202,7 @@ impl Document {
     }
 
     pub fn finish_edit(&mut self) -> Result<()> {
+        self.clear_mesh_generation_preview();
         if self.manual_pending.is_some() {
             self.finish_manual_mesh_gesture()?;
         }
@@ -288,6 +289,7 @@ impl Document {
     }
 
     pub fn cancel_edit(&mut self) {
+        self.clear_mesh_generation_preview();
         if self.manual_pending.is_some() {
             self.cancel_manual_mesh_gesture();
             return;

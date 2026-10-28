@@ -66,6 +66,23 @@ pub struct Editor {
     exiting: bool,
 }
 impl Editor {
+    pub fn preview_mesh_generation(
+        &mut self,
+        document: DocumentId,
+        preview: Option<&crate::MeshGenerationPreview>,
+    ) -> Result<()> {
+        let session = self
+            .entry_mut(document)?
+            .session_mut()
+            .ok_or_else(|| anyhow!("Document unavailable"))?;
+        if let Some(preview) = preview {
+            session.document.preview_mesh_generation(preview)?;
+        } else {
+            session.document.clear_mesh_generation_preview();
+        }
+        session.invalidate_scene();
+        Ok(())
+    }
     pub fn rehost(&mut self, runtime: crate::RuntimeHost) -> Result<()> {
         ensure!(
             self.loads.is_empty() && self.documents.iter().all(|e| e.saving().is_none()),

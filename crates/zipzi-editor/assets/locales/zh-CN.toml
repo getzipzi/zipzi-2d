@@ -341,6 +341,13 @@ export_existing_warning = "已有的导出限制"
 top_level_destination = "顶层（参数进入未分组）"
 
 [mesh_generation]
+cancel = "取消"
+stage_edges = "1 · 外轮廓"
+stage_interior = "2 · 内部点"
+use_original = "沿用原有轮廓"
+apply = "应用"
+vertices = "顶点"
+triangles = "三角形"
 edge_mode = "边缘布局"
 fill_algorithm = "内部填充"
 edge_single = "单排"

@@ -175,6 +175,8 @@ pub struct Document {
     changed_canvas_meshes: std::sync::Mutex<Option<std::collections::HashSet<String>>>,
     pending: Option<PendingEdit>,
     manual_pending: Option<ManualPending>,
+    generation_pending: Option<ManualPending>,
+    generation_texture: Option<SceneTexture>,
     next_property_edit: u64,
     textures: textures::DocumentTextures,
     pristine_blank: Option<zipzi_sdk::Version>,
@@ -408,6 +410,8 @@ impl Document {
             selected: None,
             pending: None,
             manual_pending: None,
+            generation_pending: None,
+            generation_texture: None,
             next_property_edit: 0,
             textures,
             pristine_blank,
@@ -453,14 +457,18 @@ impl Document {
         self.session.history_lengths()
     }
     pub fn has_pending_edit(&self) -> bool {
-        self.pending.is_some() || self.manual_pending.is_some()
+        self.pending.is_some() || self.manual_pending.is_some() || self.generation_pending.is_some()
     }
     pub fn selected_id(&self) -> Option<&str> {
         self.selected.as_deref()
     }
 
     fn mesh(&self, id: &str) -> Option<Mesh> {
-        if let Some(pending) = &self.manual_pending {
+        if let Some(pending) = self
+            .generation_pending
+            .as_ref()
+            .or(self.manual_pending.as_ref())
+        {
             return pending.edit.candidate_document().get_mesh(id).cloned();
         }
         match &self.pending {
@@ -470,7 +478,11 @@ impl Document {
     }
 
     pub(crate) fn model(&self) -> crate::runtime_host::ModelRead<'_> {
-        if let Some(pending) = &self.manual_pending {
+        if let Some(pending) = self
+            .generation_pending
+            .as_ref()
+            .or(self.manual_pending.as_ref())
+        {
             return pending.edit.candidate_document();
         }
         self.pending
@@ -719,7 +731,11 @@ impl Document {
     }
 
     pub(crate) fn canvas_topology(&self) -> Arc<crate::canvas_topology::CanvasTopology> {
-        let source = if let Some(pending) = &self.manual_pending {
+        let source = if let Some(pending) = self
+            .generation_pending
+            .as_ref()
+            .or(self.manual_pending.as_ref())
+        {
             pending.edit.source_ref()
         } else if let Some(pending) = &self.pending {
             pending.edit.source_ref()
@@ -806,7 +822,11 @@ impl Document {
     }
 
     pub fn snapshot(&mut self) -> Result<SceneSnapshot> {
-        let frame = if let Some(pending) = &mut self.manual_pending {
+        let frame = if let Some(pending) = self
+            .generation_pending
+            .as_mut()
+            .or(self.manual_pending.as_mut())
+        {
             pending
                 .preview
                 .replace(
@@ -836,11 +856,21 @@ impl Document {
             self.session.preview_frame()?
         };
         let viewport_frame = self.viewport_frame(&frame);
+        let mut textures = self.textures.snapshot();
+        if let Some(texture) = &self.generation_texture {
+            let items = Arc::make_mut(&mut textures);
+            if let Some(item) = items
+                .iter_mut()
+                .find(|item| item.asset_id == texture.asset_id)
+            {
+                *item = texture.clone();
+            }
+        }
         Ok(SceneSnapshot {
             model_opacity: 1.,
             runtime_frame: frame,
             viewport_frame,
-            textures: self.textures.snapshot(),
+            textures,
         })
     }
 }

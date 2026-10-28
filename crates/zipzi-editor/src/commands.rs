@@ -80,6 +80,14 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         let id = command.id;
+        if self.mesh_generation.is_some() && id == CommandId::CancelGesture {
+            self.cancel_mesh_generation(cx);
+            return;
+        }
+        if self.mesh_generation.is_some() && id == CommandId::GenerateMesh {
+            self.cancel_mesh_generation(cx);
+            return;
+        }
         if self.modal || window.has_active_dialog(cx) {
             return;
         }
@@ -201,7 +209,7 @@ impl EditorView {
                         {
                             return;
                         }
-                        if let Err(error) = crate::ui::mesh_generation::MeshGenerationForm::open(
+                        if let Err(error) = crate::ui::mesh_generation::MeshGenerationPanel::open(
                             owner.clone(),
                             command.document().unwrap(),
                             window,

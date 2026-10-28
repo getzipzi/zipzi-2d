@@ -27,6 +27,16 @@ pub(super) fn with_layout(
     spacing: f64,
     suppress: bool,
 ) -> Option<Mesh> {
+    with_edges(loops, layout, candidates, spacing, suppress, &[])
+}
+pub(super) fn with_edges(
+    loops: &[Vec<Point>],
+    layout: &Mesh,
+    candidates: &[Point],
+    spacing: f64,
+    suppress: bool,
+    fixed_edges: &[[usize; 2]],
+) -> Option<Mesh> {
     if !valid_domain(loops) {
         return None;
     }
@@ -38,6 +48,7 @@ pub(super) fn with_layout(
         .flat_map(|r| (0..r.len()).map(|i| [r[i], r[(i + 1) % r.len()]]))
         .collect();
     constraints.extend(layout.triangles.iter().flat_map(|t| edges(*t)));
+    constraints.extend_from_slice(fixed_edges);
     let mut conflict = false;
     let mut cdt = Cdt::try_bulk_load_cdt(
         pts.iter().map(|p| Point2::new(p[0], p[1])).collect(),
@@ -62,6 +73,10 @@ pub(super) fn with_layout(
         }
     }
     // Only free interior edges are refined, never the sampled boundary or band.
+    // Authored contours can have very long fixed sides. Repeatedly bisecting
+    // their adjacent free edges cannot shorten those sides; it only crowds
+    // points against them until triangles collapse at output precision.
+    let refinement_clearance = clearance.max(spacing * 0.25);
     let mut budget = 512;
     for _ in 0..4 {
         let mut inserted = 0;
@@ -74,7 +89,7 @@ pub(super) fn with_layout(
                     let mid = snap(lerp(a, b, 0.5));
                     (distance(a, b) > spacing * 1.72
                         && in_domain(mid, loops)
-                        && index.distance(mid) > clearance)
+                        && index.distance(mid) > refinement_clearance)
                         .then_some((distance(a, b), mid))
                 })
                 .max_by(|a, b| a.0.total_cmp(&b.0));

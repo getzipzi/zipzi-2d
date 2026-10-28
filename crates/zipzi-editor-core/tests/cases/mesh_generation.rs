@@ -1048,6 +1048,11 @@ fn manual_mesh_sparse_interior_is_a_valid_noop_on_an_untouched_mesh() -> anyhow:
     assert_eq!(preview.geometry().vertex_ids.len(), 4);
     doc.apply_mesh_generation(&preview)?;
     assert_eq!(doc.history_lengths(), (0, 0));
+    let dense = source.generate(MeshGenerationOptions::ManualInterior(MeshSettings {
+        interior_spacing: 12.,
+        ..options
+    }))?;
+    assert!(dense.geometry().vertex_ids.len() > 4);
     Ok(())
 }
 
@@ -1627,5 +1632,43 @@ fn manual_mesh_authoring_creation_and_deletion_exit_cleanly() -> anyhow::Result<
     editor.execute(EditorCommand::SelectObject(mesh()))?;
     editor.enter_manual_mesh(editor.active_id().unwrap())?;
     assert!(editor.manual_editable());
+    Ok(())
+}
+
+#[test]
+fn viewport_generation_candidate_is_disposable_and_applies_once() -> anyhow::Result<()> {
+    let (mut doc, _assets) = support::alpha_document()?;
+    let source = doc.mesh_generation_source(&mesh())?;
+    let plan = source.generate(MeshGenerationOptions::ManualEdge(MeshSettings {
+        clip_to_image: true,
+        ..Default::default()
+    }))?;
+    let n = plan.geometry().vertex_ids.len();
+    assert!(n > 4);
+    doc.preview_mesh_generation(&plan)?;
+    assert!(source.is_current(&doc));
+    assert_eq!(doc.history_lengths(), (0, 0));
+    let snapshot = doc.snapshot()?;
+    let drawable = snapshot
+        .viewport_frame
+        .drawables
+        .iter()
+        .find(|d| d.id == mesh().id)
+        .unwrap();
+    assert_eq!(drawable.positions.len(), n);
+    assert!(doc.clear_mesh_generation_preview());
+    assert_eq!(doc.layers()[0].vertices, 4);
+    doc.preview_mesh_generation(&plan)?;
+    doc.finish_edit()?;
+    assert_eq!(
+        doc.layers()[0].vertices,
+        4,
+        "save/finish must not silently apply generation"
+    );
+    assert_eq!(doc.history_lengths(), (0, 0));
+    doc.preview_mesh_generation(&plan)?;
+    doc.apply_mesh_generation(&plan)?;
+    assert_eq!(doc.layers()[0].vertices, n);
+    assert_eq!(doc.history_lengths(), (1, 0));
     Ok(())
 }

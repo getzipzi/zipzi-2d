@@ -16,7 +16,6 @@ mod hierarchy;
 mod input_routing;
 mod manual_mesh;
 mod mesh_generation;
-mod mesh_generation_preview;
 mod mesh_properties;
 mod palette_commands;
 mod palette_move_to;

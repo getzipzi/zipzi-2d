@@ -40,9 +40,19 @@ meshes that meet the SDK's UV validation receive editable meshing metadata with
 an empty `constraints` list. Band and patterned-fill connections are fixed only
 during generation; the resulting edges are ordinary edges and may change during
 later filling or reconnecting. Only explicit user edits create persistent
-constraints. The Editor's add-interior action preserves existing vertices and
-user constraints, and filters new samples away from their segments before
-calling the SDK's atomic insertion operation.
+constraints. `fill_existing_geometry` consumes authored boundary loops, vertices
+and user constraints directly, without reading alpha. Existing vertex IDs,
+positions and UVs remain unchanged; proposed pattern cells that cross a user
+constraint are freed before constrained triangulation.
+
+The Editor opens an inline panel below the viewport's secondary toolbar. Edges
+and interior fill are separate stages, sharing an accepted contour snapshot.
+The interior stage can also use the original mesh boundary to fill an existing
+or manually edited mesh without replacing its contour.
+Parameter changes replace a disposable Runtime candidate used by the normal
+viewport scene and topology overlays. Apply publishes one history entry; cancel,
+Save/FinishEdit, and editing-context changes discard the draft. Generation never
+implicitly commits through the ordinary gesture lifecycle.
 
 ## Intentional integration differences
 
