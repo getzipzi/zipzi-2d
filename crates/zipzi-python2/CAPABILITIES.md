@@ -12,6 +12,7 @@ was introduced; later aggregate acceptance does not expand historical results.
 
 | Capability | Public entry | Shared typed Rust route | Evidence | State |
 | --- | --- | --- | --- | --- |
+| Editor adaptive mesh generation | `mesh_generation.generate` (Connected Editor only) | Optional authenticated host handler; GPL algorithm remains in Editor Core | Five fills, three edge layouts, edge/interior stages, validation and Edit publication; `tests/editor_mesh_generation.py` | Implemented, synchronous bounded service |
 | Mesh generation | Same public values/ops and query methods | Selected Rust declarations + compiled query registration | Deterministic generation/check-only/protection, real Rust negative compilation, unchanged behavior/static tests | P2 mesh slice implemented |
 | Resource/Plan generation | Image values/usage, typed resource ops and rename intents, Plan report/cost, resource conveniences | Actual Rust declarations and compiled image/pixel/Plan registrations | Finite bool/u64/usize/bytes/string-map shapes, type propagation, direct native conversion and independent recipes | P2 selected slice implemented |
 | Local ownership | `local()` / Runtime context | `host::LocalHost` | `tests/test_api.py::test_shared_recipe`; Runtime host tests | Implemented |

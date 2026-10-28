@@ -1,6 +1,10 @@
 //! Viewport-owned, two-stage generation. Drafts never create history entries.
+#[path = "mesh_generation_controls.rs"]
+mod controls;
 use super::slide_number_input::{SlideNumberChange, SlideNumberInput, SlideNumberOptions};
-use crate::{EditorView, t};
+use crate::{EditorView, t, ui::compact};
+use controls::Controls;
+use gpui_kit::base::{Tab, Tabs};
 use gpui_kit::component::{
     ActiveTheme, Disableable, IndexPath, Sizable,
     button::{Button, ButtonVariants},
@@ -45,13 +49,13 @@ const FIELDS: [(&str, &str, f64, f64); 11] = [
         "mesh-generation-edge-spacing",
         "mesh_generation.edge_spacing",
         6.,
-        4096.,
+        16384.,
     ),
     (
         "mesh-generation-interior-spacing",
         "mesh_generation.interior_spacing",
         6.,
-        4096.,
+        16384.,
     ),
     (
         "mesh-generation-outer-margin",
@@ -81,7 +85,7 @@ const FIELDS: [(&str, &str, f64, f64); 11] = [
     (
         "mesh-generation-gradation",
         "mesh_generation.gradation",
-        0.25,
+        0.3,
         4.,
     ),
     ("mesh-generation-jitter", "mesh_generation.jitter", 0., 1.),
@@ -106,10 +110,12 @@ pub(crate) struct MeshGenerationPanel {
     source: Arc<MeshGenerationSource>,
     contour: Option<zipzi_sdk::MeshGeometry>,
     stage: Stage,
+    columns: u16,
     edge: Entity<SelectState<Vec<Choice>>>,
     fill: Entity<SelectState<Vec<Choice>>>,
     active_fill: MeshFillAlgorithm,
     parameters: MeshFillParameters,
+    steps: [f64; 11],
     suppress_diagonals: bool,
     inputs: [Entity<InputState>; 11],
     numbers: [Entity<SlideNumberInput>; 11],
@@ -153,6 +159,18 @@ impl MeshGenerationPanel {
         );
         let context = state.editor.editing_context_token().unwrap();
         let viewport = state.focused_viewport.unwrap_or(state.viewport_slots[0]);
+        let texture = source
+            .texture
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Missing source texture"))?;
+        let controls = Controls::for_texture(texture.width, texture.height);
+        let columns = column_count(
+            state
+                .editor
+                .viewport_metrics(viewport)
+                .map_or(470., |m| m.width),
+            cx,
+        );
         let panel = cx.new(|cx| {
             let make = |choices: Vec<Choice>, window: &mut Window, cx: &mut Context<Self>| {
                 cx.new(|cx| SelectState::new(choices, Some(IndexPath::new(0)), window, cx))
@@ -178,23 +196,27 @@ impl MeshGenerationPanel {
                 window,
                 cx,
             );
-            let defaults = [6., 40., 1., 10., 0., 8., 2., 1., 0.45, 0., 12.];
+            let defaults = controls.defaults;
             let inputs = std::array::from_fn(|i| {
-                cx.new(|cx| InputState::new(window, cx).default_value(defaults[i].to_string()))
+                cx.new(|cx| {
+                    InputState::new(window, cx).default_value(parameter_text(i, defaults[i]))
+                })
             });
             let numbers = std::array::from_fn(|i| {
                 cx.new(|cx| {
                     let n = SlideNumberInput::new(
                         inputs[i].clone(),
                         "",
-                        number_options(i, defaults[i]),
+                        number_options(i, defaults[i], controls.steps[i]),
                         window,
                         cx,
-                    );
+                    )
+                    .xsmall()
+                    .snap_to_step();
                     if matches!(i, 5 | 10) {
                         n.truncate_to_integer()
                     } else {
-                        n
+                        n.truncate_to_one_decimal()
                     }
                 })
             });
@@ -205,16 +227,26 @@ impl MeshGenerationPanel {
                     window,
                     move |this: &mut Self, _, change: &SlideNumberChange, window, cx| {
                         this.inputs[i].update(cx, |input, cx| {
-                            input.set_value(change.0.to_string(), window, cx)
+                            input.set_value(parameter_text(i, change.0), window, cx)
                         });
+                        this.refresh(cx);
                     },
                 ));
-                subscriptions.push(cx.subscribe(
+                subscriptions.push(cx.subscribe_in(
                     &inputs[i],
-                    |this: &mut Self, _, event: &InputEvent, cx| {
-                        if matches!(event, InputEvent::Change) {
-                            this.refresh(cx);
+                    window,
+                    move |this: &mut Self, _, event: &InputEvent, window, cx| match event {
+                        InputEvent::Change => this.refresh(cx),
+                        InputEvent::Blur | InputEvent::PressEnter { .. } => {
+                            if let Ok(value) = this.number(i, cx) {
+                                let text = parameter_text(i, value);
+                                if this.inputs[i].read(cx).value().as_ref() != text {
+                                    this.inputs[i]
+                                        .update(cx, |input, cx| input.set_value(text, window, cx));
+                                }
+                            }
                         }
+                        _ => {}
                     },
                 ));
             }
@@ -242,7 +274,7 @@ impl MeshGenerationPanel {
                     .enumerate()
                     {
                         this.inputs[i + 6].update(cx, |input, cx| {
-                            input.set_value(value.to_string(), window, cx)
+                            input.set_value(parameter_text(i + 6, value), window, cx)
                         });
                     }
                     this.refresh(cx);
@@ -253,6 +285,15 @@ impl MeshGenerationPanel {
                     return;
                 }
                 let state = owner.read(cx);
+                let columns = column_count(
+                    state
+                        .editor
+                        .viewport_metrics(this.viewport)
+                        .map_or(470., |m| m.width),
+                    cx,
+                );
+                let layout_changed = columns != this.columns;
+                this.columns = columns;
                 if !state.editor.editing_context_token_valid(this.context)
                     || state.editor.is_busy()
                     || state
@@ -275,6 +316,9 @@ impl MeshGenerationPanel {
                         })
                     });
                 }
+                if layout_changed {
+                    cx.notify();
+                }
             }));
             Self {
                 owner,
@@ -284,10 +328,12 @@ impl MeshGenerationPanel {
                 source: Arc::new(source),
                 contour: None,
                 stage: Stage::Edges,
+                columns,
                 edge,
                 fill,
                 active_fill: MeshFillAlgorithm::GradedPoisson,
-                parameters: Default::default(),
+                parameters: controls.fill,
+                steps: controls.steps,
                 suppress_diagonals: false,
                 inputs,
                 numbers,
@@ -330,6 +376,7 @@ impl MeshGenerationPanel {
             .parse::<f64>()
             .ok()
             .filter(|n| n.is_finite())
+            .map(|value| parameter_value(i, value))
             .ok_or_else(|| anyhow::anyhow!(t!("mesh_generation.invalid_alpha")))
     }
     fn read_parameters(&self, cx: &App) -> anyhow::Result<FillParameters> {
@@ -512,38 +559,139 @@ impl MeshGenerationPanel {
         });
     }
 }
-fn number_options(i: usize, value: f64) -> SlideNumberOptions {
+/// Counts remain integral; all continuous controls use the same precision for
+/// preview generation, typed input and scrubbing.
+fn parameter_value(i: usize, value: f64) -> f64 {
+    if matches!(i, 5 | 10) {
+        value
+    } else {
+        (value * 10.).trunc() / 10.
+    }
+}
+fn parameter_text(i: usize, value: f64) -> String {
+    if matches!(i, 5 | 10) {
+        value.to_string()
+    } else {
+        format!("{:.1}", parameter_value(i, value))
+    }
+}
+fn number_options(i: usize, value: f64, step: f64) -> SlideNumberOptions {
     SlideNumberOptions {
-        value,
+        value: parameter_value(i, value),
         min: FIELDS[i].2,
         max: FIELDS[i].3,
-        step: if i >= 6 && i <= 8 { 0.05 } else { 1. },
-        drag_distance: Some(2000.),
+        step,
+        drag_distance: None,
         disabled: false,
     }
 }
+fn column_count(viewport_width: f32, cx: &App) -> u16 {
+    let available = viewport_width / compact::scale(cx) - 64.;
+    if available >= 390. {
+        3
+    } else if available >= 250. {
+        2
+    } else {
+        1
+    }
+}
+const LABEL_WIDTH: f32 = 54.;
+const VALUE_WIDTH: f32 = 64.;
+const FIELD_GAP: f32 = 4.;
+const FIELD_WIDTH: f32 = LABEL_WIDTH + FIELD_GAP + VALUE_WIDTH;
+
+fn field_row(label: &str, control: impl IntoElement, cx: &App) -> Div {
+    let tooltip = t!(label).into_owned();
+    let key = format!("{label}_compact");
+    let short = t!(key.as_str()).into_owned();
+    div()
+        .flex()
+        .items_center()
+        .flex_shrink_0()
+        .w(compact::rem(FIELD_WIDTH))
+        .max_w_full()
+        .min_h(compact::rem(18.))
+        .min_w_0()
+        .gap(compact::rem(FIELD_GAP))
+        .text_size(compact::rem(compact::CAPTION))
+        .line_height(compact::rem(14.))
+        .child(
+            div()
+                .id(SharedString::from(format!("mesh-generation-label-{label}")))
+                .w(compact::rem(LABEL_WIDTH))
+                .flex_shrink_0()
+                .min_w_0()
+                .truncate()
+                .text_color(cx.theme().muted_foreground)
+                .tooltip(move |window, cx| {
+                    gpui_kit::component::tooltip::Tooltip::new(tooltip.clone()).build(window, cx)
+                })
+                .child(short),
+        )
+        .child(control)
+}
+fn parameter_row(id: &'static str) -> Stateful<Div> {
+    div()
+        .id(id)
+        .test_support()
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap_x(compact::rem(8.))
+        .gap_y(compact::rem(2.))
+}
+fn panel_button(button: Button) -> Button {
+    compact::button(button)
+        .xsmall()
+        .h(compact::rem(20.))
+        .min_w(compact::rem(20.))
+        .px(compact::rem(4.))
+}
 impl Render for MeshGenerationPanel {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let mut fields = div().flex().flex_wrap().gap_2();
-        let select = if self.stage == Stage::Edges {
-            &self.edge
-        } else {
-            &self.fill
-        };
-        fields = fields.child(
-            div().w(crate::ui::compact::rem(180.)).child(
-                crate::ui::compact::select(Select::new(select))
-                    .id(if self.stage == Stage::Edges {
-                        "mesh-generation-edge-mode"
-                    } else {
-                        "mesh-generation-fill-algorithm"
-                    })
-                    .w_full(),
-            ),
+        let edges = self.stage == Stage::Edges;
+        let columns = self.owner.upgrade().map_or(self.columns, |owner| {
+            column_count(
+                owner
+                    .read(cx)
+                    .editor
+                    .viewport_metrics(self.viewport)
+                    .map_or(470., |m| m.width),
+                cx,
+            )
+        });
+        self.columns = columns;
+        let narrow = columns == 1;
+        let select = if edges { &self.edge } else { &self.fill };
+        let mut fields = parameter_row("mesh-generation-fields").child(
+            div()
+                .w(compact::rem(FIELD_WIDTH))
+                .max_w_full()
+                .flex_shrink_0()
+                .child(
+                    Select::new(select)
+                        .xsmall()
+                        .h(compact::rem(18.))
+                        .accessibility_label(
+                            t!(if edges {
+                                "mesh_generation.edge_mode"
+                            } else {
+                                "mesh_generation.algorithm"
+                            })
+                            .into_owned(),
+                        )
+                        .id(if edges {
+                            "mesh-generation-edge-mode"
+                        } else {
+                            "mesh-generation-fill-algorithm"
+                        })
+                        .w_full(),
+                ),
         );
+        let mut details = parameter_row("mesh-generation-details");
         let kind = self.fill_kind(cx);
         for (i, (id, label, _, _)) in FIELDS.iter().enumerate() {
-            let visible = if self.stage == Stage::Edges {
+            let visible = if edges {
                 matches!(i, 0 | 4 | 5)
                     || (i == 2 && self.edge_kind(cx) == MeshEdgeMode::Single)
                     || (i == 3 && self.edge_kind(cx) != MeshEdgeMode::Single)
@@ -564,129 +712,219 @@ impl Render for MeshGenerationPanel {
             }
             let value = self.number(i, cx).unwrap_or(FIELDS[i].2);
             self.numbers[i].update(cx, |number, cx| {
-                number.configure(t!(*label).into_owned(), number_options(i, value), cx)
+                number.configure(
+                    t!(*label).into_owned(),
+                    number_options(i, value, self.steps[i]),
+                    cx,
+                )
             });
-            fields = fields.child(
+            let field = field_row(
+                label,
                 div()
-                    .flex()
-                    .items_center()
-                    .gap_1()
-                    .text_xs()
-                    .child(t!(*label).into_owned())
-                    .child(
-                        div()
-                            .id(*id)
-                            .test_support()
-                            .w(crate::ui::compact::rem(64.))
-                            .child(self.numbers[i].clone()),
-                    ),
+                    .id(*id)
+                    .test_support()
+                    .w(compact::rem(VALUE_WIDTH))
+                    .flex_shrink_0()
+                    .child(self.numbers[i].clone()),
+                cx,
             );
+            // Keep the layout, density and boundary size together. Fine tuning
+            // and preview feedback share the following row at every width.
+            if matches!(i, 0 | 1 | 2 | 3 | 6) {
+                fields = fields.child(field);
+            } else {
+                details = details.child(field);
+            }
         }
-        if self.stage == Stage::Interior {
-            fields = fields.child(
-                crate::ui::compact::button(Button::new("mesh-generation-use-original"))
-                    .label(t!("mesh_generation.use_original"))
-                    .disabled(self.contour.is_none())
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.contour = None;
-                        this.refresh(cx);
-                    })),
-            );
-            fields = fields.child(
-                Checkbox::new("mesh-generation-suppress-diagonals")
-                    .small()
-                    .label(t!("mesh_generation.suppress_diagonals").into_owned())
-                    .checked(self.suppress_diagonals)
-                    .on_click(cx.listener(|this, value: &bool, _, cx| {
-                        this.suppress_diagonals = *value;
-                        this.refresh(cx);
-                    })),
-            );
-        }
-        let stages = div()
+        let stages = Tabs::new("mesh-generation-stage-tabs")
             .flex()
+            .flex_shrink_0()
+            .h(compact::rem(compact::HEADER_CONTROL))
+            .gap(compact::rem(8.))
+            .children(
+                [
+                    (
+                        Stage::Edges,
+                        "mesh-generation-stage-edges",
+                        "mesh_generation.edges_short",
+                    ),
+                    (
+                        Stage::Interior,
+                        "mesh-generation-stage-interior",
+                        "mesh_generation.interior_short",
+                    ),
+                ]
+                .into_iter()
+                .enumerate()
+                .map(|(index, (stage, id, label))| {
+                    let selected = self.stage == stage;
+                    Tab::new(id)
+                        .h_full()
+                        .px(compact::rem(4.))
+                        .border_b_2()
+                        .border_color(if selected {
+                            cx.theme().foreground
+                        } else {
+                            transparent_black()
+                        })
+                        .text_size(compact::rem(compact::BODY))
+                        .text_color(if selected {
+                            cx.theme().foreground
+                        } else {
+                            cx.theme().muted_foreground
+                        })
+                        .selected(selected)
+                        .accessibility_label(t!(label))
+                        .set_position(index + 1, 2)
+                        .when(!selected, |tab| {
+                            tab.cursor_pointer()
+                                .hover(|style| style.text_color(cx.theme().foreground))
+                        })
+                        .child(t!(label))
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            if this.stage != stage {
+                                this.stage = stage;
+                                this.refresh(cx);
+                            }
+                        }))
+                }),
+            );
+        let actions = div()
+            .id("mesh-generation-actions")
+            .test_support()
+            .flex()
+            .flex_shrink_0()
             .items_center()
-            .gap_2()
+            .gap(compact::rem(2.))
             .child(
-                crate::ui::compact::button(Button::new("mesh-generation-stage-edges"))
-                    .label(t!("mesh_generation.stage_edges"))
-                    .when(self.stage == Stage::Edges, |b| b.primary())
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.stage = Stage::Edges;
-                        this.refresh(cx);
-                    })),
+                panel_button(Button::new("mesh-generation-cancel"))
+                    .ghost()
+                    .label(t!("mesh_generation.cancel"))
+                    .on_click(cx.listener(|this, _, _, cx| this.cancel(cx))),
             )
             .child(
-                crate::ui::compact::button(Button::new("mesh-generation-stage-interior"))
-                    .label(t!("mesh_generation.stage_interior"))
-                    .when(self.stage == Stage::Interior, |b| b.primary())
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.stage = Stage::Interior;
-                        this.refresh(cx);
-                    })),
-            )
-            .child(div().flex_1())
-            .child(
-                crate::ui::compact::button(Button::new("mesh-generation-submit"))
+                panel_button(Button::new("mesh-generation-submit"))
+                    .primary()
                     .label(t!("mesh_generation.apply"))
                     .disabled(self.plan.is_none())
                     .on_click(cx.listener(|this, _, _, cx| this.apply(cx))),
-            )
-            .child(
-                crate::ui::compact::button(Button::new("mesh-generation-cancel"))
-                    .label(t!("mesh_generation.cancel"))
-                    .on_click(cx.listener(|this, _, _, cx| this.cancel(cx))),
             );
-        div()
-            .id("mesh-generation-panel")
-            .test_support()
-            .w_full()
-            .max_w(crate::ui::compact::rem(850.))
-            .p_2()
+        let header = if narrow {
+            div()
+                .flex()
+                .flex_col()
+                .gap(compact::rem(4.))
+                .child(div().flex().justify_end().child(actions))
+                .child(stages)
+        } else {
+            div()
+                .flex()
+                .items_center()
+                .gap(compact::rem(4.))
+                .child(stages)
+                .child(div().flex_1())
+                .child(actions)
+        };
+        let status = if let Some(error) = &self.error {
+            div()
+                .id("mesh-generation-error")
+                .test_support()
+                .child(error.clone())
+        } else if let Some(plan) = &self.plan {
+            let vertices = plan.geometry().vertex_ids.len();
+            let triangles = plan.geometry().triangles.len();
+            let full_counts = t!(
+                "mesh_generation.counts",
+                vertices = vertices,
+                triangles = triangles
+            )
+            .into_owned();
+            div()
+                .id("mesh-generation-counts")
+                .test_support()
+                .tooltip(move |window, cx| {
+                    gpui_kit::component::tooltip::Tooltip::new(full_counts.clone())
+                        .build(window, cx)
+                })
+                .child(
+                    t!(
+                        "mesh_generation.counts_compact",
+                        vertices = vertices,
+                        triangles = triangles
+                    )
+                    .into_owned(),
+                )
+        } else {
+            div()
+                .id("mesh-generation-preparing")
+                .test_support()
+                .child(t!("mesh_generation.preparing"))
+        };
+        let status = status
+            .min_w_0()
+            .text_size(compact::rem(compact::CAPTION))
+            .line_height(compact::rem(18.))
+            .text_color(if self.error.is_some() {
+                cx.theme().danger
+            } else {
+                cx.theme().muted_foreground
+            });
+        // Errors get the full width for readable wrapping; normal feedback
+        // uses the spare space beside the fine-tuning controls.
+        let error = if self.error.is_some() {
+            Some(status)
+        } else {
+            details = details.child(status.ml_auto());
+            None
+        };
+        let content = div()
+            .relative()
             .flex()
             .flex_col()
-            .gap_2()
-            .bg(cx.theme().background)
-            .border_1()
-            .border_color(cx.theme().border)
-            .rounded_b_md()
-            .occlude()
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
-            .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
-            .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
-                if event.keystroke.key == "escape" {
-                    this.cancel(cx);
-                    cx.stop_propagation();
-                }
-            }))
-            .child(stages)
+            .min_w_0()
+            .gap(compact::rem(4.))
+            .text_size(compact::rem(compact::BODY))
+            .child(header)
             .child(fields)
-            .child(if let Some(error) = &self.error {
-                div()
-                    .id("mesh-generation-error")
-                    .test_support()
-                    .text_xs()
-                    .child(error.clone())
-            } else if let Some(plan) = &self.plan {
-                div()
-                    .id("mesh-generation-counts")
-                    .test_support()
-                    .text_xs()
-                    .child(format!(
-                        "{}: {} · {}: {}",
-                        t!("mesh_generation.vertices"),
-                        plan.geometry().vertex_ids.len(),
-                        t!("mesh_generation.triangles"),
-                        plan.geometry().triangles.len()
-                    ))
-            } else {
-                div()
-                    .id("mesh-generation-preparing")
-                    .test_support()
-                    .text_xs()
-                    .child(t!("mesh_generation.preparing"))
+            .child(details)
+            .when(!edges, |content| {
+                content.child(
+                    div()
+                        .flex()
+                        .flex_wrap()
+                        .items_center()
+                        .justify_between()
+                        .gap(compact::rem(4.))
+                        .child(
+                            panel_button(Button::new("mesh-generation-use-original"))
+                                .ghost()
+                                .label(t!("mesh_generation.use_original"))
+                                .disabled(self.contour.is_none())
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.contour = None;
+                                    this.refresh(cx);
+                                })),
+                        )
+                        .child(
+                            Checkbox::new("mesh-generation-suppress-diagonals")
+                                .xsmall()
+                                .label(t!("mesh_generation.suppress_diagonals").into_owned())
+                                .checked(self.suppress_diagonals)
+                                .on_click(cx.listener(|this, value: &bool, _, cx| {
+                                    this.suppress_diagonals = *value;
+                                    this.refresh(cx);
+                                })),
+                        ),
+                )
             })
+            .children(error);
+        let content = content.on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
+            if event.keystroke.key == "escape" {
+                this.cancel(cx);
+                cx.stop_propagation();
+            }
+        }));
+        crate::viewports::toolbar::generation_bar(content, cx)
     }
 }
 impl EditorView {

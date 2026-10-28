@@ -14,7 +14,14 @@ pub fn render_deformer_bar(
         return div().into_any_element();
     };
     let state = owner.read(cx);
-    if state.editor.manual_active() || state.mesh_generation.is_some() {
+    if state
+        .mesh_generation
+        .as_ref()
+        .is_some_and(|panel| panel.read(cx).viewport == canvas.viewport)
+    {
+        return div().into_any_element();
+    }
+    if state.editor.manual_active() {
         return render_mesh_edit_bar(canvas, modal, cx);
     }
     if !state.editor.document().is_some_and(|d| {

@@ -211,3 +211,22 @@ pub(super) fn secondary_bar(id: &'static str, content: impl IntoElement, cx: &Ap
         )
         .into_any_element()
 }
+
+/// Expanded tool settings use the same top attachment and single alpha mask.
+pub(crate) fn generation_bar(content: impl IntoElement, cx: &App) -> impl IntoElement {
+    div()
+        .id("mesh-generation-panel")
+        .test_support()
+        .relative()
+        .w(compact::rem(440.))
+        .max_w_full()
+        .min_w_0()
+        .px(compact::rem(10.))
+        .py(compact::rem(6.))
+        .occlude()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
+        .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
+        .child(SECONDARY.background(cx))
+        .child(content)
+}

@@ -24,7 +24,9 @@ impl DesktopHost {
         Self {
             runtime,
             protocol: Rc::new(RefCell::new(
-                zipzi_runtime::protocol::Protocol::default().with_window_support(),
+                zipzi_runtime::protocol::Protocol::default()
+                    .with_window_support()
+                    .with_mesh_generator(zipzi_editor_core::adaptive_mesh::remote::generate),
             )),
             resident,
             parked: Rc::new(RefCell::new(Some(editor))),

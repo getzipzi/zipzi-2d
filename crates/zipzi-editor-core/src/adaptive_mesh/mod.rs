@@ -15,13 +15,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use zipzi_core::Vec2;
 use zipzi_sdk::{MeshGeometry, extract_manual_meshing};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MeshEdgeMode {
     Single,
     Double,
     Triple,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MeshFillAlgorithm {
     GradedPoisson,
     SimpleTriangles,
@@ -29,7 +31,8 @@ pub enum MeshFillAlgorithm {
     TriangleFractal,
     ContourPaving,
 }
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct FillParameters {
     pub edge_ratio: f64,
     pub gradation: f64,
@@ -49,7 +52,8 @@ impl Default for FillParameters {
     }
 }
 /// Each strategy retains its controls when the selected strategy changes.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct MeshFillParameters {
     pub poisson: FillParameters,
     pub quadtree: FillParameters,
@@ -89,7 +93,8 @@ impl MeshFillParameters {
         }
     }
 }
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct MeshSettings {
     pub edge_mode: MeshEdgeMode,
     pub edge_spacing: f64,
@@ -750,3 +755,5 @@ fn clip(mesh: Mesh, w: f64, h: f64) -> Mesh {
 }
 #[cfg(test)]
 mod tests;
+
+pub mod remote;

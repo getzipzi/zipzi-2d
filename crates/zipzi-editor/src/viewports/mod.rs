@@ -390,23 +390,25 @@ impl Render for ViewportSurface {
             })
             .children(error.map(|e| div().absolute().p_4().child(e)))
             .child(self.overlay_element(overlay, palette, capture, cx))
-            .when(!self.toolbar.items().is_empty(), |element| {
-                element.child(toolbar::CanvasToolbar {
-                    owner: owner.clone(),
-                    canvas: cx.entity(),
-                    modal,
-                    items: self.toolbar.items(),
-                })
-            })
+            .when(
+                generation_panel.is_none() && !self.toolbar.items().is_empty(),
+                |element| {
+                    element.child(toolbar::CanvasToolbar {
+                        owner: owner.clone(),
+                        canvas: cx.entity(),
+                        modal,
+                        items: self.toolbar.items(),
+                    })
+                },
+            )
             .children(controls.map(|render| render(self, modal, cx)))
             .children(generation_panel.map(|panel| {
                 div()
                     .absolute()
-                    .top(crate::ui::compact::rem(
-                        toolbar::SECONDARY.button_size + toolbar::SECONDARY.inset * 2.,
-                    ))
+                    .top_0()
                     .left_0()
                     .w_full()
+                    .px(crate::ui::compact::rem(32.))
                     .flex()
                     .justify_center()
                     .child(panel.clone())

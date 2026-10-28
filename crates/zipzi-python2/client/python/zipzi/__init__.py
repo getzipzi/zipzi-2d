@@ -62,3 +62,6 @@ __all__ += ["RuntimeCapabilities", "RuntimeLimits", "ObjectSummary"]
 
 from ._documentation import ApiDescription, describe
 __all__ += ["ApiDescription", "describe"]
+
+from . import mesh_generation as mesh_generation
+__all__ += ["mesh_generation"]

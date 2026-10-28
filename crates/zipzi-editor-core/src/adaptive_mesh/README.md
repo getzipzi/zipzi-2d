@@ -45,8 +45,9 @@ and user constraints directly, without reading alpha. Existing vertex IDs,
 positions and UVs remain unchanged; proposed pattern cells that cross a user
 constraint are freed before constrained triangulation.
 
-The Editor opens an inline panel below the viewport's secondary toolbar. Edges
-and interior fill are separate stages, sharing an accepted contour snapshot.
+The Editor replaces the secondary toolbar with a centered, top-attached
+generation toolbar. Its fixed-width controls pack horizontally and wrap as needed.
+Edges and interior fill are separate stages, sharing an accepted contour snapshot.
 The interior stage can also use the original mesh boundary to fill an existing
 or manually edited mesh without replacing its contour.
 Parameter changes replace a disposable Runtime candidate used by the normal
@@ -74,6 +75,8 @@ implicitly commits through the ordinary gesture lifecycle.
   The API can request document-scale working units and finer tracing. Output is
   always mapped back to source pixels. The UI currently exposes source-pixel
   settings, not document-unit or tracing-resolution selectors.
+  Its starting distances and per-field scrub increments scale with source texture
+  size; see the [Editor control defaults](../../../zipzi-editor/README.md#mesh-generation-controls).
 - Work is bounded before potentially large allocations: 16384 per image axis,
   64 Mi source pixels, 262144 merged rectangles, 1024 components, 65534 traced
   points, and a conservative 1048576 candidate-lattice work bound. Output has a

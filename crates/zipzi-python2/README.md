@@ -582,3 +582,38 @@ CPU tests do not initialize a device. Runtime GPU checks use
 `cargo test --locked -p zipzi-runtime --test observation -- --include-ignored`.
 Normal distribution acceptance adds `--observation` to `tools/distribution.py`
 when exercising installed GPU recipes.
+
+## Editor mesh generation (Connected only)
+
+`zipzi.mesh_generation.generate(runtime, width, height, alpha, settings=..., stage=...)`
+uses the GPL implementation in the Editor process; the MIT Runtime and Python
+client do not link it. A host advertises `editor_mesh_generate` when available.
+Local hosts and older Editor hosts reject this optional operation explicitly.
+The result is an owned `meshes.Geometry`; generation never modifies a document.
+Use an Edit to create a mesh or the topology replacement workflow to replace one.
+Positions are bottom-up source pixels, so transform them into the target model's
+coordinate system before publishing. UVs are normalized; input alpha is top-down.
+
+```python
+import zipzi
+from zipzi.mesh_generation import MeshSettings, generate
+
+width = height = 64
+alpha = bytes(255 if 8 <= x < 56 and 8 <= y < 56 else 0
+              for y in range(height) for x in range(width))
+with zipzi.connect(timeout=60) as runtime:
+    settings = MeshSettings(edge_spacing=12, interior_spacing=16)
+    contour = generate(runtime, width, height, alpha, settings=settings, stage="edges")
+    mesh = generate(runtime, width, height, settings=settings,
+                    stage="interior", geometry=contour)
+    # Or generate both stages together with stage="full" (the default).
+```
+
+This initial synchronous endpoint is bounded to 4194304 source pixels, 65534
+output vertices and 131068 input triangles. Larger inputs require a future worker
+job/binary-transfer endpoint; they are not silently resized. Generation may hold
+the Editor request loop while computing. All five fill strategies and three edge
+layouts are supported. Settings are independent of the UI's texture-scaled defaults.
+Socket timeouts retain the normal same-request recovery behavior.
+
+Focused production-host acceptance: `./tools/dev-python crates/zipzi-python2/tests/editor_mesh_generation.py --host /absolute/path/to/zipzi-editor`.

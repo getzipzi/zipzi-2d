@@ -1,7 +1,7 @@
 use super::compact;
-use gpui_kit::base::NumberInput;
+use gpui_kit::base::{NumberInput, StepAction, step_value};
 use gpui_kit::component::{
-    ActiveTheme,
+    ActiveTheme, Sizable,
     input::{Input, InputState},
 };
 use gpui_kit::{prelude::*, *};
@@ -73,7 +73,9 @@ pub(crate) struct SlideNumberInput {
     options: SlideNumberOptions,
     focus: FocusHandle,
     drag: Option<Drag>,
-    truncate_to_integer: bool,
+    truncate_factor: Option<f64>,
+    snap_to_step: bool,
+    xsmall: bool,
     sliding_value_format: fn(f64) -> String,
     ignore_mouse_move: Option<fn() -> bool>,
     _observe: Subscription,
@@ -110,7 +112,9 @@ impl SlideNumberInput {
             options,
             focus: cx.focus_handle().tab_stop(false),
             drag: None,
-            truncate_to_integer: false,
+            truncate_factor: None,
+            snap_to_step: false,
+            xsmall: false,
             sliding_value_format: |value| (value as f32).to_string(),
             ignore_mouse_move: None,
         }
@@ -118,6 +122,11 @@ impl SlideNumberInput {
 
     pub fn suffix(mut self, suffix: impl Into<SharedString>) -> Self {
         self.suffix = Some(suffix.into());
+        self
+    }
+
+    pub fn xsmall(mut self) -> Self {
+        self.xsmall = true;
         self
     }
 
@@ -131,8 +140,61 @@ impl SlideNumberInput {
     /// Keep fractional drag movement, but emit and display only truncated integers.
     #[allow(dead_code)]
     pub fn truncate_to_integer(mut self) -> Self {
-        self.truncate_to_integer = true;
+        self.truncate_factor = Some(1.);
         self
+    }
+
+    /// Retain fractional drag movement while emitting tenths, without rounding.
+    pub fn truncate_to_one_decimal(mut self) -> Self {
+        self.truncate_factor = Some(10.);
+        self.sliding_value_format = |value| format!("{value:.1}");
+        self
+    }
+
+    /// Honor configured increments while retaining truncation precision. Shift
+    /// cannot select a finer increment than the emitted decimal/integer value.
+    pub fn snap_to_step(mut self) -> Self {
+        self.snap_to_step = true;
+        self
+    }
+
+    fn drag_scale(&self, shift: bool) -> (f64, f64) {
+        let (step, distance) = self.options.slide_scale();
+        let step = step * if shift { 0.1 } else { 1. };
+        let step = if self.snap_to_step {
+            self.truncate_factor
+                .map_or(step, |factor| step.max(1. / factor))
+        } else {
+            step
+        };
+        (step, distance)
+    }
+
+    fn step_keyboard(&mut self, action: StepAction, shift: bool, cx: &mut Context<Self>) {
+        if self.options.disabled {
+            return;
+        }
+        let text = self.input.read(cx).value();
+        let Some(text) = step_value(
+            &text,
+            action,
+            self.drag_scale(shift).0,
+            Some(self.options.min),
+            Some(self.options.max),
+        ) else {
+            return;
+        };
+        let Ok(value) = text.parse::<f64>() else {
+            return;
+        };
+        let value = self
+            .truncate_factor
+            .map_or(value, |factor| (value * factor).trunc() / factor);
+        if value != self.options.value {
+            self.options.value = value;
+            cx.emit(SlideNumberChange(value));
+            cx.notify();
+        }
     }
 
     /// Format the drag display without changing the emitted numeric value.
@@ -216,7 +278,7 @@ impl SlideNumberInput {
             last_x: event.position.x,
             original: self.options.value,
             anchor: self.options.value,
-            step: self.options.slide_scale().0 * if event.modifiers.shift { 0.1 } else { 1. },
+            step: self.drag_scale(event.modifiers.shift).0,
             value: self.options.value,
             sliding: false,
         });
@@ -230,6 +292,7 @@ impl SlideNumberInput {
         if self.ignore_mouse_move.is_some_and(|ignore| ignore()) {
             return false;
         }
+        let (step, pixels_per_step) = self.drag_scale(event.modifiers.shift);
         let Some(drag) = &mut self.drag else {
             return false;
         };
@@ -246,8 +309,6 @@ impl SlideNumberInput {
             }
             drag.sliding = true;
         }
-        let (base_step, pixels_per_step) = self.options.slide_scale();
-        let step = base_step * if event.modifiers.shift { 0.1 } else { 1. };
         if step != drag.step {
             // Changing precision starts at the current value rather than
             // snapping back to the previous step's grid.
@@ -263,9 +324,7 @@ impl SlideNumberInput {
         if drag.value == self.options.min || drag.value == self.options.max {
             drag.anchor = drag.value;
         }
-        let value = if self.truncate_to_integer {
-            drag.value.trunc()
-        } else {
+        let value = if self.snap_to_step || self.truncate_factor.is_none() {
             snap_value(
                 drag.value,
                 drag.anchor,
@@ -273,6 +332,13 @@ impl SlideNumberInput {
                 self.options.min,
                 self.options.max,
             )
+        } else {
+            drag.value
+        };
+        let value = if let Some(factor) = self.truncate_factor {
+            (value * factor).trunc() / factor
+        } else {
+            value
         };
         let changed = value != self.options.value;
         let repaint = started
@@ -365,6 +431,45 @@ impl Render for SlideNumberInput {
                     cx.stop_propagation();
                 }
             }))
+            .when(self.snap_to_step, |element| {
+                element
+                    .capture_action(cx.listener(
+                        |this, _: &gpui_kit::base::input::MoveUp, window, cx| {
+                            this.step_keyboard(StepAction::Increment, window.modifiers().shift, cx);
+                            cx.stop_propagation();
+                        },
+                    ))
+                    .capture_action(cx.listener(
+                        |this, _: &gpui_kit::base::input::MoveDown, window, cx| {
+                            this.step_keyboard(StepAction::Decrement, window.modifiers().shift, cx);
+                            cx.stop_propagation();
+                        },
+                    ))
+                    .capture_action(cx.listener(
+                        |this, _: &gpui_kit::base::Increment, window, cx| {
+                            this.step_keyboard(StepAction::Increment, window.modifiers().shift, cx);
+                            cx.stop_propagation();
+                        },
+                    ))
+                    .capture_action(cx.listener(
+                        |this, _: &gpui_kit::base::Decrement, window, cx| {
+                            this.step_keyboard(StepAction::Decrement, window.modifiers().shift, cx);
+                            cx.stop_propagation();
+                        },
+                    ))
+                    .capture_action(cx.listener(
+                        |this, _: &gpui_kit::base::actions::SelectUp, _, cx| {
+                            this.step_keyboard(StepAction::Increment, true, cx);
+                            cx.stop_propagation();
+                        },
+                    ))
+                    .capture_action(cx.listener(
+                        |this, _: &gpui_kit::base::actions::SelectDown, _, cx| {
+                            this.step_keyboard(StepAction::Decrement, true, cx);
+                            cx.stop_propagation();
+                        },
+                    ))
+            })
             // The drag surface replaces the editor: its translucent background
             // cannot hide the editor's text underneath it.
             .when(!sliding, |element| {
@@ -377,6 +482,7 @@ impl Render for SlideNumberInput {
                         .increment_button(|button| button.hidden())
                         .input(
                             compact::input(Input::new(&self.input))
+                                .when(self.xsmall, |input| input.xsmall())
                                 .map(|input| {
                                     Styled::h(input, compact::rem(compact::NUMBER_CONTROL))
                                 })

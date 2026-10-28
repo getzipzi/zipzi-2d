@@ -64,6 +64,9 @@ pub struct Request {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 enum Operation {
+    EditorMeshGenerate {
+        input: Value,
+    },
     RequestObservation {
         session: SessionId,
         edit: Option<EditId>,
@@ -462,6 +465,7 @@ pub struct Protocol {
     next_connection: u64,
     show_window: Option<Option<SessionId>>,
     windows: bool,
+    mesh_generator: Option<fn(Value) -> Value>,
     binary_input: Option<Vec<u8>>,
     binary_output: Option<BinarySlice>,
 }
@@ -487,6 +491,10 @@ impl Protocol {
             },
         }
     }
+    pub fn with_mesh_generator(mut self, generate: fn(Value) -> Value) -> Self {
+        self.mesh_generator = Some(generate);
+        self
+    }
     pub fn with_window_support(mut self) -> Self {
         self.windows = true;
         self
@@ -499,6 +507,7 @@ impl Protocol {
             next_connection: 0,
             show_window: None,
             windows: false,
+            mesh_generator: None,
             binary_input: None,
             binary_output: None,
         }
@@ -607,6 +616,9 @@ impl Protocol {
             "events",
             "request_recovery",
         ];
+        if self.mesh_generator.is_some() {
+            capabilities.push("editor_mesh_generate");
+        }
         if self.windows {
             capabilities.push("show_window");
         }
@@ -860,6 +872,15 @@ impl Protocol {
         op: Operation,
     ) -> crate::Result<Value> {
         let value = match op {
+            Operation::EditorMeshGenerate { input } => {
+                return Ok(match self.mesh_generator {
+                    Some(generate) => generate(input),
+                    None => failure(
+                        "UNSUPPORTED_OPERATION",
+                        "Mesh generation requires an Editor host",
+                    ),
+                })
+            }
             Operation::RuntimeCapabilities => {
                 let mut c = rt.runtime_capabilities();
                 c.editor_windows = self.windows;

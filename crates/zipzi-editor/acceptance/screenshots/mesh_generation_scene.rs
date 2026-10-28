@@ -9,22 +9,7 @@ pub(crate) fn mesh_generation_screenshots(
     harness: &mut Harness,
     directory: &std::path::Path,
 ) -> anyhow::Result<()> {
-    let (document, assets) = fixture::alpha_document()?;
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        harness.view.update(cx, |view, cx| {
-            view.replace_editor(Editor::from_document(document), cx);
-            view.redraw(cx);
-        });
-        window.render_frame(cx);
-        harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::GenerateMesh, window, cx)
-        });
-    })?;
-    harness._assets = assets;
-    for _ in 0..4 {
-        harness.cx.run_until_parked();
-        harness.cx.advance_clock(Duration::from_millis(150));
-    }
+    open_generation(harness)?;
     let edges = harness.capture()?;
     let edge_vertices = harness
         .view
@@ -33,6 +18,11 @@ pub(crate) fn mesh_generation_screenshots(
         assert!(!window.has_active_dialog(cx));
         assert!(window.find("mesh-generation-panel").visible());
         assert!(window.find("mesh-generation-counts").visible());
+        assert!(window.try_find("mesh-edit-actions").is_none());
+        assert_eq!(
+            window.find("mesh-generation-panel").bounds().top(),
+            window.find("canvas-body").bounds().top()
+        );
         window.click("mesh-generation-stage-interior", cx);
     })?;
     save(&edges, directory, "mesh-generation-edges.png")?;
@@ -86,5 +76,49 @@ pub(crate) fn mesh_generation_screenshots(
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         assert_eq!(view.editor.layers()[0].vertices, 4);
     });
+    wide_toolbar(directory)?;
+    Ok(())
+}
+
+fn open_generation(harness: &mut Harness) -> anyhow::Result<()> {
+    let (document, assets) = fixture::alpha_document()?;
+    harness.cx.update(|cx| {
+        theme::change(gpui_kit::component::ThemeMode::Light, cx);
+    });
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.replace_editor(Editor::from_document(document), cx);
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::GenerateMesh, window, cx)
+        });
+    })?;
+    harness._assets = assets;
+    for _ in 0..4 {
+        harness.cx.run_until_parked();
+        harness.cx.advance_clock(Duration::from_millis(150));
+    }
+    Ok(())
+}
+
+fn wide_toolbar(directory: &std::path::Path) -> anyhow::Result<()> {
+    let mut harness = Harness::with_size(1600., 740.)?;
+    open_generation(&mut harness)?;
+    let frame = harness.capture()?;
+    harness.cx.update_window(harness.window, |_, window, _| {
+        let layout = window.find("mesh-generation-edge-mode").bounds();
+        let spacing = window.find("mesh-generation-edge-spacing").bounds();
+        let margin = window.find("mesh-generation-outer-margin").bounds();
+        assert!(layout.left() < spacing.left() && spacing.left() < margin.left());
+        assert!(layout.top() < margin.bottom() && margin.top() < layout.bottom());
+        assert!(window.try_find("mesh-edit-actions").is_none());
+    })?;
+    save(&frame, directory, "mesh-generation-wide.png")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-generation-cancel", cx);
+    })?;
+    harness.cx.run_until_parked();
     Ok(())
 }
