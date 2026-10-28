@@ -94,6 +94,17 @@ class WindowsGpuiReport(unittest.TestCase):
         self.assertEqual(result['inputs_without_image_platform_return'], 1)
         self.assertEqual(result['metrics']['input_to_first_image_platform_return_ms'], {'n': 0})
 
+    def test_shared_texture_paint_joins_without_readback_or_atlas_upload(self):
+        records = [e for e in fixture() if e.get('stage') not in ('readback', 'image_atlas')]
+        for event in records:
+            if event.get('stage') == 'compose_image':
+                event['stage'] = 'paint_shared_surface'
+                event['fields'] = {}
+        result = report.diagnose(records)['workloads']['1']
+        self.assertEqual(result['inputs_without_image_platform_return'], 0)
+        self.assertEqual(result['atlas_uploaded_bytes'], 0)
+        self.assertEqual(result['metrics']['input_to_first_image_platform_return_ms']['p50'], 10)
+
     def test_incomplete_lost_or_failed_run_is_rejected(self):
         with self.assertRaises(ValueError):
             report.diagnose(fixture()[:-1])

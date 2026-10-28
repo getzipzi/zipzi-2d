@@ -38,5 +38,12 @@ required-features = ["wgpu-backend"]
 [target.'cfg(target_os = "macos")'.dependencies]
 zipzi-render-metal.workspace = true
 
+[target.'cfg(target_os = "windows")'.dependencies]
+gpui = { package = "gpui-fast", version = "0.1.7", default-features = false }
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Direct3D11", "Win32_Graphics_Direct3D12", "Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common", "Win32_Security"] }
+
 [target.'cfg(target_os = "macos")'.dev-dependencies]
 objc2.workspace = true
+
+[target.'cfg(target_os = "windows")'.dev-dependencies]
+gpui-windows = { package = "gpui-fast-windows", version = "0.1.7", features = ["test-support"] }

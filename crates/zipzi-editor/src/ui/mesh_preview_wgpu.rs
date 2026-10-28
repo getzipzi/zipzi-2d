@@ -1,19 +1,20 @@
-//! Candidate previews share the Windows canvas WGPU/readback path.
+//! Candidate previews retain immutable slots in the Windows shared texture pool.
 use crate::preview;
 use gpui_kit::*;
 use std::sync::{Arc, Mutex};
 use zipzi_editor_core::{SceneSnapshot, ViewportMetrics, ViewportPoint, ViewportTransform};
-use zipzi_editor_render::WgpuSceneRenderer;
 
 pub(super) type MeshPreviewCache = Arc<Mutex<MeshPreviewResources>>;
 #[derive(Default)]
 pub(super) struct MeshPreviewResources {
-    renderer: Option<WgpuSceneRenderer>,
+    renderer: Option<preview::Renderer>,
+    device: Option<preview::Device>,
 }
 impl MeshPreviewResources {
-    fn renderer(&mut self) -> anyhow::Result<&mut WgpuSceneRenderer> {
-        if self.renderer.is_none() {
-            self.renderer = Some(WgpuSceneRenderer::new(preview::target(1, 1))?);
+    fn renderer(&mut self, device: preview::Device) -> anyhow::Result<&mut preview::Renderer> {
+        if self.device.as_ref() != Some(&device) || self.renderer.is_none() {
+            self.renderer = Some(preview::Renderer::new(device.clone())?);
+            self.device = Some(device);
         }
         Ok(self.renderer.as_mut().unwrap())
     }
@@ -25,22 +26,27 @@ impl MeshPreview {
     pub fn prepare(
         scene: SceneSnapshot,
         source_size: [f32; 2],
-        _gpu: Option<preview::Context>,
+        gpu: Option<preview::Context>,
         resources: MeshPreviewCache,
     ) -> anyhow::Result<Self> {
         anyhow::ensure!(
             source_size.into_iter().all(|v| v.is_finite() && v > 0.),
             "Invalid preview extent"
         );
-        // Rasterize once on the generation worker, including completion/readback.
-        // The UI only uploads/composes the immutable candidate. A 2048px longest
+        // Rasterize once on the generation worker; completion is a GPU fence.
+        // The UI samples the immutable candidate. A 2048px longest
         // edge bounds each image to 16 MiB; zooming magnifies this preview raster.
         let scale = (2048. / source_size[0].max(source_size[1])).min(2.);
         let width = (source_size[0] * scale).ceil().max(1.) as u32;
         let height = (source_size[1] * scale).ceil().max(1.) as u32;
         let mut cache = resources.lock().unwrap();
-        let renderer = cache.renderer()?;
-        let frame = renderer.submit_transformed(
+        let renderer =
+            cache.renderer(gpu.ok_or_else(|| anyhow::anyhow!("D3D11 device unavailable"))?)?;
+        let slot = renderer
+            .presenter
+            .acquire([width, height])?
+            .ok_or_else(|| anyhow::anyhow!("Candidate preview texture budget exhausted"))?;
+        let frame = renderer.scene.submit_transformed(
             preview::target(width, height),
             &scene,
             ViewportTransform {
@@ -54,7 +60,7 @@ impl MeshPreview {
             },
         )?;
         Ok(Self {
-            image: preview::read_image(renderer, &frame.image, 0)?,
+            image: renderer.publish(slot, frame.image, 0)?,
         })
     }
     pub fn paint(

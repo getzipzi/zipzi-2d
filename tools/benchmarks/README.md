@@ -511,3 +511,14 @@ For Mao, the explicit Warp matches the audited editable target in the R0/native
 baselines. The default largest Warp has a singular parent deformation and rejects
 the gesture even in R1. Preserve a rejected trace separately; never report it as a
 low-latency pass. Choose an audited editable target when using a different model.
+
+### Windows shared texture presentation
+
+Windows previews now publish `shared_texture_submitted` and paint through
+`paint_shared_surface`, without the former preview `readback`/`compose_image`
+sequence. `windows-gpui-trace-report.py` joins both generations to CPU platform
+returns. Historical metric keys containing `image` also cover shared surfaces.
+A publish timestamp on the new path is an asynchronous submission boundary;
+it no longer implies that model GPU execution has completed. Do not interpret
+publish-to-paint or platform-return metrics as screen latency. Image atlas events
+may still occur for unrelated UI icons and thumbnails.

@@ -9,7 +9,7 @@ updating these sources.
 | Dependency | Source |
 | --- | --- |
 | GPUI Kit 0.7.3 | [longbridge/gpui-kit](https://github.com/longbridge/gpui-kit), pinned to `507e82b8115ac73af92b7d3856501f9d7b73b2c9`; local `gpui-component` patches are described under [compact menus and tooltips](#kit-compact-menus-and-tooltips). |
-| GPUI Fast 0.1.7 | Local patches for `gpui-fast`, `gpui-fast-macos` and `gpui-fast-apple`; see the [native Metal changes](#native-metal-changes-by-file). |
+| GPUI Fast 0.1.7 | Local patches for `gpui-fast`, `gpui-fast-macos`, `gpui-fast-apple` and `gpui-fast-windows`; see the [native Metal changes](#native-metal-changes-by-file). |
 | Zipzi | SDK sources under [`crates/`](../crates), built from the same repository commit and root `Cargo.lock`. |
 | Metal 0.33 | crates.io |
 
@@ -39,7 +39,7 @@ for CPU measurements and presentation-latency tradeoffs.
 
 ## Upstream baselines
 
-The three Fast packages come from the crates.io **0.1.7** releases and provide
+The four Fast packages come from the crates.io **0.1.7** releases and provide
 the `gpui-fast` backend for GPUI Kit 0.7.3. The root `[patch.crates-io]` section
 selects these local packages. Kit is pinned to the upstream commit above;
 a separate Git-source `[patch]` overrides `gpui-component`.
@@ -309,3 +309,37 @@ in test/bench-support/test-support builds. It returns a submitted command buffer
 for GPU timing and reuses size-matched intermediate textures on the headless
 path. Existing `render_scene()` forwards to it; production window drawing keeps
 its existing behavior.
+
+## Windows shared GPU surfaces
+
+`gpui-fast-windows` is vendored from the crates.io 0.1.7 release, retaining its
+normalized/original manifests, source, lockfile and Apache-2.0 license. The root
+workspace patch selects it. [windows-shared-texture.patch](windows-shared-texture.patch) records deviations
+from that release and the accompanying core GPUI changes relative to the
+pre-bridge checkpoint `7e42c511`.
+
+The patch adds a D3D11 device accessor, `SurfaceSource::DirectX` with ready/consumed
+fences, and Windows `paint_surface`/`surface` support. Both debugger and Fast draw
+paths sample premultiplied textures with content-mask clipping and opacity; Fast
+state tracking is invalidated after the external draw. Surface shaders compile
+at runtime in debug and through the existing FXC build step in release. Shared
+views are created once per pool slot by the producer, not opened on every draw.
+The `test-support` offscreen harness exercises production pipelines with final
+pixel readback; it is not part of normal presentation.
+
+The patch covers 12 files, with 337 additions and 10 deletions. Apply it after
+the existing core patches (including `gpui-diagnostics.patch`); the Windows
+package baseline is the unmodified published `gpui-fast-windows` 0.1.7 package.
+Paths are relative to the repository root. Root Cargo overrides and Editor
+producer/pool integration are outside this vendor patch.
+
+```sh
+git apply --reverse --check --ignore-space-change vendor/windows-shared-texture.patch
+```
+
+On 2026-10-28, validation reversed the patch in a temporary directory, compared
+the restored files with the published Windows package and core checkpoint
+`7e42c511`, and reapplied it to reproduce all 12 current files. A complete
+Windows package comparison also confirmed there are no unrecorded source
+changes. Comparisons normalize CRLF/LF; Cargo's local `.cargo-ok` and
+`.cargo_vcs_info.json` metadata are excluded.

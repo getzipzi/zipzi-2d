@@ -48,6 +48,10 @@ fn status(error: zipzi_core::Status) -> anyhow::Error {
 impl WgpuSceneRenderer {
     pub fn new(config: WgpuTargetConfig) -> Result<Self> {
         let context = WgpuContext::new().map_err(status)?;
+        Self::with_context(context, config)
+    }
+
+    pub fn with_context(context: WgpuContext, config: WgpuTargetConfig) -> Result<Self> {
         let renderer = WgpuRenderer::new(context.device(), config).map_err(status)?;
         Ok(Self {
             context,

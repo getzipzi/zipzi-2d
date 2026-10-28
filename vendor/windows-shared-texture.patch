@@ -1,0 +1,535 @@
+--- a/vendor/gpui-fast-windows/build.rs
++++ b/vendor/gpui-fast-windows/build.rs
+@@ -32,6 +32,7 @@
+ 
+         // Define all modules
+         let modules = [
++            "surface",
+             "quad",
+             "shadow",
+             "path_rasterization",
+--- a/vendor/gpui-fast-windows/src/window.rs
++++ b/vendor/gpui-fast-windows/src/window.rs
+@@ -1078,6 +1078,10 @@
+         self.state.renderer.borrow().gpu_specs().log_err()
+     }
+ 
++    fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {
++        Some(self.state.renderer.borrow().devices.as_ref()?.device.clone())
++    }
++
+     fn update_ime_position(&self, bounds: Bounds<Pixels>) {
+         let scale_factor = self.state.scale_factor.get();
+         let caret_position = POINT {
+--- a/vendor/gpui-fast-windows/src/directx_renderer.rs
++++ b/vendor/gpui-fast-windows/src/directx_renderer.rs
+@@ -24,6 +24,9 @@
+ use crate::*;
+ use gpui::*;
+ 
++#[cfg(feature = "test-support")]
++pub mod test_support;
++
+ pub(crate) const DISABLE_DIRECT_COMPOSITION: &str = "GPUI_DISABLE_DIRECT_COMPOSITION";
+ pub(crate) const RENDER_TARGET_FORMAT: DXGI_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
+ // This configuration is used for MSAA rendering on paths only, and it's guaranteed to be supported by DirectX 11.
+@@ -95,6 +98,7 @@
+     pub(crate) mono_sprites: PipelineState<MonochromeSprite>,
+     pub(crate) subpixel_sprites: PipelineState<SubpixelSprite>,
+     pub(crate) poly_sprites: PipelineState<PolychromeSprite>,
++    pub(crate) surfaces: PipelineState<SurfaceSprite>,
+ }
+ 
+ pub(crate) struct DirectXGlobalElements {
+@@ -829,10 +833,14 @@
+     }
+ 
+     fn draw_surfaces(&mut self, surfaces: &[PaintSurface]) -> Result<()> {
+-        if surfaces.is_empty() {
+-            return Ok(());
+-        }
+-        Ok(())
++        let devices = self.devices.as_ref().context("devices missing")?;
++        draw_shared_surfaces(
++            &devices.device,
++            &devices.device_context,
++            &mut self.pipelines.surfaces,
++            &self.globals.sampler,
++            surfaces,
++        )
+     }
+ 
+     pub(crate) fn gpu_specs(&self) -> Result<GpuSpecs> {
+@@ -1022,6 +1030,13 @@
+             mono_sprites,
+             subpixel_sprites,
+             poly_sprites,
++            surfaces: PipelineState::new(
++                device,
++                "surface_pipeline",
++                ShaderModule::Surface,
++                1,
++                create_blend_state_for_path_rasterization(device)?,
++            )?,
+         })
+     }
+ }
+@@ -1099,6 +1114,61 @@
+ }
+ 
+ const _: () = assert!(std::mem::size_of::<BatchParams>() == 16);
++
++#[repr(C)]
++pub(crate) struct SurfaceSprite {
++    bounds: Bounds<ScaledPixels>,
++    clip: Bounds<ScaledPixels>,
++    opacity: f32,
++}
++
++pub(crate) fn draw_shared_surfaces(
++    device: &ID3D11Device,
++    context: &ID3D11DeviceContext,
++    pipeline: &mut PipelineState<SurfaceSprite>,
++    sampler: &Option<ID3D11SamplerState>,
++    surfaces: &[PaintSurface],
++) -> Result<()> {
++    if surfaces.is_empty() {
++        return Ok(());
++    }
++    let context4: ID3D11DeviceContext4 = context.cast()?;
++    for surface in surfaces {
++        let SurfaceSource::DirectX(image) = &surface.source;
++        // Device recovery invalidates all resources from the previous device.
++        if image.device != *device {
++            continue;
++        }
++        pipeline.update_buffer(
++            device,
++            context,
++            &[SurfaceSprite {
++                bounds: surface.bounds,
++                clip: surface.content_mask.bounds,
++                opacity: surface.opacity,
++            }],
++        )?;
++        let value = image.next_consumed_value();
++        unsafe {
++            context4.Wait(&image.ready, image.ready_value)?;
++        }
++        pipeline.draw_with_texture(
++            context,
++            &[Some(image.view.clone())],
++            slice::from_ref(sampler),
++            1,
++        )?;
++        unsafe {
++            // Unbind the shared resource before making it available to the producer.
++            context.PSSetShaderResources(0, Some(&[None]));
++            context.VSSetShaderResources(0, Some(&[None]));
++            context4.Signal(&image.consumed, value)?;
++            // Ensure the fence is submitted even for offscreen/no-Present draws.
++            context.Flush();
++        }
++    }
++    Ok(())
++}
+ 
+ pub(crate) struct PipelineState<T> {
+     pub(crate) label: &'static str,
+@@ -1723,6 +1793,7 @@
+ 
+     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+     pub(crate) enum ShaderModule {
++        Surface,
+         Quad,
+         Shadow,
+         Underline,
+@@ -1773,6 +1844,10 @@
+         #[cfg(not(debug_assertions))]
+         fn from_bytes(module: ShaderModule, target: ShaderTarget) -> Self {
+             let bytes = match module {
++                ShaderModule::Surface => match target {
++                    ShaderTarget::Vertex => SURFACE_VERTEX_BYTES,
++                    ShaderTarget::Fragment => SURFACE_FRAGMENT_BYTES,
++                },
+                 ShaderModule::Quad => match target {
+                     ShaderTarget::Vertex => QUAD_VERTEX_BYTES,
+                     ShaderTarget::Fragment => QUAD_FRAGMENT_BYTES,
+@@ -1888,6 +1963,7 @@
+         pub fn as_str(self) -> &'static str {
+             match self {
+                 ShaderModule::Quad => "quad",
++                ShaderModule::Surface => "surface",
+                 ShaderModule::Shadow => "shadow",
+                 ShaderModule::Underline => "underline",
+                 ShaderModule::PathRasterization => "path_rasterization",
+--- a/vendor/gpui-fast-windows/src/fast/frame.rs
++++ b/vendor/gpui-fast-windows/src/fast/frame.rs
+@@ -257,8 +257,18 @@
+                 let pipeline = &pipelines.poly_sprites;
+                 draw.instances(pipeline, range.start, range.len(), Some(&view))
+             }
+-            // Upstream draws nothing for surfaces on Windows either.
+-            PrimitiveBatch::Surfaces(_) => Ok(()),
++            PrimitiveBatch::Surfaces(range) => {
++                let result = crate::directx_renderer::draw_shared_surfaces(
++                    target.device,
++                    target.device_context,
++                    &mut pipelines.surfaces,
++                    &target.globals.sampler,
++                    &scene.surfaces[range],
++                );
++                // The external draw changes bindings outside DrawState.
++                *draw.state = DrawState::default();
++                result
++            }
+         }
+         .with_context(|| scene_too_large(scene))?;
+     }
+--- a/vendor/gpui-fast-windows/src/shaders.hlsl
++++ b/vendor/gpui-fast-windows/src/shaders.hlsl
+@@ -1267,3 +1267,34 @@
+     color.a *= sprite.opacity * saturate(0.5 - distance);
+     return color;
+ }
++
++// Zipzi: external premultiplied textures, composed without the image atlas.
++struct SurfaceSprite {
++    Bounds bounds;
++    Bounds clip_bounds;
++    float opacity;
++};
++StructuredBuffer<SurfaceSprite> surfaces: register(t1);
++struct SurfaceVertexOutput {
++    float4 position: SV_Position;
++    float2 uv: TEXCOORD0;
++    nointerpolation float4 clip_bounds: TEXCOORD1;
++    nointerpolation float opacity: TEXCOORD2;
++};
++SurfaceVertexOutput surface_vertex(uint vertex_id: SV_VertexID, uint instance_id: SV_InstanceID) {
++    SurfaceSprite s = surfaces[instance_id];
++    float2 uv = float2(float(vertex_id & 1u), 0.5 * float(vertex_id & 2u));
++    SurfaceVertexOutput o;
++    o.position = to_device_position(uv, s.bounds);
++    o.uv = uv;
++    o.clip_bounds = float4(s.clip_bounds.origin, s.clip_bounds.origin + s.clip_bounds.size);
++    o.opacity = s.opacity;
++    return o;
++}
++float4 surface_fragment(SurfaceVertexOutput i): SV_Target {
++    if (any(i.position.xy < i.clip_bounds.xy) || any(i.position.xy >= i.clip_bounds.zw)) discard;
++    uint width, height;
++    t_sprite.GetDimensions(width, height);
++    float2 half_texel = 0.5 / float2(width, height);
++    return t_sprite.Sample(s_sprite, clamp(i.uv, half_texel, 1.0 - half_texel)) * i.opacity;
++}
+--- a/vendor/gpui-fast-windows/src/gpui_windows.rs
++++ b/vendor/gpui-fast-windows/src/gpui_windows.rs
+@@ -41,5 +41,7 @@
+ pub(crate) use wrapper::*;
+ 
+ pub use platform::WindowsPlatform;
++#[cfg(feature = "test-support")]
++pub use directx_renderer::test_support::SurfaceTestRenderer;
+ 
+ pub(crate) use windows::Win32::Foundation::HWND;
+diff --git a/vendor/gpui-fast/src/elements/surface.rs b/vendor/gpui-fast/src/elements/surface.rs
+index 63932658..612435b0 100644
+--- a/vendor/gpui-fast/src/elements/surface.rs
++++ b/vendor/gpui-fast/src/elements/surface.rs
+@@ -7,10 +7,17 @@ use objc2_core_foundation::CFRetained;
+ #[cfg(any(target_os = "macos", target_os = "ios"))]
+ use objc2_core_video::{CVPixelBuffer, CVPixelBufferGetHeight, CVPixelBufferGetWidth};
+ use refineable::Refineable;
++#[cfg(target_os = "windows")]
++mod directx;
++#[cfg(target_os = "windows")]
++pub use directx::DirectXSurface;
+ 
+ /// A source of a surface's content.
+ #[derive(Clone, Debug)]
+ pub enum SurfaceSource {
++    /// Immutable premultiplied D3D11 texture with explicit producer/consumer fences.
++    #[cfg(target_os = "windows")]
++    DirectX(std::sync::Arc<DirectXSurface>),
+     /// A CoreVideo image buffer
+     #[cfg(any(target_os = "macos", target_os = "ios"))]
+     Surface(CFRetained<CVPixelBuffer>),
+@@ -29,6 +36,8 @@ impl From<CFRetained<CVPixelBuffer>> for SurfaceSource {
+ impl PartialEq for SurfaceSource {
+     fn eq(&self, other: &Self) -> bool {
+         match (self, other) {
++            #[cfg(target_os = "windows")]
++            (Self::DirectX(a), Self::DirectX(b)) => std::sync::Arc::ptr_eq(a, b),
+             #[cfg(any(target_os = "macos", target_os = "ios"))]
+             (Self::Surface(a), Self::Surface(b)) => a == b,
+             #[cfg(target_os = "macos")]
+@@ -40,7 +49,6 @@ impl PartialEq for SurfaceSource {
+ }
+ impl Eq for SurfaceSource {}
+ 
+-
+ /// A surface element.
+ pub struct Surface {
+     source: SurfaceSource,
+@@ -49,7 +57,7 @@ pub struct Surface {
+ }
+ 
+ /// Create a new surface element.
+-#[cfg(any(target_os = "macos", target_os = "ios"))]
++#[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
+ pub fn surface(source: impl Into<SurfaceSource>) -> Surface {
+     Surface {
+         source: source.into(),
+@@ -121,6 +129,17 @@ impl Element for Surface {
+         _: &mut App,
+     ) {
+         match &self.source {
++            #[cfg(target_os = "windows")]
++            SurfaceSource::DirectX(texture) => {
++                let size = crate::size(
++                    crate::DevicePixels(texture.extent[0] as i32),
++                    crate::DevicePixels(texture.extent[1] as i32),
++                );
++                window.paint_surface(
++                    self.object_fit.get_bounds(bounds, size),
++                    self.source.clone(),
++                );
++            }
+             #[cfg(any(target_os = "macos", target_os = "ios"))]
+             SurfaceSource::Surface(surface) => {
+                 let size = crate::size(
+diff --git a/vendor/gpui-fast/src/platform.rs b/vendor/gpui-fast/src/platform.rs
+index d6909bf1..e11daecb 100644
+--- a/vendor/gpui-fast/src/platform.rs
++++ b/vendor/gpui-fast/src/platform.rs
+@@ -1202,6 +1202,11 @@ pub enum TextInputStateChange {
+ 
+ #[expect(missing_docs)]
+ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
++    /// D3D11 device used by the window. The immediate context stays on the UI thread.
++    #[cfg(target_os = "windows")]
++    fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {
++        None
++    }
+     /// Native Metal renderer handles, if available.
+     #[cfg(target_os = "macos")]
+     fn metal_context(&self) -> Option<SharedMetalContext> {
+diff --git a/vendor/gpui-fast/src/scene.rs b/vendor/gpui-fast/src/scene.rs
+index 5990d48d..8d11c422 100644
+--- a/vendor/gpui-fast/src/scene.rs
++++ b/vendor/gpui-fast/src/scene.rs
+@@ -766,7 +766,7 @@ pub struct PaintSurface {
+     pub order: DrawOrder,
+     pub bounds: Bounds<ScaledPixels>,
+     pub content_mask: ContentMask<ScaledPixels>,
+-    #[cfg(any(target_os = "macos", target_os = "ios"))]
++    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
+     pub source: crate::SurfaceSource,
+     pub opacity: f32,
+ }
+diff --git a/vendor/gpui-fast/src/window.rs b/vendor/gpui-fast/src/window.rs
+index bcf94d5b..08df63b3 100644
+--- a/vendor/gpui-fast/src/window.rs
++++ b/vendor/gpui-fast/src/window.rs
+@@ -5228,7 +5228,7 @@ impl Window {
+     /// Paint a surface into the scene for the next frame at the current z-index.
+     ///
+     /// This method should only be called as part of the paint phase of element drawing.
+-    #[cfg(any(target_os = "macos", target_os = "ios"))]
++    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
+     pub fn paint_surface(
+         &mut self,
+         bounds: Bounds<Pixels>,
+@@ -5265,6 +5265,12 @@ impl Window {
+         self.platform_window.metal_context()
+     }
+ 
++    /// D3D11 device identity for GPU-only preview presentation.
++    #[cfg(target_os = "windows")]
++    pub fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {
++        self.platform_window.directx_device()
++    }
++
+     /// Removes an image from the sprite atlas.
+     pub fn drop_image(&mut self, data: Arc<RenderImage>) -> Result<()> {
+         for frame_index in 0..data.frame_count() {
+--- /dev/null
++++ b/vendor/gpui-fast/src/elements/surface/directx.rs
+@@ -0,0 +1,39 @@
++//! D3D11 presentation contract. All context operations belong to the UI renderer.
++use std::sync::atomic::{AtomicU64, Ordering};
++use windows::Win32::Graphics::Direct3D11::*;
++
++/// Immutable until all scene references and both GPU timelines have retired.
++#[derive(Debug)]
++pub struct DirectXSurface {
++    /// Device identity prevents stale frames being used after device recovery.
++    pub device: ID3D11Device,
++    /// Sampled view of the shared RGBA8 texture.
++    pub view: ID3D11ShaderResourceView,
++    /// Texture dimensions in physical pixels.
++    pub extent: [u32; 2],
++    /// Producer completion timeline.
++    pub ready: ID3D11Fence,
++    /// Producer submission corresponding to this immutable frame.
++    pub ready_value: u64,
++    /// Consumer completion timeline; signaled after every draw, including redraws.
++    pub consumed: ID3D11Fence,
++    /// Last reserved consumer submission; a failed signal must prevent reuse.
++    pub consumed_value: AtomicU64,
++}
++
++impl DirectXSurface {
++    /// Reserve a value before issuing consumer commands. Only the UI thread submits them.
++    pub fn next_consumed_value(&self) -> u64 {
++        self.consumed_value.fetch_add(1, Ordering::AcqRel) + 1
++    }
++
++    /// Nonblocking completion check. Device removal is not successful completion.
++    pub fn is_idle(&self) -> bool {
++        let ready = unsafe { self.ready.GetCompletedValue() };
++        let consumed = unsafe { self.consumed.GetCompletedValue() };
++        ready != u64::MAX
++            && consumed != u64::MAX
++            && ready >= self.ready_value
++            && consumed >= self.consumed_value.load(Ordering::Acquire)
++    }
++}
+--- /dev/null
++++ b/vendor/gpui-fast-windows/src/directx_renderer/test_support.rs
+@@ -0,0 +1,134 @@
++//! Offscreen acceptance harness using the production Windows Fast pipelines.
++use super::*;
++use crate::fast::frame::{FrameState, Target};
++
++pub struct SurfaceTestRenderer {
++    device: ID3D11Device,
++    context: ID3D11DeviceContext,
++    atlas: DirectXAtlas,
++    globals: DirectXGlobalElements,
++    pipelines: DirectXRenderPipelines,
++    frame: FrameState,
++}
++impl SurfaceTestRenderer {
++    pub fn new(device: ID3D11Device) -> Result<Self> {
++        let context = unsafe { device.GetImmediateContext()? };
++        let globals = DirectXGlobalElements::new(&device)?;
++        let pipelines = DirectXRenderPipelines::new(&device)?;
++        let atlas = DirectXAtlas::new(&device, &context);
++        Ok(Self {
++            device,
++            context,
++            atlas,
++            globals,
++            pipelines,
++            frame: FrameState::default(),
++        })
++    }
++
++    pub fn render(
++        &mut self,
++        scene: &Scene,
++        extent: [u32; 2],
++        clear: [f32; 4],
++    ) -> Result<image::RgbaImage> {
++        let [width, height] = extent;
++        let desc = D3D11_TEXTURE2D_DESC {
++            Width: width,
++            Height: height,
++            MipLevels: 1,
++            ArraySize: 1,
++            Format: RENDER_TARGET_FORMAT,
++            SampleDesc: DXGI_SAMPLE_DESC {
++                Count: 1,
++                Quality: 0,
++            },
++            Usage: D3D11_USAGE_DEFAULT,
++            BindFlags: D3D11_BIND_RENDER_TARGET.0 as u32,
++            ..Default::default()
++        };
++        unsafe {
++            let mut texture = None;
++            self.device
++                .CreateTexture2D(&desc, None, Some(&mut texture))?;
++            let texture = texture.context("offscreen target")?;
++            let mut rtv = None;
++            self.device
++                .CreateRenderTargetView(&texture, None, Some(&mut rtv))?;
++            let mut rasterizer = None;
++            self.device.CreateRasterizerState(
++                &D3D11_RASTERIZER_DESC {
++                    FillMode: D3D11_FILL_SOLID,
++                    CullMode: D3D11_CULL_NONE,
++                    DepthClipEnable: true.into(),
++                    ..Default::default()
++                },
++                Some(&mut rasterizer),
++            )?;
++            self.context.RSSetState(rasterizer.as_ref());
++            self.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
++                Width: width as f32,
++                Height: height as f32,
++                MaxDepth: 1.,
++                ..Default::default()
++            }]));
++            self.context
++                .OMSetRenderTargets(Some(slice::from_ref(&rtv)), None);
++            self.context
++                .ClearRenderTargetView(rtv.as_ref().unwrap(), &clear);
++            update_buffer(
++                &self.context,
++                self.globals.global_params_buffer.as_ref().unwrap(),
++                &[GlobalParams {
++                    viewport_size: [width as f32, height as f32],
++                    ..Default::default()
++                }],
++            )?;
++            self.context
++                .VSSetConstantBuffers(0, Some(slice::from_ref(&self.globals.global_params_buffer)));
++            self.context
++                .PSSetConstantBuffers(0, Some(slice::from_ref(&self.globals.global_params_buffer)));
++            self.context
++                .VSSetConstantBuffers(1, Some(slice::from_ref(&self.globals.batch_params_buffer)));
++            let target = Target {
++                device: &self.device,
++                device_context: &self.context,
++                atlas: &self.atlas,
++                globals: &self.globals,
++                paths: None,
++            };
++            crate::fast::frame::upload(&target, &mut self.pipelines, scene)?;
++            crate::fast::frame::draw_scene(&target, &mut self.pipelines, &mut self.frame, scene)?;
++            self.context.OMSetRenderTargets(None, None);
++            let mut staging = None;
++            self.device.CreateTexture2D(
++                &D3D11_TEXTURE2D_DESC {
++                    Usage: D3D11_USAGE_STAGING,
++                    BindFlags: 0,
++                    CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
++                    ..desc
++                },
++                None,
++                Some(&mut staging),
++            )?;
++            let staging = staging.context("offscreen readback")?;
++            self.context.CopyResource(&staging, &texture);
++            let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
++            self.context
++                .Map(&staging, 0, D3D11_MAP_READ, 0, Some(&mut mapped))?;
++            let mut pixels = vec![0u8; (width * height * 4) as usize];
++            for row in 0..height as usize {
++                std::ptr::copy_nonoverlapping(
++                    (mapped.pData as *const u8).add(row * mapped.RowPitch as usize),
++                    pixels.as_mut_ptr().add(row * width as usize * 4),
++                    width as usize * 4,
++                );
++            }
++            self.context.Unmap(&staging, 0);
++            for pixel in pixels.chunks_exact_mut(4) {
++                pixel.swap(0, 2);
++            }
++            image::RgbaImage::from_raw(width, height, pixels).context("offscreen pixels")
++        }
++    }
++}

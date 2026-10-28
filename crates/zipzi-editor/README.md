@@ -8,8 +8,8 @@ input routing and native UI integration. It consumes
 [`zipzi-editor-render`](../zipzi-editor-render/README.md) for scene rendering.
 
 Windows now has a P5 development prototype using the shared
-[wgpu backend](../zipzi-render-wgpu/README.md), background readback and GPUI D3D11
-image composition. It requires Rust 1.95+, MSVC C++ Build Tools, Windows SDK and
+[wgpu backend](../zipzi-render-wgpu/README.md), D3D12 shared textures and GPUI
+D3D11 GPU composition. It requires Rust 1.95+, MSVC C++ Build Tools, Windows SDK and
 a usable GPU. Settings use `%APPDATA%\Zipzi Editor`; Named Pipe clients share the
 resident Editor Runtime, including `--no-window` and window reopening.
 
@@ -33,22 +33,23 @@ jobs or connected Python clients block restart and preserve the running process.
 Save work and disconnect clients before retrying. Clean project tabs are restored
 after reload. This handshake is enabled only by the development launcher.
 
-Readback frames retain independent viewport identity and are released from the
-GPUI image atlas when their final presentation owner is dropped. Mesh generation
-candidates render off the UI thread at a maximum 2048px longest edge (16 MiB);
-zoom magnifies that preview raster. Main and candidate previews convert to
-straight BGRA on the GPU and reuse worker-local conversion/staging buffers.
-With `ZIPZI_FRAME_TRACE` enabled, main preview `readback` events record the combined
-GPU conversion/readback/CPU copy duration as `readback_ns`, with `gpu_conversion=1`
-and the image byte count. The former CPU `conversion_ns` field is no longer emitted.
-These measurements exclude GPUI upload/presentation; end-to-end latency still
-needs native-window measurement.
+Main and mesh-candidate previews publish immutable shared GPU textures. A worker
+renders on the same adapter as GPUI, then copies on the GPU into a bounded shared
+texture pool. D3D11 waits on the producer fence before sampling and signals a
+consumer fence after drawing. There is no pixel readback, alpha conversion or
+image-atlas upload in this path. Candidate rasters retain the 2048px longest-edge
+limit. See [bridge ownership and limits](../zipzi-editor-render/README.md#wgpu-model-adapter).
+
+Frame traces record `shared_texture_submitted` and `paint_shared_surface`;
+these are CPU submission/paint boundaries, not GPU completion or screen presentation.
+The Windows trace report accepts both these paints and historical `compose_image`
+paints. Its existing metric names retain `image` for compatibility with old reports.
 
 Focused Windows checks (run in a desktop session for the installed Editor gate):
 
 ```powershell
 cargo check --locked -p zipzi-editor -p zipzi-editor-render --all-targets --features zipzi-editor/test-support,zipzi-editor/wgpu-backend
-cargo test --locked -p zipzi-editor-render --features wgpu-backend --test wgpu_readback -- --nocapture
+cargo test --locked -p zipzi-editor-render --features wgpu-backend --test windows_shared_texture -- --nocapture
 uv run --locked python tools/dev.py test editor ui headless_tests::ui_performance
 uv run --locked python tools/dev.py test sdk python2-connected --editor-host C:\absolute\path\to\zipzi-editor.exe
 ```

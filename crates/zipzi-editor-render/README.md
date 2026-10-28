@@ -53,15 +53,39 @@ cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu
 ```
 
 macOS overlays remain native Metal. Windows uses GPUI paths/markers and a
-background WGPU readback-to-image bridge in `zipzi-editor/src/preview/readback.rs`.
-`WgpuSceneRenderer::read_straight_bgra8` converts premultiplied linear UNORM output
-to straight BGRA on the GPU using the previous CPU integer rounding, then reads a
-tightly packed storage buffer. Its worker-local `WgpuImageReadback` retains one
-conversion/staging buffer pair, replaced when the byte size changes. CPU images
-remain independent and immutable. Each buffer is limited by the device's storage
-binding/buffer limits (128 MiB storage binding with the current default limits);
-this cache does not impose a total preview memory budget. sRGB inputs are rejected
-to avoid implicit linearization during conversion.
+D3D12-to-D3D11 shared texture bridge in `src/wgpu_windows.rs`. The Editor selects
+the D3D12 adapter by the GPUI device's LUID, renders to a normal wgpu RGBA8 target,
+then submits one native GPU copy into a shared committed texture. The source's
+COPY_SRC transition goes through wgpu's tracker; the native destination returns
+to COMMON before D3D11 samples it. No pixel readback or image-atlas upload occurs.
+
+Each immutable surface has separate ready/consumed shared fence timelines. GPUI
+waits on ready on its GPU queue and signals consumed after every actual draw,
+including retained redraws. Reuse requires exclusive pool ownership AND both
+fences completed. Each presenter bounds shared textures to eight slots / 256 MiB;
+source textures and render attachments are separate allocations. Main preview
+requests coalesce during backpressure; candidate previews report budget exhaustion.
+Changing dimensions retires reusable old sizes. Pending copies retire on a separate
+thread when their presenter closes, keeping native resources and the wgpu backend
+alive without a UI-thread wait. Device identity changes rebuild the
+preview worker; GPUI skips old-device surfaces. Unsupported sharing/fences produce
+an explicit preview error rather than silently falling back to CPU pixels.
+
+`WgpuImageReadback` remains available for export, tests and baseline measurements;
+it is no longer the Windows presentation mechanism. It converts premultiplied
+linear RGBA/BGRA to straight BGRA on the GPU before mapping a tightly packed buffer.
+Its existing exhaustive conversion test and benchmark remain useful independently.
+
+```powershell
+cargo test --locked -p zipzi-editor-render --features wgpu-backend --test windows_shared_texture -- --nocapture
+```
+
+This hardware test uses the production GPUI Windows Fast pipeline offscreen and
+reads back only the final test target. It checks premultiplied alpha, opacity,
+clipping, subsequent UI primitives, repeated draws, retained old frames, resizing,
+bounded-pool exhaustion/reuse, real model output, retained consumer frames after
+producer teardown, and closing while a GPU copy is deliberately stalled. It does
+not measure DWM or display latency.
 
 On Windows, the Editor enables `wgpu-backend` automatically. To verify the
 scene adapter on a real GPU independently of GPUI:

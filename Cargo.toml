@@ -24,7 +24,7 @@ members = [
 ]
 
 default-members = ["crates/zipzi-core", "crates/zipzi-project", "crates/zipzi-sdk"]
-exclude = ["vendor/gpui-fast", "vendor/gpui-fast-macos", "vendor/gpui-fast-apple", "vendor/gpui-kit"]
+exclude = ["vendor/gpui-fast", "vendor/gpui-fast-macos", "vendor/gpui-fast-apple", "vendor/gpui-fast-windows", "vendor/gpui-kit"]
 
 [workspace.package]
 version = "0.1.0-alpha.1"
@@ -115,6 +115,7 @@ opt-level = 0
 gpui-fast = { path = "vendor/gpui-fast" }
 gpui-fast-macos = { path = "vendor/gpui-fast-macos" }
 gpui-fast-apple = { path = "vendor/gpui-fast-apple" }
+gpui-fast-windows = { path = "vendor/gpui-fast-windows" }
 
 [patch."https://github.com/longbridge/gpui-kit"]
 gpui-component = { path = "vendor/gpui-kit/crates/component" }

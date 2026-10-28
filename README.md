@@ -28,7 +28,7 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
 Use Rust 1.95 or newer, uv 0.10.7 or newer, and CPython 3.14.
 The macOS Editor additionally requires Xcode Command Line Tools and a
 Metal-capable GPU. The [Windows development prototype](crates/zipzi-editor/README.md)
-uses WGPU with GPUI D3D11 image composition and requires MSVC/Windows SDK.
+uses WGPU/D3D12 shared textures with GPUI D3D11 composition and requires MSVC/Windows SDK.
 Run these commands from the repository root:
 
 ```sh

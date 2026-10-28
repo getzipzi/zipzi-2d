@@ -111,7 +111,7 @@ def diagnose(records):
                 draws[draw_id] = event['at_ns']
             elif event['stage'] == 'ui_draw_end':
                 draw_id = 0
-            elif event['stage'] == 'compose_image' and draw_id:
+            elif event['stage'] in ('compose_image', 'paint_shared_surface') and draw_id:
                 tick = preview_tick.get(event['id'], 0)
                 if tick in measured and measured[tick]['fields']['mode'] == mode:
                     painted.append((tick, draw_id, event['at_ns']))

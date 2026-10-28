@@ -5228,7 +5228,7 @@ impl Window {
     /// Paint a surface into the scene for the next frame at the current z-index.
     ///
     /// This method should only be called as part of the paint phase of element drawing.
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
     pub fn paint_surface(
         &mut self,
         bounds: Bounds<Pixels>,
@@ -5263,6 +5263,12 @@ impl Window {
     #[cfg(target_os = "macos")]
     pub fn metal_context(&self) -> Option<crate::SharedMetalContext> {
         self.platform_window.metal_context()
+    }
+
+    /// D3D11 device identity for GPU-only preview presentation.
+    #[cfg(target_os = "windows")]
+    pub fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {
+        self.platform_window.directx_device()
     }
 
     /// Removes an image from the sprite atlas.

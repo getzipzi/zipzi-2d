@@ -95,6 +95,7 @@ required-features = ["test-support"]
 gpui-apple = { package = "gpui-fast-apple", version = "=0.1.7", features = ["test-support"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.62", features = ["Win32_Graphics_Direct3D11"] }
 zipzi-editor-render = { workspace = true, features = ["wgpu-backend"] }
 wgpu.workspace = true
 

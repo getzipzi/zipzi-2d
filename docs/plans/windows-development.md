@@ -687,3 +687,92 @@ Windows 本次仅用 subprocess 包装相同生产驱动，CPU 归因复用现�
 本地 `target/parameter-path-20261028/` 保留探索数据，`direct-edges/` 为主对照，
 含固定二进制／SHA-256、原始 trace、audit、逐项分位数、内存样本和运行脚本。
 本轮没有采集新的 PresentMon，以上改善只确认 CPU 时间和进程内存，不宣称新的显示 FPS。
+
+## P6：Windows 全 GPU 预览第一版（2026-10-28）
+
+开始前将当时工作区保存为 `7e42c511`。主预览及网格生成候选预览现改为：
+
+```text
+wgpu / D3D12 普通输出 → 一次 GPU CopyTextureRegion → 共享 RGBA8 纹理
+                                                   ↓ ready fence
+                                       GPUI / D3D11 surface 合成
+                                                   ↓ consumed fence
+                                       无引用且 GPU 完成后复用
+```
+
+- 按 GPUI adapter LUID 选择 D3D12 adapter，不改变 SDK 默认 adapter 选择。
+- 共享纹理为独立 committed resource。wgpu 跟踪源纹理的 COPY_SRC 转换；桥接层
+  单独管理共享目标的 COMMON/COPY_DEST 状态。普通提交不等待 GPU 完成，也不映射像素。
+- GPUI core 新增 DirectX surface 和设备访问接口；本地纳入 crates.io 0.1.7
+  `gpui-fast-windows`。常规与 Fast 路径均采样共享 SRV，并使用预乘 source-over、
+  content mask、opacity。Fast 绘制后使状态缓存失效，后续文字/图元可正确恢复绑定。
+- 独立 ready/consumed fence；每次实际绘制（包括 retained redraw）都更新消费时间线。
+  槽位复用同时检查 Arc 独占及双向完成，不按帧序号直接覆盖。
+- 每个 presenter 上限 8 个共享槽位 / 256 MiB；该预算不含模型渲染附件与尚未退休的
+  普通输出纹理。主预览在池满时合并请求并重试；候选预览耗尽预算时返回明确错误。
+- 尺寸变更回收可复用的旧尺寸资源。设备身份变化重建预览连接，旧设备 surface 被跳过。
+  不支持共享资源/fence 的设备返回预览错误；未增加隐式回读 fallback。
+- 关闭时仍在飞行的原生命令转到后台退休线程；保留 wgpu Device/Queue，确保原生对象
+  先于后端/动态库释放。真实模型测试曾复现相反释放顺序的退出崩溃，现已加入回归。
+- 旧 `WgpuImageReadback` 保留用于导出、测试和基线测量；Windows 正常展示不调用它。
+  trace 新增 `shared_texture_submitted` / `paint_shared_surface`，二者都不是屏幕完成时间。
+
+### 本机验证
+
+RTX 5060 / Windows，以下检查通过：
+
+- Editor + editor-render all-targets check，启用 WGPU/test-support。
+- `windows_shared_texture`：3 项 GPU 集成测试。覆盖半透明颜色、元素 opacity、裁剪、
+  后续 UI 图元、重复绘制、100 次尺寸切换、旧帧不可变、池耗尽/复用、实际模型/UV 方向、
+  生产者销毁后继续合成，以及人为阻塞 GPU 时关闭 presenter 不阻塞调用线程。
+  最终测试目标允许回读用于像素断言，生产交接路径没有像素回读。
+- `headless_tests::ui_performance`：11 项通过；两个帧追踪工具测试文件共 22 项通过。
+- Release Editor 构建通过，包含 FXC 预编译 surface shaders。
+- Cargo domain 完整性检查及 vendor patch 反向应用检查通过。
+
+### 原生窗口 Release 对照
+
+使用此前保留的旧 Release 二进制（SHA-256 `d2842d8132dd651ca744d846322d93ae58984d5753ef7a9d59d13373c08370e5`）
+与本次新二进制（`51b0c3160344c052f5402dabfbef1d8794d08c7cc58fa9b8359670a88e20edfa`）。
+同一 Mao 模型、全选/全部 overlay、30 次预热 + 180 次正式参数输入、120 Hz 目标；
+按旧→新→新→旧顺序运行，采样阶段未运行编译。每轮实际变化的 mesh 数均为 93；
+四个进程正常完成、trace 无丢事件、无 render_error。
+
+| 轮次 | UI draw P50 / P95（ms） | 输入到首次图片/纹理平台返回 P50 / P95（ms） | 全程预览回读次数 |
+| --- | --- | --- | --- |
+| 旧 1 | 9.79 / 11.87 | 30.93 / 38.26 | 208 |
+| 新 1 | 9.05 / 10.64 | 30.58 / 36.68 | 0 |
+| 新 2 | 9.61 / 11.10 | 30.35 / 43.14 | 0 |
+| 旧 2 | 9.59 / 11.72 | 30.70 / 38.36 | 208 |
+
+新版本两轮各提交 208 张共享纹理；测量窗口内图片 atlas 上传字节均为 0。
+旧版本测量窗口的 atlas 上传约为 1047 / 1035 MiB，worker 回读 P50 为 1.71 / 1.70 ms。
+比较同时包含 Vulkan→D3D12 后端切换，不能把所有差异单独归因于共享纹理。
+这里确认移除回读/重新上传，UI draw P95 在两轮均降低；输入到平台返回的第二轮新版本
+尾部更慢，不宣称端到端显示延迟或 FPS 改善。新版本 published 表示异步提交，旧版本
+published 在回读完成之后；两种 publish-to-paint 指标的起点语义不同。
+
+本地 `target/windows-shared-texture-20261028/` 保存固定新旧二进制、运行脚本、原始 trace、
+模型变化 audit 和逐轮 JSON 结果。正常路径仍有一次 GPU 复制。直接渲染共享目标、
+最新已完成帧选择、更细的 GPU 时间戳/PresentMon、多厂商/混合显卡及强制设备丢失验收，
+留给后续阶段；本轮不将这些项目列为已完成。
+
+### 用户要求的再次 benchmark（2026-10-28）
+
+复用上述固定二进制（当前 Release SHA-256 与 `51b0c316…20edfa` 一致），按
+旧→新→新→旧重跑 Parameter 全选/全部 overlay。每轮 30 次预热＋180 次正式输入，
+目标 120 Hz；未运行编译。四轮均正常完成、零丢事件、无 render_error，实际变化的
+Mesh 均为 93。原始记录位于 `target/windows-shared-texture-20261028/rerun-1/`。
+
+| 轮次 | UI draw P50 / P95（ms） | 输入到首张对应纹理平台返回 P50 / P95（ms） | 回读次数 | 测量区间 atlas 上传 |
+| --- | --- | --- | --- | --- |
+| 旧 1 | 10.48 / 13.16 | 31.34 / 43.15 | 208 | 1059 MiB |
+| 新 1 | 9.13 / 11.36 | 30.21 / 39.74 | 0 | 0 |
+| 新 2 | 9.02 / 10.81 | 30.88 / 39.38 | 0 | 0 |
+| 旧 2 | 9.60 / 11.63 | 30.90 / 39.72 | 208 | 1053 MiB |
+
+每项 180 次正式输入中，未关联到对应新纹理平台返回的输入依次为 4、11、6、4；
+保留这些未确认输入，不将有时间戳的子集解释为所有输入。新版本各提交 208 张共享纹理。
+结果再次确认消除预览回读／atlas 上传及较低的 UI draw P95；输入到平台返回中位数
+仍约 30–31 ms，第二轮尾部差距很小。没有新增 PresentMon，不能当作显示 FPS 或
+屏幕端到端延迟结果，后端切换仍是对照中的共同变量。

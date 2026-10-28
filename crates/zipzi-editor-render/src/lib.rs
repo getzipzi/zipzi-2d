@@ -19,6 +19,11 @@ mod wgpu_macos;
 #[cfg(all(feature = "wgpu-backend", target_os = "macos"))]
 pub use wgpu_macos::WgpuMetalSceneRenderer;
 
+#[cfg(all(feature = "wgpu-backend", target_os = "windows"))]
+mod wgpu_windows;
+#[cfg(all(feature = "wgpu-backend", target_os = "windows"))]
+pub use wgpu_windows::{WindowsPresenter, windows_context};
+
 /// Shared screen-space radius for filled and hollow editing markers.
 pub const OVERLAY_MARKER_RADIUS: f32 = 3.;
 

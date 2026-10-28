@@ -8,9 +8,9 @@ mod metal;
 #[cfg(target_os = "macos")]
 pub use metal::*;
 #[cfg(target_os = "windows")]
-mod readback;
+mod windows;
 #[cfg(target_os = "windows")]
-pub use readback::*;
+pub use windows::*;
 
 #[derive(Clone, Copy)]
 pub struct Target {

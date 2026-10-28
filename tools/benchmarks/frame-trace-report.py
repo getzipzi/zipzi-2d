@@ -187,7 +187,7 @@ def analyze(records, budget_ms=1000 / 120):
         else:
             compose = None
             row["outcome"] = next((s for s in ("delivery_coalesced", "coalesced", "cancelled", "rejected", "render_error", "send_error") if s in group),
-                                  "painted_unconfirmed" if "compose_image" in group else
+                                  "painted_unconfirmed" if "compose_image" in group or "paint_shared_surface" in group else
                                   "accepted_not_composed" if "accepted" in group else "incomplete")
         if compose:
             times.update({name: e["at_ns"] for name, e in compose.items()})

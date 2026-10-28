@@ -7,10 +7,17 @@ use objc2_core_foundation::CFRetained;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use objc2_core_video::{CVPixelBuffer, CVPixelBufferGetHeight, CVPixelBufferGetWidth};
 use refineable::Refineable;
+#[cfg(target_os = "windows")]
+mod directx;
+#[cfg(target_os = "windows")]
+pub use directx::DirectXSurface;
 
 /// A source of a surface's content.
 #[derive(Clone, Debug)]
 pub enum SurfaceSource {
+    /// Immutable premultiplied D3D11 texture with explicit producer/consumer fences.
+    #[cfg(target_os = "windows")]
+    DirectX(std::sync::Arc<DirectXSurface>),
     /// A CoreVideo image buffer
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     Surface(CFRetained<CVPixelBuffer>),
@@ -29,6 +36,8 @@ impl From<CFRetained<CVPixelBuffer>> for SurfaceSource {
 impl PartialEq for SurfaceSource {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            #[cfg(target_os = "windows")]
+            (Self::DirectX(a), Self::DirectX(b)) => std::sync::Arc::ptr_eq(a, b),
             #[cfg(any(target_os = "macos", target_os = "ios"))]
             (Self::Surface(a), Self::Surface(b)) => a == b,
             #[cfg(target_os = "macos")]
@@ -40,7 +49,6 @@ impl PartialEq for SurfaceSource {
 }
 impl Eq for SurfaceSource {}
 
-
 /// A surface element.
 pub struct Surface {
     source: SurfaceSource,
@@ -49,7 +57,7 @@ pub struct Surface {
 }
 
 /// Create a new surface element.
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
 pub fn surface(source: impl Into<SurfaceSource>) -> Surface {
     Surface {
         source: source.into(),
@@ -121,6 +129,17 @@ impl Element for Surface {
         _: &mut App,
     ) {
         match &self.source {
+            #[cfg(target_os = "windows")]
+            SurfaceSource::DirectX(texture) => {
+                let size = crate::size(
+                    crate::DevicePixels(texture.extent[0] as i32),
+                    crate::DevicePixels(texture.extent[1] as i32),
+                );
+                window.paint_surface(
+                    self.object_fit.get_bounds(bounds, size),
+                    self.source.clone(),
+                );
+            }
             #[cfg(any(target_os = "macos", target_os = "ios"))]
             SurfaceSource::Surface(surface) => {
                 let size = crate::size(
