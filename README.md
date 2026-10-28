@@ -1,8 +1,9 @@
 # Zipzi 2D
 
 
-Zipzi 2D is a 2D modeling and animation tool and an alternative to Live2D
-Cubism Editor. Create and edit models in the desktop editor, use the Python
+Zipzi 2D (from Cantonese 摺紙, *zip3 zi2*, “origami”) is a 2D modeling and
+animation tool and an alternative to Live2D Cubism Editor. Create and edit models
+in the desktop editor, use the Python
 package to work programmatically and collaborate with AI agents.
 
 **Platforms:** macOS and Windows (development prototype).
