@@ -266,6 +266,47 @@ fn r2_worker_panic_keeps_frozen_view_and_never_leaves_editor_busy() -> anyhow::R
 }
 
 #[test]
+fn external_busy_command_queries_do_not_require_a_workspace_sync() -> anyhow::Result<()> {
+    use zipzi_editor_core::{CommandDisabledReason, CommandId};
+
+    let mut editor = Editor::new()?;
+    let host = editor.runtime_host();
+    let session = editor.document().unwrap().runtime_session_id();
+    let agent = host.write().register_client()?;
+    let command = editor.command(CommandId::CreateParameter);
+    assert!(editor.command_state(command).enabled);
+    let target = tempfile::tempdir()?;
+    let job = host.write().request_save(agent, session, target.path())?;
+
+    // Keep the Job queued and skip sync_runtime: this is the interval between
+    // socket admission and the workspace's asynchronous change notification.
+    assert!(editor.is_busy());
+    assert_eq!(
+        editor.command_state(command).disabled_reason,
+        Some(CommandDisabledReason::Busy)
+    );
+    let error = editor
+        .authoring_command_capability(CommandId::CreateParameter)
+        .unwrap_err();
+    assert!(matches!(
+        error.downcast_ref::<zipzi_runtime::RuntimeError>(),
+        Some(zipzi_runtime::RuntimeError::Busy)
+    ));
+
+    host.write().cancel_queued_job(agent, job)?;
+    host.write().release_job(agent, job)?;
+    assert!(!editor.is_busy());
+    assert!(editor.command_state(command).enabled);
+    assert_eq!(
+        editor.authoring_command_capability(CommandId::CreateParameter)?,
+        zipzi_sdk::CapabilityState::Available
+    );
+    assert!(editor.sync_runtime()?);
+    assert!(editor.document().is_some());
+    Ok(())
+}
+
+#[test]
 fn r2_external_busy_operation_freezes_then_restores_the_editor_projection() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
     let host = editor.runtime_host();

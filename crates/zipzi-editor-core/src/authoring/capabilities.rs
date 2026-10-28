@@ -336,6 +336,9 @@ impl crate::Editor {
     /// Domain state shared by native menus and configured authoring commands.
     pub fn authoring_command_capability(&self, id: crate::CommandId) -> Result<C> {
         use crate::CommandId as I;
+        if self.is_busy() {
+            return Err(zipzi_runtime::RuntimeError::Busy.into());
+        }
         let doc = self
             .document()
             .ok_or_else(|| anyhow::anyhow!("Document no longer exists"))?;

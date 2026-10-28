@@ -48,6 +48,61 @@ fn modify(harness: &Harness, cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
+fn rendering_external_busy_job_before_notification_freezes_and_restores_the_view(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{CommandDisabledReason, CommandId};
+
+    let (harness, host) = hosted(cx);
+    cx.run_until_parked();
+    let agent = host.runtime.write().register_client().unwrap();
+    let target = harness._config_dir.path().join("external-save");
+    cx.update_window(harness.window, |_, window, cx| {
+        let (job, menu_index) = harness.view.update(cx, |view, cx| {
+            let session = view.editor.document().unwrap().runtime_session_id();
+            let command = view.editor.command(CommandId::CreateParameter);
+            let menu_index = zipzi_editor_core::COMMANDS
+                .iter()
+                .position(|spec| spec.id == CommandId::CreateParameter)
+                .unwrap();
+            assert!(view.editor.command_state(command).enabled);
+            let job = host
+                .runtime
+                .write()
+                .request_save(agent, session, &target)
+                .unwrap();
+            cx.notify();
+            (job, menu_index)
+        });
+        // Draw in this same App update, before the notification task can run,
+        // and hold the queued Job until all Busy assertions complete.
+        window.render_frame(cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.is_busy());
+            assert!(view.editor.document().is_none());
+            let state = &view.menu_state.commands[menu_index];
+            assert!(!state.enabled);
+            assert_eq!(state.disabled_reason, Some(CommandDisabledReason::Busy));
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        });
+        let work = host.runtime.write().take_work(job).unwrap();
+        host.runtime.write().complete(work.run());
+        host.runtime.write().release_job(agent, job).unwrap();
+        // Ready also has to be visible without waiting for that task.
+        harness.view.update(cx, |_, cx| cx.notify());
+        window.render_frame(cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(!view.editor.is_busy());
+            assert!(view.editor.document().is_some());
+            assert!(view.menu_state.commands[menu_index].enabled);
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        });
+    })
+    .unwrap();
+    assert!(target.join("project.zipzi.json").is_file());
+}
+
+#[gpui_kit::test]
 fn last_idle_window_enters_quit_instead_of_parking_sessions(cx: &mut TestAppContext) {
     let (harness, host) = hosted(cx);
     // Exercise the native red-button callback. Quit owns the window lifetime;

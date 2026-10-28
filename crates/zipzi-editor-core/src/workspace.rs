@@ -288,8 +288,24 @@ impl Editor {
             .map_or_else(ViewState::default, |state| state.view)
     }
     pub fn is_busy(&self) -> bool {
-        self.active
-            .is_some_and(|id| self.entry(id).is_ok_and(|e| e.saving().is_some()))
+        self.active.is_some_and(|id| {
+            self.entry(id).is_ok_and(|entry| {
+                entry.saving().is_some()
+                    // External Jobs take SDK ownership before the workspace's
+                    // asynchronous notification has frozen its projection.
+                    || self
+                        .runtime
+                        .read()
+                        .session_info(entry.hosted_session_id())
+                        .is_ok_and(|info| {
+                            matches!(
+                                info.state,
+                                zipzi_runtime::SessionState::Busy(_)
+                                    | zipzi_runtime::SessionState::Closing
+                            )
+                        })
+            })
+        })
     }
     pub fn can_undo(&self) -> bool {
         self.timeline_edit().is_some()

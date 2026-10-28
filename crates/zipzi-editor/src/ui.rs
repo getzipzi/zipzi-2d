@@ -23,6 +23,19 @@ impl EditorView {
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let _span = benchmark::parameter_overlay::ui_span("ui.editor_render");
+        // Socket admission can lend the SDK session to a worker before the
+        // change-notification task runs. Freeze/restore projections before any
+        // panel or menu reads them in this frame.
+        match self.editor.sync_runtime() {
+            Ok(true) => self.redraw(cx),
+            Ok(false) => {}
+            Err(error) => {
+                let message = error.to_string();
+                if self.edit_error.as_deref() != Some(message.as_str()) {
+                    self.set_edit_error(message, cx);
+                }
+            }
+        }
         self.sync_viewports();
         let open: std::collections::HashSet<_> = self
             .editor
