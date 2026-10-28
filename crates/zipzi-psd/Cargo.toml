@@ -9,13 +9,13 @@ description = "Import layered PSD artwork into a Zipzi document draft"
 
 [dependencies]
 ag-psd = "=0.3.0"
-zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
+zipzi-core = { version = "=0.1.0-alpha.2", path = "../zipzi-core" }
 png.workspace = true
 sha2.workspace = true
 
 [dev-dependencies]
-zipzi-moc3-psd = { version = "=0.1.0-alpha.1", path = "../zipzi-moc3-psd" }
+zipzi-moc3-psd = { version = "=0.1.0-alpha.2", path = "../zipzi-moc3-psd" }
 
 [target.'cfg(target_os = "macos")'.dev-dependencies]
-zipzi-render = { version = "=0.1.0-alpha.1", path = "../zipzi-render" }
-zipzi-render-metal = { version = "=0.1.0-alpha.1", path = "../zipzi-render-metal" }
+zipzi-render = { version = "=0.1.0-alpha.2", path = "../zipzi-render" }
+zipzi-render-metal = { version = "=0.1.0-alpha.2", path = "../zipzi-render-metal" }

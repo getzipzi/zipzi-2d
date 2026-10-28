@@ -11,12 +11,12 @@ benchmark-global-surfaces = []
 
 [dependencies]
 bytemuck = { workspace = true }
-zipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }
-zipzi-render = { version = "=0.1.0-alpha.1", path = "../zipzi-render" }
+zipzi-core = { version = "=0.1.0-alpha.2", path = "../zipzi-core" }
+zipzi-render = { version = "=0.1.0-alpha.2", path = "../zipzi-render" }
 wgpu = { workspace = true }
 
 [dev-dependencies]
 png = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dev-dependencies]
-zipzi-render-metal = { version = "=0.1.0-alpha.1", path = "../zipzi-render-metal" }
+zipzi-render-metal = { version = "=0.1.0-alpha.2", path = "../zipzi-render-metal" }

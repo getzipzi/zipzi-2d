@@ -60,14 +60,14 @@ jobs:
       - run: uv run --locked python tools/dev.py test tools -p test_test_entrypoint.py -v
       - run: uv run --locked python tools/dev.py test tools -p test_test_runner.py -v
       - run: uv run --locked python tools/dev.py test tools -p test_tool_discovery.py -v
-      - run: uv run --locked python tools/dev.py test sdk fast physics_editing::
-      - run: uv run --locked python tools/dev.py test editor fast timeline::
-      - run: uv run --locked python tools/dev.py test editor fast recent_files::
-      - run: uv run --locked python tools/dev.py test editor fast platform_paths::
-      - run: uv run --locked python tools/dev.py test editor fast storage_tests::
+      - run: "uv run --locked python tools/dev.py test sdk fast physics_editing::"
+      - run: "uv run --locked python tools/dev.py test editor fast timeline::"
+      - run: "uv run --locked python tools/dev.py test editor fast recent_files::"
+      - run: "uv run --locked python tools/dev.py test editor fast platform_paths::"
+      - run: "uv run --locked python tools/dev.py test editor fast storage_tests::"
       - run: cargo test --locked -p zipzi-project --lib filesystem::tests -- --nocapture
       - run: cargo test --locked -p zipzi-runtime --test source_identity
-      - run: cargo test --locked -p zipzi-runtime --lib local::
+      - run: "cargo test --locked -p zipzi-runtime --lib local::"
       - run: cargo test --locked -p zipzi-runtime --test binary --test protocol
 
   python-runtime:

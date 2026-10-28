@@ -50,6 +50,8 @@ arguments and output paths.
 | `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
 | `dev-editor.sh` | Editor development watcher and process lifecycle |
 | `build-editor-app.sh` | macOS app bundle construction |
+| `packaging/package_windows.py` | Build and verify a Windows x86-64 portable archive from a compiled Editor |
+| `packaging/collect_python.py` | Verify acceptance reports and collect the Python release distributions |
 | `workspace/workspace.sh`, `workspace/workspace_tools.py` | Shared path and Cargo artifact handling |
 
 See [test coverage](#test-coverage), [CI coverage](#ci-coverage) and
@@ -104,41 +106,23 @@ during iteration and reserve full runs for broad regression acceptance.
 
 ### CI coverage
 
-Development gates run on relevant pull requests on Windows and macOS. They run native Python entrypoint controls and focused SDK physics/Editor Core timeline tests. The Editor compile matrix checks all targets with WGPU/test-support enabled; Windows additionally runs presentation scheduling logic tests. GPU image conversion is verified locally by the Editor renderer's `wgpu_readback` test; hosted jobs do not replace real GPU/window acceptance. SDK CI, Editor CI and Prepare Python Packages remain manual-only. Ordinary branch pushes do not start the full CI suites. Only an explicitly pushed
-`vX.Y.Z-alpha.N` tag starts Package macOS App and its GitHub prerelease upload.
-See [the release guide](../docs/RELEASING.md) for versioning and tag commands.
-
-For a downloadable app, open **Actions → Package macOS App → Run workflow**,
-select the branch and start the run, or use
-`gh workflow run macos-app.yml --ref <branch>`. This uses one `macos-15`
-Apple Silicon runner to build a Release app, verify its contents, apply and
-verify an ad hoc signature, and archive the bundle with executable permissions.
-It creates a drag-to-Applications DMG installer and verifies the mounted App.
-It also archives and verifies the corresponding workspace source and records
-SHA-256 checksums. Manual runs upload artifacts only; Alpha tag pushes publish
-the same verified artifacts to a GitHub prerelease.
-It does not run the SDK/Editor test suites or build Python wheels. Download
-`Zipzi-Editor-vX.Y.Z-alpha.N-macos-arm64` from the completed run's **Artifacts**
-section and extract the enclosed app zip to obtain `Zipzi Editor.app`.
-Artifacts are retained for three days; the job has a 90-minute timeout.
-This is a development build without Developer ID signing or notarization.
-Packaging success does not establish native runtime or UI acceptance.
+Development gates run on relevant pull requests on Windows and macOS. They run
+focused SDK, Editor, tooling and Python checks. SDK CI and Editor CI are manual.
+Only an explicitly pushed `vX.Y.Z-alpha.N` tag starts **Alpha release** and its
+GitHub prerelease and PyPI publication. A manual Alpha release run builds and
+validates all deliverables and uploads seven-day Actions artifacts without
+publishing. See [the release guide](../docs/RELEASING.md) for PyPI token
+setup, versioning, tag commands, platform scope and recovery.
 
 Use **Actions → SDK CI / Editor CI → Run workflow** for the full checks, or
 `gh workflow run rust.yml --ref <branch>` /
-`gh workflow run editor.yml --ref <branch>`. Manual triggers become available
-once the workflows are on the repository's default branch; no version tag is
-required. Repeated runs of the same workflow for the same branch cancel the
-previous pending or running workflow.
-
-Prepare Python Packages builds the formal `zipzi` client and optional
-`zipzi-native` backend, rebuilds wheels from their source archives and exercises
-isolated Local/Connected installation. It uploads the packages and acceptance
-report as three-day artifacts. No workflow uploads to PyPI or crates.io.
+`gh workflow run editor.yml --ref <branch>`. These workflows are manual-only.
+Repeated runs of the same workflow for the same branch cancel the previous
+pending or running workflow.
 
 SDK CI retains Linux/macOS/Windows, all-target clippy, decoder safety without
 native Core, complete SDK tests and the macOS WGPU blend reference. Maintained Python
-package build and installed integration run in Prepare Python Packages. Cargo commands select only SDK packages.
+package build and installed integration run in Alpha release. Cargo commands select only SDK packages.
 
 Editor CI runs on macOS: package coverage, formatting, tooling, every-target
 compilation with test-support, and core synthetic tests. A Swift Metal-device

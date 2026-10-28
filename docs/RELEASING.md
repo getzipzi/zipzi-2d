@@ -1,8 +1,9 @@
 # Releases
 
-The first release is `v0.1.0-alpha.1`, an Apple Silicon macOS Editor Alpha.
-PyPI and crates.io publication is prepared separately and is not triggered by
-the Mac release workflow. SDK CI and Editor CI remain manual-only.
+The first release, `v0.1.0-alpha.1`, contains the Apple Silicon macOS Editor.
+Subsequent Alpha releases use one workflow for the macOS and Windows Editors
+and the Python packages. Rust crates.io publication remains separate. SDK CI
+and Editor CI remain manual-only.
 
 ## Version identity
 
@@ -30,78 +31,93 @@ python3 tools/packaging/release.py check --tag v0.1.0-alpha.2
 ```
 
 The tool also supports stable, `beta.N` and `rc.N` versions. Only Alpha tags
-currently trigger Mac publication. Project-file schemas, native ABI contracts
+currently trigger Alpha publication. Project-file schemas, native ABI contracts
 and IPC protocol versions are separate compatibility contracts; do not change
 them merely to bump a release version.
 
-## Mac Alpha publication
+## Alpha publication
 
-1. Review and commit the intended source and release changes. A tag identifies
-   committed files; uncommitted changes are not included.
-2. Add `docs/releases/<tag>.md` with release notes, supported architecture and
-   known limitations. Run the focused tooling checks below and appropriate
-   native acceptance locally for the features being released.
-3. Push the source and an annotated Alpha tag:
+The **Alpha release** workflow (`.github/workflows/release-alpha.yml`) builds
+four independent jobs: the macOS Apple Silicon app and source archive, the
+Windows x86-64 portable app, and Python packages on macOS and Windows. Python
+builds rebuild wheels from their source archives and run isolated installed
+Local/Connected acceptance. A collection job checks both acceptance reports,
+commit identity, wheel tags and file hashes. It selects the macOS copies of the
+source archives and pure wheel and one native wheel per platform, then checks
+the distribution metadata. Only after all builds and collection succeed does a tag run create the GitHub prerelease
+and then publish the tested Python distributions to PyPI.
+
+Before the first PyPI publication:
+
+1. Configure the GitHub Actions repository secret `PYPI_API_TOKEN` with an
+   account-scoped PyPI token able to create and publish both `zipzi` and
+   `zipzi-native`. Verify the account email and confirm both project names are
+   available or owned by that account. The workflow uses the secret in its two
+   publishing jobs, with environments `pypi-zipzi` and `pypi-zipzi-native`.
+   Token-based publishing does not produce PyPI Trusted Publisher attestations.
+2. Configure the two GitHub environments and their deployment protections as
+   appropriate. To rotate the token, replace the existing Actions secret; never
+   add a token to the repository or logs.
+3. Verify Windows native desktop/GPU acceptance on a real Windows machine;
+   hosted build and Python checks do not validate the complete UI experience.
+   Also run the appropriate local macOS acceptance and release tooling checks.
+
+For each release:
+
+1. Set and check the version, then review and commit all source changes.
+2. Push the workflow changes to the default branch. Run **Actions → Alpha
+   release → Run workflow** on the intended commit as a rehearsal. A manual run
+   builds and uploads seven-day Actions artifacts only; it never publishes.
+3. Inspect the completed artifacts and acceptance reports, then push an annotated
+   Alpha tag matching the workspace version. For example:
 
    ```sh
-   git tag -a v0.1.0-alpha.1 -m 'Zipzi Editor 0.1.0 Alpha 1'
-   git push origin main refs/tags/v0.1.0-alpha.1
+   git tag -a v0.1.0-alpha.2 -m 'Zipzi 0.1.0 Alpha 2'
+   git push origin main refs/tags/v0.1.0-alpha.2
    ```
 
-4. Follow **Actions → Package macOS App**. The tag must exactly match the
-   workspace version. One `macos-15` runner builds the Release app, validates
-   its contents, ad hoc signs it, verifies the signature, and creates a zip and
-   a drag-to-Applications DMG installer. The DMG is mounted read-only to verify
-   its Applications link, executable bytes, release identity and App signature.
-   Corresponding complete workspace source and SHA-256 checksums accompany it.
-5. A small Linux job verifies downloaded checksums and creates a GitHub
-   **prerelease**, without marking it Latest. Release assets remain available
-   after the three-day Actions artifacts expire. Repository access rules apply
-   to private-repository Releases.
+4. Follow **Actions → Alpha release**. Once all builds pass, the workflow creates
+   a GitHub prerelease containing the Mac app ZIP and DMG, Windows portable ZIP,
+   complete workspace source, Python distributions and `SHA256SUMS`. GitHub
+   automatically generates the release notes. Separate PyPI jobs then publish `zipzi` followed by `zipzi-native` using the
+   configured API token.
 
-Ordinary commits and PR updates run nothing automatically. A manual Package
-macOS App run produces temporary artifacts without creating a GitHub Release.
-No Apple certificate is required for this Alpha; it is not Developer ID signed
-or notarized. Follow the release notes for first-launch instructions. Published
-tags and assets should not be replaced: fix the issue and use the next Alpha
-number. A failed run that created no Release can be retried from Actions.
+The Windows ZIP contains the executable, licenses/notices and build identity;
+it is unsigned. The macOS app is ad hoc signed, without Developer ID signing
+or notarization. macOS may block the first launch; if you trust the build, open
+System Settings → Privacy & Security → Open Anyway after attempting to launch it.
+Actions artifacts expire after seven days; GitHub Release assets persist.
+Python targets CPython 3.14; native wheels cover macOS arm64 and Windows x86-64.
+Other platforms can use the pure client; native source builds are not covered by
+this matrix. No Rust crates are published by this workflow.
 
-The first Alpha includes the Mac app only. Source archives include the required
-workspace layout, vendored patches, initialized Purism sources and notices;
-proprietary Cubism SDK/Core binaries and local models are excluded. SDK remains
-MIT; Editor remains GPL-3.0-only. Packaging success is not a substitute for native
-UI/GPU acceptance.
+The two external services cannot publish atomically. If GitHub succeeds and PyPI
+fails, the GitHub prerelease remains; inspect the failed PyPI job and fix the
+token or account configuration before rerunning the failed job. If the client job
+succeeded but the native job failed, the client is already public. PyPI uploads individual
+files and may partially succeed: check both PyPI projects and all files before
+retrying. Already-published files cannot be replaced; use a new Alpha version
+if the release needs changed artifacts. Do not blindly rerun the entire workflow
+against an existing GitHub release or tag. GitHub Release assets and PyPI
+versions must not be overwritten.
 
-## Python package preparation
+Development gates run for relevant pull requests; SDK CI and Editor CI remain
+manual. The Alpha workflow runs only on a matching tag push or manual dispatch.
+Packaging success does not establish native UI/GPU or licensed-model acceptance.
+
+## Python package identities
 
 The public client distribution is **`zipzi`**, imported as `zipzi`. The optional
 native backend is **`zipzi-native`**, imported as `zipzi_native`. Their sources
-remain at `crates/zipzi-python2/client` and `crates/zipzi-python2`; the Rust adapter
-crate retains its internal `zipzi-python2` name. The retired `zipzi-python`
-adapter has been removed from the workspace.
-
-Run **Actions → Prepare Python Packages → Run workflow** to produce source and
-wheel archives and installed Local/Connected acceptance evidence. This is
-manual-only and contains no registry upload step or registry credentials.
-Equivalent local preparation:
+remain at `crates/zipzi-python2/client` and `crates/zipzi-python2`; the Rust
+adapter retains its internal `zipzi-python2` name. Equivalent local preparation:
 
 ```sh
 uv sync --locked
 python3 tools/packaging/release.py check
 uv run --locked python crates/zipzi-python2/tools/distribution.py \
-  --output target/python-release-0.1.0a1
+  --output target/python-release-0.1.0a2
 ```
-
-The native backend version comes from Cargo via Maturin and is mapped to Python
-version syntax; the client and exact native-to-client requirement are checked by
-the release tool. Current Python support is CPython 3.14, with native source
-acceptance on macOS/Unix. Expand the wheel matrix only when those platforms are
-actually supported and tested.
-
-Before a future public Python release, configure PyPI/TestPyPI project ownership
-and Trusted Publishing for a dedicated upload workflow. Exercise TestPyPI first,
-then upload the already-tested immutable artifacts to PyPI. This repository does
-not yet enable either upload; creating a Mac Alpha tag publishes neither package.
 
 ## Rust package preparation
 

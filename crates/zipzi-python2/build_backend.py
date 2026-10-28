@@ -22,7 +22,7 @@ def __getattr__(name):
 def normalize_manifest(text):
     # These patch tables are for the Editor; no crate in the native SDK closure
     # depends on them. Keep all other workspace/package settings intact.
-    desktop = {'gpui-fast', 'gpui-fast-macos', 'gpui-fast-apple', 'gpui-component'}
+    desktop = {'gpui-fast', 'gpui-fast-macos', 'gpui-fast-apple', 'gpui-fast-windows', 'gpui-component'}
     def remove(match):
         tables = tomllib.loads(match[0])['patch']
         names = {name for table in tables.values() for name in table}

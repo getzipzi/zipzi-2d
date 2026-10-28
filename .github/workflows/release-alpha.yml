@@ -1,0 +1,260 @@
+name: Alpha release
+on:
+  push:
+    tags:
+      - 'v[0-9]*-alpha.*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alpha-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  macos-app:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Validate version
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        shell: bash
+        run: |
+          args=()
+          if [[ -n "$RELEASE_TAG" ]]; then args+=(--tag "$RELEASE_TAG"); fi
+          python3 tools/packaging/release.py check "${args[@]}" --github-output "$GITHUB_OUTPUT"
+      - name: Build and verify macOS app
+        env:
+          ZIPZI_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+        run: |
+          sh tools/build-editor-app.sh editor release
+          python3 tools/packaging/verify_artifacts.py --app 'target/Zipzi Editor.app'
+          codesign --force --deep --sign - 'target/Zipzi Editor.app'
+          codesign --verify --deep --strict 'target/Zipzi Editor.app'
+      - name: Package macOS app and source
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          mkdir -p target/releases
+          ditto -c -k --sequesterRsrc --keepParent 'target/Zipzi Editor.app' "target/releases/Zipzi-Editor-${RELEASE_TAG}-macos-arm64.zip"
+          python3 tools/packaging/package_macos.py --app 'target/Zipzi Editor.app' --output "target/releases/Zipzi-Editor-${RELEASE_TAG}-macos-arm64.dmg"
+          python3 tools/packaging/package_source.py "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
+          python3 tools/packaging/verify_artifacts.py --source "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: alpha-macos-app
+          path: target/releases/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  windows-app:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: '1'
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Validate version
+        id: release
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          args=()
+          if [[ -n "$RELEASE_TAG" ]]; then args+=(--tag "$RELEASE_TAG"); fi
+          python tools/packaging/release.py check "${args[@]}" --github-output "$GITHUB_OUTPUT"
+      - name: Build Windows Editor
+        run: cargo build --locked --release -p zipzi-editor
+      - name: Package and verify Windows Editor
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: python tools/packaging/package_windows.py --binary target/release/zipzi-editor.exe --output "target/releases/Zipzi-Editor-${env:RELEASE_TAG}-windows-x86_64.zip" --revision "${env:GITHUB_SHA}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: alpha-windows-app
+          path: target/releases/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  python:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos
+          - os: windows-2022
+            platform: windows
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.10.7'
+      - run: uv sync --locked
+      - name: Validate version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          args=()
+          if [[ -n "$RELEASE_TAG" ]]; then args+=(--tag "$RELEASE_TAG"); fi
+          uv run --locked python tools/packaging/release.py check "${args[@]}"
+      - name: Build and test Python distributions from source archives
+        run: uv run --locked python crates/zipzi-python2/tools/distribution.py --output target/python-release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: alpha-python-${{ matrix.platform }}
+          path: |
+            target/python-release/sdists/
+            target/python-release/wheels/
+            target/python-release/results.json
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  collect:
+    needs: [macos-app, windows-app, python]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: alpha-*-app
+          path: inputs/apps
+      - uses: actions/download-artifact@v8
+        with:
+          name: alpha-python-macos
+          path: inputs/python/macos
+      - uses: actions/download-artifact@v8
+        with:
+          name: alpha-python-windows
+          path: inputs/python/windows
+      - name: Verify and collect tested Python distributions
+        run: python tools/packaging/collect_python.py --builds inputs/python --output dist --revision "$GITHUB_SHA"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.10.7'
+      - name: Validate PyPI distribution metadata
+        run: uvx --from twine==7.0.0 twine check dist/*
+      - name: Assemble release assets and checksums
+        run: |
+          mkdir release
+          cp inputs/apps/alpha-macos-app/* inputs/apps/alpha-windows-app/* dist/* release/
+          (cd release && sha256sum ./* > SHA256SUMS && sha256sum --check SHA256SUMS)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: alpha-release-assets
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: alpha-python-client
+          path: dist/zipzi-*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: alpha-python-native
+          path: dist/zipzi_native-*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  github-release:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: collect
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: alpha-release-assets
+          path: release
+      - name: Verify and publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          (cd release && sha256sum --check SHA256SUMS)
+          gh release create "$RELEASE_TAG" release/* --verify-tag --title "Zipzi $RELEASE_TAG" --generate-notes --prerelease --latest=false
+
+  pypi-client:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [collect, github-release]
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi-zipzi
+      url: https://pypi.org/project/zipzi/
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: alpha-python-client
+          path: dist
+      - name: Publish zipzi to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: false
+
+  pypi-native:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [collect, pypi-client]
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi-zipzi-native
+      url: https://pypi.org/project/zipzi-native/
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: alpha-python-native
+          path: dist
+      - name: Publish zipzi-native to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: false
