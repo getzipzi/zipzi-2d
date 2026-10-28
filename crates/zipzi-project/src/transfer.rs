@@ -120,7 +120,7 @@ impl DocumentSession {
         // Parsing overlaps with the encoded source and prepared image buffers.
         // Leave headroom for those allocations even when the host's remaining
         // budget is below the normal decoder workspace cap.
-        let workspace = (self.image_memory_budget().available_bytes() / 2).min(512 << 20);
+        let workspace = (self.image_memory_budget().available_bytes() / 2).min(2usize << 30);
         let _decoded = self.image_memory_budget().reserve_transfer(workspace)?;
         let (model, animation) = linked_project_with_budget(path, workspace)?;
         let length = fs::metadata(&model)

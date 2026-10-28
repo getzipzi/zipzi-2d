@@ -60,6 +60,10 @@ have separate cursors; a gap or invalid cursor requires resynchronization.
 resources. Image, blob and document accounting is conservative and does not
 measure process RSS or GPU memory.
 
+The default aggregate accounting limit is 8 GiB and the image limit is 4 GiB
+on 64-bit hosts. Cubism import can reserve up to 2 GiB for parsing, subject to
+available shared budget; limits are admission ceilings, not preallocated memory.
+
 ## Local protocol
 
 The `protocol` and Unix `local` modules provide authenticated connections,

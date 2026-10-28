@@ -8,6 +8,28 @@ fn local(name: &str) -> PathBuf {
 }
 
 #[test]
+fn local_v3a9_cubism_import_through_editor_loads_both_entry_files() -> anyhow::Result<()> {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/local/v3a9_315702_nxss");
+    if !root.join("v3a9_315702_nxss.can3").is_file()
+        || !root.join("v3a9_315702_nxss.cmo3").is_file()
+    {
+        eprintln!("SKIP: local v3a9 project unavailable");
+        return Ok(());
+    }
+    for extension in ["cmo3", "can3"] {
+        let path = root.join(format!("v3a9_315702_nxss.{extension}"));
+        let mut editor = Editor::new()?;
+        let previous = editor.active_id();
+        let task = editor.prepare_load(LoadRequest::Cubism(path))?.unwrap();
+        editor.finish_load(task.run())?;
+        assert_ne!(editor.active_id(), previous);
+        assert_eq!(editor.document_count(), 2);
+    }
+    Ok(())
+}
+
+#[test]
 fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> anyhow::Result<()> {
     let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../models/local/v3a9_315702_nxss/v3a9_315702_nxss.can3");
