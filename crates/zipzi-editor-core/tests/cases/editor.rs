@@ -54,6 +54,57 @@ fn load(editor: &mut Editor, path: &std::path::Path) -> anyhow::Result<()> {
 }
 
 #[test]
+fn model3_background_import_resolves_selected_moc3() -> anyhow::Result<()> {
+    let source =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/external_v50");
+    let dir = tempfile::tempdir()?;
+    for file in ["model.moc3", "texture_00.png"] {
+        std::fs::copy(source.join(file), dir.path().join(file))?;
+    }
+    let entry = dir.path().join("different-name.model3.json");
+    std::fs::copy(source.join("model.model3.json"), &entry)?;
+
+    let mut editor = Editor::new()?;
+    let original = editor.active_id();
+    let moc = dir.path().join("model.moc3");
+    let task = editor
+        .prepare_load(LoadRequest::Model3(moc.clone()))?
+        .unwrap();
+    editor.finish_load(task.run())?;
+    assert_eq!(editor.document_count(), 2);
+    assert_ne!(editor.active_id(), original);
+    assert!(!editor.document().unwrap().layers().is_empty());
+    assert!(!editor.document().unwrap().parameters().is_empty());
+
+    let imported = editor.active_id();
+    std::fs::copy(&entry, dir.path().join("second.model3.json"))?;
+    let task = editor
+        .prepare_load(LoadRequest::Model3(moc.clone()))?
+        .unwrap();
+    let error = editor.finish_load(task.run()).unwrap_err().to_string();
+    assert!(error.contains("MODEL3_ENTRY"), "{error}");
+    assert_eq!(editor.active_id(), imported);
+    assert_eq!(editor.document_count(), 2);
+
+    std::fs::remove_file(dir.path().join("second.model3.json"))?;
+    let task = editor
+        .prepare_load(LoadRequest::Model3(entry.clone()))?
+        .unwrap();
+    editor.finish_load(task.run())?;
+    assert_eq!(editor.document_count(), 3);
+    assert!(!editor.document().unwrap().layers().is_empty());
+    let imported = editor.active_id();
+
+    std::fs::remove_file(&entry)?;
+    let task = editor.prepare_load(LoadRequest::Model3(moc))?.unwrap();
+    let error = editor.finish_load(task.run()).unwrap_err().to_string();
+    assert!(error.contains("MODEL3_ENTRY"), "{error}");
+    assert_eq!(editor.active_id(), imported);
+    assert_eq!(editor.document_count(), 3);
+    Ok(())
+}
+
+#[test]
 fn zoom_stays_within_four_to_thirty_two_hundred_percent() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
     let mut editor = crate::support::editor_from_document(document);

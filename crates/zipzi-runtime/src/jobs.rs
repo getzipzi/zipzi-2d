@@ -218,8 +218,21 @@ impl Work {
                 Task::Import(source) => {
                     let (path, result) = match source {
                         crate::ImportSource::Model3(path) => {
-                            let report = session.import_model3(&path, Some(base));
-                            (path, report.map(|r| r.project))
+                            let entry =
+                                zipzi_project::resolve_model3_entry(&path).map_err(|s| {
+                                    RuntimeError::Sdk(zipzi_sdk::SdkError {
+                                        code: s.code.into_boxed_str(),
+                                        message: s.message.into_boxed_str(),
+                                        operation: "import_model3",
+                                        object_ids: vec![path.display().to_string()],
+                                        field_path: None,
+                                        expected_version: None,
+                                        actual_version: None,
+                                        referrers: Box::new([]),
+                                    })
+                                })?;
+                            let report = session.import_model3(&entry, Some(base));
+                            (entry, report.map(|r| r.project))
                         }
                         crate::ImportSource::Psd(path) => {
                             let report = session.import_psd_in_memory(&path, Some(base));
