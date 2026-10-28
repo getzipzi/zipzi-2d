@@ -15,7 +15,7 @@ members = [
     "crates/zipzi-project",
     "crates/zipzi-sdk",
     "crates/zipzi-runtime",
-    "crates/zipzi-sdk-observe",
+    "crates/zipzi-observe",
     "crates/zipzi-python2",
     "crates/cubism-matrix-zipzi",
     "crates/zipzi-editor",
@@ -81,7 +81,7 @@ opt-level = 0
 [profile.dev.package.zipzi-sdk]
 opt-level = 0
 
-[profile.dev.package.zipzi-sdk-observe]
+[profile.dev.package.zipzi-observe]
 opt-level = 0
 
 [profile.dev.package.zipzi-project]

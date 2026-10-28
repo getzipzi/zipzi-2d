@@ -1,14 +1,12 @@
 [package]
-name = "zipzi-sdk-observe"
+name = "zipzi-observe"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Immutable observation inputs and GPU capture for Zipzi SDK"
+description = "Frozen snapshot capture and GPU observation for Zipzi Runtime"
 
 [features]
-default = ["framework-texture-filtering"]
-framework-texture-filtering = []
 wgpu-backend = ["dep:zipzi-render-wgpu", "dep:wgpu"]
 
 [dependencies]
@@ -27,6 +25,7 @@ zipzi-render-wgpu = { version = "=0.1.0-alpha.1", path = "../zipzi-render-wgpu",
 wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]
+tempfile.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 zipzi-render-metal = { version = "=0.1.0-alpha.1", path = "../zipzi-render-metal" }

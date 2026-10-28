@@ -4,7 +4,7 @@ Single-owner host for `zipzi-sdk` authoring sessions and independent CPU/GPU
 observation jobs. It owns the sole formal session and history, client/edit/job
 tables, project path reservations, bounded event streams and executor handoffs.
 There is no GPUI or PyO3 dependency. The default build is CPU-only. The optional
-`gpu-observation` feature uses `zipzi-sdk-observe` and initializes a device only
+`gpu-observation` feature uses `zipzi-observe` and initializes a device only
 on an explicit render worker. Python's native adapter and the desktop Editor
 enable this feature. CPU hosts report `gpu=false` and reject image requests
 with `GPU_UNAVAILABLE` before admission; CPU sampling and previews remain available.

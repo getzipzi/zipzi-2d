@@ -4,7 +4,7 @@ use super::*;
 #[cfg(feature = "gpu-observation")]
 use std::collections::VecDeque;
 #[cfg(feature = "gpu-observation")]
-use zipzi_sdk_observe::{ObservationInput, Observer, ResolvedObservation};
+use zipzi_observe::{ObservationInput, Observer, ResolvedObservation};
 
 pub(crate) struct ReadBatch {
     source: crate::SourceSnapshot,

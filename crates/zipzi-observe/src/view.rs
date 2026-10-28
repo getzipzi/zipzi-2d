@@ -20,8 +20,6 @@ pub struct RenderRequest {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ViewMapping {
-    pub requested_roi: ModelRoi,
-    pub padded_roi: ModelRoi,
     /// Entire output viewport expressed in model units. Its extent
     /// may exceed the padded ROI when the output aspect ratio differs.
     pub visible_roi: ModelRoi,
@@ -104,28 +102,10 @@ impl RenderRequest {
             ));
         }
         Ok(ViewMapping {
-            requested_roi: self.roi,
-            padded_roi,
             visible_roi,
             scale,
             offset,
         })
-    }
-}
-
-impl ViewMapping {
-    pub fn model_to_image(self, point: (f32, f32)) -> (f32, f32) {
-        (
-            point.0 * self.scale + self.offset.0,
-            -point.1 * self.scale + self.offset.1,
-        )
-    }
-
-    pub fn image_to_model(self, point: (f32, f32)) -> (f32, f32) {
-        (
-            (point.0 - self.offset.0) / self.scale,
-            (self.offset.1 - point.1) / self.scale,
-        )
     }
 }
 
@@ -134,7 +114,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn non_square_view_preserves_aspect_and_round_trips_subpixels() {
+    fn non_square_view_preserves_aspect_and_centers_roi() {
         let mapping = RenderRequest {
             width: 1024,
             height: 512,
@@ -148,13 +128,11 @@ mod tests {
         }
         .mapping()
         .unwrap();
-        assert!(mapping.visible_roi.x0 < mapping.padded_roi.x0);
-        assert!(mapping.visible_roi.x1 > mapping.padded_roi.x1);
-        for point in [(-10.25, 17.5), (36.625, 31.125), (89.75, 67.5)] {
-            let restored = mapping.image_to_model(mapping.model_to_image(point));
-            assert!((restored.0 - point.0).abs() < 0.00001);
-            assert!((restored.1 - point.1).abs() < 0.00001);
-        }
+        assert!(mapping.visible_roi.x0 < -15.25);
+        assert!(mapping.visible_roi.x1 > 94.75);
+        let center = (39.75, 42.5);
+        assert!((center.0 * mapping.scale + mapping.offset.0 - 512.).abs() < 0.0001);
+        assert!((-center.1 * mapping.scale + mapping.offset.1 - 256.).abs() < 0.0001);
     }
 
     #[test]

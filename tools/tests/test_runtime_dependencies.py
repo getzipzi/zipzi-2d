@@ -27,7 +27,7 @@ class RuntimeDependencies(unittest.TestCase):
 
     def test_gpu_runtime_keeps_ui_and_python_adapters_out(self):
         runtime = self.dependencies('zipzi-runtime', 'gpu-observation')
-        self.assertIn('zipzi-sdk-observe', runtime)
+        self.assertIn('zipzi-observe', runtime)
         self.assertIn('zipzi-render', runtime)
         self.assertFalse({name for name in runtime if name.startswith((
             'gpui', 'pyo3', 'zipzi-editor',

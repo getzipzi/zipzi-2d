@@ -7,8 +7,8 @@ license.workspace = true
 description = "UI-independent host for Zipzi authoring sessions"
 
 [features]
-wgpu-backend = ["gpu-observation", "zipzi-sdk-observe/wgpu-backend"]
-gpu-observation = ["dep:zipzi-sdk-observe"]
+wgpu-backend = ["gpu-observation", "zipzi-observe/wgpu-backend"]
+gpu-observation = ["dep:zipzi-observe"]
 test-support = []
 bench-instrumentation = ["zipzi-project/bench-instrumentation"]
 
@@ -17,7 +17,7 @@ zipzi-api-derive = { version = "=0.1.0-alpha.1", path = "../zipzi-api-derive" }
 zipzi-core.workspace = true
 zipzi-sdk.workspace = true
 zipzi-project.workspace = true
-zipzi-sdk-observe = { version = "=0.1.0-alpha.1", path = "../zipzi-sdk-observe", optional = true }
+zipzi-observe = { version = "=0.1.0-alpha.1", path = "../zipzi-observe", optional = true }
 uuid.workspace = true
 thiserror.workspace = true
 serde.workspace = true

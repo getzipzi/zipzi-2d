@@ -26,11 +26,11 @@ pub(crate) struct PreviewSampling {
     view: Option<crate::observation::ObservationView>,
     initialized: bool,
     #[cfg(feature = "gpu-observation")]
-    observer: Option<zipzi_sdk_observe::Observer>,
+    observer: Option<zipzi_observe::Observer>,
     #[cfg(feature = "gpu-observation")]
-    inputs: Vec<zipzi_sdk_observe::ObservationInput>,
+    inputs: Vec<zipzi_observe::ObservationInput>,
     #[cfg(feature = "gpu-observation")]
-    captures: Option<VecDeque<zipzi_sdk_observe::ResolvedObservation>>,
+    captures: Option<VecDeque<zipzi_observe::ResolvedObservation>>,
     frames: Vec<PreviewFrame>,
 }
 impl PreviewSampling {
@@ -127,10 +127,9 @@ impl PreviewSampling {
             if self.view.is_some() {
                 crate::observation::check(cancel)?;
                 self.inputs.push(
-                    zipzi_sdk_observe::ObservationInput::capture_motion_from_snapshot(
+                    zipzi_observe::ObservationInput::capture_motion_from_snapshot(
                         &source.snapshot,
                         &state,
-                        true,
                     )
                     .map_err(crate::observation::error)?,
                 );
@@ -160,7 +159,7 @@ impl PreviewSampling {
         let view = self.view.expect("observation view");
         if self.captures.is_none() {
             self.captures = Some(
-                zipzi_sdk_observe::ResolvedObservation::capture_many_with_control(
+                zipzi_observe::ResolvedObservation::capture_many_with_control(
                     std::mem::take(&mut self.inputs),
                     control,
                 )

@@ -5,9 +5,9 @@ operations, and CPU geometry queries.
 
 `resolve_mesh_ids`, `object_bounds`, and `hit_test_geometry` operate on one
 evaluated `DrawableFrame` plus its frozen `Mesh` and `Part` records. They do not
-need a renderer or textures. The observer's Python binding calls them on a
-captured scene; the analysis-packet reader reuses them after reopening saved
-geometry, including in wheels built without GPU observation.
+need a renderer or textures. Runtime spatial queries reuse these CPU operations
+on frozen formal/candidate sources and Preview states, including hosts built
+without GPU observation.
 
 Palette sorting uses `EditSession::replace_hierarchy_order(HierarchyOrder)`.
 `Document::hierarchy_order()` exposes independent organization and deformation

@@ -17,7 +17,7 @@ Sources and overrides are defined in [Cargo.toml](../Cargo.toml). All workspace
 crates share [Cargo.lock](../Cargo.lock); build and test with `--locked`.
 Zipzi uses local path dependencies, so Cargo.lock does not pin their source
 revision. Use one checkout for all Zipzi crates, including
-`zipzi-sdk-observe` for tests. No sibling GPUI checkout is needed.
+`zipzi-observe` for tests. No sibling GPUI checkout is needed.
 
 The workspace enables `gpui-fast` on GPUI Kit and the optional FPS monitor.
 The local Fast patches support native Metal surfaces, shared queues, headless

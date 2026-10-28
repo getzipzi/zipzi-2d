@@ -15,7 +15,7 @@
 - 修复 SDK 原先把候选的文档修订号与正式基准版本比较而误拒绝的问题。GPU 捕获现在
   比较 Core 已有的不可变 snapshot identity；不同候选即使局部修订计数相同也不能混用。
   该检查为常数时间，不展开或重新 hash 整个文档。
-- Runtime 接入 `zipzi-sdk-observe`，逐批解析纹理并固定实际解码内容，再共享给该批全部帧。
+- Runtime 接入 `zipzi-observe`，逐批解析纹理并固定实际解码内容，再共享给该批全部帧。
   候选 PreparedImage 在调用方释放、后续替换或取消后仍由冻结来源保留。
   磁盘资源在 worker 执行时解析并校验；缺失、被修改或无效的资源明确失败，不用新内容冒充
   旧来源。结果带实际纹理哈希和 capture/scene/render/input digest。
@@ -81,8 +81,8 @@ Native/IPC 配对更新为 `zipzi-python2-18` / `zipzi-runtime-r5-observation-1`
 ```sh
 ./tools/test-sdk.sh python2 --observation
 cargo test --locked -p zipzi-runtime --test observation -- --include-ignored
-cargo test --locked -p zipzi-sdk-observe --lib view::
-cargo test --locked -p zipzi-sdk-observe --test capture cancelled_capture
+cargo test --locked -p zipzi-observe --lib view::
+cargo test --locked -p zipzi-observe --test capture cancelled_capture
 ```
 
 GPU 测试及分发 recipe 均使用显式 `--observation`，默认 CPU 入口保持独立。
@@ -98,3 +98,15 @@ GPU 测试及分发 recipe 均使用显式 `--observation`，默认 CPU 入口�
 客户端公平轮转、批次续执行和 Editor 播放/Physics/双视口隔离现已通过定向回归，
 保存中关闭标签页的生命周期冲突已修复；具体证据及仍待完成的原生性能/发行复验见
 [调度与隔离记录](python2-r5-scheduling.md)。本切片原有数字描述当时的验证范围。
+
+## 2026-10-28 观察 crate 收敛
+
+`zipzi-sdk-observe` 更名为 `zipzi-observe`，公开 API 收敛到 Runtime 实际使用的
+快照捕获、动画捕获、可取消的批量纹理固定、显式 ROI 渲染和结果摘要。删除场景包
+保存/重开、自动居中、参数名称解析、直接 Session 捕获及无控制器的便捷入口。
+动画捕获固定应用 Model opacity，结果只保留 Runtime 投影所需字段；纹理 revision
+留在 GPU 缓存内部。删除的场景包功能不再列为该 crate 的待接入能力。
+
+摘要实现独立为内部 `digest` 模块；模型结构仍参与内容摘要和批次一致性检查。
+场景摘要域更新为 `zipzi-observe-scene-digest-v2`，不再携带场景文件路径或操作日志
+占位字段。Runtime 的图像结果和协议字段保持原有形状。

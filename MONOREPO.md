@@ -22,7 +22,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | `zipzi-render-metal` | Native Metal rendering |
 | `zipzi-sdk` | Transactional Rust authoring API |
 | [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
-| `zipzi-sdk-observe` | Immutable inspection and GPU capture |
+| `zipzi-observe` | Immutable inspection and GPU capture |
 | [`zipzi-python2`](crates/zipzi-python2/README.md) | Independent typed Python client and optional Runtime-native adapter |
 | `cubism-matrix-zipzi` | SDK comparison benchmark runner |
 | [`zipzi-editor-core`](crates/zipzi-editor-core/README.md) | UI-independent Editor state and SDK coordination |
@@ -47,7 +47,7 @@ results. Python provides user-facing types, context managers, batch workflows
 and reports. New modeling rules belong in Rust even when Python is their only
 current caller; model-specific experiments remain in experiment tooling.
 
-`zipzi-sdk-observe` captures immutable session snapshots and validates image
+`zipzi-observe` captures immutable session snapshots and validates image
 resources through `zipzi-project`. Render backends share scene planning and CPU
 geometry through `zipzi-render`: native Metal on macOS and WGPU on other
 platforms. See [format conversion boundaries](crates/zipzi-cmo3/README.md) and

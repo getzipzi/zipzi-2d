@@ -2,8 +2,10 @@
 use std::{collections::HashMap, env, fs, path::PathBuf};
 
 use zipzi_core::{Canvas, Vec2};
+use zipzi_observe::{
+    ModelRoi, ObservationInput, Observer, ObserverConfig, RenderRequest, ResolvedObservation,
+};
 use zipzi_sdk::AuthoringSession;
-use zipzi_sdk_observe::{ObservationInput, Observer, ObserverConfig};
 
 const DOCUMENT: &str = "00000000-0000-4000-8000-00000000f901";
 const MOTION: &str = "00000000-0000-4000-8000-00000000f902";
@@ -11,10 +13,8 @@ const POSE: &str = "00000000-0000-4000-8000-00000000f903";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().skip(1).collect();
-    if !(args.len() == 6 || args.len() == 7 && args[6] == "--apply-model-opacity") {
-        return Err(
-            "expected MOC3 texture motion3 pose3 output.png time [--apply-model-opacity]".into(),
-        );
+    if args.len() != 6 {
+        return Err("expected MOC3 texture motion3 pose3 output.png time".into());
     }
     let mut session = AuthoringSession::new(
         DOCUMENT,
@@ -47,17 +47,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut preview = session.motion_preview();
     preview.schedule_motion(MOTION, 0.0)?;
     preview.seek(args[5].parse()?)?;
-    let input = ObservationInput::capture_motion_with_renderer_opacity(
-        &session,
-        &preview,
-        args.len() == 7,
-    )?;
+    let input = ObservationInput::capture_motion_from_snapshot(&session.read_snapshot(), &preview)?;
+    let captured = ResolvedObservation::capture_many_with_control(
+        vec![input],
+        &zipzi_sdk::ConversionControl::default(),
+    )?
+    .remove(0);
+    // The probe chooses its own square view to match Framework's fitted view.
+    let frame = preview.evaluate_drawables_including_hidden()?;
+    let [x0, y0, x1, y1] = frame.model_bounds(false).unwrap_or([0.; 4]);
+    let side = (x1 - x0).max(y1 - y0).max(1.) as f32;
+    let center = (((x0 + x1) * 0.5) as f32, ((y0 + y1) * 0.5) as f32);
+    let request = RenderRequest {
+        width: 128,
+        height: 128,
+        roi: ModelRoi {
+            x0: center.0 - side * 0.5,
+            y0: center.1 - side * 0.5,
+            x1: center.0 + side * 0.5,
+            y1: center.1 + side * 0.5,
+        },
+        padding_model: 0.,
+    };
     let mut observer = Observer::new(ObserverConfig {
         width: 128,
         height: 128,
-        fit_long_side: 128.0,
     })?;
-    fs::write(&args[4], observer.observe(&input)?.png_bytes()?)?;
+    fs::write(&args[4], observer.render(&captured, request)?.png_bytes()?)?;
     let snapshot = preview.snapshot();
     for (index, id) in session.parameter_ids().iter().enumerate() {
         let runtime_id = &session.parameter(id).ok_or("missing parameter")?.runtime_id;

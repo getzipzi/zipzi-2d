@@ -90,13 +90,14 @@ def main() -> int:
                 key = f"{variant}_{time:.2f}"
                 zipzi = OUT / f"{key}_zipzi.png"
                 official = OUT / f"{key}_framework.png"
-                output = run(["cargo", "run", "-q", "-p", "zipzi-sdk-observe",
+                output = run(["cargo", "run", "-q", "-p", "zipzi-observe",
                               "--example", "animation_gpu_frame", "--", str(moc),
                               str(TEXTURE), str(MOTION), str(POSE), str(zipzi), str(time)])
                 parameters, parts, model_opacity = numeric_state(output)
                 framework_output = run([str(GPU), str(SHADERS), str(moc), str(TEXTURE),
                                         str(official), "128x128", "128", *parameters, *parts,
-                                        "--model-opacity", str(model_opacity)])
+                                        "--model-opacity", str(model_opacity),
+                                        "--renderer-opacity", str(model_opacity)])
                 framework_details = [json.loads(line) for line in framework_output.splitlines()
                                      if line.startswith("{")]
                 if len(framework_details) != 1:
@@ -109,25 +110,8 @@ def main() -> int:
                                          "offscreen_count": expected_offscreens}
                 report["inputs"][str(zipzi.relative_to(ROOT))] = digest(zipzi)
                 report["inputs"][str(official.relative_to(ROOT))] = digest(official)
-                applied_key = f"{key}_model_applied"
-                applied_zipzi = OUT / f"{applied_key}_zipzi.png"
-                applied_official = OUT / f"{applied_key}_framework.png"
-                run(["cargo", "run", "-q", "-p", "zipzi-sdk-observe", "--example",
-                     "animation_gpu_frame", "--", str(moc), str(TEXTURE), str(MOTION),
-                     str(POSE), str(applied_zipzi), str(time), "--apply-model-opacity"])
-                run([str(GPU), str(SHADERS), str(moc), str(TEXTURE),
-                     str(applied_official), "128x128", "128", *parameters, *parts,
-                     "--model-opacity", str(model_opacity),
-                     "--renderer-opacity", str(model_opacity)])
-                report["frames"][applied_key] = {
-                    **compare(applied_zipzi, applied_official),
-                    "model_opacity": model_opacity,
-                    "offscreen_count": expected_offscreens,
-                }
-                report["inputs"][str(applied_zipzi.relative_to(ROOT))] = digest(applied_zipzi)
-                report["inputs"][str(applied_official.relative_to(ROOT))] = digest(applied_official)
         for path in (MOTION, POSE, TEXTURE, GPU, SOURCE / "model.moc3",
-                     ROOT / "crates/zipzi-sdk-observe/examples/animation_gpu_frame.rs",
+                     ROOT / "crates/zipzi-observe/examples/animation_gpu_frame.rs",
                      ROOT / "tools/validation/probes/framework_gpu_probe.cpp"):
             report["inputs"][str(path.relative_to(ROOT))] = digest(path)
         report["model_opacity_application"] = "passed"

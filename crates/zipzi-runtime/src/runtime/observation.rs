@@ -47,7 +47,7 @@ mod tests {
             base: w.base,
             session: None,
             outcome: crate::jobs::WorkOutcome::Complete(Err(error(
-                zipzi_sdk_observe::ObservationError {
+                zipzi_observe::ObservationError {
                     code: "GPU_ADAPTER".into(),
                     message: "No test device".into(),
                     asset_id: None,

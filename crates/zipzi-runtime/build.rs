@@ -27,7 +27,7 @@ fn main() {
     ];
     for name in [
         "zipzi-runtime",
-        "zipzi-sdk-observe",
+        "zipzi-observe",
         "zipzi-render",
         "zipzi-render-metal",
         "zipzi-render-wgpu",

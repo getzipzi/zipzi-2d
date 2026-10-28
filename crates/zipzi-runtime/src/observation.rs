@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use zipzi_core::PreviewValues;
 #[cfg(feature = "gpu-observation")]
-use zipzi_sdk_observe::{Observer, ObserverConfig, ResolvedObservation};
+use zipzi_observe::{Observer, ObserverConfig, ResolvedObservation};
 
 #[derive(
     Debug,
@@ -27,12 +27,12 @@ pub struct ObservationView {
 }
 impl ObservationView {
     #[cfg(feature = "gpu-observation")]
-    pub fn request(self) -> zipzi_sdk_observe::RenderRequest {
+    pub fn request(self) -> zipzi_observe::RenderRequest {
         let [x0, y0, x1, y1] = self.roi;
-        zipzi_sdk_observe::RenderRequest {
+        zipzi_observe::RenderRequest {
             width: self.width,
             height: self.height,
-            roi: zipzi_sdk_observe::ModelRoi { x0, y0, x1, y1 },
+            roi: zipzi_observe::ModelRoi { x0, y0, x1, y1 },
             padding_model: self.padding_model,
         }
     }
@@ -137,7 +137,7 @@ pub(crate) fn gpu_unavailable() -> crate::RuntimeError {
     })
 }
 #[cfg(feature = "gpu-observation")]
-pub(crate) fn error(e: zipzi_sdk_observe::ObservationError) -> crate::RuntimeError {
+pub(crate) fn error(e: zipzi_observe::ObservationError) -> crate::RuntimeError {
     crate::RuntimeError::Sdk(zipzi_sdk::SdkError {
         code: e.code.into(),
         message: e.message.into(),
@@ -162,7 +162,6 @@ pub(crate) fn observer(view: ObservationView) -> crate::Result<Observer> {
     Observer::new(ObserverConfig {
         width: view.width,
         height: view.height,
-        fit_long_side: 1.,
     })
     .map_err(error)
 }
@@ -173,7 +172,7 @@ pub(crate) fn render(
     view: ObservationView,
 ) -> crate::Result<ObservationImage> {
     let frame = observer.render(capture, view.request()).map_err(error)?;
-    let mapping = frame.explicit_view.expect("explicit observation view");
+    let mapping = frame.view;
     let roi = mapping.visible_roi;
     let png = frame.png_bytes().map_err(error)?;
     Ok(ObservationImage {
@@ -189,16 +188,12 @@ pub(crate) fn render(
         input_sha256: frame.input_sha256,
         adapter_name: frame.adapter_name,
         adapter_backend: frame.adapter_backend,
-        parameters: frame
-            .parameters
-            .into_iter()
-            .map(|(id, _, value, _)| (id, value))
-            .collect(),
+        parameters: frame.parameters,
         visible_roi: [roi.x0, roi.y0, roi.x1, roi.y1],
         scale: mapping.scale,
         offset: [mapping.offset.0, mapping.offset.1],
         textures: frame
-            .texture_revisions
+            .textures
             .into_iter()
             .map(|t| ObservedTexture {
                 asset_id: t.asset_id,

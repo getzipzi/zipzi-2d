@@ -1,14 +1,13 @@
-//! Immutable input capture for rendering an authoring session.
+//! Frozen snapshot capture and explicit-view GPU rendering for Runtime jobs.
 //!
-//! Capture borrows the session briefly. Resource IO happens later, from the
-//! captured descriptors, so an observer never holds an editing lock while
-//! decoding images or submitting GPU work.
+//! Evaluation uses detached authoring snapshots. Texture decoding and GPU work
+//! never borrow the live editing session.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use zipzi_animation::{MotionOperation, MotionPreview, MotionSnapshot};
+use zipzi_animation::{MotionPreview, MotionSnapshot};
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::evaluation::evaluate_frame_including_hidden;
 use zipzi_core::{
@@ -16,19 +15,18 @@ use zipzi_core::{
     Mesh, MeshBinding, Offscreen, Parameter, Part, PreviewValues, SceneBinding, Transform,
 };
 use zipzi_project::{read_project_asset, AssetData};
-use zipzi_sdk::{AuthoringSession, AuthoringSnapshot, Version};
+use zipzi_sdk::{AuthoringSnapshot, Version};
 
-mod bundle;
+mod digest;
 mod gpu;
 mod view;
-pub use gpu::{DrawableBounds, ObservedFrame, Observer, ObserverConfig, TextureRevision};
+pub use gpu::{DrawableBounds, ObservedFrame, ObservedTexture, Observer, ObserverConfig};
 pub use view::{ModelRoi, RenderRequest, ViewMapping};
 
 #[derive(Clone, Debug)]
 pub struct ObservationInput {
     version: Version,
     evaluation_revision: u64,
-    snapshot_clone_ns: u64,
     document_id: String,
     requested: PreviewValues,
     frame: DrawableFrame,
@@ -39,59 +37,44 @@ pub struct ObservationInput {
     authoring: CapturedAuthoring,
 }
 
-/// Object identities and source topology from the same document snapshot as
-/// the evaluated frame. Interpolation provenance is added by a later stage.
+/// Authoring content retained only for the scene digest and batch validation.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct CapturedAuthoring {
-    pub meshes: Vec<Mesh>,
-    pub parts: Vec<Part>,
-    pub transforms: Vec<Transform>,
-    pub bindings: Vec<MeshBinding>,
+struct CapturedAuthoring {
+    meshes: Vec<Mesh>,
+    parts: Vec<Part>,
+    transforms: Vec<Transform>,
+    bindings: Vec<MeshBinding>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub parameters: Vec<Parameter>,
+    parameters: Vec<Parameter>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub assets: Vec<ImageAsset>,
+    assets: Vec<ImageAsset>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub draw_order_groups: Vec<DrawOrderGroup>,
+    draw_order_groups: Vec<DrawOrderGroup>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub scene_bindings: Vec<SceneBinding>,
+    scene_bindings: Vec<SceneBinding>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub offscreens: Vec<Offscreen>,
+    offscreens: Vec<Offscreen>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub glues: Vec<Glue>,
+    glues: Vec<Glue>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub blend_key_tables: Vec<BlendShapeKeyTable>,
+    blend_key_tables: Vec<BlendShapeKeyTable>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub blend_constraints: Vec<BlendShapeConstraint>,
+    blend_constraints: Vec<BlendShapeConstraint>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub blend_bindings: Vec<BlendShapeBinding>,
+    blend_bindings: Vec<BlendShapeBinding>,
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "source_kind", rename_all = "snake_case")]
-pub enum ObservationSource {
+enum ObservationSource {
     Parameters,
-    Animation {
-        snapshot: Box<MotionSnapshot>,
-        apply_model_opacity: bool,
-        /// Live preview captures do not contain a complete update journal.
-        history_status: HistoryStatus,
-        /// Last successful operation; not a complete replay recipe.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        operation: Option<MotionOperation>,
-    },
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HistoryStatus {
-    NotRecorded,
+    Animation { snapshot: Box<MotionSnapshot> },
 }
 
 #[derive(Clone, Debug)]
-pub struct ResolvedTexture {
-    pub asset: ImageAsset,
-    pub data: AssetData,
+struct ResolvedTexture {
+    asset: ImageAsset,
+    data: AssetData,
 }
 
 /// A captured evaluated frame and its decoded textures. Rendering this value
@@ -119,16 +102,7 @@ fn check_capture(control: &zipzi_sdk::ConversionControl) -> Result<(), Observati
 }
 
 impl ResolvedObservation {
-    pub fn capture(input: ObservationInput) -> Result<Self, ObservationError> {
-        Ok(Self::capture_many(vec![input])?.remove(0))
-    }
-
-    /// Resolve the union of sample assets once and share their decoded bytes.
-    /// All inputs must come from the same authoring snapshot.
-    pub fn capture_many(inputs: Vec<ObservationInput>) -> Result<Vec<Self>, ObservationError> {
-        Self::capture_many_with_control(inputs, &zipzi_sdk::ConversionControl::default())
-    }
-
+    /// Resolve 1..64 inputs from one snapshot, sharing decoded texture content.
     /// Cooperatively cancel between samples, texture decodes and scene digests.
     /// An already entered image decode completes before cancellation is observed.
     pub fn capture_many_with_control(
@@ -239,14 +213,6 @@ impl ResolvedObservation {
             .collect()
     }
 
-    pub fn input(&self) -> &ObservationInput {
-        &self.input
-    }
-
-    pub fn textures(&self) -> &[ResolvedTexture] {
-        &self.textures
-    }
-
     pub fn capture_id(&self) -> &str {
         &self.capture_id
     }
@@ -272,89 +238,6 @@ impl std::fmt::Display for ObservationError {
 impl std::error::Error for ObservationError {}
 
 impl ObservationInput {
-    /// Resolve IDs or unique display names against the detached document.
-    pub fn resolve_requested(
-        snapshot: &AuthoringSnapshot,
-        values: &PreviewValues,
-    ) -> Result<PreviewValues, ObservationError> {
-        let document = snapshot.document();
-        let mut resolved = PreviewValues::new();
-        for (name_or_id, value) in values {
-            let id = if document.get_parameter(name_or_id).is_some() {
-                name_or_id.clone()
-            } else {
-                let mut matches = document.parameter_order().iter().filter(|id| {
-                    document
-                        .get_parameter(id)
-                        .is_some_and(|p| p.name == *name_or_id)
-                });
-                match (matches.next(), matches.next()) {
-                    (Some(id), None) => id.clone(),
-                    (Some(_), Some(_)) => {
-                        return Err(ObservationError {
-                            code: "AMBIGUOUS_PARAMETER_NAME".into(),
-                            message: format!("Parameter name {name_or_id:?} is ambiguous"),
-                            asset_id: None,
-                        });
-                    }
-                    _ => {
-                        return Err(ObservationError {
-                            code: "UNKNOWN_PARAMETER".into(),
-                            message: format!("Unknown parameter {name_or_id:?}"),
-                            asset_id: None,
-                        });
-                    }
-                }
-            };
-            if resolved.insert(id.clone(), *value).is_some() {
-                return Err(ObservationError {
-                    code: "DUPLICATE_PARAMETER".into(),
-                    message: format!("Parameter {id:?} was supplied twice"),
-                    asset_id: None,
-                });
-            }
-        }
-        Ok(resolved)
-    }
-
-    pub fn version(&self) -> Version {
-        self.version
-    }
-    pub fn evaluation_revision(&self) -> u64 {
-        self.evaluation_revision
-    }
-    pub fn snapshot_clone_ns(&self) -> u64 {
-        self.snapshot_clone_ns
-    }
-    pub fn document_id(&self) -> &str {
-        &self.document_id
-    }
-    pub fn requested(&self) -> &PreviewValues {
-        &self.requested
-    }
-    pub fn frame(&self) -> &DrawableFrame {
-        &self.frame
-    }
-    pub fn assets(&self) -> &[ImageAsset] {
-        &self.assets
-    }
-    pub fn root(&self) -> &std::path::Path {
-        &self.root
-    }
-    pub fn source(&self) -> &ObservationSource {
-        &self.source
-    }
-    pub fn authoring(&self) -> &CapturedAuthoring {
-        &self.authoring
-    }
-
-    pub fn capture(
-        session: &AuthoringSession,
-        requested: &PreviewValues,
-    ) -> Result<Self, ObservationError> {
-        Self::capture_from_snapshot(&session.read_snapshot(), requested)
-    }
-
     /// Evaluate a detached authoring snapshot; no live session is consulted.
     pub fn capture_from_snapshot(
         snapshot: &AuthoringSnapshot,
@@ -377,50 +260,11 @@ impl ObservationInput {
         )
     }
 
-    /// Capture up to 64 parameter samples against one detached document.
-    pub fn capture_samples(
-        snapshot: &AuthoringSnapshot,
-        samples: &[PreviewValues],
-    ) -> Result<Vec<Self>, ObservationError> {
-        if samples.is_empty() || samples.len() > 64 {
-            return Err(ObservationError {
-                code: "OBSERVATION_BUDGET_EXCEEDED".into(),
-                message: "Sample count must be 1..64".into(),
-                asset_id: None,
-            });
-        }
-        samples
-            .iter()
-            .map(|values| Self::capture_from_snapshot(snapshot, values))
-            .collect()
-    }
-
-    /// Capture a previously evaluated Motion/Expression/Physics/Pose frame.
-    /// The preview must still describe this session's current document.
-    pub fn capture_motion(
-        session: &AuthoringSession,
-        preview: &MotionPreview,
-    ) -> Result<Self, ObservationError> {
-        Self::capture_motion_with_renderer_opacity(session, preview, false)
-    }
-
-    /// Capture an animation frame and optionally apply its Model opacity as
-    /// Framework renderer color alpha at drawable draws. Offscreen opacity
-    /// remains independent of this host color input.
-    /// Framework does not apply Model opacity to its renderer automatically.
-    pub fn capture_motion_with_renderer_opacity(
-        session: &AuthoringSession,
-        preview: &MotionPreview,
-        apply_model_opacity: bool,
-    ) -> Result<Self, ObservationError> {
-        Self::capture_motion_from_snapshot(&session.read_snapshot(), preview, apply_model_opacity)
-    }
-
     /// Capture animation against the exact document snapshot checked for identity.
+    /// Apply Model opacity to drawable draws before mask / Offscreen composition.
     pub fn capture_motion_from_snapshot(
         snapshot: &AuthoringSnapshot,
         preview: &MotionPreview,
-        apply_model_opacity: bool,
     ) -> Result<Self, ObservationError> {
         let version = snapshot.version();
         if preview.source_identity() != Some((version.session_id, version.generation))
@@ -445,23 +289,18 @@ impl ObservationInput {
                 message: error.to_string(),
                 asset_id: None,
             })?;
-        if apply_model_opacity {
-            zipzi_animation::apply_model_opacity(&mut frame, preview.snapshot().model_opacity)
-                .map_err(|error| ObservationError {
-                    code: "INVALID_MODEL_OPACITY".into(),
-                    message: error.to_string(),
-                    asset_id: None,
-                })?;
-        }
+        zipzi_animation::apply_model_opacity(&mut frame, preview.snapshot().model_opacity)
+            .map_err(|error| ObservationError {
+                code: "INVALID_MODEL_OPACITY".into(),
+                message: error.to_string(),
+                asset_id: None,
+            })?;
         Self::capture_frame(
             snapshot,
             requested,
             frame,
             ObservationSource::Animation {
                 snapshot: Box::new(preview.snapshot().clone()),
-                apply_model_opacity,
-                history_status: HistoryStatus::NotRecorded,
-                operation: Some(preview.operation().clone()),
             },
         )
     }
@@ -621,7 +460,6 @@ impl ObservationInput {
             memory_images,
             version,
             evaluation_revision,
-            snapshot_clone_ns: snapshot.clone_elapsed_ns(),
             document_id: document.id().to_owned(),
             requested,
             frame,
@@ -630,28 +468,5 @@ impl ObservationInput {
             source,
             authoring,
         })
-    }
-
-    /// Read, decode, and hash each source once. The returned RGBA is the exact
-    /// buffer that an observer must upload for this run.
-    pub fn resolve_textures(&self) -> Result<Vec<ResolvedTexture>, ObservationError> {
-        self.assets
-            .iter()
-            .map(|asset| {
-                let data = match self.memory_images.get(&asset.id) {
-                    Some(image) => image.read_asset(),
-                    None => read_project_asset(&self.root, asset),
-                }
-                .map_err(|status| ObservationError {
-                    code: status.code,
-                    message: status.message,
-                    asset_id: Some(asset.id.clone()),
-                })?;
-                Ok(ResolvedTexture {
-                    asset: asset.clone(),
-                    data,
-                })
-            })
-            .collect()
     }
 }

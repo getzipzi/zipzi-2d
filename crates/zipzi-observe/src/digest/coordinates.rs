@@ -16,7 +16,7 @@ fn coordinates(axes: &[BindingAxis], samples: &[String]) -> Result<Vec<f32>, Obs
         .collect();
     if active.len() != samples.len() {
         return Err(failure(
-            "BUNDLE_FORMAT",
+            "SCENE_FORMAT",
             "Binding coordinate dimension mismatch",
         ));
     }
@@ -30,7 +30,7 @@ fn coordinates(axes: &[BindingAxis], samples: &[String]) -> Result<Vec<f32>, Obs
                 .map(|sample| sample.value)
                 .ok_or_else(|| {
                     failure(
-                        "BUNDLE_FORMAT",
+                        "SCENE_FORMAT",
                         "Binding coordinate references a missing sample",
                     )
                 })
@@ -82,7 +82,7 @@ impl CapturedAuthoring {
                     .position(|sample| sample.id == table.base_sample_id)
                     .ok_or_else(|| {
                         failure(
-                            "BUNDLE_FORMAT",
+                            "SCENE_FORMAT",
                             "Blend table references a missing base sample",
                         )
                     })?

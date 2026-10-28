@@ -1278,10 +1278,10 @@ dependencies = [
  "serde_json",
  "sha2 0.11.0",
  "zipzi-core",
+ "zipzi-project",
  "zipzi-render",
  "zipzi-render-metal",
  "zipzi-sdk",
- "zipzi-sdk-observe",
 ]
 
 [[package]]
@@ -9215,9 +9215,9 @@ dependencies = [
  "zipzi-core",
  "zipzi-editor-core",
  "zipzi-editor-render",
+ "zipzi-observe",
  "zipzi-runtime",
  "zipzi-sdk",
- "zipzi-sdk-observe",
 ]
 
 [[package]]
@@ -9283,6 +9283,26 @@ dependencies = [
  "ag-psd",
  "zipzi-core",
  "zipzi-moc3",
+]
+
+[[package]]
+name = "zipzi-observe"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "png 0.17.16",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "tempfile",
+ "uuid",
+ "wgpu",
+ "zipzi-animation",
+ "zipzi-core",
+ "zipzi-project",
+ "zipzi-render",
+ "zipzi-render-metal",
+ "zipzi-render-wgpu",
+ "zipzi-sdk",
 ]
 
 [[package]]
@@ -9373,9 +9393,9 @@ dependencies = [
  "uuid",
  "zipzi-api-derive",
  "zipzi-core",
+ "zipzi-observe",
  "zipzi-project",
  "zipzi-sdk",
- "zipzi-sdk-observe",
 ]
 
 [[package]]
@@ -9393,25 +9413,6 @@ dependencies = [
  "zipzi-api-derive",
  "zipzi-core",
  "zipzi-project",
-]
-
-[[package]]
-name = "zipzi-sdk-observe"
-version = "0.1.0-alpha.1"
-dependencies = [
- "png 0.17.16",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "uuid",
- "wgpu",
- "zipzi-animation",
- "zipzi-core",
- "zipzi-project",
- "zipzi-render",
- "zipzi-render-metal",
- "zipzi-render-wgpu",
- "zipzi-sdk",
 ]
 
 [[package]]

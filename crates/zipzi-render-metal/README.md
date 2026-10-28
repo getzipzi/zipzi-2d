@@ -84,7 +84,7 @@ requires no geometry upload. `attachment_budget_bytes` reports the conservative
 reservation including host output, masks and atlas packing overhead;
 `mask_resolution_limit` reports the mask edge limit chosen for the frame.
 
-On macOS, `zipzi-sdk-observe` and the Python `observe` feature use this
+On macOS, `zipzi-observe` and the Python `observe` feature use this
 native backend by default. The `wgpu-backend` feature selects
 `zipzi-render-wgpu` for local parity and cross-platform route validation.
 Other platforms use `zipzi-render-wgpu`. Python builds
@@ -92,7 +92,7 @@ without `observe` do not include a GPU renderer.
 
 ```sh
 cargo test -p zipzi-render-metal --test metal_smoke --locked
-cargo test -p zipzi-sdk-observe --locked
+cargo test -p zipzi-observe --locked
 ```
 
 For the group-crop A/B benchmark and pixel comparison, run:

@@ -18,7 +18,6 @@ use zipzi_render_metal::{
     MetalTexture, MetalTextureCatalog,
 };
 use zipzi_sdk::{AuthoringSession, MotionPreview};
-use zipzi_sdk_observe::ObservationInput;
 
 const DOCUMENT_ID: &str = "00000000-0000-4000-8000-000000000001";
 const GEOMETRY_PHASES: [&str; 12] = [
@@ -224,28 +223,48 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     if import_diagnostics != 0 {
         eprintln!("Zipzi import reported {import_diagnostics} unresolved model3 references");
     }
-    let observation = ObservationInput::capture(&session, &PreviewValues::new())?;
-    let resolved = observation.resolve_textures()?;
+    let snapshot = session.read_snapshot();
+    let mut frame = DrawableFrame::default();
+    let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
+        snapshot.document(),
+        &PreviewValues::new(),
+        &mut frame,
+    );
+    if !status.is_ok() {
+        return Err(format!("{}: {}", status.code, status.message).into());
+    }
+    let required: std::collections::BTreeSet<_> = frame
+        .drawables
+        .iter()
+        .map(|drawable| drawable.texture_asset_id.as_str())
+        .collect();
+    let root = snapshot
+        .project_path()
+        .and_then(Path::parent)
+        .unwrap_or(Path::new(""));
+    let resolved = required
+        .into_iter()
+        .map(|id| {
+            let asset = snapshot
+                .document()
+                .get_asset(id)
+                .expect("evaluated texture exists");
+            let data = match snapshot.memory_image(id) {
+                Some(image) => image.read_asset(),
+                None => zipzi_project::read_project_asset(root, asset),
+            }
+            .map_err(|status| format!("{}: {}", status.code, status.message))?;
+            Ok::<_, String>((asset, data))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let context = MetalContext::new()?;
     let uploaded = resolved
         .iter()
-        .map(|texture| {
-            let levels = mipmaps(texture.data.width, texture.data.height, &texture.data.rgba);
+        .map(|(asset, data)| {
+            let levels = mipmaps(data.width, data.height, &data.rgba);
             context
-                .upload_rgba8(
-                    texture.data.width,
-                    texture.data.height,
-                    &texture.data.rgba,
-                    &levels,
-                )
-                .map(|gpu| {
-                    (
-                        texture.asset.id.clone(),
-                        gpu,
-                        texture.data.width,
-                        texture.data.height,
-                    )
-                })
+                .upload_rgba8(data.width, data.height, &data.rgba, &levels)
+                .map(|gpu| (asset.id.clone(), gpu, data.width, data.height))
                 .map_err(|status| format!("{status:?}"))
         })
         .collect::<Result<Vec<_>, _>>()?;

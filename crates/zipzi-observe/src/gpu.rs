@@ -17,25 +17,19 @@ use zipzi_render_wgpu::{
     WgpuRenderer as BackendRenderer, WgpuTargetConfig as BackendTargetConfig,
     WgpuTexture as BackendTexture, WgpuTextureCatalog as BackendTextureCatalog,
 };
-use zipzi_sdk::Version;
 
-use crate::{
-    ObservationError, ObservationInput, RenderRequest, ResolvedObservation, ResolvedTexture,
-    ViewMapping,
-};
+use crate::{ObservationError, RenderRequest, ResolvedObservation, ResolvedTexture, ViewMapping};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ObserverConfig {
     pub width: u32,
     pub height: u32,
-    pub fit_long_side: f32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TextureRevision {
+pub struct ObservedTexture {
     pub asset_id: String,
     pub sha256: String,
-    pub revision: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -53,18 +47,12 @@ pub struct ObservedFrame {
     pub width: u32,
     pub height: u32,
     pub rgba: Vec<u8>,
-    pub version: Version,
     pub evaluation_revision: u64,
     pub document_id: String,
-    pub source_revision: u64,
-    pub parameters: Vec<(String, f32, f32, bool)>,
-    pub view_scale: f32,
-    pub view_offset: (f32, f32),
-    /// Present only for an explicit ROI render. The legacy observe path keeps
-    /// its existing fitted-view fields and byte contract.
-    pub explicit_view: Option<ViewMapping>,
+    pub parameters: zipzi_core::PreviewValues,
+    pub view: ViewMapping,
     pub drawable_bounds: Vec<DrawableBounds>,
-    pub texture_revisions: Vec<TextureRevision>,
+    pub textures: Vec<ObservedTexture>,
     pub adapter_name: String,
     pub adapter_backend: String,
 }
@@ -108,7 +96,6 @@ impl std::fmt::Write for DigestWriter<'_> {
 }
 
 pub struct Observer {
-    config: ObserverConfig,
     #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
     context: MetalContext,
     #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
@@ -130,15 +117,8 @@ fn error(code: &str, message: impl Into<String>) -> ObservationError {
 
 impl Observer {
     pub fn new(config: ObserverConfig) -> Result<Self, ObservationError> {
-        if config.width == 0
-            || config.height == 0
-            || !config.fit_long_side.is_finite()
-            || config.fit_long_side <= 0.0
-        {
-            return Err(error(
-                "INVALID_VIEW",
-                "Output size and fit_long_side must be positive",
-            ));
+        if config.width == 0 || config.height == 0 {
+            return Err(error("INVALID_VIEW", "Output dimensions must be positive"));
         }
         #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
         let (context, renderer, adapter_name) = {
@@ -188,7 +168,6 @@ impl Observer {
             (context, renderer, adapter_name, adapter_backend)
         };
         Ok(Self {
-            config,
             context,
             renderer,
             textures: HashMap::new(),
@@ -199,14 +178,6 @@ impl Observer {
             #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
             adapter_backend,
         })
-    }
-
-    pub fn set_fit_long_side(&mut self, fit_long_side: f32) -> Result<(), ObservationError> {
-        if !fit_long_side.is_finite() || fit_long_side <= 0.0 {
-            return Err(error("INVALID_VIEW", "fit_long_side must be positive"));
-        }
-        self.config.fit_long_side = fit_long_side;
-        Ok(())
     }
 
     fn upload_textures(&mut self, resolved: &[ResolvedTexture]) -> Result<(), ObservationError> {
@@ -241,11 +212,8 @@ impl Observer {
             }) {
                 continue;
             }
-            let mipmaps = if cfg!(feature = "framework-texture-filtering") {
-                straight_rgba_mipmaps(texture.data.width, texture.data.height, &texture.data.rgba)
-            } else {
-                Vec::new()
-            };
+            let mipmaps =
+                straight_rgba_mipmaps(texture.data.width, texture.data.height, &texture.data.rgba);
             #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
             let view = self
                 .context
@@ -288,37 +256,21 @@ impl Observer {
         Ok(())
     }
 
-    pub fn observe(&mut self, input: &ObservationInput) -> Result<ObservedFrame, ObservationError> {
-        let resolved = input.resolve_textures()?;
-        self.render_resolved(input, &resolved, None)
-    }
-
-    /// Rerender a previously resolved scene at a source-canvas ROI without
-    /// reading the live session or source texture paths.
+    /// Render frozen texture content at an explicit model-space view.
     pub fn render(
         &mut self,
         captured: &ResolvedObservation,
         request: RenderRequest,
     ) -> Result<ObservedFrame, ObservationError> {
-        self.render_resolved(captured.input(), captured.textures(), Some(request))
-    }
-
-    fn render_resolved(
-        &mut self,
-        input: &ObservationInput,
-        resolved: &[ResolvedTexture],
-        request: Option<RenderRequest>,
-    ) -> Result<ObservedFrame, ObservationError> {
-        let explicit_view = request.map(RenderRequest::mapping).transpose()?;
-        let (width, height) = request.map_or((self.config.width, self.config.height), |view| {
-            (view.width, view.height)
-        });
+        let input = &captured.input;
+        let resolved = &captured.textures;
+        let view = request.mapping()?;
+        let (width, height) = (request.width, request.height);
         #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
         let limit = self.context.max_texture_dimension();
         #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
         let limit = self.context.device().limits().max_texture_dimension_2d;
-        if width > limit || height > limit || request.is_some_and(|_| width > 4096 || height > 4096)
-        {
+        if width > limit || height > limit || width > 4096 || height > 4096 {
             return Err(error(
                 "OUTPUT_SIZE_LIMIT",
                 format!("Output size exceeds the inspection or device limit {limit}x{limit}"),
@@ -331,39 +283,26 @@ impl Observer {
                 .iter()
                 .map(|texture| (&texture.asset.id, &texture.data.sha256))
                 .collect::<Vec<_>>();
-            if request.is_some() {
-                write!(
-                    digest_writer,
-                    "zipzi-observation-explicit-v1:{:?}:{:?}",
-                    input.frame, texture_hashes,
-                )
-                .expect("digest writer is infallible");
-            } else {
-                write!(
-                    digest_writer,
-                    "zipzi-observation-input-v1:{:?}:{:?}:{:?}",
-                    input.frame, texture_hashes, self.config,
-                )
-                .expect("digest writer is infallible");
-            }
+            write!(
+                digest_writer,
+                "zipzi-observation-explicit-v1:{:?}:{:?}",
+                input.frame, texture_hashes,
+            )
+            .expect("digest writer is infallible");
         }
-        if let Some(request) = request {
-            digest.update(b"explicit-roi-v1");
-            digest.update(request.width.to_le_bytes());
-            digest.update(request.height.to_le_bytes());
-            for value in [
-                request.roi.x0,
-                request.roi.y0,
-                request.roi.x1,
-                request.roi.y1,
-                request.padding_model,
-            ] {
-                digest.update(value.to_bits().to_le_bytes());
-            }
+        digest.update(b"explicit-roi-v1");
+        digest.update(request.width.to_le_bytes());
+        digest.update(request.height.to_le_bytes());
+        for value in [
+            request.roi.x0,
+            request.roi.y0,
+            request.roi.x1,
+            request.roi.y1,
+            request.padding_model,
+        ] {
+            digest.update(value.to_bits().to_le_bytes());
         }
-        if cfg!(feature = "framework-texture-filtering") {
-            digest.update(b"source-texture:linear-mipmap-linear-repeat-area-v2");
-        }
+        digest.update(b"source-texture:linear-mipmap-linear-repeat-area-v2");
         let mut input_sha256 = String::with_capacity(64);
         for byte in digest.finalize() {
             use std::fmt::Write;
@@ -403,7 +342,7 @@ impl Observer {
         );
         for (id, texture) in &self.textures {
             catalog.set_revision(id.clone(), texture.revision);
-            catalog.set_repeat(id.clone(), cfg!(feature = "framework-texture-filtering"));
+            catalog.set_repeat(id.clone(), true);
         }
         let status = |s: zipzi_core::Status| error(&s.code, s.message);
         #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
@@ -414,21 +353,7 @@ impl Observer {
         self.renderer
             .sync_model(self.context.device(), &input.frame, &catalog)
             .map_err(status)?;
-        let (scale, offset_x, offset_y) = if let Some(view) = explicit_view {
-            (view.scale, view.offset.0, view.offset.1)
-        } else {
-            let [x0, y0, x1, y1] = input.frame.model_bounds(false).unwrap_or([0.; 4]);
-            let w = (x1 - x0) as f32;
-            let h = (y1 - y0) as f32;
-            let scale = self.config.fit_long_side / w.max(h).max(1.);
-            let center_x = ((x0 + x1) * 0.5) as f32;
-            let center_y = -((y0 + y1) * 0.5) as f32;
-            (
-                scale,
-                width as f32 * 0.5 - center_x * scale,
-                height as f32 * 0.5 - center_y * scale,
-            )
-        };
+        let (scale, offset_x, offset_y) = (view.scale, view.offset.0, view.offset.1);
         let drawable_bounds = input
             .frame
             .drawables
@@ -473,43 +398,31 @@ impl Observer {
             offset_x,
             offset_y,
         )?;
-        let mut texture_revisions: Vec<_> = self
+        let mut textures: Vec<_> = self
             .textures
             .iter()
-            .map(|(id, texture)| TextureRevision {
+            .map(|(id, texture)| ObservedTexture {
                 asset_id: id.clone(),
                 sha256: texture.sha256.clone(),
-                revision: texture.revision,
             })
             .collect();
-        texture_revisions.sort_by(|a, b| a.asset_id.cmp(&b.asset_id));
+        textures.sort_by(|a, b| a.asset_id.cmp(&b.asset_id));
         Ok(ObservedFrame {
             input_sha256,
             width,
             height,
             rgba,
-            version: input.version,
             evaluation_revision: input.evaluation_revision,
             document_id: input.document_id.clone(),
-            source_revision: input.frame.source_revision,
             parameters: input
                 .frame
                 .parameters
                 .iter()
-                .map(|parameter| {
-                    (
-                        parameter.id.clone(),
-                        parameter.requested,
-                        parameter.value,
-                        parameter.clamped,
-                    )
-                })
+                .map(|parameter| (parameter.id.clone(), parameter.value))
                 .collect(),
-            view_scale: scale,
-            view_offset: (offset_x, offset_y),
-            explicit_view,
+            view,
             drawable_bounds,
-            texture_revisions,
+            textures,
             adapter_name: self.adapter_name.clone(),
             adapter_backend: self.adapter_backend.clone(),
         })
@@ -582,7 +495,9 @@ fn render_sample(
         mask_scale: scale as f64,
     };
     let status = |s: zipzi_core::Status| error(&s.code, s.message);
-    renderer.update_view(context.device(), view).map_err(status)?;
+    renderer
+        .update_view(context.device(), view)
+        .map_err(status)?;
     let output = context
         .output_texture(BackendTargetConfig {
             width,
@@ -594,7 +509,7 @@ fn render_sample(
     let mut encoder = context
         .device()
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("sdk-observe.encode"),
+            label: Some("observe.encode"),
         });
     renderer
         .encode(

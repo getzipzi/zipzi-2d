@@ -57,7 +57,7 @@ comparisons; leave it disabled in hosts.
 ## Application routes on macOS
 
 ```sh
-cargo test --locked -p zipzi-sdk-observe --features wgpu-backend --test capture
+cargo test --locked -p zipzi-observe --features wgpu-backend --test capture
 cargo run --locked -p zipzi-editor --features wgpu-backend
 cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu_preview -- \
   models/local/mao/runtime/mao_pro.model3.json target/wgpu-mao

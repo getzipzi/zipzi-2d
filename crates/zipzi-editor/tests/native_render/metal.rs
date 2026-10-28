@@ -7,9 +7,9 @@ use gpui_kit::{
 };
 use metal::MTLPixelFormat;
 use zipzi_editor_core::{Document, SceneSnapshot, ViewState, ViewportPoint};
-use zipzi_editor_render::MetalTargetConfig;
 #[cfg(not(feature = "wgpu-backend"))]
 use zipzi_editor_render::MetalSceneRenderer;
+use zipzi_editor_render::MetalTargetConfig;
 #[cfg(feature = "wgpu-backend")]
 use zipzi_editor_render::WgpuMetalSceneRenderer as MetalSceneRenderer;
 #[path = "../../../zipzi-editor-core/tests/support/mod.rs"]
@@ -679,9 +679,7 @@ fn check_animation_opacity(
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
         use zipzi_core::{Canvas, Vec2};
         use zipzi_editor_core::{AnimationEvaluator, Editor, ViewportMetrics, WorkspaceKind};
-        use zipzi_sdk_observe::{
-            ModelRoi, ObservationInput, Observer, ObserverConfig, RenderRequest,
-        };
+        use zipzi_observe::{ModelRoi, ObservationInput, Observer, ObserverConfig, RenderRequest};
         let canvas = document
             .source_canvas()
             .expect("fixture has a source rectangle");
@@ -734,7 +732,6 @@ fn check_animation_opacity(
         let mut observer = Observer::new(ObserverConfig {
             width: 256,
             height: 256,
-            fit_long_side: 256.,
         })?;
         let mut images = Vec::new();
         for opacity in [0., 0.5, 1.] {
@@ -755,13 +752,15 @@ fn check_animation_opacity(
             preview.schedule_motion(&motion_id, 0.)?;
             preview.seek(0.)?;
             assert_eq!(preview.snapshot().model_opacity, opacity);
-            let input = ObservationInput::capture_motion_from_snapshot(
-                &sdk.read_snapshot(),
-                &preview,
-                true,
-            )?;
+            let input =
+                ObservationInput::capture_motion_from_snapshot(&sdk.read_snapshot(), &preview)?;
+            let capture = zipzi_observe::ResolvedObservation::capture_many_with_control(
+                vec![input],
+                &zipzi_sdk::ConversionControl::default(),
+            )?
+            .remove(0);
             let expected = observer.render(
-                &zipzi_sdk_observe::ResolvedObservation::capture(input.clone())?,
+                &capture,
                 RenderRequest {
                     width: 256,
                     height: 256,
@@ -806,7 +805,8 @@ fn check_animation_opacity(
                     .iter()
                     .any(|d| !d.masks.is_empty())
             );
-            let mut reference = input.frame().clone();
+            let mut reference = preview.evaluate_drawables_including_hidden()?;
+            zipzi_sdk::apply_model_opacity(&mut reference, preview.snapshot().model_opacity)?;
             reference.source_revision = scene.viewport_frame.source_revision;
             assert_eq!(scene.render_frame()?.as_ref(), &reference);
             let submitted = renderer.submit_transformed(

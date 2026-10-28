@@ -49,7 +49,7 @@ Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观�
 | [应用入口](../../../crates/zipzi-editor/src/lib.rs) | 最后一个窗口关闭时退出应用 | 宿主常驻与窗口开关分离 |
 | [Python NativeSession](../../crates/zipzi-python/src/session.rs) | 独立 `Arc<Mutex<AuthoringSession>>` | 增加连接后端，不向连接模式复制这个会话 |
 | [Python 公共包](../../crates/zipzi-python/python/zipzi/__init__.py)、[Session](../../crates/zipzi-python/python/zipzi/_session.py) | 公共 API 直接依赖 `_native`；Plan、Handle 等为 PyO3 对象 | 分离公共值类型、后端引用和可选原生扩展 |
-| [Observer](../../crates/zipzi-sdk-observe/src/lib.rs) | 不可变观察输入、空间检查和离屏渲染 | 接受明确的正式/候选快照来源，按需执行 |
+| [Observer](../../../crates/zipzi-observe/src/lib.rs) | 不可变观察输入、内容摘要和离屏渲染 | 接受明确的正式/候选快照来源，按需执行 |
 
 旧[第一阶段架构](../editor-foundation.md)把 Python 连接排除在当时范围之外。本设计更新该范围，保留其中的单一历史、文档身份、SDK 领域所有权和后台结果版本检查原则。对象身份与编辑规则继续遵循[对象创作核心方案](unified-object-authoring-core.md)。
 
@@ -329,7 +329,7 @@ EditorContextProvider 由 zipzi-editor-core/宿主适配提供，返回 ViewId�
 | zipzi-2d：`crates/zipzi-runtime`（新增） | 会话/操作表、调度状态机、事件、预算、协议及可选本机 transport | 无 GPUI；无第二模型/历史；可独立 CPU 测试 |
 | zipzi-2d：`crates/zipzi-sdk` | 通用候选读取/快照、发布契约、后台准备接口、必要的批量查询 | 领域行为唯一实现，standalone 继续可用 |
 | zipzi-2d：core/project/animation | 仅在候选/资源/后台契约需要时补底层原语 | 不引入连接、窗口和 Runtime 依赖 |
-| zipzi-2d：`crates/zipzi-sdk-observe` | 明确来源、候选及内存资源观察、异步宿主适配 | 渲染/诊断结果可无窗口获得 |
+| zipzi-2d：`crates/zipzi-observe` | 明确来源、候选及内存资源观察、异步宿主适配 | 渲染/诊断结果可无窗口获得 |
 | zipzi-2d：`crates/zipzi-python` | facade/backend 分离、连接客户端、远端引用、可选原生扩展分发、API 清单与一致性测试 | 同一创作语义；连接 import 不要求 `_native` |
 | zipzi-2d：workspace、工具与文档 | 加 crate/锁文件，新增聚焦 Runtime/连接测试入口，更新构建与包文档 | 保留现有 focused test 策略 |
 | editor：`crates/zipzi-editor-core` | Document/Session/Workspace 所有权重构、Runtime 引用、事件驱动投影、每视图 Preview、上下文 provider | UI 交互策略留在此处；可测试且不依赖 GPUI |
