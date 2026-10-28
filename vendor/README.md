@@ -34,6 +34,7 @@ upstream README and files needed by relative test paths are also retained.
 | [drag-ownership.patch](drag-ownership.patch) | Adds drag identity and targeted cancellation so a stale token cannot stop a later drag. |
 | [cache-boundary.patch](cache-boundary.patch) | Preserves explicit virtual-list cache boundaries across frame reuse and splicing. |
 | [list-height-estimates.patch](list-height-estimates.patch) | Retains list height estimates across width changes until rows are remeasured. |
+| [list-layout-reparent.patch](list-layout-reparent.patch) | Compares actual Taffy children without a duplicate child-list cache. |
 | [kit-workspace.patch](kit-workspace.patch) | Defines the reduced Kit workspace and pinned sibling dependencies. |
 | [compact-menu.patch](compact-menu.patch) | Adds compact menu sizing and inherits the parent size in submenus. |
 | [compact-tooltip.patch](compact-tooltip.patch) | Adjusts tooltip sizing, wrapping and per-window identity handling. |
@@ -82,6 +83,18 @@ cargo test --locked -p zipzi-editor -p zipzi-editor-core -p zipzi-editor-render 
 Reapply these changes when updating GPUI Fast. Mesh selection/Details interaction
 coverage lives in `zipzi-editor/headless_tests/mesh_properties.rs`; its ignored Mao
 case requires the separately obtained local model.
+
+## Retained list layout children
+
+Taffy removes a child from its old parent when it is attached elsewhere. A
+separate retained child list can then disagree with Taffy's tree and cause a
+returning list row to skip layout of newly rendered text. The
+list-layout-reparent patch removes that duplicate list and compares the actual
+ordered children through Taffy's allocation-free iterator before reusing them.
+`mesh_properties_revisit_interpolated_and_stored_meshes` reproduces the crash
+without local model assets; the ignored
+`mesh_properties_mao_interpolated_selection_revisit` covers the reported Mao
+meshes. Both switch between stored and interpolated mesh property scopes.
 
 ## Metal surface contract
 

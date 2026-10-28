@@ -633,7 +633,6 @@ fn field_row(label: &str, control: impl IntoElement, cx: &App) -> Div {
 fn parameter_row(id: &'static str) -> Stateful<Div> {
     div()
         .id(id)
-        .test_support()
         .flex()
         .flex_wrap()
         .items_center()
@@ -885,8 +884,8 @@ impl Render for MeshGenerationPanel {
             .gap(compact::rem(4.))
             .text_size(compact::rem(compact::BODY))
             .child(header)
-            .child(fields)
-            .child(details)
+            .child(fields.test_support())
+            .child(details.test_support())
             .when(!edges, |content| {
                 content.child(
                     div()

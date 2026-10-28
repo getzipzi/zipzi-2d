@@ -1,0 +1,113 @@
+diff --git a/vendor/gpui-fast/src/fast/layout.rs b/vendor/gpui-fast/src/fast/layout.rs
+index b6a8269e..aacc98b0 100644
+--- a/vendor/gpui-fast/src/fast/layout.rs
++++ b/vendor/gpui-fast/src/fast/layout.rs
+@@ -18,7 +18,7 @@ use std::{
+     mem,
+     rc::Rc,
+ };
+-use taffy::TaffyTree;
++use taffy::{TaffyTree, TraversePartialTree};
+ 
+ /// What a Taffy call that cannot fail by construction panics with, as
+ /// upstream's layout engine does.
+@@ -211,9 +211,6 @@ struct RetainedNode {
+     /// Frame in which this node was last claimed. A node that goes a whole
+     /// frame unclaimed has left the element tree and is released.
+     claimed_in_frame: u64,
+-    /// The children the node was last given, kept here because reading them
+-    /// back out of Taffy allocates.
+-    children: SmallVec<[LayoutId; 8]>,
+     /// Whether the node measures its own size.
+     measured: bool,
+     /// [`layout_fingerprint`] of the style the node was last asked for. While
+@@ -559,14 +556,7 @@ impl TaffyLayoutEngine {
+ 
+     /// Records a freshly allocated node under `key`, or as transient when there
+     /// is no key to record it under.
+-    fn retain(
+-        &mut self,
+-        key: Option<u64>,
+-        id: LayoutId,
+-        children: &[LayoutId],
+-        measured: bool,
+-        style_fingerprint: u64,
+-    ) {
++    fn retain(&mut self, key: Option<u64>, id: LayoutId, measured: bool, style_fingerprint: u64) {
+         let retention = &mut self.retention;
+         let Some(key) = key else {
+             retention.transient.push(id);
+@@ -577,7 +567,6 @@ impl TaffyLayoutEngine {
+             RetainedNode {
+                 id,
+                 claimed_in_frame: retention.frame,
+-                children: SmallVec::from_slice(children),
+                 measured,
+                 style_fingerprint,
+                 measurement: None,
+@@ -649,18 +638,19 @@ impl TaffyLayoutEngine {
+             .expect(EXPECT_MESSAGE);
+     }
+ 
+-    /// Writes `children` to a retained node, but only if the list changed.
+-    fn apply_children(&mut self, key: u64, id: LayoutId, children: &[LayoutId]) {
+-        let retention = &mut self.retention;
+-        let node = retention
+-            .retained
+-            .get_mut(&key)
+-            .expect("a claimed key is always present");
+-        if node.children.as_slice() == children {
++    /// Writes `children` to a retained node only when its actual children
++    /// differ. Reparenting a child changes Taffy's tree without another
++    /// request to its old parent, so a separate remembered list can go stale.
++    /// `child_ids` borrows the tree's child list without allocating.
++    fn apply_children(&mut self, id: LayoutId, children: &[LayoutId]) {
++        if self
++            .taffy
++            .child_ids(id.into())
++            .eq(children.iter().map(|child| (*child).into()))
++        {
+             return;
+         }
+-        node.children.clear();
+-        node.children.extend_from_slice(children);
++        let retention = &mut self.retention;
+         retention.stats.children_writes += 1;
+         retention.layout_changes += 1;
+         self.taffy
+@@ -960,7 +950,7 @@ pub(crate) fn request_retained_layout(
+     let key = match engine.claim(key) {
+         Claim::Reused(key, id) => {
+             engine.apply_requested_style(key, id, style, rem_size, scale_factor);
+-            engine.apply_children(key, id, children);
++            engine.apply_children(id, children);
+             // A node that measured itself on an earlier frame no longer does.
+             if engine
+                 .retention
+@@ -1009,7 +999,7 @@ pub(crate) fn request_retained_layout(
+             .set_children(id.into(), LayoutId::to_taffy_slice(children))
+             .expect(EXPECT_MESSAGE);
+     }
+-    engine.retain(key, id, children, false, style_fingerprint);
++    engine.retain(key, id, false, style_fingerprint);
+     id
+ }
+ 
+@@ -1092,7 +1082,7 @@ fn request_measured_node(
+                 .new_leaf_with_context(taffy_style, NodeContext { measure })
+                 .expect(EXPECT_MESSAGE)
+                 .into();
+-            engine.retain(key, id, &[], true, style_fingerprint);
++            engine.retain(key, id, true, style_fingerprint);
+             if let Some(node) = key.and_then(|key| engine.retention.retained.get_mut(&key))
+                 && node.id == id
+             {
+@@ -1103,7 +1093,7 @@ fn request_measured_node(
+     };
+ 
+     engine.apply_requested_style(key, id, style, rem_size, scale_factor);
+-    engine.apply_children(key, id, &[]);
++    engine.apply_children(id, &[]);
+ 
+     // Nothing says whether the measurement still stands, and what it
+     // produces lives in state the element made afresh this frame, so it

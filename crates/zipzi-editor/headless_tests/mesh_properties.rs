@@ -32,6 +32,102 @@ fn mesh_properties_revisit_selection_and_expand_details(cx: &mut TestAppContext)
 }
 
 #[gpui_kit::test]
+fn mesh_properties_revisit_interpolated_and_stored_meshes(cx: &mut TestAppContext) {
+    let (mut doc, assets) = document_fixture::rectangle_document(true).unwrap();
+    let meshes: Vec<_> = doc
+        .layers()
+        .iter()
+        .map(|layer| ObjectRef::new(ObjectKind::Mesh, &layer.id))
+        .collect();
+    assert_eq!(meshes.len(), 2);
+    let bound = meshes
+        .iter()
+        .find(|object| {
+            matches!(
+                doc.property_scope(object),
+                zipzi_editor_core::PropertyScope::MeshKeyform { .. }
+            )
+        })
+        .unwrap()
+        .clone();
+    let parameter = doc
+        .parameters()
+        .into_iter()
+        .find(|p| p.name == "Pose")
+        .unwrap()
+        .id;
+    // Both selections have stored forms, as in the Mao report; only the
+    // first one's parameter is moved between its stored keys.
+    let other = meshes.iter().find(|object| **object != bound).unwrap();
+    let saved = doc
+        .save(&assets.path().join("selection-scopes.zipzi"))
+        .unwrap();
+    let mut session = zipzi_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        zipzi_core::ModelSetup::default(),
+    )
+    .unwrap();
+    session.open_project(&saved.manifest, None).unwrap();
+    let mesh = session.mesh(&other.id).unwrap();
+    let other_parameter = uuid::Uuid::new_v4().to_string();
+    session
+        .edit("Bind second mesh", None, |edit| {
+            edit.create_parameter(zipzi_core::Parameter {
+                id: other_parameter.clone(),
+                name: "Other Pose".into(),
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            })?;
+            edit.create_binding(zipzi_core::MeshBinding {
+                id: uuid::Uuid::new_v4().to_string(),
+                mesh_id: mesh.id.clone(),
+                axes: vec![zipzi_core::BindingAxis {
+                    parameter_id: other_parameter.clone(),
+                    keys: vec![0., 1.],
+                    ..Default::default()
+                }],
+                keyforms: [0., 1.]
+                    .into_iter()
+                    .map(|key| zipzi_core::MeshKeyform {
+                        keys: vec![key],
+                        positions: mesh.base_positions.clone(),
+                        ..Default::default()
+                    })
+                    .collect(),
+            })
+        })
+        .unwrap();
+    session.save_project(&saved.manifest, None).unwrap();
+    let doc = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    let h = setup_with_document(cx, doc, assets);
+    command(
+        &h,
+        EditorCommand::SetPreviewParameter {
+            parameter_id: parameter,
+            value: 0.5,
+        },
+        cx,
+    );
+    for _ in 0..10 {
+        for object in &meshes {
+            navigate_and_draw(&h, object, cx);
+            h.view.read_with(cx, |view, _| {
+                let scope = view.editor.document().unwrap().property_scope(object);
+                if *object == bound {
+                    assert_eq!(scope, zipzi_editor_core::PropertyScope::InterpolatedMesh);
+                } else {
+                    assert!(matches!(
+                        scope,
+                        zipzi_editor_core::PropertyScope::MeshKeyform { .. }
+                    ));
+                }
+            });
+        }
+    }
+}
+
+#[gpui_kit::test]
 #[ignore = "requires separately obtained local Mao model"]
 fn mesh_properties_mao_revisit_selection_and_expand_details(cx: &mut TestAppContext) {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -117,6 +213,75 @@ fn mesh_properties_mao_revisit_selection_and_expand_details(cx: &mut TestAppCont
             })
             .unwrap();
             cx.run_until_parked();
+        }
+    }
+}
+
+#[gpui_kit::test]
+#[ignore = "requires separately obtained local Mao model"]
+fn mesh_properties_mao_interpolated_selection_revisit(cx: &mut TestAppContext) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+    let (doc, _) = zipzi_editor_core::Document::import_model3(&path).unwrap();
+    let meshes: Vec<_> = ["ArtMesh135", "ArtMesh278"]
+        .iter()
+        .map(|runtime_id| {
+            let layer = doc
+                .layers()
+                .into_iter()
+                .find(|layer| {
+                    doc.object_index()
+                        .get(&ObjectRef::new(ObjectKind::Mesh, &layer.id))
+                        .is_some_and(|info| info.properties["runtime_id"] == *runtime_id)
+                })
+                .unwrap();
+            ObjectRef::new(ObjectKind::Mesh, &layer.id)
+        })
+        .collect();
+    let parameters: Vec<_> = ["ParamAngleX", "ParamAngleY"]
+        .iter()
+        .map(|runtime_id| {
+            doc.parameters()
+                .into_iter()
+                .find(|parameter| {
+                    doc.object_index()
+                        .get(&ObjectRef::new(ObjectKind::Parameter, &parameter.id))
+                        .is_some_and(|info| info.properties["runtime_id"] == *runtime_id)
+                })
+                .unwrap()
+                .id
+        })
+        .collect();
+    let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
+    cx.simulate_window_resize(
+        h.window,
+        gpui_kit::size(gpui_kit::px(1600.), gpui_kit::px(1000.)),
+    );
+    for parameter_id in parameters {
+        command(
+            &h,
+            EditorCommand::SetPreviewParameter {
+                parameter_id,
+                value: 15.,
+            },
+            cx,
+        );
+    }
+    for _ in 0..10 {
+        for (index, object) in meshes.iter().enumerate() {
+            navigate_and_draw(&h, object, cx);
+            h.view.read_with(cx, |view, _| {
+                let doc = view.editor.document().unwrap();
+                let scope = doc.property_scope(object);
+                if index == 0 {
+                    assert!(matches!(
+                        scope,
+                        zipzi_editor_core::PropertyScope::MeshKeyform { .. }
+                    ));
+                } else {
+                    assert_eq!(scope, zipzi_editor_core::PropertyScope::InterpolatedMesh);
+                }
+            });
         }
     }
 }
