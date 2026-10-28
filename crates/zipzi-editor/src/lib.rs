@@ -7,13 +7,12 @@ mod actions;
 mod animation;
 mod authoring;
 mod benchmark;
-#[cfg(target_os = "macos")]
 mod canvas_overlay;
 mod commands;
 mod dev_session;
 mod docking;
 mod editing;
-#[cfg(all(test, target_os = "macos"))]
+#[cfg(test)]
 #[path = "../headless_tests/mod.rs"]
 mod headless_tests;
 mod host;
@@ -27,17 +26,12 @@ mod mesh_edges;
 mod mesh_thumbnails;
 mod panel_lifecycle;
 mod panels;
-mod platform;
 mod presentation;
-#[cfg(target_os = "macos")]
-mod preview;
-#[cfg(not(target_os = "macos"))]
-#[path = "preview_disabled.rs"]
 mod preview;
 mod project;
 mod properties;
 mod settings;
-#[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
+#[cfg(any(test, feature = "test-support"))]
 #[path = "../../zipzi-editor-core/tests/support/mod.rs"]
 pub(crate) mod test_fixture;
 mod theme;
@@ -88,7 +82,7 @@ struct EditorView {
     status_message_task: Option<Task<()>>,
     viewport_notice: Option<(zipzi_editor_core::DocumentId, String)>,
     requests: Option<preview::RequestSender>,
-    gpu_device: Option<preview::Device>,
+    gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
     dev_session: Option<dev_session::DevSession>,

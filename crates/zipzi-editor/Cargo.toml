@@ -14,18 +14,19 @@ test-support = ["gpui-kit/test-support", "dep:tempfile", "image/png"]
 bench-instrumentation = ["zipzi-editor-core/bench-instrumentation", "zipzi-editor-render/bench-instrumentation"]
 
 [dependencies]
-gpui-kit.workspace = true
-anyhow.workspace = true
 uuid.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+gpui-kit.workspace = true
 gpui-fps = { workspace = true, optional = true }
 zipzi-editor-core.workspace = true
 zipzi-sdk.workspace = true
 zipzi-runtime = { workspace = true, features = ["gpu-observation"] }
 zipzi-core.workspace = true
+zipzi-editor-render.workspace = true
 rust-i18n.workspace = true
 sys-locale.workspace = true
+anyhow.workspace = true
 async-channel.workspace = true
 image = { version = "0.25.10", default-features = false }
 tempfile = { workspace = true, optional = true }
@@ -39,9 +40,8 @@ test = false
 metal.workspace = true
 objc2.workspace = true
 libc = "0.2"
-zipzi-editor-render.workspace = true
 
-[target.'cfg(target_os = "macos")'.dev-dependencies]
+[dev-dependencies]
 zipzi-sdk-observe = { version = "=0.1.0-alpha.1", path = "../zipzi-sdk-observe" }
 gpui-kit = { workspace = true, features = ["test-support"] }
 gpui-apple = { package = "gpui-fast-apple", version = "=0.1.7", features = ["test-support"] }

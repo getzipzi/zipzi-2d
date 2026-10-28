@@ -54,23 +54,8 @@ pub fn render_title_bar(
                 .gap(compact::rem(compact::PADDING))
                 .when(!cfg!(target_os = "macos"), |left| {
                     left.child(
-                        control_region("application-menu-control").child(
-                            compact::button(Button::new("application-menu"))
-                                .ghost()
-                                .icon(gpui_kit::assets::IconName::Menu)
-                                .accessibility_label(t!("menu.application_menu"))
-                                .tooltip(t!("menu.application_menu"))
-                                .disabled(modal)
-                                .dropdown_menu(|menu, window, cx| {
-                                    let items = cx
-                                        .get_menus()
-                                        .unwrap_or_default()
-                                        .into_iter()
-                                        .map(OwnedMenuItem::Submenu)
-                                        .collect();
-                                    application_menu(compact::menu(menu), items, window, cx)
-                                }),
-                        ),
+                        control_region("application-menu-control")
+                            .child(application_menu_button(modal, window, cx)),
                     )
                 })
                 .child(
@@ -110,6 +95,66 @@ pub fn render_title_bar(
                 .when(window.is_fullscreen(), |bar| bar.pl_0())
                 .child(div().relative().flex_1().min_w_0().h_full().child(chrome)),
         )
+}
+
+#[derive(Clone)]
+struct ApplicationMenuSnapshot {
+    focus: Option<FocusHandle>,
+    menus: Vec<OwnedMenu>,
+}
+
+impl ApplicationMenuSnapshot {
+    fn capture(window: &Window, cx: &App) -> Self {
+        Self {
+            focus: window.focused(cx),
+            menus: cx.get_menus().unwrap_or_default(),
+        }
+    }
+}
+
+pub(crate) fn application_menu_button(
+    modal: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> impl IntoElement {
+    let context = window.use_keyed_state("application-menu-action-context", cx, |_, _| {
+        None::<ApplicationMenuSnapshot>
+    });
+    let pointer_context = context.clone();
+    let keyboard_context = context.clone();
+    compact::button(Button::new("application-menu"))
+        .ghost()
+        .icon(gpui_kit::assets::IconName::Menu)
+        .accessibility_label(t!("menu.application_menu"))
+        .tooltip(t!("menu.application_menu"))
+        .disabled(modal)
+        // The enclosing popover takes focus before it builds the menu.
+        // Capture both focus and actions before EditorView rebuilds the menus
+        // for the popover's focus instead of the original input.
+        .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+            let snapshot = ApplicationMenuSnapshot::capture(window, cx);
+            pointer_context.update(cx, |context, _| *context = Some(snapshot));
+        })
+        .capture_key_down(move |_, window, cx| {
+            let snapshot = ApplicationMenuSnapshot::capture(window, cx);
+            keyboard_context.update(cx, |context, _| *context = Some(snapshot));
+        })
+        .dropdown_menu(move |menu, window, cx| {
+            let snapshot = context
+                .read(cx)
+                .clone()
+                .unwrap_or_else(|| ApplicationMenuSnapshot::capture(window, cx));
+            let mut menu = compact::menu(menu);
+            if let Some(focus) = snapshot.focus {
+                menu = menu.action_context(focus);
+            }
+            let items = snapshot
+                .menus
+                .into_iter()
+                .map(OwnedMenuItem::Submenu)
+                .collect();
+            application_menu(menu, items, window, cx)
+        })
 }
 
 fn application_menu(

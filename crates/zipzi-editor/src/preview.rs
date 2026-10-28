@@ -11,10 +11,6 @@ use zipzi_editor_render::MetalSceneRenderer;
 use zipzi_editor_render::WgpuMetalSceneRenderer as MetalSceneRenderer;
 
 pub type Image = metal::Texture;
-pub type Device = metal::Device;
-pub fn available() -> bool {
-    true
-}
 #[derive(Clone)]
 pub struct Presented {
     pub image: Image,

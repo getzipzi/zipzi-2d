@@ -3,6 +3,7 @@
 mod animation;
 mod animation_authoring;
 mod animation_panels;
+mod application_menu;
 mod authoring;
 mod authoring_coordination;
 mod canvas;

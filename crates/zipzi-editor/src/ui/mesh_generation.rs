@@ -342,10 +342,7 @@ impl MeshGenerationForm {
                 document,
                 revision,
                 target,
-                preview: generation::PreviewGeneration::new(
-                    source.clone(),
-                    crate::platform::gpu_context(window),
-                ),
+                preview: generation::PreviewGeneration::new(source.clone(), window.metal_context()),
                 name,
                 square,
                 algorithm,

@@ -1,22 +1,18 @@
 # zipzi-editor
 
-The desktop application for Zipzi 2D, built with GPUI Kit and a Metal viewport on macOS.
+The desktop application for Zipzi 2D, built with GPUI Kit. On macOS, model
+previews use native Metal or the optional wgpu backend.
 This crate owns application startup, window/workspace presentation, panels,
 input routing and native UI integration. It consumes
 [`zipzi-editor-core`](../zipzi-editor-core/README.md) for editing state and
 [`zipzi-editor-render`](../zipzi-editor-render/README.md) for scene rendering.
 
-On Windows, the same binary starts the Editor with viewport rendering disabled:
-
-```powershell
-cargo run --locked -p zipzi-editor --bin zipzi-editor
-```
-
-Requires Rust 1.95+ and MSVC C++ Build Tools with the Windows SDK. This runs the
-existing Editor window, document state, docking, panels, commands and timeline.
-Viewport panels show a disabled-rendering message; no Metal device, overlay or
-preview worker is created. The resident Unix socket is unavailable on Windows;
-the Editor still owns its in-process Runtime. Settings use `%APPDATA%\Zipzi Editor`.
+The Windows port will use the shared [wgpu backend](../zipzi-render-wgpu/README.md).
+The macOS wgpu model-preview route is already available; Windows window,
+viewport and overlay integration remains to be connected and validated.
+Windows development requires Rust 1.95+, MSVC C++ Build Tools and the Windows SDK.
+Settings use `%APPDATA%\Zipzi Editor`. The resident Unix socket is unavailable
+on Windows; the Editor owns its in-process Runtime.
 
 ## Develop and test
 

@@ -6,10 +6,6 @@ pub(crate) mod form_dialog;
 pub(crate) mod manual_mesh;
 pub(crate) mod mesh_generation;
 pub(crate) mod mesh_generation_preview;
-#[cfg(target_os = "macos")]
-mod mesh_preview;
-#[cfg(not(target_os = "macos"))]
-#[path = "ui/mesh_preview_disabled.rs"]
 mod mesh_preview;
 pub(crate) mod object_identity;
 pub(crate) mod property_details;

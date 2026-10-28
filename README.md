@@ -27,9 +27,9 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
 
 Use Rust 1.95 or newer, uv 0.10.7 or newer, and CPython 3.14.
 The Editor additionally requires macOS, Xcode Command Line Tools and a
-Metal-capable GPU for its model viewport. Windows can run the
-[Editor with viewport rendering disabled](crates/zipzi-editor/README.md) with MSVC C++ Build Tools
-and the Windows SDK. Run these commands from the repository root:
+Metal-capable GPU. The [Windows port](crates/zipzi-editor/README.md) will use the
+shared wgpu backend; Windows rendering integration is pending.
+Run these commands from the repository root:
 
 ```sh
 uv sync --locked

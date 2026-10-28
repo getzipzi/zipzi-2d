@@ -241,12 +241,12 @@ pub(crate) fn paint_any() -> bool {
     OPTIONS.get().is_none_or(|o| o.paint != "none")
 }
 
-#[cfg(all(feature = "bench-instrumentation", target_os = "macos"))]
+#[cfg(feature = "bench-instrumentation")]
 pub(crate) fn observer() -> Option<fn(zipzi_editor_render::OverlayPass, &metal::CommandBufferRef)> {
     OPTIONS.get().filter(|o| o.detail).map(|_| observe_gpu as _)
 }
 
-#[cfg(all(feature = "bench-instrumentation", target_os = "macos"))]
+#[cfg(feature = "bench-instrumentation")]
 fn observe_gpu(pass: zipzi_editor_render::OverlayPass, command: &metal::CommandBufferRef) {
     // A single diagnostics worker waits for retained commands; the UI never waits.
     static GPU: OnceLock<mpsc::Sender<(u64, metal::CommandBuffer)>> = OnceLock::new();

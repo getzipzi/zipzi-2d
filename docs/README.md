@@ -14,6 +14,7 @@
 - [Runtime R5 / Python P5 animation authoring](plans/sdk-runtime/python2-r5-authoring.md): typed edits, records, SDK plans and addresses; Preview, spatial/GPU observation, fair scheduling and Editor playback isolation are delivered; [R7 acceptance](plans/sdk-runtime/python2-r7-closeout.md) records final workflows, distribution and performance
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
 - [Manual Mesh 编辑实施方案](plans/manual-mesh-editing.md): authoring topology, dashed-edge caches, atomic editing and staged mesh generation
+- [Windows 原生开发支持实施方案](plans/windows-development.md): tooling, platform services, Runtime IPC and Python validation first; GPUI/WGPU desktop integration last
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)
 
