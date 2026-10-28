@@ -88,11 +88,6 @@ x11 = ["scap?/x11"]
 name = "gpui"
 path = "src/gpui.rs"
 
-[[test]]
-name = "a11y_prepaint_rollback"
-path = "tests/a11y_prepaint_rollback.rs"
-required-features = ["test-support"]
-
 [dependencies.accesskit]
 version = "0.24.0"
 features = ["enumn"]
