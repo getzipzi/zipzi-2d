@@ -834,6 +834,28 @@ impl Path<Pixels> {
         }
     }
 
+    /// Scale this path, consuming its vertex buffer so collection can reuse it.
+    ///
+    /// The source and destination vertex types have the same size and alignment;
+    /// an owning iterator avoids allocating and copying a second path buffer.
+    pub fn into_scaled(self, factor: f32) -> Path<ScaledPixels> {
+        Path {
+            id: self.id,
+            order: self.order,
+            bounds: self.bounds.scale(factor),
+            content_mask: self.content_mask.scale(factor),
+            vertices: self
+                .vertices
+                .into_iter()
+                .map(|vertex| vertex.scale(factor))
+                .collect(),
+            start: self.start.map(|start| start.scale(factor)),
+            current: self.current.scale(factor),
+            contour_count: self.contour_count,
+            color: self.color,
+        }
+    }
+
     /// Move the start, current point to the given point.
     pub fn move_to(&mut self, to: Point<Pixels>) {
         self.contour_count += 1;

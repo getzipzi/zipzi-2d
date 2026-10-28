@@ -145,12 +145,17 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 };
                 let trace_id = request.trace_id;
                 // Backpressure before encoding; pending requests continue coalescing.
-                let slot = match renderer
-                    .presenter
-                    .acquire([request.target.width, request.target.height])
-                {
-                    Ok(Some(slot)) => Ok(slot),
-                    Ok(None) => {
+                let prepared = WindowsPresenter::fit_preview(
+                    target(request.target.width, request.target.height),
+                    request.transform,
+                )
+                .and_then(|(target, transform)| {
+                    let slot = renderer.presenter.acquire([target.width, target.height])?;
+                    Ok((slot, target, transform))
+                });
+                let slot = match prepared {
+                    Ok((Some(slot), target, transform)) => Ok((slot, target, transform)),
+                    Ok((None, _, _)) => {
                         let (lock, ready) = &*shared;
                         let mut inbox = lock.lock().unwrap();
                         if inbox.closed {
@@ -174,15 +179,12 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 frame_trace::emit(trace_id, "dequeued", &[]);
                 frame_trace::emit(trace_id, "worker_begin", &[]);
                 let image = slot
-                    .and_then(|slot| {
+                    .and_then(|(slot, target, transform)| {
                         renderer
                             .scene
-                            .submit_transformed_traced(
-                                target(request.target.width, request.target.height),
-                                &request.scene,
-                                request.transform,
-                                |stage| frame_trace::emit(trace_id, stage, &[]),
-                            )
+                            .submit_transformed_traced(target, &request.scene, transform, |stage| {
+                                frame_trace::emit(trace_id, stage, &[])
+                            })
                             .and_then(|frame| renderer.publish(slot, frame.image, trace_id))
                     })
                     .map_err(|e| e.to_string());

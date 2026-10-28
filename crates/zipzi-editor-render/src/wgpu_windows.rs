@@ -97,6 +97,36 @@ pub struct WindowsPresenter {
 impl WindowsPresenter {
     pub const MAX_SLOTS: usize = 8;
     pub const MAX_BYTES: u64 = 256 * 1024 * 1024;
+    /// Leave room for all retained/in-flight slots, including a replacement frame.
+    pub const MAX_FRAME_BYTES: u64 = Self::MAX_BYTES / Self::MAX_SLOTS as u64;
+
+    /// Bound raster resolution without changing the logical viewport coordinates.
+    /// The resulting texture is stretched back to the original bounds by GPUI.
+    pub fn fit_preview(
+        mut target: crate::WgpuTargetConfig,
+        mut transform: zipzi_editor_core::ViewportTransform,
+    ) -> Result<(
+        crate::WgpuTargetConfig,
+        zipzi_editor_core::ViewportTransform,
+    )> {
+        Self::validate_extent([target.width, target.height])?;
+        let bytes = u64::from(target.width) * u64::from(target.height) * 4;
+        if bytes > Self::MAX_FRAME_BYTES {
+            let scale = (Self::MAX_FRAME_BYTES as f64 / bytes as f64).sqrt();
+            target.width = (f64::from(target.width) * scale).floor().max(1.) as u32;
+            target.height = (f64::from(target.height) * scale).floor().max(1.) as u32;
+            transform.metrics.scale_factor *= scale as f32;
+        }
+        Ok((target, transform))
+    }
+
+    fn validate_extent(extent: [u32; 2]) -> Result<()> {
+        ensure!(
+            extent.into_iter().all(|v| v > 0 && v <= 16384),
+            "Invalid shared preview extent"
+        );
+        Ok(())
+    }
 
     pub fn new(context: &WgpuContext, consumer: ID3D11Device) -> Result<Self> {
         let hal = unsafe { context.device().as_hal::<wgpu::hal::api::Dx12>() }
@@ -121,14 +151,11 @@ impl WindowsPresenter {
     /// Select a free slot without a GPU/CPU wait. None means the caller should
     /// coalesce pending requests and retry, never publish an error/blank frame.
     pub fn acquire(&mut self, extent: [u32; 2]) -> Result<Option<usize>> {
-        ensure!(
-            extent.into_iter().all(|v| v > 0 && v <= 16384),
-            "Invalid shared preview extent"
-        );
+        Self::validate_extent(extent)?;
         let bytes = u64::from(extent[0]) * u64::from(extent[1]) * 4;
         ensure!(
-            extent.into_iter().all(|v| v > 0) && bytes <= Self::MAX_BYTES,
-            "Shared preview exceeds presentation budget"
+            bytes <= Self::MAX_FRAME_BYTES,
+            "Shared preview exceeds per-frame presentation budget; fit the preview before rendering"
         );
         unsafe {
             self.device.GetDeviceRemovedReason()?;

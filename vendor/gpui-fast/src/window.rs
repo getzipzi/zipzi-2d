@@ -4832,7 +4832,7 @@ impl Window {
         self.next_frame
             .scene
             .insert_primitive(crate::fast::layers::paint::snap_path(
-                path.scale(scale_factor),
+                path.into_scaled(scale_factor),
             ));
     }
 

@@ -103,6 +103,123 @@ fn close(actual: [u8; 4], expected: [u8; 4]) {
 }
 
 #[test]
+fn fitting_large_previews_preserves_logical_coordinates_and_bounds_raster_bytes() -> Result<()> {
+    use zipzi_editor_core::{ModelPoint, ViewportMetrics, ViewportPoint, ViewportTransform};
+    for [width, height] in [
+        [6000, 6000],
+        [7680, 4320],
+        [16384, 16384],
+        [16384, 1],
+        [1, 16384],
+        [3840, 2160],
+        [4096, 2048],
+        [4097, 2048],
+        [1, 1],
+    ] {
+        let target = WgpuTargetConfig {
+            width,
+            height,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+        };
+        let transform = ViewportTransform {
+            scale: 1.75,
+            offset: ViewportPoint { x: 120., y: 240. },
+            metrics: ViewportMetrics {
+                width: width as f32 / 2.,
+                height: height as f32 / 2.,
+                scale_factor: 2.,
+            },
+        };
+        let (fitted, raster) = WindowsPresenter::fit_preview(target, transform)?;
+        assert!(
+            u64::from(fitted.width) * u64::from(fitted.height) * 4
+                <= WindowsPresenter::MAX_FRAME_BYTES
+        );
+        assert!(fitted.width > 0 && fitted.height > 0);
+        assert_eq!(
+            raster.to_viewport(ModelPoint { x: 12., y: -34. }),
+            transform.to_viewport(ModelPoint { x: 12., y: -34. })
+        );
+        assert_eq!(raster.metrics.width, transform.metrics.width);
+        assert_eq!(raster.metrics.height, transform.metrics.height);
+        let scale = raster.metrics.scale_factor / transform.metrics.scale_factor;
+        // Integer texture extents may round down by less than one raster pixel.
+        assert!((fitted.width as f32 - width as f32 * scale).abs() < 1.);
+        assert!((fitted.height as f32 - height as f32 * scale).abs() < 1.);
+        if u64::from(width) * u64::from(height) * 4 <= WindowsPresenter::MAX_FRAME_BYTES {
+            assert_eq!([fitted.width, fitted.height], [width, height]);
+            assert_eq!(raster, transform);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn large_previews_keep_replacing_retained_frames_within_the_pool_budget() -> Result<()> {
+    use std::collections::VecDeque;
+    use zipzi_editor_core::{ViewportMetrics, ViewportPoint, ViewportTransform};
+    let consumer = device()?;
+    let context = windows_context(&consumer)?;
+    let mut presenter = WindowsPresenter::new(&context, consumer.clone())?;
+    let mut gpui = gpui_windows::SurfaceTestRenderer::new(consumer)?;
+    // Previously accepted a 137 MiB frame, then retried its replacement forever.
+    assert!(presenter.acquire([6000, 6000]).is_err());
+    let mut retained = VecDeque::new();
+    for i in 0..WindowsPresenter::MAX_SLOTS * 2 {
+        let [width, height] = if i % 2 == 0 {
+            [6000, 6000]
+        } else {
+            [7680, 4320]
+        };
+        let (target, _) = WindowsPresenter::fit_preview(
+            WgpuTargetConfig {
+                width,
+                height,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+            },
+            ViewportTransform {
+                scale: 1.,
+                offset: ViewportPoint::default(),
+                metrics: ViewportMetrics {
+                    width: width as f32,
+                    height: height as f32,
+                    scale_factor: 1.,
+                },
+            },
+        )?;
+        let color = if i % 2 == 0 {
+            [1., 0., 0., 1.]
+        } else {
+            [0., 0., 1., 1.]
+        };
+        // Keep the old displayed scenes until their replacement is ready, just like the UI.
+        let next = scene(
+            frame(
+                &context,
+                &mut presenter,
+                [target.width, target.height],
+                color,
+            )?,
+            1.,
+        );
+        let pixels = gpui.render(&next, [32, 32], [1.; 4])?;
+        close(
+            pixels.get_pixel(5, 5).0,
+            if i % 2 == 0 {
+                [255, 0, 0, 255]
+            } else {
+                [0, 0, 255, 255]
+            },
+        );
+        if retained.len() == WindowsPresenter::MAX_SLOTS - 1 {
+            retained.pop_front();
+        }
+        retained.push_back(next);
+    }
+    Ok(())
+}
+
+#[test]
 fn shared_texture_composes_clips_redraws_and_recycles_without_overwriting_retained_frames()
 -> Result<()> {
     let consumer = device()?;

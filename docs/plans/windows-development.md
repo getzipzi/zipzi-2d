@@ -776,3 +776,194 @@ Mesh 均为 93。原始记录位于 `target/windows-shared-texture-20261028/reru
 结果再次确认消除预览回读／atlas 上传及较低的 UI draw P95；输入到平台返回中位数
 仍约 30–31 ms，第二轮尾部差距很小。没有新增 PresentMon，不能当作显示 FPS 或
 屏幕端到端延迟结果，后端切换仍是对照中的共同变量。
+
+### P6 延迟归因：去掉回读后为什么仍约 30 ms（2026-10-28）
+
+结论：剩余主要成本在 UI 线程绘制与帧交接调度；新旧 worker 总耗时差距也远小于
+旧回读本身。共享纹理消除了像素往返，但没有消除 UI build/prepaint/paint，亦未改变
+完成帧接收、失效通知及 Windows 帧请求的时序。此次只排查，未修改生产调度或渲染代码。
+
+重新分析 `rerun-1/`，按 scene 的 input 父链归属正式 benchmark tick，按 preview ID
+连接各阶段。下表为两轮 P50 的范围，单位 ms；各阶段分位数不能直接相加：
+
+| 阶段 | 旧 Vulkan/readback | 新 D3D12/shared |
+| --- | --- | --- |
+| 输入 → scene 开始 | 1.07–1.11 | 1.09–1.10 |
+| scene 开始 → 请求 | 0.85–0.88 | 0.85–0.86 |
+| enqueued → dequeued | 0.011–0.012 | 0.217–0.219 |
+| worker 开始 → published | 4.10–4.17 | 3.93 |
+| encode_begin → preview_commit_begin | 0.83–0.85 | 1.88–1.89 |
+| preview_commit_begin → preview_submitted | 0.55–0.56 | 0.62–0.63 |
+| preview_submitted → shared_texture_submitted | 不适用 | 0.37–0.38 |
+| published → ui_received | 8.48–8.79 | 8.19–8.34 |
+| ui_received → accepted | 0.20 | 0.19 |
+| accepted → 首次绘制该预览的 ui_draw_begin | 3.49–3.99 | 4.09–4.70 |
+| ui_draw_begin → paint_shared_surface | 不适用 | 5.98–6.07 |
+
+旧回读本身 P50 为 1.71–1.73 ms；新路径 CPU 编码区间增加约 1 ms，另外增加共享提交
+工作，最终 worker 发布只提前约 0.2 ms。这是两条完整路径的观测，不能单独断言为
+D3D12 API 或驱动固有开销；后续需要同后端对照及编码内部采样。新 published 只代表
+提交，旧 published 已完成读回，更不能把这组 CPU 边界理解为 GPU 完成耗时。
+
+新路径 UI draw P50 仍为 9.02–9.13 ms：build 约 3.11 ms、prepaint 约 2.30–2.34 ms、
+paint 约 3.00 ms。platform_draw CPU P50 约 1.17–1.20 ms，P95 约 1.40–1.57 ms；
+现有数据没有显示平台调用是最大的 CPU 阻塞，但该区间没有拆开 D3D11 提交与 Present，
+也没有 GPU 完成时间戳，不能排除 GPU/DWM 端排队。
+
+#### 同二进制覆盖层对照
+
+使用同一 shared.exe、同一 Mao 模型、全选、180 正式输入＋30 预热、120 Hz 目标，
+开启 `ZIPZI_BENCH_OVERLAY_DETAIL=1`，只改变 `ZIPZI_BENCH_OVERLAY_PAINT=all/none`。
+按 all → none → none → all 顺序运行，四轮正常退出、零丢事件、无 render_error、
+零预览回读，audit 均确认 93 个 Mesh 发生变化。关闭 paint 保留选中几何与模型计算。
+
+| 轮次 | UI draw P50 / P95（ms） | 输入到对应纹理平台返回 P50 / P95（ms） | 有返回关联的输入 / 180 |
+| --- | --- | --- | --- |
+| all 1 | 9.23 / 10.76 | 31.13 / 38.95 | 177 |
+| none 1 | 7.87 / 8.87 | 21.20 / 30.46 | 162 |
+| none 2 | 7.79 / 8.90 | 19.53 / 30.64 | 156 |
+| all 2 | 9.14 / 10.59 | 30.65 / 40.08 | 173 |
+
+详细 CPU scope 中，all 的 mesh edges 约 0.75 ms、markers 约 0.65 ms、其他 lines
+约 0.18 ms（均 P50）。这与关闭覆盖层后约 1.3–1.4 ms 的 UI draw 降幅一致。
+整体交接延迟下降更大，表明绘制成本会影响线程接收与帧时序；并非绘制每省 1 ms，
+端到端就固定省 1 ms。none 的可关联输入比例更低，结果存在合并/未确认样本，不能宣称
+所有输入都降低到 20 ms，亦不能把两个分位数直接作为严格配对的因果差值。
+
+进一步将每个正式区间内 published → ui_received 与 ui_draw/platform_draw 区间求交：
+all 两轮分别有 171/176、162/176 次发布发生在 UI 绘制中；接收延迟 P50 为
+8.49/8.12 ms，其中绘制重叠 P50 为 8.00/7.70 ms。所有接收等待的总时长中，
+85.4%/86.5% 与绘制重叠。none 两轮接收延迟 P50 降至 4.37/3.01 ms。
+这是当前主线程交接受绘制阻塞的直接时间证据。
+
+源码路径与观测相符：`presentation.rs::receive_viewport_frame` 在前台接收后才
+notify_viewport；Windows dispatcher 通过消息投递前台任务，不能抢占正在执行的 draw；
+`platform.rs::run_foreground_task` 的 10 ms 是任务循环让出预算，不是固定睡眠。
+Windows VSyncProvider 经 DwmFlush 触发窗口帧请求，接收后的通知仍需等待绘制机会。
+没有记录调度信号的完整链路，因此这里只把额外帧等待视为有源码支持的解释，尚未
+归因到某一个具体调度分支，也不建议直接改掉 DwmFlush 或去掉 fence。
+
+120 Hz 是驱动目标，实际 all 输入间隔 P50 约 18.5–19.3 ms、P95 约 33.5 ms；
+timer_late P50 约 12.3 ms。驱动在前台醒来后注入输入，迟到时重设 deadline，避免追赶
+突发。因此这不是稳定的 120 Hz 输入流。现有输入到平台返回从实际 benchmark_tick
+开始，不包含此前 timer_late；不能再次将 timer_late 相加解释表中的 30 ms。
+
+本地复现入口为 `target/windows-shared-texture-20261028/diagnosis/probe.py`，四个子目录
+各保留 trace、result.json、overlay/parameter audit 和日志；与前述固定 shared.exe 配套。
+本轮未采集 PresentMon/GPU timestamp，不将平台返回视为屏幕显示完成。
+
+#### 下一步优先级
+
+1. 在 Windows 前台任务唤醒/开始、frame signal、draw 开始处补齐关联，确认完成帧为何
+   错过当前绘制。评估在帧构建前消费最新可用预览，保持模型纹理与 overlay 同一版本，
+   避免在绘制过程中重入 App 或无条件全窗口 refresh。
+2. 缩小参数变化引起的 UI build/layout/paint 范围；批量处理高密度 edges/markers，
+   验证颜色、裁剪、层级和命中区域不退化。当前覆盖层对照已证明这是有效优化方向。
+3. 同 D3D12 后端隔离 model encode、资源分配、共享复制提交，配合 GPU 时间戳确认 GPU
+   临界路径；再判断直接渲染共享目标的价值。目前不能期待省去一次 GPU copy 就消除
+   约 20 ms 的 UI 交接与绘制等待。
+
+### 帧开始接收实验（2026-10-28，已撤回）
+
+尝试在平台 frame request 的 dirty check 前消费预览邮箱，保留原异步接收。
+12 项 UI 回归和 4 项邮箱测试通过，但四轮原生窗口对照中，新入口消费数均为 0；
+已有异步任务已经先取走结果，无法改善本场景。新版本两轮输入到平台返回 P95 为
+46.01/48.12 ms，基线为 39.23/40.20 ms，没有可接受收益。因此撤回该入口、邮箱
+修改、附加测试及 vendor patch。原始二进制与 trace 保留在
+`target/windows-frame-start-20261028/`，不把该实验列为已完成优化。
+
+### 保留的优化：边线包围盒批量累计（2026-10-28）
+
+`mesh_edges.rs` 原本为每条边调用两次 `Path::push_triangle`，每个三角形按三个顶点
+串行 union 包围盒。新路径按四个角点累计 min/max，每个 4096 边的块结束时才构建
+Bounds，并直接批量写入相同的六个顶点。三角形坐标、方向、绘制顺序、分块、颜色、
+裁剪余量及透明叠加行为保持不变。没有减少边线或顶点显示数量。
+
+保留旧算法作为自动参数 benchmark 的 `ZIPZI_BENCH_LEGACY_EDGE_BOUNDS=1` 对照；
+同一个可执行文件切换该参数，避免并行工作区改动干扰二进制间的比较。
+四轮使用 SHA-256 `117104734dc83da057326d61b56f46136d6e7463125fa9a043d568e4a23c0e42`，
+Mao 全选/全部 overlay，30 预热＋180 正式输入，120 Hz 目标，detail 开启。
+按旧→新→新→旧运行，每轮开始前等待 Cargo/rustc/link 空闲。四轮正常退出、零 trace
+丢事件、无 render_error、零预览回读，audit 均确认 93 个 Mesh 变化。
+
+| 轮次 | mesh edges P50 / P95（ms） | UI draw P50 / P95（ms） | 输入到平台返回 P50 / P95（ms） | 关联输入 / 180 |
+| --- | --- | --- | --- | --- |
+| 旧 1 | 0.836 / 1.066 | 10.87 / 14.81 | 32.72 / 43.44 | 177 |
+| 新 1 | 0.646 / 0.881 | 10.45 / 14.43 | 31.48 / 40.32 | 175 |
+| 新 2 | 0.673 / 0.921 | 10.99 / 15.06 | 33.14 / 45.90 | 176 |
+| 旧 2 | 0.870 / 1.128 | 10.97 / 14.87 | 33.30 / 44.66 | 177 |
+
+边线 CPU P50 约降低 23%，P95 约降低 17%–18%；整体 P50/P95 没有一致改善，
+不能把局部约 0.2 ms 的节省当作解决了约 30 ms 的交互延迟。仍需进一步减少其他
+build/prepaint/paint 工作以及输入和完成帧引起的重复绘制。本轮没有改变帧调度策略。
+
+3 项 `mesh_edges::tests` 通过：覆盖分数原点/线宽与通用描边的采样覆盖一致性、退化
+输入/分块，以及 12,345 条边的新旧逐顶点比较和各块包围盒覆盖；Release 构建通过。
+同二进制对照脚本、原始 trace、每轮审计和 JSON 结果位于
+`target/windows-edge-bounds-20261028/`。上述均为 CPU 时间，不代表屏幕显示延迟。
+
+### 视口布局写入与缓存排查（2026-10-28）
+
+Canvas prepaint 现在先比较 bounds 和 core viewport metrics，仅在尺寸、位置、DPI、
+可见性或绑定后的 metrics 需要更新时写入 ViewportSurface/EditorView。GPUI 会把绘制
+期间的 Entity::update 记入 retained dependency writes，即使闭包没有改变数据；
+因此不再为每帧相同的布局执行更新。metrics 单独比较，避免隐藏/重新绑定后 bounds
+相同但 core metrics 尚未恢复时漏掉同步。实际同步保留原来的 gesture rollback
+与 redraw 行为，并记录 `ui.viewport_layout_sync`。
+
+同二进制 `ZIPZI_BENCH_EAGER_VIEWPORT_LAYOUT=1/0`，Mao 全选、30 预热＋180 正式
+输入、120 Hz 目标、detail 开启，按旧→新→新→旧运行。两轮新路径正式区间的布局
+同步均为 0，旧路径为 177/178；root 和参数面板渲染次数未稳定减少。UI draw P50
+旧为 10.75/9.88 ms、新为 9.77/9.83 ms，不能把首轮波动解释为稳定整体收益。
+四轮 trace 完整、零丢事件、零 render_error、零预览回读，参数审计均为 93 个 Mesh
+变化。证据保存于 `target/windows-viewport-layout-20261028/`，二进制 SHA-256 为
+`d280271aa8c958800e36c60b116445afa0947263579d642380d44fd178f2b144`。
+
+另尝试仅在 disabled 状态变化时访问参数行，但原生 ABBA 未证明收益，拖动工作量
+测试仍记录 12 次 thumb 变化导致 26 次面板 render，因此撤回该尝试。临时 retained
+日志显示 ParametersPanel 自身、PropertiesPanel 和依赖中的 DockArea 仍有绘制期
+写入失效；不是仅移除参数行读取就能解决。实验与日志保留在
+`target/windows-parameter-retention-20261028/`，诊断 vendor patch 已撤回。
+
+`ui_performance::` 12 项通过，新增回归验证稳定布局不写入、窗口尺寸和 DPI 变化
+同步、core metrics 清空后恢复。没有更改 Windows 帧调度。
+
+### 保留的优化：复用 GPUI 路径缩放缓冲（2026-10-28）
+
+`Window::paint_path` 已接管 Path，但原来的 `Path::scale(&self)` 仍会再分配一份
+顶点数组。新增 `Path::into_scaled(self)` 使用 owning iterator，让 Rust 的原地 collect
+复用输入 Vec；借用式 scale API 保留。没有 unsafe 转换，顶点、包围盒、content mask、
+颜色、opacity、snapping 和层级计算保持相同。按每条有效边 6 个 32 字节顶点计算，
+12,202 条边每次绘制减少约 2.23 MiB 的临时分配总量；这是结构计算值，不是 GPU 内存
+测量。按现有 4096 条边分块，一次避免的最大额外数组为 768 KiB。
+
+Release 旧/新二进制 SHA-256 分别为：
+
+- 旧：`d280271aa8c958800e36c60b116445afa0947263579d642380d44fd178f2b144`
+- 新：`0ca81e9246a9ea3ed52474f4285809871514c301de0c0bac3a2a0e486b40776c`
+
+两者均启用视口布局 guard、原来的 hypot 和批量包围盒。Mao 全选、全部 overlay、
+30 预热＋180 正式输入、120 Hz 目标、detail 开启，按旧→新→新→旧运行，未与编译
+并行。每轮审计均为 150 个选中 Mesh、5,159 个顶点、12,202 条边、93 个 Mesh 实际
+形变；正常退出、零丢事件、零 render_error、零预览回读。
+
+| 轮次 | mesh edges P50 / P95（ms） | UI draw P50 / P95（ms） | 输入到平台返回 P50 / P95（ms） | 关联输入 / 180 |
+| --- | --- | --- | --- | --- |
+| 旧 1 | 0.620 / 0.921 | 9.91 / 12.81 | 30.87 / 38.79 | 176 |
+| 新 1 | 0.542 / 0.744 | 9.55 / 12.27 | 30.87 / 40.76 | 176 |
+| 新 2 | 0.540 / 0.770 | 9.79 / 12.46 | 30.65 / 39.27 | 176 |
+| 旧 2 | 0.617 / 0.798 | 9.78 / 12.70 | 30.53 / 41.77 | 172 |
+
+两轮 P50 的均值从 0.619 降至 0.541 ms，边线阶段约减少 12.6%。整体 UI draw 和
+输入到平台返回仍未稳定改善，仍约 30–31 ms；该边界不代表屏幕显示完成。此次收益
+是在已有包围盒优化基础上的增量，不能与其他时段的 benchmark 直接拼接计算。
+
+`mesh_edges::tests` 4 项、`ui_performance::` 12 项及 Release 构建通过。新增测试
+检查空路径、单三角形、大数组以及 0.5/1/1.25/2/3 倍缩放：与借用式 scale 逐顶点
+完全一致，并核验非空 Vec 的地址和容量保持不变。补丁及升级说明位于
+`vendor/path-buffer-reuse.patch` 和 `vendor/README.md`。固定二进制、复现脚本、
+原始 trace、审计和 `summary.json` 保留于 `target/windows-path-buffer-20261028/`。
+
+此前测试了用 f64 平方和开方替代逐边 hypot；四轮边线 P50 仅减少约 0.008 ms，
+没有稳定整体收益，因此撤回实现、对照开关与附加测试。实验资料保留在
+`target/windows-edge-length-20261028/`。

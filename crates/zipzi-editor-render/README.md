@@ -62,8 +62,12 @@ to COMMON before D3D11 samples it. No pixel readback or image-atlas upload occur
 Each immutable surface has separate ready/consumed shared fence timelines. GPUI
 waits on ready on its GPU queue and signals consumed after every actual draw,
 including retained redraws. Reuse requires exclusive pool ownership AND both
-fences completed. Each presenter bounds shared textures to eight slots / 256 MiB;
-source textures and render attachments are separate allocations. Main preview
+fences completed. Each presenter bounds shared textures to eight slots / 256 MiB,
+with at most 32 MiB per frame so retained frames leave room for replacement slots.
+The main preview fits larger targets to this pixel budget by reducing raster DPI;
+logical viewport coordinates and interaction remain unchanged. Direct acquisitions
+above the per-frame budget fail immediately instead of entering backpressure.
+Source textures and render attachments are separate allocations. Main preview
 requests coalesce during backpressure; candidate previews report budget exhaustion.
 Changing dimensions retires reusable old sizes. Pending copies retire on a separate
 thread when their presenter closes, keeping native resources and the wgpu backend

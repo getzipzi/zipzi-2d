@@ -113,6 +113,14 @@ also be measured separately). Their automatic-driver equivalents are
 `ZIPZI_BENCH_UNLAYERED_MARKERS=1` and `ZIPZI_BENCH_TESSELLATED_EDGES=1`; the trace
 records both settings. Detailed runs split `overlay.gpui_mesh_edges`,
 `overlay.gpui_lines` (semantic/control lines), and `overlay.gpui_markers`.
+`ZIPZI_BENCH_LEGACY_EDGE_BOUNDS=1` keeps the direct triangles but restores their
+old per-triangle bounding-box accumulation, isolating the batched-bounds change
+in the same binary. It requires the automatic parameter workload and is recorded
+as `parameter_overlay.legacy_edge_bounds`; leave tessellated edges disabled.
+`ZIPZI_BENCH_EAGER_VIEWPORT_LAYOUT=1` restores unconditional canvas prepaint
+layout writes. It requires the automatic parameter workload and is recorded as
+`parameter_overlay.eager_viewport_layout`. Change one switch at a time and keep
+detailed recording identical in each pair.
 The `vertices` case skips fallback mesh edges as well as control lines on Windows.
 Earlier Windows `vertices` traces that still included mesh edges are not a pure
 vertex ablation. Preserve those raw results rather than relabeling them.

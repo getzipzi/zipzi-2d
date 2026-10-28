@@ -110,6 +110,8 @@ pub struct ViewportSurface {
     #[cfg(target_os = "macos")]
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
+    #[cfg(test)]
+    pub(crate) layout_syncs: usize,
     navigation: navigation::ViewportNavigation,
     interaction: Option<zipzi_editor_core::ViewportInteractionToken>,
     _subscriptions: Vec<Subscription>,
@@ -225,6 +227,8 @@ impl ViewportSurface {
                 #[cfg(target_os = "macos")]
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
+                #[cfg(test)]
+                layout_syncs: 0,
                 navigation: Default::default(),
                 interaction: None,
                 _subscriptions: subscriptions,

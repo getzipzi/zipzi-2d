@@ -111,16 +111,37 @@ impl ViewportSurface {
         let selection_fill = selection_outline.opacity(0.12);
         canvas(
             move |bounds, window, cx| {
+                let metrics = ViewportMetrics {
+                    width: bounds.size.width.as_f32(),
+                    height: bounds.size.height.as_f32(),
+                    scale_factor: if window.is_visible() {
+                        window.scale_factor()
+                    } else {
+                        0.
+                    },
+                };
+                let surface = measure.read(cx);
+                let metrics_changed = surface.owner.upgrade().is_some_and(|owner| {
+                    let owner = owner.read(cx);
+                    surface.binding(&owner.editor).is_some_and(|binding| {
+                        owner.editor.viewport_metrics(binding.viewport) != Some(metrics)
+                    })
+                });
+                // An update during prepaint counts as a write to GPUI's retained
+                // dependencies even when it changes no fields. Avoid invalidating
+                // the owner and its readers on every unchanged canvas frame.
+                if surface.bounds == bounds
+                    && !metrics_changed
+                    && !benchmark::parameter_overlay::eager_viewport_layout()
+                {
+                    return;
+                }
+                let _span = benchmark::parameter_overlay::ui_span("ui.viewport_layout_sync");
                 measure.update(cx, |this, cx| {
-                    let metrics = ViewportMetrics {
-                        width: bounds.size.width.as_f32(),
-                        height: bounds.size.height.as_f32(),
-                        scale_factor: if window.is_visible() {
-                            window.scale_factor()
-                        } else {
-                            0.
-                        },
-                    };
+                    #[cfg(test)]
+                    {
+                        this.layout_syncs += 1;
+                    }
                     this.bounds = bounds;
                     let _ = this.owner.update(cx, |owner, cx| {
                         let Some(binding) = this.binding(&owner.editor) else {

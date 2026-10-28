@@ -37,6 +37,25 @@ The Fast backend and local cache-boundary fix are the accepted default. See the
 [Kit comparison and adoption decision](../docs/archive/gpui-kit-old-vs-fast.md)
 for CPU measurements and presentation-latency tradeoffs.
 
+## Owned path scaling
+
+[path-buffer-reuse.patch](path-buffer-reuse.patch) adds `Path::into_scaled` in
+`gpui-fast/src/scene.rs` and uses it from `Window::paint_path`. The owning vertex
+iterator lets Rust collect into the original allocation, avoiding a second
+buffer for every painted path. The existing borrowed `Path::scale` remains
+available; coordinates, content masks, color, bounds and snapping are unchanged.
+No raw pointer casts or unsafe allocation conversion are used.
+
+The Editor's `mesh_edges::tests::owned_path_scaling_reuses_vertices_and_preserves_geometry`
+checks buffer identity/capacity and exact equality against borrowed scaling at
+fractional and integer DPI factors, including large buffers and empty paths.
+Keep this regression when upgrading Rust or GPUI because allocation reuse is a
+standard-library optimization. Apply this patch after the existing GPUI patches:
+
+```sh
+git apply --reverse --check vendor/path-buffer-reuse.patch
+```
+
 ## Accessibility prepaint transactions
 
 `gpui-fast/src/window.rs`, `window/a11y.rs` and `fast/a11y.rs` roll back

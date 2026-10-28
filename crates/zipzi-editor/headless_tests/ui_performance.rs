@@ -342,6 +342,85 @@ fn canvas_frame_notifications_do_not_redraw_unchanged_header(cx: &mut TestAppCon
 }
 
 #[gpui_kit::test]
+fn canvas_prepaint_writes_layout_only_when_bounds_or_metrics_change(cx: &mut TestAppContext) {
+    use gpui_kit::{App, px, size};
+    let harness = setup(cx);
+    let canvas = harness.view.read_with(cx, |view, _| {
+        view.dock.as_ref().unwrap().active_viewport().clone()
+    });
+    let viewport = canvas.read_with(cx, |surface, _| surface.viewport);
+    let draw = |cx: &mut TestAppContext| {
+        cx.update_window(harness.window, |_, window, cx| {
+            App::notify(cx, canvas.entity_id());
+            window.draw(cx).clear(cx);
+        })
+        .unwrap();
+    };
+    for _ in 0..3 {
+        draw(cx);
+    }
+    let syncs = canvas.read_with(cx, |surface, _| surface.layout_syncs);
+    assert!(syncs > 0, "initial layout was never synchronized");
+    for _ in 0..10 {
+        draw(cx);
+    }
+    assert_eq!(
+        canvas.read_with(cx, |surface, _| surface.layout_syncs),
+        syncs,
+        "unchanged canvas prepaint wrote retained entity dependencies"
+    );
+
+    let before = harness.view.read_with(cx, |view, _| {
+        view.editor.viewport_metrics(viewport).unwrap()
+    });
+    cx.simulate_window_resize(harness.window, size(px(1200.), px(800.)));
+    draw(cx);
+    let resized = harness.view.read_with(cx, |view, _| {
+        view.editor.viewport_metrics(viewport).unwrap()
+    });
+    let bounds = canvas.read_with(cx, |surface, _| surface.benchmark_bounds().unwrap());
+    assert_ne!(
+        (before.width, before.height),
+        (resized.width, resized.height)
+    );
+    assert_eq!(resized.width, bounds.size.width.as_f32());
+    assert_eq!(resized.height, bounds.size.height.as_f32());
+
+    cx.simulate_window_scale_factor_change(harness.window, 2.);
+    draw(cx);
+    let scaled = harness.view.read_with(cx, |view, _| {
+        view.editor.viewport_metrics(viewport).unwrap()
+    });
+    assert_eq!(scaled.scale_factor, 2.);
+    assert_eq!(
+        (scaled.width, scaled.height),
+        (resized.width, resized.height)
+    );
+
+    // Hiding/rebinding can clear core metrics without changing the last UI bounds.
+    harness.view.update(cx, |view, _| {
+        view.editor
+            .set_viewport_metrics(viewport, Default::default());
+    });
+    draw(cx);
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.viewport_metrics(viewport), Some(scaled));
+    });
+    let settled = canvas.read_with(cx, |surface, _| surface.layout_syncs);
+    assert!(
+        settled >= syncs + 3,
+        "resize, DPI and restored metrics were not synchronized"
+    );
+    for _ in 0..3 {
+        draw(cx);
+    }
+    assert_eq!(
+        canvas.read_with(cx, |surface, _| surface.layout_syncs),
+        settled
+    );
+}
+
+#[gpui_kit::test]
 fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
     cx: &mut TestAppContext,
 ) {

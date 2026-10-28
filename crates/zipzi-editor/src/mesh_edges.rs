@@ -1,4 +1,4 @@
-use gpui_kit::{Path, PathBuilder, Pixels, Point, point, px};
+use gpui_kit::{Bounds, Path, PathBuilder, PathVertex, Pixels, Point, point, px};
 use zipzi_editor_core::ViewportPoint;
 
 // PathBuilder tessellates with u16 indices. Independent straight strokes use four
@@ -18,6 +18,19 @@ pub fn paint_edges_with_width(
     edges: &[(ViewportPoint, ViewportPoint)],
     origin: Point<Pixels>,
     width: f32,
+    paint: impl FnMut(Path<Pixels>),
+) {
+    if crate::benchmark::parameter_overlay::legacy_edge_bounds() {
+        paint_edges_impl::<false>(edges, origin, width, paint);
+    } else {
+        paint_edges_impl::<true>(edges, origin, width, paint);
+    }
+}
+
+fn paint_edges_impl<const DIRECT_BOUNDS: bool>(
+    edges: &[(ViewportPoint, ViewportPoint)],
+    origin: Point<Pixels>,
+    width: f32,
     mut paint: impl FnMut(Path<Pixels>),
 ) {
     if !width.is_finite() || width <= 0. {
@@ -28,6 +41,8 @@ pub fn paint_edges_with_width(
     // the existing chunk boundaries (including overlap/alpha behavior).
     for edges in edges.chunks(EDGES_PER_PATH) {
         let mut path = None;
+        let mut minimum = point(f32::INFINITY, f32::INFINITY);
+        let mut maximum = point(f32::NEG_INFINITY, f32::NEG_INFINITY);
         for (a, b) in edges {
             let dx = b.x - a.x;
             let dy = b.y - a.y;
@@ -46,12 +61,32 @@ pub fn paint_edges_with_width(
                 path.vertices.reserve(edges.len() * 6);
                 path
             });
-            let st = (point(0., 1.), point(0., 1.), point(0., 1.));
-            // Match Lyon's triangle winding as well as its butt-cap coverage.
-            path.push_triangle((a + normal, b + normal, a - normal), st);
-            path.push_triangle((a - normal, b + normal, b - normal), st);
+            if !DIRECT_BOUNDS {
+                let st = (point(0., 1.), point(0., 1.), point(0., 1.));
+                path.push_triangle((a + normal, b + normal, a - normal), st);
+                path.push_triangle((a - normal, b + normal, b - normal), st);
+                continue;
+            }
+            // Bound the four stroke corners once instead of performing six
+            // dependent Bounds::union operations through push_triangle.
+            let corners = [a + normal, b + normal, a - normal, b - normal];
+            for corner in corners {
+                minimum.x = minimum.x.min(corner.x.as_f32());
+                minimum.y = minimum.y.min(corner.y.as_f32());
+                maximum.x = maximum.x.max(corner.x.as_f32());
+                maximum.y = maximum.y.max(corner.y.as_f32());
+            }
+            // Preserve the exact triangles, winding, and per-chunk alpha behavior.
+            path.vertices.extend([0, 1, 2, 2, 1, 3].map(|i| PathVertex {
+                xy_position: corners[i],
+                st_position: point(0., 1.),
+                content_mask: Default::default(),
+            }));
         }
         if let Some(mut path) = path {
+            if DIRECT_BOUNDS {
+                path.bounds = Bounds::from_corners(minimum.map(px), maximum.map(px));
+            }
             path.bounds = path.bounds.dilate(px(width.max(1.)));
             paint(path);
         }
@@ -179,6 +214,101 @@ mod tests {
                             );
                         }
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn batched_bounds_keep_legacy_triangles_and_cover_every_chunk() {
+        let edges: Vec<_> = (0..12345)
+            .map(|i| {
+                let x = (i % 137) as f32 * 3.125 - 100.;
+                let y = (i / 137) as f32 * 1.375;
+                (
+                    ViewportPoint { x, y },
+                    ViewportPoint {
+                        x: x + 4.75,
+                        y: y - 2.25,
+                    },
+                )
+            })
+            .collect();
+        for width in [0.75, 1., 3.] {
+            let mut old = Vec::new();
+            let mut new = Vec::new();
+            let origin = point(px(-13.25), px(117.75));
+            paint_edges_impl::<false>(&edges, origin, width, |p| old.push(p));
+            paint_edges_impl::<true>(&edges, origin, width, |p| new.push(p));
+            assert_eq!(old.len(), new.len());
+            for (old, new) in old.iter().zip(&new) {
+                assert_eq!(old.vertices.len(), new.vertices.len());
+                for (a, b) in old.vertices.iter().zip(&new.vertices) {
+                    assert_eq!(a.xy_position, b.xy_position);
+                    assert_eq!(a.st_position, b.st_position);
+                    assert_eq!(a.content_mask, b.content_mask);
+                    assert!(new.bounds.contains(&b.xy_position));
+                }
+                // Different accumulation avoids repeated f32 subtraction/addition.
+                for (a, b) in [
+                    (old.bounds.origin, new.bounds.origin),
+                    (old.bounds.bottom_right(), new.bounds.bottom_right()),
+                ] {
+                    assert!((a.x - b.x).as_f32().abs() < 0.001);
+                    assert!((a.y - b.y).as_f32().abs() < 0.001);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn owned_path_scaling_reuses_vertices_and_preserves_geometry() {
+        for count in [0, 3, EDGES_PER_PATH * 6] {
+            for factor in [0.5, 1., 1.25, 2., 3.] {
+                let mut path = Path::new(point(px(-13.25), px(117.75)));
+                path.vertices.reserve(count + 16);
+                path.order = 7;
+                path.color = gpui_kit::rgba(0x12345678).into();
+                path.content_mask.bounds = Bounds::from_corners(
+                    point(px(-20.5), px(100.25)),
+                    point(px(300.75), px(400.5)),
+                );
+                for i in 0..count / 3 {
+                    let x = i as f32 * 0.125 - 100.25;
+                    path.push_triangle(
+                        (
+                            point(px(x), px(0.25)),
+                            point(px(x + 2.5), px(7.75)),
+                            point(px(x - 3.25), px(-1.5)),
+                        ),
+                        (point(0., 0.), point(0.5, 0.), point(1., 1.)),
+                    );
+                }
+                for vertex in &mut path.vertices {
+                    vertex.content_mask = path.content_mask;
+                }
+                let expected = path.scale(factor);
+                let buffer = path.vertices.as_ptr() as usize;
+                let capacity = path.vertices.capacity();
+                let scaled = path.into_scaled(factor);
+                if count > 0 {
+                    assert_eq!(
+                        scaled.vertices.as_ptr() as usize,
+                        buffer,
+                        "owned scaling allocated a second vertex buffer"
+                    );
+                    assert_eq!(scaled.vertices.capacity(), capacity);
+                }
+                assert_eq!(scaled.id, expected.id);
+                assert_eq!(scaled.order, expected.order);
+                assert_eq!(scaled.bounds, expected.bounds);
+                assert_eq!(scaled.content_mask, expected.content_mask);
+                assert_eq!(scaled.color, expected.color);
+                assert_eq!(scaled.vertices.len(), expected.vertices.len());
+                for (a, b) in scaled.vertices.iter().zip(&expected.vertices) {
+                    assert_eq!(a.xy_position, b.xy_position);
+                    assert_eq!(a.st_position, b.st_position);
+                    assert_eq!(a.content_mask, b.content_mask);
                 }
             }
         }
