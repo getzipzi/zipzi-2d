@@ -11,7 +11,7 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = 'zipzi-runtime-r7-manual-mesh-1'
 PACKAGE_VERSION = '0.1.0a1'
-CLIENT_SOURCE_SHA256 = '496edb57f7bdf333b112790f32eab283a5ae873e903c7dc8833e6d2b8db84420'
+CLIENT_SOURCE_SHA256 = 'ad479f16f177bd6c88e05df08a970ae6e39ea712fc68c6a05775a62531d7e97b'
 CONTRACT_SHA256 = '544b83dd122e08a3270d0e38d2d915bb4a27c66b111257a43cc334d9a19178b9'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
@@ -54,7 +54,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client '
-                            'source SHA-256 496edb57f7bdf333b112790f32eab283a5ae873e903c7dc8833e6d2b8db84420.',
+                            'source SHA-256 ad479f16f177bd6c88e05df08a970ae6e39ea712fc68c6a05775a62531d7e97b.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -4059,11 +4059,13 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.connect': {'children': (),
                    'documentation': 'Connect to an explicit/discovered host and return an owned Runtime client.\n'
                                     '\n'
-                                    'endpoint is an absolute private Unix <profile>.sock path; None discovers it\n'
-                                    'from ZIPZI_RUNTIME_DIR/ZIPZI_RUNTIME_PROFILE. start=False never launches a\n'
+                                    'endpoint is an absolute private Unix socket path or a local Windows Named\n'
+                                    'Pipe name; None discovers it from ZIPZI_RUNTIME_DIR/ZIPZI_RUNTIME_PROFILE.\n'
+                                    'On Windows, start=True requires the discovered endpoint (or None).\n'
+                                    'start=False never launches a\n'
                                     'process. With start=True, host is an absolute executable, or discovery uses\n'
                                     'ZIPZI_EDITOR_HOST and the supported app locations. host requires start=True.\n'
-                                    'timeout is the positive finite per-request socket timeout in seconds;\n'
+                                    'timeout is the positive finite per-request transport timeout in seconds;\n'
                                     'startup_timeout is the positive finite total startup/handshake budget.\n'
                                     'sdk_build=None accepts the compatible host build; an explicit string also\n'
                                     'requires an exact build match. Protocol and required capabilities always\n'

@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import sysconfig
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -76,9 +78,9 @@ def main():
         builds[side] = {}
         for role in ("timing", "probe"):
             build = json.loads((directory / role / "build-metadata.json").read_text())
-            libraries = list((directory / role / "native/zipzi_native").glob("_native*.so"))
+            libraries = list((directory / role / "native/zipzi_native").glob('_native' + sysconfig.get_config_var('EXT_SUFFIX')))
             if (len(libraries) != 1 or sha(libraries[0]) != build["artifact_sha256"]
-                    or sha(directory / role / "local_host_fixture") != build["host_sha256"]
+                    or sha(directory / role / ('local_host_fixture.exe' if sys.platform == 'win32' else 'local_host_fixture')) != build["host_sha256"]
                     or build["profile"]["debug_assertions"] or build["host_profile"] != "release"
                     or build["instrumented"] != (role == "probe")):
                 raise ValueError("Both sides require copied, paired Release artifacts")
@@ -96,7 +98,7 @@ def main():
                     name = f"{mode}-{role}-{index}-{side}"
                     result = subprocess.run([sys.executable, "-I", str(directory / "tools/baseline.py"),
                         "--worker", "--mode", mode, "--role", role, "--native-dir", str(directory / role / "native")],
-                        cwd="/tmp", capture_output=True, text=True,
+                        cwd=tempfile.gettempdir(), capture_output=True, text=True,
                         env={k: v for k, v in os.environ.items() if k not in {"PYTHONPATH", "PYTHONHOME", "ZIPZI_DEV_SESSION_DIR"}})
                     (args.output / (name + ".json")).write_text(result.stdout)
                     (args.output / (name + ".stderr")).write_text(result.stderr)

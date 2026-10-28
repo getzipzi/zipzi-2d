@@ -1,5 +1,6 @@
 """P3A-1 independent call, candidate and accepted-job contracts."""
 from pathlib import Path
+import os
 import sys
 import threading
 import time
@@ -150,7 +151,7 @@ class P3ARecovery(unittest.TestCase):
                 self.assertEqual(job.state(), "queued")
                 self.control(runtime, "resume_dispatch")
                 saved = job.wait()
-                self.assertTrue(saved.durable)
+                self.assertEqual(saved.durable, os.name != 'nt')
                 self.assertIs(job.wait(timeout=0.), saved)
                 self.assertEqual(job.state(), "succeeded")
 
@@ -166,7 +167,7 @@ class P3ARecovery(unittest.TestCase):
         worker = threading.Thread(target=resume)
         worker.start()
         try:
-            self.assertTrue(job.wait(timeout=None).durable)
+            self.assertEqual(job.wait(timeout=None).durable, os.name != 'nt')
         finally:
             worker.join(timeout=5)
         self.assertFalse(worker.is_alive())
@@ -178,7 +179,7 @@ class P3ARecovery(unittest.TestCase):
         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
             job.close()
         self.assertIsNone(lost.exception.recover())
-        self.assertTrue(job.wait().durable)
+        self.assertEqual(job.wait().durable, os.name != 'nt')
         request = runtime._backend._next
         job.close()
         self.assertEqual(runtime._backend._next, request)

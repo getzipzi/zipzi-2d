@@ -5,6 +5,15 @@ Requires the [workspace development prerequisites](../../README.md#development).
 
 From the repository root:
 
+Windows PowerShell (also available on macOS):
+
+```powershell
+uv run --locked python tools/dev.py python path/to/probe.py argument
+uv run --locked python tools/dev.py python -c 'import zipzi; print(zipzi.describe("zipzi"))'
+```
+
+macOS shell wrapper:
+
 ```sh
 ./tools/dev-python /tmp/probe.py argument
 ./tools/dev-python -c 'import zipzi; print(zipzi.describe("zipzi"))'
@@ -23,7 +32,10 @@ status retain normal Python behavior. Keep disposable scripts/results under
 The entrypoint maintains CPython 3.14 under `target/python2/dev/venv`, installs
 the client editable, and incrementally builds the native adapter under
 `target/python2/dev/cargo` before every launch, including uncommitted changes.
-It atomically copies the extension into the environment; failed preparation
+It publishes the extension into a content-addressed version directory and
+atomically selects that directory for new Python processes. Existing processes
+retain their loaded version; old versions are not automatically deleted.
+This avoids overwriting loaded Windows `.pyd` files. Failed preparation
 stops execution. Concurrent launches serialize preparation, then run independently.
 Build output goes to stderr.
 

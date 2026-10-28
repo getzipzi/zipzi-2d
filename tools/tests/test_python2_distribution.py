@@ -44,8 +44,27 @@ TOOLS=Path(__file__).resolve().parents[2]/'crates/zipzi-python2/tools'
 sys.path.insert(0,str(TOOLS))
 SPEC=importlib.util.spec_from_file_location('python2_distribution',TOOLS/'distribution.py')
 distribution=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(distribution)
+from _support import publish_executable
 
 class Distribution(unittest.TestCase):
+    def test_host_publication_keeps_old_version_and_recovers_copy_failure(self):
+        with tempfile.TemporaryDirectory(prefix='host 中文 ') as folder:
+            root = Path(folder)
+            source = root / 'fixture.exe'
+            source.write_bytes(b'old host')
+            first = publish_executable(root / 'output', source)
+            with first.open('rb') as old:
+                self.assertEqual(publish_executable(root / 'output', source), first)
+                source.write_bytes(b'new host')
+                with patch('_support.shutil.copy2', side_effect=OSError('copy failed')):
+                    with self.assertRaises(OSError):
+                        publish_executable(root / 'output', source)
+                second = publish_executable(root / 'output', source)
+                self.assertNotEqual(first, second)
+                self.assertEqual(second.read_bytes(), b'new host')
+                self.assertEqual(old.read(), b'old host')
+            self.assertEqual(list((root / 'output').rglob('.host-*')), [])
+
     def test_reused_cargo_cache_observes_changed_zero_timestamp_archive_dependencies(self):
         with tempfile.TemporaryDirectory(prefix='zipzi-archive-cache-') as temporary:
             root=Path(temporary)

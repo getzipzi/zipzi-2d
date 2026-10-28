@@ -1,125 +1,60 @@
-"""Exercise test entrypoint isolation and failure propagation without native builds."""
-
-import json
+"""Editor test routing, environment isolation and ordered prerequisite failures."""
 import os
 from pathlib import Path
-import shutil
-import subprocess
 import sys
-import tempfile
 import unittest
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+from unittest.mock import patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import dev
 
 
 class TestRunnerTests(unittest.TestCase):
-    def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name).resolve()
-        self.app = self.root / "crates/zipzi-editor"
-        (self.root / "tools").mkdir(parents=True)
-        self.app.mkdir(parents=True)
-        for name in ["test-editor.sh", "workspace/workspace.sh", "workspace/cargo_domain.py", "workspace/package-domains.json"]:
-            (self.root / "tools" / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy((Path(__file__).resolve().parents[2] / "tools").joinpath(name), self.root / "tools" / name)
-        self.bin = self.root / "bin"
-        self.bin.mkdir()
-        for name in ["cargo", "python3"]:
-            tool = self.bin / name
-            tool.write_text(f"#!{sys.executable}\n" + '''import json,os,pathlib,sys
-if pathlib.Path(sys.argv[0]).name == 'python3' and pathlib.Path(sys.argv[1]).name == 'cargo_domain.py':
-    os.execv(sys.executable, [sys.executable, *sys.argv[1:]])
-with open('calls.jsonl','a') as out:
-    out.write(json.dumps({'tool':pathlib.Path(sys.argv[0]).name,'args':sys.argv[1:],'session':os.environ.get('ZIPZI_DEV_SESSION_DIR'),'client':os.environ.get('ZIPZI_CLIENT_PYTHON')})+'\\n')
-if len(sys.argv)>1 and pathlib.Path(sys.argv[1]).name=='connected.py':
-    print('/fixture/connected/bin/python');sys.exit(0)
-if sys.argv[1:2]==['fmt']:sys.exit(int(os.environ.get('FORMAT_EXIT','0')))
-sys.exit(int(os.environ.get('TEST_EXIT','0')))
-''')
-            tool.chmod(0o755)
-        self.env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}", "ZIPZI_DEV_SESSION_DIR": "live-development-session", "ZIPZI_CLIENT_PYTHON": "/fixture/connected/bin/python"}
+    def run_gate(self, *args, status=0):
+        with patch.object(dev.cargo_domain, 'validate'), patch.object(dev.subprocess, 'call', return_value=status) as call:
+            result = dev.main(['test', 'editor', *args])
+        return result, call
 
-    def assert_editor_packages(self, args):
-        expected = json.loads((self.root / 'tools/workspace/package-domains.json').read_text())['editor']
-        actual = [args[i + 1] for i, value in enumerate(args) if value == '-p']
-        self.assertCountEqual(actual, expected)
-        self.assertNotIn('--workspace', args)
-        self.assertNotIn('--all', args)
+    def test_fast_isolates_session_and_preserves_filter(self):
+        with patch.dict(os.environ, ZIPZI_DEV_SESSION_DIR='live'):
+            result, call = self.run_gate('fast', 'timeline::', '--', '--exact')
+        self.assertEqual(result, 0)
+        self.assertNotIn('ZIPZI_DEV_SESSION_DIR', call.call_args.kwargs['env'])
+        self.assertEqual(call.call_args.args[0][-3:], ['timeline::', '--', '--exact'])
 
-    def run_entrypoint(self, *args, **environment):
-        result = subprocess.run(["sh", "tools/test-editor.sh", *args], cwd=self.root, env={**self.env, **environment}, capture_output=True, text=True)
-        log = self.root / "calls.jsonl"
-        calls = [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
-        return result, calls
+    def test_no_mode_is_help(self):
+        result, call = self.run_gate()
+        self.assertEqual(result, 0)
+        call.assert_not_called()
 
-    def test_fast_isolates_development_session_and_preserves_filter_arguments(self):
-        result, calls = self.run_entrypoint("fast", "timeline::", "--", "--exact")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(calls), 1)
-        self.assertIsNone(calls[0]["session"])
-        self.assertEqual(calls[0]["args"][-3:], ["timeline::", "--", "--exact"])
-        self.assertIn("integration", calls[0]["args"])
-        self.assertNotIn("--workspace", calls[0]["args"])
+    def test_full_runs_format_tools_and_complete_domain(self):
+        with patch.dict(os.environ, ZIPZI_CLIENT_PYTHON=sys.executable):
+            result, call = self.run_gate('full')
+        self.assertEqual(result, 0)
+        commands = [entry.args[0] for entry in call.call_args_list]
+        self.assertEqual(len(commands), 3)
+        self.assertEqual(commands[0][:2], ['cargo', 'fmt'])
+        self.assertEqual(Path(commands[1][1]).name, 'test_tools.py')
+        names = [commands[2][i+1] for i, arg in enumerate(commands[2]) if arg == '-p']
+        self.assertCountEqual(names, dev.cargo_domain.domains()['editor'])
+        self.assertNotIn('--lib', commands[2])
 
-    def test_no_argument_preserves_full_gate_and_stops_on_format_failure(self):
-        result, calls = self.run_entrypoint(FORMAT_EXIT="7")
-        self.assertEqual(result.returncode, 7)
-        self.assertEqual([call["tool"] for call in calls], ["cargo"])
-        self.assertEqual(calls[0]["args"][0], "fmt")
+    def test_tooling_failure_prevents_install_and_rust(self):
+        with patch.object(dev.cargo_domain, 'validate'), patch.object(dev.subprocess, 'call', side_effect=[0, 9]) as call, patch.object(dev.subprocess, 'check_output') as install:
+            self.assertEqual(dev.main(['test', 'editor', 'full']), 9)
+            self.assertEqual(call.call_count, 2)
+            install.assert_not_called()
 
-    def test_full_still_runs_tooling_and_complete_editor_domain(self):
-        result, calls = self.run_entrypoint()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual([call["tool"] for call in calls], ["cargo", "python3", "cargo"])
-        self.assert_editor_packages(calls[-1]["args"])
-        self.assert_editor_packages(calls[0]["args"])
-        self.assertNotIn("--lib", calls[-1]["args"])
-        self.assertIsNone(calls[-1]["session"])
+    def test_acceptance_prepares_client_and_retains_targets(self):
+        with patch.dict(os.environ, ZIPZI_CLIENT_PYTHON=''), patch.object(dev.subprocess, 'check_output', return_value=sys.executable) as install:
+            result, call = self.run_gate('acceptance', status=17)
+        self.assertEqual(result, 17)
+        self.assertIn('--install-only', install.call_args.args[0])
+        self.assertEqual(call.call_args.kwargs['env']['ZIPZI_CLIENT_PYTHON'], sys.executable)
+        for target in ('acceptance', 'native_render', 'headless_screenshot', 'animation_acceptance', 'timeline_acceptance', 'runtime_interaction_acceptance', 'runtime_ipc_acceptance', 'runtime_handoff_acceptance'):
+            self.assertIn(target, call.call_args.args[0])
 
-    def test_full_stops_after_tooling_failure(self):
-        result, calls = self.run_entrypoint('full', TEST_EXIT='9')
-        self.assertEqual(result.returncode, 9)
-        self.assertEqual([call['tool'] for call in calls], ['cargo', 'python3'])
-
-    def test_acceptance_keeps_every_native_target_and_propagates_failure(self):
-        result, calls = self.run_entrypoint("acceptance", TEST_EXIT="9")
-        self.assertEqual(result.returncode, 9)
-        self.assertEqual(len(calls), 1)
-        for target in ["acceptance", "native_render", "headless_screenshot", "animation_acceptance", "timeline_acceptance", "runtime_ipc_acceptance", "runtime_handoff_acceptance"]:
-            self.assertIn(target, calls[0]["args"])
-
-    def test_acceptance_prepares_client_when_no_interpreter_was_supplied(self):
-        result, calls = self.run_entrypoint("acceptance", ZIPZI_CLIENT_PYTHON="")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(Path(calls[0]["args"][0]).name, "connected.py")
-        self.assertIn("zipzi-python2", calls[0]["args"][0])
-        self.assertIn("--install-only", calls[0]["args"])
-        self.assertEqual(calls[-1]["client"], "/fixture/connected/bin/python")
-
-    def test_ui_uses_the_full_editor_feature_graph_and_keeps_the_filter(self):
-        result, calls = self.run_entrypoint("ui", "headless_tests::ui_performance")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        args = calls[0]["args"]
-        self.assert_editor_packages(args)
-        self.assertIn("zipzi-editor/test-support", args)
-        self.assertEqual(args[-1], "headless_tests::ui_performance")
-        self.assertIsNone(calls[0]["session"])
-
-    def test_absolute_entrypoint_resolves_tool_discovery_from_another_directory(self):
-        for cwd in [self.app, self.root.parent]:
-            result = subprocess.run(['sh',str(self.root/'tools/test-editor.sh'),'tools','-v'],cwd=cwd,
-                env=self.env,capture_output=True,text=True)
-            self.assertEqual(result.returncode,0,result.stderr)
-            call = json.loads((self.root/'calls.jsonl').read_text().splitlines()[-1])
-            self.assertEqual(Path(call['args'][0]).name, 'test_tools.py')
-            self.assertNotIn('discover',call['args'])
-            self.assertEqual(call['args'][-1],'-v')
-
-    def test_unknown_mode_fails_without_starting_work(self):
-        result, calls = self.run_entrypoint("fasst")
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual(calls, [])
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_unknown_mode_starts_no_work(self):
+        with patch.object(dev.subprocess, 'call') as call:
+            with self.assertRaises(ValueError):
+                dev.main(['test', 'editor', 'fasst'])
+            call.assert_not_called()

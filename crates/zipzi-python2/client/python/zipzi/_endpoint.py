@@ -14,13 +14,15 @@ from .backends.connected import ConnectedBackend
 
 
 def _private(metadata: os.stat_result, directory: bool) -> None:
+    if sys.platform == "win32":
+        raise RuntimeError("Unix permission check on Windows")
     valid_kind = stat.S_ISDIR(metadata.st_mode) if directory else stat.S_ISREG(metadata.st_mode)
     if not valid_kind or metadata.st_uid != os.getuid() or metadata.st_mode & 0o077:
         raise PermissionError("Runtime directory/lock must be private, owned by this user and not a symlink")
 
 
 def _endpoint(path: Path | None, start: bool) -> Path:
-    if os.name != "posix":
+    if sys.platform == "win32":
         raise SdkFailure("HOST_UNAVAILABLE", "Local host connections currently require Unix")
     if path is None:
         directory = Path(os.environ.get("ZIPZI_RUNTIME_DIR", f"/tmp/zipzi-runtime-{os.getuid()}"))
@@ -43,6 +45,8 @@ def _endpoint(path: Path | None, start: bool) -> Path:
 
 
 def _socket(path: Path) -> None:
+    if sys.platform == "win32":
+        raise RuntimeError("Unix socket check on Windows")
     try:
         metadata = path.lstat()
     except FileNotFoundError:
@@ -69,6 +73,8 @@ def _host(explicit: Path | None) -> Path:
 
 
 def _claim(path: Path) -> int | None:
+    if sys.platform == "win32":
+        raise RuntimeError("Unix ownership claim on Windows")
     import fcntl
     descriptor = os.open(path.with_suffix(".lock"), os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
     try:
@@ -93,6 +99,10 @@ def connect_backend(endpoint: Path | None, *, start: bool, host: Path | None,
             raise ValueError("Connection and startup timeouts must be finite and positive")
     if host is not None and not start:
         raise ValueError("A host executable requires start=True")
+    if os.name == "nt":
+        from ._windows_endpoint import connect
+        return connect(endpoint, start=start, host=host, timeout=timeout,
+            startup_timeout=startup_timeout, sdk_build=sdk_build)
     path = _endpoint(endpoint, start)
     deadline = time.monotonic() + startup_timeout
     child: subprocess.Popen[bytes] | None = None

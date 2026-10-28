@@ -1,16 +1,12 @@
 //! CPU-only subprocess acceptance fixture; not a production Editor substitute.
-#[cfg(unix)]
 use std::time::{Duration, Instant};
-#[cfg(unix)]
 use zipzi_runtime::{local::*, protocol::*, *};
-#[cfg(unix)]
 fn milliseconds(key: &str, default: u64) -> u64 {
     std::env::var(key)
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(default)
 }
-#[cfg(unix)]
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let endpoint = Endpoint::from_env()?;
     let Some(owner) = endpoint.inherit_or_claim()? else {
@@ -138,14 +134,12 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
-#[cfg(unix)]
 struct Threaded {
     completed: std::sync::mpsc::Sender<Completion>,
     threads: Vec<std::thread::JoinHandle<()>>,
     #[cfg(feature = "test-support")]
     control: std::sync::Arc<zipzi_runtime::test_support::Control>,
 }
-#[cfg(unix)]
 impl Threaded {
     fn reap(&mut self) {
         let mut index = 0;
@@ -158,7 +152,6 @@ impl Threaded {
         }
     }
 }
-#[cfg(unix)]
 impl Executor for Threaded {
     fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
         let pending = std::sync::Arc::new(std::sync::Mutex::new(Some(work)));
@@ -184,9 +177,4 @@ impl Executor for Threaded {
             Err(_) => Err(Box::new(pending.lock().unwrap().take().unwrap())),
         }
     }
-}
-
-#[cfg(not(unix))]
-fn main() {
-    eprintln!("The local host fixture requires Unix sockets");
 }

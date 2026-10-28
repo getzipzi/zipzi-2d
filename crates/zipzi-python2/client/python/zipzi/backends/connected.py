@@ -6,7 +6,7 @@ from .._generated import binary as typed_binary
 import hashlib
 import json
 from pathlib import Path
-import socket
+from .._transport import Stream, stream as create_stream
 import struct
 import threading
 import time
@@ -26,7 +26,7 @@ MAX_BINARY_HEADER = 16 << 10
 def _body(value: object) -> bytes:
     return json.dumps(value, allow_nan=False, separators=(",", ":"), sort_keys=True).encode()
 
-def _read(stream: socket.socket, length: int) -> bytes:
+def _read(stream: Stream, length: int) -> bytes:
     chunks = bytearray()
     while len(chunks) < length:
         chunk = stream.recv(min(65536, length - len(chunks)))
@@ -35,7 +35,7 @@ def _read(stream: socket.socket, length: int) -> bytes:
         chunks.extend(chunk)
     return bytes(chunks)
 
-def _exchange(stream: socket.socket, body: bytes) -> object:
+def _exchange(stream: Stream, body: bytes) -> object:
     binary = body.startswith(b"ZZB1")
     wire = body[4:] if binary else body
     limit = MAX_BINARY_CHUNK + MAX_BINARY_HEADER + 4 if binary else MAX_FRAME
@@ -76,7 +76,7 @@ class ConnectedBackend(ConnectedBindings):
         self._runtime: object = None
         self._client: object = None
         self._secret: object = None
-        self._stream: socket.socket | None = None
+        self._stream: Stream | None = None
         self._closed = False
         self._next = 0
         self._pending: tuple[PendingRequest, bytes, object] | None = None
@@ -94,7 +94,7 @@ class ConnectedBackend(ConnectedBindings):
         if self._closed:
             raise SdkFailure("HOST_CLOSED", "Connection is closed")
         self._disconnect()
-        stream = socket.socket(socket.AF_UNIX)
+        stream = create_stream()
         stream.settimeout(self._timeout if timeout is None else timeout)
         try:
             stream.connect(str(self._endpoint))

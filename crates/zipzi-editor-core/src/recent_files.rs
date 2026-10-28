@@ -11,9 +11,7 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     let abs = if path.is_absolute() {
         path.to_path_buf()
     } else {
-        std::env::current_dir()
-            .unwrap_or_else(|_| PathBuf::from("/"))
-            .join(path)
+        std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf())
     };
     let mut normalized = PathBuf::new();
     for component in abs.components() {
@@ -81,13 +79,31 @@ mod tests {
     use super::*;
     use anyhow::Result;
 
+    #[cfg(windows)]
+    #[test]
+    fn drive_and_unc_paths_keep_native_roots() {
+        for (input, expected) in [
+            (
+                r"C:\中文 folder\a\..\project.zipzi",
+                r"C:\中文 folder\project.zipzi",
+            ),
+            (
+                r"\\server\share\folder\..\project.zipzi",
+                r"\\server\share\project.zipzi",
+            ),
+            (r"C:\..\..\project.zipzi", r"C:\project.zipzi"),
+        ] {
+            assert_eq!(normalize_path(Path::new(input)), PathBuf::from(expected));
+        }
+    }
+
     #[test]
     fn path_normalization_resolves_dots_and_relative() {
         let current = std::env::current_dir().unwrap();
         assert_eq!(normalize_path(Path::new("a/b/../c")), current.join("a/c"));
         assert_eq!(
-            normalize_path(Path::new("/x/y/./z/../w")),
-            PathBuf::from("/x/y/w")
+            normalize_path(&current.join("x/y/./z/../w")),
+            current.join("x/y/w")
         );
     }
 
@@ -96,25 +112,26 @@ mod tests {
         let mut recent = RecentFiles::new();
         assert!(recent.is_empty());
 
+        let root = std::env::temp_dir().join("中文 models");
         for i in 1..=12 {
-            recent.push(format!("/models/project_{i}.zipzi"));
+            recent.push(root.join(format!("project_{i}.zipzi")));
         }
         assert_eq!(recent.len(), MAX_RECENT_FILES);
-        assert_eq!(recent.paths[0], PathBuf::from("/models/project_12.zipzi"));
+        assert_eq!(recent.paths[0], root.join("project_12.zipzi"));
         assert_eq!(
             recent.paths[MAX_RECENT_FILES - 1],
-            PathBuf::from("/models/project_3.zipzi")
+            root.join("project_3.zipzi")
         );
 
         // Push existing file moves it to the front
-        recent.push("/models/project_5.zipzi");
+        recent.push(root.join("project_5.zipzi"));
         assert_eq!(recent.len(), MAX_RECENT_FILES);
-        assert_eq!(recent.paths[0], PathBuf::from("/models/project_5.zipzi"));
+        assert_eq!(recent.paths[0], root.join("project_5.zipzi"));
 
         // Remove
-        recent.remove(Path::new("/models/project_5.zipzi"));
+        recent.remove(&root.join("project_5.zipzi"));
         assert_eq!(recent.len(), MAX_RECENT_FILES - 1);
-        assert_ne!(recent.paths[0], PathBuf::from("/models/project_5.zipzi"));
+        assert_ne!(recent.paths[0], root.join("project_5.zipzi"));
 
         // Clear
         recent.clear();

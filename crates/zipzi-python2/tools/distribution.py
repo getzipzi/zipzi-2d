@@ -14,7 +14,7 @@ import sys
 import tarfile
 import tomllib
 import zipfile
-from _support import exclusive_run
+from _support import exclusive_run, executable, executable_name, venv_python
 
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGE = ROOT / 'crates/zipzi-python2'
@@ -48,16 +48,16 @@ def main():
     environment['CARGO_TARGET_DIR'] = str(cargo_target)
     commands = []
     def run(name, command, cwd=ROOT, env=environment):
-        with (output / (name+'.log')).open('w') as log:
+        with (output / (name+'.log')).open('w', encoding='utf-8') as log:
             result = subprocess.run([str(x) for x in command], cwd=cwd, env=env, stdout=log, stderr=subprocess.STDOUT)
         commands.append(dict(name=name,command=[str(x) for x in command],cwd=str(cwd),exit_code=result.returncode))
         (output/'commands.json').write_text(json.dumps(commands,indent=2)+'\n')
         if result.returncode:
-            print((output/(name+'.log')).read_text()[-6000:],file=sys.stderr)
+            print((output/(name+'.log')).read_text(encoding='utf-8')[-6000:],file=sys.stderr)
             result.check_returncode()
         print(name+': passed',flush=True)
     with exclusive_run(output/'runner.lock'):
-        version = tomllib.loads((PACKAGE/'client/pyproject.toml').read_text())['project']['version']
+        version = tomllib.loads((PACKAGE/'client/pyproject.toml').read_text(encoding='utf-8'))['project']['version']
         run('client-sdist',['uv','build','--sdist','--out-dir',output/'sdists',PACKAGE/'client'])
         run('native-sdist',['uv','build','--sdist','--out-dir',output/'sdists',PACKAGE])
         client=extract(output/f'sdists/zipzi-{version}.tar.gz',output/'sources')
@@ -78,20 +78,21 @@ def main():
         with zipfile.ZipFile(pure) as wheel:
             for source in (PACKAGE/'client/python/zipzi/_generated').glob('*.py'):
                 assert wheel.read('zipzi/_generated/'+source.name)==source.read_bytes()
-        run('production-host',['cargo','build','--locked','--release','-p','zipzi-runtime','--features','gpu-observation','--example','local_host_fixture'],cwd=native)
+        run('production-host',['cargo','build','--locked','--release','--message-format=json-render-diagnostics','-p','zipzi-runtime','--features','gpu-observation','--example','local_host_fixture'],cwd=native)
         import shutil
-        host=output/'local_host_fixture'
-        shutil.copy2(cargo_target/'release/examples/local_host_fixture',host)
+        host=output/executable_name('local_host_fixture')
+        messages='\n'.join(line for line in (output/'production-host.log').read_text(encoding='utf-8').splitlines() if line.startswith('{'))
+        shutil.copy2(executable(messages, 'local_host_fixture', 'example'),host)
         for mode in ('connected','local'):
             venv=output/(mode+'-venv')
             run(mode+'-venv',['uv','venv','--python','3.14',venv])
-            python=venv/'bin/python'
+            python=venv_python(venv)
             run(mode+'-install',['uv','pip','install','--python',python,pure,*([extension] if mode=='local' else [])])
             run(mode+'-recipe',[python,'-I',archived/'tests/installed_recipe.py',mode,*(['--observation'] if args.observation else [])],cwd=output,
                 env=dict(environment,ZIPZI_PYTHON2_HOST=str(host)))
         artifacts=[*sorted((output/'sdists').glob('*')),*sorted((output/'wheels').glob('*')),host]
-        report=dict(schema=1,status='passed',base_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
-            dirty_files=subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).splitlines(),commands=commands,
+        report=dict(schema=1,status='passed',base_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True, encoding='utf-8').strip(),
+            dirty_files=subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True, encoding='utf-8').splitlines(),commands=commands,
             artifacts=[dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in artifacts],
             source_contract_sha256=hashlib.sha256((archived/'schema/authoring.json').read_bytes()).hexdigest(),
             native_source_scope='SDK dependency closure plus complete Python client, native adapter, Rust declarations, exporter and generator; pure client sdist carries the same Python sources and generated outputs')

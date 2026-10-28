@@ -39,7 +39,6 @@ pub struct BinaryReply {
     pub payload: Option<BinarySlice>,
 }
 impl Protocol {
-    #[cfg(unix)]
     fn invalidate_attached_binary(
         &self,
         runtime: &mut Runtime,
@@ -66,7 +65,6 @@ impl Protocol {
     /// The binary header is an ordinary Request. Input hashes include the exact
     /// payload digest; cached output retains immutable backing storage and its
     /// requested range, so release/other writes cannot change a replayed result.
-    #[cfg(unix)]
     pub fn receive_binary(
         &mut self,
         runtime: &mut Runtime,

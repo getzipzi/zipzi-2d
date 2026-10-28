@@ -35,7 +35,6 @@ jobs:
       - name: Static analysis
         run: uv run --locked python tools/workspace/cargo_domain.py sdk clippy --all-targets --locked -- -D warnings
       - name: SDK entrypoint controls
-        if: runner.os != 'Windows'
         run: uv run --locked python -m unittest discover -s tools/tests -p test_test_entrypoint.py -v
       - name: Acceptance validator negative controls
         run: uv run --locked python -m unittest discover -s tools/tests -p test_acceptance_validators.py -v

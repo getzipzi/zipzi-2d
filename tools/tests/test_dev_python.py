@@ -13,7 +13,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@unittest.skipUnless(os.name == "posix" and sys.version_info[:2] == (3, 14), "CPython 3.14/POSIX launcher")
+@unittest.skipUnless(sys.version_info[:2] == (3, 14), "CPython 3.14 launcher")
 class DevPython(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="dev python ")
@@ -21,7 +21,7 @@ class DevPython(unittest.TestCase):
         self.root = Path(self.temp.name).resolve() / "checkout with spaces"
         self.outside = Path(self.temp.name).resolve() / "caller with spaces"
         self.outside.mkdir()
-        for name in ("dev-python", "python/dev_python.py"):
+        for name in ("dev-python", "python/dev_python.py", "workspace/dev_platform.py"):
             target = self.root / "tools" / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / "tools" / name, target)
@@ -61,15 +61,20 @@ target.write_bytes((root/'native-source').read_bytes())
 print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi_python2_native'},'filenames':[str(target)]}))
 ''')
         self.env = dict(os.environ, PATH=f"{self.bin}{os.pathsep}{os.environ['PATH']}")
-        self.entry = self.root / "tools/dev-python"
+        self.entry = [sys.executable, '-I', str(self.root / 'tools/python/dev_python.py')]
 
     def tool(self, name, source):
+        if os.name == 'nt':
+            path = self.bin / (name + '.py')
+            path.write_text(source)
+            (self.bin / (name + '.cmd')).write_text(f'@"{sys.executable}" -I "{path}" %*\n')
+            return
         path = self.bin / name
         path.write_text(f"#!{sys.executable} -I\n" + source)
         path.chmod(0o755)
 
     def launch(self, *args, input=None, **environment):
-        return subprocess.run([str(self.entry), *args], cwd=self.outside,
+        return subprocess.run([*self.entry, *args], cwd=self.outside,
                               env={**self.env, **environment}, input=input,
                               capture_output=True, text=True)
 
@@ -132,7 +137,7 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi_python2_n
         self.assertEqual(result.stdout, "initial\nhuman-test\nTrue\n")
 
     def test_concurrent_first_launches_share_preparation_safely(self):
-        commands = [[str(self.entry), "-c", "import zipzi; print(zipzi.value)"]] * 2
+        commands = [[*self.entry, "-c", "import zipzi; print(zipzi.value)"]] * 2
         processes = [subprocess.Popen(command, cwd=self.outside, env=self.env, stdin=subprocess.DEVNULL,
                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for command in commands]
         try:
@@ -145,6 +150,31 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi_python2_n
                 if process.poll() is None:
                     process.kill()
                 process.wait()
+
+
+class VersionedPublication(unittest.TestCase):
+    def test_old_version_survives_and_new_process_resolves_new_package(self):
+        spec = importlib.util.spec_from_file_location('dev_python_version', ROOT / 'tools/python/dev_python.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory(prefix='native 中文 ') as folder:
+            state = Path(folder)
+            init, library = state / 'init.py', state / 'input.dll'
+            init.write_text('value = 1\n')
+            library.write_bytes(b'old version')
+            site = state / 'site'
+            first = module.publish_native(state, site, init, library, '.pyd')
+            with (first / '_native.pyd').open('rb') as old:
+                library.write_bytes(b'new version')
+                second = module.publish_native(state, site, init, library, '.pyd')
+                self.assertNotEqual(first, second)
+                self.assertEqual(old.read(), b'old version')
+                self.assertEqual((second / '_native.pyd').read_bytes(), b'new version')
+                probe = subprocess.run([sys.executable, '-I', '-c',
+                    'import site,sys; site.addsitedir(sys.argv[1]); import zipzi_native; print(zipzi_native.__file__)',
+                    str(site)], capture_output=True, text=True, check=True)
+                self.assertEqual(Path(probe.stdout.strip()).parent, second)
+                self.assertEqual(module.publish_native(state, site, init, library, '.pyd'), second)
 
 
 @unittest.skipUnless(os.name == "posix", "POSIX extension publication")

@@ -8,7 +8,6 @@ pub mod editor_context;
 mod events;
 pub mod host;
 mod jobs;
-#[cfg(unix)]
 pub mod local;
 pub mod metrics;
 pub mod modeling;

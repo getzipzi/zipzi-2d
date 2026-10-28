@@ -2,6 +2,22 @@
 
 Project persistence, asset management, and import and publication of model and animation resources.
 
+## Filesystem guarantees
+
+Saves synchronize new file contents before publication. Unix additionally attempts
+directory synchronization. Windows publication reports a durability warning because
+directory synchronization is unavailable; successful publication does not promise
+that the directory entry survives power loss. A destination opened without delete
+sharing blocks replacement; the existing destination survives and callers may retry
+after releasing the handle. Project locks use a persistent lock file, with flock
+on Unix and an exclusive file handle on Windows. Never delete the lock file to
+resolve a busy project.
+
+Focused native controls: `cargo test --locked -p zipzi-project --lib filesystem::tests
+-- --nocapture`. Windows symlink tests require Developer Mode or the relevant
+privilege and report missing coverage explicitly when unavailable. Ordinary file,
+case-alias, lock and replacement tests always execute.
+
 ## Import artwork
 
 `DocumentSession` imports of model3/MOC3 and CMO3/CAN3 normalize packed texture

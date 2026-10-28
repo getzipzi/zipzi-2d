@@ -11,7 +11,13 @@ concurrency:
 
 jobs:
   package:
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-2022]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: '1'
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +37,7 @@ jobs:
       - name: Upload packages and acceptance report
         uses: actions/upload-artifact@v7
         with:
-          name: zipzi-python-packages
+          name: zipzi-python-packages-${{ runner.os }}
           path: |
             target/python-release/sdists/
             target/python-release/wheels/

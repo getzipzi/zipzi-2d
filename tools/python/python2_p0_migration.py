@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import sys
 
 ROOT=Path(__file__).resolve().parents[2]
 WORKLOAD=ROOT/'crates/zipzi-python2/tools/baseline.py'
@@ -106,7 +107,7 @@ def prepare(baseline,builds,policy_path,output):
         artifacts=baseline if side=='baseline' else builds
         for role in ('timing','probe'):
             target=directory/role;target.mkdir()
-            for name in ('build-metadata.json','local_host_fixture'):shutil.copy2(artifacts/role/name,target/name)
+            for name in ('build-metadata.json','local_host_fixture.exe' if sys.platform == 'win32' else 'local_host_fixture'):shutil.copy2(artifacts/role/name,target/name)
             shutil.copytree(artifacts/role/'native',target/'native',ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     manifest={'schema':1,'scope':'p3a-api-bindings-only','original_policy_sha256':sha(policy_path),
         'original_workload_sha256':sha(original),'common_workload_sha256':sha(WORKLOAD),

@@ -15,6 +15,7 @@ from pathlib import Path
 import statistics
 import subprocess
 import sys
+import sysconfig
 import time
 import tracemalloc
 
@@ -168,7 +169,7 @@ def execution(zipzi, mode, host):
         with zipzi.local() as runtime:
             yield runtime
         return
-    with tempfile.TemporaryDirectory(prefix="zzp0-", dir="/tmp") as folder:
+    with tempfile.TemporaryDirectory(prefix="zzp0-") as folder:
         env = {k: v for k, v in os.environ.items() if not k.startswith("ZIPZI_TEST_")}
         env.update(ZIPZI_RUNTIME_DIR=folder, ZIPZI_RUNTIME_PROFILE="python2")
         child = subprocess.Popen([str(host)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -176,7 +177,12 @@ def execution(zipzi, mode, host):
             deadline = time.monotonic() + 10
             while True:
                 try:
-                    runtime = zipzi.connect(endpoint=Path(folder) / "python2.sock")
+                    if os.name == 'nt':
+                        from zipzi._windows_pipe import endpoint_name
+                        endpoint = endpoint_name(Path(folder), 'python2')
+                    else:
+                        endpoint = Path(folder) / 'python2.sock'
+                    runtime = zipzi.connect(endpoint=endpoint)
                     break
                 except (FileNotFoundError, ConnectionRefusedError):
                     if child.poll() is not None:
@@ -205,7 +211,7 @@ def worker(native, mode, role):
     metadata = json.loads((native.parent / "build-metadata.json").read_text())
     assert metadata["instrumented"] == (role == "probe")
     assert metadata["host_profile"] == "release"
-    host = native.parent / "local_host_fixture"
+    host = native.parent / ('local_host_fixture.exe' if os.name == 'nt' else 'local_host_fixture')
     assert hashlib.sha256(host.read_bytes()).hexdigest() == metadata["host_sha256"]
     cases = {}
     for case in CASES:
@@ -226,7 +232,7 @@ def worker(native, mode, role):
             else:
                 validate(SAMPLES + WARMUP - 1)
                 cases[case] = dict(wall_ns=times, input_payload_bytes=payload)
-    extensions = list((native / "zipzi_native").glob("_native*.so"))
+    extensions = list((native / "zipzi_native").glob('_native' + sysconfig.get_config_var('EXT_SUFFIX')))
     assert len(extensions) == 1
     digest = hashlib.sha256(extensions[0].read_bytes()).hexdigest()
     assert digest == metadata["artifact_sha256"]
@@ -292,7 +298,7 @@ def measure(args, parser):
             runs = []
             for index in range(args.runs):
                 process = subprocess.run([sys.executable, "-I", str(Path(__file__).absolute()), "--worker",
-                    "--mode", mode, "--role", role, "--native-dir", str(directory.absolute())], cwd="/tmp",
+                    "--mode", mode, "--role", role, "--native-dir", str(directory.absolute())], cwd=tempfile.gettempdir(),
                     env={k: v for k, v in os.environ.items() if k not in {"PYTHONPATH", "PYTHONHOME", "ZIPZI_DEV_SESSION_DIR"}},
                     capture_output=True, text=True)
                 name = f"{mode}-{role}-{index}"

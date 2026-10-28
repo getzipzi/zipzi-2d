@@ -1,6 +1,6 @@
 # Windows 原生开发支持实施方案
 
-状态：待实施。更新日期：2026-10-28。
+状态：P0–P4 实施与验收中；Windows 分发闭环已通过，干净 checkout 和双平台最终验收待完成。更新日期：2026-10-28。
 
 目标是在 Windows 原生环境中完成 Rust SDK、Python SDK 和桌面 Editor 的开发、
 聚焦测试与调试，并保持 macOS 开发能力。日常开发不依赖 WSL、Git Bash 或 MSYS。
@@ -149,12 +149,202 @@ Editor 测试继续清理 `ZIPZI_DEV_SESSION_DIR`。只有宽范围改动或阶�
 
 | 阶段 | 状态 | 完成证据 |
 | --- | --- | --- |
-| P0 工具与最小 CI | 待实施 | 待记录 |
-| P1 平台与文件语义 | 待实施 | 待记录 |
-| P2 Runtime IPC | 待实施 | 待记录 |
-| P3 Python 开发与分发 | 待实施 | 待记录 |
-| P4 基础设施收口 | 待实施 | 待记录 |
+| P0 工具与最小 CI | 实施中 | 统一测试分派、跨平台锁和进程生命周期、shell 薄包装与 CI 配置已实现；Windows 聚焦工具与 CPU 测试通过，远端 CI/macOS 回归待验证 |
+| P1 平台与文件语义 | 实施中 | 源码身份规范化 2 项、平台配置目录 2 项、配置保存 2 项 Windows 聚焦测试通过；完整文件语义与两平台身份比对待完成 |
+| P2 Runtime IPC | 实施中 | Named Pipe、纯 Python 传输和冷启动仲裁已接线；Windows 真实 fixture 握手、4 进程竞争启动与崩溃重启通过；完整安装后契约待验证 |
+| P3 Python 开发与分发 | 实施中 | Windows 源码 Local adapter 构建、版本化发布、仓库外调用及并发准备通过；wheel/sdist 与完整测试工具迁移待完成 |
+| P4 基础设施收口 | 实施中 | 已补充根 README、工具入口与 Python Windows 文档；干净 checkout 和双平台 CI 最终验收待完成 |
 | P5 GPUI/WGPU 与桌面验收 | 待实施 | 待记录 |
 
 完成证据应包含变更范围、实际命令、操作系统/工具链、结果和未覆盖项。源码调查、
 macOS 交叉编译或 CI 配置存在都不能单独证明 Windows 运行行为。
+
+### 2026-10-28 首批实施
+
+分支：`codex/windows-development-p0-p4`。环境：Windows x86_64、Rust
+1.95.0 MSVC、uv 0.13.6、工作区 CPython 3.14。`uv sync --locked` 成功。
+
+`uv run --locked python tools/dev.py test tools -p test_dev_entrypoint.py -v`
+通过 6 项测试，覆盖空参数不构建、过滤器与分隔符、失败短路、Editor session
+隔离、真实子进程退出码、中文/空格目录中的跨进程排他锁及释放。
+
+当前 `tools/dev.py test` 可分派已有测试模式；空参数显示帮助。Python SDK
+相关模式的底层工具仍待 P3 移植，真实 Windows Editor 仍待 P5。旧 shell
+入口在后续批次收敛为薄包装；本记录不代表 P0 或 P0–P4 已验收。
+
+继续验证：入口控制已扩充至 9 项并全部通过，新增 full 格式失败不安装客户端、
+调用方相对 target 路径与仓库外帮助测试；`test_tool_discovery.py` 的 1 项测试通过。
+`uv run --locked python tools/dev.py test editor fast timeline::` 在 Windows 原生
+执行并通过 50 项集成测试（库目标 52 项被过滤）。包域校验仍覆盖 17 SDK + 3 Editor。
+新增 `.github/workflows/development.yml`，相关 PR 在 Windows/macOS 执行这些工具门禁
+和 SDK physics/Editor Core timeline 聚焦测试；远端 CI 尚未执行，不能视作两平台验收。
+
+测试入口迁移：`test-sdk.sh` 和 `test-editor.sh` 现仅转发到 `tools/dev.py`；无模式
+显示帮助，完整门禁须显式指定 `full`。替换原有 POSIX stub 测试，Windows 原生
+`test_test_entrypoint.py` 4 项、`test_test_runner.py` 6 项全部通过；SDK CI 的入口测试
+不再跳过 Windows。SDK physics 聚焦门禁实际通过 7 项，1 项原有性能测量忽略。
+进程 launcher 仍待迁移，P0 尚未完成。
+
+进程平台层：新增 `tools/workspace/dev_process.py`，以 PID、创建时间与可执行文件
+验证归属；只终止已确认 owner 及其子进程树。开发依赖增加锁定的 psutil。
+Windows `test_dev_process.py` 验证错误身份拒绝终止、真实子进程树清理与无关
+进程保留、中文 cwd/UTF-8 日志及退出码。该平台层尚待接入 launcher 的 readiness
+与常驻 host 复用流程；Windows 真窗口关闭/保存握手仍属于 P5。
+
+生命周期核心：新增 `dev_lifecycle.py`，用原子 JSON 归属记录与每次启动独立的
+PID/readiness 文件处理重启、启动超时与恢复；`reused:<pid>` 不会转化为 launcher
+所有权。Windows `test_dev_lifecycle.py` 4 项通过，覆盖构建失败保留旧进程、重启、
+超时恢复、checkout 隔离与复用 resident。后台 reaper 不绑定 host 生命周期。
+尚需将核心与 Cargo 构建、macOS bundle、watch 以及统一 `editor` 命令接线；
+旧 `dev-editor.sh` 尚未替换，P0 保持实施中。
+
+统一 Editor 接线初版：`tools/dev.py editor watch|reload|run|stop` 已连接 Cargo JSON
+产物定位、独立 `target/dev`（可用 `ZIPZI_DEV_TARGET_DIR` 覆盖）、发布、macOS bundle
+构造与文件监听。发布在旧进程退出后进行；未归属的同路径进程会阻止重启。
+Windows `test_dev_editor.py` 3 项通过，生命周期 4 项复测通过。尚未完成 watcher
+竞争/退出与 macOS 真 bundle 回归；旧 shell launcher 的替换将在这些控制补齐后进行。
+
+Watcher 控制：旧 `test_dev.py` 的 C/POSIX fixtures 已迁移为原生 Python 合成进程，
+5 项 Windows 测试通过，覆盖重启后退出、第二 watcher 拒绝、并发 reload 拒绝、
+仅有 PID 不算 readiness，以及 resident 复用后 watcher 不认领进程。修复观察记录
+与删除记录的竞争。`dev-editor.sh` 已转为统一入口薄包装，shell 文件固定 LF。
+macOS 实机 bundle 行为尚待验证；旧测试中的中断恢复、拒绝 TERM 等细项仍需补齐。
+
+异常恢复补充：生命周期与 watcher 各 6 项 Windows 测试通过，新增真实 launcher
+中断后恢复、停止失败保留归属且不启动新进程，以及外部 reload 空档内 watcher
+存活。停止失败使用注入控制；尚未在 POSIX 验证真实忽略 TERM 的子进程。
+
+P1 源码身份初版：build script 按 `/` 分隔的仓库相对路径排序与编码，已知文本输入
+统一 CRLF→LF，孤立 CR 保留；产物哈希未改动。源码扩展和 Cargo 文本增加 LF
+checkout 策略。聚焦 `source_identity` 测试验证换行等价、真实内容差异及中文相对路径；
+两平台完整源码身份比对仍待执行。
+
+平台目录与配置：Editor Core 新增 `platform_paths`，集中处理配置、缓存、用户目录，
+保留 `ZIPZI_CONFIG_DIR` / `ZIPZI_CACHE_DIR` 覆盖，缺少持久目录时明确报错。
+`ConfigStore::from_platform` 提供调用入口；UI 最终接线留给 P5。配置读写拒绝
+带路径分隔符/盘符的文件名，保存关闭临时句柄后发布。Windows 原生
+`cargo test --locked -p zipzi-editor-core --lib platform_paths::` 2 项通过，
+`cargo test --locked -p zipzi-editor-core --lib storage_tests::` 2 项通过；均清理
+`ZIPZI_DEV_SESSION_DIR`。独占占用测试确认失败保留旧内容、清理临时文件且释放后可重试。
+
+文件语义继续验证：Windows recent files 原有 2 个 Unix 根路径断言失败，已改为
+原生路径测试，并用 `std::path::absolute` 处理相对路径，取消 `/` 回退；3 项复测通过。
+`zipzi-project --lib filesystem::tests` 3 项通过，包含真实子进程的锁排他与释放、
+中文/空格路径、Windows 盘符与 verbatim prefix。新增测试使用 workspace tempfile
+开发依赖，以 `cargo test --offline -p zipzi-project --lib filesystem::tests` 更新锁文件并执行。
+`cargo test --locked -p zipzi-project --test project_tests
+package_failures_rollback_and_report_recovery_copy_when_rollback_fails` 通过 1 项，覆盖
+多种注入的发布/回滚失败。UNC、大小写别名及 reparse point 权限专项仍待补齐。
+
+Windows 路径专项：文件系统控制扩充至 6 项并通过，实际验证大小写别名、
+占用目标保留原文件且解除占用后可覆盖，以及符号链接创建/拒绝/解析（本机未触发
+权限缺失分支）。recent files 4 项通过，新增盘符与 UNC lexical root 及越根 `..`
+规范化。UNC 网络共享实际读写、非符号链接 reparse point 仍未验收。已在项目 README
+明确 Windows 目录持久性限制，并将这些聚焦测试加入 Windows/macOS Development CI。
+
+P2 首批：`local.rs` 保留公共 Auth、Inbound、framing、预算与连接分派；Unix 端点、
+权限、所有权与 socket 配置移至 `local/unix.rs`。协议 receive/receive_encoded 与
+receive_binary 移出 Unix 条件边界，binary 契约测试取消整组 Unix 限制。Windows
+`cargo test --locked -p zipzi-runtime --test binary --test protocol` 实际通过 6+11 项。
+framing 与 Unix endpoint 权限测试已拆分，前者在 Windows 也执行。
+Named Pipe、Windows host fixture 和 Python transport 尚未接入，不能据此宣称 IPC 完成。
+
+P2 Win32 安全基础：添加 windows-sys 平台依赖及 `local/windows_security.rs`，
+读取当前 token SID、校验指定进程的 token 用户，并构造当前用户专属且不继承的
+安全描述符。`cargo test --offline -p zipzi-runtime --lib windows_security::` 在 Windows
+通过 1 项真实 Win32 测试（身份匹配/错误身份拒绝、有效 DACL 且仅 1 条 ACE）。
+依赖变更已写入 Cargo.lock。此时安全模块尚未用于真实管道，仍需管道访问拒绝、
+远程客户端拒绝和对端身份测试，不能替代 IPC 验收。
+
+P2 Named Pipe I/O：新增 `local/windows_io.rs`，创建显式私有 DACL、拒绝远程客户端的
+byte pipe，使用 overlapped ReadFile/WriteFile/ConnectNamedPipe；超时 CancelIoEx 后
+等待完成回收，保证缓冲区与 OVERLAPPED 生命周期。首实例创建带
+FILE_FLAG_FIRST_PIPE_INSTANCE。`cargo test --locked -p zipzi-runtime --lib windows_io::`
+在 Windows 实际通过 2 项，覆盖双向读写、读超时后重用、断开、首实例冲突和
+2 MiB 阻塞写超时取消。当前尚未连接 Runtime listener、所有权仲裁或 Python 客户端。
+
+P2 listener 接线：新增 `local/windows.rs`，以用户 SID、runtime directory 的规范字符串
+哈希及 profile 组成管道名；首实例句柄取得所有权，accept 后先建下一实例再交付连接，
+避免所有权空档。对端 PID token 必须属于当前用户，最多 8 个连接线程；关闭服务
+取消接收并回收连接线程。Windows `--lib local::windows::` 的真实帧分派、重复 claim
+拒绝及退出后重新 claim 测试通过。fixture 移除 Windows 空 main，接入共同 Runtime
+循环。Python 冷启动仲裁、真实 fixture 握手与多客户端压力验证仍待执行。
+
+P2 纯 Python 传输：`_windows_pipe.py` 通过 ctypes 封装 token SID、服务端进程身份、
+本机 pipe 名、overlapped 有界读写、超时取消回收与关闭，无 native adapter 依赖。
+设置 `ZIPZI_PYTHON2_HOST` 指向已构建的 Windows fixture 后，运行
+`python crates/zipzi-python2/tests/test_windows_transport.py -v`，真实握手与 idle timeout
+1 项通过。公开 ConnectedBackend、endpoint 冷启动流程和严格静态类型尚待接线验证。
+
+Connected 接线：新增 Stream 协议、平台工厂和 Windows endpoint 分派，纯 Python
+传输进入原有 framing/恢复路径。Windows 冷启动由当前用户私有命名 mutex 仲裁，
+host 自行取得首 pipe 所有权；客户端释放启动锁不终止 host。Windows transport
+测试扩至 2 项并通过，新增冷启动、断开首客户端后仍常驻、第二连接复用同 PID/Runtime。
+当前 start=True 的显式 endpoint 要求匹配 runtime directory/profile 环境配置；
+并发冷启动、崩溃恢复、安装后公开 API 与跨平台类型门禁仍待完成。
+
+2026-10-28 后续 Windows 原生验证：`test_windows_transport.py -v` 3 项通过。
+新增 4 个独立进程通过公开 `zipzi.connect` 同时冷启动，以 fixture PID 日志确认仅一个
+有效所有者和同一 Runtime；全部客户端退出后 host 存活，强制终止后新连接得到新 Runtime。
+这些测试仍加载源码客户端，不能代替安装纯 wheel 后的验收。
+
+P3 开始：`dev_python.py` 使用共享跨平台文件锁和 venv 路径，扩展按内容哈希发布到
+不可变目录，通过原子 `.pth` 切换供新进程使用的版本；保留旧版本，不删除加载中的文件。
+统一 `tools/dev.py python` 已开放 Windows。实际 MSVC/CPython 3.14 构建原生 adapter
+后，Local Runtime 创建、查询和关闭通过；两个并发 launcher 在仓库外运行，均保持 cwd，
+分别精确保留退出码 0/23。版本发布聚焦测试 1 项、统一入口测试 9 项通过；原有 POSIX
+launcher 的 8 项跳过不计 Windows 覆盖。`_support.py` 已改用共享锁，其他 Python
+测试/分发脚本的 host 产物定位、临时目录和安装流程仍需迁移。
+
+P3 launcher 测试补齐：将 POSIX shebang 工具替身改为按平台生成入口，并统一 PATH/PATHEXT 查找。
+`tools/test_tools.py -p test_dev_python.py -v` 在 Windows 为 8 项通过、1 项 Unix inode
+专项跳过，覆盖脚本/cwd/argv/stdin、-c/-m、退出码、Python 环境清理、并发准备、
+构建失败及源码更新；已纳入双平台 development CI。严格 pyright 为 0 errors。
+
+P3 安装验证推进：`test.py`、`connected.py` 和 `distribution.py` 已改为使用 Cargo JSON
+定位 fixture，适配 Windows venv、可执行文件后缀和平台临时目录。开发测试 host 按内容
+哈希复制，避免覆盖仍在运行的 Windows executable；构建元数据记录实际 host 路径。
+Windows `tools/dev.py test sdk python2 PythonSdk.test_manual_mesh_source_contract_and_existing_large_writes`
+通过 Local/Connected 行为及完整正负静态类型门禁；4 项 Python 工具测试、9 项入口测试通过。
+
+安装纯 wheel 的连接验收揭示慢启动缺陷：客户端在 listen 之前连接又超时退出，会让
+ConnectNamedPipe 返回 ERROR_NO_DATA，原 listener 退出导致所有权丢失。现已断开并复用
+原 pipe 实例，保留所有权；`cargo test --locked -p zipzi-runtime --lib local::windows::`
+2 项通过，包含该确定性回归。Windows 测试清理同时等待进程退出，并正确处理已退出 PID。
+源码归档验证正在 `target/python2/windows-distribution-20261028` 运行：两份 sdist、归档
+生成器校验及 pure wheel 已通过，native wheel/生产 host/安装工作流结果尚待确认。
+本轮归档生成后又修复了 listener 与 Windows 保存 durability 断言，需刷新归档后重验最终状态。
+
+修复后 Windows 完整 python2-connected 门禁通过：16 项中 13 项执行通过、3 项 Unix socket 专项跳过。覆盖安装纯 wheel 后的竞争冷启动、慢启动超时复用、启动失败重试、身份/构建检查和请求恢复；Windows 伪协议服务器/权限负例仍需补齐，不能以这些跳过证明对应安全覆盖。
+
+后续 Windows 验证：完整 `test_api.py` 的 96 项 Local/Connected 测试通过；修复测试中将
+Named Pipe 当目录的重启逻辑及 `/tmp` 假设。恢复专项 `--recovery` 16 项通过，正负类型
+门禁通过。保存恢复断言现在明确要求 Windows `durable=False`，不丢弃完成/缓存/状态验证。
+安装纯 wheel 的真实协议不兼容拒绝和启动客户端退出后复用原 host 两项新增测试通过。
+Python Named Pipe 的 sendall 使用跨所有分块的总预算；Windows transport 4 项通过。
+
+首轮归档成功构建 CPython 3.14 Windows native wheel 和 Release CPU host，安装后
+Connected recipe 在已知的旧 durability 断言处失败；不是完整分发通过。使用该 native wheel
+的隔离 Local 环境执行当前完整 installed_recipe 成功（包含 R4/P3B/P4/R5/preview/spatial
+和保存重开）。第二轮 `windows-distribution-20261028-r2` 已刷新源归档，继续使用独立的
+`target/python2/distribution-cargo` 缓存，最终配对分发结果仍待确认。
+
+P4 文档开始同步：根 README 新增 PowerShell 非图形开发命令，tools README 和 Python SDK README/guide 明确 Named Pipe、CPU fixture 与 P5 桌面边界。基准辅助入口改用当前解释器扩展后缀、Windows host 后缀与系统临时目录；既有计时/统计逻辑未改动。第二轮归档已通过源码生成器检查和 pure wheel 构建；Python tooling 模块回归仍在执行，暂未宣称通过。
+
+后续工具与 CI：Python 工具组 75 项测试结束（74 通过、1 跳过）；基准配对/迁移 6 项与 contract 工具 6 项聚焦复验通过。discovery 7 项及类型门禁通过。development CI 增加双平台 Runtime IPC/协议和 Python behavior/installed/discovery job，尚未远端执行。平台配置/缓存目录 4 项 Windows 测试通过；runtime/editor-core/project 的格式检查通过。安装测试 host 采用临时文件加原子发布，复制失败重试与旧版本保留回归通过，分发工具聚焦共 4 项通过。
+
+第二轮分发 `target/python2/windows-distribution-20261028-r2/results.json` 已记录 passed：
+12 个步骤均为退出码 0，含两份 sdist、归档生成器校验、pure/native wheel、Release host、
+两个隔离 venv 的安装及完整 Connected/Local recipe。真实 native 扩展版本并存测试也通过：
+旧子进程持续加载旧目录，新子进程加载新目录，两边均能查询 Runtime。新增用例已加入 CI。
+额外 strict Clippy 检查未通过：9 项告警来自既有大型枚举、参数数量及取模写法；日志为
+`target/windows-runtime-clippy.log`，不能据此宣称 SDK Clippy 全绿。
+
+干净 Windows 验证快照 `f83091aa49b1e53938cad8558e346a2a820b1cb3` 已创建，当前开发分支
+与工作区未被提交或重置；独立工作树位于 Codex 管理的 windows-verify/zipzi-2d。
+该树 git status 为空，已重新初始化子模块、uv sync --locked、通过包域检查和 8 项
+Windows source launcher 工具测试（1 项 Unix inode 专项跳过）。CPU、真实 native
+发布及安装连接闭环仍在该树执行中。另修复统一入口的 Python --output/--editor-host
+相对路径，10 项入口测试通过。
+
+源码身份验收补强：build.rs 与 source_identity.rs 测试共用实际 digest 实现；固定 fixture 的跨平台期望 SHA-256 为 763a744031f58117890a73c612f3e02df911a4ed874b464311af6a78527f71c9。Windows 验证 LF/CRLF、输入顺序、中文相对路径和真实源码变化共 3 项通过；macOS 同一黄金样本仍需 CI 实际执行。此改动发生在验证快照之后，已在主工作区执行聚焦测试。

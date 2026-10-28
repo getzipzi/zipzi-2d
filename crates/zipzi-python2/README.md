@@ -40,8 +40,13 @@ isolated Python processes, and checks actual valid/invalid public type examples.
 It uses macOS extension-module/dynamic-lookup linking, so CPython symbols come
 from the importing interpreter. Tests never load Cargo's mutable output in place.
 
-The package currently targets CPython `>=3.14,<3.15`; source acceptance is on
-macOS/Unix. Other platform/version claims require separate CI evidence.
+The package targets CPython `>=3.14,<3.15`. On Windows, use
+`uv run --locked python tools/dev.py test sdk python2` and
+`uv run --locked python tools/dev.py test sdk python2-connected` from the root.
+Local uses a native `.pyd`; Connected uses a pure Python Named Pipe transport
+and the CPU fixture. Unix continues to use Unix sockets. Windows desktop Editor
+integration is pending; the [Windows plan](../../docs/plans/windows-development.md)
+records the executed gates and remaining cross-platform validation.
 
 ## Current API and validation
 

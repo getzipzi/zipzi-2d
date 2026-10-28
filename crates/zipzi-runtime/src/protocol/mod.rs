@@ -471,7 +471,6 @@ impl Default for Protocol {
     }
 }
 impl Protocol {
-    #[cfg(unix)]
     pub fn receive(
         &mut self,
         runtime: &mut Runtime,
@@ -1560,13 +1559,11 @@ pub fn failure(code: &str, message: &str) -> Value {
 
 /// Serialized while still on the owner thread, then held by an actual charged
 /// Arc until the socket finishes. Cache eviction cannot release its accounting.
-#[cfg(unix)]
 pub struct EncodedReply {
     pub bytes: std::sync::Arc<[u8]>,
     pub authenticated: Option<crate::local::Auth>,
     pub(crate) _transfer: zipzi_project::TransferReservation,
 }
-#[cfg(unix)]
 impl Protocol {
     pub fn receive_encoded(
         &mut self,

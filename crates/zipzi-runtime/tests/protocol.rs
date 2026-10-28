@@ -344,9 +344,8 @@ fn a18_disconnect_resume_generation_and_expiry_reclaim_candidate_not_session() {
     assert!(rt.edit_state(client, edit).is_err());
     assert!(rt.session_info(session).is_ok());
 }
-#[cfg(unix)]
 #[test]
-fn a06_framing_limits_utf8_nonfinite_empty_arrays_roundtrip_and_private_endpoint() {
+fn a06_framing_limits_utf8_nonfinite_empty_arrays_roundtrip() {
     use zipzi_runtime::local::*;
     let original = json!({"array":[], "float":1.2345678901234567, "text":"你好"});
     let mut bytes = Vec::new();
@@ -360,6 +359,12 @@ fn a06_framing_limits_utf8_nonfinite_empty_arrays_roundtrip_and_private_endpoint
         bytes.extend(body);
         assert!(read_frame(&mut bytes.as_slice()).is_err());
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn private_unix_endpoint_permissions_and_ownership() {
+    use zipzi_runtime::local::*;
     let temp = tempfile::tempdir().unwrap();
     use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();

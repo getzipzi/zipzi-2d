@@ -33,7 +33,7 @@ Run these commands from the repository root:
 
 ```sh
 uv sync --locked
-python3 tools/workspace/cargo_domain.py --check
+uv run --locked python tools/workspace/cargo_domain.py --check
 
 # Focused SDK development
 cargo test --locked -p zipzi-sdk --test integration physics_editing::
@@ -51,6 +51,23 @@ and runs Local/Connected behavior and static types. `python2-connected` installs
 the pure wheel and validates real subprocess host discovery and session binding;
 add `--editor-host /absolute/path/to/zipzi-editor` for the current desktop host.
 Root `pyproject.toml` and `uv.lock` manage development tools.
+
+Windows non-graphical development uses PowerShell, the MSVC Rust toolchain and
+Windows SDK. The shared Python entrypoint runs without Bash:
+
+```powershell
+uv sync --locked
+uv run --locked python tools/dev.py test tools -p test_dev_python.py
+uv run --locked python tools/dev.py test sdk fast physics_editing::
+uv run --locked python tools/dev.py test editor fast timeline::
+uv run --locked python tools/dev.py python -c 'import zipzi; print(zipzi.describe("zipzi"))'
+uv run --locked python tools/dev.py test sdk python2-connected
+```
+
+The Connected gate builds a CPU fixture and installs the pure client in an
+isolated environment. It does not launch the desktop Editor. Windows desktop
+launching and GPU/UI integration remain P5 work; current verification and
+remaining gates are tracked in the [Windows plan](docs/plans/windows-development.md).
 
 ## Tests
 
@@ -84,7 +101,7 @@ running Editor Cargo tests directly.
 
 [Full coverage, prerequisites and CI](tools/README.md#test-coverage) define
 regression, stress, native acceptance and packaged-wheel gates. Both domain
-scripts default to expensive **full** runs when no mode is supplied.
+scripts display help when no mode is supplied; select **full** explicitly.
 Plain `cargo test` selects only `zipzi-core`, `zipzi-project` and `zipzi-sdk`.
 Tooling tests belong in `tools/tests/`, crate tests stay with their crate, and
 shared data belongs in [`fixtures/`](fixtures/README.md).

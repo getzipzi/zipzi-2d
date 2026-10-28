@@ -74,12 +74,15 @@ impl Document {
         let mut used = std::collections::HashSet::new();
         let mut links = Vec::new();
         for set in model.display_info().combined_parameters.iter().flatten() {
-            let mut resolved = set.members.iter().filter_map(|member| match &member.target {
-                zipzi_core::document::CdiParameterRef::Resolved { parameter_id } => {
-                    Some(parameter_id.as_str())
-                }
-                _ => None,
-            });
+            let mut resolved = set
+                .members
+                .iter()
+                .filter_map(|member| match &member.target {
+                    zipzi_core::document::CdiParameterRef::Resolved { parameter_id } => {
+                        Some(parameter_id.as_str())
+                    }
+                    _ => None,
+                });
             let (Some(first), Some(second)) = (resolved.next(), resolved.next()) else {
                 continue;
             };
