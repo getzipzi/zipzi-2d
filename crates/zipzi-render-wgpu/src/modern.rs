@@ -24,6 +24,7 @@ pub struct WgpuRenderer {
     pub(crate) mask_cache: HashMap<MaskCacheKey, CachedMask>,
     pub(crate) atlas_pages: Vec<crate::surface::PooledTexture>,
     pub(crate) quad: MeshBuffers,
+    pub(crate) bindings: HashMap<crate::encoding::BindingKey, crate::encoding::CachedBinding>,
     pub(crate) uniforms: HashMap<UniformKey, wgpu::Buffer>,
     pub(crate) fallback: crate::surface::PooledTexture,
 }
@@ -80,6 +81,7 @@ impl WgpuRenderer {
             mask_cache: HashMap::new(),
             atlas_pages: Vec::new(),
             quad: MeshBuffers::quad(device),
+            bindings: HashMap::new(),
             uniforms: HashMap::new(),
             fallback: crate::surface::PooledTexture::new(
                 device,
@@ -100,6 +102,7 @@ impl WgpuRenderer {
         validate_target(device, target)?;
         if target.format != self.target.format {
             self.pipelines = Pipelines::new(device, target.format);
+            self.bindings.clear();
         }
         if target != self.target {
             self.viewport = None;
@@ -129,7 +132,7 @@ impl WgpuRenderer {
             ));
         }
         zipzi_render::gpu::inverse_affine(view.transform)?;
-        let layouts = self.color_layout(view, WgpuOutputMode::Replace)?;
+        let layouts = self.color_layout(view, false)?;
         self.validate_layouts(&layouts)?;
         self.viewport = Some(view);
         Ok(())

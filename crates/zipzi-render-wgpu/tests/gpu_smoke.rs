@@ -459,8 +459,10 @@ fn render_fixture_with_texture_change(
     assert_eq!(stable.index_upload_bytes, 0);
     assert_eq!(stable.geometry_buffer_creations, 0);
     assert_eq!(stable.uniform_buffer_creations, 0);
-    // Command-local color/snapshot views need fresh bindings; immutable uniforms are reused.
-    assert!(stable.bind_group_creations > 0);
+    // Plain mesh bindings survive stable frames; transient group/snapshot views do not.
+    if frame.offscreens.is_empty() && frame.drawables.iter().all(|d| d.raw_blend_mode.is_none()) {
+        assert_eq!(stable.bind_group_creations, 0);
+    }
     assert_eq!(stable.mask_redraws, usize::from(texture_change.is_some()));
     queue.submit([scene_encoder.finish()]);
     let readback = device.create_buffer(&wgpu::BufferDescriptor {

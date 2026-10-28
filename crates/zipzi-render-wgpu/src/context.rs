@@ -37,8 +37,11 @@ impl WgpuContext {
         }))
         .map_err(|error| Status::error("GPU_ADAPTER", error.to_string()))?;
         let info = adapter.get_info();
-        let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
-            .map_err(|error| Status::error("GPU_DEVICE", error.to_string()))?;
+        let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            required_limits: wgpu::Limits::default().using_resolution(adapter.limits()),
+            ..Default::default()
+        }))
+        .map_err(|error| Status::error("GPU_DEVICE", error.to_string()))?;
         Ok(Self {
             device,
             queue,
@@ -212,8 +215,8 @@ pub fn read_rgba8(
     let width = extent.width;
     let height = extent.height;
     let row_bytes = width * 4;
-    let padded_row = row_bytes.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
-        * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    let padded_row =
+        row_bytes.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT) * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
     let buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("zipzi.readback"),
         size: u64::from(padded_row) * u64::from(height),

@@ -1,0 +1,2038 @@
+{
+  "reviewed_commit": "cfab4bded1572d3f7753980159ac0197c07ea652",
+  "baseline_checkout": "d9787e85",
+  "environment": {
+    "device": "Apple M4",
+    "os": "macOS 27.0.1 (26A434)",
+    "rust": "1.99.0",
+    "wgpu": "29.0.4",
+    "profile": "release",
+    "size": [
+      1280,
+      800
+    ],
+    "view": "Editor fitted full model",
+    "samples_per_round": 90,
+    "rounds": 3,
+    "warmup": 20
+  },
+  "harness_sha256": "73c2c6ddee54c3d0211d6b950a444a745a4e99dc21899d710c45a19b8ebe8b87",
+  "binaries": {
+    "baseline": "48edb0bc38fa5bc31c1884e9d39acec1bf11caeb1e2379580d9cebf1358f16b6",
+    "improved": "8dd062a4283ba33e0a1456b81ba62c7a2e0176341c581690c3b440cab0cf5df3"
+  },
+  "runs": [
+    {
+      "model": "mao",
+      "version": "baseline",
+      "csv": "target/wgpu-review/mao-baseline-fitted.csv",
+      "csv_sha256": "e1c3e5969fc928229cae2626558aced5da7e463a415ee66953229d2544068f29",
+      "metadata": "adapter=Apple M4 backend=wgpu (Metal) release=true meshes=260 samples=90 rounds=3 size=1280x800 warmup=20 fit_zoom=0.047307257 fit_pan=31.77334,-9.795969",
+      "aggregate": {
+        "idle/wgpu": {
+          "cpu_ms": {
+            "p50": 0.662708,
+            "p95": 2.2225
+          },
+          "complete_ms": {
+            "p50": 2.303375,
+            "p95": 8.32125
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 151.0,
+            "passes": 2.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 14.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 151.0,
+            "color_bytes": 4096000.0
+          }
+        },
+        "idle/metal": {
+          "cpu_ms": {
+            "p50": 0.19875,
+            "p95": 0.375917
+          },
+          "complete_ms": {
+            "p50": 0.602458,
+            "p95": 1.68
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 150.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 28.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "pan/wgpu": {
+          "cpu_ms": {
+            "p50": 0.807292,
+            "p95": 2.012875
+          },
+          "complete_ms": {
+            "p50": 2.462292,
+            "p95": 6.654833
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 151.0,
+            "passes": 2.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 14.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 151.0,
+            "color_bytes": 4096000.0
+          }
+        },
+        "pan/metal": {
+          "cpu_ms": {
+            "p50": 0.315792,
+            "p95": 1.04025
+          },
+          "complete_ms": {
+            "p50": 0.977292,
+            "p95": 6.701959
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 150.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 28.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "deform/wgpu": {
+          "cpu_ms": {
+            "p50": 1.164417,
+            "p95": 1.643667
+          },
+          "complete_ms": {
+            "p50": 2.771667,
+            "p95": 7.12
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 192.0,
+            "passes": 16.0,
+            "mask_redraws": 14.0,
+            "mask_hits": 0.0,
+            "buffer_creations": 1.0,
+            "bind_groups": 192.0,
+            "color_bytes": 4096000.0
+          }
+        },
+        "deform/metal": {
+          "cpu_ms": {
+            "p50": 0.488917,
+            "p95": 1.415916
+          },
+          "complete_ms": {
+            "p50": 1.577042,
+            "p95": 5.745666
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 191.0,
+            "passes": 15.0,
+            "mask_redraws": 14.0,
+            "mask_hits": 14.0,
+            "buffer_creations": 1.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        }
+      },
+      "rounds": {
+        "idle/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.483292,
+              "p95": 0.712625
+            },
+            "complete_ms": {
+              "p50": 2.085541,
+              "p95": 7.991333
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 151.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 151.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 1.235708,
+              "p95": 2.364792
+            },
+            "complete_ms": {
+              "p50": 5.92475,
+              "p95": 9.595292
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 151.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 151.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.727875,
+              "p95": 2.091
+            },
+            "complete_ms": {
+              "p50": 2.390833,
+              "p95": 8.02125
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 151.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 151.0,
+              "color_bytes": 4096000.0
+            }
+          }
+        },
+        "idle/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.194167,
+              "p95": 0.218792
+            },
+            "complete_ms": {
+              "p50": 0.575959,
+              "p95": 0.680208
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.186625,
+              "p95": 0.222375
+            },
+            "complete_ms": {
+              "p50": 0.585708,
+              "p95": 4.202791
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.235,
+              "p95": 0.531958
+            },
+            "complete_ms": {
+              "p50": 0.8295,
+              "p95": 1.827708
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "pan/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.599417,
+              "p95": 0.871291
+            },
+            "complete_ms": {
+              "p50": 2.181667,
+              "p95": 5.30675
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 151.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 151.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.985334,
+              "p95": 1.874875
+            },
+            "complete_ms": {
+              "p50": 2.625625,
+              "p95": 5.477375
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 151.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 151.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.969292,
+              "p95": 2.570292
+            },
+            "complete_ms": {
+              "p50": 2.627125,
+              "p95": 8.170791
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 151.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 151.0,
+              "color_bytes": 4096000.0
+            }
+          }
+        },
+        "pan/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.373042,
+              "p95": 0.5215
+            },
+            "complete_ms": {
+              "p50": 0.977292,
+              "p95": 5.564375
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.446417,
+              "p95": 1.201958
+            },
+            "complete_ms": {
+              "p50": 1.761333,
+              "p95": 8.265459
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.251916,
+              "p95": 0.862958
+            },
+            "complete_ms": {
+              "p50": 0.694333,
+              "p95": 3.401
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "deform/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 1.131542,
+              "p95": 1.331166
+            },
+            "complete_ms": {
+              "p50": 2.686,
+              "p95": 6.069875
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 192.0,
+              "passes": 16.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 192.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 1.4645,
+              "p95": 1.700417
+            },
+            "complete_ms": {
+              "p50": 3.122375,
+              "p95": 8.320708
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 192.0,
+              "passes": 16.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 192.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 1.084167,
+              "p95": 1.397833
+            },
+            "complete_ms": {
+              "p50": 2.640042,
+              "p95": 6.007583
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 192.0,
+              "passes": 16.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 192.0,
+              "color_bytes": 4096000.0
+            }
+          }
+        },
+        "deform/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.477333,
+              "p95": 0.629458
+            },
+            "complete_ms": {
+              "p50": 1.533625,
+              "p95": 5.745666
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 1.246584,
+              "p95": 2.015833
+            },
+            "complete_ms": {
+              "p50": 3.009167,
+              "p95": 7.642916
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.451625,
+              "p95": 0.498833
+            },
+            "complete_ms": {
+              "p50": 1.447083,
+              "p95": 1.7765
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "model": "mao",
+      "version": "improved",
+      "csv": "target/wgpu-review/mao-improved-fitted.csv",
+      "csv_sha256": "01de43635c6d6d66e16c7a8888901c273263328ee4a7537b27f720bd76be20d6",
+      "metadata": "adapter=Apple M4 backend=wgpu (Metal) release=true meshes=260 samples=90 rounds=3 size=1280x800 warmup=20 fit_zoom=0.047307257 fit_pan=31.77334,-9.795969",
+      "aggregate": {
+        "idle/wgpu": {
+          "cpu_ms": {
+            "p50": 0.515125,
+            "p95": 1.387208
+          },
+          "complete_ms": {
+            "p50": 2.066791,
+            "p95": 7.218167
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 150.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 14.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "idle/metal": {
+          "cpu_ms": {
+            "p50": 0.217709,
+            "p95": 0.563416
+          },
+          "complete_ms": {
+            "p50": 0.662458,
+            "p95": 2.379125
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 150.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 28.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "pan/wgpu": {
+          "cpu_ms": {
+            "p50": 0.844041,
+            "p95": 2.722
+          },
+          "complete_ms": {
+            "p50": 2.479541,
+            "p95": 8.280667
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 150.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 14.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 132.0,
+            "color_bytes": 0.0
+          }
+        },
+        "pan/metal": {
+          "cpu_ms": {
+            "p50": 0.25525,
+            "p95": 0.724542
+          },
+          "complete_ms": {
+            "p50": 0.830041,
+            "p95": 5.593709
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 150.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 28.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "deform/wgpu": {
+          "cpu_ms": {
+            "p50": 1.264584,
+            "p95": 1.7745
+          },
+          "complete_ms": {
+            "p50": 3.891458,
+            "p95": 8.538625
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 191.0,
+            "passes": 15.0,
+            "mask_redraws": 14.0,
+            "mask_hits": 0.0,
+            "buffer_creations": 1.0,
+            "bind_groups": 64.0,
+            "color_bytes": 0.0
+          }
+        },
+        "deform/metal": {
+          "cpu_ms": {
+            "p50": 0.48,
+            "p95": 1.254583
+          },
+          "complete_ms": {
+            "p50": 1.520292,
+            "p95": 4.816
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 191.0,
+            "passes": 15.0,
+            "mask_redraws": 14.0,
+            "mask_hits": 14.0,
+            "buffer_creations": 1.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        }
+      },
+      "rounds": {
+        "idle/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.354167,
+              "p95": 0.521625
+            },
+            "complete_ms": {
+              "p50": 1.88775,
+              "p95": 6.404333
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.817833,
+              "p95": 1.432
+            },
+            "complete_ms": {
+              "p50": 2.346291,
+              "p95": 7.218167
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.714334,
+              "p95": 1.66625
+            },
+            "complete_ms": {
+              "p50": 2.281458,
+              "p95": 7.791708
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "idle/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.213292,
+              "p95": 0.251791
+            },
+            "complete_ms": {
+              "p50": 0.651958,
+              "p95": 3.726709
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.195,
+              "p95": 0.224334
+            },
+            "complete_ms": {
+              "p50": 0.580666,
+              "p95": 0.673458
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.393583,
+              "p95": 0.638917
+            },
+            "complete_ms": {
+              "p50": 0.956166,
+              "p95": 1.531125
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "pan/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.70575,
+              "p95": 1.684125
+            },
+            "complete_ms": {
+              "p50": 2.250583,
+              "p95": 6.779167
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 132.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.91875,
+              "p95": 2.839959
+            },
+            "complete_ms": {
+              "p50": 2.732541,
+              "p95": 8.459958
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 132.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 1.068,
+              "p95": 2.802583
+            },
+            "complete_ms": {
+              "p50": 2.67925,
+              "p95": 8.480209
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 132.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "pan/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.2245,
+              "p95": 0.785125
+            },
+            "complete_ms": {
+              "p50": 0.81875,
+              "p95": 5.741291
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.218292,
+              "p95": 0.591542
+            },
+            "complete_ms": {
+              "p50": 0.792375,
+              "p95": 4.677917
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.343583,
+              "p95": 0.724542
+            },
+            "complete_ms": {
+              "p50": 0.909125,
+              "p95": 1.870083
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 150.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 28.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "deform/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 1.12975,
+              "p95": 1.626416
+            },
+            "complete_ms": {
+              "p50": 5.524667,
+              "p95": 7.526958
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 64.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 1.409458,
+              "p95": 1.8385
+            },
+            "complete_ms": {
+              "p50": 3.252333,
+              "p95": 8.958458
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 64.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 1.314208,
+              "p95": 1.755292
+            },
+            "complete_ms": {
+              "p50": 3.237292,
+              "p95": 7.7755
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 64.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "deform/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.4635,
+              "p95": 0.5135
+            },
+            "complete_ms": {
+              "p50": 1.454834,
+              "p95": 4.816
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.995709,
+              "p95": 1.289292
+            },
+            "complete_ms": {
+              "p50": 2.157667,
+              "p95": 4.938792
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.445625,
+              "p95": 0.542709
+            },
+            "complete_ms": {
+              "p50": 1.473042,
+              "p95": 1.712459
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 191.0,
+              "passes": 15.0,
+              "mask_redraws": 14.0,
+              "mask_hits": 14.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "model": "shirousagi",
+      "version": "baseline",
+      "csv": "target/wgpu-review/shirousagi-baseline-fitted.csv",
+      "csv_sha256": "8267eb69f7573af5b4535e823ae2ae2f29f6509a65b8ac90161fd13c9ab5a4ae",
+      "metadata": "adapter=Apple M4 backend=wgpu (Metal) release=true meshes=24 samples=90 rounds=3 size=1280x800 warmup=20 fit_zoom=0.092753395 fit_pan=-0.5737701,2.1608076",
+      "aggregate": {
+        "idle/wgpu": {
+          "cpu_ms": {
+            "p50": 0.242791,
+            "p95": 0.5
+          },
+          "complete_ms": {
+            "p50": 1.795458,
+            "p95": 6.796834
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 13.0,
+            "passes": 2.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 1.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 13.0,
+            "color_bytes": 4096000.0
+          }
+        },
+        "idle/metal": {
+          "cpu_ms": {
+            "p50": 0.069208,
+            "p95": 0.216541
+          },
+          "complete_ms": {
+            "p50": 0.66725,
+            "p95": 5.16175
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 12.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 2.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "pan/wgpu": {
+          "cpu_ms": {
+            "p50": 0.369792,
+            "p95": 0.679375
+          },
+          "complete_ms": {
+            "p50": 1.926875,
+            "p95": 6.509167
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 13.0,
+            "passes": 2.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 1.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 13.0,
+            "color_bytes": 4096000.0
+          }
+        },
+        "pan/metal": {
+          "cpu_ms": {
+            "p50": 0.109,
+            "p95": 0.22275
+          },
+          "complete_ms": {
+            "p50": 0.71825,
+            "p95": 2.211459
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 12.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 2.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "deform/wgpu": {
+          "cpu_ms": {
+            "p50": 0.51425,
+            "p95": 1.018209
+          },
+          "complete_ms": {
+            "p50": 2.082208,
+            "p95": 8.127375
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 14.0,
+            "passes": 3.0,
+            "mask_redraws": 1.0,
+            "mask_hits": 0.0,
+            "buffer_creations": 1.0,
+            "bind_groups": 14.0,
+            "color_bytes": 4096000.0
+          }
+        },
+        "deform/metal": {
+          "cpu_ms": {
+            "p50": 0.214375,
+            "p95": 0.423625
+          },
+          "complete_ms": {
+            "p50": 0.912083,
+            "p95": 5.602334
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 13.0,
+            "passes": 2.0,
+            "mask_redraws": 1.0,
+            "mask_hits": 1.0,
+            "buffer_creations": 1.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        }
+      },
+      "rounds": {
+        "idle/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.094541,
+              "p95": 0.138458
+            },
+            "complete_ms": {
+              "p50": 1.6195,
+              "p95": 6.180167
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 13.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.258834,
+              "p95": 0.553708
+            },
+            "complete_ms": {
+              "p50": 1.8785,
+              "p95": 7.613084
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 13.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.303958,
+              "p95": 0.5
+            },
+            "complete_ms": {
+              "p50": 1.842375,
+              "p95": 6.481083
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 13.0,
+              "color_bytes": 4096000.0
+            }
+          }
+        },
+        "idle/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.061583,
+              "p95": 0.069791
+            },
+            "complete_ms": {
+              "p50": 0.572584,
+              "p95": 1.199291
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.060875,
+              "p95": 0.25975
+            },
+            "complete_ms": {
+              "p50": 0.66325,
+              "p95": 5.400208
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.10525,
+              "p95": 0.2465
+            },
+            "complete_ms": {
+              "p50": 0.723833,
+              "p95": 4.174792
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "pan/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.359125,
+              "p95": 0.703667
+            },
+            "complete_ms": {
+              "p50": 1.917125,
+              "p95": 7.258084
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 13.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.38475,
+              "p95": 0.593166
+            },
+            "complete_ms": {
+              "p50": 1.946916,
+              "p95": 5.124959
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 13.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.365833,
+              "p95": 0.699625
+            },
+            "complete_ms": {
+              "p50": 1.924416,
+              "p95": 6.8635
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 13.0,
+              "color_bytes": 4096000.0
+            }
+          }
+        },
+        "pan/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.124958,
+              "p95": 0.256041
+            },
+            "complete_ms": {
+              "p50": 0.756958,
+              "p95": 4.038917
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.103625,
+              "p95": 0.172583
+            },
+            "complete_ms": {
+              "p50": 0.589834,
+              "p95": 0.937208
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.10675,
+              "p95": 0.21575
+            },
+            "complete_ms": {
+              "p50": 0.776375,
+              "p95": 1.568458
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "deform/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.514166,
+              "p95": 0.988791
+            },
+            "complete_ms": {
+              "p50": 2.082208,
+              "p95": 7.193667
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 14.0,
+              "passes": 3.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 14.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.393958,
+              "p95": 0.806583
+            },
+            "complete_ms": {
+              "p50": 2.005417,
+              "p95": 8.087875
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 14.0,
+              "passes": 3.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 14.0,
+              "color_bytes": 4096000.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.609166,
+              "p95": 1.066667
+            },
+            "complete_ms": {
+              "p50": 2.18425,
+              "p95": 8.340542
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 14.0,
+              "passes": 3.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 14.0,
+              "color_bytes": 4096000.0
+            }
+          }
+        },
+        "deform/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.307583,
+              "p95": 0.458791
+            },
+            "complete_ms": {
+              "p50": 1.242792,
+              "p95": 5.801709
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.153917,
+              "p95": 0.359
+            },
+            "complete_ms": {
+              "p50": 0.763875,
+              "p95": 5.463958
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.198417,
+              "p95": 0.326125
+            },
+            "complete_ms": {
+              "p50": 0.830209,
+              "p95": 2.042916
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "model": "shirousagi",
+      "version": "improved",
+      "csv": "target/wgpu-review/shirousagi-improved-fitted.csv",
+      "csv_sha256": "153a28987f894556b1e584665ba076e6c6beb3c9095044d8422dc35dfb68d60b",
+      "metadata": "adapter=Apple M4 backend=wgpu (Metal) release=true meshes=24 samples=90 rounds=3 size=1280x800 warmup=20 fit_zoom=0.092753395 fit_pan=-0.5737701,2.1608076",
+      "aggregate": {
+        "idle/wgpu": {
+          "cpu_ms": {
+            "p50": 0.164375,
+            "p95": 0.330542
+          },
+          "complete_ms": {
+            "p50": 1.681667,
+            "p95": 4.741459
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 12.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 1.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "idle/metal": {
+          "cpu_ms": {
+            "p50": 0.092667,
+            "p95": 0.2365
+          },
+          "complete_ms": {
+            "p50": 0.690708,
+            "p95": 4.828
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 12.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 2.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "pan/wgpu": {
+          "cpu_ms": {
+            "p50": 0.393125,
+            "p95": 0.774792
+          },
+          "complete_ms": {
+            "p50": 1.972042,
+            "p95": 6.887709
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 12.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 1.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 12.0,
+            "color_bytes": 0.0
+          }
+        },
+        "pan/metal": {
+          "cpu_ms": {
+            "p50": 0.096125,
+            "p95": 0.194458
+          },
+          "complete_ms": {
+            "p50": 0.737542,
+            "p95": 4.094
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 12.0,
+            "passes": 1.0,
+            "mask_redraws": 0.0,
+            "mask_hits": 2.0,
+            "buffer_creations": 0.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        },
+        "deform/wgpu": {
+          "cpu_ms": {
+            "p50": 0.389375,
+            "p95": 0.745833
+          },
+          "complete_ms": {
+            "p50": 1.942834,
+            "p95": 6.618708
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 13.0,
+            "passes": 2.0,
+            "mask_redraws": 1.0,
+            "mask_hits": 0.0,
+            "buffer_creations": 1.0,
+            "bind_groups": 3.0,
+            "color_bytes": 0.0
+          }
+        },
+        "deform/metal": {
+          "cpu_ms": {
+            "p50": 0.233417,
+            "p95": 0.38525
+          },
+          "complete_ms": {
+            "p50": 0.956791,
+            "p95": 4.364792
+          },
+          "samples": 270,
+          "median_counters": {
+            "draws": 13.0,
+            "passes": 2.0,
+            "mask_redraws": 1.0,
+            "mask_hits": 1.0,
+            "buffer_creations": 1.0,
+            "bind_groups": 0.0,
+            "color_bytes": 0.0
+          }
+        }
+      },
+      "rounds": {
+        "idle/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.070708,
+              "p95": 0.083833
+            },
+            "complete_ms": {
+              "p50": 1.5865,
+              "p95": 3.10975
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.167709,
+              "p95": 0.305083
+            },
+            "complete_ms": {
+              "p50": 1.682125,
+              "p95": 4.799333
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.228042,
+              "p95": 0.382667
+            },
+            "complete_ms": {
+              "p50": 1.777459,
+              "p95": 4.789334
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "idle/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.056792,
+              "p95": 0.068291
+            },
+            "complete_ms": {
+              "p50": 0.572041,
+              "p95": 0.81525
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.10125,
+              "p95": 0.170667
+            },
+            "complete_ms": {
+              "p50": 0.697875,
+              "p95": 1.106708
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.15175,
+              "p95": 0.274833
+            },
+            "complete_ms": {
+              "p50": 0.850667,
+              "p95": 5.421083
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "pan/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.294708,
+              "p95": 0.651167
+            },
+            "complete_ms": {
+              "p50": 1.833875,
+              "p95": 6.749625
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 12.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.364042,
+              "p95": 0.775375
+            },
+            "complete_ms": {
+              "p50": 1.904166,
+              "p95": 7.690417
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 12.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.528958,
+              "p95": 0.803417
+            },
+            "complete_ms": {
+              "p50": 3.490625,
+              "p95": 6.673083
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 12.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "pan/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.11075,
+              "p95": 0.228667
+            },
+            "complete_ms": {
+              "p50": 0.81375,
+              "p95": 1.596375
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.101792,
+              "p95": 0.191542
+            },
+            "complete_ms": {
+              "p50": 0.753291,
+              "p95": 1.799542
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.0545,
+              "p95": 0.194375
+            },
+            "complete_ms": {
+              "p50": 0.489208,
+              "p95": 4.5275
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 12.0,
+              "passes": 1.0,
+              "mask_redraws": 0.0,
+              "mask_hits": 2.0,
+              "buffer_creations": 0.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "deform/wgpu": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.419417,
+              "p95": 0.766916
+            },
+            "complete_ms": {
+              "p50": 1.957917,
+              "p95": 7.936166
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 3.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.502041,
+              "p95": 0.79925
+            },
+            "complete_ms": {
+              "p50": 2.114708,
+              "p95": 6.618708
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 3.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.232917,
+              "p95": 0.397541
+            },
+            "complete_ms": {
+              "p50": 1.760584,
+              "p95": 4.784292
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 0.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 3.0,
+              "color_bytes": 0.0
+            }
+          }
+        },
+        "deform/metal": {
+          "0": {
+            "cpu_ms": {
+              "p50": 0.23925,
+              "p95": 0.44125
+            },
+            "complete_ms": {
+              "p50": 0.993084,
+              "p95": 4.38275
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "1": {
+            "cpu_ms": {
+              "p50": 0.201541,
+              "p95": 0.384667
+            },
+            "complete_ms": {
+              "p50": 0.882708,
+              "p95": 1.65
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          },
+          "2": {
+            "cpu_ms": {
+              "p50": 0.277375,
+              "p95": 0.38525
+            },
+            "complete_ms": {
+              "p50": 1.003334,
+              "p95": 2.424209
+            },
+            "samples": 90,
+            "median_counters": {
+              "draws": 13.0,
+              "passes": 2.0,
+              "mask_redraws": 1.0,
+              "mask_hits": 1.0,
+              "buffer_creations": 1.0,
+              "bind_groups": 0.0,
+              "color_bytes": 0.0
+            }
+          }
+        }
+      }
+    }
+  ]
+}

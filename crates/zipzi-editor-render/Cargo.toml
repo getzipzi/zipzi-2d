@@ -28,3 +28,7 @@ objc2.workspace = true
 [[example]]
 name = "wgpu_preview"
 required-features = ["wgpu-backend"]
+
+[[example]]
+name = "wgpu_benchmark"
+required-features = ["wgpu-backend"]

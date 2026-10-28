@@ -66,12 +66,29 @@ struct GeometrySlab {
     offsets: Vec<(usize, u64, u64)>,
 }
 
-fn vec2_bytes(values: &[Vec2]) -> &[u8] {
-    unsafe {
-        std::slice::from_raw_parts(
-            values.as_ptr().cast::<u8>(),
-            std::mem::size_of_val(values),
-        )
+#[derive(Clone, Copy)]
+enum GeometryData<'a> {
+    Points(&'a [Vec2]),
+    Indices(&'a [u32]),
+}
+impl GeometryData<'_> {
+    fn len(self) -> usize {
+        match self {
+            Self::Points(v) => v.len() * 8,
+            Self::Indices(v) => v.len() * 4,
+        }
+    }
+    fn append(self, output: &mut Vec<u8>) {
+        match self {
+            Self::Points(values) => {
+                // Vec2 has no stable repr/Pod contract; the GPU expects XY float32.
+                for value in values {
+                    output.extend_from_slice(&value.x.to_ne_bytes());
+                    output.extend_from_slice(&value.y.to_ne_bytes());
+                }
+            }
+            Self::Indices(values) => output.extend_from_slice(bytemuck::cast_slice(values)),
+        }
     }
 }
 
@@ -79,36 +96,37 @@ fn pack_buffers<'a>(
     device: &wgpu::Device,
     usage: wgpu::BufferUsages,
     label: &str,
-    items: impl IntoIterator<Item = (usize, &'a [u8])>,
+    items: impl IntoIterator<Item = (usize, GeometryData<'a>)>,
 ) -> Vec<GeometrySlab> {
     let limit = (device.limits().max_buffer_size as usize).min(SLAB_UPLOAD_CAP);
     let mut slabs = Vec::new();
-    let mut batch: Vec<(usize, &'a [u8])> = Vec::new();
+    let mut batch: Vec<(usize, GeometryData<'a>)> = Vec::new();
     let mut total = 0usize;
-    let flush =
-        |batch: &mut Vec<(usize, &'a [u8])>, total: &mut usize, slabs: &mut Vec<GeometrySlab>| {
-            if batch.is_empty() {
-                return;
-            }
-            let buffer_size = (*total).max(4);
-            let mut contents = Vec::with_capacity(buffer_size);
-            let mut offsets = Vec::with_capacity(batch.len());
-            for (index, bytes) in batch.drain(..) {
-                let offset = contents.len() as u64;
-                contents.extend_from_slice(bytes);
-                offsets.push((index, offset, bytes.len() as u64));
-            }
-            if contents.len() < 4 {
-                contents.resize(4, 0);
-            }
-            let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(label),
-                contents: &contents,
-                usage,
-            });
-            *total = 0;
-            slabs.push(GeometrySlab { buffer, offsets });
-        };
+    let flush = |batch: &mut Vec<(usize, GeometryData<'a>)>,
+                 total: &mut usize,
+                 slabs: &mut Vec<GeometrySlab>| {
+        if batch.is_empty() {
+            return;
+        }
+        let buffer_size = (*total).max(4);
+        let mut contents = Vec::with_capacity(buffer_size);
+        let mut offsets = Vec::with_capacity(batch.len());
+        for (index, bytes) in batch.drain(..) {
+            let offset = contents.len() as u64;
+            bytes.append(&mut contents);
+            offsets.push((index, offset, bytes.len() as u64));
+        }
+        if contents.len() < 4 {
+            contents.resize(4, 0);
+        }
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some(label),
+            contents: &contents,
+            usage,
+        });
+        *total = 0;
+        slabs.push(GeometrySlab { buffer, offsets });
+    };
     for (index, bytes) in items {
         if !batch.is_empty() && total + bytes.len() > limit {
             flush(&mut batch, &mut total, &mut slabs);
@@ -140,8 +158,7 @@ impl WgpuRenderer {
         self.validate_frame_textures(&frame, textures)?;
         let max_buffer = device.limits().max_buffer_size;
         for drawable in &frame.drawables {
-            let vertex_bytes = (drawable.positions.len() as u64)
-                .saturating_mul(std::mem::size_of::<Vec2>() as u64);
+            let vertex_bytes = (drawable.positions.len() as u64).saturating_mul(8);
             let index_bytes =
                 (drawable.indices.len() as u64).saturating_mul(std::mem::size_of::<u32>() as u64);
             if vertex_bytes > max_buffer
@@ -193,17 +210,17 @@ impl WgpuRenderer {
             let revision = self.next_geometry_revision;
             self.next_geometry_revision += 1;
             if !positions_same {
-                let bytes = vec2_bytes(&drawable.positions);
+                let bytes = GeometryData::Points(&drawable.positions);
                 vertex_bytes_uploaded += bytes.len() as u64;
                 position_uploads.push((slot, bytes));
             }
             if !uvs_same {
-                let bytes = vec2_bytes(&drawable.uvs);
+                let bytes = GeometryData::Points(&drawable.uvs);
                 vertex_bytes_uploaded += bytes.len() as u64;
                 uv_uploads.push((slot, bytes));
             }
             if !indices_same {
-                let bytes = bytemuck::cast_slice(&drawable.indices);
+                let bytes = GeometryData::Indices(&drawable.indices);
                 index_bytes_uploaded += bytes.len() as u64;
                 index_uploads.push((slot, bytes));
             }

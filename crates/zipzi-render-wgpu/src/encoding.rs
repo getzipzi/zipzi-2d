@@ -12,6 +12,19 @@ use zipzi_core::{BlendMode, Status, Vec2};
 use zipzi_render::gpu::{compose_affine, inverse_affine};
 use zipzi_render::{Affine2, TargetId, TargetItem};
 
+/// Only immutable bindings to source textures and masks survive an encoding.
+/// Transient color/snapshot views never enter this cache or retain their storage.
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub(crate) struct BindingKey {
+    uniform: wgpu::Buffer,
+    source: wgpu::TextureView,
+    mask: Option<wgpu::TextureView>,
+    repeat: bool,
+}
+pub(crate) struct CachedBinding {
+    group: wgpu::BindGroup,
+    used: bool,
+}
 struct DrawCall {
     mesh: MeshBuffers,
     bindings: wgpu::BindGroup,
@@ -27,9 +40,12 @@ struct FrameEncoder<'a, 'b> {
     masks: HashMap<String, MaskAttachment>,
     stats: WgpuRenderStats,
     uniforms: HashMap<UniformKey, wgpu::Buffer>,
+    bindings: HashMap<BindingKey, CachedBinding>,
     used_uniforms: HashSet<UniformKey>,
 }
 impl WgpuRenderer {
+    // wgpu handles hash/compare by stable resource identity, not mutable contents.
+    #[allow(clippy::mutable_key_type)]
     pub fn encode(
         &mut self,
         target: WgpuEncodeTarget<'_>,
@@ -59,7 +75,24 @@ impl WgpuRenderer {
                 "Output extent, format or usage differs from target",
             ));
         }
-        let color = self.color_layout(view, target.output_mode)?;
+        // A view-only host does not promise COPY_SRC. Direct Replace is safe
+        // when the main target never needs a destination snapshot or reads itself.
+        let direct_main = target.output_mode == WgpuOutputMode::Replace
+            && !self.scene.targets()[0]
+                .items
+                .iter()
+                .any(|&item| self.item_reads_destination(item))
+            && !self
+                .frame
+                .drawables
+                .iter()
+                .filter(|d| d.renderable)
+                .any(|d| {
+                    textures
+                        .get(&d.texture_asset_id)
+                        .is_some_and(|t| t.view.texture() == output)
+                });
+        let color = self.color_layout(view, direct_main)?;
         self.validate_layouts(&color)?;
         let mut jobs = Vec::new();
         let mut consumers = HashMap::new();
@@ -103,7 +136,12 @@ impl WgpuRenderer {
             .map(|t| u64::from(t.size.0) * u64::from(t.size.1) * 4)
             .sum::<u64>();
         let uniforms = std::mem::take(&mut self.uniforms);
+        let mut bindings = std::mem::take(&mut self.bindings);
+        for binding in bindings.values_mut() {
+            binding.used = false;
+        }
         let mut state = FrameEncoder {
+            bindings,
             uniforms,
             used_uniforms: HashSet::new(),
             renderer: self,
@@ -219,33 +257,42 @@ impl WgpuRenderer {
         for (id, i) in consumers {
             state.masks.insert(id, attachments[i].clone());
         }
-        let main = state.acquire((self.target.width, self.target.height));
-        state.encode_target(TargetId::MAIN, &main)?;
-        let transform = Affine2 {
-            a: Vec2::new(self.target.width as f32, 0.),
-            b: Vec2::new(0., self.target.height as f32),
-            origin: Vec2::default(),
-        };
-        let uniform = Uniform::new(main.size, transform, [1.; 4], [0.; 4], 1.);
-        let pipeline = if target.output_mode == WgpuOutputMode::Replace {
-            &self.pipelines.present_replace
+        let main = if direct_main {
+            PooledTexture {
+                texture: output.clone(),
+                view: target.output.clone(),
+                size: (self.target.width, self.target.height),
+            }
         } else {
-            &self.pipelines.present
+            state.acquire((self.target.width, self.target.height))
         };
-        let call = state.draw_call(
-            &self.quad, &uniform, &main.view, None, None, false, pipeline,
-        );
-        let mut present_clear = target.output_mode == WgpuOutputMode::Replace;
-        state.flush(
-            target.output,
-            &mut vec![call],
-            &mut present_clear,
-        );
+        state.encode_target(TargetId::MAIN, &main)?;
+        if !direct_main {
+            let transform = Affine2 {
+                a: Vec2::new(self.target.width as f32, 0.),
+                b: Vec2::new(0., self.target.height as f32),
+                origin: Vec2::default(),
+            };
+            let uniform = Uniform::new(main.size, transform, [1.; 4], [0.; 4], 1.);
+            let pipeline = if target.output_mode == WgpuOutputMode::Replace {
+                &self.pipelines.present_replace
+            } else {
+                &self.pipelines.present
+            };
+            let call = state.draw_call(
+                &self.quad, &uniform, &main.view, None, None, false, pipeline,
+            );
+            let mut present_clear = target.output_mode == WgpuOutputMode::Replace;
+            state.flush(target.output, &mut vec![call], &mut present_clear);
+        }
         let stats = state.stats;
         state
             .uniforms
             .retain(|k, _| state.used_uniforms.contains(k));
+        state.bindings.retain(|_, binding| binding.used);
+        let bindings = state.bindings;
         let uniforms = state.uniforms;
+        self.bindings = bindings;
         self.uniforms = uniforms;
         debug_assert_eq!(stats.color_attachment_bytes, color.bytes);
         cache.retain(|k, _| jobs.iter().any(|j| j.key == *k));
@@ -369,6 +416,27 @@ impl FrameEncoder<'_, '_> {
                     usage: wgpu::BufferUsages::UNIFORM,
                 })
         });
+        let cache_key = (destination.is_none()
+            && uniform.flags[1] == 0
+            && pipeline != &r.pipelines.present
+            && pipeline != &r.pipelines.present_replace)
+            .then(|| BindingKey {
+                uniform: buffer.clone(),
+                source: source.clone(),
+                mask: mask.cloned(),
+                repeat,
+            });
+        if let Some(key) = &cache_key {
+            if let Some(binding) = self.bindings.get_mut(key) {
+                binding.used = true;
+                return DrawCall {
+                    mesh: mesh.clone(),
+                    bindings: binding.group.clone(),
+                    pipeline: pipeline.clone(),
+                    scissor: None,
+                };
+            }
+        }
         let sampler = if repeat {
             &r.pipelines.linear_repeat
         } else {
@@ -406,6 +474,15 @@ impl FrameEncoder<'_, '_> {
                 },
             ],
         });
+        if let Some(key) = cache_key {
+            self.bindings.insert(
+                key,
+                CachedBinding {
+                    group: bindings.clone(),
+                    used: true,
+                },
+            );
+        }
         self.stats.bind_group_creations += 1;
         DrawCall {
             mesh: mesh.clone(),

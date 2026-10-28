@@ -25,16 +25,23 @@ revisions and atlases for large mask sets. The 512 MiB attachment budget include
 host output, color targets, masks and conservative atlas overhead. Mask resolution
 falls back when necessary. A private main color target supports destination reads
 when the host only supplies a texture view without `COPY_SRC` usage.
+Replace output renders directly to the host when the main target neither reads
+its destination nor samples the host texture. Composite output keeps the private
+target. Device creation uses the adapter's texture resolution limits.
 
 `WgpuRenderStats` reports GPU draws/passes, attachment bytes, mask hits/redraws,
 and geometry uploads. Uniforms are immutable per draw so commands do not observe
 later queue writes. `read_rgba8` handles padded rows and converts BGRA output into
 RGBA bytes.
+Immutable source/mask bindings are reused across frames and evicted when unused.
+Transient color and destination snapshots are excluded from this cache. Geometry
+is packed explicitly as XY floats, independent of Rust's `Vec2` memory layout.
 
 ## Local GPU checks
 
 ```sh
 cargo test --locked -p zipzi-render-wgpu --test gpu_smoke
+cargo test --locked -p zipzi-render-wgpu --test cache_contract
 # macOS: compare identical inputs through wgpu and native Metal
 cargo test --locked -p zipzi-render-wgpu --test parity
 cargo run --locked -p zipzi-render-wgpu --example offscreen -- target/wgpu-minimal.png
@@ -63,3 +70,22 @@ retains the native output texture after wgpu completion on the rendering worker;
 there is no image readback or UI-thread wait. GPUI window rendering and interaction
 overlays still use native Metal. Windows/Linux window/overlay integration and
 platform acceptance remain separate work.
+
+## Backend benchmark on macOS
+
+```sh
+cargo run --locked --release -p zipzi-editor-render --features wgpu-backend \
+  --example wgpu_benchmark -- models/local/mao/runtime/mao_pro.model3.json \
+  target/wgpu-mao.csv 90 3
+```
+
+The harness fits the full model using the Editor preview's view, then compares
+the same scene through wgpu and native Metal at 1280×800: idle, pan, and synthetic
+vertex deformation. Each case has 20 warmup
+frames and alternates backend order between rounds. CSV records CPU submission,
+completed-frame wall time and allocation/pass counters. It excludes loading,
+scene mutation and readback; completed-frame time includes queue scheduling and
+CPU waits, and is not a GPU timestamp or full Editor interaction latency.
+
+[Local review and acceptance evidence](../../docs/archive/wgpu-review-2026-10-28.md)
+records the tested revision, pixel gates, before/after measurements and limits.

@@ -2,7 +2,7 @@
 use zipzi_core::{Status, Vec2};
 use zipzi_render::{surface_layout_bounds, Affine2, TargetId, TargetItem, ViewportConfig};
 
-use crate::modern::{WgpuOutputMode, WgpuRenderer};
+use crate::modern::WgpuRenderer;
 
 #[derive(Clone, Copy)]
 pub(crate) struct SurfaceLayout {
@@ -55,7 +55,7 @@ impl WgpuRenderer {
     pub(crate) fn color_layout(
         &self,
         view: ViewportConfig,
-        mode: WgpuOutputMode,
+        direct_main: bool,
     ) -> Result<ColorLayout, Status> {
         let layout = |bounds| -> Result<SurfaceLayout, Status> {
             let (size, transform) =
@@ -78,11 +78,11 @@ impl WgpuRenderer {
         for target in self.scene.targets().iter().skip(1) {
             surfaces.push(layout(target.bounds)?);
         }
-        let bytes = self.color_bytes(&surfaces, mode);
+        let bytes = self.color_bytes(&surfaces, direct_main);
         let common = layout(self.scene.effective_bounds())?;
         let mut shared = vec![common; surfaces.len()];
         shared[0] = main;
-        let shared_bytes = self.color_bytes(&shared, mode);
+        let shared_bytes = self.color_bytes(&shared, direct_main);
         Ok(
             if !cfg!(feature = "benchmark-global-surfaces") && bytes <= shared_bytes {
                 ColorLayout { surfaces, bytes }
@@ -111,7 +111,7 @@ impl WgpuRenderer {
         }
     }
 
-    fn color_bytes(&self, layouts: &[SurfaceLayout], _mode: WgpuOutputMode) -> u64 {
+    fn color_bytes(&self, layouts: &[SurfaceLayout], direct_main: bool) -> u64 {
         fn acquire(pool: &mut Vec<(u32, u32)>, bytes: &mut u64, size: (u32, u32)) {
             if let Some(i) = pool.iter().position(|s| *s == size) {
                 pool.swap_remove(i);
@@ -146,7 +146,9 @@ impl WgpuRenderer {
         }
         let mut pool = Vec::new();
         let mut bytes = 0;
-        acquire(&mut pool, &mut bytes, layouts[TargetId::MAIN.0].size);
+        if !direct_main {
+            acquire(&mut pool, &mut bytes, layouts[TargetId::MAIN.0].size);
+        }
         visit(self, layouts, TargetId::MAIN, &mut pool, &mut bytes);
         bytes
     }

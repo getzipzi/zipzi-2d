@@ -2,7 +2,8 @@
 use anyhow::{Result, ensure};
 use std::{path::PathBuf, time::Instant};
 use zipzi_editor_core::{
-    Editor, LoadRequest, ViewState, ViewportId, ViewportKind, ViewportMetrics, ViewportTransform,
+    Editor, LoadRequest, ViewState, ViewportId, ViewportKind, ViewportMetrics, ViewportPoint,
+    ViewportTransform,
 };
 use zipzi_editor_render::{MetalSceneRenderer, MetalTargetConfig, WgpuSceneRenderer};
 use zipzi_render_metal::{metal, read_rgba8};
@@ -61,8 +62,11 @@ fn main() -> Result<()> {
         let transform = ViewportTransform::new(
             metrics,
             ViewState {
-                zoom,
-                ..Default::default()
+                zoom: preview.view.zoom * zoom,
+                pan: ViewportPoint {
+                    x: preview.view.pan.x * zoom,
+                    y: preview.view.pan.y * zoom,
+                },
             },
         )
         .unwrap();
