@@ -55,7 +55,7 @@ fingerprint can be recomputed from the installed files.
 
 P3A provides complete-call recovery, uniform read containers and domain operations,
 generated facades, collection pages, Session detach/close and offline discovery.
-The [P3A-6 record](../../docs/plans/python-sdk-rewrite/p3a-6.md) closes P3A using
+The [P3A-6 record](../../docs/archive/plans/python-sdk-rewrite/p3a-6.md) closes P3A using
 the deterministic/source/installed evidence and fixed agent functional gate.
 The user confirmed the configured `gpt-6.1-sol/high` model and removed the
 model/service identity gate on 2026-10-26; optional service metadata is report-only.
@@ -69,19 +69,19 @@ For focused regressions, run from the repository root:
 ./tools/test-sdk.sh python2 --discovery
 ```
 
-[Typed animation authoring](../../docs/plans/sdk-runtime/python2-r5-authoring.md)
-is connected in the first R5/P5 slice. [CPU Preview and animation sampling](../../docs/plans/sdk-runtime/python2-r5-preview.md)
-are connected on independent frozen sources. [CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md)
-cover formal/candidate poses and animated frames. [GPU observation and PNG/JSON inspection](../../docs/plans/sdk-runtime/python2-r5-observation.md) are connected;
-[Fair batch scheduling and Editor playback isolation](../../docs/plans/sdk-runtime/python2-r5-scheduling.md)
+[Typed animation authoring](../../docs/archive/plans/sdk-runtime/python2-r5-authoring.md)
+is connected in the first R5/P5 slice. [CPU Preview and animation sampling](../../docs/archive/plans/sdk-runtime/python2-r5-preview.md)
+are connected on independent frozen sources. [CPU spatial queries](../../docs/archive/plans/sdk-runtime/python2-r5-spatial.md)
+cover formal/candidate poses and animated frames. [GPU observation and PNG/JSON inspection](../../docs/archive/plans/sdk-runtime/python2-r5-observation.md) are connected;
+[Fair batch scheduling and Editor playback isolation](../../docs/archive/plans/sdk-runtime/python2-r5-scheduling.md)
 are delivered with the R5/P5 regressions and final Release comparisons.
 Runtime R7 acceptance is complete for macOS arm64 and CPython 3.14.
-The [Python P7 closeout](../../docs/plans/python-sdk-rewrite/p7.md) completes the
+The [Python P7 closeout](../../docs/archive/plans/python-sdk-rewrite/p7.md) completes the
 current Python scope: capability/contract evidence, generated/manual ownership,
 wrapper/page/binary/background costs, agent results and final artifact identity.
 Historical P0 comparison limits and the recorded stability waiver retain their
 original scope; other platforms and deferred capabilities are separate.
-The [R5/R7 closeout record](../../docs/plans/sdk-runtime/python2-r7-closeout.md)
+The [R5/R7 closeout record](../../docs/archive/plans/sdk-runtime/python2-r7-closeout.md)
 tracks paired normal sdists/wheels, the macOS app/installer, installed-app
 discovery, handoff/save/reopen/export and the 151 native/window performance checks.
 The opt-in `tests/installed_model_workflow.py` also checks real-model authoring,
@@ -90,7 +90,7 @@ desktop executable. Run it with an installed pure interpreter, `-I`, and explici
 `--host`, `--model`, `--output` paths; model assets are not bundled.
 See [CAPABILITIES.md](CAPABILITIES.md) for implemented routes and evidence.
 
-[P3B scope reconciliation](../../docs/plans/python-sdk-rewrite/p3b.md) is complete:
+[P3B scope reconciliation](../../docs/archive/plans/python-sdk-rewrite/p3b.md) is complete:
 the earlier R4 implementation supplies the modeling routes, and public source and
 installed recipes now cover affine reparenting, grid/range conversions, all three
 scene binding tracks, independent scene collections and nested identity expiry.
@@ -100,7 +100,7 @@ The focused check also runs positive/negative static types:
 ./tools/test-sdk.sh python2 PythonSdk.test_p3b_conversions_scene_bindings_and_independent_collections
 ```
 
-[P4 resource/project acceptance](../../docs/plans/python-sdk-rewrite/p4.md) covers
+[P4 resource/project acceptance](../../docs/archive/plans/python-sdk-rewrite/p4.md) covers
 large attachments and RGBA images through save, Save As, reopen and package
 export/import, including empty/unavailable attachments, disk captures, generation
 expiry and failures. Save As copies current resources; old disk-backed Undo
@@ -140,7 +140,7 @@ uv run --locked python crates/zipzi-python2/tools/distribution.py \
 ```
 
 This checks generation from extracted sources, rebuilds both normal wheels, and
-runs isolated Local/Connected recipes. See the [integrated acceptance record](../../docs/plans/sdk-runtime/r1-r3-python-p1-p2-acceptance.md).
+runs isolated Local/Connected recipes. See the [integrated acceptance record](../../docs/archive/plans/sdk-runtime/r1-r3-python-p1-p2-acceptance.md).
 
 ## First model
 
@@ -257,7 +257,7 @@ follows host expiry without a new write ID. A lost close
 acknowledgment has its own recovery owner.
 
 The lifecycle matrix is recorded in the
-[P1 acceptance table](../../docs/plans/python-sdk-rewrite/p1-lifecycle-matrix.md).
+[P1 acceptance table](../../docs/archive/plans/python-sdk-rewrite/p1-lifecycle-matrix.md).
 Fault gates are compiled only under `test-support`; normal wheels expose neither
 fault controls nor allocator probes.
 
@@ -306,7 +306,7 @@ python -I -m zipzi.docs.editor_handoff rename \
 Use the identities from discovery and explicitly select the target document and
 mesh. `--endpoint /absolute/path/to/profile.sock` before the subcommand selects a
 specific host. Script exit retains committed content and resources. See the
-[R6 handoff record](../../docs/plans/sdk-runtime/python2-r6-handoff.md) for tested scope.
+[R6 handoff record](../../docs/archive/plans/sdk-runtime/python2-r6-handoff.md) for tested scope.
 
 ```sh
 ./tools/test-sdk.sh python2-connected
@@ -316,8 +316,8 @@ specific host. Script exit retains committed content and resources. See the
 
 The pure wheel runs from `/tmp` under `-I`, without a native package. Editor's
 focused `runtime_ipc_acceptance` also uses this installed client. See the
-[reconnection record](../../docs/plans/sdk-runtime/python2-r0-r4.md) and
-[R4 record](../../docs/plans/sdk-runtime/python2-r4-complete.md) for coverage and
+[reconnection record](../../docs/archive/plans/sdk-runtime/python2-r0-r4.md) and
+[R4 record](../../docs/archive/plans/sdk-runtime/python2-r4-complete.md) for coverage and
 remaining acceptance work.
 
 ## Typed parameters and events
@@ -351,7 +351,7 @@ events and permits at most 256. A gap requires explicit `resync()`; an unresolve
 poll must first recover its original response. Cursors and event values contain
 no native objects. Use `runtime.events_since(cursor)` to continue on another
 connection to the same host. Subscriptions do not drain SDK events or allocate a
-server lease. See [R3 evidence](../../docs/plans/sdk-runtime/python2-r3-events.md).
+server lease. See [R3 evidence](../../docs/archive/plans/sdk-runtime/python2-r3-events.md).
 
 ## Mesh bindings and CPU samples
 
@@ -469,8 +469,8 @@ once even when candidates, history, jobs or leases share them. These are
 conservative admission bounds and actual payload counters, not process RSS.
 
 R4 verification and commands are tracked in the
-[complete acceptance record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
-The Python [P3A public-contract refactor](../../docs/plans/python-sdk-rewrite/p3a-api-agent-contract.md)
+[complete acceptance record](../../docs/archive/plans/sdk-runtime/python2-r4-complete.md).
+The Python [P3A public-contract refactor](../../docs/archive/plans/python-sdk-rewrite/p3a-api-agent-contract.md)
 applies to these routes; its overall acceptance and Runtime R4 exit gates are
 tracked separately.
 
@@ -492,7 +492,7 @@ types without a Python JSON round trip.
 
 The [shared source/installed recipe](tests/r5_authoring_recipe.py) checks four
 domains, plans, addresses, exports and save/reopen. Current scope and remaining
-Preview/Observer work are recorded in the [R5/P5 record](../../docs/plans/sdk-runtime/python2-r5-authoring.md).
+Preview/Observer work are recorded in the [R5/P5 record](../../docs/archive/plans/sdk-runtime/python2-r5-authoring.md).
 
 ```sh
 ./tools/test-sdk.sh python2 PythonSdk.test_r5_animation_authoring_plans_addresses_and_sidecars
@@ -525,8 +525,8 @@ or pass `queries` to Preview sampling; both return explicit Jobs with exact Sour
 GPU renders use `modeling.observe(poses, observation.View(...))` or Preview
 `view=...`. Use `inspection.save` for local PNG/JSON evidence. Agent previews stay
 independent of human Editor playback. See the
-[construction plan](../../docs/plans/python-sdk-rewrite-plan.md) and
-[implementation record](../../docs/plans/python-sdk-rewrite/README.md).
+[construction plan](../../docs/archive/plans/python-sdk-rewrite-plan.md) and
+[implementation record](../../docs/archive/plans/python-sdk-rewrite/README.md).
 
 
 ## P3A-3/4/5 implementation and P3A-6 acceptance
@@ -534,7 +534,7 @@ independent of human Editor playback. See the
 P3A-3/4/5 was committed as `8500d9fe` without acceptance, by user request.
 Subsequent P3A-6 fixes and selected behavior, recovery, discovery, type, normal
 paired sdist/wheel and current production Editor checks are recorded in
-[P3A-6 results](../../docs/plans/python-sdk-rewrite/p3a-6.md). P3A is accepted:
+[P3A-6 results](../../docs/archive/plans/python-sdk-rewrite/p3a-6.md). P3A is accepted:
 P0 stability is waived for the recorded round, the fixed agent functional gate
 passed, and the user removed the model/service identity gate. Fixes were committed as `32e42da7`; documentation, context methods,
 installed examples and deterministic contract evidence have been consolidated.

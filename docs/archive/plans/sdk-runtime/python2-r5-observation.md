@@ -46,7 +46,7 @@ Native/IPC 配对更新为 `zipzi-python2-18` / `zipzi-runtime-r5-observation-1`
 ## 验证
 
 - 六项显式 Python GPU 测试通过，适用用例分别运行 Local/Connected。公共
-  [recipe](../../../crates/zipzi-python2/tests/r5_observation_recipe.py) 实际检查红/绿/蓝像素、
+  [recipe](../../../../crates/zipzi-python2/tests/r5_observation_recipe.py) 实际检查红/绿/蓝像素、
   正式提交和候选取消后的旧纹理、参数移位、重复姿态、动画局部时间、Model opacity=0、
   同批 capture/hash、一致映射、PNG，以及本地检查报告。
   候选 Preview 在后续纹理替换及取消后仍能输出原蓝色内容。

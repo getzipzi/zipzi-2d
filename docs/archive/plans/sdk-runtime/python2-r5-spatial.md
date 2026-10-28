@@ -36,7 +36,7 @@ binary codec、facade、目录和文档。Local 直接转换原生结构，Conne
 
 - 十项 Python 定向行为通过：四项空间测试，以及 Preview 数值/恢复/大结果、动画创作、
   P4 和手工网格回归。适用用例运行 Local/Connected；公共
-  [recipe](../../../crates/zipzi-python2/tests/r5_spatial_recipe.py)
+  [recipe](../../../../crates/zipzi-python2/tests/r5_spatial_recipe.py)
   独立检查位置 `0/5/10`、参数 clamp、Part 后代去重、命中画序/截断、退化三角形、
   空选择、隐藏筛选、稳定顶点 ID `(10,20,30)`、重心 `(.5,.25,.25)`、UV、冻结正式/候选
   标签，以及动画局部坐标对应的 bounds。

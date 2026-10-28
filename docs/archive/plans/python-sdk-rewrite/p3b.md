@@ -21,7 +21,7 @@ Preview 和 Observer 仍归 R5/P5。
 
 ## 本轮结果
 
-新增公共 recipe：[p3b_recipe.py](../../../crates/zipzi-python2/tests/p3b_recipe.py)，由
+新增公共 recipe：[p3b_recipe.py](../../../../crates/zipzi-python2/tests/p3b_recipe.py)，由
 `test_api.py` 与隔离安装入口 `installed_recipe.py` 共用，只调用公开 API。
 预期几何、历史步数、失效错误码与集合关系均由手写断言检查。
 

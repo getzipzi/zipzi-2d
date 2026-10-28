@@ -2,7 +2,7 @@
   "schema": 1,
   "contract": "zipzi-runtime-r3-2",
   "scope": "R3 minimum connection slice; no modeling/animation/preview completeness claim",
-  "evidence": "docs/plans/sdk-runtime/r3-ipc.md",
+  "evidence": "docs/archive/plans/sdk-runtime/r3-ipc.md",
   "implemented": [
     {"public": "zipzi.connect / Connection", "wire": "hello", "source": "runtime", "effects": "register/resume bounded client; no model copy", "acceptance": ["A06", "A12", "A18"]},
     {"public": "Connection.list_sessions/create_session/attach_session; Session.session_id", "wire": "list_sessions/create_session/attach_session/session_info", "source": "formal session", "effects": "resident registration; no duplicate SDK/history", "acceptance": ["A02", "A06", "A18"]},

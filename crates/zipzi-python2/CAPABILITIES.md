@@ -4,7 +4,7 @@ This list is a delivery checklist for a new package. It does not generate API
 signatures or define another wire schema. Domain behavior is checked against
 fixed geometry/history and the independent Rust SDK tests.
 
-[Python P7 closeout](../../docs/plans/python-sdk-rewrite/p7.md) reconciles the
+[Python P7 closeout](../../docs/archive/plans/python-sdk-rewrite/p7.md) reconciles the
 complete current scope for macOS arm64 / CPython 3.14, including the shared
 contract, generated/manual responsibilities, measured costs, agent evidence and
 final distributions. Slice labels below retain the stage in which each route
@@ -46,13 +46,13 @@ was introduced; later aggregate acceptance does not expand historical results.
 | Attachments | `modeling.ModelingCommandAttachment`, selected canonical records | SDK attachment operations; shared binary authoring/records and project IO | 1,600,102-byte UserData persistence and package roundtrip; empty/unavailable distinction, invalid-path rollback, unreferenced export refusal | R4 implemented; P4 accepted; independent convenience collection optional |
 | Project formats and resource IO | Project/Sessions Jobs; PNG Jobs and ImageLease | SDK import/open/generation/export and bounded decoders | PSD/Model3/MOC3/Cubism and all sidecar formats; Save As/history paths, disk overwrite/captured leases, generation expiry and installed package roundtrip | R4 implemented; P4 scope accepted |
 | Modeling CPU sampling | `session/edit.modeling.sample`, immutable `sampling` values | Same typed Runtime sampling entry and frozen SDK evaluation | Mesh binding/keyform numeric recipe, source/limits/recovery and real Editor human Preview/history isolation | Implemented R4; frozen sync/async CPU batches |
-| Animation authoring | `modeling.ModelingCommandMotion/Expression/Physics/Pose`, selected records, intents, addresses and capabilities | Existing SDK planners and core edits through the same Runtime batch; compiled finite types and binary codecs | Four-domain Local/Connected recipe, sidecar contents/save/reopen, SDK address Undo regression, large binary records and complete-call recovery | R5/P5 first slice implemented; see [record](../../docs/plans/sdk-runtime/python2-r5-authoring.md) |
-| CPU animation Preview | `session/edit.preview`, `animation` controls, sample/seek/advance Jobs | Independent SDK MotionPreview per client-owned frozen source; bounded shared worker route | Numeric Motion/Expression/geometry, Pose, candidate sequences, two clients/views, cancellation, 100 release rounds, binary/recovery and Local no-JSON | R5/P5 CPU slice implemented; [record](../../docs/plans/sdk-runtime/python2-r5-preview.md) |
-| CPU spatial queries | `session/edit.modeling.spatial`, Preview `queries`, typed `spatial` values | Shared SDK bounds/hits on frozen explicit poses or exact animated state; borrowed source object tables | Numeric bounds, stable vertex IDs/barycentric/UV, hidden filtering, Part ancestry, ordering/limits, cancelled candidates, worker cancellation and binary recovery | R5/P5 CPU slice implemented; [record](../../docs/plans/sdk-runtime/python2-r5-spatial.md) |
-| Editor animation Preview | Independent human view playback and Timeline projection | Existing Editor/SDK worker and Metal chain | Human/agent clock/Physics isolation, external Motion refresh, old frame refusal and two viewports | Integration/UI isolation and native/window Release comparisons passed; [final record](../../docs/plans/sdk-runtime/python2-r7-closeout.md) |
-| GPU observation / inspection export | `modeling.observe`, Preview `view`, `observation` values and `inspection.save` | Shared SDK Observer, one resolved texture set per batch, Rust RGBA/PNG; Python local file organization | Actual Metal pixels, formal/candidate texture replacements, animated source, binary/recovery and offline PNG/JSON export | R5/P5 slice implemented; [record](../../docs/plans/sdk-runtime/python2-r5-observation.md); portable scene rerender remains separate |
-| Direct Editor handoff | Attach resident Session; Edit batch `commit().wait()`; next Edit reads human refinement | Existing shared formal document/history and native event refresh; installed `zipzi.docs.editor_handoff` example | Mixed mesh/texture/Motion batch, native property/Timeline inputs, fresh-client continuation, atomic Undo, no-op/redo and image cleanup | Simplified R6 delivered; [scope/evidence](../../docs/plans/sdk-runtime/python2-r6-handoff.md); Proposal/Review deferred |
-| Packaged acceptance | Both distributions and installed desktop app locations | Same host ownership/protocol | Paired normal sdists/wheels and GPU recipes, signed macOS app/DMG, installed-app discovery/cold start/reopen/save; current macOS arm64 / CPython 3.14 integrated acceptance passed | P6 current platform scope and Runtime R7 complete; [current results and limits](../../docs/plans/sdk-runtime/python2-r7-closeout.md) |
+| Animation authoring | `modeling.ModelingCommandMotion/Expression/Physics/Pose`, selected records, intents, addresses and capabilities | Existing SDK planners and core edits through the same Runtime batch; compiled finite types and binary codecs | Four-domain Local/Connected recipe, sidecar contents/save/reopen, SDK address Undo regression, large binary records and complete-call recovery | R5/P5 first slice implemented; see [record](../../docs/archive/plans/sdk-runtime/python2-r5-authoring.md) |
+| CPU animation Preview | `session/edit.preview`, `animation` controls, sample/seek/advance Jobs | Independent SDK MotionPreview per client-owned frozen source; bounded shared worker route | Numeric Motion/Expression/geometry, Pose, candidate sequences, two clients/views, cancellation, 100 release rounds, binary/recovery and Local no-JSON | R5/P5 CPU slice implemented; [record](../../docs/archive/plans/sdk-runtime/python2-r5-preview.md) |
+| CPU spatial queries | `session/edit.modeling.spatial`, Preview `queries`, typed `spatial` values | Shared SDK bounds/hits on frozen explicit poses or exact animated state; borrowed source object tables | Numeric bounds, stable vertex IDs/barycentric/UV, hidden filtering, Part ancestry, ordering/limits, cancelled candidates, worker cancellation and binary recovery | R5/P5 CPU slice implemented; [record](../../docs/archive/plans/sdk-runtime/python2-r5-spatial.md) |
+| Editor animation Preview | Independent human view playback and Timeline projection | Existing Editor/SDK worker and Metal chain | Human/agent clock/Physics isolation, external Motion refresh, old frame refusal and two viewports | Integration/UI isolation and native/window Release comparisons passed; [final record](../../docs/archive/plans/sdk-runtime/python2-r7-closeout.md) |
+| GPU observation / inspection export | `modeling.observe`, Preview `view`, `observation` values and `inspection.save` | Shared SDK Observer, one resolved texture set per batch, Rust RGBA/PNG; Python local file organization | Actual Metal pixels, formal/candidate texture replacements, animated source, binary/recovery and offline PNG/JSON export | R5/P5 slice implemented; [record](../../docs/archive/plans/sdk-runtime/python2-r5-observation.md); portable scene rerender remains separate |
+| Direct Editor handoff | Attach resident Session; Edit batch `commit().wait()`; next Edit reads human refinement | Existing shared formal document/history and native event refresh; installed `zipzi.docs.editor_handoff` example | Mixed mesh/texture/Motion batch, native property/Timeline inputs, fresh-client continuation, atomic Undo, no-op/redo and image cleanup | Simplified R6 delivered; [scope/evidence](../../docs/archive/plans/sdk-runtime/python2-r6-handoff.md); Proposal/Review deferred |
+| Packaged acceptance | Both distributions and installed desktop app locations | Same host ownership/protocol | Paired normal sdists/wheels and GPU recipes, signed macOS app/DMG, installed-app discovery/cold start/reopen/save; current macOS arm64 / CPython 3.14 integrated acceptance passed | P6 current platform scope and Runtime R7 complete; [current results and limits](../../docs/archive/plans/sdk-runtime/python2-r7-closeout.md) |
 
 P0 has selected the first inputs/results and failure rules: `MeshSpec` creates
 without copying a persisted Mesh; Rename/SetPositions express intent; snapshots
@@ -68,32 +68,32 @@ CPU/GPU and platform work remains in its own phases. Implemented source APIs and
 separately. New capabilities require explicit handlers and independent evidence;
 there are no generated unsupported-operation placeholders.
 
-Current R4 implementation and acceptance: [complete record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
+Current R4 implementation and acceptance: [complete record](../../docs/archive/plans/sdk-runtime/python2-r4-complete.md).
 R4 predates the Python P3A/P3B split. Its 2026-10-26 closeout passed current
 Local/Connected full recipes, paired source/wheel rebuilds and native Editor/Metal
 acceptance. Box layout and ordinary mesh batch costs were rechecked in Release;
 historical P1 query and binary-image comparison limits are recorded separately.
 Existing modeling/resource/IO routes are not new P3B/P4 implementation work.
-The [P3B record](../../docs/plans/python-sdk-rewrite/p3b.md) closes the original
+The [P3B record](../../docs/archive/plans/python-sdk-rewrite/p3b.md) closes the original
 modeling scope using these routes and additional public conversion/scene/identity
 scenarios. Six focused tests run both backends; strict types and the normal-wheel
 Local/Connected installed recipes pass. Product code and public signatures are
 unchanged; R4 performance and Editor evidence retain their original scope.
-The [P4 record](../../docs/plans/python-sdk-rewrite/p4.md) closes the resource/project
+The [P4 record](../../docs/archive/plans/python-sdk-rewrite/p4.md) closes the resource/project
 scope with nine focused regressions, types and isolated Local/Connected installed
 recipes. It records the SDK's original-path dependency for old disk Undo resources
 after Save As; explicit image captures retain their own content. No product code
 or public return types changed, and optional attachment conveniences are separate.
-Python [P3A-0](../../docs/plans/python-sdk-rewrite/p3a-0.md) has passed its freeze gate.
-[P3A-1](../../docs/plans/python-sdk-rewrite/p3a-1.md) implements complete-call recovery,
+Python [P3A-0](../../docs/archive/plans/python-sdk-rewrite/p3a-0.md) has passed its freeze gate.
+[P3A-1](../../docs/archive/plans/python-sdk-rewrite/p3a-1.md) implements complete-call recovery,
 cached state and JobTimeout with source/type/installed evidence. P3A-1 is accepted;
 the user waived this round's final performance noise blocker. Raw failed measurements
 and the original P0 policy remain unchanged.
 P3A-3–6 and the overall API/agent contract are accepted for the implemented scope;
 evidence and the user's removal of the model/service identity gate are recorded in
-[P3A-6](../../docs/plans/python-sdk-rewrite/p3a-6.md).
+[P3A-6](../../docs/archive/plans/python-sdk-rewrite/p3a-6.md).
 
-[P3A-2](../../docs/plans/python-sdk-rewrite/p3a-2.md) is accepted. Existing reads
+[P3A-2](../../docs/archive/plans/python-sdk-rewrite/p3a-2.md) is accepted. Existing reads
 use root `Snapshot[T]`/`Batch[T]` with pure payloads and exact empty-batch sources.
 Domain operations, the common plan/apply path, generated parameter/binding/sampling/
 event/reference DTOs and root `PlanCost`/`PlanReport` are implemented.
@@ -116,7 +116,7 @@ as `gpt-6.1-sol/high` and removed the model/service identity gate. Optional meta
 is report-only. Prior behavior/type/distribution/
 Editor and P0 evidence is reused within its original scope.
 
-The 2026-10-26 [P3A closeout](../../docs/plans/python-sdk-rewrite/p3a-6.md#2026-10-26-p3a-收尾复核)
+The 2026-10-26 [P3A closeout](../../docs/archive/plans/python-sdk-rewrite/p3a-6.md#2026-10-26-p3a-收尾复核)
 synchronizes the current `zipzi` / `zipzi-native` `0.1.0a1` distribution metadata,
 generated source fingerprint and usage documentation. The catalog version is
 derived from the client manifest. The earlier real probe supplied no model/service

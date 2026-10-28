@@ -25,7 +25,7 @@ P4 已提交为 `e1401632`，本轮在同一独立 worktree `python-p4-resources
 - 八项定向 Python 公共测试通过，覆盖新增四领域流程、4096 段曲线、完整调用恢复、
   Local 无 Python JSON 往返、Physics 扩展冲突回滚，以及受影响的 R4/P3B/P4 场景。
   适用案例运行 Local/Connected，传输丢响应案例运行 Connected。
-- 共用 [r5_authoring_recipe.py](../../../crates/zipzi-python2/tests/r5_authoring_recipe.py)
+- 共用 [r5_authoring_recipe.py](../../../../crates/zipzi-python2/tests/r5_authoring_recipe.py)
   检查混合事务、候选读隔离、重复/缺失读取、能力、Plan、字段地址改动后 Undo
   仍失效、失败回滚，以及 Motion3/Expression3/Physics3/Pose3 实际导出和工程重开。
   独立核对曲线段 `[0,-1,0,1,1]`、事件时间/文本和 Expression JSON。

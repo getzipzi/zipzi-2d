@@ -31,18 +31,18 @@ Generate Mesh 位于 Mesh Edit 的顶部二级工具栏。默认交互统一为�
 
 | 位置 | 已有能力与计划改动 |
 | --- | --- |
-| [Core Mesh](../../crates/zipzi-core/src/types.rs) | 稳定 VertexId、基础位置、UV 和三角形；增加可选建模拓扑 |
-| [Core 几何校验](../../crates/zipzi-core/src/geometry.rs) | 基本渲染合法性，允许空三角形；新增独立的建模拓扑校验 |
-| [Mesh 文档操作](../../crates/zipzi-core/src/document/meshes.rs) | 创建、替换、原子拓扑替换；统一校验新增数据 |
-| [内容编辑](../../crates/zipzi-core/src/document/scene_content/mesh.rs) | 顶点及三角形增删、形状数组重映射；审计所有几何写入路径 |
-| [SDK 几何](../../crates/zipzi-sdk/src/geometry.rs) | MeshGeometry、网格生成与依赖保留；新增纯拓扑操作和完整输出 |
-| [Alpha 生成](../../crates/zipzi-sdk/src/alpha_mesh/mod.rs) | domain 构建后进入 triangulate；拆出边缘布局、内部采样、约束三角化 |
-| [Project codec](../../crates/zipzi-project/src/codec/types.rs) | 独立 MeshWire；同步 JSON 与 CBOR 保存结构 |
-| [SDK 内容变化](../../crates/zipzi-sdk/src/changes/content.rs) | 逐字段生成 MeshTopology 变化；增加结构边和外围变化 |
-| [Runtime 网格读取](../../crates/zipzi-runtime/src/runtime/mesh_read.rs) | 手写 borrowed 输出及布局断言；同步类型、预算及快照 |
-| [画布拓扑缓存](../../crates/zipzi-editor-core/src/canvas_topology.rs) | 已缓存顶点、三角形、去重边、边界；扩展分类并按 Mesh 共享 |
-| [边绘制](../../crates/zipzi-editor/src/mesh_edges.rs) | 批量绘制直线；增加固定屏幕长度的虚线与有界缓存 |
-| [视口交互](../references/viewport-interactions.md) | capture token、过期帧拒绝、多视口所有权；新工具沿用 |
+| [Core Mesh](../../../crates/zipzi-core/src/types.rs) | 稳定 VertexId、基础位置、UV 和三角形；增加可选建模拓扑 |
+| [Core 几何校验](../../../crates/zipzi-core/src/geometry.rs) | 基本渲染合法性，允许空三角形；新增独立的建模拓扑校验 |
+| [Mesh 文档操作](../../../crates/zipzi-core/src/document/meshes.rs) | 创建、替换、原子拓扑替换；统一校验新增数据 |
+| [内容编辑](../../../crates/zipzi-core/src/document/scene_content/mesh.rs) | 顶点及三角形增删、形状数组重映射；审计所有几何写入路径 |
+| [SDK 几何](../../../crates/zipzi-sdk/src/geometry.rs) | MeshGeometry、网格生成与依赖保留；新增纯拓扑操作和完整输出 |
+| [Alpha 生成](../../../crates/zipzi-sdk/src/alpha_mesh/mod.rs) | domain 构建后进入 triangulate；拆出边缘布局、内部采样、约束三角化 |
+| [Project codec](../../../crates/zipzi-project/src/codec/types.rs) | 独立 MeshWire；同步 JSON 与 CBOR 保存结构 |
+| [SDK 内容变化](../../../crates/zipzi-sdk/src/changes/content.rs) | 逐字段生成 MeshTopology 变化；增加结构边和外围变化 |
+| [Runtime 网格读取](../../../crates/zipzi-runtime/src/runtime/mesh_read.rs) | 手写 borrowed 输出及布局断言；同步类型、预算及快照 |
+| [画布拓扑缓存](../../../crates/zipzi-editor-core/src/canvas_topology.rs) | 已缓存顶点、三角形、去重边、边界；扩展分类并按 Mesh 共享 |
+| [边绘制](../../../crates/zipzi-editor/src/mesh_edges.rs) | 批量绘制直线；增加固定屏幕长度的虚线与有界缓存 |
+| [视口交互](../../references/viewport-interactions.md) | capture token、过期帧拒绝、多视口所有权；新工具沿用 |
 
 Core 负责持久化类型、结构不变量和原子应用；SDK 负责纯算法、编辑语义和依赖处理；Runtime 负责会话、版本、candidate、Job 和唯一历史；Editor Core 负责模式、选择、输入状态和派生缓存；Editor 负责界面、命中反馈和绘制。三角化算法不进入 UI 或语言绑定。
 
@@ -128,7 +128,7 @@ Core 在创建、替换、完整结构验证和最终 candidate 发布路径执�
 
 Atlas 图片由项目导入流程拆分为独立 Mesh 图片。进入 Mesh Edit 时直接执行资源和几何检查，符合条件即进入，不再要求用户确认完整独立源图；缺图、共享资产及不支持的几何仍给出明确原因。
 
-复用并抽出 [TextureTransform](../../crates/zipzi-editor-core/src/mesh_generation_alpha.rs) 的仿射恢复思路到可供 SDK 使用的层级，得到 `position = origin + u * uv.x + v * uv.y` 及其逆。进入模式恢复基准，手势开始冻结该映射；一次拖动始终从操作前快照计算绝对结果，不累计逐帧偏移、不逐帧重新拟合。
+复用并抽出 [TextureTransform](../../../crates/zipzi-editor-core/src/mesh_generation_alpha.rs) 的仿射恢复思路到可供 SDK 使用的层级，得到 `position = origin + u * uv.x + v * uv.y` 及其逆。进入模式恢复基准，手势开始冻结该映射；一次拖动始终从操作前快照计算绝对结果，不累计逐帧偏移、不逐帧重新拟合。
 
 首版不新增独立持久化图片摆放矩阵：至少一个有效三角形和统一仿射位置／UV 已能恢复它。外部修改几何或源图后结束当前手势，重新检查能力并恢复映射。资源更新的依赖包含内容身份和尺寸，不能只看 asset ID。
 
@@ -390,7 +390,7 @@ P1 可先抽出公共约束三角化设施，P4 再迁移现有 Alpha 实现，�
 
 ## 验收与测试
 
-测试从最小模块和集成切片开始，按 [根 README](../../README.md#tests) 与 [工具测试说明](../../tools/README.md#test-coverage) 扩大。新测试模块名采用 manual_mesh，新增 SDK 普通 CPU 集成注册到既有 integration target。不要为简单字段赋值写镜像实现测试，重点覆盖语义和数据边界。
+测试从最小模块和集成切片开始，按 [根 README](../../../README.md#tests) 与 [工具测试说明](../../../tools/README.md#test-coverage) 扩大。新测试模块名采用 manual_mesh，新增 SDK 普通 CPU 集成注册到既有 integration target。不要为简单字段赋值写镜像实现测试，重点覆盖语义和数据边界。
 
 ### 几何与数据验收
 
@@ -454,5 +454,5 @@ Editor shell gate 会清除 ZIPZI_DEV_SESSION_DIR；直接执行 Editor Cargo �
 
 - [Spine Mesh attachments](https://en.esotericsoftware.com/spine-meshes)：编辑模式、轮廓、手工边与自动三角边，以及无孔洞限制。
 - [Spine 关于 UV 交叉的说明](https://es.esotericsoftware.com/forum/d/10330-cant-move-big-groups-of-vertices-in-edit-mesh-mode/13)：UV 拓扑约束与显示姿态的区别。
-- [视口交互约定](../references/viewport-interactions.md)：输入所有权、capture 和生命周期。
-- [SDK README](../../crates/zipzi-sdk/README.md)：会话历史和当前 Alpha 生成契约。
+- [视口交互约定](../../references/viewport-interactions.md)：输入所有权、capture 和生命周期。
+- [SDK README](../../../crates/zipzi-sdk/README.md)：会话历史和当前 Alpha 生成契约。

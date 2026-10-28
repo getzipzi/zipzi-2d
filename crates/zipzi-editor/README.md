@@ -176,7 +176,7 @@ Runtime on the application thread, and worker completion remains independent of
 windows. Development launches set `ZIPZI_EDITOR_HOST` to their paired executable;
 a reused resident host is reported without claiming ownership of its process.
 See [new Python client connection usage](../zipzi-python2/README.md#desktop-host-and-resident-sessions)
-and the [R0–R4 reconnection record](../../docs/plans/sdk-runtime/python2-r0-r4.md).
+and the [R0–R4 reconnection record](../../docs/archive/plans/sdk-runtime/python2-r0-r4.md).
 
 ```sh
 ./tools/test-sdk.sh python2-connected
@@ -202,7 +202,7 @@ input and Timeline dragging, Undo/Redo, a new Python process reading and extendi
 the refinement, the installed command-line example, and temporary image cleanup.
 The same flow now finishes durable save/reopen, motion/runtime-package export,
 PCM attachment verification and redisplay of the paused animation after IO.
-See the [R5/R7 closeout record](../../docs/plans/sdk-runtime/python2-r7-closeout.md)
+See the [R5/R7 closeout record](../../docs/archive/plans/sdk-runtime/python2-r7-closeout.md)
 for normal app/DMG installation and real-model acceptance.
 Committed content and resources survive each client exit. No licensed model is
-required. [Scope and evidence](../../docs/plans/sdk-runtime/python2-r6-handoff.md).
+required. [Scope and evidence](../../docs/archive/plans/sdk-runtime/python2-r6-handoff.md).

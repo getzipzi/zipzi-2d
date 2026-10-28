@@ -43,7 +43,7 @@
         "untracked_sha256": "d8cc09189e269802c68354da9cdc53d351fd0477c7f9d51510ae2397be7606fd",
         "file_manifest_sha256": "fae0d65f3ed836823ef09bcd0389221f9cc703201be01f744563225818f97d34",
         "lock_sha256": "e52abbda2c1dc7158a6cec2a9985be01ca85752284e478cfccee4f5b7b8e61e5",
-        "status": " M crates/zipzi-editor-core/src/document/properties.rs\n M docs/plans/sdk-incremental-publication.md\n"
+        "status": " M crates/zipzi-editor-core/src/document/properties.rs\n M docs/archive/plans/sdk-incremental-publication.md\n"
       },
       "sdk": {
         "head": "4bb2fee6cf3a22be4c8285df7c83a01aac192de5",

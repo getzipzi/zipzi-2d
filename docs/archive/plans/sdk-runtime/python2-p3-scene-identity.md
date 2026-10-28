@@ -93,5 +93,5 @@ Python 索引值，更新共享 Rust 方法/意图/值类型；独立测试禁�
 6. 原生 Editor 已验收本批 Part/group 等投影；全部选择/关系/纹理/属性表单的完整外部写
    矩阵，以及无窗口素材导入→建模→保存重开→格式导出闭环仍待完成。
 
-逐能力状态继续以 [python2-coverage.json](../../runtime/python2-coverage.json) 为准；
+逐能力状态继续以 [python2-coverage.json](../../../runtime/python2-coverage.json) 为准；
 R4 完成需逐项消除以上缺口并达到主计划 A04/A05/A09/A10/A12/A14/A15/A17 门槛。

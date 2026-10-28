@@ -7,12 +7,12 @@
 
 ## 本轮落地
 
-- [清单与基线工具](../../../tools/python/python2_contract.py)：`inventory`、`freeze`、`baseline`
+- [清单与基线工具](../../../../tools/python/python2_contract.py)：`inventory`、`freeze`、`baseline`
   三个入口都有 `--help`，输出路径必须是新文件，不覆盖旧证据。
-- [严格目标测试](../../../crates/zipzi-python2/tests/test_p3a_contract.py)：使用实际 Local
+- [严格目标测试](../../../../crates/zipzi-python2/tests/test_p3a_contract.py)：使用实际 Local
   适配器和独立 Connected 测试宿主，恢复故障由现有宿主 fixture 丢弃响应触发。
   没有 `expectedFailure`、跳过或假后端答案来把缺口记作通过。
-- [工具回归](../../../tools/tests/test_python2_contract.py)：验证确定性、继承方法、领域入口、
+- [工具回归](../../../../tools/tests/test_python2_contract.py)：验证确定性、继承方法、领域入口、
   dataclass/普通实例字段、意外导出、缺失导出、注解错误、只增证据文件和结果记录。
   空测试、skip、expected failure、测试期间输入变化均不能通过。
 - 当前公开表面清单：3,682 条路径，包括 1,223 条模块导出、

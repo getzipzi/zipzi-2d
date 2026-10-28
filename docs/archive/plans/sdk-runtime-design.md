@@ -40,18 +40,18 @@ Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观�
 
 | 现有位置 | 已有能力 | 本次需要改变的边界 |
 | --- | --- | --- |
-| [SDK session](../../crates/zipzi-sdk/src/session.rs) | `AuthoringSession`、历史、快照、事件、`begin_owned_edit` | 保持领域所有权，由 Runtime 托管实例；补齐候选观察等公共契约 |
-| [SDK edit](../../crates/zipzi-sdk/src/edit.rs) | `commit_to` 校验完整 Version，原子发布并生成回执 | 提交不应被重复实现；昂贵准备与发布需要明确调度边界 |
-| [SDK project IO](../../crates/zipzi-sdk/src/project_io.rs) | 保存协调历史资源路径及已保存基线 | 统一保存入口，明确忙碌和失败后的会话归还 |
-| [Editor Document](../../crates/zipzi-editor-core/src/document.rs) | 同时持有 SDK 会话、候选、选择和投影缓存 | 拆开正式会话所有权与 Editor 视图适配 |
-| [工作区 entry](../../crates/zipzi-editor-core/src/workspace/entry.rs)、[IO](../../crates/zipzi-editor-core/src/workspace/io.rs) | 多文档、运行期身份；保存将整个文档会话交给后台 | Runtime 管理文档生命周期，Editor 保留视图和交互状态 |
-| [发布适配](../../crates/zipzi-editor-core/src/authoring/publication.rs) | 回执驱动投影更新，当前会消费 SDK 事件 | 统一事件消费，保留现有增量更新策略 |
-| [应用入口](../../crates/zipzi-editor/src/lib.rs) | 最后一个窗口关闭时退出应用 | 宿主常驻与窗口开关分离 |
+| [SDK session](../../../crates/zipzi-sdk/src/session.rs) | `AuthoringSession`、历史、快照、事件、`begin_owned_edit` | 保持领域所有权，由 Runtime 托管实例；补齐候选观察等公共契约 |
+| [SDK edit](../../../crates/zipzi-sdk/src/edit.rs) | `commit_to` 校验完整 Version，原子发布并生成回执 | 提交不应被重复实现；昂贵准备与发布需要明确调度边界 |
+| [SDK project IO](../../../crates/zipzi-sdk/src/project_io.rs) | 保存协调历史资源路径及已保存基线 | 统一保存入口，明确忙碌和失败后的会话归还 |
+| [Editor Document](../../../crates/zipzi-editor-core/src/document.rs) | 同时持有 SDK 会话、候选、选择和投影缓存 | 拆开正式会话所有权与 Editor 视图适配 |
+| [工作区 entry](../../../crates/zipzi-editor-core/src/workspace/entry.rs)、[IO](../../../crates/zipzi-editor-core/src/workspace/io.rs) | 多文档、运行期身份；保存将整个文档会话交给后台 | Runtime 管理文档生命周期，Editor 保留视图和交互状态 |
+| [发布适配](../../../crates/zipzi-editor-core/src/authoring/publication.rs) | 回执驱动投影更新，当前会消费 SDK 事件 | 统一事件消费，保留现有增量更新策略 |
+| [应用入口](../../../crates/zipzi-editor/src/lib.rs) | 最后一个窗口关闭时退出应用 | 宿主常驻与窗口开关分离 |
 | [Python NativeSession](../../crates/zipzi-python/src/session.rs) | 独立 `Arc<Mutex<AuthoringSession>>` | 增加连接后端，不向连接模式复制这个会话 |
 | [Python 公共包](../../crates/zipzi-python/python/zipzi/__init__.py)、[Session](../../crates/zipzi-python/python/zipzi/_session.py) | 公共 API 直接依赖 `_native`；Plan、Handle 等为 PyO3 对象 | 分离公共值类型、后端引用和可选原生扩展 |
 | [Observer](../../crates/zipzi-sdk-observe/src/lib.rs) | 不可变观察输入、空间检查和离屏渲染 | 接受明确的正式/候选快照来源，按需执行 |
 
-旧[第一阶段架构](../archive/editor-foundation.md)把 Python 连接排除在当时范围之外。本设计更新该范围，保留其中的单一历史、文档身份、SDK 领域所有权和后台结果版本检查原则。对象身份与编辑规则继续遵循[对象创作核心方案](../archive/plans/unified-object-authoring-core.md)。
+旧[第一阶段架构](../editor-foundation.md)把 Python 连接排除在当时范围之外。本设计更新该范围，保留其中的单一历史、文档身份、SDK 领域所有权和后台结果版本检查原则。对象身份与编辑规则继续遵循[对象创作核心方案](unified-object-authoring-core.md)。
 
 ## 3. 分层、依赖和 Runtime 厚度
 

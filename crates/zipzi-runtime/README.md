@@ -139,7 +139,7 @@ The independent Python client also uses typed SDK parameter create/patch intents
 in `apply_authoring` and source-bound mesh/parameter batch reads. Whole selections
 are admitted before copies. Focused gates are `--test authoring`, `--test protocol`
 and SDK `--test integration parameter_editing::`; see the
-[R3 evidence](../../docs/plans/sdk-runtime/python2-r3-events.md).
+[R3 evidence](../../docs/archive/plans/sdk-runtime/python2-r3-events.md).
 
 R4 routes full typed modeling commands and SDK plans through `apply_authoring`.
 Canonical selected records, geometry, bindings and CPU sample arrays use direct
@@ -147,7 +147,7 @@ native conversion or immutable binary payloads. `sample_modeling` and frozen rea
 Jobs accept at most 64 explicit poses/256 parameters per pose, with geometry-based
 aggregate admission before clone/evaluation. Reads preserve exact sources and
 cannot modify an Editor Preview or history. One worker remains available for
-formal publication. See the [R4 acceptance record](../../docs/plans/sdk-runtime/python2-r4-complete.md).
+formal publication. See the [R4 acceptance record](../../docs/archive/plans/sdk-runtime/python2-r4-complete.md).
 
 R1 applies the enabled R0 defaults in `RuntimeLimits`: client/session/edit counts,
 candidate estimates, frozen document estimates, aggregate history reservations,
@@ -176,8 +176,8 @@ python3 tools/test_tools.py -p test_runtime_dependencies.py
 cargo test --locked -p zipzi-runtime --features gpu-observation --test observation -- --include-ignored
 ```
 
-See [R1 evidence](../../docs/plans/sdk-runtime/r1-core.md) for the CPU acceptance
-mapping and [the implementation plan](../../docs/plans/sdk-runtime-implementation-plan.md)
+See [R1 evidence](../../docs/archive/plans/sdk-runtime/r1-core.md) for the CPU acceptance
+mapping and [the implementation plan](../../docs/archive/plans/sdk-runtime-implementation-plan.md)
 for the remaining Editor, transport and production gates.
 
 ## In-process Editor adapter
@@ -237,7 +237,7 @@ cargo test --locked -p zipzi-runtime --test protocol
 ./tools/test-sdk.sh python2-connected
 ```
 
-See [R3 acceptance evidence](../../docs/plans/sdk-runtime/r3-ipc.md) and the
+See [R3 acceptance evidence](../../docs/archive/plans/sdk-runtime/r3-ipc.md) and the
 [implemented connection slice](../../docs/runtime/r3-coverage.json).
 
 ## R4 modeling, resources and project IO
@@ -278,7 +278,7 @@ snapshot. Editor redraw publishes it before taking the Runtime lock; stale or
 headless contexts return no snapshot. Native acceptance covers all object kinds,
 selection, relations, texture/property projection and a human gesture interleaved
 with an external stale candidate. See [R4 coverage](../../docs/runtime/r4-coverage.json)
-and [acceptance evidence](../../docs/plans/sdk-runtime/python2-r4-complete.md).
+and [acceptance evidence](../../docs/archive/plans/sdk-runtime/python2-r4-complete.md).
 
 ## R5 animation authoring slice
 
@@ -291,14 +291,14 @@ recovery. Native/IPC pairing is `zipzi-python2-18` / `zipzi-runtime-r5-observati
 
 The SDK now retains animation field epochs across edits and Undo. Physics change
 summaries compare stable row IDs so a sibling reorder preserves field addresses.
-The [R5/P5 record](../../docs/plans/sdk-runtime/python2-r5-authoring.md) tracks
-source/installed authoring evidence. The [CPU Preview slice](../../docs/plans/sdk-runtime/python2-r5-preview.md)
+The [R5/P5 record](../../docs/archive/plans/sdk-runtime/python2-r5-authoring.md) tracks
+source/installed authoring evidence. The [CPU Preview slice](../../docs/archive/plans/sdk-runtime/python2-r5-preview.md)
 adds client-owned frozen SDK simulations, exact-source batches and cancellable
 seek/advance Jobs. Preview controls never borrow the formal session or its
 default preview. One running read worker slot remains reserved for publication.
-[CPU spatial queries](../../docs/plans/sdk-runtime/python2-r5-spatial.md) now reuse
+[CPU spatial queries](../../docs/archive/plans/sdk-runtime/python2-r5-spatial.md) now reuse
 SDK geometry on frozen formal/candidate poses and exact Preview states, with
-cancellable workers, admission and binary results. [GPU observation](../../docs/plans/sdk-runtime/python2-r5-observation.md)
+cancellable workers, admission and binary results. [GPU observation](../../docs/archive/plans/sdk-runtime/python2-r5-observation.md)
 adds explicit-view image Jobs and actual texture provenance.
 
 Read dispatch rotates between clients and FIFO between each client's jobs and
@@ -310,5 +310,5 @@ on a single-worker host. An entered SDK seek/plan, image decode, texture acquisi
 or GPU submission finishes or cooperatively cancels before yielding; this is not a
 fixed wall-clock time slice. The desktop animation worker and native Metal display
 keep their own state and queue. Focused regressions are `--test scheduling` and
-Editor `timeline::runtime_isolation`; [scope and evidence](../../docs/plans/sdk-runtime/python2-r5-scheduling.md).
+Editor `timeline::runtime_isolation`; [scope and evidence](../../docs/archive/plans/sdk-runtime/python2-r5-scheduling.md).
 R5 remains in progress pending integrated native performance/acceptance work.

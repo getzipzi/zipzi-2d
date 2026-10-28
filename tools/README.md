@@ -263,7 +263,7 @@ entries are not an approved final API catalogue.
 `targets` writes the reviewed destination and full signature for every original
 public path; `configure` freezes the G01–G08 experiment inputs without starting
 agents. `check-freeze` validates both, the original failure evidence and copied
-Release P0 binaries. See the [P3A-0 record](../docs/plans/python-sdk-rewrite/p3a-0.md)
+Release P0 binaries. See the [P3A-0 record](../docs/archive/plans/python-sdk-rewrite/p3a-0.md)
 for the completed acceptance result. Historical JSON artifacts have been removed
 from the plan directories. These one-off historical checks require their original
 inputs under `target/python2/p3a-reports/`; they are not prerequisites for later
@@ -330,7 +330,7 @@ notarize apps, change remote repositories or verify GitHub license presentation.
 
 
 P3A-3/4/5 was committed without acceptance, by user request. Subsequent selected
-checks and remaining gates are recorded in [P3A-6](../docs/plans/python-sdk-rewrite/p3a-6.md).
+checks and remaining gates are recorded in [P3A-6](../docs/archive/plans/python-sdk-rewrite/p3a-6.md).
 `./tools/test-sdk.sh python2 --discovery` selects the new focused collection,
 Session lifecycle and offline catalog regressions. For installed-only checks,
 run `tests/installed_contract.py --output /absolute/temporary/result.md` with the
@@ -358,7 +358,7 @@ are paginated within 16 KiB; raw output stays in external logs and subsequent
 pages consume tool calls. `python2_agent_matrix.py --help` freezes one 42-run
 cohort and decides acceptance from functional results. See the
 [agent fixture notes](../fixtures/python_sdk_agent/README.md) and
-[P3A-6 results](../docs/plans/python-sdk-rewrite/p3a-6.md) for coverage and all
+[P3A-6 results](../docs/archive/plans/python-sdk-rewrite/p3a-6.md) for coverage and all
 observed failures. The configured model/effort is `gpt-6.1-sol/high`; optional
 service metadata has no effect on acceptance.
 

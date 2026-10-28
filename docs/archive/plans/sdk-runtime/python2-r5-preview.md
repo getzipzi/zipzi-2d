@@ -45,7 +45,7 @@ Local 使用直接原生转换，Connected 数值结果使用既有分块二进�
 
 - 九项 Python 定向测试通过：五项新增 Preview 测试，加上动画创作、P4、手工网格
   和原生准入回归；适用案例运行 Local/Connected。共享
-  [r5_preview_recipe.py](../../../crates/zipzi-python2/tests/r5_preview_recipe.py)
+  [r5_preview_recipe.py](../../../../crates/zipzi-python2/tests/r5_preview_recipe.py)
   验证线性 Motion/Expression 的参数和网格位移、Pose opacity、多个视图、候选来源、
   正式变更后的冻结内容和一个驻留会话内 100 次创建/释放。
 - Connected 另验证两个客户端同会话预览、断开一个客户端后另一个仍可用；Local 和

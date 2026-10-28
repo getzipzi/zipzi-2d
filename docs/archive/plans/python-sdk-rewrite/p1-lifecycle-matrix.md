@@ -2,7 +2,7 @@
 
 日期：2026-10-25。基础提交 `7cf4bed` 保存资源/Plan 切片；本表对应其后的工作区实现。源代码验收使用 Release Local 扩展与真实 CPU IPC 宿主，公共类型检查另跑严格正反例。故障控制仅存在于 `test-support` feature，正式 wheel 不包含控制入口。
 
-证据来自 [`tests/test_api.py`](../../../crates/zipzi-python2/tests/test_api.py)。下表测试名均省略 `PythonSdk.test_` 前缀；每项内部可能覆盖多种故障或两种后端，不按分支重复计数。
+证据来自 [`tests/test_api.py`](../../../../crates/zipzi-python2/tests/test_api.py)。下表测试名均省略 `PythonSdk.test_` 前缀；每项内部可能覆盖多种故障或两种后端，不按分支重复计数。
 
 | 故障/边界 | Local | Connected | 测试与独立断言 |
 | --- | --- | --- | --- |

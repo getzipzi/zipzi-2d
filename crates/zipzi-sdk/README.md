@@ -307,5 +307,5 @@ an edit or snapshot. `set_image_memory_budget` admits retained images atomically
 including owned candidates crossing into a host. Pixel Arcs held by textures
 continue to count until their last owner drops.
 
-[R4 evidence and remaining work](../../docs/plans/sdk-runtime/r4-modeling.md)
+[R4 evidence and remaining work](../../docs/archive/plans/sdk-runtime/r4-modeling.md)
 describe the current connected slice and limits.

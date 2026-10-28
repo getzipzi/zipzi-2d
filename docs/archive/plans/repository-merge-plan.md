@@ -4,7 +4,7 @@
 
 状态：P0–P3、**P3F：目录平铺与二次路径适配**、P4 测试/CI 包集合划分、P5 本地素材/产物核验及 P6 本地总体验收已完成；见 [P3F](../repository-merge/p3f-flattening.md)、[P4](../repository-merge/p4-test-domains.md)、[P5](../repository-merge/p5-artifacts.md)、[P6 本机验收](../repository-merge/p6-local-acceptance.md)。18 个自有 crate、Editor 资产、工具、文档、vendor 与 Purism 已按下述布局落位；P3F 最初把资产放在根 `assets/editor/`，现按用户修订归入 `crates/zipzi-editor/assets/`，历史映射仍记录当时结果。用户后续要求的本机 Cubism SDK 与 Cargo 配置也已迁入忽略目录，官方/Purism Core 本机门禁通过。托管 CI、未推送分支的 GitHub 许可展示及最终切换仍待外部条件。
 
-权威计划现位于 `docs/plans/repository-merge-plan.md`。执行事实和测试结果见[实施记录](../repository-merge/README.md)。旧版计划可在提交 `9e3c98cc` 的 `apps/editor/docs/plans/repository-merge-plan.md` 查看；不另存一份可编辑的旧计划。
+权威计划现位于 `docs/archive/plans/repository-merge-plan.md`。执行事实和测试结果见[实施记录](../repository-merge/README.md)。旧版计划可在提交 `9e3c98cc` 的 `apps/editor/docs/archive/plans/repository-merge-plan.md` 查看；不另存一份可编辑的旧计划。
 
 ## 1. 已完成基线与保持不变的边界
 

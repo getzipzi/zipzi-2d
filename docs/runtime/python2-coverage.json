@@ -6,7 +6,7 @@
   "implementation": "crates/zipzi-python2",
   "contract": "zipzi-runtime-p3a-345-1",
   "native_contract": "zipzi-python2-14",
-  "record": "docs/plans/sdk-runtime/python2-r4-complete.md",
+  "record": "docs/archive/plans/sdk-runtime/python2-r4-complete.md",
   "modeling_commands": [
     "CreateAsset",
     "ReplaceAsset",
@@ -220,7 +220,7 @@
   "python_contract": {
     "stage": "P3A",
     "status": "accepted",
-    "record": "docs/plans/python-sdk-rewrite/p3a-6.md",
+    "record": "docs/archive/plans/python-sdk-rewrite/p3a-6.md",
     "chronology": "R4 Modeling/resources/IO implementation preceded the Python P3A/P3B split; P3A changed the public wrapper contract"
   },
   "record_section": "2026-10-26-r4-最终复验"

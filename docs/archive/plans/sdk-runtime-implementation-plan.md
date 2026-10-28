@@ -28,7 +28,7 @@
 原 R0–R3 交付记录保留为历史；新包涉及的 Python/安装/真实宿主证据独立补齐，
 不直接沿用旧客户端的通过结论。接回差距与本批宿主/会话验收见
 [新包 R0–R4 记录](sdk-runtime/python2-r0-r4.md)及
-[逐能力状态](../runtime/python2-coverage.json)。`acc54907` 已保存宿主/会话切片；
+[逐能力状态](../../runtime/python2-coverage.json)。`acc54907` 已保存宿主/会话切片；
 其后工作区的[事件、参数及批量查询](sdk-runtime/python2-r3-events.md)已通过新包
 R3 最小链路验收，并已提交为 `c0e186b`。其后[网格绑定/CPU 采样切片](sdk-runtime/python2-r4-bindings.md)
 已接通共享处理器、数值 recipe 与人工 Preview 隔离；完整 R4 Modeling、身份/地址、
@@ -331,7 +331,7 @@ CPU fixture 必须可在无授权素材环境运行。GPU 与真实模型测试�
 
 ### 6.1 测量方法
 
-复用[属性链基准](../../tools/benchmarks/README.md#property-editing-chain-benchmark)、[UI 性能参考](../references/ui-performance.md)和 README 中的 Timeline/窗口基准。采用相同机器、Release 配置、模型、窗口尺寸和交互脚本；预热后至少 5 对交替的 baseline/candidate 进程测量。记录每进程 P50/P95、各进程统计的中位数和范围，不将不同操作或不同模型混为一个平均值。
+复用[属性链基准](../../../tools/benchmarks/README.md#property-editing-chain-benchmark)、[UI 性能参考](../../references/ui-performance.md)和 README 中的 Timeline/窗口基准。采用相同机器、Release 配置、模型、窗口尺寸和交互脚本；预热后至少 5 对交替的 baseline/candidate 进程测量。记录每进程 P50/P95、各进程统计的中位数和范围，不将不同操作或不同模型混为一个平均值。
 
 最低场景：属性数值/颜色拖动、顶点或变形器拖动、Timeline 键拖动/seek、持续动画播放、双视口切换，以及另一文档存在后台 agent 批次时的人工操作。
 

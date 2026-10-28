@@ -1,6 +1,6 @@
 # zipzi-python2 实施记录
 
-日期：2026-10-25，2026-10-27 更新。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../crates/zipzi-python2/README.md)。
+日期：2026-10-25，2026-10-27 更新。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../../crates/zipzi-python2/README.md)。
 
 **Python P7 当前承诺范围已完成。** [总验收记录](p7.md)对应全部能力、统一契约、生成/手写责任规模、包装/分页/二进制/后台任务/agent 成本和当前发行身份。本轮 40 个生成产物一致、19 项生成器回归、正常安装离线审计及两后端分页/摘要观察通过；核对 R7 最终产物哈希、源码与 wheel 配对，沿用各阶段适用的行为/类型/安装/Editor/性能证据。范围为 macOS arm64 / CPython 3.14，原 P0 限制和用户豁免不扩大。
 
@@ -55,7 +55,7 @@
 | P6 | 当前 macOS arm64 / CPython 3.14 分发范围已验收 | 正常 wheel/sdist、真实 app 安装发现与完整领域组合通过；其他平台另行验证 |
 | P7 | [当前承诺范围收尾完成](p7.md)；能力、契约、复杂度、成本、agent 和发行证据已逐项核对 | 当前平台 macOS arm64 / CPython 3.14；未来能力、平台和公开发布另列，原历史失败不改记通过 |
 
-能力范围见 [`CAPABILITIES.md`](../../../crates/zipzi-python2/CAPABILITIES.md)。源码接线、独立验证和阶段验收分别记录；[P7](p7.md)已按当前承诺范围汇总完成，P0 统计范围和历史失败保持，未来能力不计入当前交付。
+能力范围见 [`CAPABILITIES.md`](../../../../crates/zipzi-python2/CAPABILITIES.md)。源码接线、独立验证和阶段验收分别记录；[P7](p7.md)已按当前承诺范围汇总完成，P0 统计范围和历史失败保持，未来能力不计入当前交付。
 
 ## P1 当前链路
 
