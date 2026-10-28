@@ -23,6 +23,8 @@ from pathlib import Path
 import platform
 import subprocess
 import sys
+import sysconfig
+import tempfile
 import types
 import typing
 import unittest
@@ -253,7 +255,7 @@ class RecordingResult(unittest.TextTestResult):
 
 def baseline(output: Path, native: Path, host: Path, names: list[str]) -> bool:
     import os
-    native_files = list((native / "zipzi_native").glob("_native*.so"))
+    native_files = list((native / "zipzi_native").glob('_native' + sysconfig.get_config_var('EXT_SUFFIX')))
     if len(native_files) != 1 or not host.is_file():
         raise ValueError("Refresh fixtures with ./tools/test-sdk.sh python2 before running the baseline")
     os.environ.update(ZIPZI_PYTHON2_NATIVE=str(native), ZIPZI_PYTHON2_HOST=str(host))
@@ -298,11 +300,11 @@ def check_freeze(catalogue: Path, configuration: Path, performance: Path, artifa
         raise ValueError("P3A-0 needs a frozen Release P0 baseline, including noise checks")
     for role in ("timing", "probe"):
         build = p0["builds"][role]
-        files = list((artifacts / role / "native/zipzi_native").glob("_native*.so"))
+        files = list((artifacts / role / "native/zipzi_native").glob('_native' + sysconfig.get_config_var('EXT_SUFFIX')))
         if (build["profile"]["debug_assertions"] or build["host_profile"] != "release"
                 or build["instrumented"] != (role == "probe") or len(files) != 1
                 or sha256(files[0]) != build["artifact_sha256"]
-                or sha256(artifacts / role / "local_host_fixture") != build["host_sha256"]):
+                or sha256(artifacts / role / ('local_host_fixture.exe' if sys.platform == 'win32' else 'local_host_fixture')) != build["host_sha256"]):
             raise ValueError(f"P0 {role} artifact/profile drift")
     cases = {"small_query", "single_edit", "batch_100", "large_array", "image", "plan"}
     if set(p0["measurements"]) != {"local", "connected"}:
@@ -340,7 +342,7 @@ def main() -> None:
         command.add_argument("--output", required=True, type=Path, help="New JSON evidence file; never overwritten")
         if name in {"freeze", "baseline"}:
             command.add_argument("--native", type=Path, default=ROOT / "target/python2/native")
-            command.add_argument("--host", type=Path, default=ROOT / "target/python2/local_host_fixture")
+            command.add_argument("--host", type=Path, default=ROOT / 'target/python2' / ('local_host_fixture.exe' if sys.platform == 'win32' else 'local_host_fixture'))
         if name == "freeze":
             command.add_argument("--editor", type=Path, default=ROOT / "target/debug/zipzi-editor")
             command.add_argument("--wheel", type=Path, action="append", default=[], help="Exact installed/build wheel to hash; repeatable")
@@ -375,7 +377,7 @@ def main() -> None:
     elif args.command == "check-freeze":
         write_json(args.output, check_freeze(args.catalogue, args.configuration, args.performance, args.artifacts, args.verify_current))
     elif args.command == "freeze":
-        native_files = sorted((args.native / "zipzi_native").glob("_native*.so"))
+        native_files = sorted((args.native / "zipzi_native").glob('_native' + sysconfig.get_config_var('EXT_SUFFIX')))
         write_json(args.output, {"schema": 1, "status": "frozen_not_accepted",
             "created_at_utc": datetime.now(timezone.utc).isoformat(),
             "python": sys.version, "platform": platform.platform(), "source": source_identity(),

@@ -23,6 +23,12 @@ from zipzi import bindings, sampling, events, meshes, ops, parameters, resources
 def uid(n: int) -> str:
     return f"79000000-0000-4000-8000-{n:012x}"
 
+def runtime_endpoint(directory):
+    if os.name == 'nt':
+        from zipzi._windows_pipe import endpoint_name
+        return endpoint_name(directory, 'python2')
+    return directory / 'python2.sock'
+
 GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
@@ -1235,7 +1241,7 @@ class PythonSdk(unittest.TestCase):
                 ref.close()
 
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix="zzpy1-", dir="/tmp")
+        self.temporary = tempfile.TemporaryDirectory(prefix="zzpy1-")
         self.addCleanup(self.temporary.cleanup)
         self.folder = Path(self.temporary.name)
         self.counter = 0
@@ -1260,7 +1266,7 @@ class PythonSdk(unittest.TestCase):
                     host.stderr.close()
             self.addCleanup(stop)
             self.stop_host = stop
-            endpoint = directory / "python2.sock"
+            endpoint = runtime_endpoint(directory)
             deadline = time.monotonic() + 10
             while True:
                 if host.poll() is not None:
@@ -1712,7 +1718,7 @@ class PythonSdk(unittest.TestCase):
         self.assertEqual(stream.cursor, before)
         with self.assertRaises(zipzi.Busy):
             stream.resync()
-        with zipzi.connect(endpoint=self.folder / str(self.counter) / "python2.sock") as peer:
+        with zipzi.connect(endpoint=runtime_endpoint(self.folder / str(self.counter))) as peer:
             same = peer.sessions.attach(session.id)
             with same.edit("second") as edit:
                 edit.parameters.patch(id, parameters.ParameterPatch(name="Second"))
@@ -2309,12 +2315,12 @@ class PythonSdk(unittest.TestCase):
         edit = session.edit("old runtime")
         with self.assertRaises(zipzi.OutcomeUnknown) as error:
             edit.meshes.create(meshes.MeshSpec("Once", GEOMETRY))
-        endpoint, old_id = runtime._backend._endpoint, runtime._backend._next
+        old_id = runtime._backend._next
         self.stop_host()
         with self.assertRaises(zipzi.OutcomeUnknown) as unavailable:
             error.exception.recover()
         self.assertEqual(unavailable.exception.pending, error.exception.pending)
-        fresh = self.runtime("connected", directory=endpoint.parent)
+        fresh = self.runtime("connected", directory=self.folder / str(self.counter))
         with self.assertRaises(zipzi.SdkFailure) as restarted:
             error.exception.recover()
         self.assertEqual(restarted.exception.code, "HOST_RESTARTED")
@@ -2726,7 +2732,7 @@ assert 'zipzi_native._native' not in sys.modules
 assert zipzi.SdkFailure.__module__ == 'zipzi._errors'
 assert meshes.Geometry((0,), ((0., 0.),), ((0., 0.),), ()).vertex_ids == (0,)
 """
-        subprocess.run([sys.executable, "-I", "-c", code], check=True, cwd="/tmp")
+        subprocess.run([sys.executable, "-I", "-c", code], check=True, cwd=tempfile.gettempdir())
 
     def test_local_bridge_does_not_encode_or_decode_python_json(self):
         runtime = self.runtime("local")

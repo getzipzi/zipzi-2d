@@ -1,7 +1,6 @@
 # Zipzi 2D
 
-Zipzi 2D brings the Zipzi Rust authoring SDK, Python bindings and native macOS
-Editor into one workspace. It supports editable 2D model documents, animation,
+Zipzi 2D brings the Zipzi Rust authoring SDK, Python bindings and desktop Editor into one workspace. It supports editable 2D model documents, animation,
 Live2D/Cubism format interoperability, and WGPU/Metal rendering. The project is
 under development with no stable release; APIs and file formats may change.
 See [release preparation and Alpha downloads](docs/RELEASING.md).
@@ -20,8 +19,9 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
 ## Development
 
 Use Rust 1.95 or newer, uv 0.10.7 or newer, and CPython 3.14.
-The Editor additionally requires macOS, Xcode Command Line Tools and a
-Metal-capable GPU. See the [Editor README](crates/zipzi-editor/README.md) for platform requirements.
+The macOS Editor requires Xcode Command Line Tools and a Metal-capable GPU.
+The [Windows development prototype](crates/zipzi-editor/README.md) requires
+MSVC, the Windows SDK and a usable GPU.
 Run these commands from the repository root:
 
 ```sh

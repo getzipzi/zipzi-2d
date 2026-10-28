@@ -62,20 +62,12 @@ pub struct Settings {
 impl Global for Settings {}
 impl Settings {
     pub fn load(cx: &App) -> Self {
-        let root = std::env::var_os("ZIPZI_CONFIG_DIR")
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| {
-                if cfg!(target_os = "windows") {
-                    return std::env::var_os("APPDATA")
-                        .map(std::path::PathBuf::from)
-                        .unwrap_or_else(std::env::temp_dir)
-                        .join("Zipzi Editor");
-                }
-                std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
-                    .join("Library/Application Support/Zipzi Editor")
-            });
-        Self::from_store(ConfigStore::new(root), cx.keyboard_mapper().as_ref())
+        Self::from_store(
+            ConfigStore::from_platform().expect("persistent Editor configuration directory"),
+            cx.keyboard_mapper().as_ref(),
+        )
     }
+
     pub fn from_store(store: ConfigStore, mapper: &dyn PlatformKeyboardMapper) -> Self {
         let policy = keyboard_policy();
         let normalize = |key: &str| normalize_key(key, mapper);

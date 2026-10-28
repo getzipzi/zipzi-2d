@@ -137,6 +137,17 @@ pub struct ConfigStore {
     root: PathBuf,
 }
 impl ConfigStore {
+    pub fn from_platform() -> Result<Self> {
+        Ok(Self::new(crate::platform_paths::config_directory()?))
+    }
+
+    fn path(&self, name: &str) -> Result<PathBuf> {
+        ensure!(
+            !name.is_empty() && !name.contains(['/', '\\', ':']) && name != "." && name != "..",
+            "Config name must be a single filename"
+        );
+        Ok(self.root.join(name))
+    }
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
     }
@@ -144,7 +155,7 @@ impl ConfigStore {
         &self.root
     }
     pub fn read<T: DeserializeOwned>(&self, name: &str) -> Result<Option<T>> {
-        let path = self.root.join(name);
+        let path = self.path(name)?;
         let bytes = match std::fs::read(&path) {
             Ok(bytes) => bytes,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -161,6 +172,7 @@ impl ConfigStore {
     }
     pub fn write<T: Serialize>(&self, name: &str, data: &T) -> Result<()> {
         use std::io::Write;
+        let destination = self.path(name)?;
         std::fs::create_dir_all(&self.root)?;
         let bytes = serde_json::to_vec_pretty(&Versioned { version: 1, data })?;
         let temporary = self
@@ -173,12 +185,60 @@ impl ConfigStore {
                 .open(&temporary)?;
             file.write_all(&bytes)?;
             file.sync_all()?;
-            std::fs::rename(&temporary, self.root.join(name))?;
+            drop(file);
+            std::fs::rename(&temporary, &destination)?;
             Ok(())
         })();
         if result.is_err() {
             let _ = std::fs::remove_file(temporary);
         }
         result
+    }
+}
+
+#[cfg(test)]
+mod storage_tests {
+    use super::*;
+
+    #[test]
+    fn overwrite_unicode_config_and_reject_path_escape() {
+        let folder = tempfile::tempdir().unwrap();
+        let store = ConfigStore::new(folder.path().join("中文 settings"));
+        store.write("preferences.json", &1u32).unwrap();
+        store.write("preferences.json", &2u32).unwrap();
+        assert_eq!(store.read::<u32>("preferences.json").unwrap(), Some(2));
+        for name in [
+            "../escape",
+            "..\\escape",
+            "C:escape",
+            "",
+            ".",
+            "..",
+            "/absolute",
+        ] {
+            assert!(store.write(name, &0u32).is_err());
+            assert!(store.read::<u32>(name).is_err());
+        }
+        assert_eq!(std::fs::read_dir(store.root()).unwrap().count(), 1);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn occupied_config_preserves_old_content_and_cleans_staging() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let folder = tempfile::tempdir().unwrap();
+        let store = ConfigStore::new(folder.path());
+        store.write("settings.json", &1u32).unwrap();
+        let occupied = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(folder.path().join("settings.json"))
+            .unwrap();
+        assert!(store.write("settings.json", &2u32).is_err());
+        drop(occupied);
+        assert_eq!(store.read::<u32>("settings.json").unwrap(), Some(1));
+        assert_eq!(std::fs::read_dir(folder.path()).unwrap().count(), 1);
+        store.write("settings.json", &3u32).unwrap();
+        assert_eq!(store.read::<u32>("settings.json").unwrap(), Some(3));
     }
 }

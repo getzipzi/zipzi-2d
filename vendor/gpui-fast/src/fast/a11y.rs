@@ -90,6 +90,18 @@ pub(crate) struct A11yLog {
 }
 
 impl A11yLog {
+    pub(crate) fn prepaint_checkpoint(&self) -> (usize, usize, usize) {
+        (self.ops.len(), self.actions.len(), self.replay_open.len())
+    }
+
+    pub(crate) fn rollback_prepaint(&mut self, checkpoint: (usize, usize, usize)) {
+        self.ops.truncate(checkpoint.0);
+        self.actions.truncate(checkpoint.1);
+        self.replay_open.truncate(checkpoint.2);
+        // Retained ranges from the abandoned pass no longer address this log.
+        self.diverged = true;
+    }
+
     #[inline]
     pub(crate) fn push(log: &mut Self, id: NodeId) {
         if log.recording {

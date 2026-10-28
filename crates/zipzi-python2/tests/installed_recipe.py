@@ -1,4 +1,4 @@
-"""Run from /tmp with -I: exercise installed wheels without source imports."""
+"""Run outside the checkout with -I: exercise installed wheels without source imports."""
 import importlib.util
 from importlib.metadata import version
 import json
@@ -14,17 +14,23 @@ from typing import get_type_hints
 import zipzi
 from zipzi import bindings, sampling, events, meshes, ops, parameters, resources, scene
 
+def endpoint(directory):
+    if os.name == 'nt':
+        from zipzi._windows_pipe import endpoint_name
+        return endpoint_name(directory, 'python2')
+    return directory / 'python2.sock'
+
 def main():
     mode = sys.argv[1]
     expected_version = tomllib.loads((Path(__file__).resolve().parents[1] / "client/pyproject.toml").read_text())["project"]["version"]
     assert version("zipzi") == expected_version
-    assert "/site-packages/zipzi/" in zipzi.__file__, zipzi.__file__
+    assert '/site-packages/zipzi/' in Path(zipzi.__file__).as_posix(), zipzi.__file__
     assert get_type_hints(resources.CreateImage)["image"] is resources.PreparedImage
     assert get_type_hints(zipzi.OutcomeUnknown.recover)["return"] is object
     assert get_type_hints(zipzi.recover_call)
     assert "zipzi_native._native" not in sys.modules
     assert (importlib.util.find_spec("zipzi_native") is not None) == (mode == "local")
-    with tempfile.TemporaryDirectory(prefix="zzpy2-", dir="/tmp") as folder:
+    with tempfile.TemporaryDirectory(prefix="zzpy2-") as folder:
         folder = Path(folder)
         child = None
         try:
@@ -39,7 +45,7 @@ def main():
                 deadline = time.monotonic() + 10
                 while True:
                     try:
-                        runtime = zipzi.connect(endpoint=folder / "python2.sock")
+                        runtime = zipzi.connect(endpoint=endpoint(folder))
                         break
                     except (FileNotFoundError, ConnectionRefusedError):
                         assert child.poll() is None
@@ -165,7 +171,7 @@ def main():
                 deadline = time.monotonic() + 10
                 while True:
                     try:
-                        fresh = zipzi.connect(endpoint=folder / "reopened/python2.sock")
+                        fresh = zipzi.connect(endpoint=endpoint(folder / 'reopened'))
                         break
                     except (FileNotFoundError, ConnectionRefusedError):
                         assert child.poll() is None

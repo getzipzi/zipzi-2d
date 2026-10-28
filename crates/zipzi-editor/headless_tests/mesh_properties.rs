@@ -1,11 +1,159 @@
 use super::{
     Harness, document_fixture,
-    properties::{fill, show},
+    properties::{fill, select_all, show},
     setup_with_document,
 };
 use gpui_kit::component::WindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 use zipzi_editor_core::{EditorCommand, ObjectKind, ObjectRef, PropertyValue, property::mesh};
+
+#[gpui_kit::test]
+fn mesh_properties_revisit_selection_and_expand_details(cx: &mut TestAppContext) {
+    let (mut doc, assets) = document_fixture::sample_document_with_two_layers().unwrap();
+    let meshes: Vec<_> = doc
+        .layers()
+        .iter()
+        .map(|layer| ObjectRef::new(ObjectKind::Mesh, &layer.id))
+        .collect();
+    doc.navigate(meshes[0].clone()).unwrap();
+    let h = setup_with_document(cx, doc, assets);
+    for object in [&meshes[0], &meshes[1], &meshes[0]] {
+        navigate_and_draw(&h, object, cx);
+    }
+    for _ in 0..3 {
+        show(&h, "property-group-$details", cx);
+        cx.update_window(h.window, |_, window, cx| {
+            window.click("property-group-$details", cx);
+            window.draw(cx).clear(cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+    }
+}
+
+#[gpui_kit::test]
+#[ignore = "requires separately obtained local Mao model"]
+fn mesh_properties_mao_revisit_selection_and_expand_details(cx: &mut TestAppContext) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+    let (doc, _) = zipzi_editor_core::Document::import_model3(&path).unwrap();
+    let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
+    cx.simulate_window_resize(
+        h.window,
+        gpui_kit::size(gpui_kit::px(1600.), gpui_kit::px(1000.)),
+    );
+    present_properties_canvas(&h, cx);
+    let points = h.view.read_with(cx, |view, _| {
+        let frame = &view.modeling_frame().as_ref().unwrap().canvas;
+        let mut points = std::collections::BTreeMap::new();
+        for y in (12..frame.transform.metrics.height as usize).step_by(24) {
+            for x in (12..frame.transform.metrics.width as usize).step_by(24) {
+                let point = zipzi_editor_core::ViewportPoint {
+                    x: x as f32,
+                    y: y as f32,
+                };
+                if let Some(hit) = frame.geometry.hit(
+                    point,
+                    frame.transform,
+                    &[],
+                    zipzi_editor_core::ToolId::Select,
+                    Default::default(),
+                ) {
+                    if hit.object().kind == ObjectKind::Mesh {
+                        points
+                            .entry(hit.object().id.clone())
+                            .or_insert((hit.object().clone(), frame.transform.to_model(point)));
+                    }
+                }
+            }
+        }
+        points.into_values().take(8).collect::<Vec<_>>()
+    });
+    assert!(
+        points.len() >= 2,
+        "Mao must expose two meshes for canvas picking"
+    );
+    for (step, (object, point)) in [&points[0], &points[1], &points[0]]
+        .into_iter()
+        .chain(points.iter())
+        .enumerate()
+    {
+        present_properties_canvas(&h, cx);
+        cx.update_window(h.window, |_, window, cx| {
+            let point = h
+                .view
+                .read(cx)
+                .modeling_frame()
+                .as_ref()
+                .unwrap()
+                .canvas
+                .transform
+                .to_viewport(*point);
+            window.click_at(
+                "canvas-body",
+                gpui_kit::point(gpui_kit::px(point.x), gpui_kit::px(point.y)),
+                cx,
+            );
+            window.draw(cx).clear(cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        h.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor.document().unwrap().selected_id(),
+                Some(object.id.as_str()),
+                "canvas click {step} at {point:?}, expected mesh {}",
+                object.id
+            );
+        });
+        if step < 3 {
+            continue;
+        }
+        show(&h, "property-group-$details", cx);
+        for _ in 0..2 {
+            cx.update_window(h.window, |_, window, cx| {
+                window.click("property-group-$details", cx);
+                window.draw(cx).clear(cx);
+            })
+            .unwrap();
+            cx.run_until_parked();
+        }
+    }
+}
+
+fn present_properties_canvas(h: &Harness, cx: &mut TestAppContext) {
+    cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            let frame = view.editor.preview().unwrap().canvas.unwrap();
+            assert!(view.editor.present_frame(frame.clone()));
+            view.viewport_frames
+                .entry(view.viewport_slots[0])
+                .or_default()
+                .modeling = Some(crate::preview::Presented {
+                image: crate::preview::test_image(),
+                canvas: frame,
+            });
+            cx.notify();
+        });
+        window.draw(cx).clear(cx);
+    })
+    .unwrap();
+}
+
+fn navigate_and_draw(h: &Harness, object: &ObjectRef, cx: &mut TestAppContext) {
+    cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::Navigate(object.clone()))
+                .unwrap();
+            view.redraw(cx);
+        });
+        // Keep GPUI's retained layout/list path enabled, as in a native frame.
+        window.draw(cx).clear(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
 
 fn command(h: &Harness, command: EditorCommand, cx: &mut TestAppContext) {
     cx.update_window(h.window, |_, window, cx| {
@@ -458,7 +606,7 @@ fn mesh_color_session_cancels_on_keyform_switch_and_save_settles_the_new_session
         window.click("property-color-multiply", cx);
         window.render_frame(cx);
         window.click("color-picker-hex", cx);
-        window.press("cmd-a", cx);
+        select_all(window, cx);
         window.input("#804020", cx);
         window.render_frame(cx);
     })
@@ -514,7 +662,7 @@ fn mesh_color_inline_input_enter_in_one_event_batch_commits_the_live_value(
     show(&h, "property-input-multiply", cx);
     cx.update_window(h.window, |_, window, cx| {
         window.click("property-input-multiply", cx);
-        window.press("cmd-a", cx);
+        select_all(window, cx);
         window.input("#FFB080", cx);
         window.press("enter", cx);
         window.render_frame(cx);
@@ -637,7 +785,7 @@ fn mesh_color_suffix_reset_replaces_a_popup_preview_without_committing_it_first(
         window.click("property-color-multiply", cx);
         window.render_frame(cx);
         window.click("color-picker-hex", cx);
-        window.press("cmd-a", cx);
+        select_all(window, cx);
         window.input("#AA3344", cx);
         window.render_frame(cx);
     })

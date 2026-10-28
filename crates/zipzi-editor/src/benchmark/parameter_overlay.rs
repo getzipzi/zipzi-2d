@@ -9,6 +9,10 @@ struct Options {
     detail: bool,
     eager_canvas: bool,
     uncached_creation_menus: bool,
+    unlayered_markers: bool,
+    tessellated_edges: bool,
+    legacy_edge_bounds: bool,
+    eager_viewport_layout: bool,
 }
 static OPTIONS: OnceLock<Options> = OnceLock::new();
 static INITIAL: OnceLock<std::sync::Arc<zipzi_core::DrawableFrame>> = OnceLock::new();
@@ -20,6 +24,12 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
     let eager_canvas = std::env::var("ZIPZI_BENCH_EAGER_CANVAS").is_ok_and(|v| v == "1");
     let uncached_creation_menus =
         std::env::var("ZIPZI_BENCH_UNCACHED_CREATION_MENUS").is_ok_and(|v| v == "1");
+    let unlayered_markers = std::env::var("ZIPZI_BENCH_UNLAYERED_MARKERS").is_ok_and(|v| v == "1");
+    let legacy_edge_bounds =
+        std::env::var("ZIPZI_BENCH_LEGACY_EDGE_BOUNDS").is_ok_and(|v| v == "1");
+    let tessellated_edges = std::env::var("ZIPZI_BENCH_TESSELLATED_EDGES").is_ok_and(|v| v == "1");
+    let eager_viewport_layout =
+        std::env::var("ZIPZI_BENCH_EAGER_VIEWPORT_LAYOUT").is_ok_and(|v| v == "1");
     ensure!(
         ["first", "none", "all"].contains(&selection.as_str()),
         "invalid benchmark selection"
@@ -38,6 +48,10 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
             && !detail
             && !eager_canvas
             && !uncached_creation_menus
+            && !unlayered_markers
+            && !tessellated_edges
+            && !legacy_edge_bounds
+            && !eager_viewport_layout
             || automatic && std::env::var("ZIPZI_BENCH_PARAMETERS").is_ok_and(|v| v == "1"),
         "overlay diagnostics require automatic parameter workload"
     );
@@ -47,6 +61,10 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
         detail,
         eager_canvas,
         uncached_creation_menus,
+        unlayered_markers,
+        tessellated_edges,
+        legacy_edge_bounds,
+        eager_viewport_layout,
     });
     Ok(())
 }
@@ -56,12 +74,32 @@ pub(super) fn metadata() -> serde_json::Value {
         serde_json::json!({
             "selection": o.selection, "paint": o.paint, "detail": o.detail,
             "eager_canvas": o.eager_canvas, "uncached_creation_menus": o.uncached_creation_menus,
+            "unlayered_markers": o.unlayered_markers,
+            "tessellated_edges": o.tessellated_edges,
+            "legacy_edge_bounds": o.legacy_edge_bounds,
+            "eager_viewport_layout": o.eager_viewport_layout,
         })
     })
 }
 
 pub(crate) fn eager_canvas() -> bool {
     OPTIONS.get().is_some_and(|o| o.eager_canvas)
+}
+
+pub(crate) fn layer_markers() -> bool {
+    !OPTIONS.get().is_some_and(|o| o.unlayered_markers)
+}
+
+pub(crate) fn legacy_edge_bounds() -> bool {
+    OPTIONS.get().is_some_and(|o| o.legacy_edge_bounds)
+}
+
+pub(crate) fn eager_viewport_layout() -> bool {
+    OPTIONS.get().is_some_and(|o| o.eager_viewport_layout)
+}
+
+pub(crate) fn tessellated_edges() -> bool {
+    OPTIONS.get().is_some_and(|o| o.tessellated_edges)
 }
 pub(crate) fn uncached_creation_menus() -> bool {
     OPTIONS.get().is_some_and(|o| o.uncached_creation_menus)
@@ -241,12 +279,12 @@ pub(crate) fn paint_any() -> bool {
     OPTIONS.get().is_none_or(|o| o.paint != "none")
 }
 
-#[cfg(feature = "bench-instrumentation")]
+#[cfg(all(feature = "bench-instrumentation", target_os = "macos"))]
 pub(crate) fn observer() -> Option<fn(zipzi_editor_render::OverlayPass, &metal::CommandBufferRef)> {
     OPTIONS.get().filter(|o| o.detail).map(|_| observe_gpu as _)
 }
 
-#[cfg(feature = "bench-instrumentation")]
+#[cfg(all(feature = "bench-instrumentation", target_os = "macos"))]
 fn observe_gpu(pass: zipzi_editor_render::OverlayPass, command: &metal::CommandBufferRef) {
     // A single diagnostics worker waits for retained commands; the UI never waits.
     static GPU: OnceLock<mpsc::Sender<(u64, metal::CommandBuffer)>> = OnceLock::new();

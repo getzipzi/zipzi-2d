@@ -6,17 +6,13 @@ fn present(h: &Harness, cx: &mut TestAppContext) {
     cx.update_window(h.window, |_, window, cx| {
         h.view.update(cx, |view, cx| {
             let frame = view.editor.preview().unwrap().canvas.unwrap();
-            let device = metal::Device::system_default().unwrap();
-            let desc = metal::TextureDescriptor::new();
-            desc.set_width(1);
-            desc.set_height(1);
-            desc.set_pixel_format(metal::MTLPixelFormat::RGBA8Unorm);
+
             assert!(view.editor.present_frame(frame.clone()));
             view.viewport_frames
                 .entry(view.viewport_slots[0])
                 .or_default()
                 .modeling = Some(crate::preview::Presented {
-                image: device.new_texture(&desc),
+                image: crate::preview::test_image(),
                 canvas: frame,
             });
             cx.notify();

@@ -44,7 +44,6 @@ libc = "0.2"
 [dev-dependencies]
 zipzi-observe = { version = "=0.1.0-alpha.1", path = "../zipzi-observe" }
 gpui-kit = { workspace = true, features = ["test-support"] }
-gpui-apple = { package = "gpui-fast-apple", version = "=0.1.7", features = ["test-support"] }
 zipzi-core.workspace = true
 tempfile.workspace = true
 uuid.workspace = true
@@ -91,3 +90,14 @@ name = "runtime_handoff_acceptance"
 path = "tests/runtime_handoff_acceptance.rs"
 harness = false
 required-features = ["test-support"]
+
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+gpui-apple = { package = "gpui-fast-apple", version = "=0.1.7", features = ["test-support"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.62", features = ["Win32_Graphics_Direct3D11"] }
+zipzi-editor-render = { workspace = true, features = ["wgpu-backend"] }
+wgpu.workspace = true
+
+[target.'cfg(windows)'.build-dependencies]
+embed-resource = "3.0"

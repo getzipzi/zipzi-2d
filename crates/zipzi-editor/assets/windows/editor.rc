@@ -1,0 +1,3 @@
+// GPUI Kit also links gpui-pre, which embeds manifest resource 1 (PerMonitorV2,
+// common controls, asInvoker). Do not embed a second resource with the same ID.
+1 ICON "assets/app-icons/zipzi-editor.ico"

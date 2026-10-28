@@ -32,7 +32,7 @@ def compact(source):
 def render_catalog(contract,output,header,package,dto_names,modeling_name):
     # Read sources rather than importing them: generation never creates Runtime,
     # imports native code, introspects private tokens or depends on an installed wheel.
-    sources={p.relative_to(package).as_posix():p.read_text() for p in (package/'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts}
+    sources={p.relative_to(package).as_posix():p.read_text(encoding='utf-8') for p in (package/'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts}
     sources.update({p:s for p,s in output.items() if p.endswith('.py')})
     for p,s in list(output.items()):
         if p.endswith('.py') and '@dataclass(' in s:output[p]=compact(s);sources[p]=output[p]
@@ -279,9 +279,9 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
         fingerprint.update(path.encode());fingerprint.update(b'\0');fingerprint.update(source.encode())
     guide_path=prefix+'docs/guide.md'
     fingerprint.update(guide_path.encode());fingerprint.update(b'\0')
-    fingerprint.update((package/guide_path).read_text().encode())
+    fingerprint.update((package/guide_path).read_text(encoding='utf-8').encode())
     source_sha=fingerprint.hexdigest()
-    package_version=tomllib.loads((package/'client/pyproject.toml').read_text())['project']['version']
+    package_version=tomllib.loads((package/'client/pyproject.toml').read_text(encoding='utf-8'))['project']['version']
     catalog['zipzi']['documentation']+=' Package '+package_version+'; protocol '+contract['protocol']+'; client source SHA-256 '+source_sha+'.'
     for row in catalog.values():row['children']=tuple(sorted(set(row.get('children',()))))
     reference=[header.rstrip(),'# Installed Python API reference','','Generated from the compiled authoring contract, the finite binding directory and lifecycle source docs.','']

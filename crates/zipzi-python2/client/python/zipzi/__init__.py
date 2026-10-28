@@ -20,11 +20,13 @@ def connect(*, endpoint: Path | None = None, start: bool = False, host: Path | N
     timeout: float = 10., startup_timeout: float = 15., sdk_build: str | None = None) -> Runtime:
     """Connect to an explicit/discovered host and return an owned Runtime client.
 
-    endpoint is an absolute private Unix <profile>.sock path; None discovers it
-    from ZIPZI_RUNTIME_DIR/ZIPZI_RUNTIME_PROFILE. start=False never launches a
+    endpoint is an absolute private Unix socket path or a local Windows Named
+    Pipe name; None discovers it from ZIPZI_RUNTIME_DIR/ZIPZI_RUNTIME_PROFILE.
+    On Windows, start=True requires the discovered endpoint (or None).
+    start=False never launches a
     process. With start=True, host is an absolute executable, or discovery uses
     ZIPZI_EDITOR_HOST and the supported app locations. host requires start=True.
-    timeout is the positive finite per-request socket timeout in seconds;
+    timeout is the positive finite per-request transport timeout in seconds;
     startup_timeout is the positive finite total startup/handshake budget.
     sdk_build=None accepts the compatible host build; an explicit string also
     requires an exact build match. Protocol and required capabilities always

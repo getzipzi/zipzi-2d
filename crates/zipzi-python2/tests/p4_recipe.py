@@ -4,6 +4,7 @@ from contextlib import ExitStack
 from dataclasses import replace
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import zipzi
@@ -66,7 +67,9 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
     assert runtime.resources.usage().prepared_images == 0
     assert session.info().history == (1, 0)
     first = session.project.save(folder / "original").wait()
-    assert first.durable and first.manifest.is_file()
+    # Native Windows publication cannot sync the parent directory; a successful
+    # save must report that limitation instead of claiming crash durability.
+    assert first.durable == (os.name != 'nt') and first.manifest.is_file()
     saved_history = session.info().history
 
     # Project storage preserves unavailable and empty files as different values.
@@ -92,7 +95,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
                 edit.resources.replace_image(asset, image)
         history = session.info().history
         saved = session.project.save(folder / "relocated").wait()
-        assert saved.durable and saved.manifest.is_file()
+        assert saved.durable == (os.name != 'nt') and saved.manifest.is_file()
         assert session.info().history == history
         assert session.info().modified is False
         parked = folder / "parked-original"
@@ -169,7 +172,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
         before = session.info()
         package = folder / "package"
         exported = session.project.export(package, m.ExportFormat.PACKAGE).wait()
-        assert exported.published and exported.durable
+        assert exported.published and exported.durable == (os.name != 'nt')
         assert session.info() == before
         model = json.loads((package / "model.model3.json").read_text())
         data_path = model["FileReferences"]["UserData"]

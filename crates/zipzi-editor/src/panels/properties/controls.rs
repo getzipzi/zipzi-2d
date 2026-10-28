@@ -544,7 +544,19 @@ impl PropertiesPanel {
                     form.fields.insert(id, previous);
                     state.set_edit_error(error.to_string(), cx);
                 }
-                state.redraw(cx);
+                // Appearance candidates leave document identity, hierarchy and
+                // workspace chrome unchanged. The inspector notifies itself;
+                // refresh the canvas when its replacement preview arrives.
+                if updated
+                    && matches!(token, properties::PreviewToken::Object(_))
+                    && target.object.kind == zipzi_editor_core::ObjectKind::Mesh
+                    && state.editor.editing_context()
+                        == Some(zipzi_editor_core::EditingContext::Modeling)
+                {
+                    state.complete_preview_edit(Ok(()), cx);
+                } else {
+                    state.redraw(cx);
+                }
                 updated
             });
             cx.notify();

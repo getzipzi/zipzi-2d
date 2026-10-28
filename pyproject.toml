@@ -6,7 +6,11 @@ requires-python = ">=3.14,<3.15"
 dependencies = []
 
 [dependency-groups]
-dev = ["maturin==1.15.0", "pyright==1.1.414"]
+dev = [
+    "maturin==1.15.0",
+    "psutil>=7,<8",
+    "pyright==1.1.414",
+]
 
 [tool.uv]
 package = false

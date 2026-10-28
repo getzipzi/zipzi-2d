@@ -6,6 +6,81 @@ use gpui_kit::{AppContext as _, TestAppContext};
 use zipzi_editor_core::property as schema;
 
 #[gpui_kit::test]
+fn mesh_appearance_scrubs_keep_unrelated_editor_views_retained(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::{point, px};
+    use std::{cell::Cell, rc::Rc};
+    use zipzi_editor_core::{ObjectKind, ObjectRef};
+
+    let (mut doc, assets) = super::document_fixture::sample_document_with_two_layers().unwrap();
+    let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
+    doc.navigate(object).unwrap();
+    let history = doc.history_lengths();
+    let h = setup_with_document(cx, doc, assets);
+    h.view.update(cx, |view, cx| {
+        view._frames = None;
+        view.requests = Some(crate::preview::RequestSender::deferred());
+        view.sync_viewport_notice(cx);
+    });
+    super::properties::show(&h, "property-input-opacity", cx);
+    let origin = cx
+        .update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            let origin = window
+                .within("property-input-opacity")
+                .find("slide-number-input")
+                .bounds()
+                .center();
+            press(window, origin, cx);
+            origin
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let notifications = Rc::new(Cell::new(0));
+    let observed = notifications.clone();
+    let _observe =
+        cx.update(|cx| cx.observe(&h.view, move |_, _| observed.set(observed.get() + 1)));
+    let mut last_revision = None;
+    for sample in 1..=6 {
+        cx.update_window(h.window, |_, window, cx| {
+            slide(
+                window,
+                origin - point(px(sample as f32 * 12.), px(0.)),
+                false,
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        h.view.read_with(cx, |view, _| {
+            let request = view.requests.as_ref().unwrap().take_pending().unwrap();
+            assert_ne!(
+                last_revision,
+                Some(request.revision),
+                "appearance preview was not replaced"
+            );
+            last_revision = Some(request.revision);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), history);
+            assert!(view.edit_error.is_none());
+        });
+    }
+    assert_eq!(
+        notifications.get(),
+        0,
+        "appearance preview invalidated the editor owner"
+    );
+    cx.update_window(h.window, |_, window, cx| {
+        window.press("escape", cx);
+        release(window, origin, cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), history);
+    });
+}
+
+#[gpui_kit::test]
 fn parameter_previews_refresh_the_canvas_only_when_the_new_frame_arrives(cx: &mut TestAppContext) {
     use std::{cell::Cell, rc::Rc};
     use zipzi_editor_core::EditorCommand;
@@ -45,12 +120,8 @@ fn parameter_previews_refresh_the_canvas_only_when_the_new_frame_arrives(cx: &mu
         h.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.document().unwrap().parameters()[0].value, value);
         });
-        let device = metal::Device::system_default().unwrap();
-        let descriptor = metal::TextureDescriptor::new();
-        descriptor.set_width(1);
-        descriptor.set_height(1);
-        descriptor.set_pixel_format(metal::MTLPixelFormat::RGBA8Unorm);
-        let image = device.new_texture(&descriptor);
+
+        let image = crate::preview::test_image();
         h.view.update(cx, |view, cx| {
             view.receive_viewport_frame(
                 crate::preview::Frame {
@@ -267,6 +338,85 @@ fn canvas_frame_notifications_do_not_redraw_unchanged_header(cx: &mut TestAppCon
     assert_eq!(
         frames, 10,
         "unchanged canvas header scheduled redundant draws"
+    );
+}
+
+#[gpui_kit::test]
+fn canvas_prepaint_writes_layout_only_when_bounds_or_metrics_change(cx: &mut TestAppContext) {
+    use gpui_kit::{App, px, size};
+    let harness = setup(cx);
+    let canvas = harness.view.read_with(cx, |view, _| {
+        view.dock.as_ref().unwrap().active_viewport().clone()
+    });
+    let viewport = canvas.read_with(cx, |surface, _| surface.viewport);
+    let draw = |cx: &mut TestAppContext| {
+        cx.update_window(harness.window, |_, window, cx| {
+            App::notify(cx, canvas.entity_id());
+            window.draw(cx).clear(cx);
+        })
+        .unwrap();
+    };
+    for _ in 0..3 {
+        draw(cx);
+    }
+    let syncs = canvas.read_with(cx, |surface, _| surface.layout_syncs);
+    assert!(syncs > 0, "initial layout was never synchronized");
+    for _ in 0..10 {
+        draw(cx);
+    }
+    assert_eq!(
+        canvas.read_with(cx, |surface, _| surface.layout_syncs),
+        syncs,
+        "unchanged canvas prepaint wrote retained entity dependencies"
+    );
+
+    let before = harness.view.read_with(cx, |view, _| {
+        view.editor.viewport_metrics(viewport).unwrap()
+    });
+    cx.simulate_window_resize(harness.window, size(px(1200.), px(800.)));
+    draw(cx);
+    let resized = harness.view.read_with(cx, |view, _| {
+        view.editor.viewport_metrics(viewport).unwrap()
+    });
+    let bounds = canvas.read_with(cx, |surface, _| surface.benchmark_bounds().unwrap());
+    assert_ne!(
+        (before.width, before.height),
+        (resized.width, resized.height)
+    );
+    assert_eq!(resized.width, bounds.size.width.as_f32());
+    assert_eq!(resized.height, bounds.size.height.as_f32());
+
+    cx.simulate_window_scale_factor_change(harness.window, 2.);
+    draw(cx);
+    let scaled = harness.view.read_with(cx, |view, _| {
+        view.editor.viewport_metrics(viewport).unwrap()
+    });
+    assert_eq!(scaled.scale_factor, 2.);
+    assert_eq!(
+        (scaled.width, scaled.height),
+        (resized.width, resized.height)
+    );
+
+    // Hiding/rebinding can clear core metrics without changing the last UI bounds.
+    harness.view.update(cx, |view, _| {
+        view.editor
+            .set_viewport_metrics(viewport, Default::default());
+    });
+    draw(cx);
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.viewport_metrics(viewport), Some(scaled));
+    });
+    let settled = canvas.read_with(cx, |surface, _| surface.layout_syncs);
+    assert!(
+        settled >= syncs + 3,
+        "resize, DPI and restored metrics were not synchronized"
+    );
+    for _ in 0..3 {
+        draw(cx);
+    }
+    assert_eq!(
+        canvas.read_with(cx, |surface, _| surface.layout_syncs),
+        settled
     );
 }
 

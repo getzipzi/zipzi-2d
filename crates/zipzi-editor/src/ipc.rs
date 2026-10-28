@@ -1,4 +1,4 @@
-//! Socket IO decodes off-thread; all Runtime admission/publication runs on App.
+//! Local transport IO decodes off-thread; all Runtime admission/publication runs on App.
 use super::*;
 use std::time::{Duration, Instant};
 use zipzi_runtime::{
@@ -10,14 +10,13 @@ use zipzi_runtime::{
 pub(super) fn reopen(endpoint: &Endpoint) -> std::io::Result<u32> {
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
-        match std::os::unix::net::UnixStream::connect(&endpoint.socket) {
+        match endpoint.connect(
+            deadline
+                .saturating_duration_since(Instant::now())
+                .max(Duration::from_millis(1)),
+            Duration::from_secs(1),
+        ) {
             Ok(mut stream) => {
-                stream.set_read_timeout(Some(
-                    deadline
-                        .saturating_duration_since(Instant::now())
-                        .max(Duration::from_millis(1)),
-                ))?;
-                stream.set_write_timeout(Some(Duration::from_secs(1)))?;
                 write_frame(&mut stream, &serde_json::json!({"protocol": CONTRACT}))?;
                 let hello = read_frame(&mut stream)?;
                 let Some(ok) = hello.get("ok") else {
@@ -41,7 +40,9 @@ pub(super) fn reopen(endpoint: &Endpoint) -> std::io::Result<u32> {
             Err(e)
                 if matches!(
                     e.kind(),
-                    std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused
+                    std::io::ErrorKind::NotFound
+                        | std::io::ErrorKind::ConnectionRefused
+                        | std::io::ErrorKind::WouldBlock
                 ) && Instant::now() < deadline =>
             {
                 std::thread::sleep(Duration::from_millis(25))
@@ -96,9 +97,8 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
         cx.background_executor()
             .spawn(async move {
                 let result = (|| -> std::io::Result<()> {
-                    let mut stream = std::os::unix::net::UnixStream::connect(&endpoint.socket)?;
-                    stream.set_read_timeout(Some(Duration::from_secs(15)))?;
-                    stream.set_write_timeout(Some(Duration::from_secs(1)))?;
+                    let mut stream =
+                        endpoint.connect(Duration::from_secs(15), Duration::from_secs(1))?;
                     write_frame(&mut stream, &serde_json::json!({"protocol": CONTRACT}))?;
                     let hello = read_frame(&mut stream)?;
                     if hello.get("ok").is_none() {
@@ -192,7 +192,10 @@ fn show_session(session: Option<zipzi_runtime::SessionId>, cx: &mut App) {
     host::open_window(cx, true);
     for window in cx.windows() {
         let _ = window.update(cx, |root, window, cx| {
-            let Ok(view) = root.downcast::<EditorView>() else {
+            let Ok(root) = root.downcast::<gpui_kit::base::Root>() else {
+                return;
+            };
+            let Ok(view) = root.read(cx).view().clone().downcast::<EditorView>() else {
                 return;
             };
             view.update(cx, |view, cx| {

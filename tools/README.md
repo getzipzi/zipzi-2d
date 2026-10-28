@@ -11,7 +11,7 @@ uv run --locked python tools/test_tools.py -p test_cargo_domain.py -v
 
 ## Directory ownership
 
-The top level keeps six daily entrypoints: `test-sdk.sh`, `test-editor.sh`,
+The unified cross-platform test entrypoint is `dev.py`. Shell test entrypoints are thin wrappers. Other daily entrypoints include: `test-sdk.sh`, `test-editor.sh`,
 `test_tools.py`, `dev-editor.sh`, `build-editor-app.sh` and `dev-python`.
 Their implementation helpers and specialized commands live under the directories
 below. Paths in this guide are relative to `tools/` unless a command starts with `tools/`.
@@ -38,6 +38,7 @@ arguments and output paths.
 
 | Entry | Purpose |
 | --- | --- |
+| `dev.py` | Cross-platform test dispatch, source SDK Python and development process lifecycle; use `--help` for commands |
 | `test_tools.py` | Repository tooling tests; accepts unittest discovery flags (`-p`, `-k`, `-v`) |
 | `test-sdk.sh` | SDK fast, mesh, regression, stress, Python2 and full gates |
 | `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
@@ -53,7 +54,7 @@ arguments and output paths.
 
 See [test coverage](#test-coverage), [CI coverage](#ci-coverage) and
 [Editor setup](../crates/zipzi-editor/README.md#develop-and-test). No mode on either domain test shell
-script means the expensive full gate. Prefer focused tests during development.
+script displays help. Select `full` explicitly for the expensive full gate.
 Editor entrypoints resolve checkout paths themselves, including absolute calls
 from another directory. The Python tooling runner also resolves its own checkout.
 
@@ -86,12 +87,12 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
 | SDK `python2` | New Runtime-backed package: refreshed native adapter, Local/Connected behavior, strict positive/negative types and generation drift |
 | SDK `python2-connected` | New pure wheel in an isolated environment; real cold-start/ownership/recovery; optional `--editor-host /absolute/path/to/zipzi-editor` adds production desktop acceptance |
-| SDK `full` or no argument | SDK formatting and complete 17-package Cargo test invocation (examples/doctests included) |
+| SDK `full` | SDK formatting and complete 17-package Cargo test invocation (examples/doctests included) |
 | Editor `fast` | zipzi-editor-core library and synthetic integration |
 | Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
 | Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance、runtime_ipc_acceptance、runtime_handoff_acceptance（自动安装隔离 Python 客户端） |
 | Editor `tools` | All repository tooling tests (automatic discovery) |
-| Editor `full` or no argument | Editor formatting, tooling and complete three-package Cargo test invocation with test-support (examples/doctests included) |
+| Editor `full` | Editor formatting, tooling and complete three-package Cargo test invocation with test-support (examples/doctests included) |
 
 SDK and Editor full extra arguments go to Cargo tests. Editor `fast` and `regression` omit
 example compilation and doctests; `full` includes both. Focused Cargo arguments and arguments
@@ -103,8 +104,7 @@ during iteration and reserve full runs for broad regression acceptance.
 
 ### CI coverage
 
-SDK CI, Editor CI and Prepare Python Packages are manual-only. Ordinary branch
-pushes and pull request updates do not start CI jobs. Only an explicitly pushed
+Development gates run on relevant pull requests on Windows and macOS. They run native Python entrypoint controls and focused SDK physics/Editor Core timeline tests. The Editor compile matrix checks all targets with WGPU/test-support enabled; Windows additionally runs presentation scheduling logic tests. GPU image conversion is verified locally by the Editor renderer's `wgpu_readback` test; hosted jobs do not replace real GPU/window acceptance. SDK CI, Editor CI and Prepare Python Packages remain manual-only. Ordinary branch pushes do not start the full CI suites. Only an explicitly pushed
 `vX.Y.Z-alpha.N` tag starts Package macOS App and its GitHub prerelease upload.
 See [the release guide](../docs/RELEASING.md) for versioning and tag commands.
 

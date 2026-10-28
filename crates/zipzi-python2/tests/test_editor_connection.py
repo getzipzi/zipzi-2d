@@ -1,26 +1,31 @@
 """Installed new client against a current production desktop executable."""
 import importlib.util
+import inspect
 from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
-import signal
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 import zipzi
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from connection_support import connect, stop
 
 
 class DesktopConnection(unittest.TestCase):
     def test_cold_start_reopen_same_session_and_save_in_real_editor(self):
-        self.assertIn("/site-packages/zipzi/", zipzi.__file__)
+        self.assertIn("/site-packages/zipzi/", Path(zipzi.__file__).as_posix())
         self.assertIsNone(importlib.util.find_spec("zipzi_native"))
         host = Path(os.environ["ZIPZI_PYTHON2_EDITOR"])
         self.assertTrue(host.is_absolute() and host.is_file())
         discover = os.environ.get("ZIPZI_PYTHON2_EDITOR_DISCOVERY") == "1"
-        with tempfile.TemporaryDirectory(prefix="zzpy2e-", dir="/tmp") as directory:
+        with tempfile.TemporaryDirectory(prefix="zzpy2e-") as directory:
             folder = Path(directory)
             endpoint = folder / "test.sock"
             processes = []
@@ -33,7 +38,7 @@ from zipzi import bindings,events,meshes,parameters
 while not Path(sys.argv[4]).exists(): time.sleep(.005)
 # The packaged-app gate leaves host selection to the public discovery path.
 host_options = {} if sys.argv[5]=='discover' else dict(host=Path(sys.argv[2]))
-with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,**host_options) as r:
+with connect(endpoint=Path(sys.argv[1]),start=True,**host_options) as r:
  assert r.connection is not None
  print(json.dumps(dict(pid=r.connection.host_pid,runtime=r.connection.runtime)),flush=True)
  assert 'show_window' in r.connection.capabilities
@@ -61,16 +66,17 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,**host_options) as r:
   assert s.info()==before
  print(json.dumps(dict(serial=s.id.serial)),flush=True)
 '''
+                script = "import os\nfrom pathlib import Path\nfrom unittest.mock import patch\nimport zipzi\n" + inspect.getsource(connect) + script
                 gate = folder / "go"
                 environment = {k: v for k, v in os.environ.items()
-                    if k not in {"ZIPZI_DEV_SESSION_DIR", "ZIPZI_DEV_PID_FILE", "ZIPZI_DEV_READY_FILE", "PYTHONPATH"}}
+                    if k not in {"ZIPZI_DEV_SESSION_DIR", "ZIPZI_DEV_PID_FILE", "ZIPZI_DEV_READY_FILE", "ZIPZI_DEV_CONTROL_DIR", "PYTHONPATH"}}
                 environment["ZIPZI_CONFIG_DIR"] = str(folder / "config")
                 environment.pop("ZIPZI_RUNTIME_OWNER_FD", None)
                 if discover:
                     environment.pop("ZIPZI_EDITOR_HOST", None)
                 for index in range(2):
                     processes.append(subprocess.Popen([sys.executable, "-I", "-c", script, str(endpoint), str(host), str(index), str(gate), "discover" if discover else "explicit"],
-                        cwd="/tmp", env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
+                        cwd=tempfile.gettempdir(), env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
                 gate.touch()
                 identities = []
                 for child in processes:
@@ -83,7 +89,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,**host_options) as r:
                     identities.append(rows)
                 self.assertEqual(identities[0], identities[1])
                 self.assertEqual(len(host_pids), 1)
-                with zipzi.connect(endpoint=endpoint) as runtime:
+                with connect(endpoint=endpoint) as runtime:
                     info, = runtime.sessions.list()
                     session = runtime.sessions.attach(info.id)
                     self.assertEqual(session.info().history, (2, 0))
@@ -96,27 +102,27 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,**host_options) as r:
                         ("Second parameter", .5, "ParamDesktop", 4, True))
                     session.show_window()
                     # Desktop relaunch uses its existing ownership/reopen path.
-                    reopened = subprocess.Popen([str(host)], cwd="/tmp", env=dict(environment,
+                    reopened = subprocess.Popen([str(host)], cwd=tempfile.gettempdir(), env=dict(environment,
                         ZIPZI_RUNTIME_DIR=str(folder), ZIPZI_RUNTIME_PROFILE="test"), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     processes.append(reopened)
                     _, stderr = reopened.communicate(timeout=20)
                     self.assertEqual(reopened.returncode, 0, stderr.decode())
-                    with zipzi.connect(endpoint=endpoint) as another:
+                    with connect(endpoint=endpoint) as another:
                         self.assertEqual(runtime.connection, another.connection)
                         self.assertEqual(another.sessions.attach(session.id).info().history, (2, 0))
                     # An abruptly terminated client leaves its unpublished edit
                     # to the host's real grace expiry. No private statistics API.
-                    abandoned = subprocess.Popen([sys.executable, "-I", "-c", '''
+                    abandoned = subprocess.Popen([sys.executable, "-I", "-c", "import os\nfrom pathlib import Path\nfrom unittest.mock import patch\nimport zipzi\n" + inspect.getsource(connect) + '''
 import sys,time,zipzi
 from pathlib import Path
 from zipzi import parameters
-r=zipzi.connect(endpoint=Path(sys.argv[1]))
+r=connect(endpoint=Path(sys.argv[1]))
 s=r.sessions.attach(zipzi.SessionId(sys.argv[2],int(sys.argv[3])))
 with s.edit('abandoned client') as e:
  e.parameters.patch('79200000-0000-4000-8000-000000000022',parameters.ParameterPatch(name='Never published'))
  print('candidate ready',flush=True)
  time.sleep(120)
-''', str(endpoint), session.id.runtime, str(session.id.serial)], cwd="/tmp", env=environment,
+''', str(endpoint), session.id.runtime, str(session.id.serial)], cwd=tempfile.gettempdir(), env=environment,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                     processes.append(abandoned)
                     self.assertEqual(abandoned.stdout.readline().strip(), "candidate ready")
@@ -130,7 +136,7 @@ with s.edit('abandoned client') as e:
                                 # The shared limit is four edits per session.
                                 # All four slots become available after expiry.
                                 for _ in range(4):
-                                    peer = owners.enter_context(zipzi.connect(endpoint=endpoint))
+                                    peer = owners.enter_context(connect(endpoint=endpoint))
                                     candidate = peer.sessions.attach(session.id).edit("expiry admission")
                                     owners.callback(candidate.cancel)
                             break
@@ -144,17 +150,17 @@ with s.edit('abandoned client') as e:
                     self.assertFalse(session.info().modified)
                     old_id = session.id
                     old_cursor = session.subscribe().cursor
-                os.kill(next(iter(host_pids)), signal.SIGTERM)
+                stop(next(iter(host_pids)))
                 end = time.monotonic() + 5
                 while True:
                     try:
-                        with zipzi.connect(endpoint=endpoint, timeout=.1):
+                        with connect(endpoint=endpoint, timeout=.1):
                             pass
                     except (OSError, EOFError):
                         break
                     self.assertLess(time.monotonic(), end)
                     time.sleep(.01)
-                with zipzi.connect(endpoint=endpoint, start=True, host=host) as fresh:
+                with connect(endpoint=endpoint, start=True, host=host) as fresh:
                     assert fresh.connection is not None
                     host_pids.add(fresh.connection.host_pid)
                     self.assertNotEqual(old_id.runtime, fresh.connection.runtime)
@@ -175,7 +181,7 @@ with s.edit('abandoned client') as e:
             finally:
                 # This private endpoint belongs exclusively to this test.
                 try:
-                    with zipzi.connect(endpoint=endpoint, timeout=.5) as resident:
+                    with connect(endpoint=endpoint, timeout=.5) as resident:
                         if resident.connection:
                             host_pids.add(resident.connection.host_pid)
                 except (OSError, EOFError, zipzi.SdkFailure):
@@ -186,7 +192,7 @@ with s.edit('abandoned client') as e:
                     child.wait(timeout=5)
                 for pid in host_pids:
                     try:
-                        os.kill(pid, signal.SIGTERM)
+                        stop(pid)
                     except ProcessLookupError:
                         pass
 

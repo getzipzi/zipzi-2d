@@ -68,6 +68,7 @@ pub use panels::*;
 
 mod commands;
 mod keyboard;
+pub mod platform_paths;
 mod recent_files;
 mod settings;
 pub use commands::*;

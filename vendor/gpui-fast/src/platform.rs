@@ -1202,6 +1202,11 @@ pub enum TextInputStateChange {
 
 #[expect(missing_docs)]
 pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
+    /// D3D11 device used by the window. The immediate context stays on the UI thread.
+    #[cfg(target_os = "windows")]
+    fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {
+        None
+    }
     /// Native Metal renderer handles, if available.
     #[cfg(target_os = "macos")]
     fn metal_context(&self) -> Option<SharedMetalContext> {

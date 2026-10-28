@@ -152,7 +152,12 @@ python -I -m zipzi.docs.editor_handoff rename \
 ```
 
 Use `--endpoint /absolute/path/to/profile.sock` before the subcommand for a
-specific host.
+specific Unix host. Windows uses a local Named Pipe name. Prefer discovery with
+`ZIPZI_RUNTIME_DIR` (an absolute directory) and `ZIPZI_RUNTIME_PROFILE` (a short
+lowercase name); `zipzi.connect(start=True, host=absolute_host_path)` uses those
+settings. Windows currently supports the CPU Runtime fixture; desktop Editor
+handoff remains pending. Installing the pure client does not install or launch
+a host unless `start=True` is explicitly requested.
 
 ## Recover and wait
 

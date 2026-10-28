@@ -33,7 +33,7 @@ def normalize_manifest(text):
 
 
 def locked_versions(path):
-    return {(p['name'], p['version'], p.get('source')) for p in tomllib.loads(path.read_text())['package']}
+    return {(p['name'], p['version'], p.get('source')) for p in tomllib.loads(path.read_text(encoding='utf-8'))['package']}
 
 
 def build_sdist(sdist_directory, config_settings=None):
@@ -48,7 +48,7 @@ def build_sdist(sdist_directory, config_settings=None):
             raise RuntimeError('Expected one source archive root')
         root = roots[0]
         manifest = root / 'Cargo.toml'
-        manifest.write_text(normalize_manifest(manifest.read_text()))
+        manifest.write_text(normalize_manifest(manifest.read_text(encoding='utf-8')))
         (root / 'build_backend.py').write_bytes(Path(__file__).read_bytes())
         # Cargo preserves existing locked versions while removing the unused
         # desktop dependency graph. No build, generator or network is involved.

@@ -2592,8 +2592,6 @@ dependencies = [
 [[package]]
 name = "gpui-fast-windows"
 version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ab29a2b4bc4aac7f18c470f7a055e7853dc3f4c2820d11fd54952a1c6923f52"
 dependencies = [
  "accesskit",
  "accesskit_windows",
@@ -9198,6 +9196,7 @@ version = "0.1.0-alpha.1"
 dependencies = [
  "anyhow",
  "async-channel",
+ "embed-resource",
  "gpui-fast-apple",
  "gpui-fps",
  "gpui-kit",
@@ -9212,6 +9211,8 @@ dependencies = [
  "tempfile",
  "toml 0.8.23",
  "uuid",
+ "wgpu",
+ "windows 0.62.2",
  "zipzi-core",
  "zipzi-editor-core",
  "zipzi-editor-render",
@@ -9245,9 +9246,12 @@ name = "zipzi-editor-render"
 version = "0.1.0-alpha.1"
 dependencies = [
  "anyhow",
+ "gpui-fast",
+ "gpui-fast-windows",
  "objc2 0.6.4",
  "png 0.17.16",
  "wgpu",
+ "windows 0.62.2",
  "zipzi-core",
  "zipzi-editor-core",
  "zipzi-render",
@@ -9317,6 +9321,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.0",
+ "tempfile",
  "thiserror 2.0.20",
  "uuid",
  "zipzi-cmo3",
@@ -9394,6 +9399,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.20",
  "uuid",
+ "windows-sys 0.61.2",
  "zipzi-api-derive",
  "zipzi-core",
  "zipzi-observe",

@@ -1,0 +1,91 @@
+name: Development gates
+env:
+  PYTHONUTF8: '1'
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/development.yml'
+
+concurrency:
+  group: development-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editor-compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Check native Editor and platform examples
+        run: cargo check --locked -p zipzi-editor -p zipzi-editor-render --all-targets --features zipzi-editor/test-support,zipzi-editor/wgpu-backend
+      - name: Windows presentation scheduling
+        if: runner.os == 'Windows'
+        run: cargo test --locked -p zipzi-editor --lib headless_tests::ui_performance
+
+  focused:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.10.7'
+      - run: uv sync --locked
+      - run: uv run --locked python tools/workspace/cargo_domain.py --check
+      - run: uv run --locked python tools/dev.py test tools -p test_dev_entrypoint.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_dev_process.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_dev_lifecycle.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_dev_editor.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_dev.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_dev_python.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_test_entrypoint.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_test_runner.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_tool_discovery.py -v
+      - run: uv run --locked python tools/dev.py test sdk fast physics_editing::
+      - run: uv run --locked python tools/dev.py test editor fast timeline::
+      - run: uv run --locked python tools/dev.py test editor fast recent_files::
+      - run: uv run --locked python tools/dev.py test editor fast platform_paths::
+      - run: uv run --locked python tools/dev.py test editor fast storage_tests::
+      - run: cargo test --locked -p zipzi-project --lib filesystem::tests -- --nocapture
+      - run: cargo test --locked -p zipzi-runtime --test source_identity
+      - run: cargo test --locked -p zipzi-runtime --lib local::
+      - run: cargo test --locked -p zipzi-runtime --test binary --test protocol
+
+  python-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.10.7'
+      - run: uv sync --locked
+      - run: uv run --locked python tools/dev.py test sdk python2
+      - run: uv run --locked python tools/dev.py test sdk python2-connected
+      - run: uv run --locked python tools/dev.py test sdk python2 --discovery
+      - run: uv run --locked python tools/dev.py python crates/zipzi-python2/tests/test_native_publication.py -v

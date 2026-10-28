@@ -16,6 +16,72 @@ window and offscreen benchmark commands. Native window harnesses require macOS,
 Metal and the documented local model; CPU chain measurements do not measure
 window or GPU latency.
 
+## Windows GPUI CPU and image-upload diagnosis
+
+Use the production Editor's automatic window workload after building; do not
+compile during measurement. It dispatches GPUI events inside a native window,
+not OS mouse input. The default workloads are pan (1), zoom (2), and opacity (3).
+For a control that only repaints the existing canvas, set
+`ZIPZI_BENCH_UI_ONLY=1` (workload 0): no new preview requests or image uploads
+should appear after warmup. This isolates the existing Editor/Kit UI tree from
+model rendering/readback; it is not a benchmark of an empty GPUI application.
+
+Example from PowerShell, with an otherwise unused output directory/profile:
+
+```powershell
+cargo build --locked --release -p zipzi-editor
+New-Item -ItemType Directory -Force target/gpui-probe | Out-Null
+Remove-Item Env:ZIPZI_DEV_SESSION_DIR -ErrorAction SilentlyContinue
+$env:ZIPZI_RUNTIME_PROFILE='gpui-probe'
+$env:ZIPZI_CONFIG_DIR=Join-Path $PWD 'target/gpui-probe/config'
+$env:ZIPZI_FRAME_TRACE=Join-Path $PWD 'target/gpui-probe/trace.jsonl'
+$env:ZIPZI_WINDOW_BENCH='1'
+$env:ZIPZI_BENCH_MODEL=(Resolve-Path models/local/mao/runtime/mao_pro.model3.json).Path
+$env:ZIPZI_BENCH_SAMPLES='180'
+$env:ZIPZI_BENCH_WARMUP='30'
+$env:ZIPZI_BENCH_HZ='120'
+uv run --locked python -c "import subprocess; subprocess.run(['target/release/zipzi-editor.exe'], check=True)"
+uv run --locked python tools/benchmarks/windows-gpui-trace-report.py target/gpui-probe/trace.jsonl --output target/gpui-probe/summary.json
+```
+
+Keep the test window active. Repeat with separate trace/config paths for Dev,
+Release and the UI-only control. Preserve raw traces and binary hashes; alternate
+profile order when repeating. No model is saved by this harness. The report
+requires a completed run, all declared workload samples and zero lost events.
+It preserves inputs without a joined new image and repeated platform calls for
+the same CPU scene. Test the reporter with
+`uv run --locked python tools/test_tools.py -p test_windows_gpui_trace_report.py`.
+
+`ui_draw_ms` includes Editor/Kit element construction, prepaint/layout and paint.
+`image_atlas` spans atlas lookup and, on misses, allocation/upload API work; it
+does not time asynchronous GPU transfer completion. `platform_draw_cpu_ms` covers
+the platform drawing call, including D3D11 submission and synchronous Present
+work on Windows. None of these is a GPU timestamp or DWM/scanout measurement.
+`input_to_first_image_platform_return_ms` ends when the CPU platform call returns;
+it excludes OS input delivery and actual screen presentation. A requested 120 Hz
+input timer is not evidence of 120 Hz input delivery or display/FPS. Build,
+prepaint, paint and atlas scopes are nested; do not add their independent P95s.
+
+## Windows visible Timeline diagnosis
+
+For visible Timeline diagnosis on Windows, build with `test-support` and use
+the same automatic window harness with `ZIPZI_BENCH_ANIMATION=1`.
+`ZIPZI_BENCH_TIMELINE_VARIANT=Natural|Dense` reuses the existing acceptance
+fixture generator in a disposable copy of the supplied model. The original
+assets are never saved. With `ZIPZI_BENCH_ANIMATION_DRAG` unset it measures
+playback; `canvas` and `number` dispatch the existing production drag handlers.
+The additional `timeline_scroll`, `timeline_zoom`, `timeline_seek` and
+`timeline_key` probes verify navigation/candidate changes and preserve authoring
+history. These visible probes do not cover the macOS headless Timeline pixel
+restoration and persistence suite.
+
+Add `bench-instrumentation` and `ZIPZI_BENCH_ANIMATION_DETAIL=1` to capture
+synchronous core/SDK spans for each canvas/number input. These spans report
+inclusive/self wall time on the UI thread; they do not measure GPU work or
+presentation FPS. Disable detailed recording for primary FPS comparisons. Keep
+builds out of the sampling interval and retain the unchanged driver and binary
+for before/after measurements.
+
 ## Whole-model parameter overlays
 
 Build once, then benchmark the saved Release executable without concurrent builds.
@@ -39,6 +105,33 @@ whole model with object marquee selection; it does not select individual vertice
 Every run verifies the parameter deforms model positions and saves the parameter
 identity, selection, vertex/edge counts, raw trace and background-process samples.
 `--model` selects another local model; the first visible slider is used and audited.
+
+The default GPUI fallback builds independent straight edges directly and groups
+consecutive marker quads into paint layers. To compare the previous path in the
+same binary, pass `--unlayered-markers --tessellated-edges` to the runner (each can
+also be measured separately). Their automatic-driver equivalents are
+`ZIPZI_BENCH_UNLAYERED_MARKERS=1` and `ZIPZI_BENCH_TESSELLATED_EDGES=1`; the trace
+records both settings. Detailed runs split `overlay.gpui_mesh_edges`,
+`overlay.gpui_lines` (semantic/control lines), and `overlay.gpui_markers`.
+`ZIPZI_BENCH_LEGACY_EDGE_BOUNDS=1` keeps the direct triangles but restores their
+old per-triangle bounding-box accumulation, isolating the batched-bounds change
+in the same binary. It requires the automatic parameter workload and is recorded
+as `parameter_overlay.legacy_edge_bounds`; leave tessellated edges disabled.
+`ZIPZI_BENCH_EAGER_VIEWPORT_LAYOUT=1` restores unconditional canvas prepaint
+layout writes. It requires the automatic parameter workload and is recorded as
+`parameter_overlay.eager_viewport_layout`. Change one switch at a time and keep
+detailed recording identical in each pair.
+The `vertices` case skips fallback mesh edges as well as control lines on Windows.
+Earlier Windows `vertices` traces that still included mesh edges are not a pure
+vertex ablation. Preserve those raw results rather than relabeling them.
+
+The Python launcher above uses macOS `caffeinate`/`ps`. On Windows, launch the
+same production automatic driver with the isolated subprocess setup from the
+Windows section and set `ZIPZI_BENCH_PARAMETERS=1`, selection/paint variables
+and the reference switches as needed. `diagnose` in this report module accepts
+completed Windows traces for CPU attribution; actual FPS still needs independent
+PresentMon evidence. CPU time and process working set do not measure GPU time
+or GPU memory.
 
 Detailed runs capture overlay construction by caller, nested CPU stage inclusive
 and self times, plus actual Metal command GPU timestamps on a separate diagnostics
@@ -426,3 +519,14 @@ For Mao, the explicit Warp matches the audited editable target in the R0/native
 baselines. The default largest Warp has a singular parent deformation and rejects
 the gesture even in R1. Preserve a rejected trace separately; never report it as a
 low-latency pass. Choose an audited editable target when using a different model.
+
+### Windows shared texture presentation
+
+Windows previews now publish `shared_texture_submitted` and paint through
+`paint_shared_surface`, without the former preview `readback`/`compose_image`
+sequence. `windows-gpui-trace-report.py` joins both generations to CPU platform
+returns. Historical metric keys containing `image` also cover shared surfaces.
+A publish timestamp on the new path is an asynchronous submission boundary;
+it no longer implies that model GPU execution has completed. Do not interpret
+publish-to-paint or platform-return metrics as screen latency. Image atlas events
+may still occur for unrelated UI icons and thumbnails.

@@ -4,7 +4,9 @@ use gpui_kit::{
     Bounds, FillOptions, FillRule, Hsla, PathBuilder, PathStyle, Pixels, Point, Window, fill,
     point, px, rgb, rgba, size,
 };
-use zipzi_editor_core::{GluePointState, OverlaySnapshot, OverlayVertexKind, ViewportPoint};
+use zipzi_editor_core::{
+    GluePointState, OverlaySnapshot, OverlayVertex, OverlayVertexKind, ViewportPoint,
+};
 
 const GLUE_MARKER_RADIUS: f32 = 3.25;
 
@@ -12,6 +14,14 @@ const GLUE_MARKER_RADIUS: f32 = 3.25;
 pub(crate) trait Painter {
     fn paint_quad(&mut self, quad: gpui_kit::PaintQuad);
     fn paint_path(&mut self, path: gpui_kit::Path<Pixels>, color: Hsla);
+    /// Only quads may be emitted inside this scope. GPUI retains their insertion
+    /// order, including overlaps, without an individual bounds-tree entry.
+    fn quad_layer(&mut self, _bounds: Bounds<Pixels>, paint: impl FnOnce(&mut Self))
+    where
+        Self: Sized,
+    {
+        paint(self);
+    }
 }
 impl Painter for Window {
     fn paint_quad(&mut self, quad: gpui_kit::PaintQuad) {
@@ -19,6 +29,9 @@ impl Painter for Window {
     }
     fn paint_path(&mut self, path: gpui_kit::Path<Pixels>, color: Hsla) {
         Window::paint_path(self, path, color);
+    }
+    fn quad_layer(&mut self, bounds: Bounds<Pixels>, paint: impl FnOnce(&mut Self)) {
+        self.paint_layer(bounds, paint);
     }
 }
 
@@ -50,6 +63,7 @@ impl Palette {
             restricted_border: rgb(0x505050).into(),
         }
     }
+    #[cfg(target_os = "macos")]
     pub fn metal(self) -> zipzi_editor_render::OverlayStyle {
         let color = |c: Hsla| {
             let c: gpui_kit::Rgba = c.into();
@@ -68,12 +82,16 @@ pub(crate) fn paint_lines(
     overlay: &OverlaySnapshot,
     bounds: Bounds<Pixels>,
     p: Palette,
+    tessellated_edges: bool,
     window: &mut impl Painter,
 ) {
     let mut lines = |edges: &[(ViewportPoint, ViewportPoint)], width, color| {
-        mesh_edges::paint_edges_with_width(edges, bounds.origin, width, |path| {
-            window.paint_path(path, color)
-        });
+        let paint = |path| window.paint_path(path, color);
+        if tessellated_edges {
+            mesh_edges::paint_edges_with_width_tessellated(edges, bounds.origin, width, paint);
+        } else {
+            mesh_edges::paint_edges_with_width(edges, bounds.origin, width, paint);
+        }
     };
     lines(&overlay.reference_lines, 0.75, p.mesh.opacity(0.5));
     let image_bounds: Vec<_> = overlay
@@ -300,90 +318,126 @@ pub(crate) fn paint_markers(
     origin: Point<Pixels>,
     p: Palette,
     mesh_fallback: bool,
+    layer_quads: bool,
     window: &mut impl Painter,
 ) {
     // Selected and hovered controls win when several markers overlap.
     for emphasized in [false, true] {
-        for v in overlay
-            .vertices
-            .iter()
-            .filter(|v| (v.selected || v.hovered) == emphasized)
-        {
-            let center = origin + point(px(v.position.x), px(v.position.y));
-            if !v.editable {
-                if v.kind == OverlayVertexKind::Mesh && !mesh_fallback {
-                    continue;
+        // Rotation centers mix paths and quads. Leave them outside each quad
+        // layer so GPUI's primitive-type batching cannot reorder the crosshair.
+        for run in overlay.vertices.chunk_by(|a, b| {
+            a.kind != OverlayVertexKind::RotationCenter
+                && b.kind != OverlayVertexKind::RotationCenter
+        }) {
+            let visible = |v: &&OverlayVertex| {
+                (v.selected || v.hovered) == emphasized
+                    && (mesh_fallback || v.kind != OverlayVertexKind::Mesh)
+            };
+            let draw = |window: &mut _| {
+                for v in run.iter().filter(visible) {
+                    paint_vertex(v, origin, p, window);
                 }
-                let radius = zipzi_editor_render::OVERLAY_MARKER_RADIUS;
-                restricted_marker(center, radius, v.kind != OverlayVertexKind::Warp, p, window);
-                if v.kind == OverlayVertexKind::RotationCenter {
-                    let q = |x, y| ViewportPoint {
-                        x: v.position.x + x,
-                        y: v.position.y + y,
-                    };
-                    mesh_edges::paint_edges(
-                        &[(q(-6., 0.), q(6., 0.)), (q(0., -6.), q(0., 6.))],
-                        origin,
-                        |path| window.paint_path(path, p.restricted_border),
-                    );
-                }
-                if v.hovered {
-                    ring(center, radius + 2., window);
-                }
-                continue;
-            }
-            let color = if v.kind == OverlayVertexKind::Mesh {
-                if v.selected {
-                    p.mesh_selected
-                } else {
-                    p.hollow
+            };
+            if layer_quads && run[0].kind != OverlayVertexKind::RotationCenter {
+                let radius = px(zipzi_editor_render::OVERLAY_MARKER_RADIUS + 2.);
+                let bounds = run
+                    .iter()
+                    .filter(visible)
+                    .map(|v| {
+                        let center = origin + point(px(v.position.x), px(v.position.y));
+                        Bounds::new(
+                            center - point(radius, radius),
+                            size(radius * 2., radius * 2.),
+                        )
+                    })
+                    .reduce(|a, b| a.union(&b));
+                if let Some(bounds) = bounds {
+                    window.quad_layer(bounds, draw);
                 }
             } else {
-                p.deformer
-            };
-            let radius = zipzi_editor_render::OVERLAY_MARKER_RADIUS;
-            match v.kind {
-                OverlayVertexKind::Mesh if !mesh_fallback => continue,
-                OverlayVertexKind::Mesh => {
-                    let r = px(radius);
-                    window.paint_quad(
-                        fill(
-                            Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
-                            color,
-                        )
-                        .corner_radii(r)
-                        .border_widths(px(1.))
-                        .border_color(if v.selected {
-                            p.mesh_selected
-                        } else {
-                            rgb(0x000000).into()
-                        }),
-                    );
-                }
-                OverlayVertexKind::Warp => {
-                    marker(center, radius, false, v.selected, color, p, window)
-                }
-                OverlayVertexKind::RotationTip => {
-                    marker(center, radius, true, v.selected, color, p, window)
-                }
-                OverlayVertexKind::RotationCenter => {
-                    marker(center, radius, true, v.selected, color, p, window);
-                    let q = |x, y| ViewportPoint {
-                        x: v.position.x + x,
-                        y: v.position.y + y,
-                    };
-                    mesh_edges::paint_edges(
-                        &[(q(-6., 0.), q(6., 0.)), (q(0., -6.), q(0., 6.))],
-                        origin,
-                        |path| window.paint_path(path, color),
-                    );
-                }
-            }
-            if v.hovered {
-                ring(center, radius + 2., window);
+                draw(window);
             }
         }
     }
+    paint_other_markers(overlay, origin, p, window);
+}
+
+fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &mut impl Painter) {
+    let center = origin + point(px(v.position.x), px(v.position.y));
+    if !v.editable {
+        let radius = zipzi_editor_render::OVERLAY_MARKER_RADIUS;
+        restricted_marker(center, radius, v.kind != OverlayVertexKind::Warp, p, window);
+        if v.kind == OverlayVertexKind::RotationCenter {
+            let q = |x, y| ViewportPoint {
+                x: v.position.x + x,
+                y: v.position.y + y,
+            };
+            mesh_edges::paint_edges(
+                &[(q(-6., 0.), q(6., 0.)), (q(0., -6.), q(0., 6.))],
+                origin,
+                |path| window.paint_path(path, p.restricted_border),
+            );
+        }
+        if v.hovered {
+            ring(center, radius + 2., window);
+        }
+        return;
+    }
+    let color = if v.kind == OverlayVertexKind::Mesh {
+        if v.selected {
+            p.mesh_selected
+        } else {
+            p.hollow
+        }
+    } else {
+        p.deformer
+    };
+    let radius = zipzi_editor_render::OVERLAY_MARKER_RADIUS;
+    match v.kind {
+        OverlayVertexKind::Mesh => {
+            let r = px(radius);
+            window.paint_quad(
+                fill(
+                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
+                    color,
+                )
+                .corner_radii(r)
+                .border_widths(px(1.))
+                .border_color(if v.selected {
+                    p.mesh_selected
+                } else {
+                    rgb(0x000000).into()
+                }),
+            );
+        }
+        OverlayVertexKind::Warp => marker(center, radius, false, v.selected, color, p, window),
+        OverlayVertexKind::RotationTip => {
+            marker(center, radius, true, v.selected, color, p, window)
+        }
+        OverlayVertexKind::RotationCenter => {
+            marker(center, radius, true, v.selected, color, p, window);
+            let q = |x, y| ViewportPoint {
+                x: v.position.x + x,
+                y: v.position.y + y,
+            };
+            mesh_edges::paint_edges(
+                &[(q(-6., 0.), q(6., 0.)), (q(0., -6.), q(0., 6.))],
+                origin,
+                |path| window.paint_path(path, color),
+            );
+        }
+    }
+    if v.hovered {
+        ring(center, radius + 2., window);
+    }
+}
+
+fn paint_other_markers(
+    overlay: &OverlaySnapshot,
+    origin: Point<Pixels>,
+    p: Palette,
+    window: &mut impl Painter,
+) {
     for handle in &overlay.handles {
         let center = origin + point(px(handle.position.x), px(handle.position.y));
         let color = p.deformer;
@@ -466,6 +520,236 @@ pub(crate) fn paint_markers(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Default)]
+    struct MarkerRecorder {
+        operations: Vec<String>,
+        layer: Option<Bounds<Pixels>>,
+        layers: usize,
+    }
+    impl Painter for MarkerRecorder {
+        fn paint_quad(&mut self, q: gpui_kit::PaintQuad) {
+            if let Some(bounds) = self.layer {
+                assert_eq!(
+                    bounds.intersect(&q.bounds),
+                    q.bounds,
+                    "layer clips a marker"
+                );
+            }
+            self.operations.push(format!(
+                "quad {:?} {:?} {:?} {:?} {:?} {:?}",
+                q.bounds,
+                q.corner_radii,
+                q.background,
+                q.border_widths,
+                q.border_color,
+                q.border_style
+            ));
+        }
+        fn paint_path(&mut self, path: gpui_kit::Path<Pixels>, color: Hsla) {
+            assert!(
+                self.layer.is_none(),
+                "crosshair path reordered inside a quad layer"
+            );
+            let points: Vec<_> = path.vertices.iter().map(|v| v.xy_position).collect();
+            self.operations
+                .push(format!("path {:?} {:?} {:?}", path.bounds, color, points));
+        }
+        fn quad_layer(&mut self, bounds: Bounds<Pixels>, paint: impl FnOnce(&mut Self)) {
+            assert!(self.layer.is_none());
+            self.layers += 1;
+            self.layer = Some(bounds);
+            paint(self);
+            self.layer = None;
+        }
+    }
+
+    #[test]
+    fn marker_layers_preserve_legacy_order_styles_and_hover_coverage() {
+        let kinds = [
+            OverlayVertexKind::Mesh,
+            OverlayVertexKind::Warp,
+            OverlayVertexKind::RotationCenter,
+            OverlayVertexKind::RotationTip,
+        ];
+        let overlay = OverlaySnapshot {
+            vertices: (0..24)
+                .map(|i| OverlayVertex {
+                    id: i,
+                    kind: kinds[i as usize % kinds.len()],
+                    position: ViewportPoint {
+                        x: (i % 3) as f32 * 2.25 - 4.,
+                        y: (i % 2) as f32 * 1.5,
+                    },
+                    selected: i % 3 == 0,
+                    hovered: i % 2 == 0,
+                    editable: i % 5 != 0,
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let origin = point(px(20.25), px(40.5));
+        for dark in [false, true] {
+            for mesh_fallback in [false, true] {
+                let palette = Palette::new(dark);
+                let mut old = MarkerRecorder::default();
+                // The original painter's order, independently of the new runs.
+                for emphasized in [false, true] {
+                    for v in &overlay.vertices {
+                        if (v.selected || v.hovered) == emphasized
+                            && (mesh_fallback || v.kind != OverlayVertexKind::Mesh)
+                        {
+                            paint_vertex(v, origin, palette, &mut old);
+                        }
+                    }
+                }
+                let mut grouped = MarkerRecorder::default();
+                paint_markers(&overlay, origin, palette, mesh_fallback, true, &mut grouped);
+                assert_eq!(grouped.operations, old.operations);
+                assert!(grouped.layers > 0);
+            }
+        }
+    }
+
+    #[test]
+    fn thousands_of_mesh_markers_use_two_layers_without_dropping_points() {
+        let overlay = OverlaySnapshot {
+            vertices: (0..5000)
+                .map(|i| OverlayVertex {
+                    id: i,
+                    kind: OverlayVertexKind::Mesh,
+                    position: ViewportPoint {
+                        x: (i % 100) as f32 * 3.,
+                        y: (i / 100) as f32 * 3.,
+                    },
+                    selected: i % 2 == 0,
+                    hovered: false,
+                    editable: true,
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let mut grouped = MarkerRecorder::default();
+        paint_markers(
+            &overlay,
+            point(px(0.), px(0.)),
+            Palette::new(false),
+            true,
+            true,
+            &mut grouped,
+        );
+        assert_eq!(grouped.layers, 2);
+        assert_eq!(grouped.operations.len(), 5000);
+        let mut unlayered = MarkerRecorder::default();
+        paint_markers(
+            &overlay,
+            point(px(0.), px(0.)),
+            Palette::new(false),
+            true,
+            false,
+            &mut unlayered,
+        );
+        assert_eq!(grouped.operations, unlayered.operations);
+        assert_eq!(unlayered.layers, 0);
+    }
+
+    #[test]
+    fn quad_layers_bound_gpui_ordering_work_and_retain_overlapping_quad_order() {
+        #[derive(Default)]
+        struct ScenePainter(gpui_kit::Scene);
+        impl Painter for ScenePainter {
+            fn paint_quad(&mut self, q: gpui_kit::PaintQuad) {
+                self.0.insert_primitive(gpui_kit::Quad {
+                    order: 0,
+                    bounds: q.bounds.scale(1.),
+                    content_mask: gpui_kit::ContentMask {
+                        bounds: Bounds::new(point(px(0.), px(0.)), size(px(400.), px(400.))),
+                    }
+                    .scale(1.),
+                    background: q.background,
+                    border_color: q.border_color,
+                    corner_radii: q.corner_radii.scale(1.),
+                    border_widths: q.border_widths.scale(1.),
+                    border_style: q.border_style,
+                });
+            }
+            fn paint_path(&mut self, _: gpui_kit::Path<Pixels>, _: Hsla) {
+                panic!("mesh-only scene contains a path");
+            }
+            fn quad_layer(&mut self, bounds: Bounds<Pixels>, paint: impl FnOnce(&mut Self)) {
+                self.0.push_layer(bounds.scale(1.));
+                paint(self);
+                self.0.pop_layer();
+            }
+        }
+        let overlay = OverlaySnapshot {
+            vertices: (0..1000)
+                .map(|i| OverlayVertex {
+                    id: i,
+                    kind: OverlayVertexKind::Mesh,
+                    position: ViewportPoint {
+                        x: 10. + (i % 20) as f32 * 2.,
+                        y: 10. + (i / 20) as f32 * 2.,
+                    },
+                    selected: i % 3 == 0,
+                    hovered: i % 7 == 0,
+                    editable: i % 5 != 0,
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let mut old = ScenePainter::default();
+        let mut grouped = ScenePainter::default();
+        for (painter, layer) in [(&mut old, false), (&mut grouped, true)] {
+            paint_markers(
+                &overlay,
+                point(px(0.), px(0.)),
+                Palette::new(false),
+                true,
+                layer,
+                painter,
+            );
+            painter.0.finish();
+        }
+        let orders = |p: &ScenePainter| {
+            p.0.quads
+                .iter()
+                .map(|q| q.order)
+                .collect::<std::collections::HashSet<_>>()
+        };
+        assert_eq!(orders(&grouped).len(), 2);
+        assert!(orders(&old).len() > 2);
+        // GPUI already combines adjacent quads across orders into one GPU batch;
+        // this optimization removes CPU ordering work, not one draw per marker.
+        assert_eq!(grouped.0.batches().count(), old.0.batches().count());
+        assert_eq!(grouped.0.quads.len(), old.0.quads.len());
+        // Spatial sorting may exchange disjoint quads. Every overlapping pair
+        // must retain painter order (including borders and hover rings).
+        for i in 0..grouped.0.quads.len() {
+            let a = &grouped.0.quads[i];
+            for b in &grouped.0.quads[i + 1..] {
+                if !a.bounds.intersect(&b.bounds).is_empty() {
+                    let position = |q: &gpui_kit::Quad| {
+                        old.0
+                            .quads
+                            .iter()
+                            .position(|x| {
+                                x.bounds == q.bounds
+                                    && x.background == q.background
+                                    && x.border_color == q.border_color
+                            })
+                            .unwrap()
+                    };
+                    // Identical primitives may compare equal; their blending is
+                    // equivalent whichever identical instance is found first.
+                    assert!(
+                        position(a) <= position(b),
+                        "overlapping marker order changed"
+                    );
+                }
+            }
+        }
+    }
 
     #[test]
     fn polygon_fill_preserves_concavities_and_even_odd_overlap() {

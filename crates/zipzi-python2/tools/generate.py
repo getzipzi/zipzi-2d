@@ -8,9 +8,11 @@ import argparse
 import hashlib
 import json
 import keyword
+import os
 import re
 from pathlib import Path
 import subprocess
+import sys
 
 PACKAGE = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE.parents[1]
@@ -473,14 +475,16 @@ def render(contract):
         for path, content in list(output.items()):
             if path.endswith('.rs'):
                 temporary = Path(folder) / Path(path).name
-                temporary.write_text(content)
+                temporary.write_text(content, encoding='utf-8')
                 subprocess.run(['rustfmt', '--edition', '2021', '--config', 'style_edition=2024,skip_children=true', str(temporary)], check=True, capture_output=True)
-                output[path] = temporary.read_text()
+                output[path] = temporary.read_text(encoding='utf-8')
     return output
 
 
 def export():
-    result = subprocess.run(['cargo', 'run', '--locked', '--quiet', '-p', 'zipzi-python2', '--example', 'authoring_schema'], cwd=ROOT, capture_output=True, text=True)
+    environment = dict(os.environ)
+    environment.setdefault('PYO3_PYTHON', sys.executable)
+    result = subprocess.run(['cargo', 'run', '--locked', '--quiet', '-p', 'zipzi-python2', '--example', 'authoring_schema'], cwd=ROOT, env=environment, capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError(result.stderr)
     return json.loads(result.stdout)
@@ -501,7 +505,7 @@ def write_outputs(output, check=False, package=PACKAGE):
             for index in range(1, len(Path(path).parts) + 1))
         if not file.resolve().is_relative_to(package.resolve()) or traverses_link:
             raise ValueError('Generated path traverses a symlink/outside package')
-        existing = file.read_text() if file.is_file() else None
+        existing = file.read_text(encoding='utf-8') if file.is_file() else None
         if existing is not None:
             owned = json.loads(existing).get('_generated_by') == OWNER if path.endswith('.json') else existing.startswith((HEADER, RUST_HEADER))
             if not owned:
@@ -512,7 +516,7 @@ def write_outputs(output, check=False, package=PACKAGE):
         for path in differences:
             file = package / path
             file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_text(output[path])
+            file.write_text(output[path], encoding='utf-8')
     return differences
 
 
@@ -521,7 +525,7 @@ def main():
     parser.add_argument('--check', action='store_true', help='Compare only; do not write sources')
     parser.add_argument('--schema', type=Path, help='Replay an exported intermediate schema for diagnostics')
     args = parser.parse_args()
-    contract = json.loads(args.schema.read_text()) if args.schema else export()
+    contract = json.loads(args.schema.read_text(encoding='utf-8')) if args.schema else export()
     output = render(contract)
     changes = write_outputs(output, args.check)
     if args.check and changes:

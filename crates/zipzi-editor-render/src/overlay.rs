@@ -3,32 +3,7 @@ use anyhow::{Result, ensure};
 use zipzi_editor_core::{OverlaySnapshot, OverlayVertexKind};
 use zipzi_render_metal::metal::*;
 
-/// Shared screen-space radius for filled and hollow editing markers.
-pub const OVERLAY_MARKER_RADIUS: f32 = 3.;
-
-/// Separate textures let the canvas insert control lines beneath all markers.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum OverlayPass {
-    All,
-    Edges,
-    Vertices,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct OverlayStyle {
-    /// Straight RGBA; shaders produce premultiplied output.
-    pub edge: [f32; 4],
-    pub vertex: [f32; 4],
-    pub selected: [f32; 4],
-    pub restricted: [f32; 4],
-}
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct OverlayViewport {
-    pub extent: [u32; 2],
-    pub scale: f32,
-    /// Logical window origin; the texture starts at floor(origin * scale).
-    pub origin: [f32; 2],
-}
+use crate::{OVERLAY_MARKER_RADIUS, OverlayPass, OverlayStyle, OverlayViewport};
 #[repr(C)]
 struct Uniforms {
     viewport: [f32; 2],

@@ -1,3 +1,10 @@
 
 # Unified diffs use a significant space prefix for empty context lines.
 *.patch -whitespace
+*.sh text eol=lf
+tools/dev-python text eol=lf
+*.rs text eol=lf
+*.toml text eol=lf
+Cargo.lock text eol=lf
+*.metal text eol=lf
+*.wgsl text eol=lf

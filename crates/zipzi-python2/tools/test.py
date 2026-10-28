@@ -14,7 +14,8 @@ import shutil
 import subprocess
 import sys
 import sysconfig
-from _support import exclusive_run
+import tempfile
+from _support import exclusive_run, executable, executable_name
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -49,7 +50,7 @@ def main() -> None:
             # Like Maturin: bind CPython symbols from the importing interpreter.
             # Apply to this cdylib only, not every Rust dependency/executable.
             command += ["--", "-C", "link-arg=-Wl,-undefined,dynamic_lookup"]
-        process = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, text=True)
+        process = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, text=True, encoding='utf-8')
         (output / "build.jsonl").write_text(process.stdout)
         (output / "build.log").write_text(process.stderr)
         if process.returncode:
@@ -68,45 +69,47 @@ def main() -> None:
         extension = native / ("_native" + sysconfig.get_config_var("EXT_SUFFIX"))
         shutil.copy2(libraries.pop(), extension)
         host_command = ["cargo", "build", "--locked", "-p", "zipzi-runtime", "--features",
-            "gpu-observation,test-support,bench-instrumentation" if args.instrumented else "gpu-observation,test-support", "--example", "local_host_fixture"]
+            "gpu-observation,test-support,bench-instrumentation" if args.instrumented else "gpu-observation,test-support", "--example", "local_host_fixture", '--message-format=json-render-diagnostics']
         if args.release:
             host_command.append("--release")
-        subprocess.run(host_command, cwd=ROOT, env=env, check=True)
-        host = output / "local_host_fixture"
-        shutil.copy2(ROOT / "target" / ("release" if args.release else "debug") / "examples/local_host_fixture", host)
+        build = subprocess.run(host_command, cwd=ROOT, env=env, check=True, stdout=subprocess.PIPE, text=True, encoding='utf-8')
+        source_host = executable(build.stdout, 'local_host_fixture', 'example')
+        host = output / executable_name('local_host_fixture')
+        if not host.exists() or hashlib.sha256(host.read_bytes()).digest() != hashlib.sha256(source_host.read_bytes()).digest():
+            shutil.copy2(source_host, host)
         (output / "build-metadata.json").write_text(json.dumps(dict(profile=artifacts[0]["profile"],
             instrumented=args.instrumented, host_profile="release" if args.release else "debug",
-            host_sha256=hashlib.sha256(host.read_bytes()).hexdigest(),
+            host_path=str(host), host_sha256=hashlib.sha256(host.read_bytes()).hexdigest(),
             python=sys.version, artifact_sha256=hashlib.sha256(extension.read_bytes()).hexdigest()), indent=2) + "\n")
         if args.build_only:
             print(f'zipzi-python2: copied paired build artifacts to {output}')
             return
         env.update(ZIPZI_PYTHON2_NATIVE=str(native.parent), ZIPZI_PYTHON2_HOST=str(host))
         module = "test_observation.py" if args.observation else "test_p3a_discovery.py" if args.discovery else "test_p3a_recovery.py" if args.recovery else "test_api.py"
-        subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests" / module), "-v", *args.tests], cwd="/tmp", env=env, check=True)
+        subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests" / module), "-v", *args.tests], cwd=tempfile.gettempdir(), env=env, check=True)
         if not args.tests and not args.recovery and not args.discovery and not args.observation:
-            subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_p3a_recovery.py"), "-v"], cwd="/tmp", env=env, check=True)
+            subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_p3a_recovery.py"), "-v"], cwd=tempfile.gettempdir(), env=env, check=True)
         subprocess.run(["uv", "run", "--locked", "pyright", "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json")], cwd=ROOT, check=True)
         invalid = subprocess.run(["uv", "run", "--locked", "--project", str(ROOT), "pyright",
             "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json"), "--outputjson", "--pythonpath", sys.executable,
-            str(ROOT / "crates/zipzi-python2/tests/type_invalid.py")], cwd=ROOT, capture_output=True, text=True)
+            str(ROOT / "crates/zipzi-python2/tests/type_invalid.py")], cwd=ROOT, capture_output=True, text=True, encoding='utf-8')
         if not invalid.stdout:
             raise RuntimeError(f"Static checker failed before producing diagnostics: {invalid.stderr}")
         diagnostics = json.loads(invalid.stdout)
         actual = {(Path(d["file"]).name, d["range"]["start"]["line"], d.get("rule"))
             for d in diagnostics["generalDiagnostics"] if d["severity"] == "error"}
         expected = {("type_invalid.py", line, rule.strip()) for line, value in
-            enumerate((ROOT / "crates/zipzi-python2/tests/type_invalid.py").read_text().splitlines()) if "# error: " in value
+            enumerate((ROOT / "crates/zipzi-python2/tests/type_invalid.py").read_text(encoding='utf-8').splitlines()) if "# error: " in value
             for rule in value.split("# error: ", 1)[1].split(",")}
         if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 28 or actual != expected:
             raise RuntimeError(f"Expected twenty-eight precise public typing diagnostics: {invalid.stdout}\n{invalid.stderr}")
         recovery_types = ROOT / "crates/zipzi-python2/tests/type_recovery_invalid.py"
         invalid = subprocess.run(["uv", "run", "--locked", "pyright", "--project",
             str(ROOT / "crates/zipzi-python2/pyrightconfig.json"), "--outputjson", str(recovery_types)],
-            cwd=ROOT, capture_output=True, text=True)
+            cwd=ROOT, capture_output=True, text=True, encoding='utf-8')
         diagnostics = json.loads(invalid.stdout)
         expected = {(line, value.split("# error: ", 1)[1].strip()) for line, value in
-            enumerate(recovery_types.read_text().splitlines()) if "# error: " in value}
+            enumerate(recovery_types.read_text(encoding='utf-8').splitlines()) if "# error: " in value}
         actual = {(d["range"]["start"]["line"], d.get("rule")) for d in diagnostics["generalDiagnostics"]
                   if d["severity"] == "error"}
         if invalid.returncode != 1 or not expected or actual != expected or diagnostics["summary"]["errorCount"] != len(expected):

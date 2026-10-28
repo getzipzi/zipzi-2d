@@ -36,6 +36,11 @@ impl WgpuContext {
             force_fallback_adapter: false,
         }))
         .map_err(|error| Status::error("GPU_ADAPTER", error.to_string()))?;
+        Self::from_adapter(adapter)
+    }
+
+    /// Create a rendering context on a host-selected adapter (for native interop).
+    pub fn from_adapter(adapter: wgpu::Adapter) -> Result<Self, Status> {
         let info = adapter.get_info();
         let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_limits: wgpu::Limits::default().using_resolution(adapter.limits()),

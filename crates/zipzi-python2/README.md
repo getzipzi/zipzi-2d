@@ -30,6 +30,11 @@ uv build --wheel --out-dir target/python2/native-wheels crates/zipzi-python2
 `python2-connected` installs the pure client and tests host discovery and session
 binding. Add `--editor-host /absolute/path/to/zipzi-editor` to test a desktop host.
 
+On Windows, run the SDK gates with `uv run --locked python tools/dev.py test sdk python2`
+and `uv run --locked python tools/dev.py test sdk python2-connected`. Local uses a
+native `.pyd`; Connected uses Named Pipes. See the [Windows plan](../../docs/plans/windows-development.md)
+for platform validation.
+
 ## First model
 
 After installing both local wheels:

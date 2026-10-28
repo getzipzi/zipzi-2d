@@ -180,11 +180,69 @@ impl Publication {
     }
 }
 
-#[cfg(all(test, windows))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
     #[test]
+    fn existing_case_aliases_resolve_to_same_project_path() {
+        let folder = tempfile::tempdir().unwrap();
+        let directory = folder.path().join("MixedCase 中文 Project");
+        fs::create_dir(&directory).unwrap();
+        let alias = folder.path().join("mixedcase 中文 project");
+        assert_eq!(local_path(&directory).unwrap(), local_path(&alias).unwrap());
+        assert!(local_path(Path::new("C:relative.zipzi")).is_err());
+        assert!(local_path(Path::new("relative.zipzi")).is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn occupied_destination_preserves_both_files_until_retry() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let folder = tempfile::tempdir().unwrap();
+        let old = folder.path().join("old 中文");
+        let new = folder.path().join("new 中文");
+        fs::write(&old, b"old").unwrap();
+        NativeFileSystem.write_new(&new, b"new").unwrap();
+        let occupied = OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&old)
+            .unwrap();
+        assert!(NativeFileSystem.rename(&new, &old).is_err());
+        assert_eq!(fs::read(&new).unwrap(), b"new");
+        drop(occupied);
+        assert_eq!(fs::read(&old).unwrap(), b"old");
+        NativeFileSystem.rename(&new, &old).unwrap();
+        assert_eq!(fs::read(&old).unwrap(), b"new");
+        assert!(!new.exists());
+        assert!(!Publication::finish(&NativeFileSystem, folder.path()).durable());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn symlink_rejection_when_creation_is_permitted() {
+        let folder = tempfile::tempdir().unwrap();
+        let target = folder.path().join("target");
+        let link = folder.path().join("link");
+        fs::create_dir(&target).unwrap();
+        match std::os::windows::fs::symlink_dir(&target, &link) {
+            Ok(()) => {}
+            Err(error) if error.raw_os_error() == Some(1314) => {
+                eprintln!(
+                    "MISSING COVERAGE: Windows symlink creation needs Developer Mode or privilege"
+                );
+                return;
+            }
+            Err(error) => panic!("create symlink: {error}"),
+        }
+        assert!(reject_symlink(&link).is_err());
+        assert_eq!(local_path(&link).unwrap(), local_path(&target).unwrap());
+    }
+
+    #[test]
+    #[cfg(windows)]
     fn local_path_resolves_windows_drive_and_verbatim_prefixes() {
         let directory = std::env::temp_dir();
         let canonical = fs::canonicalize(&directory).unwrap();
@@ -195,5 +253,45 @@ mod tests {
                 canonical.join(&suffix).join("project.zipzi.json"),
             );
         }
+    }
+
+    #[test]
+    fn project_lock_child_probe() {
+        let Some(path) = std::env::var_os("ZIPZI_TEST_PROJECT_LOCK") else {
+            return;
+        };
+        let acquired = lock(Path::new(&path)).is_ok();
+        assert_eq!(
+            acquired,
+            std::env::var_os("ZIPZI_TEST_EXPECT_LOCK").is_some()
+        );
+    }
+
+    #[test]
+    fn project_lock_excludes_another_process_then_releases() {
+        let folder = tempfile::tempdir().unwrap();
+        let directory = folder.path().join("中文 project");
+        fs::create_dir(&directory).unwrap();
+        let run = |expect_lock: bool| {
+            let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+            command
+                .args(["--exact", "filesystem::tests::project_lock_child_probe"])
+                .env("ZIPZI_TEST_PROJECT_LOCK", &directory)
+                .env_remove("ZIPZI_TEST_EXPECT_LOCK");
+            if expect_lock {
+                command.env("ZIPZI_TEST_EXPECT_LOCK", "1");
+            }
+            let output = command.output().unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stdout)
+            );
+        };
+        let held = lock(&directory).unwrap();
+        run(false);
+        drop(held);
+        run(true);
+        assert!(directory.join(".zipzi.lock").is_file());
     }
 }

@@ -6,6 +6,9 @@ mod deformation;
 pub(crate) mod parameter_overlay;
 #[cfg(feature = "test-support")]
 mod properties;
+#[cfg(feature = "test-support")]
+#[path = "../acceptance/timeline/variants.rs"]
+mod timeline_variants;
 use anyhow::{Context as _, ensure};
 use std::{
     cell::Cell,
@@ -36,6 +39,8 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 static LAST_PRESENTED: AtomicU64 = AtomicU64::new(0);
 thread_local! { static INJECTING_POINTER: Cell<bool> = const { Cell::new(false) }; }
 struct Config {
+    #[cfg(feature = "test-support")]
+    timeline_fixture: Option<Mutex<Option<tempfile::TempDir>>>,
     model: PathBuf,
     samples: usize,
     warmup: usize,
@@ -44,10 +49,37 @@ struct Config {
     deformations: bool,
     animation: bool,
     properties: bool,
+    ui_only: bool,
     vertices: usize,
     mesh: Option<String>,
     warp: Option<String>,
     rotation: Option<String>,
+}
+
+#[cfg(target_os = "windows")]
+fn clock_alignment() -> anyhow::Result<serde_json::Value> {
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn QueryPerformanceCounter(value: *mut i64) -> i32;
+        fn QueryPerformanceFrequency(value: *mut i64) -> i32;
+    }
+    let mut frequency = 0i64;
+    ensure!(
+        unsafe { QueryPerformanceFrequency(&mut frequency) } != 0 && frequency > 0,
+        "QueryPerformanceFrequency failed"
+    );
+    let before = frame_trace::now_ns();
+    let mut qpc = 0i64;
+    let ok = unsafe { QueryPerformanceCounter(&mut qpc) };
+    let after = frame_trace::now_ns();
+    ensure!(ok != 0 && qpc >= 0, "QueryPerformanceCounter failed");
+    Ok(serde_json::json!({"qpc": qpc, "frequency": frequency,
+        "trace_ns_before": before, "trace_ns_after": after}))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn clock_alignment() -> anyhow::Result<serde_json::Value> {
+    Ok(serde_json::Value::Null)
 }
 
 pub fn init() -> anyhow::Result<()> {
@@ -94,7 +126,8 @@ pub fn init() -> anyhow::Result<()> {
             "invalid sample count"
         );
         ensure!((1..=1000).contains(&hz), "invalid benchmark frequency");
-        let model = PathBuf::from(
+        #[allow(unused_mut)]
+        let mut model = PathBuf::from(
             std::env::var_os("ZIPZI_BENCH_MODEL").context("ZIPZI_BENCH_MODEL is required")?,
         )
         .canonicalize()?;
@@ -102,12 +135,39 @@ pub fn init() -> anyhow::Result<()> {
         let deformations = std::env::var("ZIPZI_BENCH_DEFORMATIONS").is_ok_and(|s| s == "1");
         let animation = std::env::var("ZIPZI_BENCH_ANIMATION").is_ok_and(|s| s == "1");
         let properties = std::env::var("ZIPZI_BENCH_PROPERTIES").is_ok_and(|s| s == "1");
+        #[cfg(feature = "test-support")]
+        let timeline_fixture = if let Ok(variant) = std::env::var("ZIPZI_BENCH_TIMELINE_VARIANT") {
+            ensure!(
+                animation && matches!(variant.as_str(), "Natural" | "Dense"),
+                "Timeline variants require an animation workload and Natural/Dense"
+            );
+            let (assets, path, info) = timeline_variants::variants(&model)?;
+            std::fs::write(
+                PathBuf::from(&path).with_file_name("benchmark-fixture.json"),
+                serde_json::to_vec_pretty(&info)?,
+            )?;
+            std::fs::write(
+                PathBuf::from(&std::env::var_os("ZIPZI_FRAME_TRACE").unwrap())
+                    .with_file_name("timeline-fixture.json"),
+                serde_json::to_vec_pretty(&info)?,
+            )?;
+            model = path;
+            Some(Mutex::new(Some(assets)))
+        } else {
+            None
+        };
+        let ui_only = std::env::var("ZIPZI_BENCH_UI_ONLY").is_ok_and(|s| s == "1");
         ensure!(
             !properties || cfg!(feature = "test-support"),
             "properties benchmark requires --features test-support"
         );
         ensure!(
-            (parameters_only as u8 + deformations as u8 + animation as u8 + properties as u8) <= 1,
+            (parameters_only as u8
+                + deformations as u8
+                + animation as u8
+                + properties as u8
+                + ui_only as u8)
+                <= 1,
             "choose one benchmark workload"
         );
         #[cfg(feature = "test-support")]
@@ -121,6 +181,8 @@ pub fn init() -> anyhow::Result<()> {
         );
         CONFIG
             .set(Config {
+                #[cfg(feature = "test-support")]
+                timeline_fixture,
                 model,
                 samples,
                 warmup,
@@ -129,6 +191,7 @@ pub fn init() -> anyhow::Result<()> {
                 deformations,
                 animation,
                 properties,
+                ui_only,
                 vertices,
                 mesh: std::env::var("ZIPZI_BENCH_MESH").ok(),
                 warp: std::env::var("ZIPZI_BENCH_WARP").ok(),
@@ -138,6 +201,9 @@ pub fn init() -> anyhow::Result<()> {
     }
     // Refuse to overwrite an earlier run's measurements.
     let file = File::options().write(true).create_new(true).open(path)?;
+    // Opt-in only. Bracket QPC with trace-clock reads so PresentMon's absolute
+    // timestamps can be joined without estimating process startup duration.
+    let clock_alignment = clock_alignment()?;
     let (sender, receiver) = mpsc::sync_channel::<Option<frame_trace::Event>>(65_536);
     let thread = std::thread::spawn(move || -> std::io::Result<()> {
         let mut out = BufWriter::new(file);
@@ -171,7 +237,10 @@ pub fn init() -> anyhow::Result<()> {
             out,
             "{}",
             serde_json::json!({
-                "type": "metadata", "schema": 1, "clock": "mach_host_nanoseconds",
+                "type": "metadata", "schema": 1,
+                "clock": if cfg!(target_os = "macos") { "mach_host_nanoseconds" } else { "monotonic_process_nanoseconds" },
+                "platform": std::env::consts::OS,
+                "clock_alignment": clock_alignment,
                 "debug_assertions": cfg!(debug_assertions), "automatic": automatic,
                 "gpui_backend": "gpui-fast",
                 "view_retention": std::env::var("GPUI_VIEW_RETENTION").map_or(true, |v| v != "0"),
@@ -179,12 +248,13 @@ pub fn init() -> anyhow::Result<()> {
                 "model": config.map(|c| c.model.display().to_string()),
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
                 "parameters_only": config.map(|c| c.parameters_only),
+                "ui_only": config.map(|c| c.ui_only),
                 "parameter_overlay": parameter_overlay::metadata(),
                 "animation_drag": std::env::var("ZIPZI_BENCH_ANIMATION_DRAG").ok(),
                 "properties": config.map(|c| c.properties),
                 "property_cases": property_cases,
                 "property_case": std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok(),
-                "workloads": config.map(|c| if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.deformations { vec![5, 6, 7, 8] }
+                "workloads": config.map(|c| if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.deformations { vec![5, 6, 7, 8] }
                     else if c.parameters_only { vec![4] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
@@ -253,6 +323,7 @@ pub fn init() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 pub fn metal_mesh_overlay() -> bool {
     METAL_MESH_OVERLAY.load(Ordering::Relaxed)
 }
@@ -303,6 +374,13 @@ pub fn finish() {
                 error => eprintln!("frame trace writer failed: {error:?}"),
             }
         }
+    }
+    #[cfg(feature = "test-support")]
+    if let Some(fixture) = CONFIG
+        .get()
+        .and_then(|config| config.timeline_fixture.as_ref())
+    {
+        fixture.lock().unwrap().take();
     }
 }
 
@@ -382,7 +460,9 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 frame_trace::emit(frame_trace::next_id(), "benchmark_done", &[]);
                 return Ok(());
             }
-            let modes = if config.animation {
+            let modes = if config.ui_only {
+                0..=0u64
+            } else if config.animation {
                 animation::run(&view, cx, config).await?;
                 1..=0u64
             } else if config.deformations {
@@ -544,6 +624,11 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                             "benchmark window lost visibility or focus"
                         );
                         match mode {
+                            0 => {
+                                // Control: rebuild/repaint the same canvas image,
+                                // without requesting model rendering or readback.
+                                view.update(cx, |view, cx| view.notify_canvas(cx))?;
+                            }
                             1 => {
                                 dispatch_pointer(
                                     window,

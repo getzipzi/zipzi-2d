@@ -25,6 +25,9 @@ png = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
 ciborium = { version = "0.2.2", optional = true }
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [[example]]
 name = "project_binary_prototype"
 required-features = ["binary-prototype"]

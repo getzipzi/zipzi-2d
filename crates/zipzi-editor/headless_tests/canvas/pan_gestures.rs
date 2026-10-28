@@ -685,6 +685,7 @@ fn continuous_pan_does_not_notify_document_panels(cx: &mut TestAppContext) {
     );
 }
 
+#[cfg(target_os = "macos")]
 #[gpui_kit::test]
 #[ignore]
 fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {

@@ -1,12 +1,14 @@
 //! Metal overlay rendering, GPUI fallback and measured canvas capture.
 use super::*;
 
+#[cfg(target_os = "macos")]
 #[derive(Default)]
 pub(super) struct CanvasOverlay {
     device: Option<metal::Device>,
     renderer: Option<zipzi_editor_render::MetalOverlayRenderer>,
     error: Option<String>,
 }
+#[cfg(target_os = "macos")]
 impl CanvasOverlay {
     fn paint(
         &mut self,
@@ -103,21 +105,43 @@ impl ViewportSurface {
         let view = cx.entity();
         let measure = view.clone();
         let mouse = view.clone();
+        #[cfg(target_os = "macos")]
         let overlay_renderer = self.overlay_renderer.clone();
         let selection_outline = palette.selection_region;
         let selection_fill = selection_outline.opacity(0.12);
         canvas(
             move |bounds, window, cx| {
+                let metrics = ViewportMetrics {
+                    width: bounds.size.width.as_f32(),
+                    height: bounds.size.height.as_f32(),
+                    scale_factor: if window.is_visible() {
+                        window.scale_factor()
+                    } else {
+                        0.
+                    },
+                };
+                let surface = measure.read(cx);
+                let metrics_changed = surface.owner.upgrade().is_some_and(|owner| {
+                    let owner = owner.read(cx);
+                    surface.binding(&owner.editor).is_some_and(|binding| {
+                        owner.editor.viewport_metrics(binding.viewport) != Some(metrics)
+                    })
+                });
+                // An update during prepaint counts as a write to GPUI's retained
+                // dependencies even when it changes no fields. Avoid invalidating
+                // the owner and its readers on every unchanged canvas frame.
+                if surface.bounds == bounds
+                    && !metrics_changed
+                    && !benchmark::parameter_overlay::eager_viewport_layout()
+                {
+                    return;
+                }
+                let _span = benchmark::parameter_overlay::ui_span("ui.viewport_layout_sync");
                 measure.update(cx, |this, cx| {
-                    let metrics = ViewportMetrics {
-                        width: bounds.size.width.as_f32(),
-                        height: bounds.size.height.as_f32(),
-                        scale_factor: if window.is_visible() {
-                            window.scale_factor()
-                        } else {
-                            0.
-                        },
-                    };
+                    #[cfg(test)]
+                    {
+                        this.layout_syncs += 1;
+                    }
                     this.bounds = bounds;
                     let _ = this.owner.update(cx, |owner, cx| {
                         let Some(binding) = this.binding(&owner.editor) else {
@@ -140,6 +164,7 @@ impl ViewportSurface {
             move |bounds, _, window, _cx| {
                 benchmark::parameter_overlay::capture(4, || {
                     if benchmark::parameter_overlay::paint_any() {
+                        #[cfg(target_os = "macos")]
                         let result = overlay_renderer.borrow_mut().paint(
                             bounds,
                             &overlay,
@@ -148,13 +173,27 @@ impl ViewportSurface {
                             window,
                         );
                         // Preserve editing visibility if shader/device setup is unavailable.
-                        if result.is_err() {
+                        #[cfg(target_os = "macos")]
+                        let gpui_edges = result.is_err();
+                        #[cfg(not(target_os = "macos"))]
+                        let gpui_edges = true;
+                        if gpui_edges && benchmark::parameter_overlay::paint_edges() {
+                            #[cfg(feature = "bench-instrumentation")]
+                            let _span = zipzi_core::benchmark::span("overlay.gpui_mesh_edges");
                             let to_window =
                                 |p: ViewportPoint| bounds.origin + point(px(p.x), px(p.y));
                             if benchmark::batch_mesh_edges() {
-                                mesh_edges::paint_edges(&overlay.lines, bounds.origin, |path| {
-                                    window.paint_path(path, palette.mesh.opacity(0.45));
-                                });
+                                let paint =
+                                    |path| window.paint_path(path, palette.mesh.opacity(0.45));
+                                if benchmark::parameter_overlay::tessellated_edges() {
+                                    mesh_edges::paint_edges_tessellated(
+                                        &overlay.lines,
+                                        bounds.origin,
+                                        paint,
+                                    );
+                                } else {
+                                    mesh_edges::paint_edges(&overlay.lines, bounds.origin, paint);
+                                }
                             } else {
                                 for (a, b) in &overlay.lines {
                                     let mut path = PathBuilder::stroke(px(1.));
@@ -169,8 +208,15 @@ impl ViewportSurface {
                         if benchmark::parameter_overlay::paint_edges() {
                             #[cfg(feature = "bench-instrumentation")]
                             let _span = zipzi_core::benchmark::span("overlay.gpui_lines");
-                            crate::canvas_overlay::paint_lines(&overlay, bounds, palette, window);
+                            crate::canvas_overlay::paint_lines(
+                                &overlay,
+                                bounds,
+                                palette,
+                                benchmark::parameter_overlay::tessellated_edges(),
+                                window,
+                            );
                         }
+                        #[cfg(target_os = "macos")]
                         let marker_result = overlay_renderer.borrow_mut().paint(
                             bounds,
                             &overlay,
@@ -178,6 +224,10 @@ impl ViewportSurface {
                             zipzi_editor_render::OverlayPass::Vertices,
                             window,
                         );
+                        #[cfg(target_os = "macos")]
+                        let gpui_markers = marker_result.is_err();
+                        #[cfg(not(target_os = "macos"))]
+                        let gpui_markers = true;
                         if benchmark::parameter_overlay::paint_vertices() {
                             #[cfg(feature = "bench-instrumentation")]
                             let _span = zipzi_core::benchmark::span("overlay.gpui_markers");
@@ -185,7 +235,8 @@ impl ViewportSurface {
                                 &overlay,
                                 bounds.origin,
                                 palette,
-                                marker_result.is_err(),
+                                gpui_markers,
+                                benchmark::parameter_overlay::layer_markers(),
                                 window,
                             );
                         }

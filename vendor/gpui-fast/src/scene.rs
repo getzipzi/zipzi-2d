@@ -766,7 +766,7 @@ pub struct PaintSurface {
     pub order: DrawOrder,
     pub bounds: Bounds<ScaledPixels>,
     pub content_mask: ContentMask<ScaledPixels>,
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
     pub source: crate::SurfaceSource,
     pub opacity: f32,
 }
@@ -825,6 +825,28 @@ impl Path<Pixels> {
             vertices: self
                 .vertices
                 .iter()
+                .map(|vertex| vertex.scale(factor))
+                .collect(),
+            start: self.start.map(|start| start.scale(factor)),
+            current: self.current.scale(factor),
+            contour_count: self.contour_count,
+            color: self.color,
+        }
+    }
+
+    /// Scale this path, consuming its vertex buffer so collection can reuse it.
+    ///
+    /// The source and destination vertex types have the same size and alignment;
+    /// an owning iterator avoids allocating and copying a second path buffer.
+    pub fn into_scaled(self, factor: f32) -> Path<ScaledPixels> {
+        Path {
+            id: self.id,
+            order: self.order,
+            bounds: self.bounds.scale(factor),
+            content_mask: self.content_mask.scale(factor),
+            vertices: self
+                .vertices
+                .into_iter()
                 .map(|vertex| vertex.scale(factor))
                 .collect(),
             start: self.start.map(|start| start.scale(factor)),

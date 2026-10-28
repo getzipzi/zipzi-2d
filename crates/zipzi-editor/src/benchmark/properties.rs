@@ -143,7 +143,15 @@ fn key(window: &mut Window, value: &str, cx: &mut App) {
 }
 
 fn text(window: &mut Window, value: &str, cx: &mut App) {
-    key(window, "cmd-a", cx);
+    key(
+        window,
+        if cfg!(target_os = "macos") {
+            "cmd-a"
+        } else {
+            "ctrl-a"
+        },
+        cx,
+    );
     // Use the GPUI simulated IME, without TestWindowExt::input's per-character draws.
     for character in value.chars() {
         let _input = frame_trace::InputScope::begin(6);

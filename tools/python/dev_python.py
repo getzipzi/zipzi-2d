@@ -4,7 +4,6 @@ All arguments belong to Python: script.py, -c, -m, -, or no arguments (REPL).
 Build/install subprocesses never read the caller's stdin or write to stdout.
 """
 
-import fcntl
 import hashlib
 import json
 import os
@@ -16,9 +15,13 @@ import tempfile
 import venv
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools'))
+from workspace.dev_platform import file_lock, venv_python
 
 
 def run(command, **kwargs):
+    # Resolve PATH/PATHEXT consistently, including Windows command wrappers.
+    command = [shutil.which(command[0], path=kwargs.get('env', os.environ).get('PATH')) or command[0], *command[1:]]
     return subprocess.run(command, stdin=subprocess.DEVNULL, check=True, **kwargs)
 
 
@@ -39,14 +42,28 @@ def publish(source: Path, destination: Path):
         temporary.unlink(missing_ok=True)
 
 
+def publish_native(state: Path, site: Path, initializer: Path, library: Path, suffix: str):
+    """Publish an immutable package, then atomically select it for new processes."""
+    digest = hashlib.sha256(initializer.read_bytes())
+    with library.open('rb') as stream:
+        digest.update(hashlib.file_digest(stream, 'sha256').digest())
+    version = state / 'native' / digest.hexdigest()
+    native = version / 'zipzi_native'
+    publish(initializer, native / '__init__.py')
+    publish(library, native / ('_native' + suffix))
+    pointer = state / 'native-path.pth'
+    pointer.write_text('import sys; sys.path.insert(0, ' + repr(str(version)) + ')\n', encoding='utf-8')
+    publish(pointer, site / 'zipzi-dev-native.pth')
+    return native
+
+
 def prepare(root: Path, environment: dict[str, str]) -> Path:
     state = root / "target/python2/dev"
     state.mkdir(parents=True, exist_ok=True)
-    python = state / "venv/bin/python"
+    python = venv_python(state / 'venv')
     # Serialize environment creation, editable installation and artifact publication.
     # Release before running user code, so independent scripts can run concurrently.
-    with (state / "prepare.lock").open("a+b") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with file_lock(state / 'prepare.lock'):
         if not python.exists():
             venv.EnvBuilder(with_pip=False).create(python.parent.parent)
         info = json.loads(run([
@@ -81,9 +98,10 @@ def prepare(root: Path, environment: dict[str, str]) -> Path:
         }
         if len(libraries) != 1:
             raise RuntimeError(f"Expected one zipzi native library from Cargo, found {libraries}")
-        native = Path(info["site"]) / "zipzi_native"
-        publish(package / "native/zipzi_native/__init__.py", native / "__init__.py")
-        publish(libraries.pop(), native / ("_native" + info["suffix"]))
+        # Immutable versions stay available to processes that already loaded them.
+        # Publish the search path only after both package files are complete.
+        publish_native(state, Path(info['site']), package / 'native/zipzi_native/__init__.py',
+                       libraries.pop(), info['suffix'])
     return python
 
 
@@ -98,6 +116,10 @@ def main():
     python = prepare(ROOT, environment)
     environment["VIRTUAL_ENV"] = str(python.parent.parent)
     environment["PATH"] = str(python.parent) + os.pathsep + environment.get("PATH", "")
+    if os.name == 'nt':
+        # Windows exec spawns then exits the parent; wait to preserve shell IO
+        # and the user's exit status instead.
+        raise SystemExit(subprocess.call([str(python), *sys.argv[1:]], env=environment))
     os.execve(str(python), [str(python), *sys.argv[1:]], environment)
 
 

@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 3e7a81f621352431059cf6513bbffdce19f60d53ace07cf504e85e50004787bf.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a1; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 5b617607d6faf34d491efcaa28a9836d0b73aec5fb9e6f0320c12dbaa877f4cf.
 
 
 ## zipzi.ApiDescription
@@ -2907,11 +2907,13 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 Connect to an explicit/discovered host and return an owned Runtime client.
 
-endpoint is an absolute private Unix <profile>.sock path; None discovers it
-from ZIPZI_RUNTIME_DIR/ZIPZI_RUNTIME_PROFILE. start=False never launches a
+endpoint is an absolute private Unix socket path or a local Windows Named
+Pipe name; None discovers it from ZIPZI_RUNTIME_DIR/ZIPZI_RUNTIME_PROFILE.
+On Windows, start=True requires the discovered endpoint (or None).
+start=False never launches a
 process. With start=True, host is an absolute executable, or discovery uses
 ZIPZI_EDITOR_HOST and the supported app locations. host requires start=True.
-timeout is the positive finite per-request socket timeout in seconds;
+timeout is the positive finite per-request transport timeout in seconds;
 startup_timeout is the positive finite total startup/handshake budget.
 sdk_build=None accepts the compatible host build; an explicit string also
 requires an exact build match. Protocol and required capabilities always

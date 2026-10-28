@@ -1,5 +1,5 @@
 //! Deterministic SDK source identity, also available outside a Git checkout.
-use sha2::{Digest, Sha256};
+mod source_identity;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -24,6 +24,7 @@ fn main() {
         root.join("Cargo.toml"),
         root.join("Cargo.lock"),
         manifest.join("build.rs"),
+        manifest.join("source_identity.rs"),
     ];
     for name in [
         "zipzi-runtime",
@@ -52,22 +53,10 @@ fn main() {
             sources(&shaders, &mut files);
         }
     }
-    files.sort();
-    let mut hash = Sha256::new();
-    for path in files {
+    for path in &files {
         println!("cargo:rerun-if-changed={}", path.display());
-        let relative = path.strip_prefix(root).unwrap().to_string_lossy();
-        let data = fs::read(&path).expect("read build identity input");
-        hash.update(relative.as_bytes());
-        hash.update([0]);
-        hash.update((data.len() as u64).to_be_bytes());
-        hash.update(data);
     }
-    let digest: String = hash
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect();
+    let digest = source_identity::digest(root, files);
     println!(
         "cargo:rustc-env=ZIPZI_RUNTIME_SDK_BUILD={}+{digest}",
         std::env::var("CARGO_PKG_VERSION").unwrap()

@@ -23,7 +23,7 @@ pub(crate) fn trace_operation<T>(stage: &'static str, operation: impl FnOnce() -
     result
 }
 
-pub(crate) fn configure(worker: u64) {
+pub(crate) fn configure(_worker: u64) {
     // Only the benchmark can opt out, so the same binary supports an A/B run.
     let baseline = frame_trace::enabled()
         && std::env::var("ZIPZI_TRACE_DEFAULT_WORKER_QOS").is_ok_and(|v| v == "1");
@@ -41,10 +41,10 @@ pub(crate) fn configure(worker: u64) {
         frame_trace::emit(
             frame_trace::next_id(),
             "worker_qos",
-            &[("worker", worker), ("status", status as u64)],
+            &[("worker", _worker), ("status", status as u64)],
         );
         if status != 0 {
-            eprintln!("preview worker {worker}: could not set interactive QoS ({status})");
+            eprintln!("preview worker {_worker}: could not set interactive QoS ({status})");
         }
     }
 }

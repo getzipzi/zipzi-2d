@@ -4,7 +4,6 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import signal
 import socket
 import struct
 import subprocess
@@ -18,18 +17,16 @@ import zipzi
 from zipzi import bindings, events, meshes, ops, parameters, sampling, scene
 
 
-def stop(pid):
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except ProcessLookupError:
-        pass
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from connection_support import connect, stop
 
 
 class InstalledConnection(unittest.TestCase):
     def setUp(self):
-        self.assertIn("/site-packages/zipzi/", zipzi.__file__)
+        self.assertIn("/site-packages/zipzi/", Path(zipzi.__file__).as_posix())
         self.assertIsNone(importlib.util.find_spec("zipzi_native"))
-        self.directory = tempfile.TemporaryDirectory(prefix="zzpy2c-", dir="/tmp")
+        self.directory = tempfile.TemporaryDirectory(prefix="zzpy2c-")
         self.addCleanup(self.directory.cleanup)
         self.folder = Path(self.directory.name)
         self.endpoint = self.folder / "test.sock"
@@ -48,14 +45,14 @@ class InstalledConnection(unittest.TestCase):
         return [int(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
 
     def connect(self, **options):
-        return zipzi.connect(endpoint=self.endpoint, start=True, host=self.host, **options)
+        return connect(endpoint=self.endpoint, start=True, host=self.host, **options)
 
     def test_installed_complete_calls_keep_projection_job_and_cached_edit_state(self):
         geometry = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
                                    ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
         for operation in ("apply_authoring", "read_selection", "commit", "job"):
             with self.subTest(operation=operation), patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE=operation):
-                with zipzi.connect(endpoint=self.folder / operation / "test.sock", start=True, host=self.host) as runtime:
+                with connect(endpoint=self.folder / operation / "test.sock", start=True, host=self.host) as runtime:
                     session = runtime.sessions.create("79200000-0000-4000-8000-000000000050")
                     with session.edit("installed complete call") as edit:
                         id = zipzi.recover_call(edit.meshes.create, meshes.MeshSpec("Face", geometry))
@@ -80,7 +77,7 @@ import json,sys,time,zipzi
 from pathlib import Path
 from zipzi import meshes,ops
 while not Path(sys.argv[4]).exists(): time.sleep(.005)
-with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
+with connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
  if sys.argv[3]=='0':
   s=r.sessions.create('79200000-0000-4000-8000-000000000001')
   g=meshes.Geometry((0,1,2),((0.,0.),(1.,0.),(0.,1.)),((0.,0.),(1.,0.),(0.,1.)),((0,1,2),))
@@ -97,9 +94,10 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
  assert r.connection is not None
  print(json.dumps(dict(runtime=r.connection.runtime,pid=r.connection.host_pid,serial=s.id.serial)))
 '''
+        script = "import runpy; connect = runpy.run_path(" + repr(str(Path(__file__).resolve())) + ")['connect']\n" + script
         gate = self.folder / "go"
         children = [subprocess.Popen([sys.executable, "-I", "-c", script, str(self.endpoint), str(self.host), str(index), str(gate)],
-            cwd="/tmp", stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for index in range(2)]
+            cwd=tempfile.gettempdir(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for index in range(2)]
         def cleanup():
             for child in children:
                 if child.poll() is None:
@@ -114,7 +112,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
             outputs.append(json.loads(stdout))
         self.assertEqual(outputs[0], outputs[1])
         self.assertEqual(self.pids(), [outputs[0]["pid"]])
-        with zipzi.connect(endpoint=self.endpoint) as runtime:
+        with connect(endpoint=self.endpoint) as runtime:
             info, = runtime.sessions.list()
             self.assertEqual(info.history, (2, 0))
             self.assertIsNone(info.path)
@@ -143,6 +141,42 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
             self.assertEqual(len(self.pids()), 2)
             self.assertEqual(runtime.sessions.list(), ())
 
+    def test_protocol_refusal_keeps_existing_host(self):
+        with self.connect() as first:
+            with patch('zipzi.backends.connected.CONTRACT', 'deliberately-incompatible'):
+                with self.assertRaises(zipzi.SdkFailure) as failure:
+                    self.connect()
+            self.assertEqual(failure.exception.code, 'PROTOCOL_MISMATCH')
+            with self.connect() as second:
+                self.assertEqual(first.connection.runtime, second.connection.runtime)
+            self.assertEqual(len(self.pids()), 1)
+
+    def test_launcher_exit_during_startup_preserves_host(self):
+        script = ('import runpy; from pathlib import Path; '
+                  'connect=runpy.run_path(' + repr(str(Path(__file__).resolve())) + ')["connect"]; '
+                  'connect(endpoint=Path(' + repr(str(self.endpoint)) + '), start=True, host=Path('
+                  + repr(str(self.host)) + '), startup_timeout=15)')
+        child = subprocess.Popen([sys.executable, '-I', '-c', script],
+            env=dict(os.environ, ZIPZI_TEST_START_DELAY_MS='1500'),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            deadline = time.monotonic() + 10
+            while not self.pids():
+                self.assertIsNone(child.poll())
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(.01)
+            pid, = self.pids()
+            child.kill()
+            child.communicate(timeout=10)
+            with self.connect(startup_timeout=10) as runtime:
+                self.assertEqual(runtime.connection.host_pid, pid)
+                self.assertEqual(self.pids(), [pid])
+        finally:
+            if child.poll() is None:
+                child.kill()
+            child.communicate(timeout=10)
+
+    @unittest.skipIf(os.name == "nt", "Unix socket inode/permission fixture; Windows pipe acceptance is separate")
     def test_stale_socket_is_replaced_by_exclusive_host_owner(self):
         with socket.socket(socket.AF_UNIX) as stale:
             stale.bind(str(self.endpoint))
@@ -155,11 +189,11 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
         with self.connect() as first:
             self.assertIsNotNone(first.connection)
             with self.assertRaises(zipzi.SdkFailure) as error:
-                zipzi.connect(endpoint=self.endpoint, start=True, host=Path("/missing/host"), sdk_build="wrong")
+                connect(endpoint=self.endpoint, start=True, host=(self.folder / "missing-host"), sdk_build="wrong")
             self.assertEqual(error.exception.code, "BUILD_MISMATCH")
             self.assertEqual(len(self.pids()), 1)
             assert first.connection is not None
-            with zipzi.connect(endpoint=self.endpoint, sdk_build=first.connection.sdk_build) as second:
+            with connect(endpoint=self.endpoint, sdk_build=first.connection.sdk_build) as second:
                 self.assertEqual(first.connection, second.connection)
                 with self.assertRaises(FrozenInstanceError):
                     second.connection.host_pid = 0
@@ -167,12 +201,13 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
     def test_discovery_without_start_and_explicit_host_environment(self):
         with patch.dict(os.environ, ZIPZI_RUNTIME_DIR=str(self.folder), ZIPZI_RUNTIME_PROFILE="test", ZIPZI_EDITOR_HOST=str(self.host)):
             with self.assertRaises(FileNotFoundError):
-                zipzi.connect()
+                connect()
             self.assertEqual(self.pids(), [])
-            with zipzi.connect(start=True) as first:
-                with zipzi.connect() as second:
+            with connect(start=True) as first:
+                with connect() as second:
                     self.assertEqual(first.connection, second.connection)
 
+    @unittest.skipIf(os.name == "nt", "Unix socket inode/permission fixture; Windows pipe acceptance is separate")
     def test_unsafe_directory_socket_and_lock_are_rejected_without_writes(self):
         self.folder.chmod(0o755)
         with self.assertRaises(PermissionError):
@@ -198,7 +233,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
             with self.subTest(operation=operation), patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE=operation):
                 directory = self.folder / operation
                 endpoint = directory / "test.sock"
-                with zipzi.connect(endpoint=endpoint, start=True, host=self.host) as runtime:
+                with connect(endpoint=endpoint, start=True, host=self.host) as runtime:
                     session = runtime.sessions.create("79200000-0000-4000-8000-000000000010")
                     with self.assertRaises(zipzi.OutcomeUnknown) as error:
                         runtime.sessions.list() if operation == "list_sessions" else runtime.sessions.attach(session.id)
@@ -219,7 +254,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
         while self.endpoint.exists():
             # SIGTERM bypasses Drop, so socket existence is not a liveness test.
             try:
-                with zipzi.connect(endpoint=self.endpoint, timeout=.1):
+                with connect(endpoint=self.endpoint, timeout=.1):
                     pass
             except (ConnectionRefusedError, FileNotFoundError, EOFError, ConnectionResetError):
                 break
@@ -238,12 +273,13 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
             with self.assertRaises(ValueError):
                 zipzi.connect(endpoint=path)
         with self.assertRaises(ValueError):
-            zipzi.connect(endpoint=self.endpoint, start=True, host=Path("relative"))
+            connect(endpoint=self.endpoint, start=True, host=Path("relative"))
         with self.assertRaises(zipzi.SdkFailure) as error:
-            zipzi.connect(endpoint=self.endpoint, start=True, host=Path("/missing/host"))
+            connect(endpoint=self.endpoint, start=True, host=(self.folder / "missing-host"))
         self.assertEqual(error.exception.code, "HOST_NOT_FOUND")
         self.assertEqual(self.pids(), [])
 
+    @unittest.skipIf(os.name == "nt", "Unix socket inode/permission fixture; Windows pipe acceptance is separate")
     def test_protocol_mismatch_and_handshake_timeout_never_start_another_host(self):
         for respond in (True, False):
             with self.subTest(respond=respond), socket.socket(socket.AF_UNIX) as listener:
@@ -291,7 +327,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
         for operation in ("subscribe", "events", "read_selection", "apply_authoring", "commit", "job"):
             with self.subTest(operation=operation), patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE=operation):
                 endpoint = self.folder / operation / "test.sock"
-                with zipzi.connect(endpoint=endpoint, start=True, host=self.host) as runtime:
+                with connect(endpoint=endpoint, start=True, host=self.host) as runtime:
                     session = runtime.sessions.create("79200000-0000-4000-8000-000000000030")
                     if operation == "subscribe":
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
@@ -358,7 +394,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
             before = session.info()
             with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                 session.modeling.sample(({angle:.5},))
-            with zipzi.connect(endpoint=self.endpoint) as peer:
+            with connect(endpoint=self.endpoint) as peer:
                 with peer.sessions.attach(session.id).edit("later") as edit:
                     edit.bindings.set_keyform(binding, bindings.Keyform((1.,),tuple((x+20.,y) for x,y in geometry.positions)))
             original = lost.exception.recover()
@@ -372,7 +408,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
         for finish in ("commit", "cancel"):
             with self.subTest(finish=finish), patch.dict(os.environ,
                     ZIPZI_TEST_BUSY_COMMIT_ONCE="1", ZIPZI_TEST_DROP_RESPONSE="commit"):
-                with zipzi.connect(endpoint=self.folder / finish / "test.sock", start=True, host=self.host) as runtime:
+                with connect(endpoint=self.folder / finish / "test.sock", start=True, host=self.host) as runtime:
                     session = runtime.sessions.create("79200000-0000-4000-8000-000000000042")
                     edit = session.edit("recover Busy")
                     with self.assertRaises(zipzi.OutcomeUnknown) as lost:
@@ -414,7 +450,7 @@ with zipzi.connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2]))
                 self.assertEqual(session.parameters.get(parameter).value.name, "Base")
                 self.assertEqual(session.info().history, (1, 0))
         with patch.dict(os.environ, ZIPZI_TEST_DROP_RESPONSE="release_edit"):
-            with zipzi.connect(endpoint=self.folder / "cleanup" / "test.sock", start=True, host=self.host) as runtime:
+            with connect(endpoint=self.folder / "cleanup" / "test.sock", start=True, host=self.host) as runtime:
                 session = runtime.sessions.create("79200000-0000-4000-8000-000000000041")
                 edit = session.edit("lost cleanup")
                 with self.assertRaises(zipzi.SdkFailure) as original:

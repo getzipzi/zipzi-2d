@@ -53,8 +53,8 @@ impl EditorView {
             .as_deref()
             .and_then(|p| p.parent())
             .map(PathBuf::from)
-            .or_else(|| std::env::var_os("HOME").map(PathBuf::from))
-            .unwrap_or_else(|| PathBuf::from("/"));
+            .or_else(|| zipzi_editor_core::platform_paths::user_home().ok())
+            .unwrap_or_else(|| std::env::current_dir().expect("file dialog initial directory"));
         let suggested = summary
             .title
             .unwrap_or_else(|| t!("project.untitled").into_owned())
