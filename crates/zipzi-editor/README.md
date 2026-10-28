@@ -7,12 +7,10 @@ input routing and native UI integration. It consumes
 [`zipzi-editor-core`](../zipzi-editor-core/README.md) for editing state and
 [`zipzi-editor-render`](../zipzi-editor-render/README.md) for scene rendering.
 
-The Windows port will use the shared [wgpu backend](../zipzi-render-wgpu/README.md).
-The macOS wgpu model-preview route is already available; Windows window,
-viewport and overlay integration remains to be connected and validated.
-Windows development requires Rust 1.95+, MSVC C++ Build Tools and the Windows SDK.
+Windows builds require Rust 1.95+, MSVC C++ Build Tools and the Windows SDK.
 Settings use `%APPDATA%\Zipzi Editor`. The resident Unix socket is unavailable
-on Windows; the Editor owns its in-process Runtime.
+on Windows; the Editor owns its in-process Runtime. Windows window, viewport and
+overlay rendering integration is not yet supported.
 
 ## Develop and test
 
@@ -52,24 +50,6 @@ Explicit relative model/output arguments and `CARGO_TARGET_DIR` are relative to 
 caller; defaults use the repository root. `CARGO_BUILD_TARGET` is supported through
 Cargo artifact messages. Dev builds intentionally override `CARGO_TARGET_DIR`.
 
-## wgpu model preview on macOS
-
-`cargo run --locked -p zipzi-editor --features wgpu-backend` selects wgpu for
-model preview and Runtime GPU observation. This uses the real wgpu pipeline on
-macOS, with a GPU texture handoff into the existing GPUI Metal surface. Completion
-is synchronized on the rendering worker before the texture is published.
-Window rendering and interaction overlays remain Metal-specific.
-
-For focused application composition coverage:
-
-```sh
-env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
-  --features test-support,wgpu-backend --test native_render metal::
-```
-
-See the [wgpu backend](../zipzi-render-wgpu/README.md) for pixel parity and
-real-model comparison commands.
-
 ## Local model acceptance
 
 Licensed model acceptance discovers optional assets under the repository root `models/local/` and
@@ -77,8 +57,8 @@ reports a skip when none are available. Explicit model paths must exist. Set
 `ZIPZI_ANIMATION_REQUIRE_ASSET=1` or `ZIPZI_TIMELINE_REQUIRE_ASSET=1` to require
 local assets, including in benchmark runs.
 
-The opt-in [Mao format round-trip audit](../../docs/archive/plans/mao-transfer-roundtrip-tests.md)
-repeats Zipzi, Cubism and runtime transfers and reports document/behavior loss:
+The opt-in Mao format round-trip test repeats Zipzi, Cubism and runtime
+transfers and reports document and behavior loss:
 
 ```sh
 env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test acceptance transfer_roundtrip::mao_repeated -- --ignored --nocapture
@@ -157,53 +137,11 @@ Load/import/save completion returns to the application host even without windows
 errors remain available when a window is reopened.
 
 The focused native host gate is `./tools/test-editor.sh ui -- headless_tests::runtime_host`.
-The Release dual-viewport/background-client probe uses
-`runtime_interaction_acceptance` with `ZIPZI_TIMELINE_MODEL`,
-`ZIPZI_RUNTIME_INTERACTION_OUTPUT` and `ZIPZI_RUNTIME_INTERACTION_SAMPLES` (at
-least 30). It checks input reaches both current Metal surfaces while another
-session publishes Runtime jobs, and verifies visible history isolation.
-Set `ZIPZI_RUNTIME_INTERACTION_READS=1` to add continuous four-pose CPU sampling,
-independent Preview sampling and 96×96 GPU observation on that Runtime. The
-report retains per-input timings and verifies background execution overlaps the
-input loop. Use the identical driver in both Release builds for a comparison.
-
-### Local Python connection (R3)
-
-The production Editor owns a private Unix socket and its endpoint lock for the
-whole resident lifetime, including `--no-window`. Python cold startup transfers
-an already locked owner descriptor; another desktop invocation forwards a window
-reopen to the existing process after a strict handshake. Protocol work enters
-Runtime on the application thread, and worker completion remains independent of
-windows. Development launches set `ZIPZI_EDITOR_HOST` to their paired executable;
-a reused resident host is reported without claiming ownership of its process.
-See [new Python client connection usage](../zipzi-python2/README.md#desktop-host-and-resident-sessions)
-and the [R0–R4 reconnection record](../../docs/archive/plans/sdk-runtime/python2-r0-r4.md).
+The IPC and handoff acceptance tests require an isolated Python client and Metal:
 
 ```sh
 ./tools/test-sdk.sh python2-connected
 ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python2/tools/connected.py --install-only) \
   env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
-  --features test-support --test runtime_ipc_acceptance
+  --features test-support --test runtime_ipc_acceptance --test runtime_handoff_acceptance
 ```
-
-The native acceptance requires the isolated client installed by the first
-command and a working Metal device; it fails when prerequisites are absent.
-
-R6 direct handoff has a separate synthetic native case using the same installed
-client and production IPC/Editor/Metal chain:
-
-```sh
-ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python2/tools/connected.py --install-only) \
-  env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
-  --features test-support --test runtime_handoff_acceptance
-```
-
-It covers one Python batch of mesh/texture/Motion changes, human property text
-input and Timeline dragging, Undo/Redo, a new Python process reading and extending
-the refinement, the installed command-line example, and temporary image cleanup.
-The same flow now finishes durable save/reopen, motion/runtime-package export,
-PCM attachment verification and redisplay of the paused animation after IO.
-See the [R5/R7 closeout record](../../docs/archive/plans/sdk-runtime/python2-r7-closeout.md)
-for normal app/DMG installation and real-model acceptance.
-Committed content and resources survive each client exit. No licensed model is
-required. [Scope and evidence](../../docs/archive/plans/sdk-runtime/python2-r6-handoff.md).

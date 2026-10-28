@@ -1,18 +1,33 @@
-# PSD import module
+# zipzi-psd
 
-`zipzi-psd` converts a layered, 8-bit RGB PSD into a new in-memory Zipzi `Document` and a list of PNG assets. It does not write files or replace a live editing session.
+Imports a layered 8-bit RGB PSD into an in-memory Zipzi `Document` and PNG
+assets. The importer does not write files or replace an active session.
 
 ```rust
 let bundle = zipzi_psd::import_psd(&std::fs::read("art.psd")?)?;
-// Publish each bundle.assets[i].bytes at bundle.assets[i].source,
-// relative to the destination project root, before opening/saving the document.
+// Write bundle.assets[i].bytes to bundle.assets[i].source relative to the project root.
 let document = bundle.document;
 ```
 
-Raster layers become cropped PNG assets and rectangular meshes. The PSD canvas, layer names, positions, stacking order, visibility, opacity, supported blend modes, and group hierarchy are retained. A raster or group base and its consecutive clipping layers become an isolated offscreen group. Group bases first composite their children into a separate surface, so clipping uses their combined alpha and follows edits to those children. Clipped layers use source-atop blending, preserving the base's pixel alpha, opacity, and visibility; a raster base's blend mode applies to the completed group. Synthetic clipping Parts retain the individual editable meshes and do not increase the report's PSD group count. Object IDs and PNG paths are deterministic for identical input bytes. This module does not infer a rig, parameters, or deformers.
+Raster layers become cropped PNG assets and rectangular meshes. The canvas,
+layer names, positions, stacking order, visibility, opacity, supported blend
+modes and group hierarchy are retained. Clipping layers use isolated offscreen
+groups; exporting them requires MOC3 5.3. The importer does not infer a rig,
+parameters or deformers.
 
-Current supported blend modes are normal, multiply, and linear dodge (additive). Clipped groups, clipping without a base in the same group, clipping with **Blend Clipped Layers As Group** explicitly disabled, layer masks, vector masks, adjustments, layer effects, group opacity, and unsupported blend modes return `UNSUPPORTED_LAYER`. Clipping uses offscreens and extended blends, requiring MOC3 5.3 when exporting. Text, vector, and placed layers with available raster pixels import as raster images and produce warnings. Empty or pixel-less layers are rejected. PSD/PSB features outside 8-bit RGB PSD version 1 are rejected. Input files have a 512 MiB limit. Decoded layer pixels above the recommended 512 MiB budget produce an import warning and continue importing; there is no cumulative decode-memory rejection limit. Canvas dimensions and layer-count checks still apply.
+Normal, multiply and linear dodge blend modes are supported. Unsupported blend
+modes, layer or vector masks, adjustments, effects, group opacity and unsupported
+clipping configurations return `UNSUPPORTED_LAYER`. Text, vector and placed
+layers with raster pixels import as images with warnings; empty layers are
+rejected. PSD/PSB features outside 8-bit RGB PSD version 1 are unsupported.
+Input is limited to 512 MiB; decoded pixels above 512 MiB produce a warning.
 
-The returned asset paths are relative. `zipzi-project` publishes the PNG files and manifest together through `DocumentSession::import_psd_authoring`; `zipzi-sdk` and Python expose this as `import_psd(source, destination)`. The destination must be a new project directory. A failed import leaves the active project untouched.
+`DocumentSession::import_psd_authoring` publishes a new project and its assets;
+SDK and Python expose `import_psd(source, destination)`. The destination must be
+new, and a failed import leaves the active project untouched. For unsaved Rust
+editing, use `AuthoringSession::import_psd_in_memory` and `read_asset`; image
+assets stay in memory until the project is saved.
 
-For unsaved editing, Rust callers use `AuthoringSession::import_psd_in_memory(source, expected_version)` and read textures with `read_asset(asset_id)`. PNGs remain in the session's memory until `save_project` is called; import writes no project or temporary resource files. The first save retains undo/redo, including original imported textures that appear only in history.
+```sh
+cargo test --locked -p zipzi-psd
+```

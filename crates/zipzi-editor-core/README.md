@@ -21,10 +21,6 @@ and viewport transforms provide the rendering boundary consumed by
 - `src/lib.rs`: public types and exports.
 
 Keep native widgets, GPU resources and window lifecycle in the consuming crates.
-R1 adds `HostedDocument`, a typed SessionId reference that borrows Runtime's
-original SDK session without owning a second authoring instance. The integration
-fixture verifies shared publication/history. Existing `Document` ownership and
-native window lifecycle migrate in R2; this bridge does not claim that migration.
 
 Reusable model semantics belong in the SDK; this crate supplies Editor policy
 and coordination around them.

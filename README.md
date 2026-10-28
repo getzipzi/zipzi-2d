@@ -11,14 +11,8 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
 - **Desktop Editor:** [setup, development and native tests](crates/zipzi-editor/README.md).
 - **Rust SDK:** [authoring API](crates/zipzi-sdk/README.md) and
   [crate responsibilities](MONOREPO.md#crate-responsibilities).
-- **Python SDK:** [independent Runtime client](crates/zipzi-python2/README.md),
-  [implemented capabilities](crates/zipzi-python2/CAPABILITIES.md) and
-  [Runtime R0–R4 integration](docs/archive/plans/sdk-runtime/python2-r0-r4.md) and
-  [R5/P5 animation authoring](docs/archive/plans/sdk-runtime/python2-r5-authoring.md).
-  [R5/R7 final acceptance](docs/archive/plans/sdk-runtime/python2-r7-closeout.md) records
-  the current macOS/CPython 3.14 distribution, complete workflows and performance.
-  [Python P7 closeout](docs/archive/plans/python-sdk-rewrite/p7.md) reconciles the complete
-  Python contract, capability evidence, ownership boundaries and measured costs.
+- **Python SDK:** [client setup and usage](crates/zipzi-python2/README.md) and
+  [capabilities](crates/zipzi-python2/CAPABILITIES.md).
 - **Contributing:** [repository structure](MONOREPO.md),
   [test gates](tools/README.md#test-coverage), [tools](tools/README.md) and
   [documentation index](docs/README.md).
@@ -27,8 +21,7 @@ See [release preparation and Alpha downloads](docs/RELEASING.md).
 
 Use Rust 1.95 or newer, uv 0.10.7 or newer, and CPython 3.14.
 The Editor additionally requires macOS, Xcode Command Line Tools and a
-Metal-capable GPU. The [Windows port](crates/zipzi-editor/README.md) will use the
-shared wgpu backend; Windows rendering integration is pending.
+Metal-capable GPU. See the [Editor README](crates/zipzi-editor/README.md) for platform requirements.
 Run these commands from the repository root:
 
 ```sh
@@ -46,7 +39,7 @@ cargo run --locked -p zipzi-editor
 uv run --locked python tools/test_tools.py
 ```
 
-For the new Python SDK, `./tools/test-sdk.sh python2` refreshes its native adapter
+For the Python SDK, `./tools/test-sdk.sh python2` refreshes its native adapter
 and runs Local/Connected behavior and static types. `python2-connected` installs
 the pure wheel and validates real subprocess host discovery and session binding;
 add `--editor-host /absolute/path/to/zipzi-editor` for the current desktop host.
@@ -71,9 +64,9 @@ commands from the repository root; inspect available modes with
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |
 | Editor UI (macOS/Metal) | `./tools/test-editor.sh ui <filter>` |
 | Runtime Python SDK (`zipzi-python2`), Local/Connected and types | `./tools/test-sdk.sh python2` ([scope](crates/zipzi-python2/README.md)) |
-| Runtime GPU observation / inspection (usable GPU required) | `./tools/test-sdk.sh python2 --observation`; [scope and evidence](docs/archive/plans/sdk-runtime/python2-r5-observation.md) |
+| Runtime GPU observation / inspection (usable GPU required) | `./tools/test-sdk.sh python2 --observation` |
 | Python complete-call recovery, Edit state and Job timeout | `./tools/test-sdk.sh python2 --recovery` (optional `P3ARecovery.test_name`) |
-| Python collection pages, Session detach/close and offline catalog | `./tools/test-sdk.sh python2 --discovery` ([P3A-6 results and remaining gates](docs/archive/plans/python-sdk-rewrite/p3a-6.md)) |
+| Python collection pages, Session detach/close and offline catalog | `./tools/test-sdk.sh python2 --discovery` |
 | Installed new client, host discovery and session binding | `./tools/test-sdk.sh python2-connected` (optional `--editor-host /absolute/path/to/zipzi-editor`) |
 | Repository tools | `uv run --locked python tools/test_tools.py -p test_<tool>.py` |
 
@@ -98,8 +91,7 @@ Python wheels and macOS app bundles have separate
 ## License and third-party rights
 
 SDK components use [MIT](LICENSE-MIT); Editor components use
-[GPL-3.0-only](LICENSE-GPL-3.0). Directory consolidation does not change
-licensing. [LICENSING](LICENSING.md) identifies scopes and shared-file origins;
+[GPL-3.0-only](LICENSE-GPL-3.0). [LICENSING](LICENSING.md) identifies scopes and shared-file origins;
 [third-party notices](THIRD_PARTY_NOTICES.md) retain dependency and benchmark exceptions.
 
 Live2D, Cubism, the Live2D Cubism SDK, Cubism Core, Cubism Native Framework,

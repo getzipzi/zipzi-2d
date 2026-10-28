@@ -46,6 +46,5 @@ cargo test --locked -p zipzi-runtime --features gpu-observation --test observati
 ```
 
 GPU observation through Python is checked explicitly with
-`./tools/test-sdk.sh python2 --observation`. See the
-[Runtime/Python observation record](../../docs/archive/plans/sdk-runtime/python2-r5-observation.md).
+`./tools/test-sdk.sh python2 --observation`.
 `ObservedFrame.adapter_backend` distinguishes native `Metal` from `wgpu (Metal)`.

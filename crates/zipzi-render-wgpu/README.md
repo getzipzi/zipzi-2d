@@ -68,8 +68,7 @@ Editor and the Python native adapter. Non-macOS observation uses wgpu by default
 The Editor feature selects wgpu for model previews. Its current macOS/GPUI bridge
 retains the native output texture after wgpu completion on the rendering worker;
 there is no image readback or UI-thread wait. GPUI window rendering and interaction
-overlays still use native Metal. Windows/Linux window/overlay integration and
-platform acceptance remain separate work.
+overlays still use native Metal. Windows/Linux window and overlay integration is not supported.
 
 ## Backend benchmark on macOS
 
@@ -86,6 +85,3 @@ frames and alternates backend order between rounds. CSV records CPU submission,
 completed-frame wall time and allocation/pass counters. It excludes loading,
 scene mutation and readback; completed-frame time includes queue scheduling and
 CPU waits, and is not a GPU timestamp or full Editor interaction latency.
-
-[Local review and acceptance evidence](../../docs/archive/wgpu-review-2026-10-28.md)
-records the tested revision, pixel gates, before/after measurements and limits.
