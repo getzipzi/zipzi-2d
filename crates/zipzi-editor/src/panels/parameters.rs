@@ -64,6 +64,22 @@ struct KeyformToolbarState {
     delete_all_reason: Option<String>,
 }
 
+struct LinkToolbarState {
+    context: Option<(DocumentId, String)>,
+    linked: bool,
+    reason: Option<String>,
+}
+
+impl LinkToolbarState {
+    fn unavailable(reason: String) -> Self {
+        Self {
+            context: None,
+            linked: false,
+            reason: Some(reason),
+        }
+    }
+}
+
 impl KeyformToolbarState {
     fn unavailable(reason: String) -> Self {
         Self {
@@ -133,6 +149,7 @@ pub struct ParametersPanel {
     only_related: bool,
     collapsed_groups: HashSet<Option<String>>,
     layout: ParameterLayout,
+    links: Vec<(String, String)>,
     visible_rows: Vec<ListRow>,
     navigation: ParameterNavigation,
     navigation_focused: bool,
@@ -141,6 +158,7 @@ pub struct ParametersPanel {
     scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
     slider_drag: Option<Entity<SliderState>>,
+    pad_drag: Option<interactions::PadDragState>,
     sorting: Entity<SortState>,
     _sorting_observe: Subscription,
     _observe: Subscription,
@@ -188,6 +206,7 @@ impl ParametersPanel {
                 only_related: false,
                 collapsed_groups: HashSet::new(),
                 layout: ParameterLayout::default(),
+                links: Vec::new(),
                 visible_rows: Vec::new(),
                 navigation: ParameterNavigation::default(),
                 navigation_focused: false,
@@ -195,6 +214,7 @@ impl ParametersPanel {
                 scroll: UniformListScrollHandle::new(),
                 subscriptions: Vec::new(),
                 slider_drag: None,
+                pad_drag: None,
                 sorting,
                 _sorting_observe: sorting_observe,
             }
@@ -202,7 +222,7 @@ impl ParametersPanel {
     }
 
     pub(crate) fn benchmark_slider_dragging(&self) -> bool {
-        self.slider_drag.is_some()
+        self.slider_drag.is_some() || self.pad_drag.is_some()
     }
 
     pub(crate) fn benchmark_slider(&self, cx: &App) -> Option<(Bounds<Pixels>, Point<Pixels>)> {
@@ -332,7 +352,7 @@ impl ParametersPanel {
             zipzi_editor_core::ParameterKeyformAction::DeleteAll,
             keyforms.context,
             keyforms.delete_all_reason,
-            interaction_reason,
+            interaction_reason.clone(),
             cx,
         );
         let add_keyforms = crate::ui::compact::group(
@@ -349,6 +369,7 @@ impl ParametersPanel {
             vec![delete_current, delete_all],
         )
         .flex_shrink_0();
+        let link_button = self.link_toolbar_button(interaction_reason, cx);
         PanelToolbar::new("parameters-panel-toolbar")
             .action(move |_| {
                 Button::new("new-parameter")
@@ -367,6 +388,7 @@ impl ParametersPanel {
             })
             .control(add_keyforms)
             .control(delete_keyforms)
+            .control(link_button)
             .control(
                 crate::ui::compact::header_button(Button::new("parameters-reset-defaults"))
                     .icon(IconName::RotateCcw)
@@ -494,6 +516,96 @@ impl ParametersPanel {
         }
     }
 
+    fn link_toolbar_button(
+        &self,
+        interaction_reason: Option<String>,
+        cx: &mut Context<Self>,
+    ) -> Button {
+        let state = self.link_toolbar_state(cx);
+        let label = t!(if state.linked {
+            "parameter.unlink_parameters"
+        } else {
+            "parameter.link_parameters"
+        })
+        .into_owned();
+        let disabled = interaction_reason.is_some() || state.reason.is_some();
+        let tip = interaction_reason
+            .or(state.reason)
+            .unwrap_or_else(|| label.clone());
+        let context = state.context;
+        crate::ui::compact::header_button(crate::ui::compact::toggle(
+            Button::new("parameter-toggle-link"),
+            state.linked,
+        ))
+        .icon(IconName::Link)
+        .accessibility_label(label)
+        .tooltip(tip)
+        .disabled(disabled)
+        .on_click(cx.listener(move |this, _, window, cx| {
+            if let Some((document, parameter)) = &context {
+                this.toggle_parameter_link(*document, parameter, window, cx);
+            }
+        }))
+    }
+
+    fn link_toolbar_state(&self, cx: &App) -> LinkToolbarState {
+        let Some(document_id) = self.document_id else {
+            return LinkToolbarState::unavailable(
+                t!("parameter.link_select_parameter").into_owned(),
+            );
+        };
+        let Some(parameter_id) = self.navigation.inspected.as_ref().and_then(|object| {
+            (object.kind == zipzi_editor_core::ObjectKind::Parameter).then(|| object.id.clone())
+        }) else {
+            return LinkToolbarState::unavailable(
+                t!("parameter.link_select_parameter").into_owned(),
+            );
+        };
+        let Some(owner) = self.owner.upgrade() else {
+            return LinkToolbarState::unavailable(
+                t!("parameter.keyform_unavailable").into_owned(),
+            );
+        };
+        let state = owner.read(cx);
+        let Some(document) = state.editor.document() else {
+            return LinkToolbarState::unavailable(
+                t!("parameter.keyform_unavailable").into_owned(),
+            );
+        };
+        if !self.rows.iter().any(|row| row.parameter.id == parameter_id) {
+            return LinkToolbarState::unavailable(
+                t!("parameter.link_select_parameter").into_owned(),
+            );
+        }
+        let context = Some((document_id, parameter_id.clone()));
+        if document.parameter_link_partner(&parameter_id).is_some() {
+            return LinkToolbarState {
+                context,
+                linked: true,
+                reason: None,
+            };
+        }
+        let Some(next_id) = document.adjacent_next_parameter(&parameter_id) else {
+            return LinkToolbarState {
+                context,
+                linked: false,
+                reason: Some(t!("parameter.link_no_adjacent_next").into_owned()),
+            };
+        };
+        if document.parameter_link_partner(&next_id).is_some() {
+            return LinkToolbarState {
+                context,
+                linked: false,
+                reason: Some(t!("parameter.link_next_already_linked").into_owned()),
+            };
+        }
+        LinkToolbarState {
+            context,
+            linked: false,
+            reason: None,
+        }
+    }
+
     fn refresh_visible_rows(&mut self, cx: &mut Context<Self>) {
         let related = self.only_related.then(|| {
             self.rows
@@ -517,6 +629,78 @@ impl ParametersPanel {
                         cx.notify();
                     });
                 }
+            }
+        }
+        self.refresh_linked_rows(cx);
+    }
+
+    fn refresh_linked_rows(&mut self, cx: &mut Context<Self>) {
+        use view::{LinkedPadState, LinkedRole};
+        let active_links: HashSet<(&str, &str)> = self
+            .links
+            .iter()
+            .map(|(a, b)| (a.as_str(), b.as_str()))
+            .collect();
+        let mut desired: Vec<Option<LinkedPadState>> = vec![None; self.rows.len()];
+        let mut i = 0;
+        while i + 1 < self.visible_rows.len() {
+            if let (
+                ListRow::Parameter {
+                    index: top_index, ..
+                },
+                ListRow::Parameter {
+                    index: bottom_index,
+                    ..
+                },
+            ) = (&self.visible_rows[i], &self.visible_rows[i + 1])
+            {
+                let top_row = &self.rows[*top_index];
+                let bottom_row = &self.rows[*bottom_index];
+                if top_row.parameter.group_id == bottom_row.parameter.group_id
+                    && active_links.contains(&(
+                        top_row.parameter.id.as_str(),
+                        bottom_row.parameter.id.as_str(),
+                    ))
+                {
+                    let make = |role| LinkedPadState {
+                        role,
+                        top_parameter: top_row.parameter.clone(),
+                        bottom_parameter: bottom_row.parameter.clone(),
+                        top_visual: top_row.visual.clone(),
+                        bottom_visual: bottom_row.visual.clone(),
+                        top_slider: top_row.slider.clone(),
+                        bottom_slider: bottom_row.slider.clone(),
+                    };
+                    desired[*top_index] = Some(make(LinkedRole::Top));
+                    desired[*bottom_index] = Some(make(LinkedRole::Bottom));
+                    i += 2;
+                    continue;
+                }
+            }
+            i += 1;
+        }
+        for (row, next_linked) in self.rows.iter().zip(desired) {
+            if row.view.read(cx).linked != next_linked {
+                row.view.update(cx, |view, cx| {
+                    let partner_changed = view.linked.as_ref().map(|l| match l.role {
+                        LinkedRole::Top => &l.bottom_slider,
+                        LinkedRole::Bottom => &l.top_slider,
+                    }) != next_linked.as_ref().map(|l| match l.role {
+                        LinkedRole::Top => &l.bottom_slider,
+                        LinkedRole::Bottom => &l.top_slider,
+                    });
+                    if partner_changed {
+                        view._partner_observe = next_linked.as_ref().map(|l| {
+                            let partner = match l.role {
+                                LinkedRole::Top => &l.bottom_slider,
+                                LinkedRole::Bottom => &l.top_slider,
+                            };
+                            cx.observe(partner, |_, _, cx| cx.notify())
+                        });
+                    }
+                    view.linked = next_linked;
+                    cx.notify();
+                });
             }
         }
     }

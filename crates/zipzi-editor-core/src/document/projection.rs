@@ -51,6 +51,148 @@ impl Document {
         self.projection_revision
     }
 
+    /// Adjacent parameter pairs `(top_id, bottom_id)` persisted in `DisplayInfo::combined_parameters`
+    /// that currently sit on consecutive rows in the same parameter group.
+    pub fn parameter_links(&self) -> Vec<(String, String)> {
+        let parameters = self.parameters();
+        let layout = crate::ParameterLayout::new(&self.parameter_groups(), &parameters, "");
+        let mut adjacent_next = HashMap::new();
+        for window in layout.rows().windows(2) {
+            if let [
+                crate::ParameterRow::Parameter { index: top, .. },
+                crate::ParameterRow::Parameter { index: bottom, .. },
+            ] = window
+            {
+                let a = &parameters[*top];
+                let b = &parameters[*bottom];
+                if a.group_id == b.group_id {
+                    adjacent_next.insert(a.id.as_str(), b.id.as_str());
+                }
+            }
+        }
+        let model = self.model();
+        let mut used = std::collections::HashSet::new();
+        let mut links = Vec::new();
+        for set in model.display_info().combined_parameters.iter().flatten() {
+            let mut resolved = set.members.iter().filter_map(|member| match &member.target {
+                zipzi_core::document::CdiParameterRef::Resolved { parameter_id } => {
+                    Some(parameter_id.as_str())
+                }
+                _ => None,
+            });
+            let (Some(first), Some(second)) = (resolved.next(), resolved.next()) else {
+                continue;
+            };
+            if adjacent_next.get(first) == Some(&second)
+                && !used.contains(first)
+                && !used.contains(second)
+            {
+                used.insert(first);
+                used.insert(second);
+                links.push((first.to_owned(), second.to_owned()));
+            }
+        }
+        links
+    }
+
+    pub fn parameter_link_partner(&self, parameter_id: &str) -> Option<(String, String)> {
+        self.parameter_links()
+            .into_iter()
+            .find(|(top, bottom)| top == parameter_id || bottom == parameter_id)
+    }
+
+    pub fn adjacent_next_parameter(&self, parameter_id: &str) -> Option<String> {
+        let parameters = self.parameters();
+        let layout = crate::ParameterLayout::new(&self.parameter_groups(), &parameters, "");
+        layout.rows().windows(2).find_map(|window| match window {
+            [
+                crate::ParameterRow::Parameter { index: top, .. },
+                crate::ParameterRow::Parameter { index: bottom, .. },
+            ] => {
+                let a = &parameters[*top];
+                let b = &parameters[*bottom];
+                (a.id == parameter_id && a.group_id == b.group_id).then(|| b.id.clone())
+            }
+            _ => None,
+        })
+    }
+
+    pub fn toggle_parameter_link(&mut self, parameter_id: &str) -> Result<crate::OperationResult> {
+        ensure!(
+            self.pending.is_none(),
+            "Finish the active editor gesture first"
+        );
+        ensure!(
+            self.model().get_parameter(parameter_id).is_some(),
+            "Parameter no longer exists"
+        );
+        if let Some((top_id, bottom_id)) = self.parameter_link_partner(parameter_id) {
+            let ids: Vec<_> = self
+                .model()
+                .display_info()
+                .combined_parameters
+                .iter()
+                .flatten()
+                .filter(|set| {
+                    set.members.iter().any(|member| {
+                        matches!(
+                            &member.target,
+                            zipzi_core::document::CdiParameterRef::Resolved { parameter_id }
+                                if parameter_id == &top_id || parameter_id == &bottom_id
+                        )
+                    })
+                })
+                .map(|set| set.id.clone())
+                .collect();
+            let plan = self.plan_reference_authoring(zipzi_sdk::ReferenceEdit::Delete { ids })?;
+            return self.execute_reference_authoring(&plan);
+        }
+        let next_id = self
+            .adjacent_next_parameter(parameter_id)
+            .ok_or_else(|| anyhow!("Select a parameter with an adjacent next parameter"))?;
+        ensure!(
+            self.parameter_link_partner(&next_id).is_none(),
+            "The next parameter is already linked"
+        );
+        let version = self.session.version();
+        let mut edit = self
+            .session
+            .begin_owned_edit("Link parameters", Some(version))?;
+        edit.apply(|candidate| {
+            let mut info = candidate.candidate_document().display_info().clone();
+            let sets = info.combined_parameters.get_or_insert_with(Vec::new);
+            sets.retain(|set| {
+                !set.members.iter().any(|member| {
+                    matches!(
+                        &member.target,
+                        zipzi_core::document::CdiParameterRef::Resolved {
+                            parameter_id: existing
+                        } if existing == parameter_id || existing == &next_id
+                    )
+                })
+            });
+            sets.push(zipzi_core::document::CdiCombinedSet {
+                id: Uuid::new_v4().to_string(),
+                members: vec![
+                    zipzi_core::document::CdiParameterRef::Resolved {
+                        parameter_id: parameter_id.to_owned(),
+                    }
+                    .into(),
+                    zipzi_core::document::CdiParameterRef::Resolved {
+                        parameter_id: next_id.clone(),
+                    }
+                    .into(),
+                ],
+            });
+            Ok(candidate.replace_display_info(info)?)
+        })?;
+        let receipt = edit.commit_to(&mut self.session)?;
+        self.pristine_blank = None;
+        self.consume_authoring_receipt(&receipt, false);
+        self.context.reconcile(&self.object_index());
+        Ok(self.authoring_result(receipt))
+    }
+
     pub fn parameter_visuals(&self) -> HashMap<String, ParameterVisual> {
         let mut visuals = self.parameter_visuals_for_targets(
             &self

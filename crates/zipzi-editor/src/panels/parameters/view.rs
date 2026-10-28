@@ -1,6 +1,24 @@
 //! Independently observed, virtualized parameter row views.
+use super::track::parameter_pad_track;
 use super::*;
 use gpui_kit::component::Icon;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum LinkedRole {
+    Top,
+    Bottom,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct LinkedPadState {
+    pub(super) role: LinkedRole,
+    pub(super) top_parameter: ParameterValue,
+    pub(super) bottom_parameter: ParameterValue,
+    pub(super) top_visual: ParameterVisual,
+    pub(super) bottom_visual: ParameterVisual,
+    pub(super) top_slider: Entity<SliderState>,
+    pub(super) bottom_slider: Entity<SliderState>,
+}
 
 // Each row owns its slider dependency so changing one thumb does not rebuild
 // the other visible sliders (including their labels, tooltips and hover rings).
@@ -19,7 +37,9 @@ pub(super) struct ParameterRowView {
     pub(super) selected: bool,
     pub(super) cursor: bool,
     pub(super) depth: usize,
+    pub(super) linked: Option<LinkedPadState>,
     pub(super) _observe: Subscription,
+    pub(super) _partner_observe: Option<Subscription>,
     pub(super) sorting: Entity<SortState>,
     pub(super) _sorting_observe: Subscription,
 }
@@ -189,16 +209,37 @@ impl Render for ParameterRowView {
                         )
                     }),
             )
-            .child(row::track().child(parameter_track(
-                slider,
-                parameter,
-                &self.visual,
-                value,
-                disabled,
-                theme,
-                self.panel.clone(),
-                document_id,
-            )))
+            .child(row::track().child(if let Some(linked) = &self.linked {
+                let top_value = match linked.top_slider.read(cx).value() {
+                    SliderValue::Single(value) => value,
+                    _ => linked.top_parameter.value,
+                };
+                let bottom_value = match linked.bottom_slider.read(cx).value() {
+                    SliderValue::Single(value) => value,
+                    _ => linked.bottom_parameter.value,
+                };
+                parameter_pad_track(
+                    slider,
+                    linked,
+                    top_value,
+                    bottom_value,
+                    disabled,
+                    theme,
+                    self.panel.clone(),
+                    document_id,
+                )
+            } else {
+                parameter_track(
+                    slider,
+                    parameter,
+                    &self.visual,
+                    value,
+                    disabled,
+                    theme,
+                    self.panel.clone(),
+                    document_id,
+                )
+            }))
             .child(
                 row::value()
                     .id(SharedString::from(format!(

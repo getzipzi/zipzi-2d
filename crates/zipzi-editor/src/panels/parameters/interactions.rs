@@ -1,5 +1,17 @@
 //! Slider gestures, numeric input and parameter focus commands.
-use super::*;
+use super::{
+    track::{pad_full_bounds, pad_values_at_position},
+    view::LinkedRole,
+    *,
+};
+
+#[derive(Clone)]
+pub(super) struct PadDragState {
+    pub(super) document_id: DocumentId,
+    pub(super) top_id: String,
+    pub(super) bottom_id: String,
+    pub(super) full_bounds: Bounds<Pixels>,
+}
 
 impl ParametersPanel {
     pub(super) fn reset_defaults(
@@ -119,6 +131,101 @@ impl ParametersPanel {
         });
     }
 
+    pub(super) fn toggle_parameter_link(
+        &mut self,
+        document_id: DocumentId,
+        parameter_id: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.document_id != Some(document_id) || !self.slider_interaction_allowed(window, cx) {
+            return;
+        }
+        self.finish_slider_drag(cx);
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        owner.update(cx, |owner, cx| {
+            if !owner.prepare_property_inputs(document_id, window, cx) {
+                return;
+            }
+            let result = owner.editor.execute_for(
+                document_id,
+                EditorCommand::ToggleParameterLink {
+                    parameter_id: parameter_id.to_owned(),
+                },
+            );
+            owner.complete_edit(result, cx);
+        });
+        self.sync_with_editor(window, cx);
+        cx.notify();
+    }
+
+    pub(super) fn begin_pad_drag(
+        &mut self,
+        document_id: DocumentId,
+        top_id: &str,
+        bottom_id: &str,
+        slider: &Entity<SliderState>,
+        role: LinkedRole,
+        position: Point<Pixels>,
+        move_thumb: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let row_bounds = slider.read(cx).bounds();
+        if self.document_id != Some(document_id)
+            || !self.slider_interaction_allowed(window, cx)
+            || row_bounds.size.width <= px(0.)
+            || row_bounds.size.height <= px(0.)
+        {
+            return;
+        }
+        let (Some(top_param), Some(bottom_param)) = (
+            self.rows
+                .iter()
+                .find(|r| r.parameter.id == top_id)
+                .map(|r| r.parameter.clone()),
+            self.rows
+                .iter()
+                .find(|r| r.parameter.id == bottom_id)
+                .map(|r| r.parameter.clone()),
+        ) else {
+            return;
+        };
+        self.finish_slider_drag(cx);
+        let focused_parameter = match role {
+            LinkedRole::Top => top_id.to_owned(),
+            LinkedRole::Bottom => bottom_id.to_owned(),
+        };
+        if let Some(owner) = self.owner.upgrade() {
+            owner.update(cx, |owner, cx| {
+                let result = owner.editor.execute_for(
+                    document_id,
+                    EditorCommand::FocusParameter(focused_parameter),
+                );
+                owner.complete_preview_edit(result, cx);
+            });
+        }
+        let full_bounds = pad_full_bounds(row_bounds, role);
+        self.pad_drag = Some(PadDragState {
+            document_id,
+            top_id: top_id.to_owned(),
+            bottom_id: bottom_id.to_owned(),
+            full_bounds,
+        });
+        if move_thumb {
+            let (x_val, y_val) =
+                pad_values_at_position(&top_param, &bottom_param, full_bounds, position, cx);
+            self.apply_values(
+                document_id,
+                &[(top_id.to_owned(), x_val), (bottom_id.to_owned(), y_val)],
+                window,
+                cx,
+            );
+        }
+    }
+
     pub(super) fn begin_slider_drag(
         &mut self,
         document_id: DocumentId,
@@ -178,6 +285,41 @@ impl ParametersPanel {
         if crate::benchmark::ignore_native_pointer_event() {
             return true;
         }
+        if let Some(pad) = self.pad_drag.clone() {
+            if event.pressed_button != Some(MouseButton::Left)
+                || !self.slider_interaction_allowed(window, cx)
+            {
+                self.finish_slider_drag(cx);
+                return false;
+            }
+            let (Some(top_param), Some(bottom_param)) = (
+                self.rows
+                    .iter()
+                    .find(|r| r.parameter.id == pad.top_id)
+                    .map(|r| r.parameter.clone()),
+                self.rows
+                    .iter()
+                    .find(|r| r.parameter.id == pad.bottom_id)
+                    .map(|r| r.parameter.clone()),
+            ) else {
+                self.finish_slider_drag(cx);
+                return false;
+            };
+            let (x_val, y_val) = pad_values_at_position(
+                &top_param,
+                &bottom_param,
+                pad.full_bounds,
+                event.position,
+                cx,
+            );
+            self.apply_values(
+                pad.document_id,
+                &[(pad.top_id, x_val), (pad.bottom_id, y_val)],
+                window,
+                cx,
+            );
+            return true;
+        }
         let Some(slider) = self.slider_drag.clone() else {
             return false;
         };
@@ -194,8 +336,9 @@ impl ParametersPanel {
     }
 
     pub(super) fn finish_slider_drag(&mut self, cx: &mut Context<Self>) -> bool {
+        let had_pad = self.pad_drag.take().is_some();
         let Some(slider) = self.slider_drag.take() else {
-            return false;
+            return had_pad;
         };
         slider.update(cx, |slider, cx| slider.handle_release(cx));
         true

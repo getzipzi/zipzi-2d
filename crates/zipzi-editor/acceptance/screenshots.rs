@@ -11,6 +11,7 @@ mod dock_and_layout;
 mod manual_mesh_scene;
 mod mesh_generation_scene;
 mod modeling_scene;
+mod parameter_pad_scene;
 mod parameter_toolbar_scene;
 mod physics_scene;
 mod properties_scene;
@@ -31,6 +32,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("parameter-pad") {
+        parameter_pad_scene::run(&directory)?;
+        println!("Linked parameter pad screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("manual-mesh") {
         manual_mesh_scene::run(&directory)?;
         println!("Manual mesh native interaction screenshots passed.");

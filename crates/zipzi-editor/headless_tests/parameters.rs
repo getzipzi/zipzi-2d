@@ -148,11 +148,24 @@ fn indirect_selection_document(
 
 #[gpui_kit::test]
 fn parameter_indirect_button_selects_the_nearest_bound_ancestor(cx: &mut TestAppContext) {
-    use zipzi_editor_core::{ObjectKind, ObjectRef};
-    let (document, assets, parameter) = indirect_selection_document(true);
+    use zipzi_editor_core::{NewParameter, ObjectKind, ObjectRef};
+    let (mut document, assets, parameter) = indirect_selection_document(true);
+    let partner = document
+        .create_parameter(NewParameter {
+            name: "Linked driver".into(),
+            runtime_id: "LinkedDriver".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    document.toggle_parameter_link(&parameter).unwrap();
     let history = document.history_lengths();
     let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
+        assert!(
+            window
+                .find(format!("parameter-pad-top-{parameter}-{partner}"))
+                .visible()
+        );
         window.click(format!("parameter-indirect-{parameter}"), cx);
     })
     .unwrap();
@@ -1026,6 +1039,7 @@ fn parameter_titlebar_adds_endpoint_keyforms(cx: &mut TestAppContext) {
         window.render_frame(cx);
         let standard = window.find("new-parameter").bounds();
         for button in [
+            "parameter-toggle-link",
             "parameter-add-keyform",
             "parameter-delete-keyform",
             "parameter-add-two-keyforms",
@@ -1203,4 +1217,225 @@ fn parameter_slider_refreshes_the_active_keyform_coordinate(cx: &mut TestAppCont
         });
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn parameter_toolbar_links_and_unlinks_adjacent_next_row_and_persists(cx: &mut TestAppContext) {
+    use zipzi_editor_core::NewParameter;
+
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(0).unwrap();
+    let p0 = document
+        .create_parameter(NewParameter {
+            name: "Angle X".into(),
+            runtime_id: "ParamAngleX".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    let p1 = document
+        .create_parameter(NewParameter {
+            name: "Angle Y".into(),
+            runtime_id: "ParamAngleY".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    let p2 = document
+        .create_parameter(NewParameter {
+            name: "Angle Z".into(),
+            runtime_id: "ParamAngleZ".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    let history = document.history_lengths();
+    let harness = setup_with_document(cx, document, assets);
+
+    // Selecting the last parameter has no adjacent next row, so link button is disabled.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-name-{p2}"), cx);
+        window.render_frame(cx);
+        window.click("parameter-toggle-link", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert!(view.editor.document().unwrap().parameter_links().is_empty());
+    });
+
+    // Selecting p0 and clicking link links (p0, p1) into a 2D pad.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-name-{p0}"), cx);
+        window.render_frame(cx);
+        window.click("parameter-toggle-link", cx);
+        window.render_frame(cx);
+        assert!(
+            window
+                .try_find(format!("parameter-pad-top-{p0}-{p1}"))
+                .is_some()
+        );
+        assert!(
+            window
+                .try_find(format!("parameter-pad-bottom-{p0}-{p1}"))
+                .is_some()
+        );
+    })
+    .unwrap();
+
+    // Verify persistence in project document (.zipzi save/open).
+    let dir = tempfile::tempdir().unwrap();
+    let saved_path = dir.path().join("linked.zipzi");
+    harness.view.update(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert_eq!(document.parameter_links(), vec![(p0.clone(), p1.clone())]);
+        assert_eq!(document.history_lengths(), (history.0 + 1, 0));
+        let id = view.editor.active_id().unwrap();
+        let mut completion = view
+            .editor
+            .prepare_save(id, &saved_path, false)
+            .unwrap()
+            .run();
+        view.editor.finish_save(&mut completion).unwrap();
+    });
+    let reopened = zipzi_editor_core::Document::open(&saved_path).unwrap();
+    assert_eq!(reopened.parameter_links(), vec![(p0.clone(), p1.clone())]);
+
+    // Selecting the bottom parameter p1 of the linked pair and clicking the button unlinks them.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-name-{p1}"), cx);
+        window.render_frame(cx);
+        window.click("parameter-toggle-link", cx);
+        window.render_frame(cx);
+        assert!(
+            window
+                .try_find(format!("parameter-pad-top-{p0}-{p1}"))
+                .is_none()
+        );
+        assert!(
+            window
+                .try_find(format!("parameter-pad-bottom-{p0}-{p1}"))
+                .is_none()
+        );
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(document.parameter_links().is_empty());
+        assert_eq!(document.history_lengths(), (history.0 + 2, 0));
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_pad_drag_updates_both_axes_with_top_max_bottom_min(cx: &mut TestAppContext) {
+    use gpui_kit::{
+        InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, px,
+    };
+    use zipzi_editor_core::NewParameter;
+
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(0).unwrap();
+    let p0 = document
+        .create_parameter(NewParameter {
+            name: "Angle X".into(),
+            runtime_id: "ParamAngleX".into(),
+            minimum: -30.,
+            maximum: 30.,
+            default_value: 0.,
+            ..Default::default()
+        })
+        .unwrap();
+    let p1 = document
+        .create_parameter(NewParameter {
+            name: "Angle Y".into(),
+            runtime_id: "ParamAngleY".into(),
+            minimum: -20.,
+            maximum: 20.,
+            default_value: 0.,
+            ..Default::default()
+        })
+        .unwrap();
+    document.toggle_parameter_link(&p0).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+
+    let (top_bounds, bottom_bounds) = cx
+        .update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            (
+                window.find(format!("parameter-pad-top-{p0}-{p1}")).bounds(),
+                window
+                    .find(format!("parameter-pad-bottom-{p0}-{p1}"))
+                    .bounds(),
+            )
+        })
+        .unwrap();
+
+    // Press inside the pad and drag beyond the top-right corner: X clamps to max (30), Y clamps to max (20, top=max).
+    let start = top_bounds.center();
+    let top_right = point(top_bounds.right() + px(10.), top_bounds.top() - px(10.));
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: start,
+                pressed_button: None,
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: start,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: top_right,
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let parameters = view.editor.document().unwrap().parameters();
+        assert_eq!(parameters[0].value, 30.);
+        assert_eq!(parameters[1].value, 20.);
+    });
+
+    // Drag to bottom-left corner of the 2D pad: X should clamp to min (-30), Y should clamp to min (-20, bottom=min).
+    let bottom_left = point(
+        bottom_bounds.left() - px(10.),
+        bottom_bounds.bottom() + px(10.),
+    );
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: bottom_left,
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: bottom_left,
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let parameters = view.editor.document().unwrap().parameters();
+        assert_eq!(parameters[0].value, -30.);
+        assert_eq!(parameters[1].value, -20.);
+    });
 }

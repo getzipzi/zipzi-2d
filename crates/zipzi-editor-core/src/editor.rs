@@ -94,6 +94,9 @@ pub enum EditorCommand {
         parameter_id: String,
         action: crate::ParameterKeyformAction,
     },
+    ToggleParameterLink {
+        parameter_id: String,
+    },
     SetObjectVisible {
         object: crate::ObjectRef,
         visible: bool,

@@ -68,6 +68,11 @@ impl ParametersPanel {
                     .is_none_or(|id| groups.iter().any(|group| &group.id == id))
             });
             self.layout = ParameterLayout::new(&groups, &parameters, &t!("parameter.ungrouped"));
+            self.links = owner
+                .read(cx)
+                .editor
+                .document()
+                .map_or_else(Vec::new, |doc| doc.parameter_links());
         }
         let visuals_changed = structure_changed
             || self.visual_revision != revision
@@ -92,6 +97,8 @@ impl ParametersPanel {
         }
         if layout_changed || (self.only_related && visuals_changed) {
             self.refresh_visible_rows(cx);
+        } else if visuals_changed {
+            self.refresh_linked_rows(cx);
         }
         self.sync_navigation(cx);
     }
@@ -164,7 +171,9 @@ impl ParametersPanel {
                     selected: false,
                     cursor: false,
                     depth: 0,
+                    linked: None,
                     _observe: cx.observe(&slider, |_, _, cx| cx.notify()),
+                    _partner_observe: None,
                     sorting: self.sorting.clone(),
                     _sorting_observe: cx.observe(&self.sorting, |_, _, cx| cx.notify()),
                 });

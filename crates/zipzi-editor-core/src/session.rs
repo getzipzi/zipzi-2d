@@ -403,6 +403,10 @@ impl DocumentSession {
                 .document
                 .edit_selected_parameter_keyforms(&parameter_id, action)
                 .map(|_| ()),
+            EditorCommand::ToggleParameterLink { parameter_id } => self
+                .document
+                .toggle_parameter_link(&parameter_id)
+                .map(|_| ()),
             EditorCommand::SetObjectVisible { object, visible } => {
                 self.document.set_object_visible(&object, visible)
             }
