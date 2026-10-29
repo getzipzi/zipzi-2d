@@ -52,7 +52,7 @@ impl ConversionControl {
             Ok(())
         }
     }
-    pub(super) fn checkpoint(&self) -> Result<(), Status> {
+    pub(in crate::document) fn checkpoint(&self) -> Result<(), Status> {
         self.check()?;
         let n = self.checkpoints.fetch_add(1, Ordering::AcqRel) + 1;
         if self.progress.as_ref().is_some_and(|f| !f(n)) {

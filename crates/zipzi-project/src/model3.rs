@@ -187,11 +187,11 @@ fn import_with_namespace(
     Ok(settings)
 }
 
-pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status> {
-    let settings = document.model3_settings();
+/// Shared, allocation-free opaque-field classification used by export preflight.
+fn has_opaque_fields(settings: &Model3Settings) -> bool {
     // Name is a label with no embedded runtime IDs. Other extension payloads
     // remain opaque and must still pass the namespace and strict-export guards.
-    let opaque = settings
+    settings
         .extensions
         .iter()
         .any(|(key, value)| key != "Name" || !value.is_string())
@@ -204,19 +204,36 @@ pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status
             .hit_areas
             .iter()
             .flatten()
-            .any(|area| !area.extensions.is_empty());
+            .any(|area| !area.extensions.is_empty())
+}
+
+/// Check a frozen or prospective namespace without encoding an export file.
+/// This does not rebase provenance or relax the export guard.
+pub fn validate_settings_namespace(
+    settings: &Model3Settings,
+    namespace: &BTreeMap<String, String>,
+) -> Result<(), Status> {
     // Known fields are remapped by identity. Only opaque payloads need a
     // namespace-wide guard because their embedded IDs cannot be rewritten.
-    if (opaque || settings.user_data.is_some())
+    if (has_opaque_fields(settings) || settings.user_data.is_some())
         && settings
             .source_runtime_ids
             .as_ref()
-            .is_some_and(|source| source != &runtime_namespace(document))
+            .is_some_and(|source| source != namespace)
     {
         return Err(Status::error(
             "MODEL3_NAMESPACE_CHANGED",
             "Opaque model3/UserData namespace changed",
         ));
+    }
+    Ok(())
+}
+
+pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status> {
+    let settings = document.model3_settings();
+    let opaque = has_opaque_fields(settings);
+    if opaque || settings.user_data.is_some() {
+        validate_settings_namespace(settings, &runtime_namespace(document))?;
     }
     if opaque {
         return Err(Status::error(

@@ -69,6 +69,7 @@ pub struct AuthoringSession {
 /// The clone cost belongs to the capture step; later evaluation cannot observe edits.
 #[derive(Debug, Clone)]
 pub struct AuthoringSnapshot {
+    pub(crate) edit_source: Option<(Arc<()>, u64)>,
     document: Document,
     version: Version,
     project_path: Option<PathBuf>,
@@ -97,6 +98,7 @@ impl AuthoringSnapshot {
             ));
         }
         Ok(Self {
+            edit_source: self.edit_source.clone(),
             document,
             version: self.version,
             memory_images: self.memory_images.clone(),
@@ -162,6 +164,7 @@ impl AuthoringSession {
         }
         let started = std::time::Instant::now();
         let mut snapshot = self.snapshot_document(edit.candidate_document().clone(), base, started);
+        snapshot.edit_source = Some((edit.identity.clone(), edit.sequence));
         let prepared: HashMap<_, _> = edit
             .prepared_images
             .iter()
@@ -200,6 +203,7 @@ impl AuthoringSession {
             })
             .collect();
         AuthoringSnapshot {
+            edit_source: None,
             memory_images,
             document,
             version,
@@ -745,6 +749,8 @@ impl AuthoringSession {
         }
         let (base_keys, base_key_bytes) = self.object_keys_with_bytes();
         Ok(EditSession {
+            identity: std::sync::Arc::new(()),
+            sequence: 0,
             manual_baseline: None,
             session: None,
             base_keys,

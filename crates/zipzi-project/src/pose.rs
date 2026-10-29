@@ -180,25 +180,34 @@ pub fn export_pose3(document: &Document) -> Result<Option<String>, PoseProjectEr
 pub fn export_available_pose3(document: &Document) -> Result<Option<String>, PoseProjectError> {
     export_pose(document, true)
 }
+pub(crate) fn opaque_export_problems(
+    document: &Document,
+    pose: &PoseAsset,
+) -> Vec<crate::OpaqueExportProblem> {
+    use crate::OpaqueExportProblem as P;
+    if !(pose.has_extensions()) {
+        return vec![];
+    }
+    let mut problems = vec![];
+    if pose.opaque_source_ids.as_ref() != Some(&namespace(document, Some(pose))) {
+        problems.push(P::NamespaceChanged);
+    }
+    if pose.opaque_source_content_hash.as_deref() != Some(content_hash(pose).as_str()) {
+        problems.push(P::ContentChanged);
+    }
+    problems
+}
+
 fn export_pose(document: &Document, available: bool) -> Result<Option<String>, PoseProjectError> {
     let Some(pose) = document.pose() else {
         return Ok(None);
     };
-    if pose.has_extensions() {
-        if pose.opaque_source_ids.as_ref() != Some(&namespace(document, Some(pose))) {
-            return Err(error(
-                "OPAQUE_NAMESPACE_CHANGED",
-                "$",
-                "Part runtime IDs changed since import",
-            ));
-        }
-        if pose.opaque_source_content_hash.as_deref() != Some(content_hash(pose).as_str()) {
-            return Err(error(
-                "OPAQUE_CONTENT_CHANGED",
-                "$",
-                "Pose content changed since import; reimport to establish an opaque-field baseline",
-            ));
-        }
+    if let Some(problem) = opaque_export_problems(document, pose).first() {
+        return Err(error(
+            problem.code(),
+            "$",
+            "Imported opaque fields no longer match their provenance",
+        ));
     }
     let runtime_id = |target: &PosePartRef, path: String| -> Result<String, PoseProjectError> {
         match target {

@@ -501,6 +501,19 @@ fn group_runtime_id(
     }
 }
 
+pub(crate) fn opaque_export_problems(document: &Document) -> Vec<crate::OpaqueExportProblem> {
+    use crate::OpaqueExportProblem as P;
+    let info = document.display_info();
+    if !info.has_extensions() {
+        return vec![];
+    }
+    match &info.opaque_source_ids {
+        None => vec![P::ProvenanceMissing],
+        Some(source) if *source != namespace_ids(document, info) => vec![P::NamespaceChanged],
+        _ => vec![],
+    }
+}
+
 /// Encode CDI3 from current model names and runtime IDs. Unresolved targets
 /// and opaque-extension namespace changes are explicit errors.
 pub fn export_cdi3(document: &Document) -> Result<String, CdiProjectError> {
@@ -515,21 +528,12 @@ pub fn export_cdi3(document: &Document) -> Result<String, CdiProjectError> {
         return Err(error(issue.status.code, "$", issue.status.message));
     }
     let info = document.display_info();
-    if info.has_extensions() {
-        let Some(source) = &info.opaque_source_ids else {
-            return Err(error(
-                "OPAQUE_PROVENANCE_MISSING",
-                info.first_extension_path().unwrap_or_else(|| "$".into()),
-                "opaque extensions require a persisted source namespace",
-            ));
-        };
-        if *source != namespace_ids(document, info) {
-            return Err(error(
-                "OPAQUE_NAMESPACE_CHANGED",
-                info.first_extension_path().unwrap_or_else(|| "$".into()),
-                "runtime namespace changed since opaque extensions were imported",
-            ));
-        }
+    if let Some(problem) = opaque_export_problems(document).first() {
+        return Err(error(
+            problem.code(),
+            info.first_extension_path().unwrap_or_else(|| "$".into()),
+            "Opaque CDI fields no longer match their namespace",
+        ));
     }
     let group_runtime: HashMap<_, _> = info
         .parameter_groups

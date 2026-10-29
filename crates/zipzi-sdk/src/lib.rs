@@ -2,6 +2,8 @@
 mod alpha_mesh;
 mod assets;
 mod diagnostics;
+mod deletion;
+pub use deletion::*;
 mod edit;
 mod mesh_quality;
 mod project_io;

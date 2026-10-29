@@ -12,6 +12,8 @@ use zipzi_core::{
 };
 
 pub struct EditSession<'a> {
+    pub(crate) identity: std::sync::Arc<()>,
+    pub(crate) sequence: u64,
     pub(crate) manual_baseline: Option<crate::manual_mesh_transfer::ManualMeshBaseline>,
     pub(crate) session: Option<&'a mut AuthoringSession>,
     pub(crate) base_keys: std::sync::Arc<HashSet<ObjectKey>>,
@@ -157,6 +159,7 @@ impl EditSession<'_> {
             error.referrers = result.referrers.into_boxed_slice();
             return Err(error);
         }
+        self.sequence += 1;
         if result.changes.kind == ChangeKind::Resources
             || result.changes.kind == ChangeKind::Structure
             || result
@@ -263,6 +266,7 @@ impl EditSession<'_> {
     }
 
     pub(crate) fn track_expression_deletions(&mut self, ids: &[String]) {
+        self.sequence += 1;
         for id in ids {
             let key = ObjectKey {
                 kind: ObjectKind::ExpressionEntry,
@@ -379,6 +383,7 @@ impl EditSession<'_> {
         &mut self,
         before: std::collections::HashSet<crate::types::ObjectKey>,
     ) {
+        self.sequence += 1;
         let after = crate::session::keys_in(self.candidate_document());
         self.erased_keys.extend(before.difference(&after).cloned());
     }

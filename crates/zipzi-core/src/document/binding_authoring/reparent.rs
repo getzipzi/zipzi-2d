@@ -414,7 +414,8 @@ impl Document {
     /// document, or runtime frame is constructed. A successful preservation query
     /// still needs a conversion plan to check capacity and the numeric error bound.
     pub fn reparent_support(&self, edit: &ReparentEdit) -> Result<ReparentSupport, Status> {
-        let (sources, changing, _) = self.prepare_reparent(edit, &ConversionControl::default())?;
+        let (sources, changing, _) =
+            self.prepare_reparent(edit, &ConversionControl::default(), true)?;
         let hierarchy = self.reparent_placement(&sources, edit)?;
         Ok(if changing.is_empty() && hierarchy.is_none() {
             ReparentSupport::NoChange
@@ -428,6 +429,7 @@ impl Document {
         &self,
         edit: &ReparentEdit,
         control: &ConversionControl,
+        check_locks: bool,
     ) -> Result<(Vec<String>, Vec<String>, Option<ReparentContext>), Status> {
         if edit.strategy != ReparentStrategy::KeepLocalData
             && (!edit.tolerance.is_finite()
@@ -443,7 +445,9 @@ impl Document {
         if !edit.parent_id.is_empty() && self.get_transform(&edit.parent_id).is_none() {
             return Err(Status::error("MISSING_TRANSFORM", &edit.parent_id));
         }
-        self.authoring_unlocked(&edit.parent_id)?;
+        if check_locks {
+            self.authoring_unlocked(&edit.parent_id)?;
+        }
         let selected: HashSet<_> = edit.sources.iter().cloned().collect();
         if selected.len() != edit.sources.len() {
             return Err(Status::error("DUPLICATE_SOURCE", "Select each source once"));
@@ -453,7 +457,9 @@ impl Document {
             if self.get_mesh(id).is_none() && self.get_transform(id).is_none() {
                 return Err(Status::error("INVALID_REPARENT_SOURCE", id));
             }
-            self.authoring_unlocked(id)?;
+            if check_locks {
+                self.authoring_unlocked(id)?;
+            }
         }
         let parent_of = |id: &str| {
             self.get_mesh(id)
@@ -503,7 +509,7 @@ impl Document {
                 affected |= sources.iter().any(|s| s == parent);
                 parent = parent_of(parent);
             }
-            if affected {
+            if affected && check_locks {
                 self.authoring_unlocked(id)?;
                 if let Some(b) = self.binding_for_mesh(id) {
                     self.authoring_unlocked(&b.id)?;
@@ -564,7 +570,34 @@ impl Document {
         control: &ConversionControl,
     ) -> Result<ReparentPlan, Status> {
         control.checkpoint()?;
-        let (sources, changing, context) = self.prepare_reparent(&edit, control)?;
+        self.plan_reparent_with_access(edit, limits, control, true)
+    }
+    // The deletion planner validates the exact final write set, including locks
+    // on converted bindings/samples. Read-only destinations and unchanged
+    // descendants must not be locked merely because ordinary reparent checks them.
+    pub(in crate::document) fn deletion_reparent_supported(
+        &self,
+        edit: &ReparentEdit,
+    ) -> Result<(), Status> {
+        self.prepare_reparent(edit, &ConversionControl::default(), false)
+            .map(|_| ())
+    }
+    pub(in crate::document) fn plan_deletion_reparent(
+        &self,
+        edit: ReparentEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<ReparentPlan, Status> {
+        self.plan_reparent_with_access(edit, limits, control, false)
+    }
+    fn plan_reparent_with_access(
+        &self,
+        edit: ReparentEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+        check_locks: bool,
+    ) -> Result<ReparentPlan, Status> {
+        let (sources, changing, context) = self.prepare_reparent(&edit, control, check_locks)?;
         let hierarchy = self.reparent_placement(&sources, &edit)?;
         let point_count = changing
             .iter()

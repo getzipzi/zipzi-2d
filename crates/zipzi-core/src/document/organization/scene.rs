@@ -1,6 +1,6 @@
 use super::*;
 impl Document {
-    pub(super) fn scene_organization_owner(&self, id: &str) -> Option<&str> {
+    pub(in crate::document) fn scene_organization_owner(&self, id: &str) -> Option<&str> {
         self.get_part(id)
             .map(|p| p.parent_id.as_str())
             .or_else(|| self.get_mesh(id).map(|m| m.part_id.as_str()))

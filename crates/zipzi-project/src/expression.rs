@@ -183,6 +183,26 @@ pub fn export_available_expression3(
 ) -> Result<String, ExpressionProjectError> {
     export_expression_entries(document, id, true)
 }
+pub(crate) fn opaque_export_problems(
+    document: &Document,
+    asset: &ExpressionAsset,
+) -> Vec<crate::OpaqueExportProblem> {
+    use crate::OpaqueExportProblem as P;
+    if !(asset.has_extensions()) {
+        return vec![];
+    }
+    let mut problems = vec![];
+    if asset.opaque_source_ids.is_none() {
+        problems.push(P::ProvenanceMissing);
+    } else if asset.opaque_source_ids.as_ref() != Some(&parameter_ids(document, Some(asset))) {
+        problems.push(P::NamespaceChanged);
+    }
+    if asset.opaque_source_content_hash.as_deref() != Some(content_hash(asset).as_str()) {
+        problems.push(P::ContentChanged);
+    }
+    problems
+}
+
 fn export_expression_entries(
     document: &Document,
     id: &str,
@@ -191,24 +211,12 @@ fn export_expression_entries(
     let asset = document
         .get_expression(id)
         .ok_or_else(|| error("MISSING_EXPRESSION", "$", id))?;
-    if asset.has_extensions() {
-        let Some(source) = &asset.opaque_source_ids else {
-            return Err(error(
-                "OPAQUE_PROVENANCE_MISSING",
-                "$",
-                "expression extensions need a source namespace",
-            ));
-        };
-        if *source != parameter_ids(document, Some(asset)) {
-            return Err(error(
-                "OPAQUE_NAMESPACE_CHANGED",
-                "$",
-                "parameter runtime namespace changed since import",
-            ));
-        }
-        if asset.opaque_source_content_hash.as_deref() != Some(content_hash(asset).as_str()) {
-            return Err(error("OPAQUE_CONTENT_CHANGED", "$", "expression content changed since import; reimport to establish a new opaque-field baseline"));
-        }
+    if let Some(problem) = opaque_export_problems(document, asset).first() {
+        return Err(error(
+            problem.code(),
+            "$",
+            "Imported opaque fields no longer match their provenance",
+        ));
     }
     let projection = document
         .expression_projection(id)

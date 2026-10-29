@@ -166,25 +166,34 @@ fn has_extensions(asset: &PhysicsAsset) -> bool {
         })
 }
 
+pub(crate) fn opaque_export_problems(
+    document: &Document,
+    asset: &PhysicsAsset,
+) -> Vec<crate::OpaqueExportProblem> {
+    use crate::OpaqueExportProblem as P;
+    if !(has_extensions(asset)) {
+        return vec![];
+    }
+    let mut problems = vec![];
+    if asset.opaque_source_ids.as_ref() != Some(&namespace(document, asset)) {
+        problems.push(P::NamespaceChanged);
+    }
+    if asset.opaque_source_content_hash.as_deref() != Some(content_hash(asset).as_str()) {
+        problems.push(P::ContentChanged);
+    }
+    problems
+}
+
 pub fn export_physics3(document: &Document) -> Result<Option<String>, PhysicsProjectError> {
     let Some(asset) = document.physics() else {
         return Ok(None);
     };
-    if has_extensions(asset) {
-        if asset.opaque_source_ids.as_ref() != Some(&namespace(document, asset)) {
-            return Err(error(
-                "OPAQUE_NAMESPACE_CHANGED",
-                "$",
-                "Parameter runtime IDs changed since import",
-            ));
-        }
-        if asset.opaque_source_content_hash.as_deref() != Some(content_hash(asset).as_str()) {
-            return Err(error(
-                "OPAQUE_CONTENT_CHANGED",
-                "$",
-                "Physics content changed since import",
-            ));
-        }
+    if let Some(problem) = opaque_export_problems(document, asset).first() {
+        return Err(error(
+            problem.code(),
+            "$",
+            "Imported opaque fields no longer match their provenance",
+        ));
     }
     for g in &asset.data.settings {
         for (id, target) in g
@@ -227,21 +236,12 @@ pub fn export_available_physics3(
     let Some(asset) = document.physics() else {
         return Ok(None);
     };
-    if has_extensions(asset) {
-        if asset.opaque_source_ids.as_ref() != Some(&namespace(document, asset)) {
-            return Err(error(
-                "OPAQUE_NAMESPACE_CHANGED",
-                "$",
-                "parameter namespace changed",
-            ));
-        }
-        if asset.opaque_source_content_hash.as_deref() != Some(content_hash(asset).as_str()) {
-            return Err(error(
-                "OPAQUE_CONTENT_CHANGED",
-                "$",
-                "physics content changed",
-            ));
-        }
+    if let Some(problem) = opaque_export_problems(document, asset).first() {
+        return Err(error(
+            problem.code(),
+            "$",
+            "Imported opaque fields no longer match their provenance",
+        ));
     }
     let Some(mut projection) = document
         .physics_projection()

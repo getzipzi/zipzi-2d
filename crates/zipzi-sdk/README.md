@@ -85,6 +85,44 @@ Expression schedules can be replaced without modifying the authoring document.
 
 ## Images and modeling
 
+The dependency-cleaning deletion API supports Mesh, Part, Deformer, Glue and
+Offscreen roots. Part roots use the organization subtree; Deformer roots use the
+deformation subtree. Explicit root scopes are unioned before deduplication.
+`DissolvePart` and `RemoveDeformer` preserve contents and report their migrations.
+Use `deletion_request` to resolve current handles, `analyze_deletion` to
+review typed removals, field rewrites, locks, migration choices and opaque export regressions,
+then `plan_deletion` and `execute_deletion_plan` for one atomic history step.
+`EditSession::plan_deletion` can compose cleanup after earlier candidate edits;
+its plan is valid only in that Edit at the captured candidate snapshot.
+`AuthoringSnapshot::plan_deletion_with_control` supports background preparation
+with limits and cancellation. SDK analysis prepares an isolated candidate when
+the native structural analysis has no unresolved choices or locks; inspect
+`export_analysis_complete` before interpreting its export results. It can run
+conversions and must not be used for per-frame command-state queries. Core's
+`analyze_deletion` remains a structural scan, while `prepare_deletion` returns
+either the validated plan or a typed report of required choices and blockers.
+
+Deletion removes owned bindings and internal identities, unlinks surviving Mask
+consumers and removes affected Glue/Hit Area, Pose, Motion, Expression source-scene
+and resolved CDI records. Surviving cross-part deformation children migrate to
+the nearest retained deformation ancestor, using parameter-domain preservation
+when proved. Unsupported or numerically unproved conversion requires an explicit
+`reparent` resolution; no local-data fallback or scope expansion is automatic.
+`conversion_context` freezes explicit values, domain and time. `tolerance`
+defaults to 0.001 model units plus 0.000001 times the geometry scale; the native
+conversion guarantee reports the actual tolerance and error bound.
+Offscreen owner and mapping changes use `offscreen_placements`. Drawing groups
+flatten surviving external members in stored expansion order and report lost
+group ranges, dynamic order and compositing effects. Shared images, parameters,
+Blend tables and constraints remain. New opaque export failures
+require explicit acceptance through `DeletionOptions`; provenance and later
+export checks remain intact. Strict deletion APIs retain their existing behavior.
+Runtime/Python transport and Editor review integration are not available yet.
+
+```sh
+cargo test --locked -p zipzi-sdk --test integration deletion::
+```
+
 `prepare_rgba_image` returns a lease that can be passed to image creation or
 replacement. Candidates, snapshots, history and leases retain their referenced
 content; unused resources can be collected after those owners are dropped.

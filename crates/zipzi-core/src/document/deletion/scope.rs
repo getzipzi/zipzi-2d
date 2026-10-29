@@ -1,0 +1,102 @@
+use super::*;
+
+impl Document {
+    pub(super) fn deletion_scope(
+        &self,
+        request: &DeletionRequest,
+        control: &ConversionControl,
+    ) -> Result<(BTreeMap<DeletionObject, DeletionReason>, DeletionReport), Status> {
+        let mut roots = BTreeSet::new();
+        for root in &request.roots {
+            control.checkpoint()?;
+            roots.insert(root.clone());
+        }
+        let mut removed = BTreeMap::new();
+        let mut requested = BTreeSet::new();
+        for root in &roots {
+            control.checkpoint()?;
+            let key = root.object();
+            let exists = match key.kind {
+                DeletionKind::Mesh => self.get_mesh(&key.id).is_some(),
+                DeletionKind::Glue => self.get_glue(&key.id).is_some(),
+                DeletionKind::Offscreen => self.get_offscreen(&key.id).is_some(),
+                DeletionKind::Part => self.get_part(&key.id).is_some(),
+                DeletionKind::Deformer => self.get_transform(&key.id).is_some(),
+                _ => false,
+            };
+            if !exists {
+                return Err(Status::error("MISSING_DELETION_TARGET", &key.id));
+            }
+            requested.insert(key.clone());
+            removed.insert(key, DeletionReason::Requested);
+        }
+        let mut report = DeletionReport {
+            requested: requested.into_iter().collect(),
+            requested_scopes: roots.iter().cloned().collect(),
+            ..Default::default()
+        };
+        // Each explicit root contributes its own scope before union. In particular,
+        // an explicitly selected Deformer inside a selected Part is not redundant.
+        for root in &roots {
+            for id in self.scene_organization_order() {
+                control.checkpoint()?;
+                let in_scope = match root {
+                    DeletionTarget::Part(part) => {
+                        let mut parent = self.scene_organization_owner(&id).unwrap_or("");
+                        let mut found = false;
+                        while !parent.is_empty() {
+                            if parent == part {
+                                found = true;
+                                break;
+                            }
+                            parent = &self.get_part(parent).unwrap().parent_id;
+                        }
+                        found
+                    }
+                    DeletionTarget::Deformer(deformer) => {
+                        let mut parent = self.scene_deformer_parent(&id).unwrap_or("");
+                        let mut found = false;
+                        while !parent.is_empty() {
+                            if parent == deformer {
+                                found = true;
+                                break;
+                            }
+                            parent = self.get_transform(parent).unwrap().parent();
+                        }
+                        found
+                    }
+                    _ => false,
+                };
+                if in_scope {
+                    let child = self.deletion_scene_object(&id).unwrap();
+                    removed
+                        .entry(child.clone())
+                        .or_insert(DeletionReason::Scope);
+                    report.relations.push(DeletionRelation {
+                        owner: root.object(),
+                        field: DeletionField::RequestedScope,
+                        target: child,
+                    });
+                }
+            }
+        }
+        Ok((removed, report))
+    }
+
+    pub(super) fn deletion_scene_object(&self, id: &str) -> Option<DeletionObject> {
+        let kind = if self.get_part(id).is_some() {
+            DeletionKind::Part
+        } else if self.get_transform(id).is_some() {
+            DeletionKind::Deformer
+        } else if self.get_mesh(id).is_some() {
+            DeletionKind::Mesh
+        } else if self.get_offscreen(id).is_some() {
+            DeletionKind::Offscreen
+        } else if self.get_glue(id).is_some() {
+            DeletionKind::Glue
+        } else {
+            return None;
+        };
+        Some(object(kind, id))
+    }
+}

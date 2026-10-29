@@ -11,6 +11,7 @@ mod binding_authoring;
 mod cdi_authoring;
 #[path = "cmo3_export.rs"]
 mod cmo3_export;
+mod deletion;
 #[path = "document_operations.rs"]
 mod document_operations;
 #[path = "editor_state.rs"]

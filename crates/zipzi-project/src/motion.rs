@@ -361,21 +361,34 @@ pub fn export_motion3(document: &Document, id: &str) -> Result<String, MotionPro
     export_clip_motion3(document, clip)
 }
 
+pub(crate) fn opaque_export_problems(
+    document: &Document,
+    clip: &MotionClip,
+) -> Vec<crate::OpaqueExportProblem> {
+    use crate::OpaqueExportProblem as P;
+    if !(clip.has_extensions()) {
+        return vec![];
+    }
+    let mut problems = vec![];
+    if clip.opaque_source_ids.as_ref() != Some(&namespace(document, Some(clip))) {
+        problems.push(P::NamespaceChanged);
+    }
+    if clip.opaque_source_content_hash.as_deref() != Some(content_hash(clip).as_str()) {
+        problems.push(P::ContentChanged);
+    }
+    problems
+}
+
 fn export_clip_motion3(
     document: &Document,
     clip: &MotionClip,
 ) -> Result<String, MotionProjectError> {
-    if clip.has_extensions() {
-        if clip.opaque_source_ids.as_ref() != Some(&namespace(document, Some(clip))) {
-            return Err(error(
-                "OPAQUE_NAMESPACE_CHANGED",
-                "$",
-                "runtime ID namespace changed since import",
-            ));
-        }
-        if clip.opaque_source_content_hash.as_deref() != Some(content_hash(clip).as_str()) {
-            return Err(error("OPAQUE_CONTENT_CHANGED", "$", "motion content changed since import; reimport to establish an opaque-field baseline"));
-        }
+    if let Some(problem) = opaque_export_problems(document, clip).first() {
+        return Err(error(
+            problem.code(),
+            "$",
+            "Imported opaque fields no longer match their provenance",
+        ));
     }
     let curves = clip
         .tracks
