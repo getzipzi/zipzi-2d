@@ -30,6 +30,12 @@ def compact(source):
 
 
 def render_catalog(contract,output,header,package,dto_names,modeling_name):
+    parsed = {}
+    def parse(path, content):
+        cached = parsed.get(path)
+        if cached is None or cached[0] != content:
+            cached = parsed[path] = (content, ast.parse(content))
+        return cached[1]
     # Read sources rather than importing them: generation never creates Runtime,
     # imports native code, introspects private tokens or depends on an installed wheel.
     sources={p.relative_to(package).as_posix():p.read_text(encoding='utf-8') for p in (package/'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts}
@@ -38,7 +44,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
         if p.endswith('.py') and '@dataclass(' in s:output[p]=compact(s);sources[p]=output[p]
     for path,content in list(output.items()):
         if path.endswith('/_generated/modeling.py'):
-            tree=ast.parse(content)
+            tree=parse(path, content)
             names=[n.name for n in tree.body if isinstance(n,ast.ClassDef) and not n.name.startswith('_')]
             names += [n.target.id for n in tree.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and 'TypeAlias' in ast.unparse(n.annotation)]
             names += ['ExtensionValue']
@@ -47,7 +53,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
     read_classes=set()
     for path,content in sources.items():
         if '/_generated/' not in path and not path.endswith('/_values.py'):continue
-        for node in ast.parse(content).body:
+        for node in parse(path, content).body:
             if isinstance(node,ast.ClassDef) and any(isinstance(f,ast.FunctionDef) and f.name in {'read','_read'} for f in node.body):read_classes.add(node.name)
     pattern=r'\b('+'|'.join(sorted(read_classes))+r')\.read\b'
     for path,content in list(output.items()):
@@ -133,7 +139,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
     aliases={'MeshSpec':'MeshCreateSpec','Geometry':'MeshGeometry','ParameterSpec':'ParameterCreateSpec','MeshBindingSpec':'MeshBindingCreateSpec','Checks':'GeometryChecks'}
     for path,content in list(output.items()):
         if not path.endswith('.py') or '/_generated/' not in path or '@dataclass' not in content:continue
-        tree=ast.parse(content);lines=content.splitlines(True);edits=[]
+        tree=parse(path, content);lines=content.splitlines(True);edits=[]
         for node in tree.body:
             if not isinstance(node,ast.ClassDef) or ast.get_docstring(node) or not any(isinstance(n,ast.Name) and n.id=='CompactValue' for n in node.bases):continue
             fs=compiled_fields(Path(path).stem,node)
@@ -143,7 +149,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
         for index,value in reversed(edits):lines.insert(index,value)
         output[path]=''.join(lines);sources[path]=output[path]
     prefix='client/python/zipzi/'
-    trees={p[len(prefix):-3].replace('/','.') if p!=prefix+'__init__.py' else '':ast.parse(s) for p,s in sources.items() if p.startswith(prefix)}
+    trees={p[len(prefix):-3].replace('/','.') if p!=prefix+'__init__.py' else '':parse(p, s) for p,s in sources.items() if p.startswith(prefix)}
     symbols={}
     def signature(node):
         if isinstance(node,ast.FunctionDef):

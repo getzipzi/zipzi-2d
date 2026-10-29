@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 PACKAGE = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE.parents[1]
@@ -473,13 +474,18 @@ def render(contract):
     output.update(_catalog_codegen.render_catalog(contract, output, HEADER, PACKAGE, _dto_codegen.NAMES, _modeling_codegen.public_name))
     # rustfmt only sees generated scratch files, never handwritten sources.
     import tempfile
+    from concurrent.futures import ThreadPoolExecutor
     with tempfile.TemporaryDirectory(prefix='zipzi-codegen-') as folder:
-        for path, content in list(output.items()):
-            if path.endswith('.rs'):
-                temporary = Path(folder) / Path(path).name
-                temporary.write_text(content, encoding='utf-8')
-                subprocess.run(['rustfmt', '--edition', '2021', '--config', 'style_edition=2024,skip_children=true', str(temporary)], check=True)
-                output[path] = temporary.read_text(encoding='utf-8')
+        def format_rust(item):
+            path, content = item
+            temporary = Path(folder) / path
+            temporary.parent.mkdir(parents=True, exist_ok=True)
+            temporary.write_text(content, encoding='utf-8')
+            subprocess.run(['rustfmt', '--edition', '2021', '--config', 'style_edition=2024,skip_children=true', str(temporary)], check=True)
+            return path, temporary.read_text(encoding='utf-8')
+        rust_files = [(path, content) for path, content in output.items() if path.endswith('.rs')]
+        with ThreadPoolExecutor(max_workers=min(8, len(rust_files) or 1)) as pool:
+            output.update(pool.map(format_rust, rust_files))
     return output
 
 
@@ -490,6 +496,53 @@ def export():
     if result.returncode:
         raise RuntimeError(result.stderr)
     return json.loads(result.stdout)
+
+
+def cache_key(contract):
+    """Fingerprint every external input read by the renderers."""
+    digest = hashlib.sha256()
+    def add(value):
+        data = value.encode('utf-8') if isinstance(value, str) else value
+        digest.update(len(data).to_bytes(8, 'big'))
+        digest.update(data)
+    add(json.dumps(contract, sort_keys=True, separators=(',', ':')))
+    add(sys.version)
+    add(subprocess.check_output(['rustfmt', '--version'], text=True))
+    paths = list((PACKAGE / 'tools').glob('generate*.py'))
+    paths += [p for p in (PACKAGE / 'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts]
+    paths += [PACKAGE / 'client/python/zipzi/docs/guide.md', PACKAGE / 'client/pyproject.toml']
+    for path in sorted(paths):
+        add(path.relative_to(PACKAGE).as_posix())
+        add(path.read_bytes())
+    return digest.hexdigest()
+
+
+def cached_render(contract, cache_file):
+    key = cache_key(contract)
+    try:
+        cached = json.loads(cache_file.read_text(encoding='utf-8'))
+        output = cached.get('output')
+        if (cached.get('key') == key and isinstance(output, dict) and set(output) == TARGETS
+                and all(isinstance(v, str) for v in output.values())
+                and cached.get('output_sha256') == hashlib.sha256(json.dumps(output, sort_keys=True).encode()).hexdigest()):
+            return output
+    except (OSError, ValueError, AttributeError):
+        pass
+    output = render(contract)
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=cache_file.parent, delete=False) as temporary:
+            try:
+                output_sha256 = hashlib.sha256(json.dumps(output, sort_keys=True).encode()).hexdigest()
+                json.dump({'key': key, 'output_sha256': output_sha256, 'output': output}, temporary)
+                temporary.close()
+                os.replace(temporary.name, cache_file)
+            finally:
+                if os.path.exists(temporary.name):
+                    os.unlink(temporary.name)
+    except OSError:
+        pass  # A read-only or unavailable cache must not prevent generation.
+    return output
 
 
 def write_outputs(output, check=False, package=PACKAGE):
@@ -526,9 +579,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true', help='Compare only; do not write sources')
     parser.add_argument('--schema', type=Path, help='Replay an exported intermediate schema for diagnostics')
+    parser.add_argument('--no-cache', action='store_true', help='Render all outputs without using the local generation cache')
     args = parser.parse_args()
     contract = json.loads(args.schema.read_text(encoding='utf-8')) if args.schema else export()
-    output = render(contract)
+    output = render(contract) if args.no_cache else cached_render(contract, ROOT / 'target/python2/generate-cache.json')
     changes = write_outputs(output, args.check)
     if args.check and changes:
         raise SystemExit('Generated drift: ' + ', '.join(changes))

@@ -16,6 +16,12 @@ uv run --locked python tools/test_tools.py -p test_python2_codegen.py
 uv run --locked python crates/zipzi-python2/tools/generate.py --check
 ```
 
+The generator always exports the current Rust contract through Cargo. It caches
+rendered outputs under `target/python2/generate-cache.json` using the contract,
+generator and client sources, documentation, Python and rustfmt versions.
+Existing outputs are still checked for drift and ownership. Use `--no-cache`
+to force a fresh render; deleting the cache is also safe.
+
 `ApiFields` exports names and concrete Rust type identities for selected lifecycle
 records and event variants. It does not traverse private state. The Python DTO
 exporter explicitly binds each supported leaf, so event/cursor field declarations

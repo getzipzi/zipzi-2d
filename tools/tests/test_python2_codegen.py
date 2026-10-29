@@ -16,6 +16,30 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_render_cache_reuses_and_invalidates_inputs_and_recovers_from_corruption(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'tools').mkdir()
+            (root / 'tools/generate.py').write_text('generator')
+            client = root / 'client/python/zipzi'
+            (client / 'docs').mkdir(parents=True)
+            (client / 'docs/guide.md').write_text('guide')
+            (client / 'api.py').write_text('api')
+            (root / 'client/pyproject.toml').write_text('version')
+            cache = root / 'cache.json'
+            output = {path: 'generated' for path in gen.TARGETS}
+            with patch.object(gen, 'PACKAGE', root), patch.object(gen.subprocess, 'check_output', return_value='rustfmt 1'), patch.object(gen, 'render', return_value=output) as render:
+                contract = {'version': 1}
+                self.assertEqual(gen.cached_render(contract, cache), output)
+                self.assertEqual(gen.cached_render(contract, cache), output)
+                self.assertEqual(render.call_count, 1)
+                (client / 'api.py').write_text('changed')
+                gen.cached_render(contract, cache)
+                gen.cached_render({'version': 2}, cache)
+                cache.write_text('{invalid')
+                gen.cached_render(contract, cache)
+                self.assertEqual(render.call_count, 4)
+
     def test_catalog_navigation_and_public_query_defaults(self):
         output=gen.render(self.contract());namespace={}
         exec(output['client/python/zipzi/_generated/catalog.py'],namespace)

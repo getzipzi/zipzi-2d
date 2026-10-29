@@ -41,26 +41,26 @@ def download_notes(repository, tag):
     def link(name):
         return f'{base}/{quote(name, safe="")}'
     return f'''{START}
-## 下载 / Downloads
+## Downloads
 
-只使用桌面编辑器，下载与你的系统对应的 **一项** 即可。
+To use the desktop editor, download the package for your platform.
 
-| 系统 / Platform | 下载 / Download | 安装 / Install |
+| Platform | Download | Installation |
 | --- | --- | --- |
-| macOS · Apple Silicon（M 系列） | [下载 Mac 安装包（DMG）]({link(mac)}) | 打开后拖入 Applications |
-| Windows · Intel/AMD 64 位 | [下载 Windows 便携版（ZIP）]({link(windows)}) | 解压后运行 zipzi-editor.exe |
+| macOS · Apple Silicon (M series) | [Download for macOS (DMG)]({link(mac)}) | Open the DMG and drag the app to Applications. |
+| Windows · Intel/AMD 64-bit | [Download for Windows (ZIP)]({link(windows)}) | Extract the archive and run `zipzi-editor.exe`. |
 
-**Python SDK（CPython 3.14）**：通过 [PyPI](https://pypi.org/project/zipzi/{version}/) 安装，无需在附件里选择 wheel：
+**Python SDK (CPython 3.14):** Install from [PyPI](https://pypi.org/project/zipzi/{version}/):
 
 ```sh
 python -m pip install zipzi=={version}
 ```
 
-使用 Python 本地运行模式 `zipzi.local()` 时，再安装 `zipzi-native=={version}`。
+For local execution with `zipzi.local()`, also install `zipzi-native=={version}`.
 
-[完整源码（含子模块，开发者使用）]({link(source)}) · [SHA256 校验文件]({link('SHA256SUMS')})
+[Complete source archive (including submodules)]({link(source)}) · [SHA-256 checksums]({link('SHA256SUMS')})
 
-下方的 Source code 是源码，不是桌面安装包。
+The automatically generated source code archives below do not contain desktop installers.
 {END}
 '''
 
