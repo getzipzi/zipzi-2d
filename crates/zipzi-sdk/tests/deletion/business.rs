@@ -161,6 +161,123 @@ fn drawing_and_glue_roles_do_not_delete_their_host() {
     assert!(s.document().get_part(&id(4)).is_some());
     assert!(s.document().get_scene_binding(&id(5)).is_some());
 }
+
+fn drawing_role_request(s: &mut AuthoringSession) -> DeletionRequest {
+    apply(s, &roots(vec![DeletionTarget::Offscreen(id(40))]));
+    s.edit("drawing role without an Offscreen", None, |e| {
+        e.replace_draw_order_groups(vec![
+            zipzi_core::draw_order::DrawOrderGroup {
+                owner: String::new(),
+                items: vec![id(10), id(4), id(11)],
+                min_order: -10,
+                max_order: 10,
+            },
+            zipzi_core::draw_order::DrawOrderGroup {
+                owner: id(4),
+                items: vec![id(12)],
+                min_order: -20,
+                max_order: 20,
+            },
+        ])
+    })
+    .unwrap();
+    roots(vec![record(DeletionKind::DrawingGroup, 4)])
+}
+
+#[test]
+fn drawing_role_flattening_requires_review_of_the_retained_members() {
+    let mut s = fixture();
+    let request = drawing_role_request(&mut s);
+    let review = s
+        .read_snapshot()
+        .prepare_deletion_review(
+            zipzi_sdk::DeletionIntent {
+                request,
+                ..Default::default()
+            },
+            AuthoringLimits::default(),
+            &ConversionControl::default(),
+        )
+        .unwrap();
+    assert_eq!(
+        review.summary().state,
+        zipzi_sdk::DeletionReviewState::NeedsConfirmation
+    );
+    assert!(review
+        .analysis()
+        .native
+        .rewritten
+        .iter()
+        .any(|r| { r.owner.kind == DeletionKind::DrawingGroup && r.owner.id == id(1) }));
+    s.edit("reviewed deletion", None, |e| review.apply(e))
+        .unwrap();
+    assert_eq!(
+        s.document().draw_order_groups().unwrap()[0].items,
+        vec![id(10), id(12), id(11)]
+    );
+    assert!(s.document().get_part(&id(4)).is_some());
+}
+
+#[test]
+fn locked_drawing_destination_is_reported_without_publishing() {
+    let mut s = fixture();
+    let request = drawing_role_request(&mut s);
+    s.edit("external drawing destination", None, |e| {
+        e.create_part(Part {
+            id: id(90),
+            ..Default::default()
+        })?;
+        let mut groups = e.candidate_document().draw_order_groups().unwrap().to_vec();
+        groups[0].owner = id(90);
+        groups.insert(
+            0,
+            zipzi_core::draw_order::DrawOrderGroup {
+                owner: String::new(),
+                items: vec![id(90)],
+                min_order: -100,
+                max_order: 100,
+            },
+        );
+        e.replace_draw_order_groups(groups)
+    })
+    .unwrap();
+    lock(&mut s, &id(90));
+    let before = s.document().clone();
+    let history = s.history_lengths();
+    let analysis = s.analyze_deletion(&request).unwrap();
+    assert!(
+        analysis
+            .native
+            .blockers
+            .iter()
+            .any(|b| b.source_id == id(90)),
+        "{:?}",
+        analysis.native
+    );
+    let review = s
+        .read_snapshot()
+        .prepare_deletion_review(
+            zipzi_sdk::DeletionIntent {
+                request: request.clone(),
+                ..Default::default()
+            },
+            s.authoring_limits(),
+            &ConversionControl::default(),
+        )
+        .unwrap();
+    assert_eq!(
+        review.summary().state,
+        zipzi_sdk::DeletionReviewState::Blocked
+    );
+    assert!(review.report_page(zipzi_sdk::DeletionSection::Locks, 0, 256).unwrap().rows.iter().any(|r| {
+        matches!(r, zipzi_sdk::DeletionRow::Lock { blocker } if blocker.source_id == id(90) && blocker.object.kind == DeletionKind::DrawingGroup)
+    }));
+    assert!(s
+        .plan_deletion(&request, &DeletionOptions::default())
+        .is_err());
+    assert!(s.document().same_content(&before));
+    assert_eq!(s.history_lengths(), history);
+}
 #[test]
 fn samples_and_keys_use_native_interpolation_and_empty_tracks_are_reported() {
     let mut s = scene::tree();
@@ -668,6 +785,34 @@ fn blend_base_sample_requires_an_explicit_retained_base_and_last_sample_has_a_ch
         .decisions
         .iter()
         .any(|d| d.object.id == id(251) && d.choices.contains(&DeletionChoice::DeleteSubtree)));
+}
+
+#[test]
+fn unconfigured_blend_table_is_not_a_deletion_target() {
+    let mut s = fixture();
+    s.edit("pending Blend binding", None, |e| {
+        e.create_blend_binding(BlendShapeBinding {
+            id: id(260),
+            target_id: id(10),
+            target_kind: BlendShapeTargetKind::Mesh,
+            key_table_id: String::new(),
+            constraint_ids: vec![],
+            keyforms: DeltaKeyforms::Mesh(vec![]),
+        })
+    })
+    .unwrap();
+    let before = s.document().clone();
+    let request = roots(vec![DeletionTarget::Record(DeletionObject {
+        kind: DeletionKind::BlendKeyTable,
+        id: String::new(),
+        owner_id: None,
+    })]);
+    let error = s
+        .plan_deletion(&request, &DeletionOptions::default())
+        .unwrap_err();
+    assert_eq!(error.code.as_ref(), "MISSING_DELETION_TARGET");
+    assert!(s.document().same_content(&before));
+    assert!(s.document().get_blend_binding(&id(260)).is_some());
 }
 
 #[test]

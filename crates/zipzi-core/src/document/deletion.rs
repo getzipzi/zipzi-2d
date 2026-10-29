@@ -692,6 +692,7 @@ impl DeletionReport {
                         | DeletionEffect::ParameterDimensionRemoved { .. }
                         | DeletionEffect::ResourceReplaced { .. }
                         | DeletionEffect::ContentChanged(_)
+                        | DeletionEffect::DrawingGroupFlattened { .. }
                 )
             })
             || self.requested.len() > 1
@@ -917,7 +918,7 @@ impl Document {
             .removed
             .iter()
             .filter(|r| r.object.owner_id.is_none())
-            .map(|r| r.object.id.as_str())
+            .map(|r| r.object.id.clone())
             .collect();
         let scene_ids: BTreeSet<_> = report
             .removed
@@ -932,17 +933,17 @@ impl Document {
                         | DeletionKind::Deformer
                 )
             })
-            .map(|r| r.object.id.as_str())
+            .map(|r| r.object.id.clone())
             .collect();
         let drawing_ids: BTreeSet<_> = scene_ids
             .iter()
-            .copied()
+            .cloned()
             .chain(
                 report
                     .removed
                     .iter()
                     .filter(|r| r.object.kind == DeletionKind::DrawingGroup)
-                    .map(|r| r.object.id.as_str()),
+                    .map(|r| r.object.id.clone()),
             )
             .collect();
         let mut delta = organization::Delta::default();
@@ -993,7 +994,9 @@ impl Document {
         if let Some(areas) = &mut candidate.content.model3_settings.hit_areas {
             areas.retain(|a| !ids.contains(a.id.as_str()));
         }
-        self.install_deletion_drawing(&mut candidate, &drawing_ids, control)?;
+        if !self.install_deletion_drawing(&mut candidate, &drawing_ids, &mut report, control)? {
+            return Ok(DeletionPreparation { report, plan: None });
+        }
         candidate
             .content
             .hierarchy_order

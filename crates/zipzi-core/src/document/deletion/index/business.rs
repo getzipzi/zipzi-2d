@@ -104,11 +104,16 @@ impl DeletionIndex {
             control.checkpoint()?;
             let b = d.get_blend_binding(id).unwrap();
             let key = object(DeletionKind::BlendBinding, id);
-            self.edge(
-                key.clone(),
-                DeletionField::BlendTable,
-                object(DeletionKind::BlendKeyTable, &b.key_table_id),
-            );
+            // An unconfigured binding has no table relationship. Registering
+            // the empty sentinel would make it a selectable deletion root and
+            // incorrectly retire every unconfigured consumer as a dependency.
+            if !b.key_table_id.is_empty() {
+                self.edge(
+                    key.clone(),
+                    DeletionField::BlendTable,
+                    object(DeletionKind::BlendKeyTable, &b.key_table_id),
+                );
+            }
             for (slot, id) in b.constraint_ids.iter().enumerate() {
                 self.edge(
                     key.clone(),

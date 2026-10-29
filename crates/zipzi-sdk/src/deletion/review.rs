@@ -507,7 +507,10 @@ impl AuthoringSnapshot {
         } else if !prepared.report.decisions.is_empty() || !new_export_failures.is_subset(&accepted)
         {
             DeletionReviewState::NeedsChoice
-        } else if prepared.report.requires_confirmation() {
+        } else if prepared.report.requires_confirmation() || !new_export_failures.is_empty() {
+            // Accepting an export regression resolves that choice; clients
+            // must still confirm deletion instead of treating it as a direct,
+            // consequence-free operation after the final acceptance click.
             DeletionReviewState::NeedsConfirmation
         } else {
             DeletionReviewState::Ready

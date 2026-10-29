@@ -177,7 +177,8 @@ impl Document {
                     && self.get_part(destination).is_some()
                     && !removed_ids.contains(destination)
                     && self.offscreen_for_part(destination).is_none_or(|other| {
-                        other.id == os.id || removed_ids.contains(other.id.as_str())
+                        other.id == os.id
+                            || removed.contains_key(&object(DeletionKind::Offscreen, &other.id))
                     })
                     && offscreen_destinations.insert(destination.to_owned());
                 if !valid {
@@ -309,14 +310,12 @@ impl Document {
                             .map(|os| object(DeletionKind::Offscreen, &os.id)),
                     });
                 }
-                for item in &group.items {
-                    if !removed_ids.contains(item.as_str()) {
-                        if let Some(owner) = self.deletion_scene_object(item) {
+                for (slot, item) in group.items.iter().enumerate() {
+                    if let Some(owner) = self.deletion_scene_object(item) {
+                        if !removed.contains_key(&owner) {
                             report.rewritten.push(DeletionRelation {
                                 owner,
-                                field: DeletionField::DrawingItem {
-                                    slot: group.items.iter().position(|v| v == item).unwrap(),
-                                },
+                                field: DeletionField::DrawingItem { slot },
                                 target: object(DeletionKind::DrawingGroup, &group.owner),
                             });
                         }
@@ -491,17 +490,29 @@ impl Document {
     pub(super) fn install_deletion_drawing(
         &self,
         candidate: &mut Document,
-        removed: &BTreeSet<&str>,
+        removed: &BTreeSet<String>,
+        report: &mut DeletionReport,
         control: &ConversionControl,
-    ) -> Result<(), Status> {
+    ) -> Result<bool, Status> {
         let Some(source) = self.draw_order_groups() else {
-            return Ok(());
+            return Ok(true);
         };
         let groups: BTreeMap<_, _> = source.iter().map(|g| (g.owner.as_str(), g)).collect();
+        let mut reported: BTreeSet<_> = report
+            .rewritten
+            .iter()
+            .filter_map(|r| {
+                if let DeletionField::DrawingItem { slot } = r.field {
+                    Some((r.owner.clone(), slot))
+                } else {
+                    None
+                }
+            })
+            .collect();
         fn expand(
             id: &str,
             groups: &BTreeMap<&str, &DrawOrderGroup>,
-            removed: &BTreeSet<&str>,
+            removed: &BTreeSet<String>,
             out: &mut Vec<String>,
         ) {
             if !removed.contains(id) {
@@ -524,15 +535,44 @@ impl Document {
                 expand(id, &groups, removed, &mut next.items);
             }
             if next != *group {
-                self.authoring_unlocked(if group.owner.is_empty() {
-                    self.id()
-                } else {
-                    &group.owner
-                })?;
+                let owner = object(
+                    DeletionKind::DrawingGroup,
+                    if group.owner.is_empty() {
+                        self.id()
+                    } else {
+                        &group.owner
+                    },
+                );
+                for (slot, id) in group
+                    .items
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, id)| removed.contains(id.as_str()))
+                {
+                    let field = DeletionField::DrawingItem { slot };
+                    if reported.insert((owner.clone(), slot)) {
+                        let target = if groups.contains_key(id.as_str()) {
+                            object(DeletionKind::DrawingGroup, id)
+                        } else {
+                            self.deletion_scene_object(id).unwrap()
+                        };
+                        report.rewritten.push(DeletionRelation {
+                            owner: owner.clone(),
+                            field,
+                            target,
+                        });
+                    }
+                }
+                if let Err(status) = self.deletion_unlocked(&owner) {
+                    report.blockers.push(DeletionLock {
+                        object: owner,
+                        source_id: status.message,
+                    });
+                }
             }
             result.push(next);
         }
         candidate.content.draw_order_groups = Some(result);
-        Ok(())
+        Ok(report.blockers.is_empty())
     }
 }

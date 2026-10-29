@@ -159,6 +159,57 @@ fn review_pages_require_exact_export_acceptance_without_changing_provenance() {
 }
 
 #[test]
+fn accepting_export_loss_still_requires_deletion_confirmation() {
+    let mut s = AuthoringSession::new(&id(1), Canvas::default()).unwrap();
+    s.edit("unused parameter and opaque settings", None, |e| {
+        e.create_parameter(Parameter {
+            id: id(270),
+            ..Default::default()
+        })?;
+        let mut settings = e.candidate_document().model3_settings().clone();
+        settings
+            .extensions
+            .insert("Vendor".into(), serde_json::json!(true));
+        settings.source_runtime_ids = Some(zipzi_project::model3::runtime_namespace(
+            e.candidate_document(),
+        ));
+        e.set_model3_settings(settings)
+    })
+    .unwrap();
+    let before = s.document().clone();
+    let request = DeletionRequest {
+        roots: vec![DeletionTarget::Parameter(id(270))],
+        ..Default::default()
+    };
+    let prepare = |accepted_export_failures| {
+        s.read_snapshot()
+            .prepare_deletion_review(
+                DeletionIntent {
+                    request: request.clone(),
+                    accepted_export_failures,
+                },
+                s.authoring_limits(),
+                &Default::default(),
+            )
+            .unwrap()
+    };
+    let initial = prepare(vec![]);
+    assert!(!initial.analysis().native.requires_confirmation());
+    assert_eq!(initial.summary().state, DeletionReviewState::NeedsChoice);
+    let accepted = prepare(vec![DeletionExportFailure::Model3NamespaceChanged]);
+    assert_eq!(
+        accepted.summary().state,
+        DeletionReviewState::NeedsConfirmation
+    );
+    assert!(s.document().same_content(&before));
+    s.edit("confirm deletion", None, |e| accepted.apply(e))
+        .unwrap();
+    assert!(s.document().get_parameter(&id(270)).is_none());
+    s.undo().unwrap();
+    assert!(s.document().same_content(&before));
+}
+
+#[test]
 fn parameter_review_folds_dependent_axes_but_keeps_business_removals_visible() {
     let s = fixture();
     let plan = s

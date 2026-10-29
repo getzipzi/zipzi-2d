@@ -435,6 +435,49 @@ fn dissolve_part_requires_a_legal_offscreen_owner_and_explicit_state_loss_choice
 }
 
 #[test]
+fn offscreen_can_migrate_into_an_owner_freed_by_the_same_deletion() {
+    let mut s = tree();
+    s.edit("occupied destination", None, |e| {
+        e.create_offscreen(Offscreen {
+            id: id(92),
+            part_id: id(90),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    let before = s.document().clone();
+    let mut request = roots(vec![
+        DeletionTarget::DissolvePart(id(4)),
+        DeletionTarget::Offscreen(id(92)),
+    ]);
+    request
+        .reparent
+        .insert(id(4), ReparentStrategy::KeepLocalData);
+    request.offscreen_placements.insert(
+        id(40),
+        DeletionOffscreenPlacement {
+            part_id: id(90),
+            mapping: None,
+        },
+    );
+    let analysis = s.analyze_deletion(&request).unwrap();
+    assert!(
+        analysis.native.decisions.is_empty(),
+        "{:?}",
+        analysis.native
+    );
+    let plan = s
+        .plan_deletion(&request, &DeletionOptions::default())
+        .unwrap();
+    s.execute_deletion_plan(&plan).unwrap();
+    assert_eq!(s.document().offscreen_for_part(&id(90)).unwrap().id, id(40));
+    assert!(s.document().get_offscreen(&id(92)).is_none());
+    assert!(s.document().validate_structure().is_empty());
+    s.undo().unwrap();
+    assert!(s.document().same_content(&before));
+}
+
+#[test]
 fn opaque_pose_and_unrelated_motion_namespace_regressions_are_reported_without_rebasing() {
     let mut s = tree();
     let part_runtime = s.document().get_part(&id(4)).unwrap().runtime_id.clone();
