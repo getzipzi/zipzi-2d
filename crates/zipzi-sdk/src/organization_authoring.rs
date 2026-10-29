@@ -212,17 +212,7 @@ impl AuthoringSession {
             } else {
                 subtree.clone()
             },
-            delete: if supported
-                && h.kind() != ObjectKind::Part
-                && !d
-                    .organization_delete_users(&[h.id().into()], OrganizationDeletePolicy::Contents)
-                    .unwrap_or_default()
-                    .is_empty()
-            {
-                unavailable("OBJECT_REFERENCED")
-            } else {
-                subtree.clone()
-            },
+            delete: subtree.clone(),
             dissolve: if h.kind() == ObjectKind::Part
                 && !d.part_dissolve_state_representable(h.id())
             {

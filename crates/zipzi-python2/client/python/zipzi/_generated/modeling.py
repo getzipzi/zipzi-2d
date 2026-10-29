@@ -1473,12 +1473,16 @@ DeletionIntent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRequest(CompactValue):
-    'Immutable owned DeletionRequest value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nroots: Explicit typed roots and individual scope choices; order does not change the result.\nreparent: Explicit migration strategy by surviving object ID; KeepLocalData on a dissolved Part accepts its state loss.\nconversion_context: Frozen parameter inputs, finite domains and reference time; None uses document defaults and full declared domains.\noffscreen_placements: Explicit retained Part owners and mapping resolutions for surviving Offscreens.\ntolerance: Absolute and geometry-scale-relative position error allowed by conversion proofs.'
+    'Immutable owned DeletionRequest value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nroots: Explicit typed roots and individual scope choices; order does not change the result.\nreparent: Explicit migration strategy by surviving object ID; KeepLocalData on a dissolved Part accepts its state loss.\nconversion_context: Frozen parameter inputs, finite domains and reference time; None uses document defaults and full declared domains.\noffscreen_placements: Explicit retained Part owners and mapping resolutions for surviving Offscreens.\ntolerance: Absolute and geometry-scale-relative position error allowed by conversion proofs.\nparameter_slices: Explicit finite parameter slice coordinates; absent entries use frozen document defaults, never preview sliders.\ntexture_replacements: Resolution by deleted texture UUID; Some redirects to a retained texture and None explicitly leaves users unconfigured.\nphysics_node_replacements: Explicit replacement by removed Physics node UUID; replacement must remain in that native setting group.\nblend_base_replacements: Explicit retained base sample when deleting a Blend table base.'
     roots: tuple[DeletionTarget, ...]
     reparent: _Mapping[str, ReparentStrategy] = field(default_factory=lambda: {key0: read_ReparentStrategy(v0) for key0, v0 in record({}).items()})
     conversion_context: (ReparentContext | None) = None
     offscreen_placements: _Mapping[str, DeletionOffscreenPlacement] = field(default_factory=lambda: {key0: read_DeletionOffscreenPlacement(v0) for key0, v0 in record({}).items()})
     tolerance: DeletionTolerance = field(default_factory=lambda: read_DeletionTolerance({'absolute': 0.001, 'relative': 1e-06}))
+    parameter_slices: _Mapping[str, float] = field(default_factory=lambda: {key0: number(v0) for key0, v0 in record({}).items()})
+    texture_replacements: _Mapping[str, (str | None)] = field(default_factory=lambda: {key0: None if v0 is None else string(v0) for key0, v0 in record({}).items()})
+    physics_node_replacements: _Mapping[str, str] = field(default_factory=lambda: {key0: string(v0) for key0, v0 in record({}).items()})
+    blend_base_replacements: _Mapping[str, str] = field(default_factory=lambda: {key0: string(v0) for key0, v0 in record({}).items()})
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'roots', tuple(self.roots))
@@ -1486,6 +1490,10 @@ class DeletionRequest(CompactValue):
         object.__setattr__(self, 'conversion_context', None if self.conversion_context is None else self.conversion_context)
         object.__setattr__(self, 'offscreen_placements', MappingProxyType({key0: v0 for key0, v0 in self.offscreen_placements.items()}))
         object.__setattr__(self, 'tolerance', self.tolerance)
+        object.__setattr__(self, 'parameter_slices', MappingProxyType({key0: v0 for key0, v0 in self.parameter_slices.items()}))
+        object.__setattr__(self, 'texture_replacements', MappingProxyType({key0: None if v0 is None else v0 for key0, v0 in self.texture_replacements.items()}))
+        object.__setattr__(self, 'physics_node_replacements', MappingProxyType({key0: v0 for key0, v0 in self.physics_node_replacements.items()}))
+        object.__setattr__(self, 'blend_base_replacements', MappingProxyType({key0: v0 for key0, v0 in self.blend_base_replacements.items()}))
 DeletionRequest.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1558,7 +1566,129 @@ class DeletionTargetRemoveDeformer(CompactValue):
         object.__setattr__(self, 'value', self.value)
 DeletionTargetRemoveDeformer.__module__ = "zipzi.modeling"
 
-DeletionTarget: TypeAlias = DeletionTargetMesh | DeletionTargetGlue | DeletionTargetOffscreen | DeletionTargetPart | DeletionTargetDeformer | DeletionTargetDissolvePart | DeletionTargetRemoveDeformer
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionTargetParameter(CompactValue):
+    'Immutable owned DeletionTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this parameter and reduce ordinary axes at its frozen default unless explicitly overridden.'
+    _variant: _ClassVar[str] = 'Parameter'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+DeletionTargetParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionTargetParameterFolder(CompactValue):
+    'Immutable owned DeletionTargetParameterFolder value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Dissolve this parameter folder and retain its parameters and nested folders in the retained parent.'
+    _variant: _ClassVar[str] = 'ParameterFolder'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+DeletionTargetParameterFolder.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionTargetParameterFolderContents(CompactValue):
+    'Immutable owned DeletionTargetParameterFolderContents value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this parameter folder subtree and explicitly include its contained parameters.'
+    _variant: _ClassVar[str] = 'ParameterFolderContents'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+DeletionTargetParameterFolderContents.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionTargetTexture(CompactValue):
+    'Immutable owned DeletionTargetTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this image record; retained users require an explicit replacement or unconfigured choice.'
+    _variant: _ClassVar[str] = 'Texture'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+DeletionTargetTexture.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionTargetAttachment(CompactValue):
+    'Immutable owned DeletionTargetAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this owned attachment record and clear resolved optional sound/UserData references.'
+    _variant: _ClassVar[str] = 'Attachment'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+DeletionTargetAttachment.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionTargetRecord(CompactValue):
+    'Immutable owned DeletionTargetRecord value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Typed non-scene business record; its native domain validates ownership, child identities and choices.'
+    _variant: _ClassVar[str] = 'Record'
+    value: DeletionObject
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+DeletionTargetRecord.__module__ = "zipzi.modeling"
+
+DeletionTarget: TypeAlias = DeletionTargetMesh | DeletionTargetGlue | DeletionTargetOffscreen | DeletionTargetPart | DeletionTargetDeformer | DeletionTargetDissolvePart | DeletionTargetRemoveDeformer | DeletionTargetParameter | DeletionTargetParameterFolder | DeletionTargetParameterFolderContents | DeletionTargetTexture | DeletionTargetAttachment | DeletionTargetRecord
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionObject(CompactValue):
+    'Immutable owned DeletionObject value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nkind: Native identity domain; Part and its DrawingGroup role remain distinct.\nid: Persistent native ID; embedded identities also require their owner namespace.\nowner_id: Optional owning Expression ID for embedded source-scene track/key identities.'
+    kind: DeletionKind
+    id: str
+    owner_id: (str | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'kind', self.kind)
+        object.__setattr__(self, 'id', self.id)
+        object.__setattr__(self, 'owner_id', None if self.owner_id is None else self.owner_id)
+DeletionObject.__module__ = "zipzi.modeling"
+
+class DeletionKind(str, Enum):
+    __module__ = "zipzi.modeling"
+    MESH = 'Mesh'
+    GLUE = 'Glue'
+    OFFSCREEN = 'Offscreen'
+    MESH_BINDING = 'MeshBinding'
+    GLUE_BINDING = 'GlueBinding'
+    BLEND_BINDING = 'BlendBinding'
+    AXIS = 'Axis'
+    SAMPLE = 'Sample'
+    GLUE_PAIR = 'GluePair'
+    HIT_AREA = 'HitArea'
+    DRAWING_GROUP = 'DrawingGroup'
+    PART = 'Part'
+    DEFORMER = 'Deformer'
+    SCENE_BINDING = 'SceneBinding'
+    MOTION = 'Motion'
+    MOTION_TRACK = 'MotionTrack'
+    MOTION_KEY = 'MotionKey'
+    EXPRESSION = 'Expression'
+    EXPRESSION_TRACK = 'ExpressionTrack'
+    EXPRESSION_KEY = 'ExpressionKey'
+    POSE_ENTRY = 'PoseEntry'
+    POSE_LINK = 'PoseLink'
+    CDI_PART = 'CdiPart'
+    DISPLAY_INFO = 'DisplayInfo'
+    PARAMETER = 'Parameter'
+    PARAMETER_FOLDER = 'ParameterFolder'
+    TEXTURE = 'Texture'
+    ATTACHMENT = 'Attachment'
+    BLEND_KEY_TABLE = 'BlendKeyTable'
+    BLEND_CONSTRAINT = 'BlendConstraint'
+    MOTION_GROUP = 'MotionGroup'
+    MOTION_REGISTRATION = 'MotionRegistration'
+    MOTION_EVENT = 'MotionEvent'
+    EXPRESSION_ENTRY = 'ExpressionEntry'
+    POSE = 'Pose'
+    POSE_GROUP = 'PoseGroup'
+    PHYSICS = 'Physics'
+    PHYSICS_GROUP = 'PhysicsGroup'
+    PHYSICS_INPUT = 'PhysicsInput'
+    PHYSICS_OUTPUT = 'PhysicsOutput'
+    PHYSICS_NODE = 'PhysicsNode'
+    MODEL_SETTINGS = 'ModelSettings'
+    MODEL_PARAMETER_GROUP = 'ModelParameterGroup'
+    MODEL_PARAMETER_MEMBER = 'ModelParameterMember'
+    CDI_COMBINED_SET = 'CdiCombinedSet'
+    CDI_COMBINED_MEMBER = 'CdiCombinedMember'
 
 class ReparentStrategy(str, Enum):
     __module__ = "zipzi.modeling"
@@ -8446,45 +8576,6 @@ class DeletionRemoval(CompactValue):
         object.__setattr__(self, 'reason', self.reason)
 DeletionRemoval.__module__ = "zipzi.modeling"
 
-@dataclass(frozen=True, kw_only=True, repr=False)
-class DeletionObject(CompactValue):
-    'Immutable owned DeletionObject value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nkind: Native identity domain; Part and its DrawingGroup role remain distinct.\nid: Persistent native ID; embedded identities also require their owner namespace.\nowner_id: Optional owning Expression ID for embedded source-scene track/key identities.'
-    kind: DeletionKind
-    id: str
-    owner_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'kind', self.kind)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'owner_id', None if self.owner_id is None else self.owner_id)
-DeletionObject.__module__ = "zipzi.modeling"
-
-class DeletionKind(str, Enum):
-    __module__ = "zipzi.modeling"
-    MESH = 'Mesh'
-    GLUE = 'Glue'
-    OFFSCREEN = 'Offscreen'
-    MESH_BINDING = 'MeshBinding'
-    BLEND_BINDING = 'BlendBinding'
-    AXIS = 'Axis'
-    SAMPLE = 'Sample'
-    GLUE_PAIR = 'GluePair'
-    HIT_AREA = 'HitArea'
-    DRAWING_GROUP = 'DrawingGroup'
-    PART = 'Part'
-    DEFORMER = 'Deformer'
-    SCENE_BINDING = 'SceneBinding'
-    MOTION = 'Motion'
-    MOTION_TRACK = 'MotionTrack'
-    MOTION_KEY = 'MotionKey'
-    EXPRESSION = 'Expression'
-    EXPRESSION_TRACK = 'ExpressionTrack'
-    EXPRESSION_KEY = 'ExpressionKey'
-    POSE_ENTRY = 'PoseEntry'
-    POSE_LINK = 'PoseLink'
-    CDI_PART = 'CdiPart'
-    DISPLAY_INFO = 'DisplayInfo'
-
 class DeletionReason(str, Enum):
     __module__ = "zipzi.modeling"
     REQUESTED = 'Requested'
@@ -8623,7 +8714,217 @@ class DeletionFieldRequestedScope(CompactValue):
     _variant: _ClassVar[str] = 'RequestedScope'
 DeletionFieldRequestedScope.__module__ = "zipzi.modeling"
 
-DeletionField: TypeAlias = DeletionFieldOwned | DeletionFieldMeshMask | DeletionFieldMeshInvertedMask | DeletionFieldOffscreenMask | DeletionFieldGlueMeshA | DeletionFieldGlueMeshB | DeletionFieldHitAreaMesh | DeletionFieldDrawingItem | DeletionFieldOrganizationParent | DeletionFieldDeformationParent | DeletionFieldConvertedData | DeletionFieldPosePart | DeletionFieldPoseLinkPart | DeletionFieldMotionPart | DeletionFieldExpressionSourcePart | DeletionFieldCdiPart | DeletionFieldRequestedScope
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldParameterAxis(CompactValue):
+    'Immutable owned DeletionFieldParameterAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'ParameterAxis'
+DeletionFieldParameterAxis.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldBlendTableParameter(CompactValue):
+    'Immutable owned DeletionFieldBlendTableParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'BlendTableParameter'
+DeletionFieldBlendTableParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldBlendConstraintParameter(CompactValue):
+    'Immutable owned DeletionFieldBlendConstraintParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'BlendConstraintParameter'
+DeletionFieldBlendConstraintParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldBlendTable(CompactValue):
+    'Immutable owned DeletionFieldBlendTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'BlendTable'
+DeletionFieldBlendTable.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldBlendConstraint(CompactValue):
+    'Immutable owned DeletionFieldBlendConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based constraint address in the frozen BlendBinding.'
+    _variant: _ClassVar[str] = 'BlendConstraint'
+    slot: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'slot', self.slot)
+DeletionFieldBlendConstraint.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldMotionParameter(CompactValue):
+    'Immutable owned DeletionFieldMotionParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'MotionParameter'
+DeletionFieldMotionParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldExpressionParameter(CompactValue):
+    'Immutable owned DeletionFieldExpressionParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'ExpressionParameter'
+DeletionFieldExpressionParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldExpressionSourceParameter(CompactValue):
+    'Immutable owned DeletionFieldExpressionSourceParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'ExpressionSourceParameter'
+DeletionFieldExpressionSourceParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldPhysicsParameter(CompactValue):
+    'Immutable owned DeletionFieldPhysicsParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'PhysicsParameter'
+DeletionFieldPhysicsParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldPhysicsNode(CompactValue):
+    'Immutable owned DeletionFieldPhysicsNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'PhysicsNode'
+DeletionFieldPhysicsNode.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldTexture(CompactValue):
+    'Immutable owned DeletionFieldTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'Texture'
+DeletionFieldTexture.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldAttachmentSound(CompactValue):
+    'Immutable owned DeletionFieldAttachmentSound value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'AttachmentSound'
+DeletionFieldAttachmentSound.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldAttachmentUserData(CompactValue):
+    'Immutable owned DeletionFieldAttachmentUserData value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'AttachmentUserData'
+DeletionFieldAttachmentUserData.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldMotionClip(CompactValue):
+    'Immutable owned DeletionFieldMotionClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'MotionClip'
+DeletionFieldMotionClip.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldMotionRegistrationContainer(CompactValue):
+    'Immutable owned DeletionFieldMotionRegistrationContainer value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'MotionRegistrationContainer'
+DeletionFieldMotionRegistrationContainer.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldParameterFolder(CompactValue):
+    'Immutable owned DeletionFieldParameterFolder value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'ParameterFolder'
+DeletionFieldParameterFolder.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldModelParameter(CompactValue):
+    'Immutable owned DeletionFieldModelParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'ModelParameter'
+DeletionFieldModelParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldCdiParameter(CompactValue):
+    'Immutable owned DeletionFieldCdiParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Frozen zero-based CDI Parameters record address; imported unresolved records remain untouched.'
+    _variant: _ClassVar[str] = 'CdiParameter'
+    slot: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'slot', self.slot)
+DeletionFieldCdiParameter.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionFieldCdiCombinedParameter(CompactValue):
+    'Immutable owned DeletionFieldCdiCombinedParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'CdiCombinedParameter'
+DeletionFieldCdiCombinedParameter.__module__ = "zipzi.modeling"
+
+DeletionField: TypeAlias = DeletionFieldOwned | DeletionFieldMeshMask | DeletionFieldMeshInvertedMask | DeletionFieldOffscreenMask | DeletionFieldGlueMeshA | DeletionFieldGlueMeshB | DeletionFieldHitAreaMesh | DeletionFieldDrawingItem | DeletionFieldOrganizationParent | DeletionFieldDeformationParent | DeletionFieldConvertedData | DeletionFieldPosePart | DeletionFieldPoseLinkPart | DeletionFieldMotionPart | DeletionFieldExpressionSourcePart | DeletionFieldCdiPart | DeletionFieldRequestedScope | DeletionFieldParameterAxis | DeletionFieldBlendTableParameter | DeletionFieldBlendConstraintParameter | DeletionFieldBlendTable | DeletionFieldBlendConstraint | DeletionFieldMotionParameter | DeletionFieldExpressionParameter | DeletionFieldExpressionSourceParameter | DeletionFieldPhysicsParameter | DeletionFieldPhysicsNode | DeletionFieldTexture | DeletionFieldAttachmentSound | DeletionFieldAttachmentUserData | DeletionFieldMotionClip | DeletionFieldMotionRegistrationContainer | DeletionFieldParameterFolder | DeletionFieldModelParameter | DeletionFieldCdiParameter | DeletionFieldCdiCombinedParameter
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionEffectMotionRegistrationMoved(CompactValue):
+    'Immutable owned DeletionEffectMotionRegistrationMoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nregistration: Preserved last registration of a retained Clip, moved to the ungrouped root.\ngroup: Removed source group; the registration is not deleted with its other entries.'
+    _variant: _ClassVar[str] = 'MotionRegistrationMoved'
+    registration: DeletionObject
+    group: DeletionObject
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'registration', self.registration)
+        object.__setattr__(self, 'group', self.group)
+DeletionEffectMotionRegistrationMoved.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionEffectContentChanged(CompactValue):
+    'Immutable owned DeletionEffectContentChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Retained owner whose selected stable content identities disappear.'
+    _variant: _ClassVar[str] = 'ContentChanged'
+    value: DeletionObject
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+DeletionEffectContentChanged.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionEffectParameterDimensionRemoved(CompactValue):
+    'Immutable owned DeletionEffectParameterDimensionRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobject: Surviving ordinary binding or Glue grid reduced by the native grid converter.\nparameter: Driving parameter whose coordinate is frozen for this removed axis.\nvalue: Frozen document-default or explicitly selected finite slice coordinate.\neffective_value: Coordinate after native repeat normalization, key snapping and endpoint selection.\ndisabled: Whether this fixed coordinate disables the ordinary target outside the native grid.'
+    _variant: _ClassVar[str] = 'ParameterDimensionRemoved'
+    object: DeletionObject
+    parameter: DeletionObject
+    value: float
+    effective_value: float
+    disabled: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'object', self.object)
+        object.__setattr__(self, 'parameter', self.parameter)
+        object.__setattr__(self, 'value', self.value)
+        object.__setattr__(self, 'effective_value', self.effective_value)
+        object.__setattr__(self, 'disabled', self.disabled)
+DeletionEffectParameterDimensionRemoved.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionEffectBindingContributionRemoved(CompactValue):
+    'Immutable owned DeletionEffectBindingContributionRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobject: Retained target whose authored contribution disappears.\nbinding: Deleted ordinary or Blend binding that previously supplied this contribution.'
+    _variant: _ClassVar[str] = 'BindingContributionRemoved'
+    object: DeletionObject
+    binding: DeletionObject
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'object', self.object)
+        object.__setattr__(self, 'binding', self.binding)
+DeletionEffectBindingContributionRemoved.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionEffectResourceReplaced(CompactValue):
+    'Immutable owned DeletionEffectResourceReplaced value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobject: Retained consumer whose texture or optional attachment reference changes.\nsource: Deleted resource previously referenced by this consumer.\nreplacement: Retained replacement resource; None means an explicit clear/unconfigured result.'
+    _variant: _ClassVar[str] = 'ResourceReplaced'
+    object: DeletionObject
+    source: DeletionObject
+    replacement: (DeletionObject | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'object', self.object)
+        object.__setattr__(self, 'source', self.source)
+        object.__setattr__(self, 'replacement', None if self.replacement is None else self.replacement)
+DeletionEffectResourceReplaced.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionEffectParameterAnimationRemoved(CompactValue):
+    'Immutable owned DeletionEffectParameterAnimationRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.'
+    _variant: _ClassVar[str] = 'ParameterAnimationRemoved'
+    value: DeletionObject
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+DeletionEffectParameterAnimationRemoved.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionEffectPhysicsChannelRemoved(CompactValue):
+    'Immutable owned DeletionEffectPhysicsChannelRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobject: Removed input or output channel, with a stable native identity.\ngroup: Retained Physics setting group whose behavior changes.'
+    _variant: _ClassVar[str] = 'PhysicsChannelRemoved'
+    object: DeletionObject
+    group: DeletionObject
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'object', self.object)
+        object.__setattr__(self, 'group', self.group)
+DeletionEffectPhysicsChannelRemoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectMaskChanged(CompactValue):
@@ -8741,7 +9042,7 @@ class DeletionEffectPartStateRemoved(CompactValue):
         object.__setattr__(self, 'animated_order', self.animated_order)
 DeletionEffectPartStateRemoved.__module__ = "zipzi.modeling"
 
-DeletionEffect: TypeAlias = DeletionEffectMaskChanged | DeletionEffectGlueRemoved | DeletionEffectHitAreaRemoved | DeletionEffectCompositionChanged | DeletionEffectPartAnimationRemoved | DeletionEffectDrawingGroupFlattened | DeletionEffectOrganizationChanged | DeletionEffectDeformationChanged | DeletionEffectUnpreservedChannels | DeletionEffectPartStateRemoved
+DeletionEffect: TypeAlias = DeletionEffectMotionRegistrationMoved | DeletionEffectContentChanged | DeletionEffectParameterDimensionRemoved | DeletionEffectBindingContributionRemoved | DeletionEffectResourceReplaced | DeletionEffectParameterAnimationRemoved | DeletionEffectPhysicsChannelRemoved | DeletionEffectMaskChanged | DeletionEffectGlueRemoved | DeletionEffectHitAreaRemoved | DeletionEffectCompositionChanged | DeletionEffectPartAnimationRemoved | DeletionEffectDrawingGroupFlattened | DeletionEffectOrganizationChanged | DeletionEffectDeformationChanged | DeletionEffectUnpreservedChannels | DeletionEffectPartStateRemoved
 
 class DeletionChannel(str, Enum):
     __module__ = "zipzi.modeling"
@@ -8791,7 +9092,35 @@ class DeletionDecisionReasonPartStateUnpreserved(CompactValue):
     _variant: _ClassVar[str] = 'PartStateUnpreserved'
 DeletionDecisionReasonPartStateUnpreserved.__module__ = "zipzi.modeling"
 
-DeletionDecisionReason: TypeAlias = DeletionDecisionReasonConversionUnproven | DeletionDecisionReasonOffscreenOwnerUnavailable | DeletionDecisionReasonOffscreenMappingRequired | DeletionDecisionReasonPartStateUnpreserved
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionDecisionReasonTextureReplacementRequired(CompactValue):
+    'Immutable owned DeletionDecisionReasonTextureReplacementRequired value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'TextureReplacementRequired'
+DeletionDecisionReasonTextureReplacementRequired.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionDecisionReasonBlendBaseReplacementRequired(CompactValue):
+    'Immutable owned DeletionDecisionReasonBlendBaseReplacementRequired value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'BlendBaseReplacementRequired'
+DeletionDecisionReasonBlendBaseReplacementRequired.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionDecisionReasonPhysicsNodeReplacementRequired(CompactValue):
+    'Immutable owned DeletionDecisionReasonPhysicsNodeReplacementRequired value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'PhysicsNodeReplacementRequired'
+DeletionDecisionReasonPhysicsNodeReplacementRequired.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeletionDecisionReasonInvalidContainer(CompactValue):
+    'Immutable owned DeletionDecisionReasonInvalidContainer value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncode: Native container invariant requiring an explicit larger deletion or cancellation.'
+    _variant: _ClassVar[str] = 'InvalidContainer'
+    code: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'code', self.code)
+DeletionDecisionReasonInvalidContainer.__module__ = "zipzi.modeling"
+
+DeletionDecisionReason: TypeAlias = DeletionDecisionReasonConversionUnproven | DeletionDecisionReasonOffscreenOwnerUnavailable | DeletionDecisionReasonOffscreenMappingRequired | DeletionDecisionReasonPartStateUnpreserved | DeletionDecisionReasonTextureReplacementRequired | DeletionDecisionReasonBlendBaseReplacementRequired | DeletionDecisionReasonPhysicsNodeReplacementRequired | DeletionDecisionReasonInvalidContainer
 
 class DeletionChoice(str, Enum):
     __module__ = "zipzi.modeling"
@@ -8799,6 +9128,10 @@ class DeletionChoice(str, Enum):
     KEEP_LOCAL_DATA = 'KeepLocalData'
     CHOOSE_PART = 'ChoosePart'
     SUPPLY_OFFSCREEN_MAPPING = 'SupplyOffscreenMapping'
+    CHOOSE_TEXTURE = 'ChooseTexture'
+    CHOOSE_BLEND_BASE = 'ChooseBlendBase'
+    CLEAR_TEXTURE = 'ClearTexture'
+    CHOOSE_PHYSICS_NODE = 'ChoosePhysicsNode'
     DELETE_SUBTREE = 'DeleteSubtree'
     CANCEL = 'Cancel'
 
@@ -10534,14 +10867,35 @@ def validate_DeletionRequest(value: DeletionRequest) -> None:
             raise ValueError("Expected string")
         validate_DeletionOffscreenPlacement(v0)
     validate_DeletionTolerance(value.tolerance)
+    for key0, v0 in value.parameter_slices.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+    for key0, v0 in value.texture_replacements.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        if v0 is not None:
+            if not isinstance(v0, str):
+                raise ValueError("Expected string")
+    for key0, v0 in value.physics_node_replacements.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
+    for key0, v0 in value.blend_base_replacements.items():
+        if not isinstance(key0, str):
+            raise ValueError("Expected string")
+        if not isinstance(v0, str):
+            raise ValueError("Expected string")
 
 def encode_DeletionRequest(value: DeletionRequest) -> object:
-    return {'roots': [encode_DeletionTarget(v0) for v0 in value.roots], 'reparent': {str(key0): encode_ReparentStrategy(v0) for key0, v0 in value.reparent.items()}, 'conversion_context': None if value.conversion_context is None else encode_ReparentContext(value.conversion_context), 'offscreen_placements': {str(key0): encode_DeletionOffscreenPlacement(v0) for key0, v0 in value.offscreen_placements.items()}, 'tolerance': encode_DeletionTolerance(value.tolerance)}
+    return {'roots': [encode_DeletionTarget(v0) for v0 in value.roots], 'reparent': {str(key0): encode_ReparentStrategy(v0) for key0, v0 in value.reparent.items()}, 'conversion_context': None if value.conversion_context is None else encode_ReparentContext(value.conversion_context), 'offscreen_placements': {str(key0): encode_DeletionOffscreenPlacement(v0) for key0, v0 in value.offscreen_placements.items()}, 'tolerance': encode_DeletionTolerance(value.tolerance), 'parameter_slices': {str(key0): v0 for key0, v0 in value.parameter_slices.items()}, 'texture_replacements': {str(key0): None if v0 is None else v0 for key0, v0 in value.texture_replacements.items()}, 'physics_node_replacements': {str(key0): v0 for key0, v0 in value.physics_node_replacements.items()}, 'blend_base_replacements': {str(key0): v0 for key0, v0 in value.blend_base_replacements.items()}}
 
 def read_DeletionRequest(value: object) -> DeletionRequest:
     if isinstance(value, DeletionRequest): return value
     r = record(value)
-    return DeletionRequest(roots=tuple(read_DeletionTarget(v0) for v0 in sequence(r['roots'])), reparent={key0: read_ReparentStrategy(v0) for key0, v0 in record(r.get('reparent', {})).items()}, conversion_context=None if r.get('conversion_context', None) is None else read_ReparentContext(r.get('conversion_context', None)), offscreen_placements={key0: read_DeletionOffscreenPlacement(v0) for key0, v0 in record(r.get('offscreen_placements', {})).items()}, tolerance=read_DeletionTolerance(r.get('tolerance', {'absolute': 0.001, 'relative': 1e-06})))
+    return DeletionRequest(roots=tuple(read_DeletionTarget(v0) for v0 in sequence(r['roots'])), reparent={key0: read_ReparentStrategy(v0) for key0, v0 in record(r.get('reparent', {})).items()}, conversion_context=None if r.get('conversion_context', None) is None else read_ReparentContext(r.get('conversion_context', None)), offscreen_placements={key0: read_DeletionOffscreenPlacement(v0) for key0, v0 in record(r.get('offscreen_placements', {})).items()}, tolerance=read_DeletionTolerance(r.get('tolerance', {'absolute': 0.001, 'relative': 1e-06})), parameter_slices={key0: number(v0) for key0, v0 in record(r.get('parameter_slices', {})).items()}, texture_replacements={key0: None if v0 is None else string(v0) for key0, v0 in record(r.get('texture_replacements', {})).items()}, physics_node_replacements={key0: string(v0) for key0, v0 in record(r.get('physics_node_replacements', {})).items()}, blend_base_replacements={key0: string(v0) for key0, v0 in record(r.get('blend_base_replacements', {})).items()})
 
 def validate_DeletionTarget(value: DeletionTarget) -> None:
     if isinstance(value, DeletionTargetMesh):
@@ -10565,6 +10919,23 @@ def validate_DeletionTarget(value: DeletionTarget) -> None:
     elif isinstance(value, DeletionTargetRemoveDeformer):
         if not isinstance(value.value, str):
             raise ValueError("Expected string")
+    elif isinstance(value, DeletionTargetParameter):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, DeletionTargetParameterFolder):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, DeletionTargetParameterFolderContents):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, DeletionTargetTexture):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, DeletionTargetAttachment):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, DeletionTargetRecord):
+        validate_DeletionObject(value.value)
     else:
         raise TypeError("Expected DeletionTarget")
 
@@ -10583,10 +10954,22 @@ def encode_DeletionTarget(value: DeletionTarget) -> object:
         return {'DissolvePart': value.value}
     elif isinstance(value, DeletionTargetRemoveDeformer):
         return {'RemoveDeformer': value.value}
+    elif isinstance(value, DeletionTargetParameter):
+        return {'Parameter': value.value}
+    elif isinstance(value, DeletionTargetParameterFolder):
+        return {'ParameterFolder': value.value}
+    elif isinstance(value, DeletionTargetParameterFolderContents):
+        return {'ParameterFolderContents': value.value}
+    elif isinstance(value, DeletionTargetTexture):
+        return {'Texture': value.value}
+    elif isinstance(value, DeletionTargetAttachment):
+        return {'Attachment': value.value}
+    elif isinstance(value, DeletionTargetRecord):
+        return {'Record': encode_DeletionObject(value.value)}
     raise TypeError("Expected DeletionTarget")
 
 def read_DeletionTarget(value: object) -> DeletionTarget:
-    if isinstance(value, (DeletionTargetMesh, DeletionTargetGlue, DeletionTargetOffscreen, DeletionTargetPart, DeletionTargetDeformer, DeletionTargetDissolvePart, DeletionTargetRemoveDeformer,)): return value
+    if isinstance(value, (DeletionTargetMesh, DeletionTargetGlue, DeletionTargetOffscreen, DeletionTargetPart, DeletionTargetDeformer, DeletionTargetDissolvePart, DeletionTargetRemoveDeformer, DeletionTargetParameter, DeletionTargetParameterFolder, DeletionTargetParameterFolderContents, DeletionTargetTexture, DeletionTargetAttachment, DeletionTargetRecord,)): return value
     r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
     tag = string(value) if isinstance(value, str) else next(iter(r))
     if tag == 'Mesh':
@@ -10603,7 +10986,48 @@ def read_DeletionTarget(value: object) -> DeletionTarget:
         return DeletionTargetDissolvePart(value=string(r['DissolvePart']))
     elif tag == 'RemoveDeformer':
         return DeletionTargetRemoveDeformer(value=string(r['RemoveDeformer']))
+    elif tag == 'Parameter':
+        return DeletionTargetParameter(value=string(r['Parameter']))
+    elif tag == 'ParameterFolder':
+        return DeletionTargetParameterFolder(value=string(r['ParameterFolder']))
+    elif tag == 'ParameterFolderContents':
+        return DeletionTargetParameterFolderContents(value=string(r['ParameterFolderContents']))
+    elif tag == 'Texture':
+        return DeletionTargetTexture(value=string(r['Texture']))
+    elif tag == 'Attachment':
+        return DeletionTargetAttachment(value=string(r['Attachment']))
+    elif tag == 'Record':
+        return DeletionTargetRecord(value=read_DeletionObject(r['Record']))
     raise ValueError("Unknown DeletionTarget variant")
+
+def validate_DeletionObject(value: DeletionObject) -> None:
+    if not isinstance(value, DeletionObject):
+        raise TypeError("Expected DeletionObject")
+    validate_DeletionKind(value.kind)
+    if not isinstance(value.id, str):
+        raise ValueError("Expected string")
+    if value.owner_id is not None:
+        if not isinstance(value.owner_id, str):
+            raise ValueError("Expected string")
+
+def encode_DeletionObject(value: DeletionObject) -> object:
+    return {'kind': encode_DeletionKind(value.kind), 'id': value.id, 'owner_id': None if value.owner_id is None else value.owner_id}
+
+def read_DeletionObject(value: object) -> DeletionObject:
+    if isinstance(value, DeletionObject): return value
+    r = record(value)
+    return DeletionObject(kind=read_DeletionKind(r['kind']), id=string(r['id']), owner_id=None if r.get('owner_id', None) is None else string(r.get('owner_id', None)))
+
+def validate_DeletionKind(value: DeletionKind) -> None:
+    if not isinstance(value, DeletionKind):
+        raise TypeError("Expected DeletionKind")
+
+def encode_DeletionKind(value: DeletionKind) -> object:
+    return value.value
+
+def read_DeletionKind(value: object) -> DeletionKind:
+    if isinstance(value, DeletionKind): return value
+    return DeletionKind(string(value))
 
 def validate_ReparentStrategy(value: ReparentStrategy) -> None:
     if not isinstance(value, ReparentStrategy):
@@ -18656,35 +19080,6 @@ def read_DeletionRemoval(value: object) -> DeletionRemoval:
     r = record(value)
     return DeletionRemoval(object=read_DeletionObject(r['object']), reason=read_DeletionReason(r['reason']))
 
-def validate_DeletionObject(value: DeletionObject) -> None:
-    if not isinstance(value, DeletionObject):
-        raise TypeError("Expected DeletionObject")
-    validate_DeletionKind(value.kind)
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if value.owner_id is not None:
-        if not isinstance(value.owner_id, str):
-            raise ValueError("Expected string")
-
-def encode_DeletionObject(value: DeletionObject) -> object:
-    return {'kind': encode_DeletionKind(value.kind), 'id': value.id, 'owner_id': None if value.owner_id is None else value.owner_id}
-
-def read_DeletionObject(value: object) -> DeletionObject:
-    if isinstance(value, DeletionObject): return value
-    r = record(value)
-    return DeletionObject(kind=read_DeletionKind(r['kind']), id=string(r['id']), owner_id=None if r.get('owner_id', None) is None else string(r.get('owner_id', None)))
-
-def validate_DeletionKind(value: DeletionKind) -> None:
-    if not isinstance(value, DeletionKind):
-        raise TypeError("Expected DeletionKind")
-
-def encode_DeletionKind(value: DeletionKind) -> object:
-    return value.value
-
-def read_DeletionKind(value: object) -> DeletionKind:
-    if isinstance(value, DeletionKind): return value
-    return DeletionKind(string(value))
-
 def validate_DeletionReason(value: DeletionReason) -> None:
     if not isinstance(value, DeletionReason):
         raise TypeError("Expected DeletionReason")
@@ -18750,6 +19145,46 @@ def validate_DeletionField(value: DeletionField) -> None:
             raise ValueError("Expected usize")
     elif isinstance(value, DeletionFieldRequestedScope):
         pass
+    elif isinstance(value, DeletionFieldParameterAxis):
+        pass
+    elif isinstance(value, DeletionFieldBlendTableParameter):
+        pass
+    elif isinstance(value, DeletionFieldBlendConstraintParameter):
+        pass
+    elif isinstance(value, DeletionFieldBlendTable):
+        pass
+    elif isinstance(value, DeletionFieldBlendConstraint):
+        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
+            raise ValueError("Expected usize")
+    elif isinstance(value, DeletionFieldMotionParameter):
+        pass
+    elif isinstance(value, DeletionFieldExpressionParameter):
+        pass
+    elif isinstance(value, DeletionFieldExpressionSourceParameter):
+        pass
+    elif isinstance(value, DeletionFieldPhysicsParameter):
+        pass
+    elif isinstance(value, DeletionFieldPhysicsNode):
+        pass
+    elif isinstance(value, DeletionFieldTexture):
+        pass
+    elif isinstance(value, DeletionFieldAttachmentSound):
+        pass
+    elif isinstance(value, DeletionFieldAttachmentUserData):
+        pass
+    elif isinstance(value, DeletionFieldMotionClip):
+        pass
+    elif isinstance(value, DeletionFieldMotionRegistrationContainer):
+        pass
+    elif isinstance(value, DeletionFieldParameterFolder):
+        pass
+    elif isinstance(value, DeletionFieldModelParameter):
+        pass
+    elif isinstance(value, DeletionFieldCdiParameter):
+        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
+            raise ValueError("Expected usize")
+    elif isinstance(value, DeletionFieldCdiCombinedParameter):
+        pass
     else:
         raise TypeError("Expected DeletionField")
 
@@ -18788,10 +19223,48 @@ def encode_DeletionField(value: DeletionField) -> object:
         return {'CdiPart': {'slot': value.slot}}
     elif isinstance(value, DeletionFieldRequestedScope):
         return 'RequestedScope'
+    elif isinstance(value, DeletionFieldParameterAxis):
+        return 'ParameterAxis'
+    elif isinstance(value, DeletionFieldBlendTableParameter):
+        return 'BlendTableParameter'
+    elif isinstance(value, DeletionFieldBlendConstraintParameter):
+        return 'BlendConstraintParameter'
+    elif isinstance(value, DeletionFieldBlendTable):
+        return 'BlendTable'
+    elif isinstance(value, DeletionFieldBlendConstraint):
+        return {'BlendConstraint': {'slot': value.slot}}
+    elif isinstance(value, DeletionFieldMotionParameter):
+        return 'MotionParameter'
+    elif isinstance(value, DeletionFieldExpressionParameter):
+        return 'ExpressionParameter'
+    elif isinstance(value, DeletionFieldExpressionSourceParameter):
+        return 'ExpressionSourceParameter'
+    elif isinstance(value, DeletionFieldPhysicsParameter):
+        return 'PhysicsParameter'
+    elif isinstance(value, DeletionFieldPhysicsNode):
+        return 'PhysicsNode'
+    elif isinstance(value, DeletionFieldTexture):
+        return 'Texture'
+    elif isinstance(value, DeletionFieldAttachmentSound):
+        return 'AttachmentSound'
+    elif isinstance(value, DeletionFieldAttachmentUserData):
+        return 'AttachmentUserData'
+    elif isinstance(value, DeletionFieldMotionClip):
+        return 'MotionClip'
+    elif isinstance(value, DeletionFieldMotionRegistrationContainer):
+        return 'MotionRegistrationContainer'
+    elif isinstance(value, DeletionFieldParameterFolder):
+        return 'ParameterFolder'
+    elif isinstance(value, DeletionFieldModelParameter):
+        return 'ModelParameter'
+    elif isinstance(value, DeletionFieldCdiParameter):
+        return {'CdiParameter': {'slot': value.slot}}
+    elif isinstance(value, DeletionFieldCdiCombinedParameter):
+        return 'CdiCombinedParameter'
     raise TypeError("Expected DeletionField")
 
 def read_DeletionField(value: object) -> DeletionField:
-    if isinstance(value, (DeletionFieldOwned, DeletionFieldMeshMask, DeletionFieldMeshInvertedMask, DeletionFieldOffscreenMask, DeletionFieldGlueMeshA, DeletionFieldGlueMeshB, DeletionFieldHitAreaMesh, DeletionFieldDrawingItem, DeletionFieldOrganizationParent, DeletionFieldDeformationParent, DeletionFieldConvertedData, DeletionFieldPosePart, DeletionFieldPoseLinkPart, DeletionFieldMotionPart, DeletionFieldExpressionSourcePart, DeletionFieldCdiPart, DeletionFieldRequestedScope,)): return value
+    if isinstance(value, (DeletionFieldOwned, DeletionFieldMeshMask, DeletionFieldMeshInvertedMask, DeletionFieldOffscreenMask, DeletionFieldGlueMeshA, DeletionFieldGlueMeshB, DeletionFieldHitAreaMesh, DeletionFieldDrawingItem, DeletionFieldOrganizationParent, DeletionFieldDeformationParent, DeletionFieldConvertedData, DeletionFieldPosePart, DeletionFieldPoseLinkPart, DeletionFieldMotionPart, DeletionFieldExpressionSourcePart, DeletionFieldCdiPart, DeletionFieldRequestedScope, DeletionFieldParameterAxis, DeletionFieldBlendTableParameter, DeletionFieldBlendConstraintParameter, DeletionFieldBlendTable, DeletionFieldBlendConstraint, DeletionFieldMotionParameter, DeletionFieldExpressionParameter, DeletionFieldExpressionSourceParameter, DeletionFieldPhysicsParameter, DeletionFieldPhysicsNode, DeletionFieldTexture, DeletionFieldAttachmentSound, DeletionFieldAttachmentUserData, DeletionFieldMotionClip, DeletionFieldMotionRegistrationContainer, DeletionFieldParameterFolder, DeletionFieldModelParameter, DeletionFieldCdiParameter, DeletionFieldCdiCombinedParameter,)): return value
     r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
     tag = string(value) if isinstance(value, str) else next(iter(r))
     if tag == 'Owned':
@@ -18832,10 +19305,77 @@ def read_DeletionField(value: object) -> DeletionField:
         return DeletionFieldCdiPart(slot=integer(f['slot']))
     elif tag == 'RequestedScope':
         return DeletionFieldRequestedScope()
+    elif tag == 'ParameterAxis':
+        return DeletionFieldParameterAxis()
+    elif tag == 'BlendTableParameter':
+        return DeletionFieldBlendTableParameter()
+    elif tag == 'BlendConstraintParameter':
+        return DeletionFieldBlendConstraintParameter()
+    elif tag == 'BlendTable':
+        return DeletionFieldBlendTable()
+    elif tag == 'BlendConstraint':
+        f = record(r['BlendConstraint'])
+        return DeletionFieldBlendConstraint(slot=integer(f['slot']))
+    elif tag == 'MotionParameter':
+        return DeletionFieldMotionParameter()
+    elif tag == 'ExpressionParameter':
+        return DeletionFieldExpressionParameter()
+    elif tag == 'ExpressionSourceParameter':
+        return DeletionFieldExpressionSourceParameter()
+    elif tag == 'PhysicsParameter':
+        return DeletionFieldPhysicsParameter()
+    elif tag == 'PhysicsNode':
+        return DeletionFieldPhysicsNode()
+    elif tag == 'Texture':
+        return DeletionFieldTexture()
+    elif tag == 'AttachmentSound':
+        return DeletionFieldAttachmentSound()
+    elif tag == 'AttachmentUserData':
+        return DeletionFieldAttachmentUserData()
+    elif tag == 'MotionClip':
+        return DeletionFieldMotionClip()
+    elif tag == 'MotionRegistrationContainer':
+        return DeletionFieldMotionRegistrationContainer()
+    elif tag == 'ParameterFolder':
+        return DeletionFieldParameterFolder()
+    elif tag == 'ModelParameter':
+        return DeletionFieldModelParameter()
+    elif tag == 'CdiParameter':
+        f = record(r['CdiParameter'])
+        return DeletionFieldCdiParameter(slot=integer(f['slot']))
+    elif tag == 'CdiCombinedParameter':
+        return DeletionFieldCdiCombinedParameter()
     raise ValueError("Unknown DeletionField variant")
 
 def validate_DeletionEffect(value: DeletionEffect) -> None:
-    if isinstance(value, DeletionEffectMaskChanged):
+    if isinstance(value, DeletionEffectMotionRegistrationMoved):
+        validate_DeletionObject(value.registration)
+        validate_DeletionObject(value.group)
+    elif isinstance(value, DeletionEffectContentChanged):
+        validate_DeletionObject(value.value)
+    elif isinstance(value, DeletionEffectParameterDimensionRemoved):
+        validate_DeletionObject(value.object)
+        validate_DeletionObject(value.parameter)
+        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+        if isinstance(value.effective_value, bool) or not isinstance(value.effective_value, (float, int)) or not math.isfinite(value.effective_value) or abs(value.effective_value) > 3.4028234663852886e38:
+            raise ValueError("Expected f32")
+        if type(value.disabled) is not bool:
+            raise ValueError("Expected bool")
+    elif isinstance(value, DeletionEffectBindingContributionRemoved):
+        validate_DeletionObject(value.object)
+        validate_DeletionObject(value.binding)
+    elif isinstance(value, DeletionEffectResourceReplaced):
+        validate_DeletionObject(value.object)
+        validate_DeletionObject(value.source)
+        if value.replacement is not None:
+            validate_DeletionObject(value.replacement)
+    elif isinstance(value, DeletionEffectParameterAnimationRemoved):
+        validate_DeletionObject(value.value)
+    elif isinstance(value, DeletionEffectPhysicsChannelRemoved):
+        validate_DeletionObject(value.object)
+        validate_DeletionObject(value.group)
+    elif isinstance(value, DeletionEffectMaskChanged):
         validate_DeletionObject(value.value)
     elif isinstance(value, DeletionEffectGlueRemoved):
         validate_DeletionObject(value.value)
@@ -18886,7 +19426,21 @@ def validate_DeletionEffect(value: DeletionEffect) -> None:
         raise TypeError("Expected DeletionEffect")
 
 def encode_DeletionEffect(value: DeletionEffect) -> object:
-    if isinstance(value, DeletionEffectMaskChanged):
+    if isinstance(value, DeletionEffectMotionRegistrationMoved):
+        return {'MotionRegistrationMoved': {'registration': encode_DeletionObject(value.registration), 'group': encode_DeletionObject(value.group)}}
+    elif isinstance(value, DeletionEffectContentChanged):
+        return {'ContentChanged': encode_DeletionObject(value.value)}
+    elif isinstance(value, DeletionEffectParameterDimensionRemoved):
+        return {'ParameterDimensionRemoved': {'object': encode_DeletionObject(value.object), 'parameter': encode_DeletionObject(value.parameter), 'value': value.value, 'effective_value': value.effective_value, 'disabled': value.disabled}}
+    elif isinstance(value, DeletionEffectBindingContributionRemoved):
+        return {'BindingContributionRemoved': {'object': encode_DeletionObject(value.object), 'binding': encode_DeletionObject(value.binding)}}
+    elif isinstance(value, DeletionEffectResourceReplaced):
+        return {'ResourceReplaced': {'object': encode_DeletionObject(value.object), 'source': encode_DeletionObject(value.source), 'replacement': None if value.replacement is None else encode_DeletionObject(value.replacement)}}
+    elif isinstance(value, DeletionEffectParameterAnimationRemoved):
+        return {'ParameterAnimationRemoved': encode_DeletionObject(value.value)}
+    elif isinstance(value, DeletionEffectPhysicsChannelRemoved):
+        return {'PhysicsChannelRemoved': {'object': encode_DeletionObject(value.object), 'group': encode_DeletionObject(value.group)}}
+    elif isinstance(value, DeletionEffectMaskChanged):
         return {'MaskChanged': encode_DeletionObject(value.value)}
     elif isinstance(value, DeletionEffectGlueRemoved):
         return {'GlueRemoved': encode_DeletionObject(value.value)}
@@ -18909,10 +19463,29 @@ def encode_DeletionEffect(value: DeletionEffect) -> object:
     raise TypeError("Expected DeletionEffect")
 
 def read_DeletionEffect(value: object) -> DeletionEffect:
-    if isinstance(value, (DeletionEffectMaskChanged, DeletionEffectGlueRemoved, DeletionEffectHitAreaRemoved, DeletionEffectCompositionChanged, DeletionEffectPartAnimationRemoved, DeletionEffectDrawingGroupFlattened, DeletionEffectOrganizationChanged, DeletionEffectDeformationChanged, DeletionEffectUnpreservedChannels, DeletionEffectPartStateRemoved,)): return value
+    if isinstance(value, (DeletionEffectMotionRegistrationMoved, DeletionEffectContentChanged, DeletionEffectParameterDimensionRemoved, DeletionEffectBindingContributionRemoved, DeletionEffectResourceReplaced, DeletionEffectParameterAnimationRemoved, DeletionEffectPhysicsChannelRemoved, DeletionEffectMaskChanged, DeletionEffectGlueRemoved, DeletionEffectHitAreaRemoved, DeletionEffectCompositionChanged, DeletionEffectPartAnimationRemoved, DeletionEffectDrawingGroupFlattened, DeletionEffectOrganizationChanged, DeletionEffectDeformationChanged, DeletionEffectUnpreservedChannels, DeletionEffectPartStateRemoved,)): return value
     r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
     tag = string(value) if isinstance(value, str) else next(iter(r))
-    if tag == 'MaskChanged':
+    if tag == 'MotionRegistrationMoved':
+        f = record(r['MotionRegistrationMoved'])
+        return DeletionEffectMotionRegistrationMoved(registration=read_DeletionObject(f['registration']), group=read_DeletionObject(f['group']))
+    elif tag == 'ContentChanged':
+        return DeletionEffectContentChanged(value=read_DeletionObject(r['ContentChanged']))
+    elif tag == 'ParameterDimensionRemoved':
+        f = record(r['ParameterDimensionRemoved'])
+        return DeletionEffectParameterDimensionRemoved(object=read_DeletionObject(f['object']), parameter=read_DeletionObject(f['parameter']), value=number(f['value']), effective_value=number(f['effective_value']), disabled=_boolean(f['disabled']))
+    elif tag == 'BindingContributionRemoved':
+        f = record(r['BindingContributionRemoved'])
+        return DeletionEffectBindingContributionRemoved(object=read_DeletionObject(f['object']), binding=read_DeletionObject(f['binding']))
+    elif tag == 'ResourceReplaced':
+        f = record(r['ResourceReplaced'])
+        return DeletionEffectResourceReplaced(object=read_DeletionObject(f['object']), source=read_DeletionObject(f['source']), replacement=None if f.get('replacement', None) is None else read_DeletionObject(f.get('replacement', None)))
+    elif tag == 'ParameterAnimationRemoved':
+        return DeletionEffectParameterAnimationRemoved(value=read_DeletionObject(r['ParameterAnimationRemoved']))
+    elif tag == 'PhysicsChannelRemoved':
+        f = record(r['PhysicsChannelRemoved'])
+        return DeletionEffectPhysicsChannelRemoved(object=read_DeletionObject(f['object']), group=read_DeletionObject(f['group']))
+    elif tag == 'MaskChanged':
         return DeletionEffectMaskChanged(value=read_DeletionObject(r['MaskChanged']))
     elif tag == 'GlueRemoved':
         return DeletionEffectGlueRemoved(value=read_DeletionObject(r['GlueRemoved']))
@@ -18976,6 +19549,15 @@ def validate_DeletionDecisionReason(value: DeletionDecisionReason) -> None:
         pass
     elif isinstance(value, DeletionDecisionReasonPartStateUnpreserved):
         pass
+    elif isinstance(value, DeletionDecisionReasonTextureReplacementRequired):
+        pass
+    elif isinstance(value, DeletionDecisionReasonBlendBaseReplacementRequired):
+        pass
+    elif isinstance(value, DeletionDecisionReasonPhysicsNodeReplacementRequired):
+        pass
+    elif isinstance(value, DeletionDecisionReasonInvalidContainer):
+        if not isinstance(value.code, str):
+            raise ValueError("Expected string")
     else:
         raise TypeError("Expected DeletionDecisionReason")
 
@@ -18988,10 +19570,18 @@ def encode_DeletionDecisionReason(value: DeletionDecisionReason) -> object:
         return 'OffscreenMappingRequired'
     elif isinstance(value, DeletionDecisionReasonPartStateUnpreserved):
         return 'PartStateUnpreserved'
+    elif isinstance(value, DeletionDecisionReasonTextureReplacementRequired):
+        return 'TextureReplacementRequired'
+    elif isinstance(value, DeletionDecisionReasonBlendBaseReplacementRequired):
+        return 'BlendBaseReplacementRequired'
+    elif isinstance(value, DeletionDecisionReasonPhysicsNodeReplacementRequired):
+        return 'PhysicsNodeReplacementRequired'
+    elif isinstance(value, DeletionDecisionReasonInvalidContainer):
+        return {'InvalidContainer': {'code': value.code}}
     raise TypeError("Expected DeletionDecisionReason")
 
 def read_DeletionDecisionReason(value: object) -> DeletionDecisionReason:
-    if isinstance(value, (DeletionDecisionReasonConversionUnproven, DeletionDecisionReasonOffscreenOwnerUnavailable, DeletionDecisionReasonOffscreenMappingRequired, DeletionDecisionReasonPartStateUnpreserved,)): return value
+    if isinstance(value, (DeletionDecisionReasonConversionUnproven, DeletionDecisionReasonOffscreenOwnerUnavailable, DeletionDecisionReasonOffscreenMappingRequired, DeletionDecisionReasonPartStateUnpreserved, DeletionDecisionReasonTextureReplacementRequired, DeletionDecisionReasonBlendBaseReplacementRequired, DeletionDecisionReasonPhysicsNodeReplacementRequired, DeletionDecisionReasonInvalidContainer,)): return value
     r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
     tag = string(value) if isinstance(value, str) else next(iter(r))
     if tag == 'ConversionUnproven':
@@ -19003,6 +19593,15 @@ def read_DeletionDecisionReason(value: object) -> DeletionDecisionReason:
         return DeletionDecisionReasonOffscreenMappingRequired()
     elif tag == 'PartStateUnpreserved':
         return DeletionDecisionReasonPartStateUnpreserved()
+    elif tag == 'TextureReplacementRequired':
+        return DeletionDecisionReasonTextureReplacementRequired()
+    elif tag == 'BlendBaseReplacementRequired':
+        return DeletionDecisionReasonBlendBaseReplacementRequired()
+    elif tag == 'PhysicsNodeReplacementRequired':
+        return DeletionDecisionReasonPhysicsNodeReplacementRequired()
+    elif tag == 'InvalidContainer':
+        f = record(r['InvalidContainer'])
+        return DeletionDecisionReasonInvalidContainer(code=string(f['code']))
     raise ValueError("Unknown DeletionDecisionReason variant")
 
 def validate_DeletionChoice(value: DeletionChoice) -> None:
@@ -19077,4 +19676,4 @@ def read_DeletionPositionGuarantee(value: object) -> DeletionPositionGuarantee:
 
 OPERATION_TYPES = (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandDeletion, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandMotion, ModelingCommandExpression, ModelingCommandPhysics, ModelingCommandPose, ModelingCommandCreateMotion, ModelingCommandReplaceMotion, ModelingCommandCreateExpression, ModelingCommandReplaceExpression, ModelingCommandSetPhysics, ModelingCommandSetPose, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology, ModelingCommandManualMesh,)
 
-__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandDeletion', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandMotion', 'ModelingCommandExpression', 'ModelingCommandPhysics', 'ModelingCommandPose', 'ModelingCommandCreateMotion', 'ModelingCommandReplaceMotion', 'ModelingCommandCreateExpression', 'ModelingCommandReplaceExpression', 'ModelingCommandSetPhysics', 'ModelingCommandSetPose', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ModelingCommandManualMesh', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'DeletionIntent', 'DeletionRequest', 'DeletionTargetMesh', 'DeletionTargetGlue', 'DeletionTargetOffscreen', 'DeletionTargetPart', 'DeletionTargetDeformer', 'DeletionTargetDissolvePart', 'DeletionTargetRemoveDeformer', 'ReparentStrategy', 'ReparentContext', 'ConversionDomain', 'DeletionOffscreenPlacement', 'DeletionTolerance', 'OpaqueExportIssueModel3NamespaceChanged', 'OpaqueExportIssueCdi', 'OpaqueExportIssueMotion', 'OpaqueExportIssueExpression', 'OpaqueExportIssuePose', 'OpaqueExportIssuePhysics', 'OpaqueExportProblem', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentPlacement', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionContainerRoot', 'MotionContainerGroup', 'MotionRegistration', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved', 'MotionEvent', 'ExpressionEditCreate', 'ExpressionEditCreateEntry', 'ExpressionEditPatchEntry', 'ExpressionEditMoveEntries', 'ExpressionEditDuplicateEntries', 'ExpressionEditDeleteEntries', 'ExpressionEditDuplicate', 'ExpressionEditDelete', 'ExpressionEditReorder', 'ExpressionEntryFields', 'ExpressionTargetUnspecified', 'ExpressionTargetResolved', 'ExpressionTargetUnresolved', 'ExpressionBlend', 'PhysicsEditCreateGroup', 'PhysicsEditCreateInput', 'PhysicsEditCreateOutput', 'PhysicsEditInsertNode', 'PhysicsEditMoveNode', 'PhysicsEditDuplicateNode', 'PhysicsEditPatch', 'PhysicsEditMoveInputs', 'PhysicsEditMoveOutputs', 'PhysicsEditReorderGroups', 'PhysicsEditDuplicate', 'PhysicsEditDelete', 'PhysicsNode', 'PhysicsVector', 'PhysicsPatch', 'PhysicsAssetPropertyFps', 'PhysicsRigPatch', 'PhysicsPropertyName', 'PhysicsPropertyInputWeight', 'PhysicsPropertyInputAxis', 'PhysicsPropertyInputReflect', 'PhysicsPropertyInputParameter', 'PhysicsPropertyOutputWeight', 'PhysicsPropertyOutputScale', 'PhysicsPropertyOutputAxis', 'PhysicsPropertyOutputReflect', 'PhysicsPropertyOutputParameter', 'PhysicsPropertyOutputNode', 'PhysicsPropertyVertexPosition', 'PhysicsPropertyVertexRadius', 'PhysicsPropertyVertexMobility', 'PhysicsPropertyVertexDelay', 'PhysicsPropertyVertexAcceleration', 'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsAxis', 'PhysicsTargetUnspecified', 'PhysicsTargetResolved', 'PhysicsTargetUnresolved', 'PhysicsRange', 'PoseEditCreate', 'PoseEditCreateGroup', 'PoseEditCreateEntry', 'PoseEditCreateLink', 'PoseEditPatch', 'PoseEditMove', 'PoseEditDuplicate', 'PoseEditDelete', 'PoseEditDissolveGroup', 'PoseFieldsAsset', 'PoseFieldsGroup', 'PoseFieldsEntry', 'PoseFieldsLink', 'PosePartRefUnspecified', 'PosePartRefResolved', 'PosePartRefUnresolved', 'PoseCollectionGroups', 'PoseCollectionEntries', 'PoseCollectionLinks', 'MotionClip', 'MotionTrack', 'MotionKey', 'MotionSegmentLinear', 'MotionSegmentBezier', 'MotionSegmentStepped', 'MotionSegmentInverseStepped', 'MotionPoint', 'ExpressionAsset', 'ExpressionEntry', 'PhysicsAsset', 'PhysicsDefinition', 'PhysicsMeta', 'PhysicsForces', 'PhysicsDictionaryEntry', 'PhysicsSetting', 'PhysicsInput', 'PhysicsOutput', 'PhysicsNormalization', 'PoseAsset', 'PoseGroup', 'PoseEntry', 'PoseLink', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ManualMeshOperationInsertVertex', 'ManualMeshOperationInsertConnectedVertex', 'ManualMeshOperationDeleteEdge', 'ManualMeshOperationMoveVertices', 'ManualMeshOperationDeleteVertices', 'ManualMeshOperationConstrainEdge', 'ManualMeshOperationReleaseConstraint', 'ManualMeshOperationReconnect', 'ManualVertexTarget', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'MotionGroup', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'AddressSelectorMotionRegistration', 'AddressSelectorExpressionEntry', 'AddressSelectorPhysics', 'AddressSelectorPose', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'AddressPatchMotionRegistration', 'AddressPatchExpressionEntry', 'AddressPatchPhysics', 'AddressPatchPose', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CollectionQueryMotion', 'CollectionQueryMotionGroups', 'CollectionQueryClips', 'CollectionQueryExpressions', 'CollectionQueryExpressionEntries', 'CollectionQueryPhysics', 'CollectionQueryPose', 'PhysicsCollectionGroups', 'PhysicsCollectionInputs', 'PhysicsCollectionOutputs', 'PhysicsCollectionNodes', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'CapabilitiesMotion', 'CapabilitiesExpression', 'CapabilitiesPhysics', 'CapabilitiesPose', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'MotionCapabilities', 'ExpressionCapabilities', 'PhysicsCapabilities', 'PoseCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'MeshQuality', 'TriangleQuality', 'TextureCoverage', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'PreviewCommandSetParameter', 'PreviewCommandScheduleMotion', 'PreviewCommandScheduleRegistration', 'PreviewCommandScheduleExpression', 'PreviewCommandScheduleParameter', 'PreviewCommandSetPhysics', 'PreviewCommandReset', 'PreviewState', 'PreviewBatch', 'ObservationView', 'TopologyOverlay', 'ObjectTargetMesh', 'ObjectTargetPart', 'TopologyThresholds', 'SpatialQueryBounds', 'SpatialQueryHits', 'PreviewFrame', 'ObservationImage', 'ObservedTexture', 'ObservedBounds', 'SpatialResultBounds', 'SpatialResultHits', 'ObjectBounds', 'GeometryQuery', 'GeometryHit', 'TriangleHit', 'MotionSnapshot', 'PhysicsRigSnapshot', 'PhysicsOutputSnapshot', 'MotionEventFired', 'MotionPlaybackPosition', 'SpatialSamples', 'SpatialFrame', 'ObservationBatch', 'ManualMeshTransferReport', 'ConversionCost', 'DeletionSummary', 'DeletionReviewState', 'DeletionSectionCount', 'DeletionSection', 'DeletionPage', 'DeletionRowRemoval', 'DeletionRowRelation', 'DeletionRowEffect', 'DeletionRowDecision', 'DeletionRowLock', 'DeletionRowStructural', 'DeletionRowDeformation', 'DeletionRowOrganization', 'DeletionRowGuaranteeLimit', 'DeletionRowDomain', 'DeletionRowExport', 'DeletionRemoval', 'DeletionObject', 'DeletionKind', 'DeletionReason', 'DeletionRelation', 'DeletionFieldOwned', 'DeletionFieldMeshMask', 'DeletionFieldMeshInvertedMask', 'DeletionFieldOffscreenMask', 'DeletionFieldGlueMeshA', 'DeletionFieldGlueMeshB', 'DeletionFieldHitAreaMesh', 'DeletionFieldDrawingItem', 'DeletionFieldOrganizationParent', 'DeletionFieldDeformationParent', 'DeletionFieldConvertedData', 'DeletionFieldPosePart', 'DeletionFieldPoseLinkPart', 'DeletionFieldMotionPart', 'DeletionFieldExpressionSourcePart', 'DeletionFieldCdiPart', 'DeletionFieldRequestedScope', 'DeletionEffectMaskChanged', 'DeletionEffectGlueRemoved', 'DeletionEffectHitAreaRemoved', 'DeletionEffectCompositionChanged', 'DeletionEffectPartAnimationRemoved', 'DeletionEffectDrawingGroupFlattened', 'DeletionEffectOrganizationChanged', 'DeletionEffectDeformationChanged', 'DeletionEffectUnpreservedChannels', 'DeletionEffectPartStateRemoved', 'DeletionChannel', 'DeletionDecision', 'DeletionDecisionReasonConversionUnproven', 'DeletionDecisionReasonOffscreenOwnerUnavailable', 'DeletionDecisionReasonOffscreenMappingRequired', 'DeletionDecisionReasonPartStateUnpreserved', 'DeletionChoice', 'DeletionLock', 'DeletionStructuralBlocker', 'DeletionPositionGuarantee', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'DeletionTarget', 'OpaqueExportIssue', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'MotionEdit', 'MotionContainer', 'MotionTrackTarget', 'ExpressionEdit', 'ExpressionTarget', 'PhysicsEdit', 'PhysicsAssetProperty', 'PhysicsProperty', 'PhysicsTarget', 'PoseEdit', 'PoseFields', 'PosePartRef', 'PoseCollection', 'MotionSegment', 'SceneKeyform', 'GeometrySpace', 'ManualMeshOperation', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'PhysicsCollection', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'PreviewCommand', 'ObjectTarget', 'SpatialQuery', 'SpatialResult', 'DeletionRow', 'DeletionField', 'DeletionEffect', 'DeletionDecisionReason', 'ExtensionValue']
+__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandDeletion', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandMotion', 'ModelingCommandExpression', 'ModelingCommandPhysics', 'ModelingCommandPose', 'ModelingCommandCreateMotion', 'ModelingCommandReplaceMotion', 'ModelingCommandCreateExpression', 'ModelingCommandReplaceExpression', 'ModelingCommandSetPhysics', 'ModelingCommandSetPose', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ModelingCommandManualMesh', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'DeletionIntent', 'DeletionRequest', 'DeletionTargetMesh', 'DeletionTargetGlue', 'DeletionTargetOffscreen', 'DeletionTargetPart', 'DeletionTargetDeformer', 'DeletionTargetDissolvePart', 'DeletionTargetRemoveDeformer', 'DeletionTargetParameter', 'DeletionTargetParameterFolder', 'DeletionTargetParameterFolderContents', 'DeletionTargetTexture', 'DeletionTargetAttachment', 'DeletionTargetRecord', 'DeletionObject', 'DeletionKind', 'ReparentStrategy', 'ReparentContext', 'ConversionDomain', 'DeletionOffscreenPlacement', 'DeletionTolerance', 'OpaqueExportIssueModel3NamespaceChanged', 'OpaqueExportIssueCdi', 'OpaqueExportIssueMotion', 'OpaqueExportIssueExpression', 'OpaqueExportIssuePose', 'OpaqueExportIssuePhysics', 'OpaqueExportProblem', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentPlacement', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionContainerRoot', 'MotionContainerGroup', 'MotionRegistration', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved', 'MotionEvent', 'ExpressionEditCreate', 'ExpressionEditCreateEntry', 'ExpressionEditPatchEntry', 'ExpressionEditMoveEntries', 'ExpressionEditDuplicateEntries', 'ExpressionEditDeleteEntries', 'ExpressionEditDuplicate', 'ExpressionEditDelete', 'ExpressionEditReorder', 'ExpressionEntryFields', 'ExpressionTargetUnspecified', 'ExpressionTargetResolved', 'ExpressionTargetUnresolved', 'ExpressionBlend', 'PhysicsEditCreateGroup', 'PhysicsEditCreateInput', 'PhysicsEditCreateOutput', 'PhysicsEditInsertNode', 'PhysicsEditMoveNode', 'PhysicsEditDuplicateNode', 'PhysicsEditPatch', 'PhysicsEditMoveInputs', 'PhysicsEditMoveOutputs', 'PhysicsEditReorderGroups', 'PhysicsEditDuplicate', 'PhysicsEditDelete', 'PhysicsNode', 'PhysicsVector', 'PhysicsPatch', 'PhysicsAssetPropertyFps', 'PhysicsRigPatch', 'PhysicsPropertyName', 'PhysicsPropertyInputWeight', 'PhysicsPropertyInputAxis', 'PhysicsPropertyInputReflect', 'PhysicsPropertyInputParameter', 'PhysicsPropertyOutputWeight', 'PhysicsPropertyOutputScale', 'PhysicsPropertyOutputAxis', 'PhysicsPropertyOutputReflect', 'PhysicsPropertyOutputParameter', 'PhysicsPropertyOutputNode', 'PhysicsPropertyVertexPosition', 'PhysicsPropertyVertexRadius', 'PhysicsPropertyVertexMobility', 'PhysicsPropertyVertexDelay', 'PhysicsPropertyVertexAcceleration', 'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsAxis', 'PhysicsTargetUnspecified', 'PhysicsTargetResolved', 'PhysicsTargetUnresolved', 'PhysicsRange', 'PoseEditCreate', 'PoseEditCreateGroup', 'PoseEditCreateEntry', 'PoseEditCreateLink', 'PoseEditPatch', 'PoseEditMove', 'PoseEditDuplicate', 'PoseEditDelete', 'PoseEditDissolveGroup', 'PoseFieldsAsset', 'PoseFieldsGroup', 'PoseFieldsEntry', 'PoseFieldsLink', 'PosePartRefUnspecified', 'PosePartRefResolved', 'PosePartRefUnresolved', 'PoseCollectionGroups', 'PoseCollectionEntries', 'PoseCollectionLinks', 'MotionClip', 'MotionTrack', 'MotionKey', 'MotionSegmentLinear', 'MotionSegmentBezier', 'MotionSegmentStepped', 'MotionSegmentInverseStepped', 'MotionPoint', 'ExpressionAsset', 'ExpressionEntry', 'PhysicsAsset', 'PhysicsDefinition', 'PhysicsMeta', 'PhysicsForces', 'PhysicsDictionaryEntry', 'PhysicsSetting', 'PhysicsInput', 'PhysicsOutput', 'PhysicsNormalization', 'PoseAsset', 'PoseGroup', 'PoseEntry', 'PoseLink', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ManualMeshOperationInsertVertex', 'ManualMeshOperationInsertConnectedVertex', 'ManualMeshOperationDeleteEdge', 'ManualMeshOperationMoveVertices', 'ManualMeshOperationDeleteVertices', 'ManualMeshOperationConstrainEdge', 'ManualMeshOperationReleaseConstraint', 'ManualMeshOperationReconnect', 'ManualVertexTarget', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'MotionGroup', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'AddressSelectorMotionRegistration', 'AddressSelectorExpressionEntry', 'AddressSelectorPhysics', 'AddressSelectorPose', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'AddressPatchMotionRegistration', 'AddressPatchExpressionEntry', 'AddressPatchPhysics', 'AddressPatchPose', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CollectionQueryMotion', 'CollectionQueryMotionGroups', 'CollectionQueryClips', 'CollectionQueryExpressions', 'CollectionQueryExpressionEntries', 'CollectionQueryPhysics', 'CollectionQueryPose', 'PhysicsCollectionGroups', 'PhysicsCollectionInputs', 'PhysicsCollectionOutputs', 'PhysicsCollectionNodes', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'CapabilitiesMotion', 'CapabilitiesExpression', 'CapabilitiesPhysics', 'CapabilitiesPose', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'MotionCapabilities', 'ExpressionCapabilities', 'PhysicsCapabilities', 'PoseCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'MeshQuality', 'TriangleQuality', 'TextureCoverage', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'PreviewCommandSetParameter', 'PreviewCommandScheduleMotion', 'PreviewCommandScheduleRegistration', 'PreviewCommandScheduleExpression', 'PreviewCommandScheduleParameter', 'PreviewCommandSetPhysics', 'PreviewCommandReset', 'PreviewState', 'PreviewBatch', 'ObservationView', 'TopologyOverlay', 'ObjectTargetMesh', 'ObjectTargetPart', 'TopologyThresholds', 'SpatialQueryBounds', 'SpatialQueryHits', 'PreviewFrame', 'ObservationImage', 'ObservedTexture', 'ObservedBounds', 'SpatialResultBounds', 'SpatialResultHits', 'ObjectBounds', 'GeometryQuery', 'GeometryHit', 'TriangleHit', 'MotionSnapshot', 'PhysicsRigSnapshot', 'PhysicsOutputSnapshot', 'MotionEventFired', 'MotionPlaybackPosition', 'SpatialSamples', 'SpatialFrame', 'ObservationBatch', 'ManualMeshTransferReport', 'ConversionCost', 'DeletionSummary', 'DeletionReviewState', 'DeletionSectionCount', 'DeletionSection', 'DeletionPage', 'DeletionRowRemoval', 'DeletionRowRelation', 'DeletionRowEffect', 'DeletionRowDecision', 'DeletionRowLock', 'DeletionRowStructural', 'DeletionRowDeformation', 'DeletionRowOrganization', 'DeletionRowGuaranteeLimit', 'DeletionRowDomain', 'DeletionRowExport', 'DeletionRemoval', 'DeletionReason', 'DeletionRelation', 'DeletionFieldOwned', 'DeletionFieldMeshMask', 'DeletionFieldMeshInvertedMask', 'DeletionFieldOffscreenMask', 'DeletionFieldGlueMeshA', 'DeletionFieldGlueMeshB', 'DeletionFieldHitAreaMesh', 'DeletionFieldDrawingItem', 'DeletionFieldOrganizationParent', 'DeletionFieldDeformationParent', 'DeletionFieldConvertedData', 'DeletionFieldPosePart', 'DeletionFieldPoseLinkPart', 'DeletionFieldMotionPart', 'DeletionFieldExpressionSourcePart', 'DeletionFieldCdiPart', 'DeletionFieldRequestedScope', 'DeletionFieldParameterAxis', 'DeletionFieldBlendTableParameter', 'DeletionFieldBlendConstraintParameter', 'DeletionFieldBlendTable', 'DeletionFieldBlendConstraint', 'DeletionFieldMotionParameter', 'DeletionFieldExpressionParameter', 'DeletionFieldExpressionSourceParameter', 'DeletionFieldPhysicsParameter', 'DeletionFieldPhysicsNode', 'DeletionFieldTexture', 'DeletionFieldAttachmentSound', 'DeletionFieldAttachmentUserData', 'DeletionFieldMotionClip', 'DeletionFieldMotionRegistrationContainer', 'DeletionFieldParameterFolder', 'DeletionFieldModelParameter', 'DeletionFieldCdiParameter', 'DeletionFieldCdiCombinedParameter', 'DeletionEffectMotionRegistrationMoved', 'DeletionEffectContentChanged', 'DeletionEffectParameterDimensionRemoved', 'DeletionEffectBindingContributionRemoved', 'DeletionEffectResourceReplaced', 'DeletionEffectParameterAnimationRemoved', 'DeletionEffectPhysicsChannelRemoved', 'DeletionEffectMaskChanged', 'DeletionEffectGlueRemoved', 'DeletionEffectHitAreaRemoved', 'DeletionEffectCompositionChanged', 'DeletionEffectPartAnimationRemoved', 'DeletionEffectDrawingGroupFlattened', 'DeletionEffectOrganizationChanged', 'DeletionEffectDeformationChanged', 'DeletionEffectUnpreservedChannels', 'DeletionEffectPartStateRemoved', 'DeletionChannel', 'DeletionDecision', 'DeletionDecisionReasonConversionUnproven', 'DeletionDecisionReasonOffscreenOwnerUnavailable', 'DeletionDecisionReasonOffscreenMappingRequired', 'DeletionDecisionReasonPartStateUnpreserved', 'DeletionDecisionReasonTextureReplacementRequired', 'DeletionDecisionReasonBlendBaseReplacementRequired', 'DeletionDecisionReasonPhysicsNodeReplacementRequired', 'DeletionDecisionReasonInvalidContainer', 'DeletionChoice', 'DeletionLock', 'DeletionStructuralBlocker', 'DeletionPositionGuarantee', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'DeletionTarget', 'OpaqueExportIssue', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'MotionEdit', 'MotionContainer', 'MotionTrackTarget', 'ExpressionEdit', 'ExpressionTarget', 'PhysicsEdit', 'PhysicsAssetProperty', 'PhysicsProperty', 'PhysicsTarget', 'PoseEdit', 'PoseFields', 'PosePartRef', 'PoseCollection', 'MotionSegment', 'SceneKeyform', 'GeometrySpace', 'ManualMeshOperation', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'PhysicsCollection', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'PreviewCommand', 'ObjectTarget', 'SpatialQuery', 'SpatialResult', 'DeletionRow', 'DeletionField', 'DeletionEffect', 'DeletionDecisionReason', 'ExtensionValue']

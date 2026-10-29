@@ -3,7 +3,7 @@ use zipzi_sdk::{
     DeletionChoice, DeletionDecisionReason, DeletionOffscreenPlacement, OpaqueExportProblem,
 };
 
-fn tree() -> AuthoringSession {
+pub(super) fn tree() -> AuthoringSession {
     let mut s = fixture();
     s.edit("cross-part tree", None, |e| {
         e.create_part(Part {
@@ -106,7 +106,7 @@ fn clip() -> MotionClip {
         opaque_source_content_hash: None,
     }
 }
-fn animation(s: &mut AuthoringSession) {
+pub(super) fn animation(s: &mut AuthoringSession) {
     s.edit("cross-domain references", None, |e| {
         e.create_motion(clip())?;
         let mut pose = PoseAsset::empty(id(110));

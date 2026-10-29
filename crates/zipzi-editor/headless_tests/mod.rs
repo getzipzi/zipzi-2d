@@ -120,3 +120,16 @@ pub(crate) fn setup_with_document(
 mod animation_management;
 mod business_authoring;
 mod ordinary_binding;
+
+/// Wait for the source-bound background plan before interacting with its review.
+fn settle_object_deletion(h: &Harness, cx: &mut TestAppContext) {
+    use gpui_kit::test::{TestAppContextExt as _, TestWindowExt as _};
+    let executor = cx.foreground_executor().clone();
+    executor.block_test(
+        cx.wait_for(h.window, std::time::Duration::from_secs(2), |window, _| {
+            window.try_find("tree-deletion-dialog").is_none()
+                || window.try_find(("deletion-section", 0usize)).is_some()
+                || window.try_find("deletion-error").is_some()
+        }),
+    );
+}

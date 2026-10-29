@@ -140,13 +140,165 @@ impl AuthoringSession {
                     ObjectKind::Offscreen => DeletionTarget::Offscreen(h.id().into()),
                     ObjectKind::Part => DeletionTarget::Part(h.id().into()),
                     ObjectKind::Transform => DeletionTarget::Deformer(h.id().into()),
-                    _ => {
-                        return Err(SdkError::new(
-                            "UNSUPPORTED_DELETION_TARGET",
-                            "This deletion root is not implemented yet",
-                            "deletion_request",
-                        ));
-                    }
+                    ObjectKind::Asset => DeletionTarget::Texture(h.id().into()),
+                    ObjectKind::Parameter => DeletionTarget::Parameter(h.id().into()),
+                    ObjectKind::CdiParameterGroup => DeletionTarget::ParameterFolder(h.id().into()),
+                    ObjectKind::Attachment => DeletionTarget::Attachment(h.id().into()),
+                    ObjectKind::MeshBinding => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::MeshBinding,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::BindingAxis => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::Axis,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::BindingSample => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::Sample,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::SceneBinding => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::SceneBinding,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::BlendKeyTable => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::BlendKeyTable,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::BlendConstraint => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::BlendConstraint,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::BlendBinding => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::BlendBinding,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::GlueVertexPair => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::GluePair,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::DrawOrderGroup => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::DrawingGroup,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::CdiCombinedSet => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::CdiCombinedSet,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::CdiCombinedMember => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::CdiCombinedMember,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::ModelParameterGroup => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::ModelParameterGroup,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::ModelParameterMember => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::ModelParameterMember,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::ModelHitArea => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::HitArea,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::Expression => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::Expression,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::ExpressionEntry => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::ExpressionEntry,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::Motion => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::Motion,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::MotionGroup => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::MotionGroup,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::MotionRegistration => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::MotionRegistration,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::MotionTrack => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::MotionTrack,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::MotionKey => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::MotionKey,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::MotionEvent => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::MotionEvent,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::Pose => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::Pose,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::PoseGroup => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::PoseGroup,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::PoseEntry => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::PoseEntry,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::PoseLink => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::PoseLink,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::Physics => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::Physics,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::PhysicsGroup => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::PhysicsGroup,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::PhysicsInput => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::PhysicsInput,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::PhysicsOutput => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::PhysicsOutput,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
+                    ObjectKind::PhysicsNode => DeletionTarget::Record(DeletionObject {
+                        kind: DeletionKind::PhysicsNode,
+                        id: h.id().into(),
+                        owner_id: None,
+                    }),
                 })
             })
             .collect::<Result<_, SdkError>>()?;

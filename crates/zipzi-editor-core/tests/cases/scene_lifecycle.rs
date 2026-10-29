@@ -363,3 +363,122 @@ fn tree_deletion_scope_is_projection_independent_and_preview_context_expires() -
     assert!(d.object_index().get(&mesh).is_some());
     Ok(())
 }
+
+#[test]
+fn tree_deletion_parameter_uses_document_default_and_is_independent_of_preview_revision(
+) -> anyhow::Result<()> {
+    let mut d = Document::new_blank()?;
+    let parameter = d.create_parameter(zipzi_editor_core::NewParameter::default())?;
+    let target = ObjectRef::new(ObjectKind::Parameter, &parameter);
+    d.set_preview_parameter(&parameter, 0.8)?;
+    let plan = d.plan_tree_deletion(
+        zipzi_editor_core::PaletteProjection::Organization,
+        &[target.clone()],
+    )?;
+    d.set_preview_parameter(&parameter, 0.2)?;
+    assert!(plan.valid_for(&d));
+    d.execute_tree_deletion(&plan)?;
+    assert!(d.object_index().get(&target).is_none());
+    d.undo()?;
+    assert!(d.object_index().get(&target).is_some());
+    assert!(!plan.valid_for(&d));
+    Ok(())
+}
+#[test]
+fn tree_deletion_business_resource_can_execute_in_animation_workspace_without_switching(
+) -> anyhow::Result<()> {
+    let (d, _assets) = super::support::combined_animation_document()?;
+    let mut editor = super::support::editor_from_document(d);
+    let doc = editor.active_id().unwrap();
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    let motion = editor.document().unwrap().motion_resources()[0]
+        .selection
+        .clone();
+    editor.select_motion(doc, motion.clone())?;
+    let target = ObjectRef::new(ObjectKind::Motion, &motion.clip_id);
+    let plan = editor.document().unwrap().plan_tree_deletion(
+        zipzi_editor_core::PaletteProjection::Organization,
+        &[target.clone()],
+    )?;
+    editor.execute_tree_deletion(doc, &plan)?;
+    assert_eq!(
+        editor.editing_context(),
+        Some(zipzi_editor_core::EditingContext::Animation)
+    );
+    assert!(editor
+        .document()
+        .unwrap()
+        .object_index()
+        .get(&target)
+        .is_none());
+    editor.execute(zipzi_editor_core::EditorCommand::Undo)?;
+    assert!(editor
+        .document()
+        .unwrap()
+        .object_index()
+        .get(&target)
+        .is_some());
+    Ok(())
+}
+
+#[test]
+fn tree_deletion_unlocks_only_a_reported_business_source_and_expires_its_plan() -> anyhow::Result<()>
+{
+    let assets = tempfile::tempdir()?;
+    let asset = id();
+    let mut sdk = zipzi_sdk::AuthoringSession::new(&id(), zipzi_core::Canvas::default())?;
+    sdk.edit("locked resource", None, |e| {
+        e.create_asset(zipzi_core::ImageAsset {
+            id: asset.clone(),
+            name: "Locked".into(),
+            content: None,
+            unresolved_source: None,
+        })?;
+        let mut state = e.candidate_document().editor_state().clone();
+        state.objects.insert(
+            asset.clone(),
+            zipzi_core::document::ObjectEditorState {
+                locked: true,
+                hidden_in_editor: false,
+            },
+        );
+        e.replace_editor_state(state)
+    })?;
+    let saved = sdk.save_project(&assets.path().join("locked.zipzi"), None)?;
+    let mut d = Document::open(&saved.manifest)?;
+    let target = ObjectRef::new(ObjectKind::Texture, &asset);
+    let plan = d.plan_tree_deletion(
+        zipzi_editor_core::PaletteProjection::Organization,
+        &[target.clone()],
+    )?;
+    assert_eq!(
+        plan.summary().state,
+        zipzi_sdk::DeletionReviewState::Blocked
+    );
+    assert!(d
+        .unlock_deletion_source(&plan, "unreported-source")
+        .is_err());
+    assert_eq!(d.history_lengths(), (0, 0));
+    d.unlock_deletion_source(&plan, &asset)?;
+    assert!(!plan.valid_for(&d));
+    assert_eq!(d.history_lengths(), (1, 0));
+    let fresh = d.plan_tree_deletion(
+        zipzi_editor_core::PaletteProjection::Organization,
+        &[target.clone()],
+    )?;
+    assert_eq!(fresh.summary().state, zipzi_sdk::DeletionReviewState::Ready);
+    d.execute_tree_deletion(&fresh)?;
+    assert!(d.object_index().get(&target).is_none());
+    d.undo()?;
+    assert!(d.object_index().get(&target).is_some());
+    d.undo()?;
+    let restored = d.plan_tree_deletion(
+        zipzi_editor_core::PaletteProjection::Organization,
+        &[target],
+    )?;
+    assert_eq!(
+        restored.summary().state,
+        zipzi_sdk::DeletionReviewState::Blocked
+    );
+    Ok(())
+}

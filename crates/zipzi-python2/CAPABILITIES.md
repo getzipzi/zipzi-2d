@@ -29,7 +29,7 @@ and the [guide](client/python/zipzi/docs/guide.md),
 | Parameters and bindings | `session/edit.parameters`, `session/edit.bindings`, `parameters` and `bindings` operations | Create, patch and query parameters and mesh bindings, including keyforms. Rust allocates identities and validates inputs. |
 | Scene and modeling | `session/edit.scene`, `modeling.ModelingCommand*` | Parts, groups, deformers, BlendShapes, Glue, Offscreen, organization, topology and conversions use SDK modeling operations. |
 | Animation authoring | `modeling.ModelingCommandMotion/Expression/Physics/Pose` | Edit animation assets and query selected records, plans, addresses and capabilities. |
-| Scene deletion | `modeling.ModelingCommandDeletion`, `Plan.deletion_page()` | Shared dependency cleanup for Mesh/Part/Deformer/Glue/Offscreen; source-bound choices, locks and export regressions, with paged typed reports. |
+| Object deletion | `modeling.ModelingCommandDeletion`, `Plan.deletion_page()` | Shared cleanup for scene objects, parameters/folders, textures, attachments and typed business/child records; native dimension reduction, replacements, locks and export regressions, with source-bound paged reports. |
 | Plans and references | `session/edit.plan()`, `session.reference()`, `session.address()` | Plans retain their source and cost/loss report. References and addresses are subject to identity and field-epoch validation. |
 | Reads and collections | `get`, `get_many`, `list` | Reads return source-bound `Snapshot` or `Batch` values. Collection pages have source-bound cursors; restart pagination on `STALE_SOURCE`. |
 | Attachments | `modeling.ModelingCommandAttachment` and selected records | Attachments use modeling operations and project I/O. |

@@ -74,6 +74,35 @@ class PythonSdk(unittest.TestCase):
                 with self.assertRaises(zipzi.SdkFailure):
                     stale.deletion_page(m.DeletionSection.REMOVED)
 
+    def test_parameter_deletion_uses_frozen_default_and_retires_dimension_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Parameter deletion fixture") as edit:
+                    mesh = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2)))
+                    p = edit.parameters.create(parameters.ParameterSpec("Stretch", 0., 1., 0.4, id=uid(3)))
+                    edit.bindings.create(bindings.MeshBindingSpec(mesh, (bindings.Axis(p, (0., 1.)),), (
+                        bindings.Keyform((0.,), GEOMETRY.positions),
+                        bindings.Keyform((1.,), ((0., 0.), (2., 0.), (0., 1.))),
+                    )))
+                intent = m.ModelingCommandDeletion(intent=m.DeletionIntent(request=m.DeletionRequest(roots=(m.DeletionTargetParameter(value=p),))))
+                with session.plan_async(intent).wait() as plan:
+                    self.assertEqual(plan.report.deletion.state, m.DeletionReviewState.NEEDS_CONFIRMATION)
+                    effects = plan.deletion_page(m.DeletionSection.EFFECTS)
+                    dimensions = [r.effect for r in effects.rows if isinstance(r.effect, m.DeletionEffectParameterDimensionRemoved)]
+                    self.assertEqual(len(dimensions), 1)
+                    self.assertAlmostEqual(dimensions[0].value, 0.4)
+                    with session.edit("Delete parameter") as edit:
+                        edit.apply(plan)
+                records = session.modeling.records(m.ModelingQuery(meshes=(mesh,), parameters=(p,))).value
+                self.assertEqual(records.parameters, (None,))
+                self.assertAlmostEqual(records.meshes[0].base_positions[1][0], 1.4, places=5)
+                self.assertEqual(session.info().history, (2, 0))
+                session.undo().wait()
+                self.assertIsNotNone(session.modeling.records(m.ModelingQuery(parameters=(p,))).value.parameters[0])
+                session.redo().wait()
+                self.assertEqual(session.modeling.records(m.ModelingQuery(parameters=(p,))).value.parameters, (None,))
+
     def test_deletion_report_page_response_loss_recovers_on_the_original_plan(self):
         with self.runtime("connected", drop="deletion_report_page") as runtime:
             session = runtime.sessions.create(uid(1))

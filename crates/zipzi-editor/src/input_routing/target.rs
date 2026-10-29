@@ -52,6 +52,16 @@ pub(crate) fn command_at(editor: &Editor, id: CommandId, target: Option<LocalTar
                     .unwrap_or(CommandTarget::Unavailable),
             }
         }
+        (CommandScope::Objects, Some(LocalTarget::Panel(panel))) if object_panel(panel) => {
+            Command {
+                id,
+                source: CommandSource::Shortcut,
+                target: editor
+                    .active_id()
+                    .map(CommandTarget::Document)
+                    .unwrap_or(CommandTarget::Unavailable),
+            }
+        }
         (CommandScope::Objects, _) => Command {
             id,
             source: CommandSource::Shortcut,
@@ -75,4 +85,25 @@ pub(crate) fn command_at(editor: &Editor, id: CommandId, target: Option<LocalTar
         },
         _ => editor.command(id).with_source(CommandSource::Shortcut),
     }
+}
+
+pub(super) fn object_panel(panel: zipzi_editor_core::PanelKind) -> bool {
+    use zipzi_editor_core::PanelKind::*;
+    matches!(
+        panel,
+        PartsTree
+            | Deformers
+            | DrawOrder
+            | Parameters
+            | Properties
+            | Keyforms
+            | BlendShapes
+            | Glue
+            | Pose
+            | Resources
+            | AnimationMotions
+            | AnimationExpressions
+            | AnimationPhysics
+            | AnimationPose
+    )
 }

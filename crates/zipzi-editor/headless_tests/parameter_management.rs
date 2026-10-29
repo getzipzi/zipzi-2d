@@ -10,6 +10,7 @@ fn command(h: &super::Harness, id: CommandId, cx: &mut TestAppContext) {
     })
     .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn submit(h: &super::Harness, field: &str, value: &str, cx: &mut TestAppContext) {
     super::properties::fill(h, field, value, cx);
@@ -163,6 +164,11 @@ fn group_properties_validate_identity_and_delete_keeps_contents(cx: &mut TestApp
     })
     .unwrap();
     command(&h, CommandId::DeleteParameterGroup, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tree-deletion-submit", cx)
+    })
+    .unwrap();
+    cx.run_until_parked();
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         assert!(doc.parameter_groups().is_empty());
@@ -181,9 +187,7 @@ fn group_properties_validate_identity_and_delete_keeps_contents(cx: &mut TestApp
 }
 
 #[gpui_kit::test]
-fn referenced_parameter_delete_is_disabled_with_native_reason_without_mutating_document(
-    cx: &mut TestAppContext,
-) {
+fn referenced_parameter_delete_opens_review_without_mutating_document(cx: &mut TestAppContext) {
     let (mut doc, assets) = document_fixture::sample_document_with_binding(true).unwrap();
     let parameter = ObjectRef::new(ObjectKind::Parameter, &doc.parameters()[0].id);
     doc.navigate(parameter).unwrap();
@@ -194,22 +198,19 @@ fn referenced_parameter_delete_is_disabled_with_native_reason_without_mutating_d
         assert_eq!(view.editor.document().unwrap().parameters().len(), 1);
         assert_eq!(view.editor.document().unwrap().history_lengths(), before);
         assert!(
-            !view
-                .editor
+            view.editor
                 .command_available(view.editor.command(CommandId::DeleteParameter))
         );
         assert_eq!(
             view.editor
                 .authoring_command_capability(CommandId::DeleteParameter)
                 .unwrap(),
-            zipzi_sdk::CapabilityState::Unavailable {
-                code: "OBJECT_REFERENCED"
-            }
+            zipzi_sdk::CapabilityState::Available
         );
         assert!(view.edit_error.is_none());
     });
     cx.update_window(h.window, |_, window, cx| {
-        assert!(!window.has_active_dialog(cx))
+        assert!(window.has_active_dialog(cx))
     })
     .unwrap();
 }
@@ -278,7 +279,7 @@ fn parameter_type_and_group_are_edited_in_the_common_properties_panel(cx: &mut T
 }
 
 #[gpui_kit::test]
-fn menu_feedback_reports_referenced_parameter_without_opening_a_dialog(cx: &mut TestAppContext) {
+fn parameter_menu_opens_shared_review_without_recording_a_problem(cx: &mut TestAppContext) {
     use gpui_kit::{MouseButton, test::ClickOptions};
     let (doc, assets) = document_fixture::sample_document_with_binding(true).unwrap();
     let parameter = doc.parameters()[0].id.clone();
@@ -310,15 +311,80 @@ fn menu_feedback_reports_referenced_parameter_without_opening_a_dialog(cx: &mut 
             })
             .unwrap();
         window.within("popup-menu").click(i, cx);
-        assert!(!window.has_active_dialog(cx));
         let view = h.view.read(cx);
-        assert_eq!(view.message, crate::t!("authoring.referenced").as_ref());
         assert!(view.edit_error.is_none());
         assert_eq!(view.editor.document().unwrap().history_lengths(), history);
-        assert_eq!(
-            view.status_bar.read(cx).displayed_message(),
-            Some((view.message.as_str(), false))
-        );
     })
     .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("tree-deletion-dialog").visible());
+        window.click("tree-deletion-cancel", cx);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn parameter_deletion_reviews_binding_cleanup_cancel_and_one_step_undo(cx: &mut TestAppContext) {
+    cx.update(|cx| cx.set_reduce_motion(true));
+    let (mut doc, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = doc.parameters()[0].id.clone();
+    doc.navigate(ObjectRef::new(ObjectKind::Parameter, &parameter))
+        .unwrap();
+    let meshes = doc.layers().len();
+    let h = setup_with_document(cx, doc, assets);
+    command(&h, CommandId::DeleteParameter, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("tree-deletion-dialog").visible());
+        window.click("tree-deletion-cancel", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (0, 0))
+    });
+    command(&h, CommandId::DeleteParameter, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tree-deletion-submit", cx)
+    })
+    .unwrap();
+    cx.run_until_parked();
+    let diagnostic = cx
+        .update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            let rows = (0..16usize)
+                .filter_map(|i| {
+                    window
+                        .try_find(("deletion-row", i))
+                        .and_then(|r| r.label().map(str::to_owned))
+                })
+                .collect::<Vec<_>>();
+            format!(
+                "error {:?}; rows {:?}; working {}",
+                window
+                    .try_find("deletion-error")
+                    .and_then(|n| n.label().map(str::to_owned)),
+                rows,
+                window.try_find("deletion-planning").is_some()
+            )
+        })
+        .unwrap();
+    h.view.read_with(cx, |v, _| {
+        let doc = v.editor.document().unwrap();
+        assert!(doc.parameter_draft(&parameter).is_err(), "{diagnostic}");
+        assert_eq!(doc.layers().len(), meshes);
+        assert_eq!(doc.history_lengths(), (1, 0));
+    });
+    command(&h, CommandId::Undo, cx);
+    h.view.read_with(cx, |v, _| {
+        assert!(
+            v.editor
+                .document()
+                .unwrap()
+                .parameter_draft(&parameter)
+                .is_ok()
+        )
+    });
 }

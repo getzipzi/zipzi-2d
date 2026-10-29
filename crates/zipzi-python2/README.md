@@ -145,8 +145,10 @@ services run in the GPL-3.0-only Editor; see the [licensing guide](https://githu
 
 `session.plan` / `plan_async` and their Edit equivalents accept
 `modeling.ModelingCommandDeletion`. The request uses typed Mesh, Part, Deformer,
-Glue or Offscreen roots. Part means its organization subtree; Deformer means its
-deformation subtree regardless of the caller's tree view. `DissolvePart` and
+Glue, Offscreen, Parameter, ParameterFolder, Texture and Attachment roots, or
+`DeletionTargetRecord` for typed business and child identities. Part means its
+organization subtree; Deformer means its deformation subtree regardless of the
+caller's tree view. `DissolvePart` and
 `RemoveDeformer` retain their children and report required migrations.
 
 ```python
@@ -165,6 +167,17 @@ with session.plan_async(operation).wait() as plan:
         with session.edit("Delete and clean dependencies") as edit:
             edit.apply(plan)
 ```
+
+Parameters reduce ordinary axes at their frozen document default. Override one
+with `DeletionRequest(parameter_slices={parameter_id: value}, roots=...)`.
+`ParameterFolder` retains contents; `ParameterFolderContents` explicitly deletes
+the folder subtree and its parameters. Texture users need an explicit entry in
+`texture_replacements`: a retained texture UUID or `None` to leave them
+unconfigured. Optional attachment references clear. Motion/Expression/Physics and
+metadata cleanup share the same atomic Plan and paged report. Physics node and
+Blend base sample choices use `physics_node_replacements` and
+`blend_base_replacements`. These fields describe fixed authoring inputs and do
+not read another client's preview sliders or playback state.
 
 A blocked or unresolved request still returns an inspectable Plan. Resolve its
 reported choices in a new request and replan. New opaque export failures require

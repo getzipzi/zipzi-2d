@@ -31,9 +31,6 @@ pub(crate) fn append_menu(
         return menu;
     };
     let state = entity.read(cx);
-    if state.editor.editing_context() != Some(EditingContext::Modeling) {
-        return menu;
-    }
     let Some(context) = AuthoringContext::capture(&state.editor) else {
         return menu;
     };
@@ -63,10 +60,21 @@ impl EditorView {
         let Some(context) = AuthoringContext::capture(&self.editor) else {
             return;
         };
-        let objects = self.editor.document().unwrap().context().selections.clone();
+        let objects = if self.editor.editing_context() == Some(EditingContext::Modeling)
+            && !matches!(command.target, CommandTarget::Document(_))
+        {
+            self.editor.document().unwrap().context().selections.clone()
+        } else {
+            self.editor
+                .editing_context()
+                .and_then(|context| self.editor.inspection(context))
+                .and_then(|i| i.object())
+                .into_iter()
+                .collect()
+        };
         self.run_object_deletion(context, &objects, window, cx);
     }
-    fn run_object_deletion(
+    pub(crate) fn run_object_deletion(
         &mut self,
         context: AuthoringContext,
         objects: &[ObjectRef],
@@ -137,7 +145,12 @@ struct DeletionDialog {
     page: Option<zipzi_sdk::DeletionPage>,
     destination: Entity<SelectState<SearchableVec<Choice>>>,
     mapping: Entity<InputState>,
+    texture: Entity<SelectState<SearchableVec<Choice>>>,
+    node: Entity<SelectState<SearchableVec<Choice>>>,
+    base: Entity<SelectState<SearchableVec<Choice>>>,
+    slice: Entity<InputState>,
     dialog: FormDialogState,
+    playback: PlaybackDialogGuard,
     _observe: Subscription,
 }
 impl DeletionDialog {
@@ -289,6 +302,28 @@ impl DeletionDialog {
                     K::MotionKey => ObjectKind::MotionKey,
                     K::Expression => ObjectKind::Expression,
                     K::PoseEntry => ObjectKind::PoseEntry,
+                    K::GlueBinding => ObjectKind::GlueBinding,
+                    K::Parameter => ObjectKind::Parameter,
+                    K::ParameterFolder => ObjectKind::ParameterGroup,
+                    K::Texture => ObjectKind::Texture,
+                    K::Attachment => ObjectKind::Attachment,
+                    K::BlendKeyTable => ObjectKind::BlendKeyTable,
+                    K::BlendConstraint => ObjectKind::BlendConstraint,
+                    K::MotionGroup => ObjectKind::MotionGroup,
+                    K::MotionRegistration => ObjectKind::MotionRegistration,
+                    K::MotionEvent => ObjectKind::MotionEvent,
+                    K::ExpressionEntry => ObjectKind::ExpressionEntry,
+                    K::Pose => ObjectKind::Pose,
+                    K::PoseGroup => ObjectKind::PoseGroup,
+                    K::Physics => ObjectKind::Physics,
+                    K::PhysicsGroup => ObjectKind::PhysicsGroup,
+                    K::PhysicsInput => ObjectKind::PhysicsInput,
+                    K::PhysicsOutput => ObjectKind::PhysicsOutput,
+                    K::PhysicsNode => ObjectKind::PhysicsNode,
+                    K::ModelParameterGroup => ObjectKind::ModelParameterGroup,
+                    K::ModelParameterMember => ObjectKind::ModelParameterMember,
+                    K::CdiCombinedSet => ObjectKind::CdiCombinedSet,
+                    K::CdiCombinedMember => ObjectKind::CdiCombinedMember,
                     K::PoseLink => ObjectKind::PoseLink,
                     _ => return None,
                 };
@@ -326,7 +361,9 @@ impl DeletionDialog {
                 C::DeleteSubtree => self.intent.request.roots.push(match object.kind {
                     K::Deformer => zipzi_sdk::DeletionTarget::Deformer(object.id),
                     K::Mesh => zipzi_sdk::DeletionTarget::Mesh(object.id),
-                    _ => anyhow::bail!("Unsupported subtree"),
+                    K::Part => zipzi_sdk::DeletionTarget::Part(object.id),
+                    K::Offscreen => zipzi_sdk::DeletionTarget::Offscreen(object.id),
+                    _ => zipzi_sdk::DeletionTarget::Record(object),
                 }),
                 C::ChoosePart | C::SupplyOffscreenMapping => {
                     let part_id = self
@@ -351,7 +388,50 @@ impl DeletionDialog {
                         zipzi_sdk::DeletionOffscreenPlacement { part_id, mapping },
                     );
                 }
+                C::ClearTexture => {
+                    self.intent
+                        .request
+                        .texture_replacements
+                        .insert(object.id, None);
+                }
+                C::ChooseTexture => {
+                    let id = self
+                        .texture
+                        .read(cx)
+                        .selected_value()
+                        .cloned()
+                        .ok_or_else(|| anyhow::anyhow!(t!("authoring.move_choose")))?;
+                    self.intent
+                        .request
+                        .texture_replacements
+                        .insert(object.id, Some(id));
+                }
+                C::ChoosePhysicsNode => {
+                    let id = self
+                        .node
+                        .read(cx)
+                        .selected_value()
+                        .cloned()
+                        .ok_or_else(|| anyhow::anyhow!(t!("authoring.move_choose")))?;
+                    self.intent
+                        .request
+                        .physics_node_replacements
+                        .insert(object.id, id);
+                }
+                C::ChooseBlendBase => {
+                    let id = self
+                        .base
+                        .read(cx)
+                        .selected_value()
+                        .cloned()
+                        .ok_or_else(|| anyhow::anyhow!(t!("authoring.move_choose")))?;
+                    self.intent
+                        .request
+                        .blend_base_replacements
+                        .insert(object.id, id);
+                }
                 C::Cancel => {
+                    self.playback.close();
                     self.invalidate();
                     self.dialog.close();
                     window.close_dialog(cx);
@@ -381,20 +461,34 @@ impl DeletionDialog {
         {
             return;
         }
-        let choices: Vec<Choice> = entity
-            .read(cx)
-            .editor
-            .document()
-            .unwrap()
-            .object_index()
-            .objects
-            .iter()
-            .filter(|i| i.reference.kind == ObjectKind::Part)
-            .map(|i| Choice {
-                value: i.reference.id.clone(),
-                label: i.name.clone().into(),
-            })
-            .collect();
+        let choices = |kind| -> Vec<Choice> {
+            entity
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .object_index()
+                .objects
+                .iter()
+                .filter(|i| i.reference.kind == kind)
+                .filter(|i| {
+                    !intent.request.roots.iter().any(|r| {
+                        let root = r.object();
+                        root.id == i.reference.id && root.kind != K::DrawingGroup
+                    })
+                })
+                .map(|i| Choice {
+                    value: i.reference.id.clone(),
+                    label: i.name.clone().into(),
+                })
+                .collect()
+        };
+        let parts = choices(ObjectKind::Part);
+        let textures = choices(ObjectKind::Texture);
+        let nodes = choices(ObjectKind::PhysicsNode);
+        let samples = choices(ObjectKind::BindingSample);
+        let playback = PlaybackDialogGuard::new(context);
+        entity.update(cx, |v, _| v.playback_dialog = Some(playback.clone()));
         let view = cx.new(|cx| Self {
             owner,
             context,
@@ -409,10 +503,21 @@ impl DeletionDialog {
             offset: 0,
             page: None,
             destination: cx.new(|cx| {
-                SelectState::new(SearchableVec::new(choices), None, window, cx).searchable(true)
+                SelectState::new(SearchableVec::new(parts), None, window, cx).searchable(true)
             }),
             mapping: cx.new(|cx| InputState::new(window, cx)),
+            texture: cx.new(|cx| {
+                SelectState::new(SearchableVec::new(textures), None, window, cx).searchable(true)
+            }),
+            node: cx.new(|cx| {
+                SelectState::new(SearchableVec::new(nodes), None, window, cx).searchable(true)
+            }),
+            base: cx.new(|cx| {
+                SelectState::new(SearchableVec::new(samples), None, window, cx).searchable(true)
+            }),
+            slice: cx.new(|cx| InputState::new(window, cx)),
             dialog: FormDialogState::new(cx),
+            playback,
             _observe: cx.observe(&entity, |this: &mut Self, _, cx| {
                 if !this.current(cx) {
                     this.invalidate();
@@ -441,6 +546,7 @@ impl DeletionDialog {
 }
 impl Drop for DeletionDialog {
     fn drop(&mut self) {
+        self.playback.close();
         self.invalidate();
     }
 }
@@ -455,6 +561,7 @@ impl FormDialogView for DeletionDialog {
         authoring_error(error)
     }
     fn closing(&mut self) {
+        self.playback.close();
         self.invalidate();
     }
     fn submit(&mut self, _: &mut Window, cx: &mut Context<Self>) -> anyhow::Result<()> {
@@ -494,6 +601,10 @@ fn choice_label(choice: &C) -> String {
         C::ChoosePart => "deletion.choose_part",
         C::SupplyOffscreenMapping => "deletion.mapping",
         C::DeleteSubtree => "deletion.subtree",
+        C::ChooseTexture => "deletion.choose_texture",
+        C::ClearTexture => "deletion.clear_texture",
+        C::ChoosePhysicsNode => "deletion.choose_node",
+        C::ChooseBlendBase => "deletion.choose_base",
         C::Cancel => "common.cancel",
     })
     .into_owned()
@@ -509,7 +620,13 @@ impl Render for DeletionDialog {
             .flex_col()
             .gap_2();
         if self.working {
-            body = body.child(t!("binding.planning"));
+            body = body.child(
+                div()
+                    .id("deletion-planning")
+                    .test_support()
+                    .aria_label(t!("binding.planning").into_owned())
+                    .child(t!("binding.planning")),
+            );
         }
         if !current {
             body = body.child(t!("authoring.move_stale"));
@@ -527,6 +644,8 @@ impl Render for DeletionDialog {
                         | zipzi_sdk::DeletionTarget::DissolvePart(_)
                         | zipzi_sdk::DeletionTarget::Deformer(_)
                         | zipzi_sdk::DeletionTarget::RemoveDeformer(_)
+                        | zipzi_sdk::DeletionTarget::ParameterFolder(_)
+                        | zipzi_sdk::DeletionTarget::ParameterFolderContents(_)
                 )
             })
             .count();
@@ -571,6 +690,8 @@ impl Render for DeletionDialog {
                         | zipzi_sdk::DeletionTarget::DissolvePart(_)
                         | zipzi_sdk::DeletionTarget::Deformer(_)
                         | zipzi_sdk::DeletionTarget::RemoveDeformer(_)
+                        | zipzi_sdk::DeletionTarget::ParameterFolder(_)
+                        | zipzi_sdk::DeletionTarget::ParameterFolderContents(_)
                 )
             })
             .skip(self.scope_offset)
@@ -583,6 +704,12 @@ impl Render for DeletionDialog {
                 T::DissolvePart(id) => Some((T::Part(id), "deletion.delete_contents")),
                 T::Deformer(id) => Some((T::RemoveDeformer(id), "deletion.remove_parent")),
                 T::RemoveDeformer(id) => Some((T::Deformer(id), "deletion.delete_contents")),
+                T::ParameterFolder(id) => {
+                    Some((T::ParameterFolderContents(id), "deletion.delete_contents"))
+                }
+                T::ParameterFolderContents(id) => {
+                    Some((T::ParameterFolder(id), "deletion.dissolve_folder"))
+                }
                 _ => None,
             };
             if let Some((target, label)) = alternative {
@@ -593,6 +720,47 @@ impl Render for DeletionDialog {
                         .disabled(!current || self.working)
                         .on_click(cx.listener(move |v, _, window, cx| {
                             v.intent.request.roots[i] = target.clone();
+                            v.review(window, cx);
+                        })),
+                );
+            }
+        }
+        let parameters: Vec<_> = self
+            .intent
+            .request
+            .roots
+            .iter()
+            .filter_map(|root| match root {
+                zipzi_sdk::DeletionTarget::Parameter(id) => Some(id.clone()),
+                _ => None,
+            })
+            .collect();
+        if !parameters.is_empty() {
+            body = body
+                .child(t!("deletion.slice"))
+                .child(compact::input(Input::new(&self.slice)).id("deletion-slice"));
+            for (i, id) in parameters.into_iter().enumerate() {
+                body = body.child(
+                    compact::button(Button::new(("deletion-slice-apply", i)))
+                        .label(format!("{} · {}", id, t!("deletion.apply_slice")))
+                        .disabled(!current || self.working)
+                        .on_click(cx.listener(move |v, _, window, cx| {
+                            let value = v.slice.read(cx).value();
+                            if value.trim().is_empty() {
+                                v.intent.request.parameter_slices.remove(&id);
+                            } else {
+                                match value.trim().parse::<f32>() {
+                                    Ok(value) if value.is_finite() => {
+                                        v.intent.request.parameter_slices.insert(id.clone(), value);
+                                    }
+                                    _ => {
+                                        v.dialog.error =
+                                            Some(t!("binding.invalid_number").into_owned());
+                                        cx.notify();
+                                        return;
+                                    }
+                                }
+                            }
                             v.review(window, cx);
                         })),
                 );
@@ -648,7 +816,9 @@ impl Render for DeletionDialog {
         if let Some(page) = &self.page {
             let mut rows = div()
                 .id("deletion-rows")
-                .max_h(px(340.))
+                .test_support()
+                .h(px(240.))
+                .flex_shrink_0()
                 .overflow_y_scroll()
                 .flex()
                 .flex_col()
@@ -739,7 +909,15 @@ impl Render for DeletionDialog {
                         export_label(failure)
                     ),
                 };
-                let mut item = div().flex().flex_col().gap_1().text_xs().child(text);
+                let mut item = div()
+                    .id(("deletion-row", i))
+                    .test_support()
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .text_xs()
+                    .aria_label(text.clone())
+                    .child(text);
                 if let R::Decision { decision } = row {
                     let mut buttons = div().flex().flex_wrap().gap_1();
                     for (j, choice) in decision.choices.into_iter().enumerate() {
@@ -781,27 +959,15 @@ impl Render for DeletionDialog {
                             .label(t!("deletion.unlock"))
                             .disabled(!current || self.working)
                             .on_click(cx.listener(move |v, _, window, cx| {
+                                let Some(plan) = v.plan.clone() else { return };
                                 v.invalidate();
                                 let result = v.owner.update(
                                     cx,
                                     |view, cx| -> anyhow::Result<AuthoringContext> {
-                                        let object = view
-                                            .editor
-                                            .document()
-                                            .unwrap()
-                                            .object_index()
-                                            .objects
-                                            .iter()
-                                            .find(|o| o.reference.id == unlock)
-                                            .map(|o| o.reference.clone())
-                                            .ok_or_else(|| {
-                                                anyhow::anyhow!(t!("authoring.missing_object"))
-                                            })?;
-                                        view.editor.execute(
-                                            zipzi_editor_core::EditorCommand::SetObjectsLocked {
-                                                objects: vec![object],
-                                                locked: false,
-                                            },
+                                        view.editor.unlock_deletion_source(
+                                            v.context.editing.document,
+                                            &plan,
+                                            &unlock,
                                         )?;
                                         view.redraw(cx);
                                         AuthoringContext::capture(&view.editor).ok_or_else(|| {
@@ -838,8 +1004,9 @@ impl Render for DeletionDialog {
                                         .find(|o| o.reference.id == source)
                                         .map(|o| o.reference.clone())
                                     {
-                                        let _ = view.editor.execute(
-                                            zipzi_editor_core::EditorCommand::SelectObject(object),
+                                        let _ = view.editor.inspect_authoring_object(
+                                            v.context.editing.document,
+                                            object,
                                         );
                                         view.redraw(cx);
                                     }
@@ -886,10 +1053,39 @@ impl Render for DeletionDialog {
                     ),
             );
             if self.section == S::Decisions {
-                body = body
-                    .child(compact::select(Select::new(&self.destination)))
-                    .child(t!("deletion.mapping_hint"))
-                    .child(compact::input(Input::new(&self.mapping)));
+                let choices: Vec<_> = page
+                    .rows
+                    .iter()
+                    .filter_map(|r| match r {
+                        R::Decision { decision } => Some(&decision.choices),
+                        _ => None,
+                    })
+                    .flatten()
+                    .collect();
+                if choices
+                    .iter()
+                    .any(|c| matches!(c, C::ChoosePart | C::SupplyOffscreenMapping))
+                {
+                    body = body
+                        .child(compact::select(Select::new(&self.destination)))
+                        .child(t!("deletion.mapping_hint"))
+                        .child(compact::input(Input::new(&self.mapping)));
+                }
+                if choices.contains(&&C::ChooseTexture) {
+                    body = body
+                        .child(t!("deletion.choose_texture"))
+                        .child(compact::select(Select::new(&self.texture)).id("deletion-texture"));
+                }
+                if choices.contains(&&C::ChoosePhysicsNode) {
+                    body = body
+                        .child(t!("deletion.choose_node"))
+                        .child(compact::select(Select::new(&self.node)).id("deletion-node"));
+                }
+                if choices.contains(&&C::ChooseBlendBase) {
+                    body = body
+                        .child(t!("deletion.choose_base"))
+                        .child(compact::select(Select::new(&self.base)).id("deletion-base"));
+                }
             }
         }
         body = body.child(
@@ -899,7 +1095,13 @@ impl Render for DeletionDialog {
                 .on_click(cx.listener(|v, _, window, cx| v.review(window, cx))),
         );
         if let Some(error) = &self.dialog.error {
-            body = body.child(error.clone());
+            body = body.child(
+                div()
+                    .id("deletion-error")
+                    .test_support()
+                    .aria_label(error.clone())
+                    .child(error.clone()),
+            );
         }
         body
     }
@@ -924,6 +1126,16 @@ fn field_label(f: &zipzi_sdk::DeletionField) -> String {
         DeformationParent | ConvertedData => "deletion.deformation",
         PosePart | PoseLinkPart | MotionPart | ExpressionSourcePart => "deletion.animation",
         CdiPart { .. } => "deletion.display",
+        ParameterAxis | BlendTableParameter | BlendConstraintParameter =>
+            "deletion.parameter_dimension",
+        BlendTable | BlendConstraint { .. } => "deletion.binding_loss",
+        MotionParameter | ExpressionParameter | ExpressionSourceParameter | MotionClip =>
+            "deletion.animation",
+        MotionRegistrationContainer => "deletion.move_to_root",
+        PhysicsParameter | PhysicsNode => "deletion.physics",
+        Texture | AttachmentSound | AttachmentUserData => "deletion.resource",
+        ParameterFolder | ModelParameter | CdiParameter { .. } | CdiCombinedParameter =>
+            "deletion.display",
         RequestedScope => "deletion.scope",
     })
     .into_owned()
@@ -937,11 +1149,75 @@ fn decision_label(r: &zipzi_sdk::DeletionDecisionReason) -> String {
         OffscreenOwnerUnavailable => t!("deletion.owner_required").into_owned(),
         OffscreenMappingRequired => t!("deletion.mapping_required").into_owned(),
         PartStateUnpreserved => t!("deletion.part_state").into_owned(),
+        TextureReplacementRequired => t!("deletion.texture_required").into_owned(),
+        BlendBaseReplacementRequired => t!("deletion.base_required").into_owned(),
+        PhysicsNodeReplacementRequired => t!("deletion.node_required").into_owned(),
+        InvalidContainer { code } => format!("{}: {code}", t!("deletion.invalid_container")),
     }
 }
 fn effect_label(e: &zipzi_sdk::DeletionEffect, name: impl Fn(&DeletionObject) -> String) -> String {
     use zipzi_sdk::DeletionEffect::*;
     let (key, object) = match e {
+        MotionRegistrationMoved {
+            registration,
+            group,
+        } => {
+            return format!(
+                "{} · {}: {}",
+                name(registration),
+                t!("deletion.move_to_root"),
+                name(group)
+            );
+        }
+        ContentChanged(o) => ("deletion.content_changed", o),
+        ParameterAnimationRemoved(o) => ("deletion.animation_effect", o),
+        ParameterDimensionRemoved {
+            object,
+            parameter,
+            value,
+            effective_value,
+            disabled,
+        } => {
+            return format!(
+                "{} · {}: {} = {value} → {effective_value} · {}: {disabled}",
+                name(object),
+                t!("deletion.parameter_dimension"),
+                name(parameter),
+                t!("deletion.disabled")
+            );
+        }
+        BindingContributionRemoved { object, binding } => {
+            return format!(
+                "{} · {}: {}",
+                name(object),
+                t!("deletion.binding_loss"),
+                name(binding)
+            );
+        }
+        PhysicsChannelRemoved { object, group } => {
+            return format!(
+                "{} · {}: {}",
+                name(group),
+                t!("deletion.physics"),
+                name(object)
+            );
+        }
+        ResourceReplaced {
+            object,
+            source,
+            replacement,
+        } => {
+            return format!(
+                "{} · {}: {} → {}",
+                name(object),
+                t!("deletion.resource"),
+                name(source),
+                replacement
+                    .as_ref()
+                    .map(&name)
+                    .unwrap_or_else(|| t!("deletion.unconfigured").into_owned())
+            );
+        }
         MaskChanged(o) => ("deletion.mask_effect", o),
         GlueRemoved(o) => ("deletion.glue_effect", o),
         HitAreaRemoved(o) => ("deletion.hit_area", o),

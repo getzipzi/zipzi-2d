@@ -194,12 +194,6 @@ impl AuthoringSession {
         let root_node = doc
             .get_physics_node(handle.id())
             .is_some_and(|(g, _)| g.vertices[0].id == handle.id());
-        let chain_too_short = doc
-            .get_physics_node(handle.id())
-            .is_some_and(|(g, _)| g.vertices.len() <= 2);
-        let node_in_use = doc
-            .get_physics_node(handle.id())
-            .is_some_and(|(g, _)| g.outputs.iter().any(|v| v.node_id == handle.id()));
         Ok(PhysicsCapabilities {
             inspect: CapabilityState::Available,
             patch: state.clone(),
@@ -213,19 +207,7 @@ impl AuthoringSession {
             } else {
                 subtree.clone()
             },
-            delete: if root_node {
-                unsupported("PHYSICS_ROOT_NODE")
-            } else if chain_too_short {
-                CapabilityState::Unavailable {
-                    code: "PHYSICS_CHAIN_TOO_SHORT",
-                }
-            } else if node_in_use {
-                CapabilityState::Unavailable {
-                    code: "PHYSICS_NODE_IN_USE",
-                }
-            } else {
-                subtree.clone()
-            },
+            delete: subtree.clone(),
             move_object: if channel {
                 state.clone()
             } else {

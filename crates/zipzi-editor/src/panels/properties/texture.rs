@@ -98,7 +98,18 @@ impl PropertiesPanel {
         } else {
             &state.domain.patch
         };
-        let Some(availability) = ActionAvailability::from_core(capability) else {
+        let availability = if control == Control::Delete {
+            view.editor.document().and_then(|d| {
+                ActionAvailability::for_object(
+                    d,
+                    object,
+                    zipzi_editor_core::AuthoringAction::Delete,
+                )
+            })
+        } else {
+            ActionAvailability::from_core(capability)
+        };
+        let Some(availability) = availability else {
             return Empty.into_any_element();
         };
         let owner = self.owner.clone();
@@ -110,7 +121,10 @@ impl PropertiesPanel {
         .ghost()
         .label(label.clone())
         .tooltip(availability.reason.unwrap_or(label.clone()))
-        .disabled(control != Control::Cancel && (self.disabled || !availability.enabled))
+        .disabled(
+            !matches!(control, Control::Cancel | Control::Delete)
+                && (self.disabled || !availability.enabled),
+        )
         .w_full()
         .justify_start()
         .on_click(move |_, window, cx| {

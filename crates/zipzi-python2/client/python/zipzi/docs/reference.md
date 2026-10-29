@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-v1; client source SHA-256 b2a1743bb97c03d685c6ce5b6c627d7e68e914c881ec3b080a9b185792f02a93.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-v1; client source SHA-256 a7832aeadffecd13c84c2e5b48f8b7765cacbc66363c4c67115f0e8ecb2a86d6.
 
 
 ## zipzi.ApiDescription
@@ -7518,6 +7518,30 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Typed public API entry.
 
 
+## zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired
+
+`()`
+
+Immutable owned DeletionDecisionReasonBlendBaseReplacementRequired value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionDecisionReasonConversionUnproven
 
 `(code: str)`
@@ -7540,6 +7564,34 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.DeletionDecisionReasonConversionUnproven.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionDecisionReasonInvalidContainer
+
+`(code: str)`
+
+Immutable owned DeletionDecisionReasonInvalidContainer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+code: Native container invariant requiring an explicit larger deletion or cancellation.
+
+- `code`: Native container invariant requiring an explicit larger deletion or cancellation.
+
+## zipzi.modeling.DeletionDecisionReasonInvalidContainer.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionDecisionReasonInvalidContainer.summary
 
 `() -> str`
 
@@ -7618,11 +7670,89 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired
+
+`()`
+
+Immutable owned DeletionDecisionReasonPhysicsNodeReplacementRequired value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired
+
+`()`
+
+Immutable owned DeletionDecisionReasonTextureReplacementRequired value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionEffect
 
 ``
 
 Typed public API entry.
+
+
+## zipzi.modeling.DeletionEffectBindingContributionRemoved
+
+`(object: DeletionObject, binding: DeletionObject)`
+
+Immutable owned DeletionEffectBindingContributionRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+object: Retained target whose authored contribution disappears.
+binding: Deleted ordinary or Blend binding that previously supplied this contribution.
+
+- `object`: Retained target whose authored contribution disappears.
+- `binding`: Deleted ordinary or Blend binding that previously supplied this contribution.
+
+## zipzi.modeling.DeletionEffectBindingContributionRemoved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionEffectBindingContributionRemoved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
 
 
 ## zipzi.modeling.DeletionEffectCompositionChanged
@@ -7647,6 +7777,34 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.DeletionEffectCompositionChanged.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionEffectContentChanged
+
+`(value: DeletionObject)`
+
+Immutable owned DeletionEffectContentChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Retained owner whose selected stable content identities disappear.
+
+- `value`: Retained owner whose selected stable content identities disappear.
+
+## zipzi.modeling.DeletionEffectContentChanged.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionEffectContentChanged.summary
 
 `() -> str`
 
@@ -7803,6 +7961,36 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.DeletionEffectMotionRegistrationMoved
+
+`(registration: DeletionObject, group: DeletionObject)`
+
+Immutable owned DeletionEffectMotionRegistrationMoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+registration: Preserved last registration of a retained Clip, moved to the ungrouped root.
+group: Removed source group; the registration is not deleted with its other entries.
+
+- `registration`: Preserved last registration of a retained Clip, moved to the ungrouped root.
+- `group`: Removed source group; the registration is not deleted with its other entries.
+
+## zipzi.modeling.DeletionEffectMotionRegistrationMoved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionEffectMotionRegistrationMoved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionEffectOrganizationChanged
 
 `(value: DeletionObject)`
@@ -7825,6 +8013,70 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.DeletionEffectOrganizationChanged.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionEffectParameterAnimationRemoved
+
+`(value: DeletionObject)`
+
+Immutable owned DeletionEffectParameterAnimationRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.
+
+- `value`: Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.
+
+## zipzi.modeling.DeletionEffectParameterAnimationRemoved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionEffectParameterAnimationRemoved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionEffectParameterDimensionRemoved
+
+`(object: DeletionObject, parameter: DeletionObject, value: float, effective_value: float, disabled: bool)`
+
+Immutable owned DeletionEffectParameterDimensionRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+object: Surviving ordinary binding or Glue grid reduced by the native grid converter.
+parameter: Driving parameter whose coordinate is frozen for this removed axis.
+value: Frozen document-default or explicitly selected finite slice coordinate.
+effective_value: Coordinate after native repeat normalization, key snapping and endpoint selection.
+disabled: Whether this fixed coordinate disables the ordinary target outside the native grid.
+
+- `object`: Surviving ordinary binding or Glue grid reduced by the native grid converter.
+- `parameter`: Driving parameter whose coordinate is frozen for this removed axis.
+- `value`: Frozen document-default or explicitly selected finite slice coordinate.
+- `effective_value`: Coordinate after native repeat normalization, key snapping and endpoint selection.
+- `disabled`: Whether this fixed coordinate disables the ordinary target outside the native grid.
+
+## zipzi.modeling.DeletionEffectParameterDimensionRemoved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionEffectParameterDimensionRemoved.summary
 
 `() -> str`
 
@@ -7891,6 +8143,68 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.DeletionEffectPhysicsChannelRemoved
+
+`(object: DeletionObject, group: DeletionObject)`
+
+Immutable owned DeletionEffectPhysicsChannelRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+object: Removed input or output channel, with a stable native identity.
+group: Retained Physics setting group whose behavior changes.
+
+- `object`: Removed input or output channel, with a stable native identity.
+- `group`: Retained Physics setting group whose behavior changes.
+
+## zipzi.modeling.DeletionEffectPhysicsChannelRemoved.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionEffectPhysicsChannelRemoved.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionEffectResourceReplaced
+
+`(object: DeletionObject, source: DeletionObject, replacement: DeletionObject | None = None)`
+
+Immutable owned DeletionEffectResourceReplaced value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+object: Retained consumer whose texture or optional attachment reference changes.
+source: Deleted resource previously referenced by this consumer.
+replacement: Retained replacement resource; None means an explicit clear/unconfigured result.
+
+- `object`: Retained consumer whose texture or optional attachment reference changes.
+- `source`: Deleted resource previously referenced by this consumer.
+- `replacement`: Retained replacement resource; None means an explicit clear/unconfigured result.
+
+## zipzi.modeling.DeletionEffectResourceReplaced.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionEffectResourceReplaced.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionEffectUnpreservedChannels
 
 `(object: DeletionObject, channels: tuple[DeletionChannel, ...])`
@@ -7926,6 +8240,206 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 ``
 
 Typed public API entry.
+
+
+## zipzi.modeling.DeletionFieldAttachmentSound
+
+`()`
+
+Immutable owned DeletionFieldAttachmentSound value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldAttachmentSound.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldAttachmentSound.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldAttachmentUserData
+
+`()`
+
+Immutable owned DeletionFieldAttachmentUserData value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldAttachmentUserData.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldAttachmentUserData.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldBlendConstraint
+
+`(slot: int)`
+
+Immutable owned DeletionFieldBlendConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+slot: Zero-based constraint address in the frozen BlendBinding.
+
+- `slot`: Zero-based constraint address in the frozen BlendBinding.
+
+## zipzi.modeling.DeletionFieldBlendConstraint.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldBlendConstraint.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldBlendConstraintParameter
+
+`()`
+
+Immutable owned DeletionFieldBlendConstraintParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldBlendConstraintParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldBlendConstraintParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldBlendTable
+
+`()`
+
+Immutable owned DeletionFieldBlendTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldBlendTable.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldBlendTable.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldBlendTableParameter
+
+`()`
+
+Immutable owned DeletionFieldBlendTableParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldBlendTableParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldBlendTableParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldCdiCombinedParameter
+
+`()`
+
+Immutable owned DeletionFieldCdiCombinedParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldCdiCombinedParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldCdiCombinedParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldCdiParameter
+
+`(slot: int)`
+
+Immutable owned DeletionFieldCdiParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+slot: Frozen zero-based CDI Parameters record address; imported unresolved records remain untouched.
+
+- `slot`: Frozen zero-based CDI Parameters record address; imported unresolved records remain untouched.
+
+## zipzi.modeling.DeletionFieldCdiParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldCdiParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
 
 
 ## zipzi.modeling.DeletionFieldCdiPart
@@ -8026,6 +8540,54 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.DeletionFieldDrawingItem.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldExpressionParameter
+
+`()`
+
+Immutable owned DeletionFieldExpressionParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldExpressionParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldExpressionParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldExpressionSourceParameter
+
+`()`
+
+Immutable owned DeletionFieldExpressionSourceParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldExpressionSourceParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldExpressionSourceParameter.summary
 
 `() -> str`
 
@@ -8180,6 +8742,78 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.DeletionFieldModelParameter
+
+`()`
+
+Immutable owned DeletionFieldModelParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldModelParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldModelParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldMotionClip
+
+`()`
+
+Immutable owned DeletionFieldMotionClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldMotionClip.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldMotionClip.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldMotionParameter
+
+`()`
+
+Immutable owned DeletionFieldMotionParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldMotionParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldMotionParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionFieldMotionPart
 
 `()`
@@ -8198,6 +8832,30 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.DeletionFieldMotionPart.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldMotionRegistrationContainer
+
+`()`
+
+Immutable owned DeletionFieldMotionRegistrationContainer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldMotionRegistrationContainer.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldMotionRegistrationContainer.summary
 
 `() -> str`
 
@@ -8280,6 +8938,102 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.DeletionFieldParameterAxis
+
+`()`
+
+Immutable owned DeletionFieldParameterAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldParameterAxis.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldParameterAxis.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldParameterFolder
+
+`()`
+
+Immutable owned DeletionFieldParameterFolder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldParameterFolder.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldParameterFolder.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldPhysicsNode
+
+`()`
+
+Immutable owned DeletionFieldPhysicsNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldPhysicsNode.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldPhysicsNode.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldPhysicsParameter
+
+`()`
+
+Immutable owned DeletionFieldPhysicsParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldPhysicsParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldPhysicsParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionFieldPoseLinkPart
 
 `()`
@@ -8346,6 +9100,30 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.DeletionFieldRequestedScope.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionFieldTexture
+
+`()`
+
+Immutable owned DeletionFieldTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.DeletionFieldTexture.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionFieldTexture.summary
 
 `() -> str`
 
@@ -8628,7 +9406,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.DeletionRequest
 
-`(roots: tuple[DeletionTarget, ...], reparent: _Mapping[str, ReparentStrategy] = field(default_factory=lambda: {key0: read_ReparentStrategy(v0) for key0, v0 in record({}).items()}), conversion_context: ReparentContext | None = None, offscreen_placements: _Mapping[str, DeletionOffscreenPlacement] = field(default_factory=lambda: {key0: read_DeletionOffscreenPlacement(v0) for key0, v0 in record({}).items()}), tolerance: DeletionTolerance = field(default_factory=lambda: read_DeletionTolerance({'absolute': 0.001, 'relative': 1e-06})))`
+`(roots: tuple[DeletionTarget, ...], reparent: _Mapping[str, ReparentStrategy] = field(default_factory=lambda: {key0: read_ReparentStrategy(v0) for key0, v0 in record({}).items()}), conversion_context: ReparentContext | None = None, offscreen_placements: _Mapping[str, DeletionOffscreenPlacement] = field(default_factory=lambda: {key0: read_DeletionOffscreenPlacement(v0) for key0, v0 in record({}).items()}), tolerance: DeletionTolerance = field(default_factory=lambda: read_DeletionTolerance({'absolute': 0.001, 'relative': 1e-06})), parameter_slices: _Mapping[str, float] = field(default_factory=lambda: {key0: number(v0) for key0, v0 in record({}).items()}), texture_replacements: _Mapping[str, str | None] = field(default_factory=lambda: {key0: None if v0 is None else string(v0) for key0, v0 in record({}).items()}), physics_node_replacements: _Mapping[str, str] = field(default_factory=lambda: {key0: string(v0) for key0, v0 in record({}).items()}), blend_base_replacements: _Mapping[str, str] = field(default_factory=lambda: {key0: string(v0) for key0, v0 in record({}).items()}))`
 
 Immutable owned DeletionRequest value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -8638,12 +9416,20 @@ reparent: Explicit migration strategy by surviving object ID; KeepLocalData on a
 conversion_context: Frozen parameter inputs, finite domains and reference time; None uses document defaults and full declared domains.
 offscreen_placements: Explicit retained Part owners and mapping resolutions for surviving Offscreens.
 tolerance: Absolute and geometry-scale-relative position error allowed by conversion proofs.
+parameter_slices: Explicit finite parameter slice coordinates; absent entries use frozen document defaults, never preview sliders.
+texture_replacements: Resolution by deleted texture UUID; Some redirects to a retained texture and None explicitly leaves users unconfigured.
+physics_node_replacements: Explicit replacement by removed Physics node UUID; replacement must remain in that native setting group.
+blend_base_replacements: Explicit retained base sample when deleting a Blend table base.
 
 - `roots`: Explicit typed roots and individual scope choices; order does not change the result.
 - `reparent`: Explicit migration strategy by surviving object ID; KeepLocalData on a dissolved Part accepts its state loss.
 - `conversion_context`: Frozen parameter inputs, finite domains and reference time; None uses document defaults and full declared domains.
 - `offscreen_placements`: Explicit retained Part owners and mapping resolutions for surviving Offscreens.
 - `tolerance`: Absolute and geometry-scale-relative position error allowed by conversion proofs.
+- `parameter_slices`: Explicit finite parameter slice coordinates; absent entries use frozen document defaults, never preview sliders.
+- `texture_replacements`: Resolution by deleted texture UUID; Some redirects to a retained texture and None explicitly leaves users unconfigured.
+- `physics_node_replacements`: Explicit replacement by removed Physics node UUID; replacement must remain in that native setting group.
+- `blend_base_replacements`: Explicit retained base sample when deleting a Blend table base.
 
 ## zipzi.modeling.DeletionRequest.__repr__
 
@@ -9116,6 +9902,34 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 Typed public API entry.
 
 
+## zipzi.modeling.DeletionTargetAttachment
+
+`(value: str)`
+
+Immutable owned DeletionTargetAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Delete this owned attachment record and clear resolved optional sound/UserData references.
+
+- `value`: Delete this owned attachment record and clear resolved optional sound/UserData references.
+
+## zipzi.modeling.DeletionTargetAttachment.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionTargetAttachment.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionTargetDeformer
 
 `(value: str)`
@@ -9256,6 +10070,90 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.DeletionTargetParameter
+
+`(value: str)`
+
+Immutable owned DeletionTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Delete this parameter and reduce ordinary axes at its frozen default unless explicitly overridden.
+
+- `value`: Delete this parameter and reduce ordinary axes at its frozen default unless explicitly overridden.
+
+## zipzi.modeling.DeletionTargetParameter.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionTargetParameter.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionTargetParameterFolder
+
+`(value: str)`
+
+Immutable owned DeletionTargetParameterFolder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Dissolve this parameter folder and retain its parameters and nested folders in the retained parent.
+
+- `value`: Dissolve this parameter folder and retain its parameters and nested folders in the retained parent.
+
+## zipzi.modeling.DeletionTargetParameterFolder.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionTargetParameterFolder.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionTargetParameterFolderContents
+
+`(value: str)`
+
+Immutable owned DeletionTargetParameterFolderContents value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Delete this parameter folder subtree and explicitly include its contained parameters.
+
+- `value`: Delete this parameter folder subtree and explicitly include its contained parameters.
+
+## zipzi.modeling.DeletionTargetParameterFolderContents.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionTargetParameterFolderContents.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionTargetPart
 
 `(value: str)`
@@ -9284,6 +10182,34 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.DeletionTargetRecord
+
+`(value: DeletionObject)`
+
+Immutable owned DeletionTargetRecord value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Typed non-scene business record; its native domain validates ownership, child identities and choices.
+
+- `value`: Typed non-scene business record; its native domain validates ownership, child identities and choices.
+
+## zipzi.modeling.DeletionTargetRecord.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionTargetRecord.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.DeletionTargetRemoveDeformer
 
 `(value: str)`
@@ -9306,6 +10232,34 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.DeletionTargetRemoveDeformer.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.DeletionTargetTexture
+
+`(value: str)`
+
+Immutable owned DeletionTargetTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Delete this image record; retained users require an explicit replacement or unconfigured choice.
+
+- `value`: Delete this image record; retained users require an explicit replacement or unconfigured choice.
+
+## zipzi.modeling.DeletionTargetTexture.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.DeletionTargetTexture.summary
 
 `() -> str`
 

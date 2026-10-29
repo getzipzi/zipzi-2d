@@ -3,9 +3,12 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
+mod business;
 mod dependents;
 pub(super) mod index;
+mod leaves;
 mod migration;
+mod parameters;
 mod scope;
 
 #[derive(
@@ -26,6 +29,7 @@ pub enum DeletionKind {
     Glue,
     Offscreen,
     MeshBinding,
+    GlueBinding,
     BlendBinding,
     Axis,
     Sample,
@@ -45,6 +49,28 @@ pub enum DeletionKind {
     PoseLink,
     CdiPart,
     DisplayInfo,
+    Parameter,
+    ParameterFolder,
+    Texture,
+    Attachment,
+    BlendKeyTable,
+    BlendConstraint,
+    MotionGroup,
+    MotionRegistration,
+    MotionEvent,
+    ExpressionEntry,
+    Pose,
+    PoseGroup,
+    Physics,
+    PhysicsGroup,
+    PhysicsInput,
+    PhysicsOutput,
+    PhysicsNode,
+    ModelSettings,
+    ModelParameterGroup,
+    ModelParameterMember,
+    CdiCombinedSet,
+    CdiCombinedMember,
 }
 
 #[derive(
@@ -69,7 +95,7 @@ pub struct DeletionObject {
     pub owner_id: Option<String>,
 }
 
-/// Only these root types are implemented. Other domains retain their strict APIs.
+/// Typed deletion scopes and native business identities.
 #[derive(
     Debug,
     Clone,
@@ -111,10 +137,41 @@ pub enum DeletionTarget {
         /// Remove only this Deformer and retain/migrate its deformation children.
         String,
     ),
+    Parameter(
+        /// Delete this parameter and reduce ordinary axes at its frozen default unless explicitly overridden.
+        String,
+    ),
+    ParameterFolder(
+        /// Dissolve this parameter folder and retain its parameters and nested folders in the retained parent.
+        String,
+    ),
+    ParameterFolderContents(
+        /// Delete this parameter folder subtree and explicitly include its contained parameters.
+        String,
+    ),
+    Texture(
+        /// Delete this image record; retained users require an explicit replacement or unconfigured choice.
+        String,
+    ),
+    Attachment(
+        /// Delete this owned attachment record and clear resolved optional sound/UserData references.
+        String,
+    ),
+    Record(
+        /// Typed non-scene business record; its native domain validates ownership, child identities and choices.
+        DeletionObject,
+    ),
 }
 impl DeletionTarget {
     pub fn object(&self) -> DeletionObject {
         let (kind, id) = match self {
+            Self::Parameter(id) => (DeletionKind::Parameter, id),
+            Self::ParameterFolder(id) | Self::ParameterFolderContents(id) => {
+                (DeletionKind::ParameterFolder, id)
+            }
+            Self::Texture(id) => (DeletionKind::Texture, id),
+            Self::Attachment(id) => (DeletionKind::Attachment, id),
+            Self::Record(object) => return object.clone(),
             Self::Mesh(id) => (DeletionKind::Mesh, id),
             Self::Glue(id) => (DeletionKind::Glue, id),
             Self::Offscreen(id) => (DeletionKind::Offscreen, id),
@@ -154,6 +211,18 @@ pub struct DeletionRequest {
     #[serde(default)]
     /// Absolute and geometry-scale-relative position error allowed by conversion proofs.
     pub tolerance: DeletionTolerance,
+    #[serde(default)]
+    /// Explicit finite parameter slice coordinates; absent entries use frozen document defaults, never preview sliders.
+    pub parameter_slices: BTreeMap<String, f32>,
+    #[serde(default)]
+    /// Resolution by deleted texture UUID; Some redirects to a retained texture and None explicitly leaves users unconfigured.
+    pub texture_replacements: BTreeMap<String, Option<String>>,
+    #[serde(default)]
+    /// Explicit replacement by removed Physics node UUID; replacement must remain in that native setting group.
+    pub physics_node_replacements: BTreeMap<String, String>,
+    #[serde(default)]
+    /// Explicit retained base sample when deleting a Blend table base.
+    pub blend_base_replacements: BTreeMap<String, String>,
 }
 
 #[derive(
@@ -213,6 +282,10 @@ pub enum DeletionChoice {
     KeepLocalData,
     ChoosePart,
     SupplyOffscreenMapping,
+    ChooseTexture,
+    ChooseBlendBase,
+    ClearTexture,
+    ChoosePhysicsNode,
     DeleteSubtree,
     Cancel,
 }
@@ -234,6 +307,13 @@ pub enum DeletionDecisionReason {
     OffscreenOwnerUnavailable,
     OffscreenMappingRequired,
     PartStateUnpreserved,
+    TextureReplacementRequired,
+    BlendBaseReplacementRequired,
+    PhysicsNodeReplacementRequired,
+    InvalidContainer {
+        /// Native container invariant requiring an explicit larger deletion or cancellation.
+        code: String,
+    },
 }
 #[derive(
     Debug,
@@ -310,6 +390,31 @@ pub enum DeletionField {
         slot: usize,
     },
     RequestedScope,
+    ParameterAxis,
+    BlendTableParameter,
+    BlendConstraintParameter,
+    BlendTable,
+    BlendConstraint {
+        /// Zero-based constraint address in the frozen BlendBinding.
+        slot: usize,
+    },
+    MotionParameter,
+    ExpressionParameter,
+    ExpressionSourceParameter,
+    PhysicsParameter,
+    PhysicsNode,
+    Texture,
+    AttachmentSound,
+    AttachmentUserData,
+    MotionClip,
+    MotionRegistrationContainer,
+    ParameterFolder,
+    ModelParameter,
+    CdiParameter {
+        /// Frozen zero-based CDI Parameters record address; imported unresolved records remain untouched.
+        slot: usize,
+    },
+    CdiCombinedParameter,
 }
 #[derive(
     Debug,
@@ -417,13 +522,59 @@ pub enum DeletionChannel {
     Debug,
     Clone,
     PartialEq,
-    Eq,
     Serialize,
     Deserialize,
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
 pub enum DeletionEffect {
+    MotionRegistrationMoved {
+        /// Preserved last registration of a retained Clip, moved to the ungrouped root.
+        registration: DeletionObject,
+        /// Removed source group; the registration is not deleted with its other entries.
+        group: DeletionObject,
+    },
+    /// A retained native record loses selected samples, pairs or keys.
+    ContentChanged(
+        /// Retained owner whose selected stable content identities disappear.
+        DeletionObject,
+    ),
+    ParameterDimensionRemoved {
+        /// Surviving ordinary binding or Glue grid reduced by the native grid converter.
+        object: DeletionObject,
+        /// Driving parameter whose coordinate is frozen for this removed axis.
+        parameter: DeletionObject,
+        /// Frozen document-default or explicitly selected finite slice coordinate.
+        value: f32,
+        /// Coordinate after native repeat normalization, key snapping and endpoint selection.
+        effective_value: f32,
+        /// Whether this fixed coordinate disables the ordinary target outside the native grid.
+        disabled: bool,
+    },
+    BindingContributionRemoved {
+        /// Retained target whose authored contribution disappears.
+        object: DeletionObject,
+        /// Deleted ordinary or Blend binding that previously supplied this contribution.
+        binding: DeletionObject,
+    },
+    ResourceReplaced {
+        /// Retained consumer whose texture or optional attachment reference changes.
+        object: DeletionObject,
+        /// Deleted resource previously referenced by this consumer.
+        source: DeletionObject,
+        /// Retained replacement resource; None means an explicit clear/unconfigured result.
+        replacement: Option<DeletionObject>,
+    },
+    ParameterAnimationRemoved(
+        /// Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.
+        DeletionObject,
+    ),
+    PhysicsChannelRemoved {
+        /// Removed input or output channel, with a stable native identity.
+        object: DeletionObject,
+        /// Retained Physics setting group whose behavior changes.
+        group: DeletionObject,
+    },
     MaskChanged(
         /// Retained Mask consumer whose clipping effect changes.
         DeletionObject,
@@ -495,6 +646,23 @@ pub struct DeletionReport {
     pub organization_migrations: Vec<DeletionOrganizationMigration>,
     pub decisions: Vec<DeletionDecision>,
 }
+impl DeletionKind {
+    /// Internal identities folded under their visible business owner in review.
+    pub fn is_internal(self) -> bool {
+        matches!(
+            self,
+            Self::Axis
+                | Self::Sample
+                | Self::GluePair
+                | Self::MotionKey
+                | Self::ExpressionKey
+                | Self::MeshBinding
+                | Self::SceneBinding
+                | Self::BlendBinding
+                | Self::GlueBinding
+        )
+    }
+}
 impl DeletionReport {
     /// Conservative report payload estimate for bounded native plan storage.
     pub fn estimated_bytes(&self) -> usize {
@@ -505,13 +673,27 @@ impl DeletionReport {
     }
 
     pub fn requires_confirmation(&self) -> bool {
-        self.rewritten
+        self.rewritten.iter().any(|r| {
+            !(matches!(r.field, DeletionField::DrawingItem { .. })
+                || (matches!(r.field, DeletionField::CdiParameter { .. })
+                    && r.target.kind == DeletionKind::Parameter))
+        }) || self
+            .removed
             .iter()
-            .any(|r| !matches!(r.field, DeletionField::DrawingItem { .. }))
+            .any(|r| matches!(r.reason, DeletionReason::Dependency | DeletionReason::Scope))
             || self
                 .removed
                 .iter()
-                .any(|r| matches!(r.reason, DeletionReason::Dependency | DeletionReason::Scope))
+                .any(|r| r.reason == DeletionReason::Owned && !r.object.kind.is_internal())
+            || self.effects.iter().any(|e| {
+                matches!(
+                    e,
+                    DeletionEffect::BindingContributionRemoved { .. }
+                        | DeletionEffect::ParameterDimensionRemoved { .. }
+                        | DeletionEffect::ResourceReplaced { .. }
+                        | DeletionEffect::ContentChanged(_)
+                )
+            })
             || self.requested.len() > 1
             || !self.migrations.is_empty()
             || !self.decisions.is_empty()
@@ -566,7 +748,10 @@ impl Document {
             return Err(Status::error("INVALID_SELECTION", "Select deletion roots"));
         }
         let (mut removed, mut report) = self.deletion_scope(request, control)?;
-        self.indexed_deletion_dependencies(&mut removed, &mut report, control)?;
+        self.indexed_deletion_dependencies(request, &mut removed, &mut report, control)?;
+        self.resolve_motion_registration_deletion(&mut removed, &mut report, control)?;
+        self.analyze_parameter_deletion(request, &removed, &mut report, control)?;
+        self.analyze_business_deletion(request, &removed, &mut report, control)?;
         self.deletion_migrations(request, &removed, &mut report, control)?;
         report.removed = removed
             .into_iter()
@@ -591,8 +776,12 @@ impl Document {
                                 DeletionKind::MeshBinding
                             } else if self.get_scene_binding(&i.owner).is_some() {
                                 DeletionKind::SceneBinding
+                            } else if self.get_blend_key_table(&i.owner).is_some() {
+                                DeletionKind::BlendKeyTable
+                            } else if self.get_blend_constraint(&i.owner).is_some() {
+                                DeletionKind::BlendConstraint
                             } else {
-                                DeletionKind::Glue
+                                DeletionKind::GlueBinding
                             },
                             &i.owner,
                         )
@@ -704,11 +893,57 @@ impl Document {
         )? {
             return Ok(DeletionPreparation { report, plan: None });
         }
+        if !self.install_parameter_deletion(
+            &mut candidate,
+            request,
+            &mut report,
+            limits,
+            control,
+            &mut cost,
+        )? {
+            return Ok(DeletionPreparation { report, plan: None });
+        }
+        if !self.install_leaf_deletion(
+            &mut candidate,
+            request,
+            &mut report,
+            limits,
+            control,
+            &mut cost,
+        )? {
+            return Ok(DeletionPreparation { report, plan: None });
+        }
         let ids: BTreeSet<_> = report
             .removed
             .iter()
             .filter(|r| r.object.owner_id.is_none())
             .map(|r| r.object.id.as_str())
+            .collect();
+        let scene_ids: BTreeSet<_> = report
+            .removed
+            .iter()
+            .filter(|r| {
+                matches!(
+                    r.object.kind,
+                    DeletionKind::Mesh
+                        | DeletionKind::Glue
+                        | DeletionKind::Offscreen
+                        | DeletionKind::Part
+                        | DeletionKind::Deformer
+                )
+            })
+            .map(|r| r.object.id.as_str())
+            .collect();
+        let drawing_ids: BTreeSet<_> = scene_ids
+            .iter()
+            .copied()
+            .chain(
+                report
+                    .removed
+                    .iter()
+                    .filter(|r| r.object.kind == DeletionKind::DrawingGroup)
+                    .map(|r| r.object.id.as_str()),
+            )
             .collect();
         let mut delta = organization::Delta::default();
         delta.removed = report
@@ -730,7 +965,7 @@ impl Document {
             .map(|r| r.object.id.clone())
             .collect();
         delta.install(&mut candidate);
-        self.install_deletion_dependents(&mut candidate, &ids, control)?;
+        self.install_business_deletion(&mut candidate, request, &report, control)?;
         // Merge each field's cleanup on its original ordered list, never by
         // executing source slots after another slot has shifted.
         let mask_owners: BTreeSet<_> = report
@@ -758,28 +993,31 @@ impl Document {
         if let Some(areas) = &mut candidate.content.model3_settings.hit_areas {
             areas.retain(|a| !ids.contains(a.id.as_str()));
         }
-        self.install_deletion_drawing(&mut candidate, &ids, control)?;
+        self.install_deletion_drawing(&mut candidate, &drawing_ids, control)?;
         candidate
             .content
             .hierarchy_order
             .organization
-            .retain(|id| !ids.contains(id.as_str()));
+            .retain(|id| !scene_ids.contains(id.as_str()));
         candidate
             .content
             .hierarchy_order
             .deformation
-            .retain(|id| !ids.contains(id.as_str()));
+            .retain(|id| !scene_ids.contains(id.as_str()));
         candidate
             .content
             .hierarchy_order
             .glues
-            .retain(|id| !ids.contains(id.as_str()));
+            .retain(|id| !scene_ids.contains(id.as_str()));
         candidate.changed(
             ChangeKind::Structure,
             vec![],
             ids.iter().map(|id| (*id).to_owned()).collect(),
         );
         control.checkpoint()?;
+        if !self.validate_deletion_business_locks(&candidate, &mut report, control)? {
+            return Ok(DeletionPreparation { report, plan: None });
+        }
         for issue in candidate.validate_structure() {
             report.structural_blockers.push(DeletionStructuralBlocker {
                 object_id: issue.object_id,
@@ -787,10 +1025,25 @@ impl Document {
                 reason: issue.status.message,
             });
         }
+        let retained_index = candidate.deletion_index(control)?;
+        for removal in &report.removed {
+            if retained_index.objects.contains(&removal.object) {
+                report.structural_blockers.push(DeletionStructuralBlocker {
+                    object_id: removal.object.id.clone(),
+                    code: "DELETION_TARGET_RETAINED".into(),
+                    reason: "The final candidate still resolves a retired typed identity".into(),
+                });
+            }
+        }
         if !report.structural_blockers.is_empty() {
             return Ok(DeletionPreparation { report, plan: None });
         }
         control.checkpoint()?;
+        cost = limits.check_conversion(
+            cost.sample_combinations,
+            cost.payload_bytes.saturating_add(report.estimated_bytes()),
+            bytes,
+        )?;
         let plan = DeletionPlan {
             source: self.snapshot_identity.clone(),
             candidate: Arc::new(candidate),

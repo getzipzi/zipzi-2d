@@ -124,6 +124,23 @@ impl Document {
         limits: AuthoringLimits,
         control: &ConversionControl,
     ) -> Result<BindingGridPlan, Status> {
+        self.plan_binding_grid_impl(edit, limits, control, true)
+    }
+    pub(in crate::document) fn plan_deletion_grid(
+        &self,
+        edit: BindingGridEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<BindingGridPlan, Status> {
+        self.plan_binding_grid_impl(edit, limits, control, false)
+    }
+    fn plan_binding_grid_impl(
+        &self,
+        edit: BindingGridEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+        check_locks: bool,
+    ) -> Result<BindingGridPlan, Status> {
         control.checkpoint()?;
         if let BindingGridEdit::Delete { owner } = &edit {
             let (target, scene) = if let Some(b) = self.get_binding(owner) {
@@ -133,8 +150,10 @@ impl Document {
             } else {
                 return Err(Status::error("MISSING_BINDING", owner));
             };
-            self.authoring_unlocked(owner)?;
-            self.authoring_unlocked(&target)?;
+            if check_locks {
+                self.authoring_unlocked(owner)?;
+                self.authoring_unlocked(&target)?;
+            }
             if scene && self.offscreen_for_part(&target).is_some() {
                 return Err(Status::error(
                     "OFFSCREEN_MAPPING_REQUIRES_CONVERSION",
@@ -188,8 +207,10 @@ impl Document {
             | BindingGridTarget::Scene(t)
             | BindingGridTarget::Glue(t) => t,
         };
-        self.authoring_unlocked(&id)?;
-        self.authoring_unlocked(target_id)?;
+        if check_locks {
+            self.authoring_unlocked(&id)?;
+            self.authoring_unlocked(target_id)?;
+        }
         if create && !matches!(&target, BindingGridTarget::Glue(_)) && self.contains_id(&id) {
             return Err(Status::error("DUPLICATE_ID", &id));
         }
@@ -490,7 +511,9 @@ impl Document {
                     }
                 };
                 let offscreen = if let Some(os) = self.offscreen_for_part(&t) {
-                    self.authoring_unlocked(&os.id)?;
+                    if check_locks {
+                        self.authoring_unlocked(&os.id)?;
+                    }
                     affected.push(os.id.clone());
                     let mut out = os.clone();
                     let mut mapping = Vec::new();

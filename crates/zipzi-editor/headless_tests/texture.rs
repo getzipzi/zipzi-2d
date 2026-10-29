@@ -27,9 +27,13 @@ fn setup(cx: &mut TestAppContext) -> Harness {
 }
 fn click(h: &Harness, id: impl Into<gpui_kit::ElementId>, cx: &mut TestAppContext) {
     let id = id.into();
-    cx.update_window(h.window, |_, window, cx| window.click(id, cx))
-        .unwrap();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click(id, cx)
+    })
+    .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn selected(h: &Harness, cx: &mut TestAppContext) -> R {
     h.view.read_with(cx, |v, _| {
@@ -45,6 +49,7 @@ fn run(h: &Harness, asset: Option<String>, control: Control, cx: &mut TestAppCon
     })
     .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn inspect(h: &Harness, object: R, cx: &mut TestAppContext) {
     cx.update_window(h.window, |_, window, cx| {
@@ -115,7 +120,6 @@ fn new_texture_inspects_immediately_and_cancelled_chooser_keeps_empty_resource(
         assert!(v.texture_loads.is_empty());
     });
     run(&h, Some(asset.id.clone()), Control::Delete, cx);
-    click(&h, "texture-delete-submit", cx);
     h.view.update(cx, |v, _| {
         assert!(
             v.editor
@@ -306,22 +310,16 @@ fn delete_reviews_real_users_requires_replacement_and_can_cancel(cx: &mut TestAp
         .view
         .read_with(cx, |v, _| v.editor.document().unwrap().history_lengths());
     run(&h, Some(source.id.clone()), Control::Delete, cx);
-    cx.update_window(h.window, |_, window, _| {
-        let users = window.find("texture-delete-users").bounds();
-        for i in 0..2usize {
-            let row = window.find(("texture-delete-user", i)).bounds();
-            assert!(row.top() >= users.top() && row.bottom() <= users.bottom());
-        }
-    })
-    .unwrap();
-    click(&h, "texture-delete-submit", cx);
+    click(&h, "tree-deletion-submit", cx);
     h.view.read_with(cx, |v, _| {
         assert_eq!(v.editor.document().unwrap().history_lengths(), history)
     });
-    click(&h, "texture-delete-cancel", cx);
+    click(&h, "tree-deletion-cancel", cx);
     run(&h, Some(source.id.clone()), Control::Delete, cx);
-    choose(&h, "texture-replacement", "DeleteReplacement", cx);
-    click(&h, "texture-delete-submit", cx);
+    click(&h, ("deletion-section", 4usize), cx);
+    choose(&h, "deletion-texture", "DeleteReplacement", cx);
+    click(&h, "deletion-choice-0-0", cx);
+    click(&h, "tree-deletion-submit", cx);
     h.view.update(cx, |v, _| {
         assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
         let d = v.editor.document().unwrap();
@@ -382,34 +380,23 @@ fn dependency_review_virtualizes_large_lists_and_keeps_the_last_user_reachable(
     let document = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
     let h = setup_with_document(cx, document, assets);
     run(&h, Some(asset_id), Control::Delete, cx);
-    for height in [1000., 720.] {
+    click(&h, ("deletion-section", 2usize), cx);
+    for page in 0..16 {
         cx.update_window(h.window, |_, window, cx| {
-            window.resize(size(px(1100.), px(height)));
+            window.resize(size(px(1100.), px(1000.)));
             window.render_frame(cx);
-            let count = (0..USERS)
-                .filter(|i| window.try_find(("texture-delete-user", *i)).is_some())
-                .count();
-            assert!(count > 0 && count < 20, "laid out {count} of {USERS} users");
-            window.scroll(
-                "texture-delete-users",
-                gpui_kit::ScrollDelta::Pixels(gpui_kit::point(px(0.), px(-100_000.))),
-                cx,
-            );
-            window.render_frame(cx);
-            let users = window.find("texture-delete-users").bounds();
-            let last = window.find(("texture-delete-user", USERS - 1)).bounds();
-            assert!(last.top() >= users.top() && last.bottom() <= users.bottom() + px(1.));
-            let count = (0..USERS)
-                .filter(|i| window.try_find(("texture-delete-user", *i)).is_some())
-                .count();
-            assert!(
-                count > 0 && count < 20,
-                "laid out {count} users after scrolling"
-            );
+            assert!((0..16usize).all(|i| window.try_find(("deletion-row", i)).is_some()));
+            assert!(window.try_find(("deletion-row", 16usize)).is_none());
+            if page == 15 {
+                assert_ne!(window.find("deletion-next").disabled(), Some(false));
+            }
         })
         .unwrap();
+        if page < 15 {
+            click(&h, "deletion-next", cx);
+        }
     }
-    click(&h, "texture-delete-cancel", cx);
+    click(&h, "tree-deletion-cancel", cx);
     h.view.read_with(cx, |v, _| {
         assert_eq!(v.editor.document().unwrap().history_lengths(), (0, 0))
     });
@@ -534,5 +521,123 @@ fn missing_source_can_be_repaired_without_replacing_the_resource_or_meshes(
                 .all(|d| d.renderable)
         );
         assert!(frame.scene.textures.iter().any(|t| t.asset_id == asset.id));
+    });
+}
+
+#[gpui_kit::test]
+fn texture_deletion_explicit_clear_retains_meshes_and_undo(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    let source = h.view.read_with(cx, |v, _| {
+        v.editor.document().unwrap().resource_collection().unwrap()[0].clone()
+    });
+    run(&h, Some(source.id.clone()), Control::Delete, cx);
+    click(&h, "deletion-choice-0-1", cx);
+    click(&h, "tree-deletion-submit", cx);
+    h.view.update(cx, |v, _| {
+        let doc = v.editor.document().unwrap();
+        assert!(doc.texture_info(&source.id).is_err());
+        assert_eq!(doc.layers().len(), 2);
+        assert_eq!(doc.history_lengths(), (1, 0));
+        v.editor.execute(EditorCommand::Undo).unwrap();
+        assert_eq!(
+            v.editor
+                .document()
+                .unwrap()
+                .texture_info(&source.id)
+                .unwrap()
+                .users
+                .len(),
+            2
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn texture_delete_button_reviews_locked_consumers_and_explicit_unlock(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    let source = h.view.read_with(cx, |v, _| {
+        v.editor.document().unwrap().resource_collection().unwrap()[0].clone()
+    });
+    let consumer = h.view.read_with(cx, |v, _| {
+        v.editor
+            .document()
+            .unwrap()
+            .texture_info(&source.id)
+            .unwrap()
+            .users[0]
+            .clone()
+    });
+    h.view.update(cx, |v, cx| {
+        v.editor
+            .execute(EditorCommand::SetObjectsLocked {
+                objects: vec![consumer.clone()],
+                locked: true,
+            })
+            .unwrap();
+        v.redraw(cx);
+    });
+    inspect(&h, source.clone(), cx);
+    show(&h, &format!("texture-delete-{}", source.id), cx);
+    let history = h
+        .view
+        .read_with(cx, |v, _| v.editor.document().unwrap().history_lengths());
+    click(&h, format!("texture-delete-{}", source.id), cx);
+    click(&h, ("deletion-section", 5usize), cx);
+    click(&h, "tree-deletion-submit", cx);
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), history);
+        assert!(
+            v.editor
+                .document()
+                .unwrap()
+                .texture_info(&source.id)
+                .is_ok()
+        );
+    });
+    click(&h, ("deletion-unlock", 0usize), cx);
+    h.view.read_with(cx, |v, _| {
+        assert!(
+            !v.editor
+                .document()
+                .unwrap()
+                .object_state(&consumer)
+                .explicit
+                .locked
+        );
+        assert_eq!(
+            v.editor.document().unwrap().history_lengths().0,
+            history.0 + 1
+        );
+    });
+    click(&h, "deletion-choice-0-1", cx);
+    click(&h, "tree-deletion-submit", cx);
+    h.view.update(cx, |v, _| {
+        assert!(
+            v.editor
+                .document()
+                .unwrap()
+                .texture_info(&source.id)
+                .is_err()
+        );
+        assert_eq!(
+            v.editor.document().unwrap().history_lengths().0,
+            history.0 + 2
+        );
+        v.editor.execute(EditorCommand::Undo).unwrap();
+        assert!(
+            v.editor
+                .document()
+                .unwrap()
+                .texture_info(&source.id)
+                .is_ok()
+        );
+        assert!(
+            !v.editor
+                .document()
+                .unwrap()
+                .object_state(&consumer)
+                .explicit
+                .locked
+        );
     });
 }

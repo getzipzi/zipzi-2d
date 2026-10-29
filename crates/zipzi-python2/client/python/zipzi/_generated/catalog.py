@@ -11,8 +11,8 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = 'zipzi-runtime-v1'
 PACKAGE_VERSION = '0.1.0a2'
-CLIENT_SOURCE_SHA256 = 'b2a1743bb97c03d685c6ce5b6c627d7e68e914c881ec3b080a9b185792f02a93'
-CONTRACT_SHA256 = 'c2f8455082d65306b136ad2fd3695dc37719b9ee1686b20f9ce9de77f3261291'
+CLIENT_SOURCE_SHA256 = 'a7832aeadffecd13c84c2e5b48f8b7765cacbc66363c4c67115f0e8ecb2a86d6'
+CONTRACT_SHA256 = 'aee58a35bdad48e3f8968b1e5fed833b3a7848c849e8f7583c50227b5ac111d1'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -68,7 +68,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a2; protocol zipzi-runtime-v1; client source SHA-256 '
-                            'b2a1743bb97c03d685c6ce5b6c627d7e68e914c881ec3b080a9b185792f02a93.',
+                            'a7832aeadffecd13c84c2e5b48f8b7765cacbc66363c4c67115f0e8ecb2a86d6.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -5293,39 +5293,69 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.DeletionChoice',
                                  'zipzi.modeling.DeletionDecision',
                                  'zipzi.modeling.DeletionDecisionReason',
+                                 'zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired',
                                  'zipzi.modeling.DeletionDecisionReasonConversionUnproven',
+                                 'zipzi.modeling.DeletionDecisionReasonInvalidContainer',
                                  'zipzi.modeling.DeletionDecisionReasonOffscreenMappingRequired',
                                  'zipzi.modeling.DeletionDecisionReasonOffscreenOwnerUnavailable',
                                  'zipzi.modeling.DeletionDecisionReasonPartStateUnpreserved',
+                                 'zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired',
+                                 'zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired',
                                  'zipzi.modeling.DeletionEffect',
+                                 'zipzi.modeling.DeletionEffectBindingContributionRemoved',
                                  'zipzi.modeling.DeletionEffectCompositionChanged',
+                                 'zipzi.modeling.DeletionEffectContentChanged',
                                  'zipzi.modeling.DeletionEffectDeformationChanged',
                                  'zipzi.modeling.DeletionEffectDrawingGroupFlattened',
                                  'zipzi.modeling.DeletionEffectGlueRemoved',
                                  'zipzi.modeling.DeletionEffectHitAreaRemoved',
                                  'zipzi.modeling.DeletionEffectMaskChanged',
+                                 'zipzi.modeling.DeletionEffectMotionRegistrationMoved',
                                  'zipzi.modeling.DeletionEffectOrganizationChanged',
+                                 'zipzi.modeling.DeletionEffectParameterAnimationRemoved',
+                                 'zipzi.modeling.DeletionEffectParameterDimensionRemoved',
                                  'zipzi.modeling.DeletionEffectPartAnimationRemoved',
                                  'zipzi.modeling.DeletionEffectPartStateRemoved',
+                                 'zipzi.modeling.DeletionEffectPhysicsChannelRemoved',
+                                 'zipzi.modeling.DeletionEffectResourceReplaced',
                                  'zipzi.modeling.DeletionEffectUnpreservedChannels',
                                  'zipzi.modeling.DeletionField',
+                                 'zipzi.modeling.DeletionFieldAttachmentSound',
+                                 'zipzi.modeling.DeletionFieldAttachmentUserData',
+                                 'zipzi.modeling.DeletionFieldBlendConstraint',
+                                 'zipzi.modeling.DeletionFieldBlendConstraintParameter',
+                                 'zipzi.modeling.DeletionFieldBlendTable',
+                                 'zipzi.modeling.DeletionFieldBlendTableParameter',
+                                 'zipzi.modeling.DeletionFieldCdiCombinedParameter',
+                                 'zipzi.modeling.DeletionFieldCdiParameter',
                                  'zipzi.modeling.DeletionFieldCdiPart',
                                  'zipzi.modeling.DeletionFieldConvertedData',
                                  'zipzi.modeling.DeletionFieldDeformationParent',
                                  'zipzi.modeling.DeletionFieldDrawingItem',
+                                 'zipzi.modeling.DeletionFieldExpressionParameter',
+                                 'zipzi.modeling.DeletionFieldExpressionSourceParameter',
                                  'zipzi.modeling.DeletionFieldExpressionSourcePart',
                                  'zipzi.modeling.DeletionFieldGlueMeshA',
                                  'zipzi.modeling.DeletionFieldGlueMeshB',
                                  'zipzi.modeling.DeletionFieldHitAreaMesh',
                                  'zipzi.modeling.DeletionFieldMeshInvertedMask',
                                  'zipzi.modeling.DeletionFieldMeshMask',
+                                 'zipzi.modeling.DeletionFieldModelParameter',
+                                 'zipzi.modeling.DeletionFieldMotionClip',
+                                 'zipzi.modeling.DeletionFieldMotionParameter',
                                  'zipzi.modeling.DeletionFieldMotionPart',
+                                 'zipzi.modeling.DeletionFieldMotionRegistrationContainer',
                                  'zipzi.modeling.DeletionFieldOffscreenMask',
                                  'zipzi.modeling.DeletionFieldOrganizationParent',
                                  'zipzi.modeling.DeletionFieldOwned',
+                                 'zipzi.modeling.DeletionFieldParameterAxis',
+                                 'zipzi.modeling.DeletionFieldParameterFolder',
+                                 'zipzi.modeling.DeletionFieldPhysicsNode',
+                                 'zipzi.modeling.DeletionFieldPhysicsParameter',
                                  'zipzi.modeling.DeletionFieldPoseLinkPart',
                                  'zipzi.modeling.DeletionFieldPosePart',
                                  'zipzi.modeling.DeletionFieldRequestedScope',
+                                 'zipzi.modeling.DeletionFieldTexture',
                                  'zipzi.modeling.DeletionIntent',
                                  'zipzi.modeling.DeletionKind',
                                  'zipzi.modeling.DeletionLock',
@@ -5355,13 +5385,19 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.DeletionStructuralBlocker',
                                  'zipzi.modeling.DeletionSummary',
                                  'zipzi.modeling.DeletionTarget',
+                                 'zipzi.modeling.DeletionTargetAttachment',
                                  'zipzi.modeling.DeletionTargetDeformer',
                                  'zipzi.modeling.DeletionTargetDissolvePart',
                                  'zipzi.modeling.DeletionTargetGlue',
                                  'zipzi.modeling.DeletionTargetMesh',
                                  'zipzi.modeling.DeletionTargetOffscreen',
+                                 'zipzi.modeling.DeletionTargetParameter',
+                                 'zipzi.modeling.DeletionTargetParameterFolder',
+                                 'zipzi.modeling.DeletionTargetParameterFolderContents',
                                  'zipzi.modeling.DeletionTargetPart',
+                                 'zipzi.modeling.DeletionTargetRecord',
                                  'zipzi.modeling.DeletionTargetRemoveDeformer',
+                                 'zipzi.modeling.DeletionTargetTexture',
                                  'zipzi.modeling.DeletionTolerance',
                                  'zipzi.modeling.DeltaGlueKeyform',
                                  'zipzi.modeling.DeltaKeyforms',
@@ -10643,6 +10679,48 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                            'fields': [],
                                            'kind': 'value',
                                            'signature': ''},
+ 'zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired': {'children': ('zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired.__repr__',
+                                                                                    'zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired.summary'),
+                                                                       'documentation': 'Immutable owned '
+                                                                                        'DeletionDecisionReasonBlendBaseReplacementRequired '
+                                                                                        'value. Construction owns '
+                                                                                        'declared collections; reading '
+                                                                                        'fields, repr and summary '
+                                                                                        'performs no IO.',
+                                                                       'example': 'docs/recipes.py',
+                                                                       'fields': [],
+                                                                       'kind': 'type',
+                                                                       'signature': '()'},
+ 'zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired.__repr__': {'children': (),
+                                                                                'documentation': 'Return a local '
+                                                                                                 'summary capped at '
+                                                                                                 '1,024 characters, '
+                                                                                                 'with no RPC/full '
+                                                                                                 'scan.\n'
+                                                                                                 '\n'
+                                                                                                 'Large arrays and '
+                                                                                                 'bytes show bounded '
+                                                                                                 'samples/counts. '
+                                                                                                 'Explicit field '
+                                                                                                 'access\n'
+                                                                                                 'still exposes the '
+                                                                                                 'owned full value; no '
+                                                                                                 'host resource is '
+                                                                                                 'created/released.',
+                                                                                'example': 'docs/recipes.py',
+                                                                                'fields': [],
+                                                                                'kind': 'callable',
+                                                                                'signature': '() -> str'},
+ 'zipzi.modeling.DeletionDecisionReasonBlendBaseReplacementRequired.summary': {'children': (),
+                                                                               'documentation': 'Return a bounded, '
+                                                                                                'local summary; full '
+                                                                                                'fields remain '
+                                                                                                'explicitly '
+                                                                                                'accessible.',
+                                                                               'example': 'docs/recipes.py',
+                                                                               'fields': [],
+                                                                               'kind': 'callable',
+                                                                               'signature': '() -> str'},
  'zipzi.modeling.DeletionDecisionReasonConversionUnproven': {'children': ('zipzi.modeling.DeletionDecisionReasonConversionUnproven.__repr__',
                                                                           'zipzi.modeling.DeletionDecisionReasonConversionUnproven.summary'),
                                                              'documentation': 'Immutable owned '
@@ -10684,6 +10762,47 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                                      'fields': [],
                                                                      'kind': 'callable',
                                                                      'signature': '() -> str'},
+ 'zipzi.modeling.DeletionDecisionReasonInvalidContainer': {'children': ('zipzi.modeling.DeletionDecisionReasonInvalidContainer.__repr__',
+                                                                        'zipzi.modeling.DeletionDecisionReasonInvalidContainer.summary'),
+                                                           'documentation': 'Immutable owned '
+                                                                            'DeletionDecisionReasonInvalidContainer '
+                                                                            'value. Construction owns declared '
+                                                                            'collections; reading fields, repr and '
+                                                                            'summary performs no IO.\n'
+                                                                            '\n'
+                                                                            'Fields:\n'
+                                                                            'code: Native container invariant '
+                                                                            'requiring an explicit larger deletion or '
+                                                                            'cancellation.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [('code',
+                                                                       'Native container invariant requiring an '
+                                                                       'explicit larger deletion or cancellation.')],
+                                                           'kind': 'type',
+                                                           'signature': '(code: str)'},
+ 'zipzi.modeling.DeletionDecisionReasonInvalidContainer.__repr__': {'children': (),
+                                                                    'documentation': 'Return a local summary capped at '
+                                                                                     '1,024 characters, with no '
+                                                                                     'RPC/full scan.\n'
+                                                                                     '\n'
+                                                                                     'Large arrays and bytes show '
+                                                                                     'bounded samples/counts. Explicit '
+                                                                                     'field access\n'
+                                                                                     'still exposes the owned full '
+                                                                                     'value; no host resource is '
+                                                                                     'created/released.',
+                                                                    'example': 'docs/recipes.py',
+                                                                    'fields': [],
+                                                                    'kind': 'callable',
+                                                                    'signature': '() -> str'},
+ 'zipzi.modeling.DeletionDecisionReasonInvalidContainer.summary': {'children': (),
+                                                                   'documentation': 'Return a bounded, local summary; '
+                                                                                    'full fields remain explicitly '
+                                                                                    'accessible.',
+                                                                   'example': 'docs/recipes.py',
+                                                                   'fields': [],
+                                                                   'kind': 'callable',
+                                                                   'signature': '() -> str'},
  'zipzi.modeling.DeletionDecisionReasonOffscreenMappingRequired': {'children': ('zipzi.modeling.DeletionDecisionReasonOffscreenMappingRequired.__repr__',
                                                                                 'zipzi.modeling.DeletionDecisionReasonOffscreenMappingRequired.summary'),
                                                                    'documentation': 'Immutable owned '
@@ -10795,12 +10914,141 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                                        'fields': [],
                                                                        'kind': 'callable',
                                                                        'signature': '() -> str'},
+ 'zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired': {'children': ('zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired.__repr__',
+                                                                                      'zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired.summary'),
+                                                                         'documentation': 'Immutable owned '
+                                                                                          'DeletionDecisionReasonPhysicsNodeReplacementRequired '
+                                                                                          'value. Construction owns '
+                                                                                          'declared collections; '
+                                                                                          'reading fields, repr and '
+                                                                                          'summary performs no IO.',
+                                                                         'example': 'docs/recipes.py',
+                                                                         'fields': [],
+                                                                         'kind': 'type',
+                                                                         'signature': '()'},
+ 'zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired.__repr__': {'children': (),
+                                                                                  'documentation': 'Return a local '
+                                                                                                   'summary capped at '
+                                                                                                   '1,024 characters, '
+                                                                                                   'with no RPC/full '
+                                                                                                   'scan.\n'
+                                                                                                   '\n'
+                                                                                                   'Large arrays and '
+                                                                                                   'bytes show bounded '
+                                                                                                   'samples/counts. '
+                                                                                                   'Explicit field '
+                                                                                                   'access\n'
+                                                                                                   'still exposes the '
+                                                                                                   'owned full value; '
+                                                                                                   'no host resource '
+                                                                                                   'is '
+                                                                                                   'created/released.',
+                                                                                  'example': 'docs/recipes.py',
+                                                                                  'fields': [],
+                                                                                  'kind': 'callable',
+                                                                                  'signature': '() -> str'},
+ 'zipzi.modeling.DeletionDecisionReasonPhysicsNodeReplacementRequired.summary': {'children': (),
+                                                                                 'documentation': 'Return a bounded, '
+                                                                                                  'local summary; full '
+                                                                                                  'fields remain '
+                                                                                                  'explicitly '
+                                                                                                  'accessible.',
+                                                                                 'example': 'docs/recipes.py',
+                                                                                 'fields': [],
+                                                                                 'kind': 'callable',
+                                                                                 'signature': '() -> str'},
+ 'zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired': {'children': ('zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired.__repr__',
+                                                                                  'zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired.summary'),
+                                                                     'documentation': 'Immutable owned '
+                                                                                      'DeletionDecisionReasonTextureReplacementRequired '
+                                                                                      'value. Construction owns '
+                                                                                      'declared collections; reading '
+                                                                                      'fields, repr and summary '
+                                                                                      'performs no IO.',
+                                                                     'example': 'docs/recipes.py',
+                                                                     'fields': [],
+                                                                     'kind': 'type',
+                                                                     'signature': '()'},
+ 'zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired.__repr__': {'children': (),
+                                                                              'documentation': 'Return a local summary '
+                                                                                               'capped at 1,024 '
+                                                                                               'characters, with no '
+                                                                                               'RPC/full scan.\n'
+                                                                                               '\n'
+                                                                                               'Large arrays and bytes '
+                                                                                               'show bounded '
+                                                                                               'samples/counts. '
+                                                                                               'Explicit field access\n'
+                                                                                               'still exposes the '
+                                                                                               'owned full value; no '
+                                                                                               'host resource is '
+                                                                                               'created/released.',
+                                                                              'example': 'docs/recipes.py',
+                                                                              'fields': [],
+                                                                              'kind': 'callable',
+                                                                              'signature': '() -> str'},
+ 'zipzi.modeling.DeletionDecisionReasonTextureReplacementRequired.summary': {'children': (),
+                                                                             'documentation': 'Return a bounded, local '
+                                                                                              'summary; full fields '
+                                                                                              'remain explicitly '
+                                                                                              'accessible.',
+                                                                             'example': 'docs/recipes.py',
+                                                                             'fields': [],
+                                                                             'kind': 'callable',
+                                                                             'signature': '() -> str'},
  'zipzi.modeling.DeletionEffect': {'children': (),
                                    'documentation': 'Typed public API entry.',
                                    'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'value',
                                    'signature': ''},
+ 'zipzi.modeling.DeletionEffectBindingContributionRemoved': {'children': ('zipzi.modeling.DeletionEffectBindingContributionRemoved.__repr__',
+                                                                          'zipzi.modeling.DeletionEffectBindingContributionRemoved.summary'),
+                                                             'documentation': 'Immutable owned '
+                                                                              'DeletionEffectBindingContributionRemoved '
+                                                                              'value. Construction owns declared '
+                                                                              'collections; reading fields, repr and '
+                                                                              'summary performs no IO.\n'
+                                                                              '\n'
+                                                                              'Fields:\n'
+                                                                              'object: Retained target whose authored '
+                                                                              'contribution disappears.\n'
+                                                                              'binding: Deleted ordinary or Blend '
+                                                                              'binding that previously supplied this '
+                                                                              'contribution.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [('object',
+                                                                         'Retained target whose authored contribution '
+                                                                         'disappears.'),
+                                                                        ('binding',
+                                                                         'Deleted ordinary or Blend binding that '
+                                                                         'previously supplied this contribution.')],
+                                                             'kind': 'type',
+                                                             'signature': '(object: DeletionObject, binding: '
+                                                                          'DeletionObject)'},
+ 'zipzi.modeling.DeletionEffectBindingContributionRemoved.__repr__': {'children': (),
+                                                                      'documentation': 'Return a local summary capped '
+                                                                                       'at 1,024 characters, with no '
+                                                                                       'RPC/full scan.\n'
+                                                                                       '\n'
+                                                                                       'Large arrays and bytes show '
+                                                                                       'bounded samples/counts. '
+                                                                                       'Explicit field access\n'
+                                                                                       'still exposes the owned full '
+                                                                                       'value; no host resource is '
+                                                                                       'created/released.',
+                                                                      'example': 'docs/recipes.py',
+                                                                      'fields': [],
+                                                                      'kind': 'callable',
+                                                                      'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectBindingContributionRemoved.summary': {'children': (),
+                                                                     'documentation': 'Return a bounded, local '
+                                                                                      'summary; full fields remain '
+                                                                                      'explicitly accessible.',
+                                                                     'example': 'docs/recipes.py',
+                                                                     'fields': [],
+                                                                     'kind': 'callable',
+                                                                     'signature': '() -> str'},
  'zipzi.modeling.DeletionEffectCompositionChanged': {'children': ('zipzi.modeling.DeletionEffectCompositionChanged.__repr__',
                                                                   'zipzi.modeling.DeletionEffectCompositionChanged.summary'),
                                                      'documentation': 'Immutable owned '
@@ -10836,6 +11084,40 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                              'fields': [],
                                                              'kind': 'callable',
                                                              'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectContentChanged': {'children': ('zipzi.modeling.DeletionEffectContentChanged.__repr__',
+                                                              'zipzi.modeling.DeletionEffectContentChanged.summary'),
+                                                 'documentation': 'Immutable owned DeletionEffectContentChanged value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.\n'
+                                                                  '\n'
+                                                                  'Fields:\n'
+                                                                  'value: Retained owner whose selected stable content '
+                                                                  'identities disappear.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [('value',
+                                                             'Retained owner whose selected stable content identities '
+                                                             'disappear.')],
+                                                 'kind': 'type',
+                                                 'signature': '(value: DeletionObject)'},
+ 'zipzi.modeling.DeletionEffectContentChanged.__repr__': {'children': (),
+                                                          'documentation': 'Return a local summary capped at 1,024 '
+                                                                           'characters, with no RPC/full scan.\n'
+                                                                           '\n'
+                                                                           'Large arrays and bytes show bounded '
+                                                                           'samples/counts. Explicit field access\n'
+                                                                           'still exposes the owned full value; no '
+                                                                           'host resource is created/released.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectContentChanged.summary': {'children': (),
+                                                         'documentation': 'Return a bounded, local summary; full '
+                                                                          'fields remain explicitly accessible.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [],
+                                                         'kind': 'callable',
+                                                         'signature': '() -> str'},
  'zipzi.modeling.DeletionEffectDeformationChanged': {'children': ('zipzi.modeling.DeletionEffectDeformationChanged.__repr__',
                                                                   'zipzi.modeling.DeletionEffectDeformationChanged.summary'),
                                                      'documentation': 'Immutable owned '
@@ -11036,6 +11318,54 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                       'fields': [],
                                                       'kind': 'callable',
                                                       'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectMotionRegistrationMoved': {'children': ('zipzi.modeling.DeletionEffectMotionRegistrationMoved.__repr__',
+                                                                       'zipzi.modeling.DeletionEffectMotionRegistrationMoved.summary'),
+                                                          'documentation': 'Immutable owned '
+                                                                           'DeletionEffectMotionRegistrationMoved '
+                                                                           'value. Construction owns declared '
+                                                                           'collections; reading fields, repr and '
+                                                                           'summary performs no IO.\n'
+                                                                           '\n'
+                                                                           'Fields:\n'
+                                                                           'registration: Preserved last registration '
+                                                                           'of a retained Clip, moved to the ungrouped '
+                                                                           'root.\n'
+                                                                           'group: Removed source group; the '
+                                                                           'registration is not deleted with its other '
+                                                                           'entries.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [('registration',
+                                                                      'Preserved last registration of a retained Clip, '
+                                                                      'moved to the ungrouped root.'),
+                                                                     ('group',
+                                                                      'Removed source group; the registration is not '
+                                                                      'deleted with its other entries.')],
+                                                          'kind': 'type',
+                                                          'signature': '(registration: DeletionObject, group: '
+                                                                       'DeletionObject)'},
+ 'zipzi.modeling.DeletionEffectMotionRegistrationMoved.__repr__': {'children': (),
+                                                                   'documentation': 'Return a local summary capped at '
+                                                                                    '1,024 characters, with no '
+                                                                                    'RPC/full scan.\n'
+                                                                                    '\n'
+                                                                                    'Large arrays and bytes show '
+                                                                                    'bounded samples/counts. Explicit '
+                                                                                    'field access\n'
+                                                                                    'still exposes the owned full '
+                                                                                    'value; no host resource is '
+                                                                                    'created/released.',
+                                                                   'example': 'docs/recipes.py',
+                                                                   'fields': [],
+                                                                   'kind': 'callable',
+                                                                   'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectMotionRegistrationMoved.summary': {'children': (),
+                                                                  'documentation': 'Return a bounded, local summary; '
+                                                                                   'full fields remain explicitly '
+                                                                                   'accessible.',
+                                                                  'example': 'docs/recipes.py',
+                                                                  'fields': [],
+                                                                  'kind': 'callable',
+                                                                  'signature': '() -> str'},
  'zipzi.modeling.DeletionEffectOrganizationChanged': {'children': ('zipzi.modeling.DeletionEffectOrganizationChanged.__repr__',
                                                                    'zipzi.modeling.DeletionEffectOrganizationChanged.summary'),
                                                       'documentation': 'Immutable owned '
@@ -11074,6 +11404,115 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                               'fields': [],
                                                               'kind': 'callable',
                                                               'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectParameterAnimationRemoved': {'children': ('zipzi.modeling.DeletionEffectParameterAnimationRemoved.__repr__',
+                                                                         'zipzi.modeling.DeletionEffectParameterAnimationRemoved.summary'),
+                                                            'documentation': 'Immutable owned '
+                                                                             'DeletionEffectParameterAnimationRemoved '
+                                                                             'value. Construction owns declared '
+                                                                             'collections; reading fields, repr and '
+                                                                             'summary performs no IO.\n'
+                                                                             '\n'
+                                                                             'Fields:\n'
+                                                                             'value: Removed Motion/Expression '
+                                                                             'parameter record; other tracks, events '
+                                                                             'and resource registrations remain.',
+                                                            'example': 'docs/recipes.py',
+                                                            'fields': [('value',
+                                                                        'Removed Motion/Expression parameter record; '
+                                                                        'other tracks, events and resource '
+                                                                        'registrations remain.')],
+                                                            'kind': 'type',
+                                                            'signature': '(value: DeletionObject)'},
+ 'zipzi.modeling.DeletionEffectParameterAnimationRemoved.__repr__': {'children': (),
+                                                                     'documentation': 'Return a local summary capped '
+                                                                                      'at 1,024 characters, with no '
+                                                                                      'RPC/full scan.\n'
+                                                                                      '\n'
+                                                                                      'Large arrays and bytes show '
+                                                                                      'bounded samples/counts. '
+                                                                                      'Explicit field access\n'
+                                                                                      'still exposes the owned full '
+                                                                                      'value; no host resource is '
+                                                                                      'created/released.',
+                                                                     'example': 'docs/recipes.py',
+                                                                     'fields': [],
+                                                                     'kind': 'callable',
+                                                                     'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectParameterAnimationRemoved.summary': {'children': (),
+                                                                    'documentation': 'Return a bounded, local summary; '
+                                                                                     'full fields remain explicitly '
+                                                                                     'accessible.',
+                                                                    'example': 'docs/recipes.py',
+                                                                    'fields': [],
+                                                                    'kind': 'callable',
+                                                                    'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectParameterDimensionRemoved': {'children': ('zipzi.modeling.DeletionEffectParameterDimensionRemoved.__repr__',
+                                                                         'zipzi.modeling.DeletionEffectParameterDimensionRemoved.summary'),
+                                                            'documentation': 'Immutable owned '
+                                                                             'DeletionEffectParameterDimensionRemoved '
+                                                                             'value. Construction owns declared '
+                                                                             'collections; reading fields, repr and '
+                                                                             'summary performs no IO.\n'
+                                                                             '\n'
+                                                                             'Fields:\n'
+                                                                             'object: Surviving ordinary binding or '
+                                                                             'Glue grid reduced by the native grid '
+                                                                             'converter.\n'
+                                                                             'parameter: Driving parameter whose '
+                                                                             'coordinate is frozen for this removed '
+                                                                             'axis.\n'
+                                                                             'value: Frozen document-default or '
+                                                                             'explicitly selected finite slice '
+                                                                             'coordinate.\n'
+                                                                             'effective_value: Coordinate after native '
+                                                                             'repeat normalization, key snapping and '
+                                                                             'endpoint selection.\n'
+                                                                             'disabled: Whether this fixed coordinate '
+                                                                             'disables the ordinary target outside the '
+                                                                             'native grid.',
+                                                            'example': 'docs/recipes.py',
+                                                            'fields': [('object',
+                                                                        'Surviving ordinary binding or Glue grid '
+                                                                        'reduced by the native grid converter.'),
+                                                                       ('parameter',
+                                                                        'Driving parameter whose coordinate is frozen '
+                                                                        'for this removed axis.'),
+                                                                       ('value',
+                                                                        'Frozen document-default or explicitly '
+                                                                        'selected finite slice coordinate.'),
+                                                                       ('effective_value',
+                                                                        'Coordinate after native repeat normalization, '
+                                                                        'key snapping and endpoint selection.'),
+                                                                       ('disabled',
+                                                                        'Whether this fixed coordinate disables the '
+                                                                        'ordinary target outside the native grid.')],
+                                                            'kind': 'type',
+                                                            'signature': '(object: DeletionObject, parameter: '
+                                                                         'DeletionObject, value: float, '
+                                                                         'effective_value: float, disabled: bool)'},
+ 'zipzi.modeling.DeletionEffectParameterDimensionRemoved.__repr__': {'children': (),
+                                                                     'documentation': 'Return a local summary capped '
+                                                                                      'at 1,024 characters, with no '
+                                                                                      'RPC/full scan.\n'
+                                                                                      '\n'
+                                                                                      'Large arrays and bytes show '
+                                                                                      'bounded samples/counts. '
+                                                                                      'Explicit field access\n'
+                                                                                      'still exposes the owned full '
+                                                                                      'value; no host resource is '
+                                                                                      'created/released.',
+                                                                     'example': 'docs/recipes.py',
+                                                                     'fields': [],
+                                                                     'kind': 'callable',
+                                                                     'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectParameterDimensionRemoved.summary': {'children': (),
+                                                                    'documentation': 'Return a bounded, local summary; '
+                                                                                     'full fields remain explicitly '
+                                                                                     'accessible.',
+                                                                    'example': 'docs/recipes.py',
+                                                                    'fields': [],
+                                                                    'kind': 'callable',
+                                                                    'signature': '() -> str'},
  'zipzi.modeling.DeletionEffectPartAnimationRemoved': {'children': ('zipzi.modeling.DeletionEffectPartAnimationRemoved.__repr__',
                                                                     'zipzi.modeling.DeletionEffectPartAnimationRemoved.summary'),
                                                        'documentation': 'Immutable owned '
@@ -11156,6 +11595,96 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                            'fields': [],
                                                            'kind': 'callable',
                                                            'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectPhysicsChannelRemoved': {'children': ('zipzi.modeling.DeletionEffectPhysicsChannelRemoved.__repr__',
+                                                                     'zipzi.modeling.DeletionEffectPhysicsChannelRemoved.summary'),
+                                                        'documentation': 'Immutable owned '
+                                                                         'DeletionEffectPhysicsChannelRemoved value. '
+                                                                         'Construction owns declared collections; '
+                                                                         'reading fields, repr and summary performs no '
+                                                                         'IO.\n'
+                                                                         '\n'
+                                                                         'Fields:\n'
+                                                                         'object: Removed input or output channel, '
+                                                                         'with a stable native identity.\n'
+                                                                         'group: Retained Physics setting group whose '
+                                                                         'behavior changes.',
+                                                        'example': 'docs/recipes.py',
+                                                        'fields': [('object',
+                                                                    'Removed input or output channel, with a stable '
+                                                                    'native identity.'),
+                                                                   ('group',
+                                                                    'Retained Physics setting group whose behavior '
+                                                                    'changes.')],
+                                                        'kind': 'type',
+                                                        'signature': '(object: DeletionObject, group: DeletionObject)'},
+ 'zipzi.modeling.DeletionEffectPhysicsChannelRemoved.__repr__': {'children': (),
+                                                                 'documentation': 'Return a local summary capped at '
+                                                                                  '1,024 characters, with no RPC/full '
+                                                                                  'scan.\n'
+                                                                                  '\n'
+                                                                                  'Large arrays and bytes show bounded '
+                                                                                  'samples/counts. Explicit field '
+                                                                                  'access\n'
+                                                                                  'still exposes the owned full value; '
+                                                                                  'no host resource is '
+                                                                                  'created/released.',
+                                                                 'example': 'docs/recipes.py',
+                                                                 'fields': [],
+                                                                 'kind': 'callable',
+                                                                 'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectPhysicsChannelRemoved.summary': {'children': (),
+                                                                'documentation': 'Return a bounded, local summary; '
+                                                                                 'full fields remain explicitly '
+                                                                                 'accessible.',
+                                                                'example': 'docs/recipes.py',
+                                                                'fields': [],
+                                                                'kind': 'callable',
+                                                                'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectResourceReplaced': {'children': ('zipzi.modeling.DeletionEffectResourceReplaced.__repr__',
+                                                                'zipzi.modeling.DeletionEffectResourceReplaced.summary'),
+                                                   'documentation': 'Immutable owned DeletionEffectResourceReplaced '
+                                                                    'value. Construction owns declared collections; '
+                                                                    'reading fields, repr and summary performs no IO.\n'
+                                                                    '\n'
+                                                                    'Fields:\n'
+                                                                    'object: Retained consumer whose texture or '
+                                                                    'optional attachment reference changes.\n'
+                                                                    'source: Deleted resource previously referenced by '
+                                                                    'this consumer.\n'
+                                                                    'replacement: Retained replacement resource; None '
+                                                                    'means an explicit clear/unconfigured result.',
+                                                   'example': 'docs/recipes.py',
+                                                   'fields': [('object',
+                                                               'Retained consumer whose texture or optional attachment '
+                                                               'reference changes.'),
+                                                              ('source',
+                                                               'Deleted resource previously referenced by this '
+                                                               'consumer.'),
+                                                              ('replacement',
+                                                               'Retained replacement resource; None means an explicit '
+                                                               'clear/unconfigured result.')],
+                                                   'kind': 'type',
+                                                   'signature': '(object: DeletionObject, source: DeletionObject, '
+                                                                'replacement: DeletionObject | None = None)'},
+ 'zipzi.modeling.DeletionEffectResourceReplaced.__repr__': {'children': (),
+                                                            'documentation': 'Return a local summary capped at 1,024 '
+                                                                             'characters, with no RPC/full scan.\n'
+                                                                             '\n'
+                                                                             'Large arrays and bytes show bounded '
+                                                                             'samples/counts. Explicit field access\n'
+                                                                             'still exposes the owned full value; no '
+                                                                             'host resource is created/released.',
+                                                            'example': 'docs/recipes.py',
+                                                            'fields': [],
+                                                            'kind': 'callable',
+                                                            'signature': '() -> str'},
+ 'zipzi.modeling.DeletionEffectResourceReplaced.summary': {'children': (),
+                                                           'documentation': 'Return a bounded, local summary; full '
+                                                                            'fields remain explicitly accessible.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [],
+                                                           'kind': 'callable',
+                                                           'signature': '() -> str'},
  'zipzi.modeling.DeletionEffectUnpreservedChannels': {'children': ('zipzi.modeling.DeletionEffectUnpreservedChannels.__repr__',
                                                                    'zipzi.modeling.DeletionEffectUnpreservedChannels.summary'),
                                                       'documentation': 'Immutable owned '
@@ -11206,6 +11735,253 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                   'fields': [],
                                   'kind': 'value',
                                   'signature': ''},
+ 'zipzi.modeling.DeletionFieldAttachmentSound': {'children': ('zipzi.modeling.DeletionFieldAttachmentSound.__repr__',
+                                                              'zipzi.modeling.DeletionFieldAttachmentSound.summary'),
+                                                 'documentation': 'Immutable owned DeletionFieldAttachmentSound value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'type',
+                                                 'signature': '()'},
+ 'zipzi.modeling.DeletionFieldAttachmentSound.__repr__': {'children': (),
+                                                          'documentation': 'Return a local summary capped at 1,024 '
+                                                                           'characters, with no RPC/full scan.\n'
+                                                                           '\n'
+                                                                           'Large arrays and bytes show bounded '
+                                                                           'samples/counts. Explicit field access\n'
+                                                                           'still exposes the owned full value; no '
+                                                                           'host resource is created/released.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldAttachmentSound.summary': {'children': (),
+                                                         'documentation': 'Return a bounded, local summary; full '
+                                                                          'fields remain explicitly accessible.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [],
+                                                         'kind': 'callable',
+                                                         'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldAttachmentUserData': {'children': ('zipzi.modeling.DeletionFieldAttachmentUserData.__repr__',
+                                                                 'zipzi.modeling.DeletionFieldAttachmentUserData.summary'),
+                                                    'documentation': 'Immutable owned DeletionFieldAttachmentUserData '
+                                                                     'value. Construction owns declared collections; '
+                                                                     'reading fields, repr and summary performs no IO.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [],
+                                                    'kind': 'type',
+                                                    'signature': '()'},
+ 'zipzi.modeling.DeletionFieldAttachmentUserData.__repr__': {'children': (),
+                                                             'documentation': 'Return a local summary capped at 1,024 '
+                                                                              'characters, with no RPC/full scan.\n'
+                                                                              '\n'
+                                                                              'Large arrays and bytes show bounded '
+                                                                              'samples/counts. Explicit field access\n'
+                                                                              'still exposes the owned full value; no '
+                                                                              'host resource is created/released.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'callable',
+                                                             'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldAttachmentUserData.summary': {'children': (),
+                                                            'documentation': 'Return a bounded, local summary; full '
+                                                                             'fields remain explicitly accessible.',
+                                                            'example': 'docs/recipes.py',
+                                                            'fields': [],
+                                                            'kind': 'callable',
+                                                            'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldBlendConstraint': {'children': ('zipzi.modeling.DeletionFieldBlendConstraint.__repr__',
+                                                              'zipzi.modeling.DeletionFieldBlendConstraint.summary'),
+                                                 'documentation': 'Immutable owned DeletionFieldBlendConstraint value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.\n'
+                                                                  '\n'
+                                                                  'Fields:\n'
+                                                                  'slot: Zero-based constraint address in the frozen '
+                                                                  'BlendBinding.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [('slot',
+                                                             'Zero-based constraint address in the frozen '
+                                                             'BlendBinding.')],
+                                                 'kind': 'type',
+                                                 'signature': '(slot: int)'},
+ 'zipzi.modeling.DeletionFieldBlendConstraint.__repr__': {'children': (),
+                                                          'documentation': 'Return a local summary capped at 1,024 '
+                                                                           'characters, with no RPC/full scan.\n'
+                                                                           '\n'
+                                                                           'Large arrays and bytes show bounded '
+                                                                           'samples/counts. Explicit field access\n'
+                                                                           'still exposes the owned full value; no '
+                                                                           'host resource is created/released.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldBlendConstraint.summary': {'children': (),
+                                                         'documentation': 'Return a bounded, local summary; full '
+                                                                          'fields remain explicitly accessible.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [],
+                                                         'kind': 'callable',
+                                                         'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldBlendConstraintParameter': {'children': ('zipzi.modeling.DeletionFieldBlendConstraintParameter.__repr__',
+                                                                       'zipzi.modeling.DeletionFieldBlendConstraintParameter.summary'),
+                                                          'documentation': 'Immutable owned '
+                                                                           'DeletionFieldBlendConstraintParameter '
+                                                                           'value. Construction owns declared '
+                                                                           'collections; reading fields, repr and '
+                                                                           'summary performs no IO.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'type',
+                                                          'signature': '()'},
+ 'zipzi.modeling.DeletionFieldBlendConstraintParameter.__repr__': {'children': (),
+                                                                   'documentation': 'Return a local summary capped at '
+                                                                                    '1,024 characters, with no '
+                                                                                    'RPC/full scan.\n'
+                                                                                    '\n'
+                                                                                    'Large arrays and bytes show '
+                                                                                    'bounded samples/counts. Explicit '
+                                                                                    'field access\n'
+                                                                                    'still exposes the owned full '
+                                                                                    'value; no host resource is '
+                                                                                    'created/released.',
+                                                                   'example': 'docs/recipes.py',
+                                                                   'fields': [],
+                                                                   'kind': 'callable',
+                                                                   'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldBlendConstraintParameter.summary': {'children': (),
+                                                                  'documentation': 'Return a bounded, local summary; '
+                                                                                   'full fields remain explicitly '
+                                                                                   'accessible.',
+                                                                  'example': 'docs/recipes.py',
+                                                                  'fields': [],
+                                                                  'kind': 'callable',
+                                                                  'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldBlendTable': {'children': ('zipzi.modeling.DeletionFieldBlendTable.__repr__',
+                                                         'zipzi.modeling.DeletionFieldBlendTable.summary'),
+                                            'documentation': 'Immutable owned DeletionFieldBlendTable value. '
+                                                             'Construction owns declared collections; reading fields, '
+                                                             'repr and summary performs no IO.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'type',
+                                            'signature': '()'},
+ 'zipzi.modeling.DeletionFieldBlendTable.__repr__': {'children': (),
+                                                     'documentation': 'Return a local summary capped at 1,024 '
+                                                                      'characters, with no RPC/full scan.\n'
+                                                                      '\n'
+                                                                      'Large arrays and bytes show bounded '
+                                                                      'samples/counts. Explicit field access\n'
+                                                                      'still exposes the owned full value; no host '
+                                                                      'resource is created/released.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'callable',
+                                                     'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldBlendTable.summary': {'children': (),
+                                                    'documentation': 'Return a bounded, local summary; full fields '
+                                                                     'remain explicitly accessible.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [],
+                                                    'kind': 'callable',
+                                                    'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldBlendTableParameter': {'children': ('zipzi.modeling.DeletionFieldBlendTableParameter.__repr__',
+                                                                  'zipzi.modeling.DeletionFieldBlendTableParameter.summary'),
+                                                     'documentation': 'Immutable owned '
+                                                                      'DeletionFieldBlendTableParameter value. '
+                                                                      'Construction owns declared collections; reading '
+                                                                      'fields, repr and summary performs no IO.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'type',
+                                                     'signature': '()'},
+ 'zipzi.modeling.DeletionFieldBlendTableParameter.__repr__': {'children': (),
+                                                              'documentation': 'Return a local summary capped at 1,024 '
+                                                                               'characters, with no RPC/full scan.\n'
+                                                                               '\n'
+                                                                               'Large arrays and bytes show bounded '
+                                                                               'samples/counts. Explicit field access\n'
+                                                                               'still exposes the owned full value; no '
+                                                                               'host resource is created/released.',
+                                                              'example': 'docs/recipes.py',
+                                                              'fields': [],
+                                                              'kind': 'callable',
+                                                              'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldBlendTableParameter.summary': {'children': (),
+                                                             'documentation': 'Return a bounded, local summary; full '
+                                                                              'fields remain explicitly accessible.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'callable',
+                                                             'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldCdiCombinedParameter': {'children': ('zipzi.modeling.DeletionFieldCdiCombinedParameter.__repr__',
+                                                                   'zipzi.modeling.DeletionFieldCdiCombinedParameter.summary'),
+                                                      'documentation': 'Immutable owned '
+                                                                       'DeletionFieldCdiCombinedParameter value. '
+                                                                       'Construction owns declared collections; '
+                                                                       'reading fields, repr and summary performs no '
+                                                                       'IO.',
+                                                      'example': 'docs/recipes.py',
+                                                      'fields': [],
+                                                      'kind': 'type',
+                                                      'signature': '()'},
+ 'zipzi.modeling.DeletionFieldCdiCombinedParameter.__repr__': {'children': (),
+                                                               'documentation': 'Return a local summary capped at '
+                                                                                '1,024 characters, with no RPC/full '
+                                                                                'scan.\n'
+                                                                                '\n'
+                                                                                'Large arrays and bytes show bounded '
+                                                                                'samples/counts. Explicit field '
+                                                                                'access\n'
+                                                                                'still exposes the owned full value; '
+                                                                                'no host resource is created/released.',
+                                                               'example': 'docs/recipes.py',
+                                                               'fields': [],
+                                                               'kind': 'callable',
+                                                               'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldCdiCombinedParameter.summary': {'children': (),
+                                                              'documentation': 'Return a bounded, local summary; full '
+                                                                               'fields remain explicitly accessible.',
+                                                              'example': 'docs/recipes.py',
+                                                              'fields': [],
+                                                              'kind': 'callable',
+                                                              'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldCdiParameter': {'children': ('zipzi.modeling.DeletionFieldCdiParameter.__repr__',
+                                                           'zipzi.modeling.DeletionFieldCdiParameter.summary'),
+                                              'documentation': 'Immutable owned DeletionFieldCdiParameter value. '
+                                                               'Construction owns declared collections; reading '
+                                                               'fields, repr and summary performs no IO.\n'
+                                                               '\n'
+                                                               'Fields:\n'
+                                                               'slot: Frozen zero-based CDI Parameters record address; '
+                                                               'imported unresolved records remain untouched.',
+                                              'example': 'docs/recipes.py',
+                                              'fields': [('slot',
+                                                          'Frozen zero-based CDI Parameters record address; imported '
+                                                          'unresolved records remain untouched.')],
+                                              'kind': 'type',
+                                              'signature': '(slot: int)'},
+ 'zipzi.modeling.DeletionFieldCdiParameter.__repr__': {'children': (),
+                                                       'documentation': 'Return a local summary capped at 1,024 '
+                                                                        'characters, with no RPC/full scan.\n'
+                                                                        '\n'
+                                                                        'Large arrays and bytes show bounded '
+                                                                        'samples/counts. Explicit field access\n'
+                                                                        'still exposes the owned full value; no host '
+                                                                        'resource is created/released.',
+                                                       'example': 'docs/recipes.py',
+                                                       'fields': [],
+                                                       'kind': 'callable',
+                                                       'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldCdiParameter.summary': {'children': (),
+                                                      'documentation': 'Return a bounded, local summary; full fields '
+                                                                       'remain explicitly accessible.',
+                                                      'example': 'docs/recipes.py',
+                                                      'fields': [],
+                                                      'kind': 'callable',
+                                                      'signature': '() -> str'},
  'zipzi.modeling.DeletionFieldCdiPart': {'children': ('zipzi.modeling.DeletionFieldCdiPart.__repr__',
                                                       'zipzi.modeling.DeletionFieldCdiPart.summary'),
                                          'documentation': 'Immutable owned DeletionFieldCdiPart value. Construction '
@@ -11330,6 +12106,69 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                      'fields': [],
                                                      'kind': 'callable',
                                                      'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldExpressionParameter': {'children': ('zipzi.modeling.DeletionFieldExpressionParameter.__repr__',
+                                                                  'zipzi.modeling.DeletionFieldExpressionParameter.summary'),
+                                                     'documentation': 'Immutable owned '
+                                                                      'DeletionFieldExpressionParameter value. '
+                                                                      'Construction owns declared collections; reading '
+                                                                      'fields, repr and summary performs no IO.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'type',
+                                                     'signature': '()'},
+ 'zipzi.modeling.DeletionFieldExpressionParameter.__repr__': {'children': (),
+                                                              'documentation': 'Return a local summary capped at 1,024 '
+                                                                               'characters, with no RPC/full scan.\n'
+                                                                               '\n'
+                                                                               'Large arrays and bytes show bounded '
+                                                                               'samples/counts. Explicit field access\n'
+                                                                               'still exposes the owned full value; no '
+                                                                               'host resource is created/released.',
+                                                              'example': 'docs/recipes.py',
+                                                              'fields': [],
+                                                              'kind': 'callable',
+                                                              'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldExpressionParameter.summary': {'children': (),
+                                                             'documentation': 'Return a bounded, local summary; full '
+                                                                              'fields remain explicitly accessible.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'callable',
+                                                             'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldExpressionSourceParameter': {'children': ('zipzi.modeling.DeletionFieldExpressionSourceParameter.__repr__',
+                                                                        'zipzi.modeling.DeletionFieldExpressionSourceParameter.summary'),
+                                                           'documentation': 'Immutable owned '
+                                                                            'DeletionFieldExpressionSourceParameter '
+                                                                            'value. Construction owns declared '
+                                                                            'collections; reading fields, repr and '
+                                                                            'summary performs no IO.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [],
+                                                           'kind': 'type',
+                                                           'signature': '()'},
+ 'zipzi.modeling.DeletionFieldExpressionSourceParameter.__repr__': {'children': (),
+                                                                    'documentation': 'Return a local summary capped at '
+                                                                                     '1,024 characters, with no '
+                                                                                     'RPC/full scan.\n'
+                                                                                     '\n'
+                                                                                     'Large arrays and bytes show '
+                                                                                     'bounded samples/counts. Explicit '
+                                                                                     'field access\n'
+                                                                                     'still exposes the owned full '
+                                                                                     'value; no host resource is '
+                                                                                     'created/released.',
+                                                                    'example': 'docs/recipes.py',
+                                                                    'fields': [],
+                                                                    'kind': 'callable',
+                                                                    'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldExpressionSourceParameter.summary': {'children': (),
+                                                                   'documentation': 'Return a bounded, local summary; '
+                                                                                    'full fields remain explicitly '
+                                                                                    'accessible.',
+                                                                   'example': 'docs/recipes.py',
+                                                                   'fields': [],
+                                                                   'kind': 'callable',
+                                                                   'signature': '() -> str'},
  'zipzi.modeling.DeletionFieldExpressionSourcePart': {'children': ('zipzi.modeling.DeletionFieldExpressionSourcePart.__repr__',
                                                                    'zipzi.modeling.DeletionFieldExpressionSourcePart.summary'),
                                                       'documentation': 'Immutable owned '
@@ -11508,6 +12347,90 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   'fields': [],
                                                   'kind': 'callable',
                                                   'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldModelParameter': {'children': ('zipzi.modeling.DeletionFieldModelParameter.__repr__',
+                                                             'zipzi.modeling.DeletionFieldModelParameter.summary'),
+                                                'documentation': 'Immutable owned DeletionFieldModelParameter value. '
+                                                                 'Construction owns declared collections; reading '
+                                                                 'fields, repr and summary performs no IO.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'type',
+                                                'signature': '()'},
+ 'zipzi.modeling.DeletionFieldModelParameter.__repr__': {'children': (),
+                                                         'documentation': 'Return a local summary capped at 1,024 '
+                                                                          'characters, with no RPC/full scan.\n'
+                                                                          '\n'
+                                                                          'Large arrays and bytes show bounded '
+                                                                          'samples/counts. Explicit field access\n'
+                                                                          'still exposes the owned full value; no host '
+                                                                          'resource is created/released.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [],
+                                                         'kind': 'callable',
+                                                         'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldModelParameter.summary': {'children': (),
+                                                        'documentation': 'Return a bounded, local summary; full fields '
+                                                                         'remain explicitly accessible.',
+                                                        'example': 'docs/recipes.py',
+                                                        'fields': [],
+                                                        'kind': 'callable',
+                                                        'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldMotionClip': {'children': ('zipzi.modeling.DeletionFieldMotionClip.__repr__',
+                                                         'zipzi.modeling.DeletionFieldMotionClip.summary'),
+                                            'documentation': 'Immutable owned DeletionFieldMotionClip value. '
+                                                             'Construction owns declared collections; reading fields, '
+                                                             'repr and summary performs no IO.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'type',
+                                            'signature': '()'},
+ 'zipzi.modeling.DeletionFieldMotionClip.__repr__': {'children': (),
+                                                     'documentation': 'Return a local summary capped at 1,024 '
+                                                                      'characters, with no RPC/full scan.\n'
+                                                                      '\n'
+                                                                      'Large arrays and bytes show bounded '
+                                                                      'samples/counts. Explicit field access\n'
+                                                                      'still exposes the owned full value; no host '
+                                                                      'resource is created/released.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'callable',
+                                                     'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldMotionClip.summary': {'children': (),
+                                                    'documentation': 'Return a bounded, local summary; full fields '
+                                                                     'remain explicitly accessible.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [],
+                                                    'kind': 'callable',
+                                                    'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldMotionParameter': {'children': ('zipzi.modeling.DeletionFieldMotionParameter.__repr__',
+                                                              'zipzi.modeling.DeletionFieldMotionParameter.summary'),
+                                                 'documentation': 'Immutable owned DeletionFieldMotionParameter value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'type',
+                                                 'signature': '()'},
+ 'zipzi.modeling.DeletionFieldMotionParameter.__repr__': {'children': (),
+                                                          'documentation': 'Return a local summary capped at 1,024 '
+                                                                           'characters, with no RPC/full scan.\n'
+                                                                           '\n'
+                                                                           'Large arrays and bytes show bounded '
+                                                                           'samples/counts. Explicit field access\n'
+                                                                           'still exposes the owned full value; no '
+                                                                           'host resource is created/released.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldMotionParameter.summary': {'children': (),
+                                                         'documentation': 'Return a bounded, local summary; full '
+                                                                          'fields remain explicitly accessible.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [],
+                                                         'kind': 'callable',
+                                                         'signature': '() -> str'},
  'zipzi.modeling.DeletionFieldMotionPart': {'children': ('zipzi.modeling.DeletionFieldMotionPart.__repr__',
                                                          'zipzi.modeling.DeletionFieldMotionPart.summary'),
                                             'documentation': 'Immutable owned DeletionFieldMotionPart value. '
@@ -11536,6 +12459,40 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                     'fields': [],
                                                     'kind': 'callable',
                                                     'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldMotionRegistrationContainer': {'children': ('zipzi.modeling.DeletionFieldMotionRegistrationContainer.__repr__',
+                                                                          'zipzi.modeling.DeletionFieldMotionRegistrationContainer.summary'),
+                                                             'documentation': 'Immutable owned '
+                                                                              'DeletionFieldMotionRegistrationContainer '
+                                                                              'value. Construction owns declared '
+                                                                              'collections; reading fields, repr and '
+                                                                              'summary performs no IO.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [],
+                                                             'kind': 'type',
+                                                             'signature': '()'},
+ 'zipzi.modeling.DeletionFieldMotionRegistrationContainer.__repr__': {'children': (),
+                                                                      'documentation': 'Return a local summary capped '
+                                                                                       'at 1,024 characters, with no '
+                                                                                       'RPC/full scan.\n'
+                                                                                       '\n'
+                                                                                       'Large arrays and bytes show '
+                                                                                       'bounded samples/counts. '
+                                                                                       'Explicit field access\n'
+                                                                                       'still exposes the owned full '
+                                                                                       'value; no host resource is '
+                                                                                       'created/released.',
+                                                                      'example': 'docs/recipes.py',
+                                                                      'fields': [],
+                                                                      'kind': 'callable',
+                                                                      'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldMotionRegistrationContainer.summary': {'children': (),
+                                                                     'documentation': 'Return a bounded, local '
+                                                                                      'summary; full fields remain '
+                                                                                      'explicitly accessible.',
+                                                                     'example': 'docs/recipes.py',
+                                                                     'fields': [],
+                                                                     'kind': 'callable',
+                                                                     'signature': '() -> str'},
  'zipzi.modeling.DeletionFieldOffscreenMask': {'children': ('zipzi.modeling.DeletionFieldOffscreenMask.__repr__',
                                                             'zipzi.modeling.DeletionFieldOffscreenMask.summary'),
                                                'documentation': 'Immutable owned DeletionFieldOffscreenMask value. '
@@ -11626,6 +12583,118 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                'fields': [],
                                                'kind': 'callable',
                                                'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldParameterAxis': {'children': ('zipzi.modeling.DeletionFieldParameterAxis.__repr__',
+                                                            'zipzi.modeling.DeletionFieldParameterAxis.summary'),
+                                               'documentation': 'Immutable owned DeletionFieldParameterAxis value. '
+                                                                'Construction owns declared collections; reading '
+                                                                'fields, repr and summary performs no IO.',
+                                               'example': 'docs/recipes.py',
+                                               'fields': [],
+                                               'kind': 'type',
+                                               'signature': '()'},
+ 'zipzi.modeling.DeletionFieldParameterAxis.__repr__': {'children': (),
+                                                        'documentation': 'Return a local summary capped at 1,024 '
+                                                                         'characters, with no RPC/full scan.\n'
+                                                                         '\n'
+                                                                         'Large arrays and bytes show bounded '
+                                                                         'samples/counts. Explicit field access\n'
+                                                                         'still exposes the owned full value; no host '
+                                                                         'resource is created/released.',
+                                                        'example': 'docs/recipes.py',
+                                                        'fields': [],
+                                                        'kind': 'callable',
+                                                        'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldParameterAxis.summary': {'children': (),
+                                                       'documentation': 'Return a bounded, local summary; full fields '
+                                                                        'remain explicitly accessible.',
+                                                       'example': 'docs/recipes.py',
+                                                       'fields': [],
+                                                       'kind': 'callable',
+                                                       'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldParameterFolder': {'children': ('zipzi.modeling.DeletionFieldParameterFolder.__repr__',
+                                                              'zipzi.modeling.DeletionFieldParameterFolder.summary'),
+                                                 'documentation': 'Immutable owned DeletionFieldParameterFolder value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'type',
+                                                 'signature': '()'},
+ 'zipzi.modeling.DeletionFieldParameterFolder.__repr__': {'children': (),
+                                                          'documentation': 'Return a local summary capped at 1,024 '
+                                                                           'characters, with no RPC/full scan.\n'
+                                                                           '\n'
+                                                                           'Large arrays and bytes show bounded '
+                                                                           'samples/counts. Explicit field access\n'
+                                                                           'still exposes the owned full value; no '
+                                                                           'host resource is created/released.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldParameterFolder.summary': {'children': (),
+                                                         'documentation': 'Return a bounded, local summary; full '
+                                                                          'fields remain explicitly accessible.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [],
+                                                         'kind': 'callable',
+                                                         'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldPhysicsNode': {'children': ('zipzi.modeling.DeletionFieldPhysicsNode.__repr__',
+                                                          'zipzi.modeling.DeletionFieldPhysicsNode.summary'),
+                                             'documentation': 'Immutable owned DeletionFieldPhysicsNode value. '
+                                                              'Construction owns declared collections; reading fields, '
+                                                              'repr and summary performs no IO.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'type',
+                                             'signature': '()'},
+ 'zipzi.modeling.DeletionFieldPhysicsNode.__repr__': {'children': (),
+                                                      'documentation': 'Return a local summary capped at 1,024 '
+                                                                       'characters, with no RPC/full scan.\n'
+                                                                       '\n'
+                                                                       'Large arrays and bytes show bounded '
+                                                                       'samples/counts. Explicit field access\n'
+                                                                       'still exposes the owned full value; no host '
+                                                                       'resource is created/released.',
+                                                      'example': 'docs/recipes.py',
+                                                      'fields': [],
+                                                      'kind': 'callable',
+                                                      'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldPhysicsNode.summary': {'children': (),
+                                                     'documentation': 'Return a bounded, local summary; full fields '
+                                                                      'remain explicitly accessible.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'callable',
+                                                     'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldPhysicsParameter': {'children': ('zipzi.modeling.DeletionFieldPhysicsParameter.__repr__',
+                                                               'zipzi.modeling.DeletionFieldPhysicsParameter.summary'),
+                                                  'documentation': 'Immutable owned DeletionFieldPhysicsParameter '
+                                                                   'value. Construction owns declared collections; '
+                                                                   'reading fields, repr and summary performs no IO.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [],
+                                                  'kind': 'type',
+                                                  'signature': '()'},
+ 'zipzi.modeling.DeletionFieldPhysicsParameter.__repr__': {'children': (),
+                                                           'documentation': 'Return a local summary capped at 1,024 '
+                                                                            'characters, with no RPC/full scan.\n'
+                                                                            '\n'
+                                                                            'Large arrays and bytes show bounded '
+                                                                            'samples/counts. Explicit field access\n'
+                                                                            'still exposes the owned full value; no '
+                                                                            'host resource is created/released.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [],
+                                                           'kind': 'callable',
+                                                           'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldPhysicsParameter.summary': {'children': (),
+                                                          'documentation': 'Return a bounded, local summary; full '
+                                                                           'fields remain explicitly accessible.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
  'zipzi.modeling.DeletionFieldPoseLinkPart': {'children': ('zipzi.modeling.DeletionFieldPoseLinkPart.__repr__',
                                                            'zipzi.modeling.DeletionFieldPoseLinkPart.summary'),
                                               'documentation': 'Immutable owned DeletionFieldPoseLinkPart value. '
@@ -11710,6 +12779,34 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                         'fields': [],
                                                         'kind': 'callable',
                                                         'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldTexture': {'children': ('zipzi.modeling.DeletionFieldTexture.__repr__',
+                                                      'zipzi.modeling.DeletionFieldTexture.summary'),
+                                         'documentation': 'Immutable owned DeletionFieldTexture value. Construction '
+                                                          'owns declared collections; reading fields, repr and summary '
+                                                          'performs no IO.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [],
+                                         'kind': 'type',
+                                         'signature': '()'},
+ 'zipzi.modeling.DeletionFieldTexture.__repr__': {'children': (),
+                                                  'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                   'with no RPC/full scan.\n'
+                                                                   '\n'
+                                                                   'Large arrays and bytes show bounded '
+                                                                   'samples/counts. Explicit field access\n'
+                                                                   'still exposes the owned full value; no host '
+                                                                   'resource is created/released.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [],
+                                                  'kind': 'callable',
+                                                  'signature': '() -> str'},
+ 'zipzi.modeling.DeletionFieldTexture.summary': {'children': (),
+                                                 'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                  'explicitly accessible.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'callable',
+                                                 'signature': '() -> str'},
  'zipzi.modeling.DeletionIntent': {'children': ('zipzi.modeling.DeletionIntent.__repr__',
                                                 'zipzi.modeling.DeletionIntent.summary'),
                                    'documentation': 'Immutable owned DeletionIntent value. Construction owns declared '
@@ -12086,7 +13183,18 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                      'offscreen_placements: Explicit retained Part owners and mapping '
                                                      'resolutions for surviving Offscreens.\n'
                                                      'tolerance: Absolute and geometry-scale-relative position error '
-                                                     'allowed by conversion proofs.',
+                                                     'allowed by conversion proofs.\n'
+                                                     'parameter_slices: Explicit finite parameter slice coordinates; '
+                                                     'absent entries use frozen document defaults, never preview '
+                                                     'sliders.\n'
+                                                     'texture_replacements: Resolution by deleted texture UUID; Some '
+                                                     'redirects to a retained texture and None explicitly leaves users '
+                                                     'unconfigured.\n'
+                                                     'physics_node_replacements: Explicit replacement by removed '
+                                                     'Physics node UUID; replacement must remain in that native '
+                                                     'setting group.\n'
+                                                     'blend_base_replacements: Explicit retained base sample when '
+                                                     'deleting a Blend table base.',
                                     'example': 'docs/recipes.py',
                                     'fields': [('roots',
                                                 'Explicit typed roots and individual scope choices; order does not '
@@ -12102,7 +13210,18 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                 'Offscreens.'),
                                                ('tolerance',
                                                 'Absolute and geometry-scale-relative position error allowed by '
-                                                'conversion proofs.')],
+                                                'conversion proofs.'),
+                                               ('parameter_slices',
+                                                'Explicit finite parameter slice coordinates; absent entries use '
+                                                'frozen document defaults, never preview sliders.'),
+                                               ('texture_replacements',
+                                                'Resolution by deleted texture UUID; Some redirects to a retained '
+                                                'texture and None explicitly leaves users unconfigured.'),
+                                               ('physics_node_replacements',
+                                                'Explicit replacement by removed Physics node UUID; replacement must '
+                                                'remain in that native setting group.'),
+                                               ('blend_base_replacements',
+                                                'Explicit retained base sample when deleting a Blend table base.')],
                                     'kind': 'type',
                                     'signature': '(roots: tuple[DeletionTarget, ...], reparent: _Mapping[str, '
                                                  'ReparentStrategy] = field(default_factory=lambda: {key0: '
@@ -12113,7 +13232,16 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'read_DeletionOffscreenPlacement(v0) for key0, v0 in '
                                                  'record({}).items()}), tolerance: DeletionTolerance = '
                                                  "field(default_factory=lambda: read_DeletionTolerance({'absolute': "
-                                                 "0.001, 'relative': 1e-06})))"},
+                                                 "0.001, 'relative': 1e-06})), parameter_slices: _Mapping[str, float] "
+                                                 '= field(default_factory=lambda: {key0: number(v0) for key0, v0 in '
+                                                 'record({}).items()}), texture_replacements: _Mapping[str, str | '
+                                                 'None] = field(default_factory=lambda: {key0: None if v0 is None else '
+                                                 'string(v0) for key0, v0 in record({}).items()}), '
+                                                 'physics_node_replacements: _Mapping[str, str] = '
+                                                 'field(default_factory=lambda: {key0: string(v0) for key0, v0 in '
+                                                 'record({}).items()}), blend_base_replacements: _Mapping[str, str] = '
+                                                 'field(default_factory=lambda: {key0: string(v0) for key0, v0 in '
+                                                 'record({}).items()}))'},
  'zipzi.modeling.DeletionRequest.__repr__': {'children': (),
                                              'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                               'no RPC/full scan.\n'
@@ -12688,6 +13816,40 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                    'fields': [],
                                    'kind': 'value',
                                    'signature': ''},
+ 'zipzi.modeling.DeletionTargetAttachment': {'children': ('zipzi.modeling.DeletionTargetAttachment.__repr__',
+                                                          'zipzi.modeling.DeletionTargetAttachment.summary'),
+                                             'documentation': 'Immutable owned DeletionTargetAttachment value. '
+                                                              'Construction owns declared collections; reading fields, '
+                                                              'repr and summary performs no IO.\n'
+                                                              '\n'
+                                                              'Fields:\n'
+                                                              'value: Delete this owned attachment record and clear '
+                                                              'resolved optional sound/UserData references.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [('value',
+                                                         'Delete this owned attachment record and clear resolved '
+                                                         'optional sound/UserData references.')],
+                                             'kind': 'type',
+                                             'signature': '(value: str)'},
+ 'zipzi.modeling.DeletionTargetAttachment.__repr__': {'children': (),
+                                                      'documentation': 'Return a local summary capped at 1,024 '
+                                                                       'characters, with no RPC/full scan.\n'
+                                                                       '\n'
+                                                                       'Large arrays and bytes show bounded '
+                                                                       'samples/counts. Explicit field access\n'
+                                                                       'still exposes the owned full value; no host '
+                                                                       'resource is created/released.',
+                                                      'example': 'docs/recipes.py',
+                                                      'fields': [],
+                                                      'kind': 'callable',
+                                                      'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetAttachment.summary': {'children': (),
+                                                     'documentation': 'Return a bounded, local summary; full fields '
+                                                                      'remain explicitly accessible.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'callable',
+                                                     'signature': '() -> str'},
  'zipzi.modeling.DeletionTargetDeformer': {'children': ('zipzi.modeling.DeletionTargetDeformer.__repr__',
                                                         'zipzi.modeling.DeletionTargetDeformer.summary'),
                                            'documentation': 'Immutable owned DeletionTargetDeformer value. '
@@ -12858,6 +14020,116 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                     'fields': [],
                                                     'kind': 'callable',
                                                     'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetParameter': {'children': ('zipzi.modeling.DeletionTargetParameter.__repr__',
+                                                         'zipzi.modeling.DeletionTargetParameter.summary'),
+                                            'documentation': 'Immutable owned DeletionTargetParameter value. '
+                                                             'Construction owns declared collections; reading fields, '
+                                                             'repr and summary performs no IO.\n'
+                                                             '\n'
+                                                             'Fields:\n'
+                                                             'value: Delete this parameter and reduce ordinary axes at '
+                                                             'its frozen default unless explicitly overridden.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [('value',
+                                                        'Delete this parameter and reduce ordinary axes at its frozen '
+                                                        'default unless explicitly overridden.')],
+                                            'kind': 'type',
+                                            'signature': '(value: str)'},
+ 'zipzi.modeling.DeletionTargetParameter.__repr__': {'children': (),
+                                                     'documentation': 'Return a local summary capped at 1,024 '
+                                                                      'characters, with no RPC/full scan.\n'
+                                                                      '\n'
+                                                                      'Large arrays and bytes show bounded '
+                                                                      'samples/counts. Explicit field access\n'
+                                                                      'still exposes the owned full value; no host '
+                                                                      'resource is created/released.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'callable',
+                                                     'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetParameter.summary': {'children': (),
+                                                    'documentation': 'Return a bounded, local summary; full fields '
+                                                                     'remain explicitly accessible.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [],
+                                                    'kind': 'callable',
+                                                    'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetParameterFolder': {'children': ('zipzi.modeling.DeletionTargetParameterFolder.__repr__',
+                                                               'zipzi.modeling.DeletionTargetParameterFolder.summary'),
+                                                  'documentation': 'Immutable owned DeletionTargetParameterFolder '
+                                                                   'value. Construction owns declared collections; '
+                                                                   'reading fields, repr and summary performs no IO.\n'
+                                                                   '\n'
+                                                                   'Fields:\n'
+                                                                   'value: Dissolve this parameter folder and retain '
+                                                                   'its parameters and nested folders in the retained '
+                                                                   'parent.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [('value',
+                                                              'Dissolve this parameter folder and retain its '
+                                                              'parameters and nested folders in the retained parent.')],
+                                                  'kind': 'type',
+                                                  'signature': '(value: str)'},
+ 'zipzi.modeling.DeletionTargetParameterFolder.__repr__': {'children': (),
+                                                           'documentation': 'Return a local summary capped at 1,024 '
+                                                                            'characters, with no RPC/full scan.\n'
+                                                                            '\n'
+                                                                            'Large arrays and bytes show bounded '
+                                                                            'samples/counts. Explicit field access\n'
+                                                                            'still exposes the owned full value; no '
+                                                                            'host resource is created/released.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [],
+                                                           'kind': 'callable',
+                                                           'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetParameterFolder.summary': {'children': (),
+                                                          'documentation': 'Return a bounded, local summary; full '
+                                                                           'fields remain explicitly accessible.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [],
+                                                          'kind': 'callable',
+                                                          'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetParameterFolderContents': {'children': ('zipzi.modeling.DeletionTargetParameterFolderContents.__repr__',
+                                                                       'zipzi.modeling.DeletionTargetParameterFolderContents.summary'),
+                                                          'documentation': 'Immutable owned '
+                                                                           'DeletionTargetParameterFolderContents '
+                                                                           'value. Construction owns declared '
+                                                                           'collections; reading fields, repr and '
+                                                                           'summary performs no IO.\n'
+                                                                           '\n'
+                                                                           'Fields:\n'
+                                                                           'value: Delete this parameter folder '
+                                                                           'subtree and explicitly include its '
+                                                                           'contained parameters.',
+                                                          'example': 'docs/recipes.py',
+                                                          'fields': [('value',
+                                                                      'Delete this parameter folder subtree and '
+                                                                      'explicitly include its contained parameters.')],
+                                                          'kind': 'type',
+                                                          'signature': '(value: str)'},
+ 'zipzi.modeling.DeletionTargetParameterFolderContents.__repr__': {'children': (),
+                                                                   'documentation': 'Return a local summary capped at '
+                                                                                    '1,024 characters, with no '
+                                                                                    'RPC/full scan.\n'
+                                                                                    '\n'
+                                                                                    'Large arrays and bytes show '
+                                                                                    'bounded samples/counts. Explicit '
+                                                                                    'field access\n'
+                                                                                    'still exposes the owned full '
+                                                                                    'value; no host resource is '
+                                                                                    'created/released.',
+                                                                   'example': 'docs/recipes.py',
+                                                                   'fields': [],
+                                                                   'kind': 'callable',
+                                                                   'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetParameterFolderContents.summary': {'children': (),
+                                                                  'documentation': 'Return a bounded, local summary; '
+                                                                                   'full fields remain explicitly '
+                                                                                   'accessible.',
+                                                                  'example': 'docs/recipes.py',
+                                                                  'fields': [],
+                                                                  'kind': 'callable',
+                                                                  'signature': '() -> str'},
  'zipzi.modeling.DeletionTargetPart': {'children': ('zipzi.modeling.DeletionTargetPart.__repr__',
                                                     'zipzi.modeling.DeletionTargetPart.summary'),
                                        'documentation': 'Immutable owned DeletionTargetPart value. Construction owns '
@@ -12892,6 +14164,40 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                'fields': [],
                                                'kind': 'callable',
                                                'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetRecord': {'children': ('zipzi.modeling.DeletionTargetRecord.__repr__',
+                                                      'zipzi.modeling.DeletionTargetRecord.summary'),
+                                         'documentation': 'Immutable owned DeletionTargetRecord value. Construction '
+                                                          'owns declared collections; reading fields, repr and summary '
+                                                          'performs no IO.\n'
+                                                          '\n'
+                                                          'Fields:\n'
+                                                          'value: Typed non-scene business record; its native domain '
+                                                          'validates ownership, child identities and choices.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [('value',
+                                                     'Typed non-scene business record; its native domain validates '
+                                                     'ownership, child identities and choices.')],
+                                         'kind': 'type',
+                                         'signature': '(value: DeletionObject)'},
+ 'zipzi.modeling.DeletionTargetRecord.__repr__': {'children': (),
+                                                  'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                   'with no RPC/full scan.\n'
+                                                                   '\n'
+                                                                   'Large arrays and bytes show bounded '
+                                                                   'samples/counts. Explicit field access\n'
+                                                                   'still exposes the owned full value; no host '
+                                                                   'resource is created/released.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [],
+                                                  'kind': 'callable',
+                                                  'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetRecord.summary': {'children': (),
+                                                 'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                  'explicitly accessible.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'callable',
+                                                 'signature': '() -> str'},
  'zipzi.modeling.DeletionTargetRemoveDeformer': {'children': ('zipzi.modeling.DeletionTargetRemoveDeformer.__repr__',
                                                               'zipzi.modeling.DeletionTargetRemoveDeformer.summary'),
                                                  'documentation': 'Immutable owned DeletionTargetRemoveDeformer value. '
@@ -12926,6 +14232,40 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                          'fields': [],
                                                          'kind': 'callable',
                                                          'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetTexture': {'children': ('zipzi.modeling.DeletionTargetTexture.__repr__',
+                                                       'zipzi.modeling.DeletionTargetTexture.summary'),
+                                          'documentation': 'Immutable owned DeletionTargetTexture value. Construction '
+                                                           'owns declared collections; reading fields, repr and '
+                                                           'summary performs no IO.\n'
+                                                           '\n'
+                                                           'Fields:\n'
+                                                           'value: Delete this image record; retained users require an '
+                                                           'explicit replacement or unconfigured choice.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [('value',
+                                                      'Delete this image record; retained users require an explicit '
+                                                      'replacement or unconfigured choice.')],
+                                          'kind': 'type',
+                                          'signature': '(value: str)'},
+ 'zipzi.modeling.DeletionTargetTexture.__repr__': {'children': (),
+                                                   'documentation': 'Return a local summary capped at 1,024 '
+                                                                    'characters, with no RPC/full scan.\n'
+                                                                    '\n'
+                                                                    'Large arrays and bytes show bounded '
+                                                                    'samples/counts. Explicit field access\n'
+                                                                    'still exposes the owned full value; no host '
+                                                                    'resource is created/released.',
+                                                   'example': 'docs/recipes.py',
+                                                   'fields': [],
+                                                   'kind': 'callable',
+                                                   'signature': '() -> str'},
+ 'zipzi.modeling.DeletionTargetTexture.summary': {'children': (),
+                                                  'documentation': 'Return a bounded, local summary; full fields '
+                                                                   'remain explicitly accessible.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [],
+                                                  'kind': 'callable',
+                                                  'signature': '() -> str'},
  'zipzi.modeling.DeletionTolerance': {'children': ('zipzi.modeling.DeletionTolerance.__repr__',
                                                    'zipzi.modeling.DeletionTolerance.summary'),
                                       'documentation': 'Immutable owned DeletionTolerance value. Construction owns '

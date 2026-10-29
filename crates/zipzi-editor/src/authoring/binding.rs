@@ -72,6 +72,10 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if matches!(control, Control::Delete | Control::DeleteSample) {
+            self.run_object_deletion(context, &[source], window, cx);
+            return;
+        }
         let result = (|| {
             anyhow::ensure!(
                 !self.modal

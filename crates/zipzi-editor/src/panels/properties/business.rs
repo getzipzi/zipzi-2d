@@ -72,7 +72,9 @@ impl PropertiesPanel {
                     .tooltip(hint)
                     .accessibility_label(label),
                 )
-                .disabled(self.disabled || !availability.enabled)
+                .disabled(
+                    (self.disabled && !matches!(&action, A::Delete(_))) || !availability.enabled,
+                )
                 .on_click(move |_, window, cx| {
                     if let Some(context) = context {
                         let _ = owner.update(cx, |v, cx| {

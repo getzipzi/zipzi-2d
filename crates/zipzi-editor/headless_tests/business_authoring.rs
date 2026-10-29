@@ -40,12 +40,14 @@ fn action(h: &Harness, action: A, cx: &mut TestAppContext) {
     })
     .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn click(h: &Harness, id: impl Into<gpui_kit::ElementId>, cx: &mut TestAppContext) {
     let id = id.into();
     cx.update_window(h.window, |_, window, cx| window.click(id, cx))
         .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn choose(h: &Harness, id: &str, text: &str, cx: &mut TestAppContext) {
     cx.update_window(h.window, |_, window, cx| {
@@ -318,7 +320,7 @@ fn business_delete_review_cancels_by_default_and_rejects_stale_history(cx: &mut 
     })
     .unwrap();
     cx.run_until_parked();
-    click(&h, "business-dialog-submit", cx);
+    click(&h, "tree-deletion-submit", cx);
     h.view.read_with(cx, |v, _| {
         assert!(
             v.editor
@@ -619,7 +621,7 @@ fn dedicated_node_copy_preserves_reference_and_root_inspection_stays_on_root(
         assert_eq!(v.editor.active_inspection().unwrap().object(), Some(root))
     });
     cx.update_window(h.window, |_, window, _| {
-        assert!(window.try_find("physics-delete-node").is_none())
+        assert!(window.try_find("physics-delete-node").is_some())
     })
     .unwrap();
 }

@@ -132,6 +132,7 @@ impl PropertiesPanel {
         let view = owner.read(cx);
         let context = AuthoringContext::capture(&view.editor);
         let navigation = matches!(control, Control::Open | Control::Target | Control::Inspect);
+        let deleting = matches!(control, Control::Delete | Control::DeleteSample);
         let availability = view.editor.document().and_then(|d| {
             if control == Control::Create {
                 d.ordinary_binding_creation_capability(object)
@@ -146,7 +147,7 @@ impl PropertiesPanel {
                 ActionAvailability::for_object(
                     d,
                     object,
-                    if control == Control::Delete {
+                    if deleting {
                         zipzi_editor_core::AuthoringAction::Delete
                     } else {
                         zipzi_editor_core::AuthoringAction::Patch
@@ -167,7 +168,7 @@ impl PropertiesPanel {
         .ghost()
         .label(label.clone())
         .tooltip(availability.reason.unwrap_or(label.clone()))
-        .disabled((!navigation && self.disabled) || !availability.enabled)
+        .disabled((!navigation && !deleting && self.disabled) || !availability.enabled)
         .w_full()
         .justify_start()
         .on_click(move |_, window, cx| {

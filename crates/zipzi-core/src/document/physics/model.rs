@@ -398,7 +398,10 @@ impl Document {
             .or_else(|| self.get_physics_output(id).map(|(g, _)| g.id.as_str()))
             .or_else(|| self.get_physics_node(id).map(|(g, _)| g.id.as_str()))
     }
-    pub(super) fn validate_native_physics_rig(&self, g: &PhysicsSetting) -> Result<(), Status> {
+    pub(in crate::document) fn validate_native_physics_rig(
+        &self,
+        g: &PhysicsSetting,
+    ) -> Result<(), Status> {
         for output in &g.outputs {
             if g.node_index(&output.node_id).is_none() {
                 return Err(Status::error("PHYSICS_NODE_UNAVAILABLE", &output.node_id));

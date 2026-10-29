@@ -129,6 +129,16 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if let AnimationAction::RemoveEntry(object) = &action {
+            self.run_object_deletion(context, std::slice::from_ref(object), window, cx);
+            return;
+        }
+        if let AnimationAction::DeleteAnimation(object, operation) = &action {
+            if *operation != AnimationRemoval::DissolveGroup {
+                self.run_object_deletion(context, std::slice::from_ref(object), window, cx);
+                return;
+            }
+        }
         let document = context.editing.document;
         if AuthoringContext::capture(&self.editor) != Some(context) {
             self.set_edit_error(t!("authoring.move_stale").into_owned(), cx);

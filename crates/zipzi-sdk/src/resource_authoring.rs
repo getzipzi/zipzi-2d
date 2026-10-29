@@ -111,14 +111,7 @@ impl AuthoringSession {
                 code: "OBJECT_LOCKED",
             },
         };
-        let delete =
-            if state == CapabilityState::Available && !self.references_to(handle.id()).is_empty() {
-                CapabilityState::Unavailable {
-                    code: "OBJECT_REFERENCED",
-                }
-            } else {
-                state.clone()
-            };
+        let delete = state.clone();
         Ok(ResourceCapabilities {
             inspect: CapabilityState::Available,
             patch: state.clone(),

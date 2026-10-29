@@ -85,9 +85,11 @@ Expression schedules can be replaced without modifying the authoring document.
 
 ## Images and modeling
 
-The dependency-cleaning deletion API supports Mesh, Part, Deformer, Glue and
-Offscreen roots. Part roots use the organization subtree; Deformer roots use the
-deformation subtree. Explicit root scopes are unioned before deduplication.
+The dependency-cleaning deletion API supports scene objects, parameters,
+parameter folders, textures, attachments and typed business records (including
+Motion, Expression, Pose, Physics, bindings and metadata children). Part roots use
+the organization subtree; Deformer roots use the deformation subtree. Explicit
+root scopes are unioned before deduplication.
 `DissolvePart` and `RemoveDeformer` preserve contents and report their migrations.
 Use `deletion_request` to resolve current handles, `analyze_deletion` to
 review typed removals, field rewrites, locks, migration choices and opaque export regressions,
@@ -117,7 +119,22 @@ group ranges, dynamic order and compositing effects. Shared images, parameters,
 Blend tables and constraints remain. New opaque export failures
 require explicit acceptance through `DeletionOptions`; provenance and later
 export checks remain intact. Strict deletion APIs retain their existing behavior.
-Runtime/Python transport and Editor review integration are not available yet.
+Runtime, Python Local/Connected and Editor entries share this review path.
+
+Parameter axes reduce at the frozen document default, or an explicit
+`parameter_slices` coordinate, using native repeat/snapping and grid conversion.
+Other dimensions and targets remain; the last dimension becomes static data.
+Dependent Blend tables/bindings, constraints, animation/Expression records,
+Physics channels and resolved metadata members are cleaned together. Native
+invalid containers require an explicit larger deletion or cancellation.
+`ParameterFolder` dissolves by default; `ParameterFolderContents` opts into its
+parameters. Retained texture users require `texture_replacements` (a retained
+UUID or explicit `None` for unconfigured). Optional attachment references clear.
+`physics_node_replacements` and `blend_base_replacements` retain native node/base
+selection semantics. Removing a Motion group migrates the last registration of
+each retained Clip to the root; deleting that registration explicitly requires
+choosing Clip deletion or cancelling. Part/drawing and Glue/binding roles retain
+distinct typed identities even when they share an ID.
 
 ```sh
 cargo test --locked -p zipzi-sdk --test integration deletion::

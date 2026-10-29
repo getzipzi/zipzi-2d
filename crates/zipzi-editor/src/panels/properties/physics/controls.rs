@@ -440,13 +440,22 @@ impl PropertiesPanel {
                     down: action == 3,
                 }),
             };
-            let availability = doc
-                .and_then(|d| {
+            let availability = if let Some(A::Delete(object)) = &operation {
+                doc.and_then(|d| {
+                    crate::authoring::ActionAvailability::for_object(
+                        d,
+                        object,
+                        zipzi_editor_core::AuthoringAction::Delete,
+                    )
+                })
+            } else {
+                doc.and_then(|d| {
                     operation
                         .as_ref()
                         .and_then(|a| d.physics_channel_capability(&self.physics.group, a).ok())
                 })
-                .and_then(|c| crate::authoring::ActionAvailability::from_core(&c));
+                .and_then(|c| crate::authoring::ActionAvailability::from_core(&c))
+            };
             let off = availability.as_ref().is_none_or(|c| !c.enabled);
             let tooltip = availability
                 .and_then(|c| c.reason)
@@ -459,7 +468,7 @@ impl PropertiesPanel {
                 .icon(icon)
                 .tooltip(tooltip)
                 .accessibility_label(t!(label))
-                .disabled(disabled || off)
+                .disabled((disabled && action != 1) || off)
                 .on_click(cx.listener(move |this, _, window, cx| {
                     if !this.physics_allowed(epoch, window, cx) {
                         return;
@@ -467,6 +476,16 @@ impl PropertiesPanel {
                     let Some(operation) = &operation else {
                         return;
                     };
+                    if let (A::Delete(object), Some(context)) = (operation, context) {
+                        let owner = this.owner.clone();
+                        let object = object.clone();
+                        window.defer(cx, move |window, cx| {
+                            let _ = owner.update(cx, |view, cx| {
+                                view.run_object_deletion(context, &[object], window, cx)
+                            });
+                        });
+                        return;
+                    }
                     let result = this.owner.upgrade().and_then(|o| {
                         let editor = &o.read(cx).editor;
                         (crate::authoring::AuthoringContext::capture(editor) == context).then(
@@ -684,7 +703,7 @@ impl PropertiesPanel {
                         "physics-delete-node",
                         IconName::Trash,
                         t!("physics.delete_segment").into_owned(),
-                        disabled || unavailable,
+                        unavailable,
                     )
                     .tooltip(reason)
                     .on_click(cx.listener(move |this, _, window, cx| {
@@ -693,26 +712,14 @@ impl PropertiesPanel {
                                 crate::authoring::AuthoringContext::capture(&o.read(cx).editor)
                                     == context
                             });
-                            if current && let Some(object) = &object {
-                                if this.physics_apply(
-                                    PhysicsEdit::Delete {
-                                        ids: vec![object.id.clone()],
-                                        node_replacements: Default::default(),
-                                    },
-                                    cx,
-                                ) {
-                                    this.physics.node = node.saturating_sub(1).max(1);
-                                    this.physics_remember_selection(cx);
-                                    if let Some(id) = this.physics.node_id.clone() {
-                                        this.physics_inspect_child(
-                                            zipzi_editor_core::ObjectRef::new(
-                                                zipzi_editor_core::ObjectKind::PhysicsNode,
-                                                id,
-                                            ),
-                                            cx,
-                                        );
-                                    }
-                                }
+                            if current && let (Some(object), Some(context)) = (&object, context) {
+                                let owner = this.owner.clone();
+                                let object = object.clone();
+                                window.defer(cx, move |window, cx| {
+                                    let _ = owner.update(cx, |view, cx| {
+                                        view.run_object_deletion(context, &[object], window, cx)
+                                    });
+                                });
                             }
                             cx.notify();
                         }

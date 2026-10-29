@@ -1223,7 +1223,10 @@ impl Document {
         }
         Ok(())
     }
-    pub(super) fn validate_motion_changes_unlocked(&self, c: &Document) -> Result<(), Status> {
+    pub(in crate::document) fn validate_motion_changes_unlocked(
+        &self,
+        c: &Document,
+    ) -> Result<(), Status> {
         for g in self.motion_groups() {
             if self.get_motion_group(&g.id) != c.get_motion_group(&g.id)
                 || self.motion_groups().iter().position(|a| a.id == g.id)
@@ -1278,8 +1281,12 @@ impl Document {
                     self.motion_unlocked(&track.id)?;
                 }
             }
+            let tracks: std::collections::HashMap<_, _> =
+                clip.tracks.iter().map(|t| (&t.id, t)).collect();
+            let events: std::collections::HashMap<_, _> =
+                clip.events.iter().map(|e| (&e.id, e)).collect();
             for t in &old.tracks {
-                if !clip.tracks.contains(t) {
+                if tracks.get(&t.id).copied() != Some(t) {
                     self.motion_unlocked(&t.id)?;
                     for k in t.keys() {
                         self.motion_unlocked(&k.id)?;
@@ -1287,7 +1294,7 @@ impl Document {
                 }
             }
             for e in &old.events {
-                if !clip.events.contains(e) {
+                if events.get(&e.id).copied() != Some(e) {
                     self.motion_unlocked(&e.id)?;
                 }
             }

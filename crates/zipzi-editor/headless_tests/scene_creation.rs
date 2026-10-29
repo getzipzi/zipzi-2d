@@ -25,6 +25,7 @@ fn choose(h: &Harness, label: &str, cx: &mut TestAppContext) {
     })
     .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn inspected(h: &Harness, cx: &TestAppContext) -> ObjectRef {
     h.view.read_with(cx, |view, _| {
@@ -670,6 +671,7 @@ fn object_deletion_viewport_shortcuts_and_context_menu_share_behavior(cx: &mut T
 #[gpui_kit::test]
 fn object_deletion_reviews_mask_cleanup_and_undo_restores_the_reference(cx: &mut TestAppContext) {
     use zipzi_sdk::{SceneField as F, SceneFieldValue as V};
+    cx.update(|cx| cx.set_reduce_motion(true));
     let mut document = Document::new_blank().unwrap();
     let mut objects = vec![];
     for name in ["Mask source", "Retained consumer"] {

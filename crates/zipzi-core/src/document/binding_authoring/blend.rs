@@ -179,6 +179,23 @@ impl Document {
         limits: AuthoringLimits,
         control: &ConversionControl,
     ) -> Result<BlendAuthoringPlan, Status> {
+        self.plan_blend_authoring_impl(edit, limits, control, true)
+    }
+    pub(in crate::document) fn plan_deletion_blend(
+        &self,
+        edit: BlendAuthoringEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<BlendAuthoringPlan, Status> {
+        self.plan_blend_authoring_impl(edit, limits, control, false)
+    }
+    fn plan_blend_authoring_impl(
+        &self,
+        edit: BlendAuthoringEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+        check_locks: bool,
+    ) -> Result<BlendAuthoringPlan, Status> {
         control.checkpoint()?;
         let mut writes = Writes::default();
         let mut affected = Vec::new();
@@ -225,7 +242,9 @@ impl Document {
                 if self.contains_id(&id) {
                     return Err(Status::error("DUPLICATE_ID", id));
                 }
-                self.authoring_unlocked(&target_id)?;
+                if check_locks {
+                    self.authoring_unlocked(&target_id)?;
+                }
                 let n = self.delta_width(target_kind, &target_id)?;
                 let table = if key_table_id.is_empty() {
                     None
@@ -267,7 +286,9 @@ impl Document {
                 let old = self
                     .get_blend_constraint(&id)
                     .ok_or_else(|| Status::error("MISSING_CONSTRAINT", &id))?;
-                self.authoring_unlocked(&id)?;
+                if check_locks {
+                    self.authoring_unlocked(&id)?;
+                }
                 let mut c = old.clone();
                 c.parameter_id = parameter_id;
                 c.samples = samples;
@@ -281,7 +302,9 @@ impl Document {
                     .values()
                     .filter(|b| b.constraint_ids.contains(&id))
                 {
-                    self.authoring_unlocked(&b.id)?;
+                    if check_locks {
+                        self.authoring_unlocked(&b.id)?;
+                    }
                     affected.extend([b.id.clone(), b.target_id.clone()]);
                 }
                 let mut report_sources = affected.clone();
@@ -306,7 +329,9 @@ impl Document {
                     .get_blend_binding(&id)
                     .ok_or_else(|| Status::error("MISSING_BINDING", &id))?
                     .clone();
-                self.authoring_unlocked(&id)?;
+                if check_locks {
+                    self.authoring_unlocked(&id)?;
+                }
                 if b.key_table_id == key_table_id {
                     cost = self.conversion_report_cost(
                         &[b.id.clone(), b.target_id.clone()],
@@ -383,7 +408,9 @@ impl Document {
                 let old = self
                     .get_blend_key_table(&id)
                     .ok_or_else(|| Status::error("MISSING_KEY_TABLE", &id))?;
-                self.authoring_unlocked(&id)?;
+                if check_locks {
+                    self.authoring_unlocked(&id)?;
+                }
                 let mut table = old.clone();
                 let mut rebase = false;
                 match &operation {
@@ -543,7 +570,9 @@ impl Document {
                 )?;
                 for b in users {
                     control.checkpoint()?;
-                    self.authoring_unlocked(&b.id)?;
+                    if check_locks {
+                        self.authoring_unlocked(&b.id)?;
+                    }
                     let mut next = b.clone();
                     let n = self.delta_width(b.target_kind, &b.target_id)?;
                     let offset = if rebase {
@@ -588,7 +617,7 @@ impl Document {
                                 &b.id,
                             ));
                         }
-                        self.rebase_target(&mut writes, b, &offset, control)?;
+                        self.rebase_target(&mut writes, b, &offset, control, check_locks)?;
                     }
                     let mut forms = Vec::new();
                     for s in &table.samples {
@@ -747,12 +776,17 @@ impl Document {
         b: &BlendShapeBinding,
         d: &DeltaVector,
         control: &ConversionControl,
+        check_locks: bool,
     ) -> Result<(), Status> {
         if let Some(binding) = self.binding_for_mesh(&b.target_id) {
-            self.authoring_unlocked(&binding.id)?;
+            if check_locks {
+                self.authoring_unlocked(&binding.id)?;
+            }
         }
         if let Some(binding) = self.binding_for_scene(&b.target_id) {
-            self.authoring_unlocked(&binding.id)?;
+            if check_locks {
+                self.authoring_unlocked(&binding.id)?;
+            }
         }
         let offset = &d.values;
         // Runtime truncates the ordinary order before adding deltas. Crossing

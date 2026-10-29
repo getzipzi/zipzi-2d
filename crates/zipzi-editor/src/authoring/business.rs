@@ -13,6 +13,13 @@ use gpui_kit::component::{
 use zipzi_editor_core::{BusinessAction as A, BusinessPlan, ObjectKind as K};
 
 pub(crate) fn availability(editor: &Editor, action: &A) -> Option<ActionAvailability> {
+    if let A::Delete(object) = action {
+        return ActionAvailability::for_object(
+            editor.document()?,
+            object,
+            zipzi_editor_core::AuthoringAction::Delete,
+        );
+    }
     match editor.document()?.business_capability(action) {
         Ok(c) => ActionAvailability::from_core(&c),
         Err(e) => Some(ActionAvailability {
@@ -39,6 +46,10 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if let A::Delete(object) = &action {
+            self.run_object_deletion(context, std::slice::from_ref(object), window, cx);
+            return;
+        }
         let result = (|| {
             anyhow::ensure!(
                 !self.modal

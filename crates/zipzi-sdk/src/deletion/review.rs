@@ -203,7 +203,17 @@ impl DeletionPageIndex {
         let mut removed = vec![];
         let mut owned = vec![];
         for (i, row) in analysis.native.removed.iter().enumerate() {
-            if row.reason == DeletionReason::Owned {
+            let internal_child = matches!(
+                row.object.kind,
+                DeletionKind::Axis
+                    | DeletionKind::Sample
+                    | DeletionKind::GluePair
+                    | DeletionKind::MotionKey
+                    | DeletionKind::ExpressionKey
+            );
+            if (row.reason == DeletionReason::Owned && row.object.kind.is_internal())
+                || (internal_child && row.reason != DeletionReason::Requested)
+            {
                 owned.push(i);
             } else {
                 removed.push(i);

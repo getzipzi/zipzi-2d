@@ -567,48 +567,7 @@ impl AuthoringSession {
             } else {
                 editable.clone()
             },
-            delete: if editable != C::Available {
-                editable.clone()
-            } else if handle.kind() == K::SceneBinding
-                && d.get_scene_binding(owner)
-                    .is_some_and(|b| d.offscreen_for_part(b.target_id()).is_some())
-            {
-                C::Unavailable {
-                    code: "OFFSCREEN_MAPPING_REQUIRES_CONVERSION",
-                }
-            } else if identity.as_ref().is_some_and(|i| {
-                i.kind == BindingIdentityKind::Axis
-                    && axes.is_some_and(|axes| {
-                        axes.iter()
-                            .any(|a| a.id == i.id && !a.parameter_id.is_empty())
-                    })
-            }) {
-                C::Unavailable {
-                    code: "AXIS_REDUCTION_REQUIRED",
-                }
-            } else if d
-                .get_blend_key_table(owner)
-                .is_some_and(|t| t.base_sample_id == handle.id())
-            {
-                C::Unavailable {
-                    code: "BASE_REPLACEMENT_REQUIRED",
-                }
-            } else if identity.as_ref().is_some_and(|i| {
-                i.kind == BindingIdentityKind::Sample
-                    && i.axis.as_ref().is_some_and(|axis| {
-                        axes.is_some_and(|axes| {
-                            axes.iter().any(|a| {
-                                &a.id == axis && a.samples.len() == 1 && !a.parameter_id.is_empty()
-                            })
-                        })
-                    })
-            }) {
-                C::Unavailable {
-                    code: "AXIS_REDUCTION_REQUIRED",
-                }
-            } else {
-                editable.clone()
-            },
+            delete: editable.clone(),
             repair: editable,
             preview,
         })

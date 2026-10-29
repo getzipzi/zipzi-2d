@@ -31,6 +31,7 @@ fn action(h: &Harness, action: A, cx: &mut TestAppContext) {
     })
     .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn menu(h: &Harness, label: &str, cx: &mut TestAppContext) {
     cx.update_window(h.window, |_, window, cx| {
@@ -213,18 +214,18 @@ fn deletion_review_defaults_to_cancel_and_executes_the_reported_migration(cx: &m
     let source = R::new(K::MotionGroup, &group.id);
     action(&h, A::DeleteAnimation(source.clone(), D::Group), cx);
     cx.update_window(h.window, |_, window, cx| {
-        assert!(window.try_find("animation-deletion-review").is_some());
+        assert!(window.try_find("tree-deletion-dialog").is_some());
         assert!(h.view.read(cx).editor.animation().unwrap().playing);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
             (0, 0)
         );
         assert!(
+            window.try_find(("deletion-row", 0usize)).is_some(),
+            "{:?}",
             window
-                .find(("animation-delete-effect", 0usize))
-                .label()
-                .unwrap()
-                .contains("Will be deleted")
+                .try_find("deletion-error")
+                .and_then(|n| n.label().map(str::to_owned))
         );
         window.press("enter", cx);
     })
@@ -235,7 +236,7 @@ fn deletion_review_defaults_to_cancel_and_executes_the_reported_migration(cx: &m
     });
     action(&h, A::DeleteAnimation(source, D::Group), cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.click("animation-delete-submit", cx)
+        window.click("tree-deletion-submit", cx)
     })
     .unwrap();
     cx.run_until_parked();
@@ -292,19 +293,30 @@ fn deleting_shared_clip_reviews_all_usages_cleans_preview_and_does_not_autoplay_
                 .clip_id,
         )
     });
+    let registrations = h.view.read_with(cx, |v, _| {
+        v.editor
+            .document()
+            .unwrap()
+            .motion_resources()
+            .into_iter()
+            .filter(|r| r.selection.clip_id == clip.id)
+            .filter_map(|r| r.selection.entry)
+            .collect::<Vec<_>>()
+    });
     action(&h, A::DeleteAnimation(clip.clone(), D::Motion), cx);
     cx.update_window(h.window, |_, window, cx| {
         let mut lines = String::new();
         for i in 0..20usize {
-            if let Some(row) = window.try_find(("animation-delete-effect", i)) {
+            if let Some(row) = window.try_find(("deletion-row", i)) {
                 lines.push_str(&row.label().unwrap_or_default());
             }
         }
-        assert!(lines.contains("Idle [1]"), "{lines}");
-        assert!(lines.contains("Idle [2]"), "{lines}");
-        assert!(lines.contains("Motion track"), "{lines}");
+        for id in &registrations {
+            assert!(lines.contains(id), "{lines}");
+        }
+        assert!(!lines.is_empty());
         assert!(h.view.read(cx).editor.animation().unwrap().playing);
-        window.click("animation-delete-submit", cx);
+        window.click("tree-deletion-submit", cx);
     })
     .unwrap();
     cx.run_until_parked();
@@ -354,14 +366,15 @@ fn last_registration_is_explained_and_stale_review_cannot_consume_redo(cx: &mut 
     });
     action(&h, A::DeleteAnimation(root, D::Registration), cx);
     cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
         assert!(
             window
-                .find("animation-delete-reason")
+                .find(("deletion-row", 0usize))
                 .label()
                 .unwrap()
-                .contains("last registration")
+                .contains("LAST_MOTION_REGISTRATION")
         );
-        window.click("animation-delete-submit", cx);
+        window.click("tree-deletion-submit", cx);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
             (0, 0)
@@ -517,7 +530,15 @@ fn expression_deletion_clears_only_expression_preview_and_empty_group_deletes_di
         cx,
     );
     cx.update_window(h.window, |_, window, cx| {
-        window.click("animation-delete-submit", cx)
+        window.render_frame(cx);
+        assert!(
+            window.try_find(("deletion-row", 0usize)).is_some(),
+            "{:?}",
+            window
+                .try_find("deletion-error")
+                .and_then(|n| n.label().map(str::to_owned))
+        );
+        window.click("tree-deletion-submit", cx)
     })
     .unwrap();
     cx.run_until_parked();
@@ -542,7 +563,7 @@ fn expression_deletion_clears_only_expression_preview_and_empty_group_deletes_di
     });
     action(&h, A::DeleteAnimation(group.clone(), D::Group), cx);
     cx.update_window(h.window, |_, window, _| {
-        assert!(window.try_find("animation-deletion-review").is_none())
+        assert!(window.try_find("tree-deletion-dialog").is_none())
     })
     .unwrap();
     h.view.read_with(cx, |v, _| {

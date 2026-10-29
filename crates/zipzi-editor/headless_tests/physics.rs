@@ -208,15 +208,15 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
     physics_context_action(&harness, cx, 1, "Delete");
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
-        assert!(window.try_find("business-dialog").is_some());
-        window.click("business-dialog-submit", cx);
+        assert!(window.try_find("tree-deletion-dialog").is_some());
+        window.click("tree-deletion-submit", cx);
     })
     .unwrap();
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(
-            window.try_find("business-dialog").is_none(),
+            window.try_find("tree-deletion-dialog").is_none(),
             "review did not close: {:?}; edit: {:?}",
             window
                 .try_find("business-dialog-reason")
@@ -454,7 +454,9 @@ fn manual_input_drag_updates_before_release_and_uses_one_decimal_display(cx: &mu
 }
 
 #[gpui_kit::test]
-fn rejected_physics_node_deletion_keeps_the_selected_node(cx: &mut TestAppContext) {
+fn physics_node_deletion_review_keeps_the_selected_node_until_confirmation(
+    cx: &mut TestAppContext,
+) {
     use zipzi_core::document::{PhysicsEdit, PhysicsPatch, PhysicsProperty, PhysicsRigPatch};
     let (document, assets) = document_fixture::combined_animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
@@ -533,6 +535,13 @@ fn rejected_physics_node_deletion_keeps_the_selected_node(cx: &mut TestAppContex
                 selected + 1
             );
         });
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("tree-deletion-dialog").visible());
+        window.click("tree-deletion-cancel", cx);
     })
     .unwrap();
 }

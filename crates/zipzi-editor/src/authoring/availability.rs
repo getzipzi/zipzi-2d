@@ -66,6 +66,14 @@ impl ActionAvailability {
         object: &ObjectRef,
         action: AuthoringAction,
     ) -> Option<Self> {
+        if action == AuthoringAction::Delete
+            && !matches!(object.kind, ObjectKind::Document | ObjectKind::Unresolved)
+        {
+            return Some(Self {
+                enabled: true,
+                reason: None,
+            });
+        }
         match document.authoring_capabilities(object) {
             Ok(capabilities) => Self::from_authoring(&capabilities, action),
             Err(error) => Some(Self {

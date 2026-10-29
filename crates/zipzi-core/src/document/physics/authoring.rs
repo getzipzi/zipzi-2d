@@ -224,7 +224,7 @@ impl Document {
         }
         Ok(())
     }
-    pub(super) fn validate_physics_replacement_unlocked(
+    pub(in crate::document) fn validate_physics_replacement_unlocked(
         &self,
         asset: &PhysicsAsset,
     ) -> Result<(), Status> {

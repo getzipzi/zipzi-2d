@@ -141,21 +141,41 @@ impl Drop for TreeDeletionTask {
 }
 impl Document {
     pub fn deletion_intent(&self, objects: &[ObjectRef]) -> Result<DeletionIntent> {
-        let handles = objects
-            .iter()
-            .map(|object| {
+        let mut request = zipzi_sdk::DeletionRequest::default();
+        for object in objects {
+            if object.kind == crate::ObjectKind::GlueBinding {
+                ensure!(
+                    self.session
+                        .read()
+                        .document()
+                        .get_glue(&object.id)
+                        .is_some_and(|g| g.binding.is_some()),
+                    "Missing Glue binding"
+                );
+                request.roots.push(zipzi_sdk::DeletionTarget::Record(
+                    zipzi_sdk::DeletionObject {
+                        kind: zipzi_sdk::DeletionKind::GlueBinding,
+                        id: object.id.clone(),
+                        owner_id: None,
+                    },
+                ));
+            } else {
                 let kind = object
                     .kind
                     .sdk_kind()
                     .ok_or_else(|| anyhow::anyhow!("Unsupported deletion target"))?;
-                Ok(self.session.handle(kind, &object.id)?)
-            })
-            .collect::<Result<Vec<_>>>()?;
+                let handle = self.session.handle(kind, &object.id)?;
+                request
+                    .roots
+                    .extend(self.session.read().deletion_request(&[handle])?.roots);
+            }
+        }
         Ok(DeletionIntent {
-            request: self.session.read().deletion_request(&handles)?,
+            request,
             ..Default::default()
         })
     }
+
     pub fn start_tree_deletion(&self, mut intent: DeletionIntent) -> Result<TreeDeletionTask> {
         self.ensure_authoring_idle()?;
         let current = intent
@@ -189,6 +209,48 @@ impl Document {
         self.start_tree_deletion(self.deletion_intent(objects)?)?
             .run()
     }
+    /// Explicitly unlock one reported source through the same Runtime session.
+    /// Business identities need not opt into scene visibility/lock tree controls.
+    pub fn unlock_deletion_source(
+        &mut self,
+        plan: &TreeDeletionPlan,
+        source_id: &str,
+    ) -> Result<OperationResult> {
+        self.ensure_authoring_idle()?;
+        ensure!(
+            plan.valid_for(self),
+            "Deletion source changed; review a new plan"
+        );
+        let mut offset = 0;
+        let mut reported = false;
+        loop {
+            let page = plan.page(DeletionSection::Locks, offset, 256)?;
+            if page.rows.iter().any(|row|matches!(row,zipzi_sdk::DeletionRow::Lock {blocker} if blocker.source_id==source_id)) {reported=true;break;}
+            match page.next_offset {
+                Some(next) => offset = next,
+                None => break,
+            }
+        }
+        ensure!(reported, "This lock source is not in the reviewed plan");
+        let mut state = self.model().editor_state().clone();
+        let flags = state
+            .objects
+            .get_mut(source_id)
+            .ok_or_else(|| anyhow::anyhow!("Lock source no longer exists"))?;
+        ensure!(flags.locked, "Lock source changed; review a new plan");
+        flags.locked = false;
+        let (_, receipt) =
+            self.session
+                .edit("Unlock deletion source", Some(plan.version), |edit| {
+                    edit.replace_editor_state(state)
+                })?;
+        self.session.acknowledge_receipts();
+        if receipt.changed {
+            self.invalidate_projection(false);
+            self.pristine_blank = None;
+        }
+        Ok(self.authoring_result(receipt))
+    }
     pub fn execute_tree_deletion(&mut self, plan: &TreeDeletionPlan) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         ensure!(
@@ -219,19 +281,41 @@ impl Document {
     }
 }
 impl crate::Editor {
+    pub fn unlock_deletion_source(
+        &mut self,
+        id: crate::DocumentId,
+        plan: &TreeDeletionPlan,
+        source_id: &str,
+    ) -> Result<OperationResult> {
+        self.ensure_authoring_target(id, "Unlock deletion source")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|d| d.unlock_deletion_source(plan, source_id))
+    }
     pub fn execute_tree_deletion(
         &mut self,
         id: crate::DocumentId,
         plan: &TreeDeletionPlan,
     ) -> Result<OperationResult> {
         self.ensure_authoring_target(id, "Object deletion")?;
-        ensure!(
-            self.editing_context() == Some(crate::EditingContext::Modeling),
-            "Modeling context changed"
-        );
-        self.active_session_mut()
+        let previous_index = self.document().unwrap().object_index();
+        let inspected = self.active_inspection().and_then(|i| i.object());
+        let result = self
+            .active_session_mut()
             .unwrap()
-            .execute_authoring(|d| d.execute_tree_deletion(plan))
+            .execute_authoring(|d| d.execute_tree_deletion(plan))?;
+        if result.receipt.changed && self.active_inspection().and_then(|i| i.object()).is_none() {
+            if let Some(object) = inspected.and_then(|object| {
+                deletion_selection_fallback(
+                    &previous_index,
+                    &self.document().unwrap().object_index(),
+                    &object,
+                )
+            }) {
+                self.inspect_authoring_object(id, object)?;
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -247,12 +331,55 @@ fn deletion_selection_fallback(
             .filter(|r| {
                 matches!(
                     r.kind,
-                    crate::RelationKind::PartOwner | crate::RelationKind::DeformParent
+                    crate::RelationKind::PartOwner
+                        | crate::RelationKind::DeformParent
+                        | crate::RelationKind::EntryOf
+                        | crate::RelationKind::ParameterGroup
+                        | crate::RelationKind::BindingTarget
+                        | crate::RelationKind::BlendTarget
                 )
             })
             .map(|r| r.target.clone())
+            .chain(
+                previous
+                    .incoming(object)
+                    .filter(|r| r.kind == crate::RelationKind::Contains)
+                    .map(|r| r.source.clone()),
+            )
+            .filter(|r| r.kind != crate::ObjectKind::Document)
             .collect::<Vec<_>>()
     };
+    let nearest_sibling = || {
+        let siblings = parents(object);
+        let origin = previous
+            .objects
+            .iter()
+            .position(|o| o.reference == *object)?;
+        for distance in 1..previous.objects.len() {
+            for slot in [origin.checked_add(distance), origin.checked_sub(distance)]
+                .into_iter()
+                .flatten()
+            {
+                if slot >= previous.objects.len() {
+                    continue;
+                }
+                let candidate = &previous.objects[slot];
+                if candidate.reference.kind == object.kind
+                    && current.get(&candidate.reference).is_some()
+                    && parents(&candidate.reference) == siblings
+                {
+                    return Some(candidate.reference.clone());
+                }
+            }
+        }
+        None
+    };
+    // Business lists keep their current container useful after removing a row.
+    if !object.kind.is_edit_target() {
+        if let Some(sibling) = nearest_sibling() {
+            return Some(sibling);
+        }
+    }
     let mut queue: std::collections::VecDeque<_> = parents(object).into();
     let mut seen = std::collections::HashSet::new();
     while let Some(parent) = queue.pop_front() {
@@ -264,27 +391,5 @@ fn deletion_selection_fallback(
         }
         queue.extend(parents(&parent));
     }
-    let siblings = parents(object);
-    let origin = previous
-        .objects
-        .iter()
-        .position(|o| o.reference == *object)?;
-    for distance in 1..previous.objects.len() {
-        for slot in [origin.checked_add(distance), origin.checked_sub(distance)]
-            .into_iter()
-            .flatten()
-        {
-            if slot >= previous.objects.len() {
-                continue;
-            }
-            let candidate = &previous.objects[slot];
-            if candidate.reference.kind == object.kind
-                && current.get(&candidate.reference).is_some()
-                && parents(&candidate.reference) == siblings
-            {
-                return Some(candidate.reference.clone());
-            }
-        }
-    }
-    None
+    nearest_sibling()
 }

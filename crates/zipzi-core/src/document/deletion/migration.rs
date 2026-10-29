@@ -76,7 +76,11 @@ impl Document {
         report: &mut DeletionReport,
         control: &ConversionControl,
     ) -> Result<(), Status> {
-        let removed_ids: BTreeSet<_> = removed.keys().map(|o| o.id.as_str()).collect();
+        let removed_ids: BTreeSet<_> = removed
+            .keys()
+            .filter(|o| matches!(o.kind, DeletionKind::Part | DeletionKind::Deformer))
+            .map(|o| o.id.as_str())
+            .collect();
         let mut offscreen_destinations = BTreeSet::new();
         for id in self.transform_order().iter().chain(self.mesh_order()) {
             control.checkpoint()?;
@@ -268,13 +272,16 @@ impl Document {
             }
         }
         for group in self.draw_order_groups().into_iter().flatten() {
-            if removed_ids.contains(group.owner.as_str()) {
+            if removed_ids.contains(group.owner.as_str())
+                || removed.contains_key(&object(DeletionKind::DrawingGroup, &group.owner))
+            {
                 let key = object(DeletionKind::DrawingGroup, &group.owner);
                 let groups = self.draw_order_groups().unwrap();
                 let mut destination = groups.iter().find(|g| g.items.contains(&group.owner));
-                while let Some(parent) =
-                    destination.filter(|g| removed_ids.contains(g.owner.as_str()))
-                {
+                while let Some(parent) = destination.filter(|g| {
+                    removed_ids.contains(g.owner.as_str())
+                        || removed.contains_key(&object(DeletionKind::DrawingGroup, &g.owner))
+                }) {
                     destination = groups.iter().find(|g| g.items.contains(&parent.owner));
                 }
                 if let Some(destination) = destination {

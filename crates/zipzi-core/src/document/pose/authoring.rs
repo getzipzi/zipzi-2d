@@ -234,7 +234,7 @@ impl Document {
         }
         Ok(())
     }
-    pub(super) fn validate_pose_replacement(
+    pub(in crate::document) fn validate_pose_replacement(
         &self,
         candidate: Option<&PoseAsset>,
     ) -> Result<(), Status> {

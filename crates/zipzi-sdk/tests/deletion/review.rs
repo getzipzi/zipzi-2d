@@ -157,3 +157,29 @@ fn review_pages_require_exact_export_acceptance_without_changing_provenance() {
     s.undo().unwrap();
     assert_eq!(s.document().model3_settings(), &source);
 }
+
+#[test]
+fn parameter_review_folds_dependent_axes_but_keeps_business_removals_visible() {
+    let s = fixture();
+    let plan = s
+        .read_snapshot()
+        .prepare_deletion_review(
+            DeletionIntent {
+                request: DeletionRequest {
+                    roots: vec![DeletionTarget::Parameter(id(3))],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            s.authoring_limits(),
+            &Default::default(),
+        )
+        .unwrap();
+    let removed = plan.report_page(DeletionSection::Removed, 0, 256).unwrap();
+    assert_eq!(removed.total, 1);
+    assert!(
+        matches!(&removed.rows[0],DeletionRow::Removal {removal} if removal.object.kind==DeletionKind::Parameter)
+    );
+    let internal = plan.report_page(DeletionSection::Owned, 0, 256).unwrap();
+    assert!(internal.rows.iter().any(|row|matches!(row,DeletionRow::Removal {removal} if removal.object.kind==DeletionKind::Axis && removal.reason==DeletionReason::Dependency)));
+}

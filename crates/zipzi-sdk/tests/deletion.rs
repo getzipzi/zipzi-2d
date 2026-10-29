@@ -1,6 +1,7 @@
 use zipzi_core::{document::*, *};
-mod scene;
+mod business;
 mod review;
+mod scene;
 use zipzi_sdk::{
     rectangle_mesh, AuthoringSession, DeletionExportFailure, DeletionOptions, ObjectKind,
 };
@@ -261,7 +262,7 @@ fn multi_root_order_duplicates_cycles_and_mask_normalization() {
         a.native
             .removed
             .iter()
-            .filter(|v| v.object.id == id(30))
+            .filter(|v| v.object.id == id(30) && v.object.kind == DeletionKind::Glue)
             .count(),
         1
     );
@@ -641,8 +642,8 @@ fn missing_and_wrong_kind_roots_are_rejected_and_strict_deletion_stays_strict() 
     );
     let part = s.handle(ObjectKind::Parameter, &id(3)).unwrap();
     assert_eq!(
-        s.deletion_request(&[part]).unwrap_err().code.as_ref(),
-        "UNSUPPORTED_DELETION_TARGET"
+        s.deletion_request(&[part]).unwrap().roots,
+        vec![DeletionTarget::Parameter(id(3))]
     );
     assert_eq!(
         s.edit("strict", None, |e| e.erase_object(&id(10)))

@@ -69,7 +69,7 @@ impl ParameterAction {
                     document,
                     &ObjectRef::new(ObjectKind::ParameterGroup, id),
                     if matches!(self, Self::DeleteGroup(_)) {
-                        A::Dissolve
+                        A::Delete
                     } else {
                         A::Inspect
                     },
@@ -225,29 +225,7 @@ impl ParametersPanel {
                         zipzi_editor_core::ObjectKind::ParameterGroup
                     };
                     let object = zipzi_editor_core::ObjectRef::new(kind, id);
-                    let candidates = state
-                        .editor
-                        .document()
-                        .unwrap()
-                        .authoring_neighbors(&object);
-                    let result =
-                        state.execute_authoring(context, window, cx, |editor, document| {
-                            // The shared boundary may commit a valid draft.
-                            // Capture the deletion version only after it settles.
-                            let doc = editor.document().unwrap();
-                            let plan = doc.plan_parameter_object_deletion(
-                                &object,
-                                doc.parameter_model_revision(),
-                            )?;
-                            editor.execute_organization_authoring(document, &plan)
-                        })?;
-                    location = state.present_authoring_result(
-                        document,
-                        &result,
-                        crate::authoring::AuthoringPresentation::AfterDelete { candidates },
-                        window,
-                        cx,
-                    )?;
+                    state.run_object_deletion(context, &[object], window, cx);
                 }
                 _ => unreachable!("creation captured"),
             }

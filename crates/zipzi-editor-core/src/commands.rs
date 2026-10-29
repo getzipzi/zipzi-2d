@@ -1,7 +1,7 @@
 //! Stable business commands. Platform input, dialogs and focus do not enter core.
 use crate::scene::{MAX_ZOOM, MIN_ZOOM};
 use crate::{DocumentId, Editor, EditorCommand};
-use anyhow::{Result, ensure};
+use anyhow::{ensure, Result};
 use serde::{Deserialize, Serialize};
 mod timeline;
 
@@ -1045,7 +1045,7 @@ impl Editor {
             | ManualSourceView => modeling && target && !self.is_busy() && self.manual_editable()
                 && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport)),
             DeleteObject => {
-                modeling && target && !self.is_busy() && !self.exiting() && !self.gesture_active()
+                (modeling || matches!(command.target, CommandTarget::Document(_))) && target && !self.is_busy() && !self.exiting() && !self.gesture_active()
                     && if self.manual_active() {
                         self.manual_editable() && matches!(command.target, CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
                     } else {

@@ -412,9 +412,7 @@ fn root_node_and_invalid_references_are_rejected_without_history() {
     let h = s.handle(ObjectKind::PhysicsNode, &n).unwrap();
     assert!(matches!(
         s.physics_capabilities(&h).unwrap().delete,
-        CapabilityState::Unsupported {
-            code: "PHYSICS_ROOT_NODE"
-        }
+        CapabilityState::Available
     ));
     let before = s.version();
     assert!(s

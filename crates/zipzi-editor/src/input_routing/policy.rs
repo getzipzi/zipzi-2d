@@ -141,14 +141,11 @@ pub(super) fn decide(
                     }
                     CommandScope::Objects => {
                         !text
-                            && matches!(
-                                object_target.map(|t| t.local),
-                                Some(LocalTarget::Viewport(_))
-                                    | Some(LocalTarget::Panel(
-                                        zipzi_editor_core::PanelKind::PartsTree
-                                            | zipzi_editor_core::PanelKind::Deformers
-                                    ))
-                            )
+                            && object_target.is_some_and(|t| match t.local {
+                                LocalTarget::Viewport(_) => true,
+                                LocalTarget::Panel(panel) => super::target::object_panel(panel),
+                                _ => false,
+                            })
                     }
                     CommandScope::Property | CommandScope::Palette => false,
                 };

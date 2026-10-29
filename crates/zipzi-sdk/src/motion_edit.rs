@@ -387,66 +387,9 @@ impl MotionClipCandidate {
                         return Err(error("MISSING_MOTION_KEY", id));
                     }
                 }
-                let original = track.clone();
-                let all: Vec<_> = original.keys().collect();
-                let survivors: Vec<_> = all
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, k)| (!removed.contains(k.id.as_str())).then_some(i))
-                    .collect();
-                if survivors.is_empty() {
+                if !track.retain_keys(|id| !removed.contains(id), restricted) {
                     empty.insert(id.to_owned());
-                    continue;
                 }
-                track.initial = all[survivors[0]].clone();
-                let mut segments = Vec::with_capacity(survivors.len() - 1);
-                for pair in survivors.windows(2) {
-                    let [left, right] = [pair[0], pair[1]];
-                    if right == left + 1 {
-                        segments.push(original.segments[left].clone());
-                        continue;
-                    }
-                    let span = &original.segments[left..right];
-                    let end = all[right].clone();
-                    let merged = if span
-                        .iter()
-                        .all(|s| matches!(s, MotionSegment::Stepped { .. }))
-                    {
-                        MotionSegment::Stepped { end }
-                    } else if span
-                        .iter()
-                        .all(|s| matches!(s, MotionSegment::InverseStepped { .. }))
-                    {
-                        MotionSegment::InverseStepped { end }
-                    } else if span
-                        .iter()
-                        .all(|s| matches!(s, MotionSegment::Bezier { .. }))
-                    {
-                        let MotionSegment::Bezier { control1, .. } = span.first().unwrap() else {
-                            unreachable!()
-                        };
-                        let MotionSegment::Bezier { control2, .. } = span.last().unwrap() else {
-                            unreachable!()
-                        };
-                        let (mut first, mut second) = (*control1, *control2);
-                        constrain_handles(
-                            all[left].time,
-                            end.time,
-                            &mut first,
-                            &mut second,
-                            restricted,
-                        );
-                        MotionSegment::Bezier {
-                            control1: first,
-                            control2: second,
-                            end,
-                        }
-                    } else {
-                        MotionSegment::Linear { end }
-                    };
-                    segments.push(merged);
-                }
-                track.segments = Arc::new(segments);
             }
             clip.tracks.retain(|t| !empty.contains(&t.id));
             clip.track_order.retain(|id| !empty.contains(id));

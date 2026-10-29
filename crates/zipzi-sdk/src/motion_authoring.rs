@@ -616,15 +616,7 @@ impl AuthoringSession {
         } else {
             CapabilityState::Available
         };
-        let delete = if state == CapabilityState::Available
-            && !self.document().references_to(handle.id()).is_empty()
-        {
-            CapabilityState::Unavailable {
-                code: "OBJECT_REFERENCED",
-            }
-        } else {
-            state.clone()
-        };
+        let delete = state.clone();
         Ok(AttachmentCapabilities {
             inspect: CapabilityState::Available,
             patch: state.clone(),

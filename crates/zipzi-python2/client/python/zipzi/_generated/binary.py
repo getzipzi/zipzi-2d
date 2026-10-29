@@ -117,7 +117,7 @@ class Reader:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
 
-INPUT_SIGNATURE = 'e044fca8272c46a083493c68bcae5f80'
+INPUT_SIGNATURE = '33cfbe95962026d21e4bc41217eaa803'
 MESH_SIGNATURE = '6f011cf86dfd4d3f0ee05751e6a6cc13'
 BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
 SAMPLE_SIGNATURE = 'd439ee6cbc8d0f1feb2c30a437523a21'
@@ -1191,6 +1191,30 @@ def _write_deletionrequest(value: object, w: Writer) -> None:
         w.text(key0)
         _write_deletionoffscreenplacement(value0, w)
     _write_deletiontolerance(_field(value, 'tolerance'), w)
+    items0=_mapping(_field(value, 'parameter_slices'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.scalar('f', value0)
+    items0=_mapping(_field(value, 'texture_replacements'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        if value0 is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            w.text(value0)
+    items0=_mapping(_field(value, 'physics_node_replacements'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.text(value0)
+    items0=_mapping(_field(value, 'blend_base_replacements'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.text(value0)
 
 def _write_deletiontarget(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -1215,8 +1239,132 @@ def _write_deletiontarget(value: object, w: Writer) -> None:
     elif tag=='RemoveDeformer':
         w.u32(6)
         w.text(_field(value, 'value'))
+    elif tag=='Parameter':
+        w.u32(7)
+        w.text(_field(value, 'value'))
+    elif tag=='ParameterFolder':
+        w.u32(8)
+        w.text(_field(value, 'value'))
+    elif tag=='ParameterFolderContents':
+        w.u32(9)
+        w.text(_field(value, 'value'))
+    elif tag=='Texture':
+        w.u32(10)
+        w.text(_field(value, 'value'))
+    elif tag=='Attachment':
+        w.u32(11)
+        w.text(_field(value, 'value'))
+    elif tag=='Record':
+        w.u32(12)
+        _write_deletionobject(_field(value, 'value'), w)
     else:
         raise TypeError("Unexpected DeletionTarget variant")
+
+def _write_deletionobject(value: object, w: Writer) -> None:
+    _write_deletionkind(_field(value, 'kind'), w)
+    w.text(_field(value, 'id'))
+    if _field(value, 'owner_id') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.text(_field(value, 'owner_id'))
+
+def _write_deletionkind(value: object, w: Writer) -> None:
+    tag=string(_field(value,"value"))
+    if tag=='Mesh':
+        w.u32(0)
+    elif tag=='Glue':
+        w.u32(1)
+    elif tag=='Offscreen':
+        w.u32(2)
+    elif tag=='MeshBinding':
+        w.u32(3)
+    elif tag=='GlueBinding':
+        w.u32(4)
+    elif tag=='BlendBinding':
+        w.u32(5)
+    elif tag=='Axis':
+        w.u32(6)
+    elif tag=='Sample':
+        w.u32(7)
+    elif tag=='GluePair':
+        w.u32(8)
+    elif tag=='HitArea':
+        w.u32(9)
+    elif tag=='DrawingGroup':
+        w.u32(10)
+    elif tag=='Part':
+        w.u32(11)
+    elif tag=='Deformer':
+        w.u32(12)
+    elif tag=='SceneBinding':
+        w.u32(13)
+    elif tag=='Motion':
+        w.u32(14)
+    elif tag=='MotionTrack':
+        w.u32(15)
+    elif tag=='MotionKey':
+        w.u32(16)
+    elif tag=='Expression':
+        w.u32(17)
+    elif tag=='ExpressionTrack':
+        w.u32(18)
+    elif tag=='ExpressionKey':
+        w.u32(19)
+    elif tag=='PoseEntry':
+        w.u32(20)
+    elif tag=='PoseLink':
+        w.u32(21)
+    elif tag=='CdiPart':
+        w.u32(22)
+    elif tag=='DisplayInfo':
+        w.u32(23)
+    elif tag=='Parameter':
+        w.u32(24)
+    elif tag=='ParameterFolder':
+        w.u32(25)
+    elif tag=='Texture':
+        w.u32(26)
+    elif tag=='Attachment':
+        w.u32(27)
+    elif tag=='BlendKeyTable':
+        w.u32(28)
+    elif tag=='BlendConstraint':
+        w.u32(29)
+    elif tag=='MotionGroup':
+        w.u32(30)
+    elif tag=='MotionRegistration':
+        w.u32(31)
+    elif tag=='MotionEvent':
+        w.u32(32)
+    elif tag=='ExpressionEntry':
+        w.u32(33)
+    elif tag=='Pose':
+        w.u32(34)
+    elif tag=='PoseGroup':
+        w.u32(35)
+    elif tag=='Physics':
+        w.u32(36)
+    elif tag=='PhysicsGroup':
+        w.u32(37)
+    elif tag=='PhysicsInput':
+        w.u32(38)
+    elif tag=='PhysicsOutput':
+        w.u32(39)
+    elif tag=='PhysicsNode':
+        w.u32(40)
+    elif tag=='ModelSettings':
+        w.u32(41)
+    elif tag=='ModelParameterGroup':
+        w.u32(42)
+    elif tag=='ModelParameterMember':
+        w.u32(43)
+    elif tag=='CdiCombinedSet':
+        w.u32(44)
+    elif tag=='CdiCombinedMember':
+        w.u32(45)
+    else:
+        raise TypeError("Unexpected DeletionKind variant")
 
 def _write_reparentstrategy(value: object, w: Writer) -> None:
     tag=string(_field(value,"value"))

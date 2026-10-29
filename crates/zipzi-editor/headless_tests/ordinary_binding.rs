@@ -30,6 +30,7 @@ fn click(h: &Harness, id: impl Into<gpui_kit::ElementId>, cx: &mut TestAppContex
     cx.update_window(h.window, |_, window, cx| window.click(id, cx))
         .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn selected(h: &Harness, cx: &mut TestAppContext) -> R {
     h.view.read_with(cx, |v, _| {
@@ -45,6 +46,7 @@ fn run(h: &Harness, source: R, control: Control, cx: &mut TestAppContext) {
     })
     .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn choose(h: &Harness, name: &str, cx: &mut TestAppContext) {
     cx.update_window(h.window, |_, window, cx| {
@@ -175,7 +177,7 @@ fn binding_delete_reviews_owned_content_keeps_mesh_and_undo_restores_identity(
     let b = create(&h, cx);
     add_axis(&h, &b, cx);
     run(&h, b.clone(), Control::Delete, cx);
-    click(&h, "binding-dialog-submit", cx);
+    click(&h, "tree-deletion-submit", cx);
     assert_eq!(selected(&h, cx).kind, K::Mesh);
     h.view.read_with(cx, |v, _| {
         assert!(

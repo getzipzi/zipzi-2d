@@ -2,6 +2,7 @@
 //! are traversed backward. Scope graphs remain separate from dependency edges.
 use super::*;
 use crate::BindingAxis;
+mod business;
 use std::sync::Mutex;
 
 #[derive(Debug, Default)]
@@ -13,6 +14,8 @@ impl Clone for DeletionIndexCache {
 }
 #[derive(Debug, Default)]
 pub(super) struct DeletionIndex {
+    pub objects: BTreeSet<DeletionObject>,
+    pub folders: BTreeMap<String, Vec<DeletionObject>>,
     pub organization: BTreeMap<String, Vec<DeletionObject>>,
     pub deformation: BTreeMap<String, Vec<DeletionObject>>,
     pub owned: BTreeMap<DeletionObject, Vec<DeletionObject>>,
@@ -20,9 +23,13 @@ pub(super) struct DeletionIndex {
 }
 impl DeletionIndex {
     fn own(&mut self, owner: DeletionObject, child: DeletionObject) {
+        self.objects.insert(owner.clone());
+        self.objects.insert(child.clone());
         self.owned.entry(owner).or_default().push(child);
     }
     fn edge(&mut self, owner: DeletionObject, field: DeletionField, target: DeletionObject) {
+        self.objects.insert(owner.clone());
+        self.objects.insert(target.clone());
         self.incoming
             .entry(target.clone())
             .or_default()
@@ -42,6 +49,13 @@ impl DeletionIndex {
             control.checkpoint()?;
             let key = object(DeletionKind::Axis, &axis.id);
             self.own(owner.clone(), key.clone());
+            if !axis.parameter_id.is_empty() {
+                self.edge(
+                    key.clone(),
+                    DeletionField::ParameterAxis,
+                    object(DeletionKind::Parameter, &axis.parameter_id),
+                );
+            }
             for sample in &axis.samples {
                 control.checkpoint()?;
                 self.own(key.clone(), object(DeletionKind::Sample, &sample.id));
@@ -79,6 +93,17 @@ impl DeletionIndex {
                 object(DeletionKind::Part, part_id),
             );
         }
+        if let MotionTrackTarget::Parameter { parameter_id } = &track.target {
+            self.edge(
+                owner.clone(),
+                if expression.is_some() {
+                    DeletionField::ExpressionSourceParameter
+                } else {
+                    DeletionField::MotionParameter
+                },
+                object(DeletionKind::Parameter, parameter_id),
+            );
+        }
         for key in track.keys() {
             control.checkpoint()?;
             self.own(
@@ -102,6 +127,7 @@ impl DeletionIndex {
             let Some(key) = d.deletion_scene_object(&id) else {
                 continue;
             };
+            index.objects.insert(key.clone());
             if let Some(parent) = d.scene_organization_owner(&id) {
                 index
                     .organization
@@ -158,7 +184,9 @@ impl DeletionIndex {
                 index.own(owner.clone(), object(DeletionKind::GluePair, &pair.id));
             }
             if let Some(b) = &g.binding {
-                index.axes(owner, &b.axes, control)?;
+                let binding = object(DeletionKind::GlueBinding, id);
+                index.own(owner, binding.clone());
+                index.axes(binding, &b.axes, control)?;
             }
         }
         for id in d.mesh_order() {
@@ -184,6 +212,9 @@ impl DeletionIndex {
         }
         for area in d.model3_settings().hit_areas.iter().flatten() {
             control.checkpoint()?;
+            index
+                .objects
+                .insert(object(DeletionKind::HitArea, &area.id));
             if let Some(mesh) = area.mesh.object_id() {
                 index.edge(
                     object(DeletionKind::HitArea, &area.id),
@@ -208,6 +239,14 @@ impl DeletionIndex {
             }
         }
         if let Some(pose) = d.pose() {
+            index.objects.insert(object(DeletionKind::Pose, &pose.id));
+            for group in &pose.groups {
+                let key = object(DeletionKind::PoseGroup, &group.id);
+                index.own(object(DeletionKind::Pose, &pose.id), key.clone());
+                for entry in &group.entries {
+                    index.own(key.clone(), object(DeletionKind::PoseEntry, &entry.id));
+                }
+            }
             for entry in pose.groups.iter().flat_map(|g| &g.entries) {
                 control.checkpoint()?;
                 let owner = object(DeletionKind::PoseEntry, &entry.id);
@@ -231,20 +270,7 @@ impl DeletionIndex {
                 }
             }
         }
-        for id in d.motion_order() {
-            control.checkpoint()?;
-            for track in &d.get_motion(id).unwrap().tracks {
-                index.track(track, None, control)?;
-            }
-        }
-        for id in d.expression_order() {
-            control.checkpoint()?;
-            if let Some(scene) = d.get_expression(id).unwrap().source_scene() {
-                for track in &scene.tracks {
-                    index.track(track, Some(id), control)?;
-                }
-            }
-        }
+        index.business(d, control)?;
         for (slot, entry) in d.display_info().parts.iter().flatten().enumerate() {
             control.checkpoint()?;
             if let CdiPartEntry::Resolved { part_id, .. } = entry {
@@ -278,6 +304,7 @@ impl Document {
     }
     pub(super) fn indexed_deletion_dependencies(
         &self,
+        request: &DeletionRequest,
         removed: &mut BTreeMap<DeletionObject, DeletionReason>,
         report: &mut DeletionReport,
         control: &ConversionControl,
@@ -304,7 +331,29 @@ impl Document {
                     | DeletionField::PosePart
                     | DeletionField::PoseLinkPart
                     | DeletionField::MotionPart
-                    | DeletionField::ExpressionSourcePart => {
+                    | DeletionField::ExpressionSourcePart
+                    | DeletionField::ParameterAxis
+                    | DeletionField::BlendTableParameter
+                    | DeletionField::BlendConstraintParameter
+                    | DeletionField::BlendTable
+                    | DeletionField::MotionParameter
+                    | DeletionField::ExpressionParameter
+                    | DeletionField::ExpressionSourceParameter
+                    | DeletionField::PhysicsParameter
+                    | DeletionField::ModelParameter
+                    | DeletionField::CdiCombinedParameter
+                    | DeletionField::MotionClip => {
+                        if !removed.contains_key(&relation.owner) {
+                            removed.insert(relation.owner.clone(), DeletionReason::Dependency);
+                            pending.push(relation.owner.clone());
+                        }
+                        report.relations.push(relation.clone());
+                    }
+                    DeletionField::PhysicsNode
+                        if !request
+                            .physics_node_replacements
+                            .contains_key(&relation.target.id) =>
+                    {
                         if !removed.contains_key(&relation.owner) {
                             removed.insert(relation.owner.clone(), DeletionReason::Dependency);
                             pending.push(relation.owner.clone());
@@ -337,8 +386,15 @@ impl Document {
                 });
             }
         }
+        let part_records: BTreeSet<_> = report
+            .relations
+            .iter()
+            .filter(|r| r.target.kind == DeletionKind::Part)
+            .map(|r| r.owner.clone())
+            .collect();
         for key in removed.iter().filter(|(k, reason)| {
             **reason != DeletionReason::Owned
+                && part_records.contains(*k)
                 && matches!(
                     k.kind,
                     DeletionKind::PoseEntry

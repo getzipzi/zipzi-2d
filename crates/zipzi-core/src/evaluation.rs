@@ -78,6 +78,10 @@ pub(crate) fn authoring_rotation_pose(
     pose
 }
 
+/// Shared scalar normalization for authoring converters; the caller validates finiteness.
+pub(crate) fn normalize_authoring_parameter(parameter: &crate::Parameter, value: f32) -> f32 {
+    parameters::normalize(parameter, value).0
+}
 fn normalized_authoring_values(doc: &crate::Document, values: &PreviewValues) -> PreviewValues {
     values
         .iter()

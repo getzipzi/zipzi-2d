@@ -78,6 +78,7 @@ fn choose(h: &Harness, label: &str, cx: &mut TestAppContext) {
     })
     .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }
 fn inspected(h: &Harness, cx: &TestAppContext) -> ObjectRef {
     h.view.read_with(cx, |view, _| {
