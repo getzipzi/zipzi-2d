@@ -193,6 +193,76 @@ fn project_select_creates_and_opens_from_an_empty_window(cx: &mut TestAppContext
 }
 
 #[gpui_kit::test]
+fn project_select_opens_and_clears_recent_projects(cx: &mut TestAppContext) {
+    use crate::settings::Settings;
+
+    let harness = setup(cx);
+    let project = harness._config_dir.path().join("recent.zipzi");
+    let mut session = zipzi_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
+    )
+    .unwrap();
+    session.save_project(&project, None).unwrap();
+    let missing = harness._config_dir.path().join("missing.zipzi");
+
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.record_recent_file(project.clone(), cx);
+            view.record_recent_file(missing.clone(), cx);
+        });
+        window.render_frame(cx);
+        window.click("project-select", cx);
+        assert!(window.try_find("project-recent-0").is_none());
+        window.within("popup-menu").hover(4usize, cx);
+        window.click("project-recent-0", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(
+            !cx.global::<Settings>()
+                .recent_files
+                .paths
+                .contains(&missing)
+        );
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .edit_error
+                .as_ref()
+                .unwrap()
+                .contains("missing.zipzi")
+        );
+        window.render_frame(cx);
+        window.click("project-select", cx);
+        window.within("popup-menu").hover(4usize, cx);
+        window.click("project-recent-0", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        assert_eq!(harness.view.read(cx).editor.document_count(), 2);
+        window.render_frame(cx);
+        window.click("project-select", cx);
+        window.within("popup-menu").hover(5usize, cx);
+        window.click("project-clear-recent", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(cx.global::<Settings>().recent_files.is_empty());
+        window.render_frame(cx);
+        window.click("project-select", cx);
+        window.within("popup-menu").hover(5usize, cx);
+        assert!(window.try_find("project-recent-0").is_none());
+        assert!(window.try_find("project-clear-recent").is_none());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn detached_modified_project_retains_state_and_quit_still_requires_confirmation(
     cx: &mut TestAppContext,
 ) {

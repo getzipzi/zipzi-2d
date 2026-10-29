@@ -219,6 +219,11 @@ fn render_project_select(
         .unwrap_or_else(|| title.clone());
     let [can_new, can_open, can_close] = [CommandId::New, CommandId::Open, CommandId::Close]
         .map(|id| !modal && view.editor.command_available(view.editor.command(id)));
+    let recent_files = cx
+        .global::<crate::settings::Settings>()
+        .recent_files
+        .paths
+        .clone();
     let owner = cx.weak_entity();
     compact::button(Button::new("project-select"))
         .ghost()
@@ -267,7 +272,7 @@ fn render_project_select(
                     .bg(crate::theme::modified(cx.theme())),
             )
         })
-        .dropdown_menu(move |mut menu, _, cx| {
+        .dropdown_menu(move |mut menu, window, cx| {
             menu = crate::ui::compact::menu(menu);
             menu = menu
                 .check_side(Side::Right)
@@ -354,6 +359,68 @@ fn render_project_select(
                     .disabled(!enabled),
                 );
             }
+            let recent_owner = owner.clone();
+            let recent_files = recent_files.clone();
+            menu = menu.submenu(t!("menu.open_recent"), window, cx, move |menu, _, cx| {
+                let mut menu = compact::menu(menu)
+                    .min_w(compact::scaled(240., cx))
+                    .max_w(compact::scaled(360., cx))
+                    .scrollable(true);
+                if recent_files.is_empty() {
+                    return menu
+                        .item(PopupMenuItem::new(t!("menu.no_recent_files")).disabled(true));
+                }
+                for (index, path) in recent_files.iter().enumerate() {
+                    let title = crate::menus::path_title(path);
+                    let display_path = path.display().to_string();
+                    let path = path.clone();
+                    let owner = recent_owner.clone();
+                    menu = menu.item(
+                        PopupMenuItem::element(move |_, cx| {
+                            div()
+                                .id(SharedString::from(format!("project-recent-{index}")))
+                                .test_support()
+                                .w(compact::scaled(280., cx))
+                                .min_w_0()
+                                .flex()
+                                .flex_col()
+                                .py(compact::rem(2.))
+                                .child(
+                                    div()
+                                        .min_w_0()
+                                        .overflow_hidden()
+                                        .text_ellipsis()
+                                        .child(title.clone()),
+                                )
+                                .child(
+                                    div()
+                                        .min_w_0()
+                                        .overflow_hidden()
+                                        .text_ellipsis()
+                                        .text_size(compact::rem(compact::CAPTION))
+                                        .text_color(cx.theme().muted_foreground)
+                                        .child(display_path.clone()),
+                                )
+                        })
+                        .icon(IconName::File)
+                        .on_click(move |_, window, cx| {
+                            _ = owner.update(cx, |view, cx| view.open_recent(&path, window, cx));
+                        }),
+                    );
+                }
+                let owner = recent_owner.clone();
+                menu.separator().item(
+                    PopupMenuItem::element(|_, _| {
+                        div()
+                            .id("project-clear-recent")
+                            .test_support()
+                            .child(t!("menu.clear_recent"))
+                    })
+                    .on_click(move |_, window, cx| {
+                        _ = owner.update(cx, |view, cx| view.clear_recent(window, cx));
+                    }),
+                )
+            });
             if active_id.is_some() {
                 menu = menu.separator().item(
                     PopupMenuItem::element(|_, _| {
