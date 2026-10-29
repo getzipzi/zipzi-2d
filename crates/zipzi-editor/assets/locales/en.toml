@@ -169,7 +169,7 @@ tool_manual_reconnect = "Retriangulate mesh"
 manual_constrain_edge = "Constrain edge"
 manual_release_constraint = "Release edge constraint"
 tool_manual_remove_selection = "Delete selected mesh points or edges"
-tool_manual_preview_result = "Preview actual mesh result"
+tool_manual_source_view = "Edit on source image"
 
 tool_hand = "Hand (H)"
 

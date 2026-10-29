@@ -4,12 +4,6 @@ use super::common::save;
 use gpui_kit::{point, px, test::TestWindowExt};
 use zipzi_editor_core::{Editor, ModelPoint};
 
-fn source_point(p: ModelPoint) -> ModelPoint {
-    ModelPoint {
-        x: (p.x - 24.) / 208. * 96.,
-        y: (p.y - 24.) / 208. * 64.,
-    }
-}
 fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| {
         let p = h
@@ -19,7 +13,7 @@ fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
             .unwrap()
             .canvas
             .transform
-            .to_viewport(source_point(p));
+            .to_viewport(p);
         // Keyboard helpers retain modifier state after Undo/Redo. This is a
         // plain click, so explicitly release those modifiers for the event.
         window.click_with_options(
@@ -41,7 +35,7 @@ fn gesture_model(
         let t = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
         let origin = window.find("canvas-body").bounds().origin;
         let screen = |p| {
-            let p = t.to_viewport(source_point(p));
+            let p = t.to_viewport(p);
             origin + point(px(p.x), px(p.y))
         };
         let a = screen(a);
@@ -179,9 +173,9 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             .read_with(&h.cx, |v, _| v.editor.canvas_notice().is_some())
     );
     save(&image, directory, "manual-mesh-05-invalid.png")?;
-    click(&mut h, "tool_manual_preview")?;
+    click(&mut h, "tool_manual_source")?;
     let image = h.capture()?;
-    save(&image, directory, "manual-mesh-06-result.png")?;
+    save(&image, directory, "manual-mesh-06-source.png")?;
     click(&mut h, "tool_generate_mesh")?;
     let image = h.capture()?;
     save(&image, directory, "manual-mesh-07-generation.png")?;
@@ -201,8 +195,8 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             v.redraw(cx);
         });
     })?;
-    // Return to full-source display while isolated; it must remain visible.
-    click(&mut h, "tool_manual_preview")?;
+    // Return to model-space editing while retaining explicit viewport isolation.
+    click(&mut h, "tool_manual_source")?;
     let image = h.capture()?;
     save(&image, directory, "manual-mesh-08-isolated.png")?;
     delete_edge(&mut h, ModelPoint { x: 128., y: 24. })?;
@@ -265,14 +259,19 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             v.redraw(cx);
         });
     })?;
-    save(&h.capture()?, directory, "manual-mesh-12-mixed-uv.png")?;
-    click_model(
-        &mut h,
+    save(&h.capture()?, directory, "manual-mesh-12-mixed-model.png")?;
+    let point = h.view.read_with(&h.cx, |v, _| {
+        let frame = &v.modeling_frame().unwrap().canvas;
+        let mesh = frame
+            .geometry
+            .mesh("a8210000-0000-4000-8000-000000000002")
+            .unwrap();
         ModelPoint {
-            x: 24. + 208. * 0.35,
-            y: 24. + 208. * 0.25,
-        },
-    )?;
+            x: (mesh.vertices[0].1.x + mesh.vertices[1].1.x + mesh.vertices[4].1.x) / 3.,
+            y: (mesh.vertices[0].1.y + mesh.vertices[1].1.y + mesh.vertices[4].1.y) / 3.,
+        }
+    });
+    click_model(&mut h, point)?;
     save(&h.capture()?, directory, "manual-mesh-13-mixed-insert.png")?;
     h.view.read_with(&h.cx, |v, _| {
         let d = v.editor.document().unwrap();
@@ -297,13 +296,13 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             None
         );
     });
-    click(&mut h, "tool_manual_preview")?;
+    click(&mut h, "tool_manual_source")?;
     h.cx.update_window(h.window, |_, _, cx| {
         h.view.update(cx, |v, cx| {
             v.editor.fit_view();
             v.redraw(cx);
         });
     })?;
-    save(&h.capture()?, directory, "manual-mesh-14-mixed-result.png")?;
+    save(&h.capture()?, directory, "manual-mesh-14-mixed-source.png")?;
     Ok(())
 }

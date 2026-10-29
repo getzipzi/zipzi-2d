@@ -159,8 +159,8 @@ pub enum CommandId {
     ManualReconnect,
     #[serde(rename = "tool.manual-remove-selection")]
     ManualRemoveSelection,
-    #[serde(rename = "tool.manual-preview-result")]
-    ManualPreviewResult,
+    #[serde(rename = "tool.manual-source-view")]
+    ManualSourceView,
     #[serde(rename = "view.deformers")]
     ToggleDeformers,
     #[serde(rename = "view.ancestor-deformers")]
@@ -558,8 +558,8 @@ specs![
         ["backspace", "delete"]
     ),
     (
-        ManualPreviewResult,
-        "editor.tool_manual_preview_result",
+        ManualSourceView,
+        "editor.tool_manual_source_view",
         Viewport,
         false,
         []
@@ -872,9 +872,9 @@ impl Editor {
             ManualSelect => self.manual_tool() == Some(crate::ManualTool::Select),
             ManualCreate => self.manual_tool() == Some(crate::ManualTool::Create),
             ManualDelete => self.manual_tool() == Some(crate::ManualTool::Delete),
-            ManualPreviewResult => self
+            ManualSourceView => self
                 .active_session()
-                .is_some_and(|s| s.modeling.tools.manual_preview_result()),
+                .is_some_and(|s| s.modeling.tools.manual_source_view()),
             ToggleViewportIsolation => matches!(command.target,
                 CommandTarget::Viewport(binding) if self.viewport_isolated(binding)),
             ToggleDeformers => self.deformer_visibility().all,
@@ -1007,7 +1007,7 @@ impl Editor {
             | ManualDelete
             | ManualReconnect
             | ManualRemoveSelection
-            | ManualPreviewResult => modeling && target && !self.is_busy() && self.manual_editable()
+            | ManualSourceView => modeling && target && !self.is_busy() && self.manual_editable()
                 && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport)),
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {
                 target && !self.is_busy() && !self.exiting()
@@ -1196,13 +1196,13 @@ impl Editor {
                     session.invalidate_scene();
                 }
             }
-            ManualPreviewResult => {
+            ManualSourceView => {
                 let session = self.active_session_mut().unwrap();
                 session
                     .modeling
                     .tools
                     .settle_manual(&mut session.document)?;
-                session.modeling.tools.toggle_manual_preview_result();
+                session.modeling.tools.toggle_manual_source_view();
                 session.invalidate_scene();
             }
             ToggleDeformers => {

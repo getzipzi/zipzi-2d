@@ -27,14 +27,7 @@ pub struct SceneSnapshot {
 }
 
 impl SceneSnapshot {
-    pub(crate) fn with_manual_reference(
-        mut self,
-        target: &crate::ManualMeshTarget,
-        preview_result: bool,
-    ) -> Self {
-        if preview_result {
-            return self;
-        }
+    pub(crate) fn with_manual_reference(mut self, target: &crate::ManualMeshTarget) -> Self {
         let mut frame = self.viewport_frame.as_ref().clone();
         let mut reference = zipzi_core::Drawable {
             id: format!("__manual_mesh_reference_{}", target.object.id),

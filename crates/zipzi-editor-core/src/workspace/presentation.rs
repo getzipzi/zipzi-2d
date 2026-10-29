@@ -142,13 +142,14 @@ impl Editor {
         let uv_plane = session.modeling.tools.manual_uv_plane(binding.viewport);
         if uv_plane {
             let target = session.modeling.tools.manual_target().unwrap();
-            scene = scene.with_manual_reference(target, false);
+            scene = scene.with_manual_reference(target);
             geometry = std::sync::Arc::new(geometry.with_manual_uv(
                 &session.document,
                 target,
                 scene.clone(),
             ));
-        } else if session.modeling.tools.original_points {
+        } else if !session.modeling.tools.manual_active() && session.modeling.tools.original_points
+        {
             geometry = std::sync::Arc::new(geometry.with_original_points(&session.document)?);
         }
         let view_state = session.view_state(binding.viewport);

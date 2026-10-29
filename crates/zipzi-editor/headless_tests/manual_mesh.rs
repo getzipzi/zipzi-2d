@@ -1,12 +1,6 @@
 use super::{Harness, document_fixture, setup_with_document};
 use gpui_kit::{AppContext as _, TestAppContext, point, px, test::TestWindowExt};
 
-fn source_point(p: zipzi_editor_core::ModelPoint) -> zipzi_editor_core::ModelPoint {
-    zipzi_editor_core::ModelPoint {
-        x: (p.x - 24.) / 208. * 96.,
-        y: (p.y - 24.) / 208. * 64.,
-    }
-}
 fn present(h: &Harness, cx: &mut TestAppContext) {
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
@@ -82,10 +76,7 @@ fn manual_mesh_failed_click_explains_why_and_next_valid_click_recovers(cx: &mut 
     let h = enter(cx);
     cx.update_window(h.window, |_, window, cx| {
         let transform = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
-        let p = transform.to_viewport(source_point(zipzi_editor_core::ModelPoint {
-            x: 128.,
-            y: 244.,
-        }));
+        let p = transform.to_viewport(zipzi_editor_core::ModelPoint { x: 128., y: 244. });
         window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
         let view = h.view.read(cx);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
@@ -93,10 +84,7 @@ fn manual_mesh_failed_click_explains_why_and_next_valid_click_recovers(cx: &mut 
             view.editor.canvas_notice().is_some(),
             "A rejected create click must show a reason after the mouse is released"
         );
-        let p = transform.to_viewport(source_point(zipzi_editor_core::ModelPoint {
-            x: 128.,
-            y: 128.,
-        }));
+        let p = transform.to_viewport(zipzi_editor_core::ModelPoint { x: 128., y: 128. });
         window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
@@ -135,7 +123,7 @@ fn manual_mesh_toolbar_only_shows_relevant_tools(cx: &mut TestAppContext) {
         ] {
             assert!(window.try_find(tool).is_none());
         }
-        assert!(window.find("tool_manual_preview").visible());
+        assert!(window.find("tool_manual_source").visible());
         assert!(window.try_find("tool_manual_exit").is_none());
         assert!(window.try_find("manual-mesh-help").is_none());
         assert!(secondary.contains(&window.find("tool_generate_mesh").bounds().center()));
@@ -208,7 +196,7 @@ fn pointer_gesture(
         let transform = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
         let origin = window.find("canvas-body").bounds().origin;
         let screen = |p| {
-            let p = transform.to_viewport(source_point(p));
+            let p = transform.to_viewport(p);
             origin + point(px(p.x), px(p.y))
         };
         let start = screen(from);
@@ -489,7 +477,7 @@ fn manual_mesh_connect_preview_tracks_target_after_cmd_release(cx: &mut TestAppC
         let binding = frame.version.binding;
         let origin = window.find("canvas-body").bounds().origin;
         let screen = |p| {
-            let p = frame.transform.to_viewport(source_point(p));
+            let p = frame.transform.to_viewport(p);
             origin + point(px(p.x), px(p.y))
         };
         let from = screen(ModelPoint { x: 24., y: 24. });
@@ -577,7 +565,7 @@ fn manual_mesh_right_click_opens_menu_without_editing_geometry(cx: &mut TestAppC
             .unwrap()
             .canvas
             .transform
-            .to_viewport(source_point(point));
+            .to_viewport(point);
         window.click_with_options(
             "canvas-body",
             gpui_kit::test::ClickOptions::new()
@@ -764,7 +752,7 @@ fn manual_mesh_context_menu_sets_and_releases_constraints_with_undo(cx: &mut Tes
             .unwrap()
             .canvas
             .transform
-            .to_viewport(source_point(ModelPoint { x: 76., y: 76. }));
+            .to_viewport(ModelPoint { x: 76., y: 76. });
         window.click_with_options(
             "canvas-body",
             gpui_kit::test::ClickOptions::new()
@@ -816,7 +804,7 @@ fn manual_mesh_context_menu_sets_and_releases_constraints_with_undo(cx: &mut Tes
             .unwrap()
             .canvas
             .transform
-            .to_viewport(source_point(ModelPoint { x: 76., y: 76. }));
+            .to_viewport(ModelPoint { x: 76., y: 76. });
         window.click_with_options(
             "canvas-body",
             gpui_kit::test::ClickOptions::new()
@@ -869,10 +857,24 @@ fn manual_mesh_mixed_dependencies_enter_edit_and_generate_interior(cx: &mut Test
     cx.update_window(h.window, |_, window, cx| {
         let view = h.view.read(cx);
         let frame = &view.modeling_frame().unwrap().canvas;
-        let t = view.editor.manual_target().unwrap();
+        assert!(
+            frame
+                .geometry
+                .source
+                .viewport_frame
+                .drawables
+                .iter()
+                .any(|d| d.id == "a8210000-0000-4000-8000-000000000004"
+                    && d.visible
+                    && d.texture_slot >= 0)
+        );
+        let mesh = frame
+            .geometry
+            .mesh(&view.editor.manual_target().unwrap().object.id)
+            .unwrap();
         let p = frame.transform.to_viewport(zipzi_editor_core::ModelPoint {
-            x: t.texture.width as f32 * 0.35,
-            y: t.texture.height as f32 * 0.25,
+            x: (mesh.vertices[0].1.x + mesh.vertices[1].1.x + mesh.vertices[4].1.x) / 3.,
+            y: (mesh.vertices[0].1.y + mesh.vertices[1].1.y + mesh.vertices[4].1.y) / 3.,
         });
         window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
     })
@@ -903,4 +905,101 @@ fn manual_mesh_mixed_dependencies_enter_edit_and_generate_interior(cx: &mut Test
         assert!(window.find("mesh-generation-stage-edges").visible());
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn manual_mesh_model_and_source_views_both_edit_and_keep_their_cameras(cx: &mut TestAppContext) {
+    let h = enter(cx);
+    let model_view = h.view.read_with(cx, |v, _| {
+        let frame = &v.modeling_frame().unwrap().canvas;
+        assert!(
+            frame
+                .geometry
+                .source
+                .viewport_frame
+                .drawables
+                .iter()
+                .all(|d| !d.id.starts_with("__manual"))
+        );
+        assert!(
+            v.editor
+                .overlay_for_viewport(frame.version.binding)
+                .image_bounds
+                .is_empty()
+        );
+        assert!(!v.editor.viewport_isolated(frame.version.binding));
+        v.editor.viewport_view(frame.version.binding).unwrap()
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tool_manual_source", cx);
+    })
+    .unwrap();
+    present(&h, cx);
+    h.view.read_with(cx, |v, _| {
+        let frame = &v.modeling_frame().unwrap().canvas;
+        assert_eq!(frame.geometry.source.viewport_frame.drawables.len(), 1);
+        assert!(
+            frame.geometry.source.viewport_frame.drawables[0]
+                .id
+                .starts_with("__manual")
+        );
+        assert_eq!(
+            v.editor
+                .overlay_for_viewport(frame.version.binding)
+                .image_bounds
+                .len(),
+            4
+        );
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        let frame = &h.view.read(cx).modeling_frame().unwrap().canvas;
+        let p = frame.transform.to_viewport(zipzi_editor_core::ModelPoint {
+            x: 96. * 0.4,
+            y: 64. * 0.3,
+        });
+        window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
+    })
+    .unwrap();
+    present(&h, cx);
+    assert_eq!(
+        h.view
+            .read_with(cx, |v, _| v.editor.document().unwrap().history_lengths()),
+        (1, 0)
+    );
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tool_manual_source", cx);
+    })
+    .unwrap();
+    present(&h, cx);
+    h.view.read_with(cx, |v, _| {
+        let frame = &v.modeling_frame().unwrap().canvas;
+        assert_eq!(
+            v.editor.viewport_view(frame.version.binding).unwrap(),
+            model_view
+        );
+        assert_eq!(
+            v.editor
+                .overlay_for_viewport(frame.version.binding)
+                .vertices
+                .iter()
+                .filter(|v| v.selected)
+                .count(),
+            1
+        );
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        let frame = &h.view.read(cx).modeling_frame().unwrap().canvas;
+        let p = frame.transform.to_viewport(zipzi_editor_core::ModelPoint {
+            x: 24. + 208. * 0.7,
+            y: 24. + 208. * 0.6,
+        });
+        window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
+    })
+    .unwrap();
+    present(&h, cx);
+    assert_eq!(
+        h.view
+            .read_with(cx, |v, _| v.editor.document().unwrap().history_lengths()),
+        (2, 0)
+    );
 }

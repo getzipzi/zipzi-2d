@@ -955,6 +955,14 @@ impl ControlSpace {
         }
     }
     pub fn from_model(&self, desired: ModelPoint, initial: Vec2) -> Result<Vec2> {
+        self.from_model_with_tolerance(desired, initial, 0.001)
+    }
+    pub(crate) fn from_model_with_tolerance(
+        &self,
+        desired: ModelPoint,
+        initial: Vec2,
+        tolerance: f32,
+    ) -> Result<Vec2> {
         if self.parent.is_none() {
             return Ok(Vec2::new(desired.x, desired.y));
         }
@@ -962,7 +970,7 @@ impl ControlSpace {
         for _ in 0..24 {
             let a = self.to_model(p);
             let (dx, dy) = (desired.x - a.x, desired.y - a.y);
-            if dx.hypot(dy) < 0.001 {
+            if dx.hypot(dy) < tolerance {
                 return Ok(p);
             }
             let h = 0.001;

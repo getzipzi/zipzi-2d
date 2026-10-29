@@ -170,24 +170,24 @@ impl ToolController {
         self.manual.as_ref()?.edge_at(frame, point)
     }
     pub(crate) fn manual_viewport(&self) -> Option<crate::ViewportId> {
-        self.manual.as_ref().and_then(|m| m.uv_viewport)
+        self.manual.as_ref().and_then(|m| m.edit_viewport)
     }
     pub(crate) fn manual_uv_plane(&self, viewport: crate::ViewportId) -> bool {
         self.manual
             .as_ref()
-            .is_some_and(|m| !m.preview_result && m.uv_viewport == Some(viewport))
+            .is_some_and(|m| m.source_view && m.edit_viewport == Some(viewport))
     }
     pub(crate) fn bind_manual_viewport(&mut self, viewport: crate::ViewportId) {
         if let Some(m) = &mut self.manual {
-            m.uv_viewport.get_or_insert(viewport);
+            m.edit_viewport.get_or_insert(viewport);
         }
     }
-    pub fn manual_preview_result(&self) -> bool {
-        self.manual.as_ref().is_some_and(|mode| mode.preview_result)
+    pub fn manual_source_view(&self) -> bool {
+        self.manual.as_ref().is_some_and(|mode| mode.source_view)
     }
-    pub fn toggle_manual_preview_result(&mut self) {
+    pub fn toggle_manual_source_view(&mut self) {
         if let Some(mode) = &mut self.manual {
-            mode.preview_result = !mode.preview_result;
+            mode.source_view = !mode.source_view;
         }
     }
     pub fn refresh_manual_source(&mut self, document: &Document) -> anyhow::Result<()> {

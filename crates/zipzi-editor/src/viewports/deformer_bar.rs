@@ -149,9 +149,9 @@ fn render_mesh_edit_bar(
             CommandId::GenerateMesh,
         ),
         (
-            "tool_manual_preview",
-            Icon::new(IconName::Eye),
-            CommandId::ManualPreviewResult,
+            "tool_manual_source",
+            Icon::new(IconName::Image),
+            CommandId::ManualSourceView,
         ),
     ] {
         let invocation = canvas.command(&state.editor, command, CommandSource::Toolbar);
@@ -162,7 +162,7 @@ fn render_mesh_edit_bar(
         let generating = state.mesh_generation.is_some() && command == CommandId::GenerateMesh;
         let button = compact::button(Button::new(id))
             .when(generating, |button| compact::toggle(button, true))
-            .when(command == CommandId::ManualPreviewResult, |button| {
+            .when(command == CommandId::ManualSourceView, |button| {
                 compact::toggle(button, status.checked)
             })
             .icon(icon)

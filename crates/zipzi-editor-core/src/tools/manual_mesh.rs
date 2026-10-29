@@ -7,6 +7,8 @@ use anyhow::Result;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 use zipzi_core::{Vec2, VertexId};
 use zipzi_sdk::{ManualMeshOperation, ManualVertexIdAllocator, ManualVertexTarget, MeshGeometry};
+mod mapping;
+use mapping::{PoseMapping, PositionUvMap};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ManualTool {
@@ -64,6 +66,7 @@ struct Gesture {
     current: ViewportPoint,
     kind: GestureKind,
     moved: bool,
+    pose: Option<PoseMapping>,
 }
 
 type ScreenLine = (ViewportPoint, ViewportPoint);
@@ -88,8 +91,8 @@ pub(super) struct ManualMeshMode {
     hover: Hit,
     gesture: Option<Gesture>,
     allocator: Arc<std::sync::Mutex<ManualVertexIdAllocator>>,
-    pub preview_result: bool,
-    pub uv_viewport: Option<crate::ViewportId>,
+    pub source_view: bool,
+    pub edit_viewport: Option<crate::ViewportId>,
     projected: RefCell<HashMap<crate::ViewportId, ProjectedEdges>>,
 }
 
@@ -151,8 +154,8 @@ impl ManualMeshMode {
             hover: Hit::Empty,
             gesture: None,
             allocator,
-            preview_result: false,
-            uv_viewport: None,
+            source_view: false,
+            edit_viewport: None,
             projected: RefCell::new(HashMap::new()),
         }
     }
@@ -201,7 +204,7 @@ impl ManualMeshMode {
     }
 
     pub fn delete_selection(&mut self, document: &mut Document) -> Result<bool> {
-        if self.blocked.is_some() || self.preview_result {
+        if self.blocked.is_some() {
             return Ok(false);
         }
         let operation = if !self.selected.is_empty() {
@@ -267,7 +270,7 @@ impl ManualMeshMode {
     }
 
     pub fn edge_at(&self, frame: &CanvasFrame, point: ViewportPoint) -> Option<ManualMeshEdge> {
-        if self.blocked.is_some() || self.dragging() || self.preview_result {
+        if self.blocked.is_some() || self.dragging() {
             return None;
         }
         match self.hit(frame, point) {
@@ -301,9 +304,8 @@ impl ManualMeshMode {
         event: CanvasInput,
     ) -> Result<bool> {
         if (self.blocked.is_some()
-            || self.preview_result
             || self
-                .uv_viewport
+                .edit_viewport
                 .is_some_and(|id| id != frame.version.binding.viewport))
             && !matches!(event, CanvasInput::Cancel)
         {
@@ -373,6 +375,17 @@ impl ManualMeshMode {
                         ManualTool::Delete => GestureKind::Delete(self.hover),
                     }
                 };
+                let pose = if !self.source_view && matches!(kind, GestureKind::Drag(_)) {
+                    match PoseMapping::capture(document, frame, &self.target.object.id) {
+                        Ok(pose) => Some(pose),
+                        Err(error) => {
+                            self.diagnostic = Some(error.to_string());
+                            return Ok(false);
+                        }
+                    }
+                } else {
+                    None
+                };
                 self.gesture = Some(Gesture {
                     version: frame.version,
                     transform: frame.transform,
@@ -380,6 +393,7 @@ impl ManualMeshMode {
                     current: point,
                     kind,
                     moved: false,
+                    pose,
                 });
                 Ok(false)
             }
@@ -454,13 +468,8 @@ impl ManualMeshMode {
                             }
                             self.selected_edge = None;
                         } else if !shift && !alt {
-                            changed = self.create_vertex_at(
-                                document,
-                                gesture.transform,
-                                gesture.start,
-                                hit,
-                                None,
-                            )?;
+                            changed =
+                                self.create_vertex_at(document, frame, gesture.start, hit, None)?;
                         }
                     }
                     GestureKind::Create(hit) | GestureKind::Connect(hit) => {
@@ -478,13 +487,8 @@ impl ManualMeshMode {
                             } else if gesture.moved
                                 || crate::picking::distance2(gesture.start, point) >= 9.
                             {
-                                changed = self.create_vertex_at(
-                                    document,
-                                    gesture.transform,
-                                    point,
-                                    end,
-                                    Some(a),
-                                )?;
+                                changed =
+                                    self.create_vertex_at(document, frame, point, end, Some(a))?;
                             }
                         } else if !gesture.moved
                             && crate::picking::distance2(gesture.start, point) < 9.
@@ -504,7 +508,7 @@ impl ManualMeshMode {
                             } else {
                                 changed = self.create_vertex_at(
                                     document,
-                                    gesture.transform,
+                                    frame,
                                     gesture.start,
                                     hit,
                                     None,
@@ -536,7 +540,7 @@ impl ManualMeshMode {
     fn create_vertex_at(
         &mut self,
         document: &mut Document,
-        transform: ViewportTransform,
+        frame: &CanvasFrame,
         point: ViewportPoint,
         hit: Hit,
         from: Option<VertexId>,
@@ -546,29 +550,57 @@ impl ManualMeshMode {
             .get_mesh(&self.target.object.id)
             .unwrap()
             .clone();
-        let uv = if let Hit::Edge([a, b], _) = hit {
-            let a = mesh.vertex_ids.iter().position(|id| *id == a).unwrap();
-            let b = mesh.vertex_ids.iter().position(|id| *id == b).unwrap();
-            let project = |slot: usize| {
-                let p = self.target.mapping.position(mesh.uvs[slot]);
-                transform.to_viewport(crate::ModelPoint { x: p.x, y: p.y })
+        let transform = frame.transform;
+        let mapped = (|| -> Result<Vec2> {
+            let uv = if let Hit::Edge([a, b], _) = hit {
+                let a = mesh.vertex_ids.iter().position(|id| *id == a).unwrap();
+                let b = mesh.vertex_ids.iter().position(|id| *id == b).unwrap();
+                let project = |slot: usize| {
+                    let p = frame
+                        .geometry
+                        .mesh(&self.target.object.id)
+                        .unwrap()
+                        .vertices[slot]
+                        .1;
+                    transform.to_viewport(p)
+                };
+                let pa = project(a);
+                let pb = project(b);
+                let dx = (pb.x - pa.x) as f64;
+                let dy = (pb.y - pa.y) as f64;
+                anyhow::ensure!(
+                    dx * dx + dy * dy > 0.,
+                    "This edge is collapsed; use Edit on source image"
+                );
+                let t = (((point.x - pa.x) as f64 * dx + (point.y - pa.y) as f64 * dy)
+                    / (dx * dx + dy * dy))
+                    .clamp(0., 1.);
+                let a = mesh.uvs[a];
+                let b = mesh.uvs[b];
+                Vec2::new(
+                    (a.x as f64 + t * (b.x as f64 - a.x as f64)) as f32,
+                    (a.y as f64 + t * (b.y as f64 - a.y as f64)) as f32,
+                )
+            } else {
+                let position = transform.to_model(point);
+                if self.source_view {
+                    self.target.mapping.uv(Vec2::new(position.x, position.y))?
+                } else {
+                    let initial =
+                        PositionUvMap::displayed(document, frame, &self.target.object.id)?
+                            .uv(Vec2::new(position.x, position.y))?;
+                    PoseMapping::capture(document, frame, &self.target.object.id)?
+                        .insert_uv(position, initial)?
+                }
             };
-            let pa = project(a);
-            let pb = project(b);
-            let dx = (pb.x - pa.x) as f64;
-            let dy = (pb.y - pa.y) as f64;
-            let t = (((point.x - pa.x) as f64 * dx + (point.y - pa.y) as f64 * dy)
-                / (dx * dx + dy * dy))
-                .clamp(0., 1.);
-            let a = mesh.uvs[a];
-            let b = mesh.uvs[b];
-            Vec2::new(
-                (a.x as f64 + t * (b.x as f64 - a.x as f64)) as f32,
-                (a.y as f64 + t * (b.y as f64 - a.y as f64)) as f32,
-            )
-        } else {
-            let position = transform.to_model(point);
-            self.target.mapping.uv(Vec2::new(position.x, position.y))?
+            Ok(uv)
+        })();
+        let uv = match mapped {
+            Ok(uv) => uv,
+            Err(error) => {
+                self.diagnostic = Some(error.to_string());
+                return Ok(false);
+            }
         };
         let geometry = MeshGeometry {
             vertex_ids: mesh.vertex_ids,
@@ -625,17 +657,34 @@ impl ManualMeshMode {
         let before = gesture.transform.to_model(gesture.start);
         let after = gesture.transform.to_model(point);
         let delta = Vec2::new(after.x - before.x, after.y - before.y);
-        let targets: Result<Vec<_>> = starts
-            .iter()
-            .map(|start| {
-                let original = self.target.mapping.position(start.uv);
-                let target = Vec2::new(original.x + delta.x, original.y + delta.y);
-                Ok(ManualVertexTarget {
-                    id: start.id,
-                    uv: self.target.mapping.uv(target)?,
+        let targets: Result<Vec<_>> = if let Some(pose) = &gesture.pose {
+            pose.move_targets(
+                starts,
+                crate::ModelVector {
+                    x: delta.x,
+                    y: delta.y,
+                },
+            )
+        } else {
+            starts
+                .iter()
+                .map(|start| {
+                    let original = self.target.mapping.position(start.uv);
+                    let target = Vec2::new(original.x + delta.x, original.y + delta.y);
+                    Ok(ManualVertexTarget {
+                        id: start.id,
+                        uv: self.target.mapping.uv(target)?,
+                    })
                 })
-            })
-            .collect();
+                .collect()
+        };
+        let targets = match targets {
+            Ok(targets) => targets,
+            Err(error) => {
+                self.diagnostic = Some(error.to_string());
+                return Ok(false);
+            }
+        };
         let current: HashMap<_, _> = {
             let model = document.model();
             let mesh = model.get_mesh(&self.target.object.id).unwrap();
@@ -646,7 +695,7 @@ impl ManualMeshMode {
                 .collect()
         };
         let operation = ManualMeshOperation::MoveVertices {
-            targets: targets?,
+            targets,
             motion_from: Some(
                 starts
                     .iter()
@@ -671,10 +720,9 @@ impl ManualMeshMode {
 
     pub fn overlay(&self, frame: &CanvasFrame) -> OverlaySnapshot {
         let mut out = OverlaySnapshot::default();
-        if self.preview_result
-            || self
-                .uv_viewport
-                .is_some_and(|id| id != frame.version.binding.viewport)
+        if self
+            .edit_viewport
+            .is_some_and(|id| id != frame.version.binding.viewport)
         {
             return out;
         }
@@ -750,20 +798,22 @@ impl ManualMeshMode {
         };
         out.lines.extend_from_slice(&projected.structural);
         out.automatic_lines.extend_from_slice(&projected.automatic);
-        let corners = [
-            Vec2::new(0., 0.),
-            Vec2::new(1., 0.),
-            Vec2::new(1., 1.),
-            Vec2::new(0., 1.),
-        ]
-        .map(|uv| {
-            let p = self.target.mapping.position(uv);
-            frame
-                .transform
-                .to_viewport(crate::ModelPoint { x: p.x, y: p.y })
-        });
-        for i in 0..4 {
-            out.image_bounds.push((corners[i], corners[(i + 1) % 4]));
+        if self.source_view {
+            let corners = [
+                Vec2::new(0., 0.),
+                Vec2::new(1., 0.),
+                Vec2::new(1., 1.),
+                Vec2::new(0., 1.),
+            ]
+            .map(|uv| {
+                let p = self.target.mapping.position(uv);
+                frame
+                    .transform
+                    .to_viewport(crate::ModelPoint { x: p.x, y: p.y })
+            });
+            for i in 0..4 {
+                out.image_bounds.push((corners[i], corners[(i + 1) % 4]));
+            }
         }
         for edge in topology
             .boundary

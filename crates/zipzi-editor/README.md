@@ -105,12 +105,17 @@ output directory.
 
 ## Mesh Edit
 
-Mesh Edit shows the selected mesh on its complete source image in UV coordinates,
-with pixel distances preserving the image aspect ratio. It supports meshes with
-parent deformers, ordinary parameter bindings, multiple BlendShapes and Glue,
-including non-affine base shapes. The UV camera is separate from the model camera;
-exiting restores the model view. The result toggle displays the complete evaluated
-model and pauses topology input. Other Modeling viewports retain model context.
+Mesh Edit retains the complete model and its current camera. The selected mesh's
+handles follow the evaluated pose, including ordinary parameters, BlendShapes,
+parent deformers and Glue. Picking maps the displayed triangles back to UVs;
+drags freeze the source pose, invert Glue and the parent deformation, and resample
+all stored shapes through the resulting UVs. No authored keyform needs to be selected.
+
+The image button switches to **Edit on source image** for an optional pixel-space
+UV view. Both views allow topology editing, retain selection and use separate cameras.
+Switching settles the active drag. Folded or singular poses explain an ambiguous
+inverse and retain the last valid candidate; the source view remains available.
+Other Modeling viewports retain their model view and cannot acquire this edit gesture.
 
 New and moved points resample every stored shape from the operation's frozen UV
 source. Glue endpoint markers remain visible; deleting a referenced endpoint

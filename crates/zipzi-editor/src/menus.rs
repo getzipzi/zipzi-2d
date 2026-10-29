@@ -135,7 +135,7 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem, selected_theme: theme::ColorT
         item(CommandId::ManualDelete),
         item(CommandId::ManualRemoveSelection),
         item(CommandId::ManualReconnect),
-        item(CommandId::ManualPreviewResult),
+        item(CommandId::ManualSourceView),
         MenuItem::separator(),
         item(CommandId::ToggleAncestorDeformers),
         item(CommandId::ToggleDeformers),

@@ -127,7 +127,7 @@ fn manual_mesh_stages_preview_apply_and_reject_stale_options() -> anyhow::Result
 }
 
 #[test]
-fn manual_mesh_mode_uses_full_reference_and_one_history_step_per_point() -> anyhow::Result<()> {
+fn manual_mesh_mode_keeps_model_display_and_one_history_step_per_point() -> anyhow::Result<()> {
     let (doc, dir) = support::alpha_document()?;
     let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
@@ -147,17 +147,11 @@ fn manual_mesh_mode_uses_full_reference_and_one_history_step_per_point() -> anyh
             .viewport_frame
             .drawables
             .iter()
-            .any(|drawable| {
-                drawable.id.starts_with("__manual_mesh_reference_") && drawable.positions.len() == 4
-            })
+            .all(|d| !d.id.starts_with("__manual"))
     );
-    assert!(
-        preview
-            .scene
-            .runtime_frame
-            .drawables
-            .iter()
-            .all(|drawable| { !drawable.id.starts_with("__manual_mesh_reference_") })
+    assert_eq!(
+        preview.scene.viewport_frame.drawables,
+        preview.scene.runtime_frame.drawables
     );
     let frame = preview.canvas.unwrap();
     assert!(editor.present_frame(frame.clone()));
@@ -166,9 +160,7 @@ fn manual_mesh_mode_uses_full_reference_and_one_history_step_per_point() -> anyh
     assert!(!overlay.automatic_lines.is_empty());
     editor.dispatch(editor.command(CommandId::ManualCreate))?;
     let frame = crate::support::present_canvas(&mut editor)?;
-    let point = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 128., y: 128. }));
+    let point = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
@@ -897,14 +889,6 @@ fn manual_interaction_fixture() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     Ok((editor, dir))
 }
 
-fn manual_pixel(point: ModelPoint) -> ModelPoint {
-    // Legacy fixture model coordinates map to its 96 by 64 source image.
-    ModelPoint {
-        x: (point.x - 24.) / 208. * 96.,
-        y: (point.y - 24.) / 208. * 64.,
-    }
-}
-
 fn manual_click(editor: &mut Editor, point: ViewportPoint) -> anyhow::Result<()> {
     crate::support::pointer_input(
         editor,
@@ -982,20 +966,13 @@ fn manual_mesh_plain_edit_retriangulates_outline_and_undo_restores_geometry() ->
         ModelPoint { x: 170., y: 60. },
     ] {
         let frame = crate::support::present_canvas(&mut editor)?;
-        manual_click(
-            &mut editor,
-            frame.transform.to_viewport(manual_pixel(point)),
-        )?;
+        manual_click(&mut editor, frame.transform.to_viewport(point))?;
     }
     let created = edited_mesh(&editor);
     assert_eq!(created.vertex_ids.len(), 6);
     let frame = crate::support::present_canvas(&mut editor)?;
-    let start = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 24., y: 24. }));
-    let to = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 105., y: 105. }));
+    let start = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+    let to = frame.transform.to_viewport(ModelPoint { x: 105., y: 105. });
     let token = editor
         .begin_canvas_gesture(frame.version.binding, start, false, false, false)?
         .capture
@@ -1021,9 +998,7 @@ fn manual_mesh_plain_edit_retriangulates_outline_and_undo_restores_geometry() ->
     let frame = crate::support::present_canvas(&mut editor)?;
     manual_click(
         &mut editor,
-        frame
-            .transform
-            .to_viewport(manual_pixel(ModelPoint { x: 232., y: 24. })),
+        frame.transform.to_viewport(ModelPoint { x: 232., y: 24. }),
     )?;
     editor.dispatch(editor.command(CommandId::ManualRemoveSelection))?;
     let deleted = edited_mesh(&editor);
@@ -1048,9 +1023,7 @@ fn manual_mesh_plain_edit_retriangulates_outline_and_undo_restores_geometry() ->
 fn manual_mesh_create_drag_from_empty_space_does_not_insert_a_point() -> anyhow::Result<()> {
     let (mut editor, _dir) = manual_interaction_fixture()?;
     let frame = crate::support::present_canvas(&mut editor)?;
-    let start = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 100., y: 100. }));
+    let start = frame.transform.to_viewport(ModelPoint { x: 100., y: 100. });
     let end = ViewportPoint {
         x: start.x + 25.,
         y: start.y + 30.,
@@ -1128,6 +1101,7 @@ fn manual_mesh_isolation_keeps_reference_at_full_opacity_and_mode_active() -> an
         if !isolate_first {
             editor.toggle_viewport_isolation(binding)?;
         }
+        editor.dispatch(editor.command(CommandId::ManualSourceView))?;
         assert!(editor.manual_active());
         for display in [IsolationDisplay::Dim, IsolationDisplay::Hide] {
             editor.set_viewport_isolation_display(binding, display)?;
@@ -1158,12 +1132,8 @@ fn manual_mesh_drag_to_empty_space_creates_connected_point_with_one_undo() -> an
     let (mut editor, _dir) = manual_interaction_fixture()?;
     let original = edited_mesh(&editor);
     let frame = crate::support::present_canvas(&mut editor)?;
-    let from = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 24., y: 24. }));
-    let to = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 128., y: 128. }));
+    let from = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+    let to = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
@@ -1200,18 +1170,14 @@ fn manual_mesh_delete_outer_edge_then_create_outside_the_new_outline() -> anyhow
     let frame = crate::support::present_canvas(&mut editor)?;
     manual_click(
         &mut editor,
-        frame
-            .transform
-            .to_viewport(manual_pixel(ModelPoint { x: 128., y: 24. })),
+        frame.transform.to_viewport(ModelPoint { x: 128., y: 24. }),
     )?;
     assert_eq!(edited_mesh(&editor).triangles.len(), 1);
     editor.dispatch(editor.command(CommandId::ManualCreate))?;
     let frame = crate::support::present_canvas(&mut editor)?;
     manual_click(
         &mut editor,
-        frame
-            .transform
-            .to_viewport(manual_pixel(ModelPoint { x: 160., y: 80. })),
+        frame.transform.to_viewport(ModelPoint { x: 160., y: 80. }),
     )?;
     assert_eq!(edited_mesh(&editor).vertex_ids.len(), 4);
     assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
@@ -1250,9 +1216,7 @@ fn manual_mesh_primary_gestures_create_move_delete_without_switching_tools() -> 
     editor.dispatch(editor.command(CommandId::ManualSelect))?;
     let original = edited_mesh(&editor);
     let frame = crate::support::present_canvas(&mut editor)?;
-    let point = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 128., y: 128. }));
+    let point = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
     let binding = frame.version.binding;
     let token = editor
         .begin_canvas_gesture(binding, point, false, false, false)?
@@ -1265,9 +1229,7 @@ fn manual_mesh_primary_gestures_create_move_delete_without_switching_tools() -> 
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
 
     let frame = crate::support::present_canvas(&mut editor)?;
-    let to = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 140., y: 140. }));
+    let to = frame.transform.to_viewport(ModelPoint { x: 140., y: 140. });
     let token = editor
         .begin_canvas_gesture(binding, point, false, false, false)?
         .capture
@@ -1311,9 +1273,7 @@ fn manual_mesh_plain_split_then_primary_connect_in_a_single_gesture() -> anyhow:
     // Plain click splits; Command is reserved for fixed connections.
     editor.dispatch(editor.command(CommandId::ManualSelect))?;
     let frame = crate::support::present_canvas(&mut editor)?;
-    let edge = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 128., y: 24. }));
+    let edge = frame.transform.to_viewport(ModelPoint { x: 128., y: 24. });
     let binding = frame.version.binding;
     let token = editor
         .begin_canvas_gesture(binding, edge, false, false, false)?
@@ -1327,9 +1287,7 @@ fn manual_mesh_plain_split_then_primary_connect_in_a_single_gesture() -> anyhow:
 
     editor.dispatch(editor.command(CommandId::ManualDelete))?;
     let frame = crate::support::present_canvas(&mut editor)?;
-    let to = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 128., y: 128. }));
+    let to = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
     let token = editor
         .begin_canvas_gesture(binding, edge, false, false, true)?
         .capture
@@ -1360,9 +1318,7 @@ fn manual_mesh_primary_delete_cancels_on_drag_escape_or_lost_button() -> anyhow:
     let original = edited_mesh(&editor);
     for ending in 0..3 {
         let frame = crate::support::present_canvas(&mut editor)?;
-        let point = frame
-            .transform
-            .to_viewport(manual_pixel(ModelPoint { x: 24., y: 24. }));
+        let point = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
         let away = ViewportPoint {
             x: point.x + 20.,
             y: point.y + 20.,
@@ -1452,9 +1408,7 @@ fn manual_mesh_cmd_click_fixes_only_automatic_edges_with_one_undo() -> anyhow::R
     // Clicking a fixed edge or empty space with Command does not add points.
     for point in [
         point,
-        frame
-            .transform
-            .to_viewport(manual_pixel(ModelPoint { x: 80., y: 128. })),
+        frame.transform.to_viewport(ModelPoint { x: 80., y: 128. }),
     ] {
         let token = editor
             .begin_canvas_gesture(binding, point, false, false, true)?
@@ -1477,12 +1431,8 @@ fn manual_mesh_plain_shift_and_option_selection_still_work() -> anyhow::Result<(
     editor.dispatch(editor.command(CommandId::ManualSelect))?;
     let frame = crate::support::present_canvas(&mut editor)?;
     let binding = frame.version.binding;
-    let a = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 24., y: 24. }));
-    let b = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 232., y: 24. }));
+    let a = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+    let b = frame.transform.to_viewport(ModelPoint { x: 232., y: 24. });
     for (point, shift, alt, count) in [
         (a, false, false, 1),
         (b, true, false, 2),
@@ -1499,12 +1449,8 @@ fn manual_mesh_plain_shift_and_option_selection_still_work() -> anyhow::Result<(
             count
         );
     }
-    let start = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 10., y: 10. }));
-    let end = frame
-        .transform
-        .to_viewport(manual_pixel(ModelPoint { x: 240., y: 240. }));
+    let start = frame.transform.to_viewport(ModelPoint { x: 10., y: 10. });
+    let end = frame.transform.to_viewport(ModelPoint { x: 240., y: 240. });
     let token = editor
         .begin_canvas_gesture(binding, start, false, false, false)?
         .capture
@@ -1583,19 +1529,13 @@ fn manual_mesh_interruption_keeps_completed_edits_cancels_drag_and_retires_captu
         let frame = support::present_canvas(&mut editor)?;
         manual_click(
             &mut editor,
-            frame
-                .transform
-                .to_viewport(manual_pixel(ModelPoint { x: 128., y: 128. })),
+            frame.transform.to_viewport(ModelPoint { x: 128., y: 128. }),
         )?;
         let completed = edited_mesh(&editor);
         editor.dispatch(editor.command(CommandId::ManualSelect))?;
         let frame = support::present_canvas(&mut editor)?;
-        let start = frame
-            .transform
-            .to_viewport(manual_pixel(ModelPoint { x: 24., y: 24. }));
-        let end = frame
-            .transform
-            .to_viewport(manual_pixel(ModelPoint { x: 32., y: 32. }));
+        let start = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+        let end = frame.transform.to_viewport(ModelPoint { x: 32., y: 32. });
         let token = editor
             .begin_canvas_gesture(frame.version.binding, start, false, false, false)?
             .capture
@@ -1770,6 +1710,15 @@ fn manual_mesh_uv_plane_keeps_non_square_pixels_and_restores_model_camera() -> a
     editor.pan_viewport(binding, ViewportPoint { x: 17., y: 29. })?;
     let original = editor.viewport_view(binding).unwrap();
     editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    let model_preview = editor.preview()?;
+    assert_eq!(editor.viewport_view(binding).unwrap(), original);
+    assert!(!editor.viewport_isolated(binding));
+    assert_eq!(
+        model_preview.scene.viewport_frame.drawables,
+        model_preview.scene.runtime_frame.drawables
+    );
+    assert!(editor.present_frame(model_preview.canvas.unwrap()));
+    editor.dispatch(editor.command(CommandId::ManualSourceView))?;
     let preview = editor.preview()?;
     let t = editor.manual_target().unwrap();
     let frame = preview.canvas.unwrap();
@@ -1788,7 +1737,7 @@ fn manual_mesh_uv_plane_keeps_non_square_pixels_and_restores_model_camera() -> a
         Vec2::new(0., 0.)
     );
     assert_ne!(editor.viewport_view(binding).unwrap(), original);
-    editor.dispatch(editor.command(CommandId::ManualPreviewResult))?;
+    editor.dispatch(editor.command(CommandId::ManualSourceView))?;
     let result = editor.preview()?;
     assert_eq!(editor.viewport_view(binding).unwrap(), original);
     assert!(
@@ -1807,7 +1756,7 @@ fn manual_mesh_uv_plane_keeps_non_square_pixels_and_restores_model_camera() -> a
             .iter()
             .all(|d| !d.id.starts_with("__manual"))
     );
-    editor.dispatch(editor.command(CommandId::ManualPreviewResult))?;
+    editor.dispatch(editor.command(CommandId::ManualSourceView))?;
     editor.exit_manual_mesh();
     assert_eq!(editor.viewport_view(binding).unwrap(), original);
     Ok(())
@@ -1883,15 +1832,18 @@ fn manual_mesh_secondary_viewport_shows_model_and_cannot_own_uv_candidate() -> a
     let second = editor.viewport_binding(other).unwrap();
     editor.enter_manual_mesh(editor.active_id().unwrap())?;
     let main = editor.preview()?;
+    assert_eq!(main.scene.viewport_frame.drawables.len(), 2);
     assert!(
-        main.scene.viewport_frame.drawables[0]
-            .id
-            .starts_with("__manual")
+        main.scene
+            .viewport_frame
+            .drawables
+            .iter()
+            .all(|d| !d.id.starts_with("__manual"))
     );
     assert!(
         !editor
             .command_state(editor.command_for_viewport(
-                CommandId::ManualPreviewResult,
+                CommandId::ManualSourceView,
                 second,
                 CommandSource::Toolbar
             ))
@@ -1951,6 +1903,7 @@ fn manual_mesh_source_resize_refits_uv_camera_and_rejects_old_generation() -> an
         scale_factor: 1.,
     });
     editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    editor.dispatch(editor.command(CommandId::ManualSourceView))?;
     editor.preview()?;
     let before = editor
         .viewport_view(editor.primary_viewport_binding().unwrap())
@@ -2085,6 +2038,427 @@ fn manual_mesh_alpha_rebuild_transfers_bound_shapes_and_enforces_domain() -> any
             .positions
             .len(),
         count
+    );
+    Ok(())
+}
+
+fn model_mesh_document(editor: &Editor) -> zipzi_core::Document {
+    let d = editor.document().unwrap();
+    d.runtime_host()
+        .read()
+        .document(d.runtime_session_id())
+        .unwrap()
+        .clone()
+}
+
+fn pose_editor() -> anyhow::Result<(Editor, tempfile::TempDir)> {
+    let (mut doc, dir) = mixed_dependency_document()?;
+    let id = dependency_fixture::id;
+    doc.set_preview_parameters(&[(id(5), 0.2), (id(10), 0.02), (id(20), 0.01)])?;
+    let mut editor = crate::support::editor_from_document(doc);
+    support::attach_viewports(&mut editor);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 960.,
+        height: 720.,
+        scale_factor: 1.,
+    });
+    let host = editor.runtime_host();
+    let sid = editor.document().unwrap().runtime_session_id();
+    let client = host.write().register_client()?;
+    let edit = host
+        .write()
+        .begin_edit(client, sid, "Activate seam", None)?;
+    host.write().apply_edit(client, edit, |e| {
+        let mut g = e.candidate_document().get_glue(&id(30)).unwrap().clone();
+        g.intensity = 0.6;
+        e.replace_glue(g)
+    })?;
+    host.write().commit_edit(client, edit)?;
+    editor.sync_runtime()?;
+    editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    Ok((editor, dir))
+}
+
+#[test]
+fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -> anyhow::Result<()>
+{
+    let id = dependency_fixture::id;
+    let mut final_models = vec![];
+    for staged in [false, true] {
+        let (mut editor, _dir) = pose_editor()?;
+        let before = model_mesh_document(&editor);
+        let history = editor.document().unwrap().history_lengths();
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let shown = frame.geometry.mesh(&id(2)).unwrap();
+        let values = frame
+            .geometry
+            .source
+            .runtime_frame
+            .parameters
+            .iter()
+            .map(|p| (p.id.clone(), p.value))
+            .collect();
+        let local =
+            zipzi_core::evaluation::authoring_mesh_positions(&before, &id(2), &values).unwrap();
+        let r = before
+            .get_transform(&id(3))
+            .unwrap()
+            .rotation()
+            .unwrap()
+            .pose;
+        let (sin, cos) = r.angle.to_radians().sin_cos();
+        let x = (local[4].x - local[0].x) * 0.15;
+        let y = (local[4].y - local[0].y) * 0.15;
+        let gain = 1. - before.get_glue(&id(30)).unwrap().intensity * 0.3;
+        let delta = ModelVector {
+            x: (x * cos - y * sin) * r.scale * gain,
+            y: (x * sin + y * cos) * r.scale * gain,
+        };
+        let original = shown.vertices[0].1;
+        let start = frame.transform.to_viewport(original);
+        let target = ModelPoint {
+            x: original.x + delta.x,
+            y: original.y + delta.y,
+        };
+        let end = frame.transform.to_viewport(target);
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: start,
+                shift: false,
+                alt: false,
+                primary: false,
+            },
+        )?;
+        if staged {
+            let intermediate = ViewportPoint {
+                x: start.x + (end.x - start.x) * 0.5,
+                y: start.y + (end.y - start.y) * 0.5,
+            };
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: intermediate,
+                    left_down: true,
+                },
+            )?;
+            let valid = model_mesh_document(&editor);
+            crate::support::present_canvas(&mut editor)?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: end.x + 9000.,
+                        y: end.y + 9000.,
+                    },
+                    left_down: true,
+                },
+            )?;
+            assert_eq!(
+                model_mesh_document(&editor).get_mesh(&id(2)),
+                valid.get_mesh(&id(2))
+            );
+            assert!(editor.canvas_notice().is_some());
+        }
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: end,
+                left_down: true,
+            },
+        )?;
+        let candidate = crate::support::present_canvas(&mut editor)?;
+        let actual = candidate.geometry.mesh(&id(2)).unwrap().vertices[0].1;
+        assert!(
+            (actual.x - target.x).hypot(actual.y - target.y) < 0.002,
+            "{actual:?} vs {target:?}; {:?}",
+            editor.canvas_notice()
+        );
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+        let after = model_mesh_document(&editor);
+        let m = after.get_mesh(&id(2)).unwrap();
+        let expected = Vec2::new(0.145, 0.1525);
+        assert!(
+            (m.uvs[0].x - expected.x).hypot(m.uvs[0].y - expected.y) < 2e-5,
+            "{:?}",
+            m.uvs[0]
+        );
+        assert_eq!(before.get_glue(&id(30)), after.get_glue(&id(30)));
+        assert_eq!(before.get_glue(&id(32)), after.get_glue(&id(32)));
+        assert_eq!(before.get_transform(&id(3)), after.get_transform(&id(3)));
+        for n in [12, 22] {
+            let DeltaKeyforms::Mesh(a) = &before.get_blend_binding(&id(n)).unwrap().keyforms else {
+                panic!()
+            };
+            let DeltaKeyforms::Mesh(b) = &after.get_blend_binding(&id(n)).unwrap().keyforms else {
+                panic!()
+            };
+            for (a, b) in a.iter().zip(b) {
+                assert_eq!(
+                    (&a.sample_id, a.opacity, a.draw_order, a.multiply, a.screen),
+                    (&b.sample_id, b.opacity, b.draw_order, b.multiply, b.screen)
+                );
+            }
+        }
+        assert_eq!(
+            before.get_binding(&id(6)).unwrap().axes,
+            after.get_binding(&id(6)).unwrap().axes
+        );
+        for (a, b) in before
+            .get_binding(&id(6))
+            .unwrap()
+            .keyforms
+            .iter()
+            .zip(&after.get_binding(&id(6)).unwrap().keyforms)
+        {
+            assert_eq!(
+                (&a.keys, &a.samples, a.appearance, a.draw_order),
+                (&b.keys, &b.samples, b.appearance, b.draw_order)
+            );
+        }
+        assert_eq!(
+            editor.document().unwrap().history_lengths(),
+            (history.0 + 1, 0)
+        );
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(
+            model_mesh_document(&editor).get_mesh(&id(2)),
+            before.get_mesh(&id(2))
+        );
+        editor.execute(EditorCommand::Redo)?;
+        assert_eq!(
+            model_mesh_document(&editor).get_mesh(&id(2)),
+            after.get_mesh(&id(2))
+        );
+        final_models.push(after);
+    }
+    assert_eq!(
+        final_models[0].get_mesh(&id(2)),
+        final_models[1].get_mesh(&id(2))
+    );
+    // Each independently installed fixture owns fresh sample identities.
+    for (a, b) in final_models[0]
+        .get_binding(&id(6))
+        .unwrap()
+        .keyforms
+        .iter()
+        .zip(&final_models[1].get_binding(&id(6)).unwrap().keyforms)
+    {
+        assert_eq!(a.positions, b.positions);
+    }
+    for n in [12, 22] {
+        let DeltaKeyforms::Mesh(a) = &final_models[0].get_blend_binding(&id(n)).unwrap().keyforms
+        else {
+            panic!()
+        };
+        let DeltaKeyforms::Mesh(b) = &final_models[1].get_blend_binding(&id(n)).unwrap().keyforms
+        else {
+            panic!()
+        };
+        for (a, b) in a.iter().zip(b) {
+            assert_eq!(a.positions, b.positions);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_model_insertion_maps_displayed_pose_back_to_uv() -> anyhow::Result<()> {
+    let id = dependency_fixture::id;
+    let (mut editor, _dir) = pose_editor()?;
+    let before = model_mesh_document(&editor);
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let p = &frame.geometry.mesh(&id(2)).unwrap().vertices;
+    // The upper triangle has no Glue endpoints; its affine parent preserves barycentrics.
+    let target = ModelPoint {
+        x: (p[2].1.x + p[3].1.x + p[4].1.x) / 3.,
+        y: (p[2].1.y + p[3].1.y + p[4].1.y) / 3.,
+    };
+    manual_click(&mut editor, frame.transform.to_viewport(target))?;
+    let after = model_mesh_document(&editor);
+    let mesh = after.get_mesh(&id(2)).unwrap();
+    assert_eq!(mesh.vertex_ids.len(), 6, "{:?}", editor.canvas_notice());
+    let expected = Vec2::new((0.9 + 0.1 + 0.4) / 3., (0.9 + 0.9 + 0.45) / 3.);
+    assert!((mesh.uvs[5].x - expected.x).hypot(mesh.uvs[5].y - expected.y) < 2e-5);
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let actual = frame.geometry.mesh(&id(2)).unwrap().vertices[5].1;
+    assert!((actual.x - target.x).hypot(actual.y - target.y) < 0.002);
+    assert_eq!(frame.geometry.meshes.len(), 2);
+    for n in [30, 32] {
+        assert_eq!(before.get_glue(&id(n)), after.get_glue(&id(n)));
+    }
+    assert_eq!(
+        after.get_binding(&id(6)).unwrap().keyforms[1]
+            .positions
+            .len(),
+        6
+    );
+    for n in [12, 22] {
+        let DeltaKeyforms::Mesh(forms) = &after.get_blend_binding(&id(n)).unwrap().keyforms else {
+            panic!()
+        };
+        assert!(forms.iter().all(|f| f.positions.len() == 6));
+    }
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_model_drag_and_insertion_invert_nonlinear_parent() -> anyhow::Result<()> {
+    let (doc, _dir) = support::alpha_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    support::attach_viewports(&mut editor);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 800.,
+        height: 600.,
+        scale_factor: 1.,
+    });
+    let host = editor.runtime_host();
+    let sid = editor.document().unwrap().runtime_session_id();
+    let client = host.write().register_client()?;
+    let edit = host.write().begin_edit(client, sid, "Warp fixture", None)?;
+    host.write().apply_edit(client, edit, |e| {
+        e.create_transform(zipzi_core::Transform {
+            id: id(990),
+            data: zipzi_core::TransformData::Warp(zipzi_core::WarpTransform {
+                rows: 1,
+                columns: 1,
+                quad: true,
+                bezier: None,
+                points: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(200., 0.),
+                    Vec2::new(0., 200.),
+                    Vec2::new(260., 240.),
+                ],
+            }),
+            ..Default::default()
+        })?;
+        let mut m = e.candidate_document().get_mesh(&mesh().id).unwrap().clone();
+        m.base_positions = m.uvs.clone();
+        m.deformer_id = id(990);
+        e.replace_mesh(m)
+    })?;
+    host.write().commit_edit(client, edit)?;
+    editor.sync_runtime()?;
+    editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    // This is the actual warped image of UV (0.3, 0.2), not the chord between corners.
+    let target = ModelPoint {
+        x: 60. + 60. * 0.3 * 0.2,
+        y: 40. + 40. * 0.3 * 0.2,
+    };
+    manual_click(&mut editor, frame.transform.to_viewport(target))?;
+    let m = model_mesh_document(&editor)
+        .get_mesh(&mesh().id)
+        .unwrap()
+        .clone();
+    assert_eq!(m.vertex_ids.len(), 5, "{:?}", editor.canvas_notice());
+    assert!(
+        (m.uvs[4].x - 0.3).hypot(m.uvs[4].y - 0.2) < 2e-5,
+        "{:?}",
+        m.uvs[4]
+    );
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let p = frame.geometry.mesh(&mesh().id).unwrap().vertices[4].1;
+    let start = frame.transform.to_viewport(p);
+    let destination = ModelPoint {
+        x: 80. + 60. * 0.4 * 0.3,
+        y: 60. + 40. * 0.4 * 0.3,
+    };
+    let end = frame.transform.to_viewport(destination);
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: end,
+            left_down: true,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let p = frame.geometry.mesh(&mesh().id).unwrap().vertices[4].1;
+    assert!(
+        (p.x - destination.x).hypot(p.y - destination.y) < 0.002,
+        "{p:?} {:?}",
+        editor.canvas_notice()
+    );
+    let m = model_mesh_document(&editor)
+        .get_mesh(&mesh().id)
+        .unwrap()
+        .clone();
+    assert!((m.uvs[4].x - 0.4).hypot(m.uvs[4].y - 0.3) < 2e-5);
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_folded_pose_refuses_ambiguous_click_and_source_view_recovers() -> anyhow::Result<()>
+{
+    let (doc, _dir) = support::alpha_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    support::attach_viewports(&mut editor);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 640.,
+        height: 480.,
+        scale_factor: 1.,
+    });
+    let host = editor.runtime_host();
+    let sid = editor.document().unwrap().runtime_session_id();
+    let client = host.write().register_client()?;
+    let edit = host.write().begin_edit(client, sid, "Fold fixture", None)?;
+    host.write().apply_edit(client, edit, |e| {
+        let mut m = e.candidate_document().get_mesh(&mesh().id).unwrap().clone();
+        m.base_positions = vec![
+            Vec2::new(0., 0.),
+            Vec2::new(100., 0.),
+            Vec2::new(100., 100.),
+            Vec2::new(100., 0.),
+        ];
+        e.replace_mesh(m)
+    })?;
+    host.write().commit_edit(client, edit)?;
+    editor.sync_runtime()?;
+    let before = model_mesh_document(&editor);
+    let history = editor.document().unwrap().history_lengths();
+    editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    manual_click(
+        &mut editor,
+        frame.transform.to_viewport(ModelPoint { x: 65., y: 30. }),
+    )?;
+    assert_eq!(
+        model_mesh_document(&editor).get_mesh(&mesh().id),
+        before.get_mesh(&mesh().id)
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+    assert!(editor.canvas_notice().unwrap().contains("overlap"));
+    editor.dispatch(editor.command(CommandId::ManualSourceView))?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    manual_click(
+        &mut editor,
+        frame.transform.to_viewport(ModelPoint {
+            x: 96. * 0.3,
+            y: 64. * 0.2,
+        }),
+    )?;
+    assert_eq!(
+        model_mesh_document(&editor)
+            .get_mesh(&mesh().id)
+            .unwrap()
+            .vertex_ids
+            .len(),
+        5
+    );
+    assert_eq!(
+        editor.document().unwrap().history_lengths(),
+        (history.0 + 1, 0)
     );
     Ok(())
 }

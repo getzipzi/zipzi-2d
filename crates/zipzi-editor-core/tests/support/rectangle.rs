@@ -164,7 +164,11 @@ pub fn mixed_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
         e.create_asset(zipzi_sdk::prepare_png_asset(&id(40), "Source", &texture)?)?;
         let mut m = e.candidate_document().get_mesh(&id(2)).unwrap().clone();
         m.texture_asset_id = id(40).into();
-        e.replace_mesh(m)
+        e.replace_mesh(m)?;
+        e.create_asset(zipzi_sdk::prepare_png_asset(&id(41), "Context", &texture)?)?;
+        let mut context = e.candidate_document().get_mesh(&id(4)).unwrap().clone();
+        context.texture_asset_id = id(41).into();
+        e.replace_mesh(context)
     })?;
     let saved = sdk.save_project(&dir.path().join("mixed.zipzi"), None)?;
     let mut doc = Document::open(&saved.manifest)?;
